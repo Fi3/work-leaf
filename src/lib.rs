@@ -1,6 +1,7 @@
 pub mod agent;
 pub mod codex;
 pub mod locks;
+pub mod patch;
 pub mod ui;
 
 pub use agent::{
@@ -11,6 +12,7 @@ pub use codex::{AgentBackend, CodexBackend, CodexCommandConfig, CodexInvocation,
 pub use locks::{
     CommandWriteIntent, CommandWritePolicy, FileAccessError, FileLockTable, FileSnapshot,
 };
+pub use patch::{GitPatcher, PatchError, PatchOutcome, PatchRequest};
 pub use ui::{
     AgentListEntry, PaneFocus, TerminalLayout, TerminalUi, UiAction, UiKey, UiMode, UiSurface,
 };
