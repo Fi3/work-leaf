@@ -1,0 +1,88 @@
+prefix_rule(
+    pattern = ["docker", "ps"],
+    decision = "allow",
+    justification = "Allow listing Docker containers so Codex can find demand-benchmark containers",
+)
+
+prefix_rule(
+    pattern = ["docker", "logs"],
+    decision = "allow",
+    justification = "Allow Codex to read Docker logs with whatever options and tail length are needed",
+)
+
+prefix_rule(
+    pattern = ["docker", "stats"],
+    decision = "allow",
+    justification = "Allow Codex to read Docker container resource stats",
+)
+
+prefix_rule(
+    pattern = ["docker", "exec"],
+    decision = "allow",
+    justification = "Allow Codex to execute commands inside Docker containers",
+)
+
+prefix_rule(
+    pattern = ["python3", "rust-backend/utils/benchmark_stack/benchmark_stack.py"],
+    decision = "allow",
+    justification = "Allow starting the local demand benchmark stack",
+)
+
+prefix_rule(
+    pattern = ["docker", "kill"],
+    decision = "allow",
+    justification = "Allow killing demand benchmark containers selected by docker ps",
+)
+
+prefix_rule(
+    pattern = ["docker", "rm"],
+    decision = "allow",
+    justification = "Allow removing demand benchmark containers selected by docker ps",
+)
+prefix_rule(
+    pattern = ["ss"],
+    decision = "allow",
+    justification = "Allow removing demand benchmark containers selected by docker ps",
+)
+prefix_rule(
+    pattern = ["curl"],
+    decision = "allow",
+    justification = "Allow removing demand benchmark containers selected by docker ps",
+)
+prefix_rule(
+    pattern = ["kill"],
+    decision = "allow",
+    justification = "Allow removing demand benchmark containers selected by docker ps",
+)
+prefix_rule(
+    pattern = ["ps"],
+    decision = "allow",
+    justification = "Allow removing demand benchmark containers selected by docker ps",
+)
+prefix_rule(
+    pattern = ["rg"],
+    decision = "allow",
+    justification = "Allow removing demand benchmark containers selected by docker ps",
+)
+prefix_rule(
+    pattern = ["python3"],
+    decision = "allow",
+    justification = "Allow removing demand benchmark containers selected by docker ps",
+)
+prefix_rule(
+    pattern = ["python"],
+    decision = "allow",
+    justification = "Allow removing demand benchmark containers selected by docker ps",
+)
+prefix_rule(
+    pattern = ["bash"],
+    decision = "allow",
+    justification = "Allow removing demand benchmark containers selected by docker ps",
+)
+
+prefix_rule(
+    pattern = ["git"],
+    decision = "allow",
+    justification = "Allow removing demand benchmark containers selected by docker ps",
+)
+
