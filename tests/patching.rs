@@ -2,7 +2,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use work_leaf::{AgentId, FileLockTable, GitPatcher, PatchError, PatchRequest};
+use work_leaf::{
+    AgentBackend, AgentError, AgentId, AgentSession, ChatMessage, FileLockTable, GitPatcher,
+    MessageRole, PatchCoordinator, PatchError, PatchRequest,
+};
 
 #[test]
 fn patcher_applies_unified_diff_and_creates_metadata_commit() {
@@ -81,14 +84,55 @@ diff --git a/README.md b/README.md
     assert!(git_output(&root, ["status", "--short"]).is_empty());
 }
 
+#[test]
+fn patch_coordinator_sends_conflict_diagnostics_back_to_agent() {
+    let root = git_repo("patch-conflict-feedback");
+    fs::write(root.join("README.md"), "actual\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+
+    let patcher = GitPatcher::new(
+        root,
+        FileLockTable::new(git_repo_root("patch-conflict-feedback")),
+    );
+    let backend = FakeBackend::default();
+    let mut coordinator = PatchCoordinator::new(patcher, backend);
+    let error = coordinator
+        .submit(PatchRequest::new(
+            AgentId::new("chat-2").unwrap(),
+            "docs",
+            "replace expected text",
+            "\
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-expected
++changed
+",
+        ))
+        .unwrap_err();
+    let backend = coordinator.into_backend();
+
+    assert!(matches!(error, PatchError::Conflict { .. }));
+    assert_eq!(backend.sends.len(), 1);
+    assert_eq!(backend.sends[0].0.as_str(), "chat-2");
+    assert!(backend.sends[0].1.contains("could not apply your patch"));
+    assert!(backend.sends[0].1.contains("README.md"));
+}
+
 fn git_repo(name: &str) -> PathBuf {
-    let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
+    let root = git_repo_root(name);
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
     git(&root, ["init"]);
     git(&root, ["config", "user.name", "Work Leaf Test"]);
     git(&root, ["config", "user.email", "work-leaf@example.test"]);
     root
+}
+
+fn git_repo_root(name: &str) -> PathBuf {
+    std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()))
 }
 
 fn git<const N: usize>(root: &Path, args: [&str; N]) {
@@ -118,4 +162,20 @@ fn git_output<const N: usize>(root: &Path, args: [&str; N]) -> String {
         String::from_utf8_lossy(&output.stderr)
     );
     String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
+#[derive(Default)]
+struct FakeBackend {
+    sends: Vec<(AgentId, String)>,
+}
+
+impl AgentBackend for FakeBackend {
+    fn launch(&mut self, _request: work_leaf::AgentLaunch) -> Result<AgentSession, AgentError> {
+        unreachable!("patch coordinator does not launch agents")
+    }
+
+    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        self.sends.push((agent_id.clone(), prompt.to_string()));
+        Ok(ChatMessage::new(MessageRole::Agent, "will fix patch"))
+    }
 }

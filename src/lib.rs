@@ -18,7 +18,7 @@ pub use linearize::{
 pub use locks::{
     CommandWriteIntent, CommandWritePolicy, FileAccessError, FileLockTable, FileSnapshot,
 };
-pub use patch::{GitPatcher, PatchError, PatchOutcome, PatchRequest};
+pub use patch::{GitPatcher, PatchCoordinator, PatchError, PatchOutcome, PatchRequest};
 pub use review::{AgentCommit, GitHistory, ReviewCoordinator, ReviewError, ReviewResult};
 pub use ui::{
     AgentListEntry, PaneFocus, TerminalLayout, TerminalUi, UiAction, UiKey, UiMode, UiSurface,

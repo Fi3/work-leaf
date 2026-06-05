@@ -3,7 +3,8 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 
-use crate::agent::AgentId;
+use crate::agent::{AgentError, AgentId};
+use crate::codex::AgentBackend;
 use crate::locks::{FileAccessError, FileLockTable};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -186,6 +187,48 @@ impl GitPatcher {
     }
 }
 
+#[derive(Debug)]
+pub struct PatchCoordinator<B> {
+    patcher: GitPatcher,
+    backend: B,
+}
+
+impl<B> PatchCoordinator<B>
+where
+    B: AgentBackend,
+{
+    pub fn new(patcher: GitPatcher, backend: B) -> Self {
+        Self { patcher, backend }
+    }
+
+    pub fn into_backend(self) -> B {
+        self.backend
+    }
+
+    pub fn submit(&mut self, request: PatchRequest) -> Result<PatchOutcome, PatchError> {
+        let agent_id = request.agent_id.clone();
+        match self.patcher.apply(request) {
+            Ok(outcome) => Ok(outcome),
+            Err(PatchError::Conflict { files, diagnostic }) => {
+                let prompt = format!(
+                    "The orchestrator could not apply your patch.\nFiles: {}\n\nGit diagnostic:\n{}\n\nPlease provide a corrected unified diff patch.",
+                    files
+                        .iter()
+                        .map(|path| path.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    diagnostic
+                );
+                self.backend
+                    .send(&agent_id, &prompt)
+                    .map_err(PatchError::Agent)?;
+                Err(PatchError::Conflict { files, diagnostic })
+            }
+            Err(error) => Err(error),
+        }
+    }
+}
+
 fn parse_patch_path(raw: &str, prefix: &str) -> Option<PathBuf> {
     let path = raw.split('\t').next().unwrap_or(raw);
     if path == "/dev/null" {
@@ -211,6 +254,7 @@ pub enum PatchError {
         files: Vec<PathBuf>,
         diagnostic: String,
     },
+    Agent(AgentError),
     FileAccess(FileAccessError),
     Git(std::io::Error),
 }
@@ -220,6 +264,7 @@ impl fmt::Display for PatchError {
         match self {
             Self::NoFiles => formatter.write_str("patch does not touch any files"),
             Self::Conflict { diagnostic, .. } => write!(formatter, "patch conflict: {diagnostic}"),
+            Self::Agent(error) => write!(formatter, "{error}"),
             Self::FileAccess(error) => write!(formatter, "{error}"),
             Self::Git(error) => write!(formatter, "{error}"),
         }
@@ -229,6 +274,7 @@ impl fmt::Display for PatchError {
 impl std::error::Error for PatchError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
+            Self::Agent(error) => Some(error),
             Self::FileAccess(error) => Some(error),
             Self::Git(error) => Some(error),
             _ => None,
