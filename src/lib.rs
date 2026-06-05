@@ -1,5 +1,6 @@
 pub mod agent;
 pub mod codex;
+pub mod linearize;
 pub mod locks;
 pub mod patch;
 pub mod review;
@@ -10,6 +11,10 @@ pub use agent::{
     PromptPolicy,
 };
 pub use codex::{AgentBackend, CodexBackend, CodexCommandConfig, CodexInvocation, SandboxMode};
+pub use linearize::{
+    LinearizeAction, LinearizeError, LinearizeGroup, LinearizeHandoff, LinearizePlan,
+    LinearizePlanner, LinearizeQuestion,
+};
 pub use locks::{
     CommandWriteIntent, CommandWritePolicy, FileAccessError, FileLockTable, FileSnapshot,
 };
