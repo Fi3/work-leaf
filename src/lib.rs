@@ -2,6 +2,7 @@ pub mod agent;
 pub mod codex;
 pub mod locks;
 pub mod patch;
+pub mod review;
 pub mod ui;
 
 pub use agent::{
@@ -13,6 +14,7 @@ pub use locks::{
     CommandWriteIntent, CommandWritePolicy, FileAccessError, FileLockTable, FileSnapshot,
 };
 pub use patch::{GitPatcher, PatchError, PatchOutcome, PatchRequest};
+pub use review::{AgentCommit, GitHistory, ReviewCoordinator, ReviewError, ReviewResult};
 pub use ui::{
     AgentListEntry, PaneFocus, TerminalLayout, TerminalUi, UiAction, UiKey, UiMode, UiSurface,
 };
