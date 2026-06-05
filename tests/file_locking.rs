@@ -78,7 +78,7 @@ fn file_paths_cannot_escape_project_root() {
 
 #[test]
 fn command_policy_marks_known_build_commands_as_write_intents() {
-    let policy = CommandWritePolicy::default();
+    let policy = CommandWritePolicy;
 
     let cargo = policy.classify(["cargo", "test"]);
     assert!(cargo.writes);
