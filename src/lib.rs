@@ -1,11 +1,15 @@
 pub mod agent;
 pub mod codex;
+pub mod ui;
 
 pub use agent::{
     AgentError, AgentId, AgentKind, AgentLaunch, AgentSession, ChatMessage, MessageRole,
     PromptPolicy,
 };
 pub use codex::{AgentBackend, CodexBackend, CodexCommandConfig, CodexInvocation, SandboxMode};
+pub use ui::{
+    AgentListEntry, PaneFocus, TerminalLayout, TerminalUi, UiAction, UiKey, UiMode, UiSurface,
+};
 
 pub fn greeting() -> &'static str {
     "work-leaf"
