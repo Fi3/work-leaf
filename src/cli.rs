@@ -8,7 +8,9 @@ use std::thread;
 use std::time::Duration;
 
 use crate::agent::{AgentId, AgentKind, AgentLaunch, PromptPolicy};
-use crate::codex::{AgentBackend, AgentStreamEvent, CodexBackend, CodexCommandConfig};
+use crate::codex::{
+    AgentBackend, AgentShutdownHandle, AgentStreamEvent, CodexBackend, CodexCommandConfig,
+};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::locks::{CommandWritePolicy, FileLockTable};
 use crate::orchestrator::{AgentFollowUp, OrchestratorEvent, handle_agent_directives_streaming};
@@ -99,6 +101,7 @@ pub fn run_cli_from_env() -> ! {
 pub struct CommandChat<B> {
     project_dir: PathBuf,
     backend: Option<B>,
+    shutdown: AgentShutdownHandle,
     locks: FileLockTable,
     command_policy: CommandWritePolicy,
     agents: BTreeMap<AgentId, String>,
@@ -111,13 +114,15 @@ where
     B: AgentBackend,
 {
     pub fn new(project_dir: PathBuf, backend: B) -> Self {
+        let shutdown = backend.shutdown_handle();
         Self {
             locks: FileLockTable::new(project_dir.clone()),
             project_dir,
             backend: Some(backend),
+            shutdown,
             command_policy: CommandWritePolicy,
             agents: BTreeMap::new(),
-            max_review_rounds: 8,
+            max_review_rounds: 8000,
             next_user_agent: 1,
         }
     }
@@ -129,6 +134,14 @@ where
 
     pub fn into_backend(self) -> B {
         self.backend.expect("command chat backend is present")
+    }
+
+    pub fn shutdown_handle(&self) -> AgentShutdownHandle {
+        self.shutdown.clone()
+    }
+
+    pub fn shutdown_agents(&self) {
+        self.shutdown.shutdown();
     }
 
     pub fn handle_line(&mut self, line: &str) -> Result<CommandChatResult, CliError> {
@@ -279,9 +292,11 @@ where
 
         while let Some(current) = pending.pop_front() {
             if rounds >= self.max_review_rounds {
-                text.push_str(
-                    "\n\norchestrator:\nstopped processing agent directives after the configured round limit",
-                );
+                text.push_str("\n\norchestrator:\n");
+                text.push_str(&format!(
+                    "agent did not converge after {} orchestrator rounds",
+                    self.max_review_rounds
+                ));
                 break;
             }
             rounds += 1;
@@ -315,6 +330,10 @@ where
 
             append_orchestrator_events(&mut text, &run.events);
             append_follow_ups(&mut text, &run.follow_up_replies);
+
+            if run.completed {
+                break;
+            }
 
             for follow_up in run.follow_up_replies {
                 if !follow_up.text.is_empty() {
