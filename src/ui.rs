@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::path::PathBuf;
 
 use crate::agent::AgentId;
@@ -162,6 +163,7 @@ pub struct TerminalUi {
     windows: Vec<UiWindow>,
     active_window: usize,
     pending: Option<PendingKey>,
+    ready_bell_pending: Cell<bool>,
 }
 
 impl TerminalUi {
@@ -179,6 +181,7 @@ impl TerminalUi {
             windows: vec![UiWindow::command()],
             active_window: 0,
             pending: None,
+            ready_bell_pending: Cell::new(false),
         }
     }
 
@@ -219,6 +222,21 @@ impl TerminalUi {
 
     pub fn add_agent(&mut self, agent: AgentListEntry) {
         self.agents.push(agent);
+    }
+
+    pub fn set_agent_ready(&mut self, agent_id: &AgentId, ready: bool) -> Result<(), String> {
+        let Some(agent) = self.agents.iter_mut().find(|agent| &agent.id == agent_id) else {
+            return Err(format!("unknown agent `{agent_id}`"));
+        };
+
+        let became_ready = ready && !agent.ready;
+        agent.ready = ready;
+
+        if became_ready {
+            self.ready_bell_pending.set(true);
+        }
+
+        Ok(())
     }
 
     pub fn select_agent(&mut self, agent_id: &AgentId) -> Result<(), String> {
@@ -344,6 +362,9 @@ impl TerminalUi {
         }
         for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
             let agent = &self.agents[*agent_index];
+            if agent.ready {
+                rendered.push_str("\u{1b}[7m");
+            }
             if self.control_selected == visible_position + 1 {
                 rendered.push('>');
             } else {
@@ -356,7 +377,10 @@ impl TerminalUi {
             rendered.push_str("  working: ");
             rendered.push_str(&agent.feature);
             if agent.ready {
-                rendered.push_str("  \u{1b}[7mREADY\u{1b}[0m");
+                rendered.push_str("  READY");
+            }
+            if agent.ready {
+                rendered.push_str("\u{1b}[0m");
             }
             rendered.push('\n');
             if !agent.modified_files.is_empty() {
@@ -386,7 +410,11 @@ impl TerminalUi {
     pub fn render_screen_with_prompt(&self, right_content: &str, prompt: &str) -> String {
         let visible_right_content = self.visible_right_content(right_content);
         let buffer = self.render_tui_buffer(&visible_right_content, prompt);
-        let mut rendered = String::from("\u{1b}[H");
+        let mut rendered = String::new();
+        if self.ready_bell_pending.replace(false) {
+            rendered.push('\u{7}');
+        }
+        rendered.push_str("\u{1b}[H");
         rendered.push_str(&buffer_to_string(&buffer));
         rendered.push_str(&self.cursor_sequence(&visible_right_content, prompt));
         rendered
@@ -455,12 +483,13 @@ impl TerminalUi {
             line.push(Span::raw(agent.feature.clone()));
             if agent.ready {
                 line.push(Span::raw("  "));
-                line.push(Span::styled(
-                    "READY",
-                    Style::default().add_modifier(Modifier::REVERSED),
-                ));
+                line.push(Span::raw("READY"));
             }
-            items.push(ListItem::new(Spans::from(line)));
+            let mut item = ListItem::new(Spans::from(line));
+            if agent.ready {
+                item = item.style(Style::default().add_modifier(Modifier::REVERSED));
+            }
+            items.push(item);
             if !agent.modified_files.is_empty() {
                 items.push(ListItem::new(Spans::from(vec![Span::raw(format!(
                     "    files: {}",
