@@ -147,6 +147,7 @@ impl PromptPolicy {
                 "Use `@work-leaf patch <reason>` followed by a unified diff and `@work-leaf end` to request a write.",
                 "Use `@work-leaf locks classify <command>` to ask whether a command writes project files.",
                 "Use `@work-leaf send <agent-id> <message>` to route context to another agent.",
+                "Use `@work-leaf done` when no more orchestrator work is required.",
             ]
             .join("\n"),
         }
