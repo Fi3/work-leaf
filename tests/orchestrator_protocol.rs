@@ -217,6 +217,54 @@ diff --git a/README.md b/README.md
     );
 }
 
+#[test]
+fn orchestrator_protocol_sends_malformed_patch_feedback_back_to_the_agent() {
+    let root = temp_git_repo("protocol-malformed-patch");
+    fs::write(root.join("README.md"), "actual\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "\
+@work-leaf patch update readme
+README.md should say changed.
+@work-leaf end",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "actual\n"
+    );
+    assert!(git_output(&root, ["status", "--short"]).is_empty());
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::PatchRejected {
+                agent_id: id,
+                files,
+                diagnostic
+            } if id == &agent_id
+                && files.is_empty()
+                && diagnostic.contains("recognizable unified diff file headers")
+        )
+    }));
+    assert_eq!(backend.sends.len(), 1);
+    assert_eq!(backend.sends[0].0, agent_id);
+    assert!(
+        backend.sends[0]
+            .1
+            .contains("recognizable unified diff file headers")
+    );
+}
+
 #[derive(Default)]
 struct RecordingBackend {
     sends: Vec<(AgentId, String)>,

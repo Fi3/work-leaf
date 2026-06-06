@@ -30,6 +30,11 @@ impl PatchRequest {
             diff: diff.into(),
         }
     }
+
+    fn with_diff(mut self, diff: String) -> Self {
+        self.diff = diff;
+        self
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -50,6 +55,8 @@ impl GitPatcher {
     }
 
     pub fn apply(&self, request: PatchRequest) -> Result<PatchOutcome, PatchError> {
+        let diff = extract_unified_diff(&request.diff);
+        let request = request.with_diff(diff);
         let files = self.parse_patch_files(&request.diff)?;
         let mut outcome = None;
         self.locks.with_write_locks(&files, || {
@@ -223,6 +230,62 @@ impl GitPatcher {
     }
 }
 
+fn extract_unified_diff(raw: &str) -> String {
+    let lines = raw.lines().collect::<Vec<_>>();
+    let Some((start, prefix)) = lines
+        .iter()
+        .enumerate()
+        .find_map(|(index, line)| diff_line_prefix(line).map(|prefix| (index, prefix)))
+    else {
+        return raw.to_string();
+    };
+
+    let mut diff = String::new();
+    for line in &lines[start..] {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("```") {
+            continue;
+        }
+        if let Some(stripped) = line.strip_prefix(&prefix) {
+            diff.push_str(stripped);
+        } else {
+            diff.push_str(line);
+        }
+        diff.push('\n');
+    }
+    diff
+}
+
+fn diff_line_prefix(line: &str) -> Option<String> {
+    for marker in ["diff --git ", "--- ", "Index: "] {
+        if line.starts_with(marker) {
+            return Some(String::new());
+        }
+    }
+
+    let trimmed = line.trim_start();
+    if ["diff --git ", "--- ", "Index: "]
+        .iter()
+        .any(|marker| trimmed.starts_with(marker))
+    {
+        let indent_len = line.len() - trimmed.len();
+        return Some(line[..indent_len].to_string());
+    }
+
+    let quote_trimmed = line.trim_start_matches([' ', '\t']);
+    if let Some(after_quote) = quote_trimmed.strip_prefix("> ")
+        && ["diff --git ", "--- ", "Index: "]
+            .iter()
+            .any(|marker| after_quote.starts_with(marker))
+    {
+        let quote_start = line.len() - quote_trimmed.len();
+        let prefix_len = quote_start + 2;
+        return Some(line[..prefix_len].to_string());
+    }
+
+    None
+}
+
 fn render_patch_context(request: &PatchRequest, files: &[PathBuf]) -> String {
     let files = files
         .iter()
@@ -306,9 +369,21 @@ where
                     diagnostic,
                 })
             }
+            Err(PatchError::NoFiles) => {
+                let prompt = render_no_files_prompt();
+                self.backend
+                    .send(&agent_id, &prompt)
+                    .map_err(PatchError::Agent)?;
+                Err(PatchError::NoFiles)
+            }
             Err(error) => Err(error),
         }
     }
+}
+
+pub(crate) fn render_no_files_prompt() -> String {
+    "The orchestrator could not apply your patch because the patch body did not include recognizable unified diff file headers such as `diff --git a/path b/path`, `--- a/path`, and `+++ b/path`.\n\nPlease resend the complete unified diff through `@work-leaf patch <reason>` followed by the patch body and `@work-leaf end`."
+        .to_string()
 }
 
 fn parse_patch_path(raw: &str, prefix: &str) -> Option<PathBuf> {

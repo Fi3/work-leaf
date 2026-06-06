@@ -4,7 +4,7 @@ use std::{fmt, fs};
 use crate::agent::{AgentError, AgentId, ChatMessage};
 use crate::codex::{AgentBackend, AgentStreamEvent};
 use crate::locks::{CommandWriteIntent, CommandWritePolicy, FileAccessError, FileLockTable};
-use crate::patch::{GitPatcher, PatchError, PatchRequest};
+use crate::patch::{GitPatcher, PatchError, PatchRequest, render_no_files_prompt};
 
 #[derive(Debug)]
 pub struct AgentOrchestrator<B> {
@@ -129,7 +129,7 @@ impl OrchestratorEvent {
             Self::PatchRejected {
                 agent_id, files, ..
             } => format!(
-                "sent patch conflict diagnostics to {agent_id}: {}",
+                "sent patch diagnostics to {agent_id}: {}",
                 display_paths(files)
             ),
             Self::MessageRouted { from, to } => {
@@ -296,6 +296,23 @@ where
                             agent_id: agent_id.clone(),
                             files,
                             diagnostic,
+                        });
+                    }
+                    Err(PatchError::NoFiles) => {
+                        let mut sink = |event| stream(agent_id, event);
+                        let reply = backend.send_streaming(
+                            agent_id,
+                            &render_no_files_prompt(),
+                            &mut sink,
+                        )?;
+                        run.follow_up_replies
+                            .push(follow_up(agent_id.clone(), reply));
+                        run.events.push(OrchestratorEvent::PatchRejected {
+                            agent_id: agent_id.clone(),
+                            files: Vec::new(),
+                            diagnostic:
+                                "patch body did not include recognizable unified diff file headers"
+                                    .to_string(),
                         });
                     }
                     Err(error) => return Err(OrchestratorError::Patch(error)),

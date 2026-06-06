@@ -89,6 +89,41 @@ diff --git a/README.md b/README.md
 }
 
 #[test]
+fn patcher_applies_indented_fenced_unified_diff_from_agent_reply() {
+    let root = git_repo("patch-indented-fenced-diff");
+    fs::write(root.join("README.md"), "actual\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+
+    let patcher = GitPatcher::new(root.clone(), FileLockTable::new(root.clone()));
+    let outcome = patcher
+        .apply(PatchRequest::new(
+            AgentId::new("chat-5").unwrap(),
+            "docs",
+            "update readme from fenced diff",
+            "\
+Here is the patch:
+
+```diff
+    diff --git a/README.md b/README.md
+    --- a/README.md
+    +++ b/README.md
+    @@ -1 +1 @@
+    -actual
+    +changed
+```
+",
+        ))
+        .unwrap();
+
+    assert_eq!(outcome.files, vec![PathBuf::from("README.md")]);
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "changed\n"
+    );
+}
+
+#[test]
 fn patcher_rejects_patch_when_required_check_fails_and_does_not_commit() {
     let root = git_repo("patch-validation-fails");
     fs::create_dir_all(root.join("src")).unwrap();
@@ -352,6 +387,44 @@ diff --git a/README.md b/README.md
         "ADD initial validation fixture"
     );
     assert!(git_output(&root, ["status", "--short", "--untracked-files=no"]).is_empty());
+}
+
+#[test]
+fn patch_coordinator_sends_no_file_header_diagnostics_back_to_agent() {
+    let root = git_repo("patch-no-file-header-feedback");
+    fs::write(root.join("README.md"), "actual\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+
+    let patcher = GitPatcher::new(root.clone(), FileLockTable::new(root.clone()));
+    let backend = FakeBackend::default();
+    let mut coordinator = PatchCoordinator::new(patcher, backend);
+    let error = coordinator
+        .submit(PatchRequest::new(
+            AgentId::new("chat-6").unwrap(),
+            "docs",
+            "malformed patch body",
+            "\
+README.md should contain changed instead of actual.
+",
+        ))
+        .unwrap_err();
+    let backend = coordinator.into_backend();
+
+    assert!(matches!(error, PatchError::NoFiles));
+    assert_eq!(backend.sends.len(), 1);
+    assert_eq!(backend.sends[0].0.as_str(), "chat-6");
+    assert!(
+        backend.sends[0]
+            .1
+            .contains("recognizable unified diff file headers")
+    );
+    assert!(backend.sends[0].1.contains("@work-leaf patch <reason>"));
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "actual\n"
+    );
+    assert!(git_output(&root, ["status", "--short"]).is_empty());
 }
 
 fn git_repo(name: &str) -> PathBuf {

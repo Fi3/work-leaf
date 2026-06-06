@@ -191,6 +191,45 @@ fn command_chat_corrects_agents_that_treat_work_leaf_as_a_shell_command() {
 }
 
 #[test]
+fn command_chat_sends_malformed_patch_feedback_instead_of_erroring() {
+    let root = temp_git_repo("command-chat-malformed-patch-feedback");
+    fs::write(root.join("README.md"), "actual\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "\
+@work-leaf patch update readme
+README.md should say changed.
+@work-leaf end",
+        "@work-leaf done",
+    ]);
+    let mut chat = CommandChat::new(root.clone(), backend);
+
+    let result = chat.handle_line("new update readme").unwrap();
+
+    let CommandChatResult::AgentLaunched { reply, .. } = result else {
+        panic!("expected launched agent");
+    };
+    assert!(!reply.contains("error: patch does not touch any files"));
+    assert!(reply.contains("sent patch diagnostics to user-1"));
+    assert!(reply.contains("agent user-1 reported done"));
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "actual\n"
+    );
+    assert!(git_output(&root, ["status", "--short"]).is_empty());
+
+    let backend = chat.into_backend();
+    assert_eq!(backend.sends.len(), 1);
+    assert!(
+        backend.sends[0]
+            .1
+            .contains("recognizable unified diff file headers")
+    );
+    assert!(backend.sends[0].1.contains("@work-leaf patch <reason>"));
+}
+
+#[test]
 fn command_chat_continues_past_old_round_cutoff_until_agent_reports_done() {
     let root = temp_dir("command-chat-agent-done-convergence");
     let mut replies = Vec::new();
