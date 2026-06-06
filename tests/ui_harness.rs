@@ -35,9 +35,12 @@ fn scripted_harness_bells_and_highlights_ready_chat_in_left_pane() {
 
     let ready_frame = harness.render_frame();
     assert!(ready_frame.contains('\u{7}'));
-    assert!(harness.ui().render_left_pane().contains(
-        "\u{1b}[7m>harness-agent user-3  working: harness-agent  READY\u{1b}[0m"
-    ));
+    assert!(
+        harness
+            .ui()
+            .render_left_pane()
+            .contains("\u{1b}[7m>harness-agent user-3  working: harness-agent  READY\u{1b}[0m")
+    );
 }
 
 #[test]

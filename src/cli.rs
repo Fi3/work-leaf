@@ -87,7 +87,13 @@ pub fn run_cli_from_env() -> ! {
                     process::exit(1);
                 }
             };
-            let backend = codex_backend(project_dir.clone(), model);
+            let backend = match codex_backend(project_dir.clone(), model) {
+                Ok(backend) => backend,
+                Err(error) => {
+                    eprintln!("{error}");
+                    process::exit(1);
+                }
+            };
             let chat = CommandChat::new(project_dir, backend);
             if let Err(error) = run_command_chat(chat) {
                 eprintln!("{error}");
@@ -893,12 +899,15 @@ fn render_command_result(
     Ok(false)
 }
 
-fn codex_backend(project_dir: PathBuf, model: Option<String>) -> CodexBackend {
-    let mut config = CodexCommandConfig::new(project_dir);
+fn codex_backend(project_dir: PathBuf, model: Option<String>) -> Result<CodexBackend, CliError> {
+    let mut config = CodexCommandConfig::new(project_dir.clone());
     if let Some(model) = model {
         config = config.with_model(model);
     }
-    CodexBackend::new(config, PromptPolicy::for_restricted_agents())
+    Ok(CodexBackend::new(
+        config,
+        PromptPolicy::for_project(&project_dir).map_err(CliError::Agent)?,
+    ))
 }
 
 fn split_command_line(line: &str) -> Vec<String> {

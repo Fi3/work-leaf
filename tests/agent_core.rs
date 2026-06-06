@@ -1,3 +1,4 @@
+use std::fs;
 use std::path::PathBuf;
 
 use work_leaf::{
@@ -25,6 +26,27 @@ fn prompt_policy_wraps_every_agent_prompt_with_file_access_rules() {
     assert!(wrapped.contains("@work-leaf locks classify <command>"));
     assert!(wrapped.contains("@work-leaf send <agent-id> <message>"));
     assert!(wrapped.contains("implement the flag parser"));
+}
+
+#[test]
+fn prompt_policy_injects_launch_project_agent_instructions() {
+    let root = temp_dir("prompt-policy-project-instructions");
+    fs::write(
+        root.join("AGENTS.md"),
+        "## Required Checks\n1. `cargo check`\n\nProject-specific rule from fixture.\n",
+    )
+    .unwrap();
+    let policy = PromptPolicy::for_project(&root).unwrap();
+
+    let wrapped = policy.inject(
+        &AgentId::new("chat-1").unwrap(),
+        "feature flags",
+        "implement the flag parser",
+    );
+
+    assert!(wrapped.contains("Repository instructions from the launch project"));
+    assert!(wrapped.contains("--- AGENTS.md ---"));
+    assert!(wrapped.contains("Project-specific rule from fixture."));
 }
 
 #[test]
@@ -63,6 +85,13 @@ fn codex_backend_builds_exec_invocation_for_project_directory() {
     );
     assert!(invocation.stdin.contains("Agent-ID: chat-a"));
     assert!(invocation.stdin.contains("add ripgrep support"));
+}
+
+fn temp_dir(name: &str) -> PathBuf {
+    let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(&root).unwrap();
+    root
 }
 
 #[test]

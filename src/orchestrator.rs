@@ -259,6 +259,27 @@ where
                             diagnostic,
                         });
                     }
+                    Err(PatchError::ValidationFailed {
+                        files,
+                        command,
+                        diagnostic,
+                    }) => {
+                        let diagnostic =
+                            format!("Validation command `{command}` failed:\n{diagnostic}");
+                        let mut sink = |event| stream(agent_id, event);
+                        let reply = backend.send_streaming(
+                            agent_id,
+                            &render_patch_validation_prompt(&files, &command, &diagnostic),
+                            &mut sink,
+                        )?;
+                        run.follow_up_replies
+                            .push(follow_up(agent_id.clone(), reply));
+                        run.events.push(OrchestratorEvent::PatchRejected {
+                            agent_id: agent_id.clone(),
+                            files,
+                            diagnostic,
+                        });
+                    }
                     Err(error) => return Err(OrchestratorError::Patch(error)),
                 }
             }
@@ -523,6 +544,15 @@ fn render_patch_conflict_prompt(files: &[PathBuf], diagnostic: &str) -> String {
     format!(
         "The orchestrator could not apply your patch.\nFiles: {}\n\nGit diagnostic:\n{}\n\nPlease provide a corrected unified diff patch.",
         display_paths(files),
+        diagnostic
+    )
+}
+
+fn render_patch_validation_prompt(files: &[PathBuf], command: &str, diagnostic: &str) -> String {
+    format!(
+        "The orchestrator rejected your patch because repository validation failed.\nFiles: {}\nCommand: {}\n\nDiagnostic:\n{}\n\nPlease provide a corrected unified diff patch.",
+        display_paths(files),
+        command,
         diagnostic
     )
 }

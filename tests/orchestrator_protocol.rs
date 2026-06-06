@@ -152,6 +152,71 @@ diff --git a/README.md b/README.md
     assert!(backend.sends[0].1.contains("README.md"));
 }
 
+#[test]
+fn orchestrator_protocol_sends_validation_failures_back_to_the_agent() {
+    let root = temp_git_repo("protocol-patch-validation");
+    fs::write(root.join("README.md"), "actual\n").unwrap();
+    fs::write(
+        root.join("AGENTS.md"),
+        "## Required Checks\n1. `sh validate.sh`\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join("validate.sh"),
+        "echo validation failed from orchestrator fixture >&2\nexit 1\n",
+    )
+    .unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial validation fixture"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "\
+@work-leaf patch update readme
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-actual
++changed
+@work-leaf end",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "actual\n"
+    );
+    assert!(git_output(&root, ["status", "--short", "--untracked-files=no"]).is_empty());
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::PatchRejected {
+                agent_id: id,
+                files,
+                diagnostic
+            } if id == &agent_id
+                && files == &vec![PathBuf::from("README.md")]
+                && diagnostic.contains("sh validate.sh")
+        )
+    }));
+    assert_eq!(backend.sends.len(), 1);
+    assert_eq!(backend.sends[0].0, agent_id);
+    assert!(backend.sends[0].1.contains("repository validation failed"));
+    assert!(backend.sends[0].1.contains("sh validate.sh"));
+    assert!(
+        backend.sends[0]
+            .1
+            .contains("validation failed from orchestrator fixture")
+    );
+}
+
 #[derive(Default)]
 struct RecordingBackend {
     sends: Vec<(AgentId, String)>,

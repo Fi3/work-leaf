@@ -8,6 +8,7 @@ pub struct UiHarness {
     chat_cursor: usize,
     chat_history: Vec<String>,
     chat_history_index: Option<usize>,
+    escape_sequence: Option<PendingEscapeSequence>,
     transcript: Vec<String>,
     next_agent: usize,
     quit: bool,
@@ -22,6 +23,7 @@ impl UiHarness {
             chat_cursor: 0,
             chat_history: Vec::new(),
             chat_history_index: None,
+            escape_sequence: None,
             transcript: vec![
                 "UI harness".to_string(),
                 "Esc command, i insert, : prompt, Ctrl-W h/j/k/l focus, , toggle right, q quit"
@@ -38,6 +40,11 @@ impl UiHarness {
 
     pub fn transcript(&self) -> &[String] {
         &self.transcript
+    }
+
+    pub fn mark_agent_ready(&mut self, agent_id: &str) -> Result<(), String> {
+        let agent_id = AgentId::new(agent_id).map_err(|error| error.to_string())?;
+        self.ui.set_agent_ready(&agent_id, true)
     }
 
     pub fn is_quit(&self) -> bool {
@@ -62,6 +69,19 @@ impl UiHarness {
     pub fn handle_byte(&mut self, byte: u8) -> bool {
         if self.quit {
             return false;
+        }
+
+        if self.continue_escape_sequence(byte) {
+            return !self.quit;
+        }
+
+        if byte == 27 {
+            self.escape_sequence = Some(PendingEscapeSequence {
+                bytes: vec![27],
+                mode_before: self.ui.mode(),
+            });
+            self.handle_input(HarnessInput::Key(UiKey::Esc));
+            return !self.quit;
         }
 
         let Some(input) = HarnessInput::from_byte(byte) else {
@@ -247,6 +267,36 @@ impl UiHarness {
             .extend(actions.into_iter().map(|action| format!("{action:?}")));
     }
 
+    fn continue_escape_sequence(&mut self, byte: u8) -> bool {
+        let Some(sequence) = self.escape_sequence.as_mut() else {
+            return false;
+        };
+
+        if sequence.bytes.len() == 1 && byte != b'[' {
+            self.escape_sequence = None;
+            return false;
+        }
+
+        sequence.bytes.push(byte);
+        if let Some((key, len)) = parse_key_sequence(&sequence.bytes) {
+            if len == sequence.bytes.len() {
+                let sequence = self
+                    .escape_sequence
+                    .take()
+                    .expect("escape sequence is present");
+                if sequence.mode_before == UiMode::Insert && self.ui.mode() != UiMode::Insert {
+                    let actions = self.ui.handle_key(UiKey::Char('i'));
+                    self.record_actions(actions);
+                }
+                self.handle_input(HarnessInput::Key(key));
+            }
+        } else if sequence.bytes.len() > MAX_ESCAPE_SEQUENCE {
+            self.escape_sequence = None;
+        }
+
+        true
+    }
+
     fn right_content(&self) -> String {
         let mut content = self.transcript.join("\n");
         if !content.is_empty() {
@@ -257,6 +307,14 @@ impl UiHarness {
         content
     }
 }
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct PendingEscapeSequence {
+    bytes: Vec<u8>,
+    mode_before: UiMode,
+}
+
+const MAX_ESCAPE_SEQUENCE: usize = 8;
 
 fn parse_key_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
     match bytes {

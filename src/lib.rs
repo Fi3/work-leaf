@@ -1,6 +1,7 @@
 pub mod agent;
 pub mod cli;
 pub mod codex;
+mod instructions;
 pub mod linearize;
 pub mod locks;
 pub mod orchestrator;

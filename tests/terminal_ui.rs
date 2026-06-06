@@ -160,7 +160,7 @@ fn left_pane_includes_command_interface_and_agent_introspection() {
     assert!(rendered.contains("conflicts: chat-b"));
     assert!(rendered.contains("depends-on: chat-b"));
     assert!(rendered.contains("depended-on-by: chat-a"));
-    assert!(rendered.contains("\u{1b}[7mREADY\u{1b}[0m"));
+    assert!(rendered.contains("\u{1b}[7m parser chat-a  working: parser  READY\u{1b}[0m"));
 }
 
 #[test]

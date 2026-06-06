@@ -1,6 +1,8 @@
 use std::collections::BTreeSet;
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+use crate::instructions::{ProjectInstructionFile, load_project_instructions};
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct AgentId(String);
@@ -132,6 +134,7 @@ impl AgentSession {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PromptPolicy {
     preamble: String,
+    project_instructions: Vec<ProjectInstructionFile>,
 }
 
 impl PromptPolicy {
@@ -150,14 +153,34 @@ impl PromptPolicy {
                 "Use `@work-leaf done` when no more orchestrator work is required.",
             ]
             .join("\n"),
+            project_instructions: Vec::new(),
         }
     }
 
+    pub fn for_project(root: impl AsRef<Path>) -> Result<Self, AgentError> {
+        let mut policy = Self::for_restricted_agents();
+        policy.project_instructions = load_project_instructions(root.as_ref())?;
+        Ok(policy)
+    }
+
     pub fn inject(&self, agent_id: &AgentId, feature: &str, prompt: &str) -> String {
-        format!(
-            "{preamble}\n\nAgent-ID: {agent_id}\nFeature: {feature}\n\nUser prompt:\n{prompt}",
-            preamble = self.preamble
-        )
+        let mut text = self.preamble.clone();
+        if !self.project_instructions.is_empty() {
+            text.push_str("\n\nRepository instructions from the launch project:");
+            for instructions in &self.project_instructions {
+                text.push_str("\n\n--- ");
+                text.push_str(&instructions.path.display().to_string());
+                text.push_str(" ---\n");
+                text.push_str(&instructions.text);
+                if !instructions.text.ends_with('\n') {
+                    text.push('\n');
+                }
+            }
+        }
+        text.push_str(&format!(
+            "\n\nAgent-ID: {agent_id}\nFeature: {feature}\n\nUser prompt:\n{prompt}"
+        ));
+        text
     }
 }
 
