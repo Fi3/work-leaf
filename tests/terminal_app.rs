@@ -185,6 +185,32 @@ fn terminal_app_chat_pane_shows_only_the_selected_agent_session() {
 }
 
 #[test]
+fn terminal_app_sgr_mouse_click_on_left_agent_row_selects_that_chat() {
+    let backend = FakeBackend::new(["first launch", "second launch"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new first\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"\x1b:new second\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    assert_eq!(
+        app.ui().selected_agent().map(AgentId::as_str),
+        Some("user-2")
+    );
+
+    app.handle_bytes(b"\x1b[<0;4;3M");
+
+    assert_eq!(
+        app.ui().selected_agent().map(AgentId::as_str),
+        Some("user-1")
+    );
+    assert!(app.render_frame().contains("first launch"));
+    assert!(!app.render_frame().contains("second launch"));
+}
+
+#[test]
 fn terminal_app_streams_spawned_codex_output_before_process_finishes() {
     let root = temp_dir("terminal-app-codex-streaming");
     let fake_bin = root.join("bin");
@@ -217,6 +243,56 @@ printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"item-1\",\"type\
     assert!(app.render_frame().contains("streamed final reply"));
 }
 
+#[test]
+fn terminal_app_answers_agent_file_requests_even_when_one_requested_path_is_missing() {
+    let root = temp_dir("terminal-app-missing-agent-read");
+    fs::write(root.join("Readme.md"), "work-leaf readme\n").unwrap();
+    fs::write(root.join("Cargo.toml"), "[package]\nname = \"work-leaf\"\n").unwrap();
+    let backend = FakeBackend::new([
+        "@work-leaf read README.md Cargo.toml",
+        "I can answer after receiving the available file text",
+    ]);
+    let chat = CommandChat::new(root, backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new explain repo\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    let frame = app.render_frame();
+    assert!(frame.contains("reported unavailable file text to user-1"));
+    assert!(frame.contains("sent file text to user-1: Cargo.toml"));
+    assert!(frame.contains("I can answer after receiving the available file text"));
+
+    let backend = app.into_chat().into_backend();
+    assert_eq!(backend.sends.len(), 1);
+    assert!(backend.sends[0].1.contains("Cargo.toml"));
+    assert!(backend.sends[0].1.contains("name = \"work-leaf\""));
+    assert!(backend.sends[0].1.contains("Unavailable file text"));
+    assert!(backend.sends[0].1.contains("README.md"));
+}
+
+#[test]
+fn terminal_app_streams_automatic_agent_follow_up_output() {
+    let root = temp_dir("terminal-app-streaming-agent-read");
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(root.join("src/lib.rs"), "pub fn value() -> u8 { 1 }\n").unwrap();
+    let chat = CommandChat::new(root, StreamingDirectiveBackend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new inspect source\n");
+
+    assert!(app.wait_for_frame_contains(
+        "streamed answer from directive follow-up",
+        Duration::from_secs(1)
+    ));
+    assert!(app.is_busy());
+    app.wait_for_idle(Duration::from_secs(2));
+    assert!(
+        app.render_frame()
+            .contains("final answer from directive follow-up")
+    );
+}
+
 #[derive(Debug)]
 struct FakeBackend {
     replies: VecDeque<String>,
@@ -226,6 +302,9 @@ struct FakeBackend {
 
 #[derive(Debug)]
 struct SlowBackend;
+
+#[derive(Debug)]
+struct StreamingDirectiveBackend;
 
 fn temp_dir(name: &str) -> PathBuf {
     let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
@@ -287,5 +366,36 @@ impl AgentBackend for SlowBackend {
     fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
         thread::sleep(Duration::from_millis(250));
         Ok(ChatMessage::new(MessageRole::Agent, "slow send reply"))
+    }
+}
+
+impl AgentBackend for StreamingDirectiveBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        let mut session = AgentSession::new(request);
+        session.push_message(MessageRole::Agent, "@work-leaf read src/lib.rs");
+        Ok(session)
+    }
+
+    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+        Ok(ChatMessage::new(
+            MessageRole::Agent,
+            "final answer from directive follow-up",
+        ))
+    }
+
+    fn send_streaming(
+        &mut self,
+        _agent_id: &AgentId,
+        _prompt: &str,
+        sink: &mut dyn FnMut(work_leaf::AgentStreamEvent),
+    ) -> Result<ChatMessage, AgentError> {
+        sink(work_leaf::AgentStreamEvent::AgentMessage(
+            "streamed answer from directive follow-up".to_string(),
+        ));
+        thread::sleep(Duration::from_millis(250));
+        Ok(ChatMessage::new(
+            MessageRole::Agent,
+            "final answer from directive follow-up",
+        ))
     }
 }

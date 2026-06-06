@@ -1,14 +1,13 @@
-use std::fmt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+use std::{fmt, fs};
 
 use crate::agent::{AgentError, AgentId, ChatMessage};
-use crate::codex::AgentBackend;
+use crate::codex::{AgentBackend, AgentStreamEvent};
 use crate::locks::{CommandWriteIntent, CommandWritePolicy, FileAccessError, FileLockTable};
 use crate::patch::{GitPatcher, PatchError, PatchRequest};
 
 #[derive(Debug)]
 pub struct AgentOrchestrator<B> {
-    root: PathBuf,
     locks: FileLockTable,
     command_policy: CommandWritePolicy,
     backend: B,
@@ -20,8 +19,7 @@ where
 {
     pub fn new(root: PathBuf, backend: B) -> Self {
         Self {
-            locks: FileLockTable::new(root.clone()),
-            root,
+            locks: FileLockTable::new(root),
             command_policy: CommandWritePolicy,
             backend,
         }
@@ -35,7 +33,6 @@ where
     ) -> Result<Vec<OrchestratorEvent>, OrchestratorError> {
         handle_agent_directives(
             &mut self.backend,
-            &self.root,
             &self.locks,
             &self.command_policy,
             agent_id,
@@ -55,6 +52,11 @@ pub enum OrchestratorEvent {
     FileTextSent {
         agent_id: AgentId,
         paths: Vec<PathBuf>,
+    },
+    FileTextUnavailable {
+        agent_id: AgentId,
+        paths: Vec<PathBuf>,
+        diagnostic: String,
     },
     CommandClassified {
         agent_id: AgentId,
@@ -84,6 +86,14 @@ impl OrchestratorEvent {
         match self {
             Self::FileTextSent { agent_id, paths } => {
                 format!("sent file text to {agent_id}: {}", display_paths(paths))
+            }
+            Self::FileTextUnavailable {
+                agent_id, paths, ..
+            } => {
+                format!(
+                    "reported unavailable file text to {agent_id}: {}",
+                    display_paths(paths)
+                )
             }
             Self::CommandClassified {
                 agent_id,
@@ -131,12 +141,34 @@ pub(crate) struct DirectiveRun {
 
 pub(crate) fn handle_agent_directives<B>(
     backend: &mut B,
-    root: &Path,
     locks: &FileLockTable,
     command_policy: &CommandWritePolicy,
     agent_id: &AgentId,
     feature: &str,
     text: &str,
+) -> Result<DirectiveRun, OrchestratorError>
+where
+    B: AgentBackend,
+{
+    handle_agent_directives_streaming(
+        backend,
+        locks,
+        command_policy,
+        agent_id,
+        feature,
+        text,
+        &mut |_, _| {},
+    )
+}
+
+pub(crate) fn handle_agent_directives_streaming<B>(
+    backend: &mut B,
+    locks: &FileLockTable,
+    command_policy: &CommandWritePolicy,
+    agent_id: &AgentId,
+    feature: &str,
+    text: &str,
+    stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
 ) -> Result<DirectiveRun, OrchestratorError>
 where
     B: AgentBackend,
@@ -147,23 +179,44 @@ where
     for directive in directives {
         match directive {
             AgentDirective::Read(paths) => {
-                let snapshots = locks.read_files(&paths)?;
-                let normalized_paths = snapshots
+                let response = read_requested_files(locks, &paths)?;
+                let normalized_paths = response
+                    .snapshots
                     .iter()
                     .map(|snapshot| snapshot.path.clone())
                     .collect::<Vec<_>>();
-                let reply = backend.send(agent_id, &render_file_snapshots(&snapshots))?;
+                let unavailable_paths = response
+                    .failures
+                    .iter()
+                    .map(|failure| failure.path.clone())
+                    .collect::<Vec<_>>();
+                let prompt = render_file_read_response(&response.snapshots, &response.failures);
+                let mut sink = |event| stream(agent_id, event);
+                let reply = backend.send_streaming(agent_id, &prompt, &mut sink)?;
                 run.follow_up_replies
                     .push(follow_up(agent_id.clone(), reply));
-                run.events.push(OrchestratorEvent::FileTextSent {
-                    agent_id: agent_id.clone(),
-                    paths: normalized_paths,
-                });
+                if !normalized_paths.is_empty() {
+                    run.events.push(OrchestratorEvent::FileTextSent {
+                        agent_id: agent_id.clone(),
+                        paths: normalized_paths,
+                    });
+                }
+                if !unavailable_paths.is_empty() {
+                    run.events.push(OrchestratorEvent::FileTextUnavailable {
+                        agent_id: agent_id.clone(),
+                        paths: unavailable_paths,
+                        diagnostic: render_file_read_failures(&response.failures),
+                    });
+                }
             }
             AgentDirective::Classify(command) => {
                 let intent = command_policy.classify(command.iter().map(String::as_str));
-                let reply =
-                    backend.send(agent_id, &render_command_classification(&command, &intent))?;
+                let mut sink = |event| stream(agent_id, event);
+                let reply = backend.send_streaming(
+                    agent_id,
+                    &render_command_classification(&command, &intent),
+                    &mut sink,
+                )?;
                 run.follow_up_replies
                     .push(follow_up(agent_id.clone(), reply));
                 run.events.push(OrchestratorEvent::CommandClassified {
@@ -173,7 +226,7 @@ where
                 });
             }
             AgentDirective::Patch { reason, diff } => {
-                let patcher = GitPatcher::new(root.to_path_buf(), locks.clone());
+                let patcher = GitPatcher::new(locks.root().to_path_buf(), locks.clone());
                 let request =
                     PatchRequest::new(agent_id.clone(), feature.to_string(), reason.clone(), diff);
                 match patcher.apply(request) {
@@ -185,8 +238,12 @@ where
                         files: outcome.files,
                     }),
                     Err(PatchError::Conflict { files, diagnostic }) => {
-                        let reply = backend
-                            .send(agent_id, &render_patch_conflict_prompt(&files, &diagnostic))?;
+                        let mut sink = |event| stream(agent_id, event);
+                        let reply = backend.send_streaming(
+                            agent_id,
+                            &render_patch_conflict_prompt(&files, &diagnostic),
+                            &mut sink,
+                        )?;
                         run.follow_up_replies
                             .push(follow_up(agent_id.clone(), reply));
                         run.events.push(OrchestratorEvent::PatchRejected {
@@ -199,9 +256,11 @@ where
                 }
             }
             AgentDirective::Send { target, message } => {
-                let reply = backend.send(
+                let mut sink = |event| stream(&target, event);
+                let reply = backend.send_streaming(
                     &target,
                     &format!("Message from {agent_id} about {feature}:\n{message}"),
+                    &mut sink,
                 )?;
                 run.follow_up_replies.push(follow_up(target.clone(), reply));
                 run.events.push(OrchestratorEvent::MessageRouted {
@@ -220,6 +279,66 @@ fn follow_up(agent_id: AgentId, message: ChatMessage) -> AgentFollowUp {
         agent_id,
         text: message.text,
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct FileReadResponse {
+    snapshots: Vec<crate::locks::FileSnapshot>,
+    failures: Vec<FileReadFailure>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct FileReadFailure {
+    path: PathBuf,
+    diagnostic: String,
+}
+
+fn read_requested_files(
+    locks: &FileLockTable,
+    paths: &[PathBuf],
+) -> Result<FileReadResponse, FileAccessError> {
+    let mut snapshots = Vec::new();
+    let mut failures = Vec::new();
+
+    for path in paths {
+        let normalized = match locks.normalize_path(path) {
+            Ok(path) => path,
+            Err(error) => {
+                failures.push(FileReadFailure {
+                    path: path.clone(),
+                    diagnostic: error.to_string(),
+                });
+                continue;
+            }
+        };
+
+        let read = locks.with_read_locks(std::slice::from_ref(&normalized), || {
+            fs::read_to_string(locks.root().join(&normalized))
+                .map(|text| crate::locks::FileSnapshot {
+                    path: normalized.clone(),
+                    text,
+                })
+                .map_err(FileAccessError::Io)
+        });
+
+        match read {
+            Ok(snapshot) => snapshots.push(snapshot),
+            Err(FileAccessError::Io(error)) => failures.push(FileReadFailure {
+                path: normalized,
+                diagnostic: error.to_string(),
+            }),
+            Err(FileAccessError::PathEscapesRoot(path)) => failures.push(FileReadFailure {
+                path,
+                diagnostic: "path escapes project root".to_string(),
+            }),
+            Err(FileAccessError::Poisoned) => return Err(FileAccessError::Poisoned),
+        }
+    }
+
+    Ok(FileReadResponse {
+        snapshots,
+        failures,
+    })
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -341,7 +460,10 @@ fn split_required(rest: &str, error: &str) -> Result<Vec<String>, OrchestratorEr
     }
 }
 
-fn render_file_snapshots(snapshots: &[crate::locks::FileSnapshot]) -> String {
+fn render_file_read_response(
+    snapshots: &[crate::locks::FileSnapshot],
+    failures: &[FileReadFailure],
+) -> String {
     let mut text = String::from("work-leaf file text\n");
     for snapshot in snapshots {
         text.push_str("\n--- ");
@@ -351,6 +473,22 @@ fn render_file_snapshots(snapshots: &[crate::locks::FileSnapshot]) -> String {
         if !snapshot.text.ends_with('\n') {
             text.push('\n');
         }
+    }
+    if !failures.is_empty() {
+        text.push_str("\nUnavailable file text\n");
+        text.push_str(&render_file_read_failures(failures));
+    }
+    text
+}
+
+fn render_file_read_failures(failures: &[FileReadFailure]) -> String {
+    let mut text = String::new();
+    for failure in failures {
+        text.push_str("- ");
+        text.push_str(&failure.path.display().to_string());
+        text.push_str(": ");
+        text.push_str(&failure.diagnostic);
+        text.push('\n');
     }
     text
 }

@@ -60,6 +60,27 @@ fn vim_style_keys_drive_mode_focus_visibility_and_tabs() {
 }
 
 #[test]
+fn comma_does_not_hide_the_right_chat_while_chat_focus_is_active() {
+    let mut ui = TerminalUi::new(100, 40);
+    let agent_id = AgentId::new("chat-comma").unwrap();
+    ui.add_agent(AgentListEntry::new(agent_id.clone(), "chat"));
+    ui.activate_agent_chat(&agent_id).unwrap();
+
+    ui.handle_key(UiKey::Esc);
+    ui.handle_key(UiKey::Char(','));
+
+    assert_eq!(ui.focus(), PaneFocus::Right);
+    assert_eq!(ui.layout().right_surface, Some(UiSurface::AgentChat));
+
+    ui.handle_key(UiKey::CtrlW);
+    ui.handle_key(UiKey::Char('h'));
+    ui.handle_key(UiKey::Char(','));
+
+    assert_eq!(ui.focus(), PaneFocus::Left);
+    assert_eq!(ui.layout().right_surface, None);
+}
+
+#[test]
 fn colon_enters_command_prompt_only_from_command_mode() {
     let mut ui = TerminalUi::new(100, 40);
 
@@ -225,6 +246,22 @@ fn left_pane_navigation_moves_cursor_to_selected_agent_row_and_opens_chat() {
     assert_eq!(ui.selected_agent(), Some(&chat_a));
     assert_eq!(ui.focus(), PaneFocus::Right);
     assert!(ui.render_screen("agent chat").contains("chat-a"));
+}
+
+#[test]
+fn mouse_clicking_a_left_pane_agent_row_opens_that_agent_chat() {
+    let mut ui = TerminalUi::new(100, 20);
+    let chat_a = AgentId::new("chat-a").unwrap();
+    let chat_b = AgentId::new("chat-b").unwrap();
+    ui.add_agent(AgentListEntry::new(chat_a.clone(), "parser"));
+    ui.add_agent(AgentListEntry::new(chat_b.clone(), "docs"));
+    ui.select_agent(&chat_a).unwrap();
+
+    ui.handle_key(UiKey::MouseClick { column: 4, row: 4 });
+
+    assert_eq!(ui.selected_agent(), Some(&chat_b));
+    assert_eq!(ui.focus(), PaneFocus::Right);
+    assert_eq!(ui.layout().right_surface, Some(UiSurface::AgentChat));
 }
 
 #[test]

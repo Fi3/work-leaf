@@ -22,8 +22,9 @@ agent/orchestrator mechanisms, not user commands.
 ## Terminal UI
 
 The terminal workspace uses the full terminal viewport. The left pane occupies one fifth of the
-viewport while the right pane is visible. The right pane can be hidden and shown from command mode
-with `,`.
+viewport while the right pane is visible. The right pane can be hidden and shown with `,` from
+command mode while the left control pane is focused. `,` does not close the selected chat while the
+right chat pane is focused.
 
 The UI behaves like nvim for modal input. `Esc`, `i`, `:`, `,`, and `Ctrl-W h/j/k/l` act
 immediately without requiring Enter. `:` opens the bottom command prompt only from command mode.
@@ -37,7 +38,8 @@ starts, then frames update in place so typing does not flash, blink, or drop fas
 
 The left pane behaves like a navigable control tree. It lists the work-leaf command interface and
 all running agents. Command-mode navigation selects entries, opens the selected entry, hides/shows
-agents, and lets the user return to any agent chat. Ready agents are highlighted.
+agents, and lets the user return to any agent chat. Mouse clicks on agent rows select that agent and
+open its chat in the right pane. Ready agents are highlighted.
 
 Agent entries show introspection: agent id, feature/work description, readiness, modified files,
 conflicting agents, dependencies, and dependents.
@@ -60,6 +62,10 @@ The orchestrator can route text between agents where workflows require it. Revie
 agent summary to a reviewer agent, sends reviewer findings back to the original agent, and asks the
 reviewer to recheck. Linearization sends reviewed commit information and user decisions to a
 linearizer agent.
+
+When an agent asks for file text with `@work-leaf read <path...>`, the orchestrator sends available
+file snapshots back to that same agent session, reports unavailable paths in the same response, and
+continues the follow-up loop so the agent can answer after receiving the file text.
 
 ## File Locking
 

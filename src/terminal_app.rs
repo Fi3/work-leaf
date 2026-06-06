@@ -23,6 +23,7 @@ where
     chat_buffer: String,
     command_transcript: Vec<String>,
     agent_chats: BTreeMap<AgentId, AgentChat>,
+    escape_sequence: Option<Vec<u8>>,
     spinner: usize,
     dirty: bool,
     quit: bool,
@@ -41,6 +42,7 @@ where
             chat_buffer: String::new(),
             command_transcript: vec![crate::cli::render_command_chat_help()],
             agent_chats: BTreeMap::new(),
+            escape_sequence: None,
             spinner: 0,
             dirty: true,
             quit: false,
@@ -124,6 +126,16 @@ where
         self.poll_worker();
         if self.quit {
             return false;
+        }
+
+        if self.continue_escape_sequence(byte) {
+            return !self.quit;
+        }
+
+        if byte == 27 {
+            self.escape_sequence = Some(Vec::new());
+            self.handle_input(TerminalAppInput::Key(UiKey::Esc));
+            return !self.quit;
         }
 
         let Some(input) = TerminalAppInput::from_byte(byte) else {
@@ -264,15 +276,14 @@ where
             .loading = Some(LoadingKind::Launching);
 
         self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
-            let stream_agent_id = agent_id.clone();
             let stream_sender = sender.clone();
-            let mut stream = move |event| {
+            let mut stream = move |event_agent_id: &AgentId, event| {
                 let _ = stream_sender.send(WorkerEvent::Stream {
-                    agent_id: stream_agent_id.clone(),
+                    agent_id: event_agent_id.clone(),
                     text: stream_event_text(event),
                 });
             };
-            match chat.launch_prepared_agent_streaming(launch, &mut stream) {
+            match chat.launch_prepared_agent_streaming_with_ids(launch, &mut stream) {
                 Ok(result) => {
                     let _ = sender.send(WorkerEvent::Complete {
                         agent_id: Some(agent_id),
@@ -348,15 +359,14 @@ where
             .loading = Some(LoadingKind::WaitingForReply);
 
         self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
-            let stream_agent_id = agent_id.clone();
             let stream_sender = sender.clone();
-            let mut stream = move |event| {
+            let mut stream = move |event_agent_id: &AgentId, event| {
                 let _ = stream_sender.send(WorkerEvent::Stream {
-                    agent_id: stream_agent_id.clone(),
+                    agent_id: event_agent_id.clone(),
                     text: stream_event_text(event),
                 });
             };
-            match chat.send_to_agent_streaming(&agent_id, &message, &mut stream) {
+            match chat.send_to_agent_streaming_with_ids(&agent_id, &message, &mut stream) {
                 Ok(result) => {
                     let _ = sender.send(WorkerEvent::Complete {
                         agent_id: Some(agent_id),
@@ -462,6 +472,32 @@ where
         }
         terminal_right_content("", &self.command_transcript)
     }
+
+    fn continue_escape_sequence(&mut self, byte: u8) -> bool {
+        let Some(sequence) = self.escape_sequence.as_mut() else {
+            return false;
+        };
+
+        if sequence.is_empty() && byte != b'[' {
+            self.escape_sequence = None;
+            return false;
+        }
+
+        sequence.push(byte);
+        if is_complete_control_sequence(sequence) {
+            let complete = self
+                .escape_sequence
+                .take()
+                .expect("escape sequence is present");
+            if let Some(key) = parse_control_sequence(&complete) {
+                self.handle_input(TerminalAppInput::Key(key));
+            }
+        } else if sequence.len() > MAX_ESCAPE_SEQUENCE {
+            self.escape_sequence = None;
+        }
+
+        true
+    }
 }
 
 #[derive(Debug)]
@@ -522,6 +558,36 @@ fn stream_event_text(event: AgentStreamEvent) -> String {
 
 fn split_command_line(line: &str) -> Vec<String> {
     line.split_whitespace().map(str::to_string).collect()
+}
+
+const MAX_ESCAPE_SEQUENCE: usize = 64;
+
+fn is_complete_control_sequence(sequence: &[u8]) -> bool {
+    sequence.len() > 1
+        && sequence
+            .last()
+            .is_some_and(|byte| (0x40..=0x7e).contains(byte))
+}
+
+fn parse_control_sequence(sequence: &[u8]) -> Option<UiKey> {
+    parse_sgr_mouse_click(sequence)
+}
+
+fn parse_sgr_mouse_click(sequence: &[u8]) -> Option<UiKey> {
+    if !sequence.starts_with(b"[<") || *sequence.last()? != b'M' {
+        return None;
+    }
+
+    let body = std::str::from_utf8(&sequence[2..sequence.len() - 1]).ok()?;
+    let mut parts = body.split(';');
+    let button = parts.next()?.parse::<u16>().ok()?;
+    let column = parts.next()?.parse::<u16>().ok()?;
+    let row = parts.next()?.parse::<u16>().ok()?;
+    if parts.next().is_some() || button & 0b11 != 0 {
+        return None;
+    }
+
+    Some(UiKey::MouseClick { column, row })
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

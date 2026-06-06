@@ -35,6 +35,7 @@ pub enum UiKey {
     Char(char),
     Esc,
     CtrlW,
+    MouseClick { column: u16, row: u16 },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -113,6 +114,12 @@ impl AgentListEntry {
 enum PendingKey {
     CtrlW,
     G,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum LeftPaneClickTarget {
+    Command,
+    Agent(AgentId),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -218,6 +225,7 @@ impl TerminalUi {
 
     pub fn select_agent(&mut self, agent_id: &AgentId) -> Result<(), String> {
         if self.agents.iter().any(|agent| &agent.id == agent_id) {
+            self.right_visible = true;
             self.selected_agent = Some(agent_id.clone());
             self.windows[self.active_window] = UiWindow::chat(agent_id.clone());
             self.control_selected = self
@@ -246,6 +254,11 @@ impl TerminalUi {
     }
 
     pub fn handle_key(&mut self, key: UiKey) -> Vec<UiAction> {
+        if let UiKey::MouseClick { column, row } = key {
+            self.pending = None;
+            return self.handle_mouse_click(column, row);
+        }
+
         if let Some(pending) = self.pending.take() {
             return self.handle_pending_key(pending, key);
         }
@@ -271,7 +284,7 @@ impl TerminalUi {
                 self.mode = UiMode::Prompt;
                 Vec::new()
             }
-            UiKey::Char(',') if self.mode == UiMode::Command => {
+            UiKey::Char(',') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
                 self.right_visible = !self.right_visible;
                 if !self.right_visible {
                     self.focus = PaneFocus::Left;
@@ -545,6 +558,7 @@ impl TerminalUi {
     fn open_control_selection(&mut self) {
         if self.control_selected == 0 {
             self.select_command_interface();
+            self.right_visible = true;
             self.focus = PaneFocus::Right;
             return;
         }
@@ -552,6 +566,48 @@ impl TerminalUi {
             let _ = self.select_agent(&agent_id);
             self.focus = PaneFocus::Right;
         }
+    }
+
+    fn handle_mouse_click(&mut self, column: u16, row: u16) -> Vec<UiAction> {
+        if column == 0 || row == 0 {
+            return Vec::new();
+        }
+
+        let layout = self.layout();
+        let left_width = if self.right_visible {
+            layout.left_width
+        } else {
+            self.width
+        };
+
+        if column <= left_width {
+            self.mode = UiMode::Command;
+            self.focus = PaneFocus::Left;
+            let Some(target) = self.left_pane_click_target(row) else {
+                return Vec::new();
+            };
+            match target {
+                LeftPaneClickTarget::Command => {
+                    self.select_command_interface();
+                    self.right_visible = true;
+                    self.focus = PaneFocus::Right;
+                }
+                LeftPaneClickTarget::Agent(agent_id) => {
+                    let _ = self.activate_agent_chat(&agent_id);
+                }
+            }
+        } else if self.right_visible {
+            self.focus = PaneFocus::Right;
+            self.mode = if self.selected_agent.is_some()
+                && self.windows[self.active_window].surface == UiSurface::AgentChat
+            {
+                UiMode::Insert
+            } else {
+                UiMode::Command
+            };
+        }
+
+        Vec::new()
     }
 
     fn hide_control_selection(&mut self) {
@@ -607,6 +663,54 @@ impl TerminalUi {
     fn control_selected_agent_id(&self) -> Option<AgentId> {
         self.control_selected_agent_index()
             .map(|index| self.agents[index].id.clone())
+    }
+
+    fn left_pane_click_target(&mut self, row: u16) -> Option<LeftPaneClickTarget> {
+        let list_row = usize::from(row.saturating_sub(2));
+        if row < 2 {
+            return None;
+        }
+        if list_row == 0 {
+            self.control_selected = 0;
+            return Some(LeftPaneClickTarget::Command);
+        }
+
+        let mut current_row = 1;
+        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
+            let agent = &self.agents[*agent_index];
+            if list_row == current_row {
+                self.control_selected = visible_position + 1;
+                return Some(LeftPaneClickTarget::Agent(agent.id.clone()));
+            }
+            current_row += 1;
+
+            if !agent.modified_files.is_empty() {
+                if list_row == current_row {
+                    self.control_selected = visible_position + 1;
+                    return Some(LeftPaneClickTarget::Agent(agent.id.clone()));
+                }
+                current_row += 1;
+            }
+
+            for linked_agents in [
+                &agent.conflicting_agents,
+                &agent.depends_on,
+                &agent.depended_on_by,
+            ] {
+                if !linked_agents.is_empty() {
+                    if list_row == current_row {
+                        self.control_selected = visible_position + 1;
+                        return linked_agents
+                            .first()
+                            .cloned()
+                            .map(LeftPaneClickTarget::Agent);
+                    }
+                    current_row += 1;
+                }
+            }
+        }
+
+        None
     }
 
     fn action_agent_id(&self) -> Option<AgentId> {

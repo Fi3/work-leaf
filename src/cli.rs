@@ -11,7 +11,7 @@ use crate::agent::{AgentId, AgentKind, AgentLaunch, PromptPolicy};
 use crate::codex::{AgentBackend, AgentStreamEvent, CodexBackend, CodexCommandConfig};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::locks::{CommandWritePolicy, FileLockTable};
-use crate::orchestrator::{AgentFollowUp, OrchestratorEvent, handle_agent_directives};
+use crate::orchestrator::{AgentFollowUp, OrchestratorEvent, handle_agent_directives_streaming};
 use crate::review::{GitHistory, ReviewCoordinator, ReviewResult};
 use crate::terminal_app::TerminalApp;
 use crate::ui::UiAction;
@@ -166,19 +166,30 @@ where
         message: &str,
         stream: &mut dyn FnMut(AgentStreamEvent),
     ) -> Result<CommandChatResult, CliError> {
+        let mut stream_with_agent = |_: &AgentId, event| stream(event);
+        self.send_to_agent_streaming_with_ids(agent_id, message, &mut stream_with_agent)
+    }
+
+    pub fn send_to_agent_streaming_with_ids(
+        &mut self,
+        agent_id: &AgentId,
+        message: &str,
+        stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+    ) -> Result<CommandChatResult, CliError> {
         let feature = self
             .agents
             .get(agent_id)
             .cloned()
             .unwrap_or_else(|| "user-agent".to_string());
+        let mut send_stream = |event| stream(agent_id, event);
         let reply = self
             .backend
             .as_mut()
             .expect("command chat backend is present")
-            .send_streaming(agent_id, message, stream)
+            .send_streaming(agent_id, message, &mut send_stream)
             .map_err(CliError::Agent)?
             .text;
-        let reply = self.process_agent_reply(agent_id, &feature, reply)?;
+        let reply = self.process_agent_reply_streaming(agent_id, &feature, reply, stream)?;
         Ok(CommandChatResult::AgentMessage {
             agent_id: agent_id.clone(),
             reply,
@@ -220,13 +231,23 @@ where
         launch: AgentLaunch,
         stream: &mut dyn FnMut(AgentStreamEvent),
     ) -> Result<CommandChatResult, CliError> {
+        let mut stream_with_agent = |_: &AgentId, event| stream(event);
+        self.launch_prepared_agent_streaming_with_ids(launch, &mut stream_with_agent)
+    }
+
+    pub fn launch_prepared_agent_streaming_with_ids(
+        &mut self,
+        launch: AgentLaunch,
+        stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+    ) -> Result<CommandChatResult, CliError> {
         let agent_id = launch.id.clone();
         let feature = launch.feature.clone();
+        let mut launch_stream = |event| stream(&agent_id, event);
         let session = self
             .backend
             .as_mut()
             .expect("command chat backend is present")
-            .launch_streaming(launch, stream)
+            .launch_streaming(launch, &mut launch_stream)
             .map_err(CliError::Agent)?;
         let reply = session
             .messages
@@ -234,7 +255,7 @@ where
             .map(|message| message.text.clone())
             .unwrap_or_default();
         self.agents.insert(agent_id.clone(), feature.clone());
-        let reply = self.process_agent_reply(&agent_id, &feature, reply)?;
+        let reply = self.process_agent_reply_streaming(&agent_id, &feature, reply, stream)?;
         Ok(CommandChatResult::AgentLaunched {
             agent_id,
             feature,
@@ -242,11 +263,12 @@ where
         })
     }
 
-    fn process_agent_reply(
+    fn process_agent_reply_streaming(
         &mut self,
         agent_id: &AgentId,
         feature: &str,
         reply: String,
+        stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
     ) -> Result<String, CliError> {
         let mut text = reply.clone();
         let mut pending = VecDeque::from([AgentFollowUp {
@@ -264,19 +286,30 @@ where
             }
             rounds += 1;
 
+            let current_feature =
+                self.agents
+                    .get(&current.agent_id)
+                    .cloned()
+                    .unwrap_or_else(|| {
+                        if current.agent_id == *agent_id {
+                            feature.to_string()
+                        } else {
+                            "user-agent".to_string()
+                        }
+                    });
             let run = {
                 let backend = self
                     .backend
                     .as_mut()
                     .expect("command chat backend is present");
-                handle_agent_directives(
+                handle_agent_directives_streaming(
                     backend,
-                    &self.project_dir,
                     &self.locks,
                     &self.command_policy,
                     &current.agent_id,
-                    feature,
+                    &current_feature,
                     &current.text,
+                    stream,
                 )?
             };
 
@@ -284,7 +317,7 @@ where
             append_follow_ups(&mut text, &run.follow_up_replies);
 
             for follow_up in run.follow_up_replies {
-                if follow_up.agent_id == *agent_id && !follow_up.text.is_empty() {
+                if !follow_up.text.is_empty() {
                     pending.push_back(follow_up);
                 }
             }
@@ -595,7 +628,10 @@ struct AlternateScreenMode;
 
 impl AlternateScreenMode {
     fn enter(output: &mut impl Write) -> Result<Self, CliError> {
-        write!(output, "\u{1b}[?1049h\u{1b}[2J\u{1b}[H")?;
+        write!(
+            output,
+            "\u{1b}[?1049h\u{1b}[?1000h\u{1b}[?1006h\u{1b}[2J\u{1b}[H"
+        )?;
         output.flush()?;
         Ok(Self)
     }
@@ -604,7 +640,7 @@ impl AlternateScreenMode {
 impl Drop for AlternateScreenMode {
     fn drop(&mut self) {
         let mut stdout = io::stdout();
-        let _ = write!(stdout, "\u{1b}[?1049l\u{1b}[?25h");
+        let _ = write!(stdout, "\u{1b}[?1006l\u{1b}[?1000l\u{1b}[?1049l\u{1b}[?25h");
         let _ = stdout.flush();
     }
 }

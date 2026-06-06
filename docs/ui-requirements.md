@@ -28,7 +28,9 @@ files, agents touching the same files, dependencies on other agents, and agents 
 Ready agents are visually highlighted.
 
 The right pane shows the selected surface. It can show the work-leaf command interface or the chat
-for the selected agent. Pressing `,` in command mode hides or shows the right pane.
+for the selected agent. Pressing `,` from command mode while the left control pane is focused hides
+or shows the right pane. Pressing `,` while the right chat pane is focused does not close the active
+chat.
 An agent chat surface contains only that agent's conversation, loading state, and streamed Codex
 events. It does not include command-chat help, global command output, or messages from other agents.
 
@@ -50,6 +52,10 @@ Insert-mode input is echoed as each byte is handled, including fast typing burst
 `Ctrl-W` followed by `h` or `k` focuses the left pane from command mode. `Ctrl-W` followed by `l`
 or `j` focuses the right pane from command mode when the right pane is visible.
 
+Clicking an agent row in the left pane selects that agent, opens its chat on the right pane, and
+places input focus in that chat. Clicking the work-leaf row opens the command surface. Terminal mouse
+clicks use SGR mouse reporting while the full-screen UI is active.
+
 Pressing `s` in command mode opens the selected chat in a split of the current pane. Pressing `t`
 in command mode opens the selected chat in a new UI window. `gt` moves to the next UI window, and
 `gT` moves to the previous UI window. Pressing `f` in command mode while an agent chat is selected
@@ -69,6 +75,11 @@ session is ready or fails.
 they are triggered automatically when agents need to modify files or interact with the filesystem.
 The orchestrator may spawn internal system agents for review, linearization, and coordination with
 user agents.
+
+When an agent emits `@work-leaf read <path...>`, the orchestrator reads available project files
+through file locks and sends the resulting file text back to that same agent session. Unavailable
+paths are reported to the agent in the same response so the session can continue and answer with the
+available context instead of stalling at the file request.
 
 ## Testability
 
