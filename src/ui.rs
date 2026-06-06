@@ -224,6 +224,18 @@ impl TerminalUi {
         self.agents.push(agent);
     }
 
+    pub fn update_agent_feature(
+        &mut self,
+        agent_id: &AgentId,
+        feature: impl Into<String>,
+    ) -> Result<(), String> {
+        let Some(agent) = self.agents.iter_mut().find(|agent| &agent.id == agent_id) else {
+            return Err(format!("unknown agent `{agent_id}`"));
+        };
+        agent.feature = feature.into();
+        Ok(())
+    }
+
     pub fn set_agent_ready(&mut self, agent_id: &AgentId, ready: bool) -> Result<(), String> {
         let Some(agent) = self.agents.iter_mut().find(|agent| &agent.id == agent_id) else {
             return Err(format!("unknown agent `{agent_id}`"));
