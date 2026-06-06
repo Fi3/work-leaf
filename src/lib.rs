@@ -19,7 +19,8 @@ pub use cli::{
     render_command_chat_help, render_process_help, run_cli_from_env,
 };
 pub use codex::{
-    AgentBackend, AgentStreamEvent, CodexBackend, CodexCommandConfig, CodexInvocation, SandboxMode,
+    AgentBackend, AgentShutdownHandle, AgentStreamEvent, CodexBackend, CodexCommandConfig,
+    CodexInvocation, SandboxMode,
 };
 pub use linearize::{
     LinearizeAction, LinearizeError, LinearizeGroup, LinearizeHandoff, LinearizePlan,

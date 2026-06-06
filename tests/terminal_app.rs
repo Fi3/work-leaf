@@ -177,7 +177,7 @@ fn terminal_app_new_adds_agent_immediately_while_backend_is_loading() {
 }
 
 #[test]
-fn terminal_app_new_adds_next_agent_while_existing_agent_is_busy() {
+fn terminal_app_new_opens_second_agent_slot_while_existing_agent_is_busy() {
     let backend = SlowBackend;
     let chat = CommandChat::new(PathBuf::from("/repo"), backend);
     let mut app = TerminalApp::new(chat, 100, 24);

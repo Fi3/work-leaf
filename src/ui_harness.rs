@@ -5,6 +5,9 @@ pub struct UiHarness {
     ui: TerminalUi,
     prompt_buffer: String,
     chat_buffer: String,
+    chat_cursor: usize,
+    chat_history: Vec<String>,
+    chat_history_index: Option<usize>,
     transcript: Vec<String>,
     next_agent: usize,
     quit: bool,
@@ -16,6 +19,9 @@ impl UiHarness {
             ui: fixture_ui(width, height),
             prompt_buffer: String::new(),
             chat_buffer: String::new(),
+            chat_cursor: 0,
+            chat_history: Vec::new(),
+            chat_history_index: None,
             transcript: vec![
                 "UI harness".to_string(),
                 "Esc command, i insert, : prompt, Ctrl-W h/j/k/l focus, , toggle right, q quit"
@@ -39,9 +45,15 @@ impl UiHarness {
     }
 
     pub fn handle_bytes(&mut self, bytes: &[u8]) -> bool {
-        for byte in bytes {
-            if !self.handle_byte(*byte) {
+        let mut index = 0;
+        while index < bytes.len() {
+            if let Some((key, len)) = parse_key_sequence(&bytes[index..]) {
+                self.handle_input(HarnessInput::Key(key));
+                index += len;
+            } else if !self.handle_byte(bytes[index]) {
                 return false;
+            } else {
+                index += 1;
             }
         }
         true
@@ -71,7 +83,7 @@ impl UiHarness {
                 self.prompt_buffer.pop();
             }
             HarnessInput::Backspace if self.ui.mode() == UiMode::Insert => {
-                self.chat_buffer.pop();
+                self.backspace_chat_char();
             }
             HarnessInput::Enter if self.ui.mode() == UiMode::Prompt => {
                 let line = self.prompt_buffer.trim().to_string();
@@ -85,7 +97,10 @@ impl UiHarness {
             HarnessInput::Enter if self.ui.mode() == UiMode::Insert => {
                 let message = self.chat_buffer.trim().to_string();
                 self.chat_buffer.clear();
+                self.chat_cursor = 0;
+                self.chat_history_index = None;
                 if !message.is_empty() {
+                    self.chat_history.push(message.clone());
                     let target = self
                         .ui
                         .selected_agent()
@@ -100,7 +115,19 @@ impl UiHarness {
                 self.prompt_buffer.push(ch);
             }
             HarnessInput::Char(ch) if self.ui.mode() == UiMode::Insert => {
-                self.chat_buffer.push(ch);
+                self.insert_chat_char(ch);
+            }
+            HarnessInput::Key(UiKey::Left) if self.ui.mode() == UiMode::Insert => {
+                self.move_chat_cursor_left();
+            }
+            HarnessInput::Key(UiKey::Right) if self.ui.mode() == UiMode::Insert => {
+                self.move_chat_cursor_right();
+            }
+            HarnessInput::Key(UiKey::Up) if self.ui.mode() == UiMode::Insert => {
+                self.recall_chat_history(-1);
+            }
+            HarnessInput::Key(UiKey::Down) if self.ui.mode() == UiMode::Insert => {
+                self.recall_chat_history(1);
             }
             HarnessInput::Key(UiKey::Esc) => {
                 self.prompt_buffer.clear();
@@ -163,6 +190,58 @@ impl UiHarness {
         }
     }
 
+    fn insert_chat_char(&mut self, ch: char) {
+        self.chat_buffer.insert(self.chat_cursor, ch);
+        self.chat_cursor += ch.len_utf8();
+        self.chat_history_index = None;
+    }
+
+    fn backspace_chat_char(&mut self) {
+        let Some((previous, _)) = self.chat_buffer[..self.chat_cursor]
+            .char_indices()
+            .next_back()
+        else {
+            return;
+        };
+        self.chat_buffer.drain(previous..self.chat_cursor);
+        self.chat_cursor = previous;
+        self.chat_history_index = None;
+    }
+
+    fn move_chat_cursor_left(&mut self) {
+        if let Some((previous, _)) = self.chat_buffer[..self.chat_cursor]
+            .char_indices()
+            .next_back()
+        {
+            self.chat_cursor = previous;
+        }
+    }
+
+    fn move_chat_cursor_right(&mut self) {
+        if self.chat_cursor >= self.chat_buffer.len() {
+            return;
+        }
+        let next = self.chat_buffer[self.chat_cursor..]
+            .chars()
+            .next()
+            .map(|ch| self.chat_cursor + ch.len_utf8())
+            .unwrap_or(self.chat_buffer.len());
+        self.chat_cursor = next;
+    }
+
+    fn recall_chat_history(&mut self, delta: isize) {
+        if self.chat_history.is_empty() {
+            return;
+        }
+
+        let current = self.chat_history_index.unwrap_or(self.chat_history.len()) as isize;
+        let max = self.chat_history.len().saturating_sub(1) as isize;
+        let next = (current + delta).clamp(0, max) as usize;
+        self.chat_history_index = Some(next);
+        self.chat_buffer = self.chat_history[next].clone();
+        self.chat_cursor = self.chat_buffer.len();
+    }
+
     fn record_actions(&mut self, actions: Vec<crate::UiAction>) {
         self.transcript
             .extend(actions.into_iter().map(|action| format!("{action:?}")));
@@ -176,6 +255,16 @@ impl UiHarness {
         content.push_str("chat> ");
         content.push_str(&self.chat_buffer);
         content
+    }
+}
+
+fn parse_key_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
+    match bytes {
+        [27, b'[', b'A', ..] => Some((UiKey::Up, 3)),
+        [27, b'[', b'B', ..] => Some((UiKey::Down, 3)),
+        [27, b'[', b'C', ..] => Some((UiKey::Right, 3)),
+        [27, b'[', b'D', ..] => Some((UiKey::Left, 3)),
+        _ => None,
     }
 }
 

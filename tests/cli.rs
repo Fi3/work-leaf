@@ -111,9 +111,7 @@ fn restricted_agent_prompt_advertises_completion_signal() {
         "finish the task",
     );
 
-    assert!(prompt.contains(
-        "Use `@work-leaf done` when no more orchestrator work is required."
-    ));
+    assert!(prompt.contains("Use `@work-leaf done` when no more orchestrator work is required."));
 }
 
 #[test]
@@ -201,9 +199,9 @@ fn command_chat_reports_non_convergence_when_emergency_guard_trips() {
         panic!("expected launched agent");
     };
     assert!(reply.contains("agent did not converge after 3 orchestrator rounds"));
-    assert!(!reply.contains(
-        "stopped processing agent directives after the configured round limit"
-    ));
+    assert!(
+        !reply.contains("stopped processing agent directives after the configured round limit")
+    );
 
     let backend = chat.into_backend();
     assert_eq!(backend.sends.len(), 3);

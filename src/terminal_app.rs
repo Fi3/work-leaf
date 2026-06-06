@@ -1,16 +1,16 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use rustyline::line_buffer::{ChangeListener, DeleteListener, Direction, LineBuffer};
 
-use crate::agent::AgentId;
+use crate::agent::{AgentId, AgentLaunch};
 use crate::cli::{
-    CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
-    terminal_right_content, ui_action_text,
+    CliError, CommandChat, CommandChatResult, build_user_agent_launch, command_chat_error_text,
+    command_result_text, terminal_right_content, ui_action_text,
 };
-use crate::codex::{AgentBackend, AgentStreamEvent};
+use crate::codex::{AgentBackend, AgentShutdownHandle, AgentStreamEvent};
 use crate::ui::{AgentListEntry, TerminalUi, UiKey, UiMode};
 
 #[derive(Debug)]
@@ -19,13 +19,17 @@ where
     B: AgentBackend + Send + 'static,
 {
     chat: Option<CommandChat<B>>,
+    shutdown: AgentShutdownHandle,
+    shutdown_on_drop: bool,
     worker: Option<Worker<B>>,
+    pending_operations: VecDeque<PendingOperation>,
     ui: TerminalUi,
     prompt_buffer: PromptLine,
     chat_buffer: PromptLine,
     command_transcript: Vec<String>,
     agent_chats: BTreeMap<AgentId, AgentChat>,
     escape_sequence: Option<Vec<u8>>,
+    next_user_agent: usize,
     spinner: usize,
     dirty: bool,
     quit: bool,
@@ -36,15 +40,21 @@ where
     B: AgentBackend + Send + 'static,
 {
     pub fn new(chat: CommandChat<B>, width: u16, height: u16) -> Self {
+        let shutdown = chat.shutdown_handle();
+        let next_user_agent = chat.next_user_agent_index();
         Self {
             chat: Some(chat),
+            shutdown,
+            shutdown_on_drop: true,
             worker: None,
+            pending_operations: VecDeque::new(),
             ui: TerminalUi::new(width, height),
             prompt_buffer: PromptLine::new(),
             chat_buffer: PromptLine::new(),
             command_transcript: vec![crate::cli::render_command_chat_help()],
             agent_chats: BTreeMap::new(),
             escape_sequence: None,
+            next_user_agent,
             spinner: 0,
             dirty: true,
             quit: false,
@@ -53,7 +63,10 @@ where
 
     pub fn into_chat(mut self) -> CommandChat<B> {
         self.wait_for_idle(Duration::from_secs(5));
-        self.chat.expect("terminal app command chat is present")
+        self.shutdown_on_drop = false;
+        self.chat
+            .take()
+            .expect("terminal app command chat is present")
     }
 
     pub fn ui(&self) -> &TerminalUi {
@@ -175,6 +188,7 @@ where
             }
             self.chat = Some(worker.handle.join().expect("terminal worker did not panic"));
             self.clear_loading();
+            self.start_next_pending_operation();
             self.dirty = true;
         }
     }
@@ -182,8 +196,7 @@ where
     fn handle_input(&mut self, input: TerminalAppInput) {
         match input {
             TerminalAppInput::Quit => {
-                self.quit = true;
-                self.dirty = true;
+                self.request_quit();
             }
             TerminalAppInput::Backspace if self.ui.mode() == UiMode::Prompt => {
                 self.prompt_buffer.backspace();
@@ -241,42 +254,81 @@ where
         };
 
         match command {
-            "quit" | "exit" => self.quit = true,
+            "quit" | "exit" => self.request_quit(),
             "new" => self.start_new_agent(parts[1..].to_vec()),
             _ => self.start_command_worker(line.to_string()),
         }
     }
 
     fn start_new_agent(&mut self, args: Vec<String>) {
-        if self.worker.is_some() {
-            self.command_transcript
-                .push("work-leaf is busy with another agent operation".to_string());
-            return;
-        }
-
-        let Some(chat) = self.chat.as_mut() else {
-            return;
-        };
-        let launch = match chat.prepare_agent_launch(&args) {
-            Ok(launch) => launch,
-            Err(error) => {
-                self.command_transcript
-                    .push(command_chat_error_text(&error));
-                return;
+        let launch = if self.worker.is_none() {
+            match self.chat.as_mut() {
+                Some(chat) => match chat.prepare_agent_launch(&args) {
+                    Ok(launch) => {
+                        self.next_user_agent = chat.next_user_agent_index();
+                        launch
+                    }
+                    Err(error) => {
+                        self.command_transcript
+                            .push(command_chat_error_text(&error));
+                        return;
+                    }
+                },
+                None => match self.prepare_queued_agent_launch(&args) {
+                    Ok(launch) => launch,
+                    Err(error) => {
+                        self.command_transcript
+                            .push(command_chat_error_text(&error));
+                        return;
+                    }
+                },
+            }
+        } else {
+            match self.prepare_queued_agent_launch(&args) {
+                Ok(launch) => launch,
+                Err(error) => {
+                    self.command_transcript
+                        .push(command_chat_error_text(&error));
+                    return;
+                }
             }
         };
 
-        let agent_id = launch.id.clone();
+        self.add_launching_agent(&launch);
+        if self.worker.is_some() || self.chat.is_none() {
+            self.pending_operations
+                .push_back(PendingOperation::Launch(launch));
+            self.dirty = true;
+            return;
+        }
+
+        self.start_launch_worker(launch);
+    }
+
+    fn prepare_queued_agent_launch(&mut self, args: &[String]) -> Result<AgentLaunch, CliError> {
+        let launch = build_user_agent_launch(self.next_user_agent, args)?;
+        self.next_user_agent += 1;
+        Ok(launch)
+    }
+
+    fn add_launching_agent(&mut self, launch: &AgentLaunch) {
         self.ui.add_agent(AgentListEntry::new(
-            agent_id.clone(),
+            launch.id.clone(),
             launch.feature.clone(),
         ));
-        let _ = self.ui.activate_agent_chat(&agent_id);
+        let _ = self.ui.activate_agent_chat(&launch.id);
+        self.agent_chats
+            .entry(launch.id.clone())
+            .or_default()
+            .loading = Some(LoadingKind::Launching);
+    }
+
+    fn start_launch_worker(&mut self, launch: AgentLaunch) {
+        let agent_id = launch.id.clone();
         self.agent_chats
             .entry(agent_id.clone())
             .or_default()
             .loading = Some(LoadingKind::Launching);
-
         self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
             let stream_sender = sender.clone();
             let mut stream = move |event_agent_id: &AgentId, event| {
@@ -301,6 +353,18 @@ where
             }
             chat
         });
+    }
+
+    fn start_next_pending_operation(&mut self) {
+        if self.worker.is_some() || self.chat.is_none() {
+            return;
+        }
+        let Some(operation) = self.pending_operations.pop_front() else {
+            return;
+        };
+        match operation {
+            PendingOperation::Launch(launch) => self.start_launch_worker(launch),
+        }
     }
 
     fn start_command_worker(&mut self, line: String) {
@@ -411,7 +475,7 @@ where
                 } else {
                     self.command_transcript.push(command_result_text(&result));
                     if matches!(result, CommandChatResult::Quit) {
-                        self.quit = true;
+                        self.request_quit();
                     }
                 }
             }
@@ -459,6 +523,12 @@ where
             .extend(actions.into_iter().map(ui_action_text));
     }
 
+    fn request_quit(&mut self) {
+        self.shutdown.shutdown();
+        self.quit = true;
+        self.dirty = true;
+    }
+
     fn right_content(&self) -> String {
         if let Some(agent_id) = self.ui.selected_agent() {
             let chat = self.agent_chats.get(agent_id);
@@ -500,6 +570,22 @@ where
 
         true
     }
+}
+
+impl<B> Drop for TerminalApp<B>
+where
+    B: AgentBackend + Send + 'static,
+{
+    fn drop(&mut self) {
+        if self.shutdown_on_drop {
+            self.shutdown.shutdown();
+        }
+    }
+}
+
+#[derive(Debug)]
+enum PendingOperation {
+    Launch(AgentLaunch),
 }
 
 #[derive(Debug)]

@@ -8,7 +8,7 @@
     files that modified, which are the other agents that are modifing the same files, if the
     agents patch depends on others agents, or if other agents depend on it, every agent is
     clickable so it open the specific agent chat
-* right part can be hide/show cliking "," when in command mode
+* left part can be hide/show cliking "," when in command mode
 * to go in command press (esc), to go in insert mode press (i)
 * when the cursor is in the right part we are always in command mode
 * ctrl-w (when in command mode) then (h) go left or (l) go right

@@ -49,6 +49,9 @@ where
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum OrchestratorEvent {
+    AgentDone {
+        agent_id: AgentId,
+    },
     FileTextSent {
         agent_id: AgentId,
         paths: Vec<PathBuf>,
@@ -84,6 +87,9 @@ pub enum OrchestratorEvent {
 impl OrchestratorEvent {
     pub fn summary(&self) -> String {
         match self {
+            Self::AgentDone { agent_id } => {
+                format!("agent {agent_id} reported done")
+            }
             Self::FileTextSent { agent_id, paths } => {
                 format!("sent file text to {agent_id}: {}", display_paths(paths))
             }
@@ -137,6 +143,7 @@ pub(crate) struct AgentFollowUp {
 pub(crate) struct DirectiveRun {
     pub events: Vec<OrchestratorEvent>,
     pub follow_up_replies: Vec<AgentFollowUp>,
+    pub completed: bool,
 }
 
 pub(crate) fn handle_agent_directives<B>(
@@ -268,6 +275,13 @@ where
                     to: target,
                 });
             }
+            AgentDirective::Done => {
+                run.completed = true;
+                run.events.push(OrchestratorEvent::AgentDone {
+                    agent_id: agent_id.clone(),
+                });
+                break;
+            }
         }
     }
 
@@ -347,6 +361,7 @@ enum AgentDirective {
     Classify(Vec<String>),
     Patch { reason: String, diff: String },
     Send { target: AgentId, message: String },
+    Done,
 }
 
 fn parse_agent_directives(text: &str) -> Result<Vec<AgentDirective>, OrchestratorError> {
@@ -362,7 +377,9 @@ fn parse_agent_directives(text: &str) -> Result<Vec<AgentDirective>, Orchestrato
             continue;
         }
 
-        if let Some(rest) = directive_rest(body, "read") {
+        if body == "done" {
+            directives.push(AgentDirective::Done);
+        } else if let Some(rest) = directive_rest(body, "read") {
             let paths = split_required(rest, "read requires at least one path")?
                 .into_iter()
                 .map(PathBuf::from)

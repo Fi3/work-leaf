@@ -35,6 +35,10 @@ pub enum UiKey {
     Char(char),
     Esc,
     CtrlW,
+    Up,
+    Down,
+    Left,
+    Right,
     MouseClick { column: u16, row: u16 },
 }
 
@@ -291,7 +295,17 @@ impl TerminalUi {
                 self.select_control_row_surface();
                 Vec::new()
             }
+            UiKey::Down if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(1);
+                self.select_control_row_surface();
+                Vec::new()
+            }
             UiKey::Char('k') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(-1);
+                self.select_control_row_surface();
+                Vec::new()
+            }
+            UiKey::Up if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
                 self.move_control_selection(-1);
                 self.select_control_row_surface();
                 Vec::new()

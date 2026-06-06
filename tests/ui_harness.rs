@@ -155,13 +155,22 @@ fn scripted_harness_arrow_keys_move_left_pane_selection_like_j_k() {
     let mut harness = UiHarness::new(80, 24);
 
     assert_eq!(harness.ui().focus(), PaneFocus::Left);
-    assert_eq!(harness.ui().selected_agent().map(|id| id.as_str()), Some("user-1"));
+    assert_eq!(
+        harness.ui().selected_agent().map(|id| id.as_str()),
+        Some("user-1")
+    );
 
     harness.handle_bytes(b"\x1b[B");
-    assert_eq!(harness.ui().selected_agent().map(|id| id.as_str()), Some("user-2"));
+    assert_eq!(
+        harness.ui().selected_agent().map(|id| id.as_str()),
+        Some("user-2")
+    );
 
     harness.handle_bytes(b"\x1b[A");
-    assert_eq!(harness.ui().selected_agent().map(|id| id.as_str()), Some("user-1"));
+    assert_eq!(
+        harness.ui().selected_agent().map(|id| id.as_str()),
+        Some("user-1")
+    );
 }
 
 fn strip_ansi(input: &str) -> String {

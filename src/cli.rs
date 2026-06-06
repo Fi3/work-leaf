@@ -144,6 +144,10 @@ where
         self.shutdown.shutdown();
     }
 
+    pub(crate) fn next_user_agent_index(&self) -> usize {
+        self.next_user_agent
+    }
+
     pub fn handle_line(&mut self, line: &str) -> Result<CommandChatResult, CliError> {
         let parts = split_command_line(line);
         let Some(command) = parts.first().map(String::as_str) else {
@@ -222,21 +226,9 @@ where
     }
 
     pub fn prepare_agent_launch(&mut self, args: &[String]) -> Result<AgentLaunch, CliError> {
-        let agent_id =
-            AgentId::new(format!("user-{}", self.next_user_agent)).map_err(CliError::Agent)?;
+        let launch = build_user_agent_launch(self.next_user_agent, args)?;
         self.next_user_agent += 1;
-        let feature = "user-agent".to_string();
-        let prompt = if args.is_empty() {
-            DEFAULT_NEW_AGENT_PROMPT.to_string()
-        } else {
-            args.join(" ")
-        };
-        Ok(AgentLaunch::new(
-            agent_id,
-            AgentKind::Codex,
-            feature,
-            prompt,
-        ))
+        Ok(launch)
     }
 
     pub fn launch_prepared_agent_streaming(
@@ -255,6 +247,7 @@ where
     ) -> Result<CommandChatResult, CliError> {
         let agent_id = launch.id.clone();
         let feature = launch.feature.clone();
+        self.reserve_prepared_agent_id(&agent_id);
         let mut launch_stream = |event| stream(&agent_id, event);
         let session = self
             .backend
@@ -274,6 +267,12 @@ where
             feature,
             reply,
         })
+    }
+
+    fn reserve_prepared_agent_id(&mut self, agent_id: &AgentId) {
+        if let Some(number) = user_agent_number(agent_id) {
+            self.next_user_agent = self.next_user_agent.max(number.saturating_add(1));
+        }
     }
 
     fn process_agent_reply_streaming(
@@ -363,6 +362,29 @@ where
             LinearizePlanner::<B>::questions_for(&commits),
         ))
     }
+}
+
+pub(crate) fn build_user_agent_launch(
+    agent_number: usize,
+    args: &[String],
+) -> Result<AgentLaunch, CliError> {
+    let agent_id = AgentId::new(format!("user-{agent_number}")).map_err(CliError::Agent)?;
+    let feature = "user-agent".to_string();
+    let prompt = if args.is_empty() {
+        DEFAULT_NEW_AGENT_PROMPT.to_string()
+    } else {
+        args.join(" ")
+    };
+    Ok(AgentLaunch::new(
+        agent_id,
+        AgentKind::Codex,
+        feature,
+        prompt,
+    ))
+}
+
+fn user_agent_number(agent_id: &AgentId) -> Option<usize> {
+    agent_id.as_str().strip_prefix("user-")?.parse().ok()
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
