@@ -75,6 +75,21 @@ impl AgentListEntry {
         self.modified_files.push(path.into());
         self
     }
+
+    pub fn with_conflicting_agent(mut self, agent_id: AgentId) -> Self {
+        self.conflicting_agents.push(agent_id);
+        self
+    }
+
+    pub fn with_dependency(mut self, agent_id: AgentId) -> Self {
+        self.depends_on.push(agent_id);
+        self
+    }
+
+    pub fn with_dependent(mut self, agent_id: AgentId) -> Self {
+        self.depended_on_by.push(agent_id);
+        self
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -177,10 +192,16 @@ impl TerminalUi {
     pub fn select_agent(&mut self, agent_id: &AgentId) -> Result<(), String> {
         if self.agents.iter().any(|agent| &agent.id == agent_id) {
             self.selected_agent = Some(agent_id.clone());
+            self.windows[self.active_window] = UiWindow::chat(agent_id.clone());
             Ok(())
         } else {
             Err(format!("unknown agent `{agent_id}`"))
         }
+    }
+
+    pub fn select_command_interface(&mut self) {
+        self.selected_agent = None;
+        self.windows[self.active_window] = UiWindow::command();
     }
 
     pub fn handle_key(&mut self, key: UiKey) -> Vec<UiAction> {
@@ -221,6 +242,11 @@ impl TerminalUi {
 
     pub fn render_left_pane(&self) -> String {
         let mut rendered = String::new();
+        if self.selected_agent.is_none() {
+            rendered.push_str("> work-leaf  command\n");
+        } else {
+            rendered.push_str("  work-leaf  command\n");
+        }
         for agent in &self.agents {
             let selected = self
                 .selected_agent
@@ -232,21 +258,57 @@ impl TerminalUi {
                 rendered.push_str("  ");
             }
             rendered.push_str(agent.id.as_str());
-            rendered.push_str("  ");
+            rendered.push_str("  working: ");
             rendered.push_str(&agent.feature);
             if agent.ready {
-                rendered.push_str("  READY");
+                rendered.push_str("  \u{1b}[7mREADY\u{1b}[0m");
             }
             rendered.push('\n');
-            for path in &agent.modified_files {
+            if !agent.modified_files.is_empty() {
                 rendered.push_str("    ");
-                rendered.push_str(&path.display().to_string());
+                rendered.push_str("files: ");
+                rendered.push_str(
+                    &agent
+                        .modified_files
+                        .iter()
+                        .map(|path| path.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                );
                 rendered.push('\n');
             }
             self.render_agent_links("conflicts", &agent.conflicting_agents, &mut rendered);
             self.render_agent_links("depends-on", &agent.depends_on, &mut rendered);
             self.render_agent_links("depended-on-by", &agent.depended_on_by, &mut rendered);
         }
+        rendered
+    }
+
+    pub fn render_screen(&self, right_content: &str) -> String {
+        let layout = self.layout();
+        let left_lines = self.render_left_pane();
+        let left_lines = left_lines.lines().collect::<Vec<_>>();
+        let right_lines = self.render_right_pane(right_content);
+        let right_lines = right_lines.lines().collect::<Vec<_>>();
+        let mut rendered = String::from("\u{1b}[2J\u{1b}[H");
+
+        let content_height = self.height.saturating_sub(1) as usize;
+        for row in 0..content_height {
+            let left = left_lines.get(row).copied().unwrap_or("");
+            rendered.push_str(&fit_cell(left, layout.left_width as usize));
+            if layout.right_surface.is_some() {
+                rendered.push('│');
+                let right = right_lines.get(row).copied().unwrap_or("");
+                rendered.push_str(&fit_cell(
+                    right,
+                    layout.right_width.saturating_sub(1) as usize,
+                ));
+            }
+            rendered.push('\n');
+        }
+
+        rendered.push_str(&self.render_status_line());
+        rendered.push('\n');
         rendered
     }
 
@@ -332,4 +394,99 @@ impl TerminalUi {
         }
         rendered.push('\n');
     }
+
+    fn render_right_pane(&self, right_content: &str) -> String {
+        let mut rendered = String::new();
+        match self.windows[self.active_window].surface {
+            UiSurface::WorkLeafCommand => rendered.push_str("command\n"),
+            UiSurface::AgentChat => {
+                rendered.push_str("chat ");
+                if let Some(agent_id) = &self.windows[self.active_window].agent_id {
+                    rendered.push_str(agent_id.as_str());
+                }
+                rendered.push('\n');
+            }
+        }
+        rendered.push_str(right_content);
+        rendered
+    }
+
+    fn render_status_line(&self) -> String {
+        format!(
+            "mode={} focus={} window={}/{}",
+            self.mode.as_str(),
+            self.focus.as_str(),
+            self.active_window + 1,
+            self.windows.len()
+        )
+    }
+}
+
+impl UiMode {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Command => "command",
+            Self::Insert => "insert",
+        }
+    }
+}
+
+impl PaneFocus {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Left => "left",
+            Self::Right => "right",
+        }
+    }
+}
+
+fn fit_cell(text: &str, width: usize) -> String {
+    let clipped = clip_ansi_text(text, width);
+    let visible = visible_width(&clipped);
+    if visible >= width {
+        clipped
+    } else {
+        format!("{clipped}{}", " ".repeat(width - visible))
+    }
+}
+
+fn clip_ansi_text(text: &str, width: usize) -> String {
+    let mut output = String::new();
+    let mut visible = 0;
+    let mut chars = text.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '\u{1b}' {
+            output.push(ch);
+            for next in chars.by_ref() {
+                output.push(next);
+                if next.is_ascii_alphabetic() {
+                    break;
+                }
+            }
+            continue;
+        }
+        if visible >= width {
+            break;
+        }
+        output.push(ch);
+        visible += 1;
+    }
+    output
+}
+
+fn visible_width(text: &str) -> usize {
+    let mut width = 0;
+    let mut chars = text.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '\u{1b}' {
+            for next in chars.by_ref() {
+                if next.is_ascii_alphabetic() {
+                    break;
+                }
+            }
+        } else {
+            width += 1;
+        }
+    }
+    width
 }
