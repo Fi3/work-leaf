@@ -185,13 +185,56 @@ impl CommandWritePolicy {
             }
             ("cargo", Some("fmt" | "fix")) => CommandWriteIntent::writes(&["."]),
             ("rustc", _) => CommandWriteIntent::writes(&["."]),
+            ("gcc" | "g++" | "clang" | "clang++" | "cc" | "c++", _) => {
+                CommandWriteIntent::writes(&["."])
+            }
+            ("node", _) => CommandWriteIntent::writes(&["."]),
+            ("deno" | "bun", Some("build" | "compile" | "install" | "run" | "test")) => {
+                CommandWriteIntent::writes(&[".", "node_modules"])
+            }
             ("npm" | "pnpm" | "yarn", Some("install" | "add" | "update" | "remove")) => {
                 CommandWriteIntent::writes(&["node_modules", "package-lock.json"])
             }
             ("npm" | "pnpm" | "yarn", Some("run" | "build" | "test")) => {
                 CommandWriteIntent::writes(&["node_modules"])
             }
+            ("python" | "python3", Some("setup.py")) => {
+                CommandWriteIntent::writes(&["build", "dist", "*.egg-info"])
+            }
+            ("python" | "python3", Some("-m"))
+                if parts
+                    .get(2)
+                    .is_some_and(|module| matches!(module.as_str(), "build" | "compileall")) =>
+            {
+                CommandWriteIntent::writes(&["build", "dist", "__pycache__"])
+            }
+            ("pip" | "pip3", Some("install" | "wheel")) => {
+                CommandWriteIntent::writes(&[".", ".venv", "build", "dist"])
+            }
             ("go", Some("build" | "test" | "run")) => CommandWriteIntent::writes(&["."]),
+            ("mvn" | "mvnw", Some("compile" | "package" | "test" | "install" | "verify")) => {
+                CommandWriteIntent::writes(&["target"])
+            }
+            ("gradle" | "gradlew", Some("assemble" | "build" | "check" | "test")) => {
+                CommandWriteIntent::writes(&["build", ".gradle"])
+            }
+            ("dotnet", Some("build" | "pack" | "publish" | "restore" | "run" | "test")) => {
+                CommandWriteIntent::writes(&["bin", "obj"])
+            }
+            ("ruby", _) => CommandWriteIntent::writes(&["."]),
+            ("bundle", Some("exec" | "install" | "update")) => {
+                CommandWriteIntent::writes(&[".bundle", "vendor/bundle", "Gemfile.lock"])
+            }
+            ("php", _) => CommandWriteIntent::writes(&[".phpunit.cache", "vendor"]),
+            ("composer", Some("install" | "update" | "require" | "remove" | "dump-autoload")) => {
+                CommandWriteIntent::writes(&["vendor", "composer.lock"])
+            }
+            ("swift", Some("build" | "run" | "test" | "package")) => {
+                CommandWriteIntent::writes(&[".build"])
+            }
+            ("zig", Some("build" | "test" | "run")) => {
+                CommandWriteIntent::writes(&["zig-cache", "zig-out"])
+            }
             ("make" | "cmake", _) => CommandWriteIntent::writes(&["."]),
             ("pytest", _) => CommandWriteIntent::writes(&[".pytest_cache"]),
             ("python" | "python3", Some("-m")) if parts.get(2).is_some_and(|p| p == "pytest") => {

@@ -93,6 +93,38 @@ fn command_policy_marks_known_build_commands_as_write_intents() {
     assert!(search.paths.is_empty());
 }
 
+#[test]
+fn command_policy_covers_common_language_build_and_test_tools() {
+    let policy = CommandWritePolicy;
+    for command in [
+        vec!["node", "build.js"],
+        vec!["deno", "test"],
+        vec!["bun", "test"],
+        vec!["python", "setup.py", "build"],
+        vec!["python3", "-m", "build"],
+        vec!["pip", "install", "-r", "requirements.txt"],
+        vec!["go", "test", "./..."],
+        vec!["mvn", "test"],
+        vec!["gradle", "build"],
+        vec!["dotnet", "test"],
+        vec!["ruby", "test.rb"],
+        vec!["bundle", "exec", "rspec"],
+        vec!["php", "vendor/bin/phpunit"],
+        vec!["composer", "install"],
+        vec!["swift", "test"],
+        vec!["zig", "build"],
+        vec!["gcc", "-o", "app", "main.c"],
+        vec!["clang", "-o", "app", "main.c"],
+    ] {
+        let intent = policy.classify(command.clone());
+        assert!(intent.writes, "{command:?} should be write-producing");
+        assert!(
+            !intent.paths.is_empty(),
+            "{command:?} should include lock paths"
+        );
+    }
+}
+
 fn unique_temp_dir(name: &str) -> PathBuf {
     let root = std::env::temp_dir().join(format!(
         "work-leaf-{name}-{}-{:?}",
