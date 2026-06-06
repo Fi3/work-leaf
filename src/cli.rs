@@ -1,43 +1,21 @@
 use std::env;
 use std::fmt;
-use std::fs;
-use std::io::{self, Read};
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::PathBuf;
 use std::process;
 
 use crate::agent::{AgentId, AgentKind, AgentLaunch, PromptPolicy};
 use crate::codex::{AgentBackend, CodexBackend, CodexCommandConfig};
-use crate::linearize::LinearizePlanner;
-use crate::locks::{CommandWritePolicy, FileLockTable};
-use crate::patch::{GitPatcher, PatchRequest};
-use crate::review::{GitHistory, ReviewCoordinator};
+use crate::linearize::{LinearizePlanner, LinearizeQuestion};
+use crate::review::{GitHistory, ReviewCoordinator, ReviewResult};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum CliCommand {
+pub enum ProcessCommand {
     Help,
-    NewAgent {
-        agent_id: String,
-        feature: String,
-        prompt: String,
-        model: Option<String>,
-    },
-    Patch {
-        agent_id: String,
-        feature: String,
-        reason: String,
-        diff_path: PathBuf,
-    },
-    Review {
-        max_rounds: usize,
-        model: Option<String>,
-    },
-    LinearizeQuestions,
-    ClassifyCommand {
-        command: Vec<String>,
-    },
+    Launch { model: Option<String> },
 }
 
-pub fn parse_cli_args<I, S>(args: I) -> Result<CliCommand, CliError>
+pub fn parse_process_args<I, S>(args: I) -> Result<ProcessCommand, CliError>
 where
     I: IntoIterator<Item = S>,
     S: Into<String>,
@@ -46,72 +24,258 @@ where
     if args.first().is_some_and(|arg| arg.ends_with("work-leaf")) {
         args.remove(0);
     }
-    let Some(command) = args.first().map(String::as_str) else {
-        return Err(CliError::Usage("missing command".to_string()));
+
+    if args.is_empty() {
+        return Ok(ProcessCommand::Launch { model: None });
+    }
+
+    let mut model = None;
+    let mut index = 0;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--help" | "-h" | "help" => return Ok(ProcessCommand::Help),
+            "--model" => {
+                if index + 1 >= args.len() {
+                    return Err(CliError::Usage("--model requires a value".to_string()));
+                }
+                model = Some(args[index + 1].clone());
+                index += 2;
+            }
+            "new" | "patch" | "review" | "linearize" | "linearize-questions" | "locks" => {
+                return Err(CliError::Usage(
+                    "work-leaf does not accept top-level workflow commands; start work-leaf and use the command chat".to_string(),
+                ));
+            }
+            other => return Err(CliError::Usage(format!("unknown option `{other}`"))),
+        }
+    }
+
+    Ok(ProcessCommand::Launch { model })
+}
+
+pub fn run_cli_from_env() -> ! {
+    let command = match parse_process_args(env::args()) {
+        Ok(command) => command,
+        Err(error) => {
+            eprintln!("{error}");
+            process::exit(2);
+        }
     };
 
     match command {
-        "--help" | "-h" | "help" => Ok(CliCommand::Help),
-        "new" => parse_new(&args[1..]),
-        "patch" => parse_patch(&args[1..]),
-        "review" => parse_review(&args[1..]),
-        "linearize-questions" => {
-            expect_no_extra("linearize-questions", &args[1..])?;
-            Ok(CliCommand::LinearizeQuestions)
+        ProcessCommand::Help => {
+            print!("{}", render_process_help());
+            process::exit(0);
         }
-        "locks" => parse_locks(&args[1..]),
-        other => Err(CliError::Usage(format!("unknown command `{other}`"))),
+        ProcessCommand::Launch { model } => {
+            let project_dir = match env::current_dir() {
+                Ok(path) => path,
+                Err(error) => {
+                    eprintln!("{error}");
+                    process::exit(1);
+                }
+            };
+            let backend = codex_backend(project_dir.clone(), model);
+            let mut chat = CommandChat::new(project_dir, backend);
+            if let Err(error) = run_command_chat(&mut chat) {
+                eprintln!("{error}");
+                process::exit(1);
+            }
+            process::exit(0);
+        }
     }
 }
 
-pub fn run_cli_command(
-    command: CliCommand,
+#[derive(Debug)]
+pub struct CommandChat<B> {
     project_dir: PathBuf,
-    stdin: &str,
-) -> Result<String, CliError> {
-    match command {
-        CliCommand::Help => Ok(usage()),
-        CliCommand::NewAgent {
-            agent_id,
-            feature,
-            prompt,
-            model,
-        } => {
-            let agent_id = AgentId::new(agent_id).map_err(CliError::Agent)?;
-            let backend = codex_backend(project_dir, model);
-            run_new_agent(backend, agent_id, feature, prompt)
+    backend: Option<B>,
+    max_review_rounds: usize,
+}
+
+impl<B> CommandChat<B>
+where
+    B: AgentBackend,
+{
+    pub fn new(project_dir: PathBuf, backend: B) -> Self {
+        Self {
+            project_dir,
+            backend: Some(backend),
+            max_review_rounds: 8,
         }
-        CliCommand::Patch {
-            agent_id,
-            feature,
-            reason,
-            diff_path,
-        } => {
-            let diff = read_diff(&diff_path, stdin)?;
-            let agent_id = AgentId::new(agent_id).map_err(CliError::Agent)?;
-            let locks = FileLockTable::new(project_dir.clone());
-            let patcher = GitPatcher::new(project_dir, locks);
-            let outcome = patcher.apply(PatchRequest::new(agent_id, feature, reason, diff))?;
-            Ok(format!(
-                "applied patch\ncommit: {}\nfiles: {}\n",
-                outcome.commit,
-                outcome
-                    .files
-                    .iter()
-                    .map(|path| path.display().to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ")
+    }
+
+    pub fn with_max_review_rounds(mut self, max_review_rounds: usize) -> Self {
+        self.max_review_rounds = max_review_rounds.max(1);
+        self
+    }
+
+    pub fn into_backend(self) -> B {
+        self.backend.expect("command chat backend is present")
+    }
+
+    pub fn handle_line(&mut self, line: &str) -> Result<CommandChatResult, CliError> {
+        let parts = split_command_line(line);
+        let Some(command) = parts.first().map(String::as_str) else {
+            return Ok(CommandChatResult::Noop);
+        };
+
+        match command {
+            "help" | "?" => Ok(CommandChatResult::Help(render_command_chat_help())),
+            "quit" | "exit" => Ok(CommandChatResult::Quit),
+            "new" => self.launch_agent(&parts[1..]),
+            "review" => self.review(),
+            "linearize" => self.linearize_questions(),
+            "patch" | "locks" => Err(CliError::Usage(format!(
+                "`{command}` is automatic orchestrator machinery, not a command chat command"
+            ))),
+            other => Err(CliError::Usage(format!(
+                "unknown command chat command `{other}`"
+            ))),
+        }
+    }
+
+    fn launch_agent(&mut self, args: &[String]) -> Result<CommandChatResult, CliError> {
+        if args.len() < 3 {
+            return Err(CliError::Usage(
+                "command chat `new` requires <agent-id> <feature> <prompt...>".to_string(),
+            ));
+        }
+        let agent_id = AgentId::new(args[0].clone()).map_err(CliError::Agent)?;
+        let feature = args[1].clone();
+        let prompt = args[2..].join(" ");
+        let session = self
+            .backend
+            .as_mut()
+            .expect("command chat backend is present")
+            .launch(AgentLaunch::new(
+                agent_id.clone(),
+                AgentKind::Codex,
+                feature,
+                prompt,
             ))
+            .map_err(CliError::Agent)?;
+        let reply = session
+            .messages
+            .last()
+            .map(|message| message.text.clone())
+            .unwrap_or_default();
+        Ok(CommandChatResult::AgentLaunched { agent_id, reply })
+    }
+
+    fn review(&mut self) -> Result<CommandChatResult, CliError> {
+        let backend = self
+            .backend
+            .take()
+            .expect("command chat backend is present");
+        let mut coordinator = ReviewCoordinator::new(self.project_dir.clone(), backend)
+            .with_max_rounds(self.max_review_rounds);
+        let results = coordinator.review_latest_agent_commits()?;
+        self.backend = Some(coordinator.into_backend());
+        Ok(CommandChatResult::ReviewComplete(results))
+    }
+
+    fn linearize_questions(&self) -> Result<CommandChatResult, CliError> {
+        let commits = GitHistory::new(self.project_dir.clone()).latest_agent_commits()?;
+        Ok(CommandChatResult::LinearizeQuestions(
+            LinearizePlanner::<B>::questions_for(&commits),
+        ))
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum CommandChatResult {
+    Noop,
+    Help(String),
+    AgentLaunched { agent_id: AgentId, reply: String },
+    ReviewComplete(Vec<ReviewResult>),
+    LinearizeQuestions(Vec<LinearizeQuestion>),
+    Quit,
+}
+
+pub fn render_process_help() -> String {
+    [
+        "Usage: work-leaf [--model <model>]",
+        "",
+        "launches the orchestrator from the current project directory.",
+        "Agents are created inside the command chat. Patches, file locks, review routing, and linearization handoff are orchestrator-controlled workflows, not top-level process commands.",
+        "",
+        "Inside command chat:",
+        "  new <agent-id> <feature> <prompt...>",
+        "  review",
+        "  linearize",
+        "  quit",
+        "",
+    ]
+    .join("\n")
+}
+
+pub fn render_command_chat_help() -> String {
+    [
+        "Command chat:",
+        "  new <agent-id> <feature> <prompt...>",
+        "  review",
+        "  linearize",
+        "  quit",
+        "",
+        "Patches and file locks are triggered automatically when agents interact with the orchestrator.",
+    ]
+    .join("\n")
+}
+
+fn run_command_chat<B>(chat: &mut CommandChat<B>) -> Result<(), CliError>
+where
+    B: AgentBackend,
+{
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
+    writeln!(stdout, "work-leaf orchestrator")?;
+    writeln!(stdout, "project: {}", chat.project_dir.display())?;
+    writeln!(stdout, "{}", render_command_chat_help())?;
+
+    if stdin.is_terminal() {
+        loop {
+            write!(stdout, "work-leaf> ")?;
+            stdout.flush()?;
+            let mut line = String::new();
+            if stdin.read_line(&mut line)? == 0 {
+                break;
+            }
+            if render_command_result(chat.handle_line(line.trim())?, &mut stdout)? {
+                break;
+            }
         }
-        CliCommand::Review { max_rounds, model } => {
-            let backend = codex_backend(project_dir.clone(), model);
-            let mut coordinator =
-                ReviewCoordinator::new(project_dir, backend).with_max_rounds(max_rounds);
-            let results = coordinator.review_latest_agent_commits()?;
-            let mut output = String::new();
+    } else {
+        for line in stdin.lock().lines() {
+            if render_command_result(chat.handle_line(&line?)?, &mut stdout)? {
+                break;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn render_command_result(
+    result: CommandChatResult,
+    output: &mut impl Write,
+) -> Result<bool, CliError> {
+    match result {
+        CommandChatResult::Noop => {}
+        CommandChatResult::Help(help) => writeln!(output, "{help}")?,
+        CommandChatResult::AgentLaunched { agent_id, reply } => {
+            writeln!(output, "agent {agent_id} launched")?;
+            if !reply.is_empty() {
+                writeln!(output, "{reply}")?;
+            }
+        }
+        CommandChatResult::ReviewComplete(results) => {
+            if results.is_empty() {
+                writeln!(output, "no agent commits found")?;
+            }
             for result in results {
-                output.push_str(&format!(
-                    "{} reviewed by {}: rounds={} resolved={}\n",
+                writeln!(
+                    output,
+                    "{} reviewed by {}: rounds={} resolved={}",
                     result.agent_id,
                     result.reviewer_id,
                     result.rounds,
@@ -120,179 +284,21 @@ pub fn run_cli_command(
                     } else {
                         "no"
                     }
-                ));
+                )?;
             }
-            if output.is_empty() {
-                output.push_str("no agent commits found\n");
-            }
-            Ok(output)
         }
-        CliCommand::LinearizeQuestions => {
-            let commits = GitHistory::new(project_dir).latest_agent_commits()?;
-            let questions = LinearizePlanner::<CodexBackend>::questions_for(&commits);
-            let mut output = String::new();
+        CommandChatResult::LinearizeQuestions(questions) => {
+            if questions.is_empty() {
+                writeln!(output, "no reviewed agent commits found")?;
+            }
             for question in questions {
-                output.push_str(&format!(
-                    "{} [{}]\n{}\n",
-                    question.agent_id, question.feature, question.prompt
-                ));
-            }
-            if output.is_empty() {
-                output.push_str("no reviewed agent commits found\n");
-            }
-            Ok(output)
-        }
-        CliCommand::ClassifyCommand { command } => {
-            let intent = CommandWritePolicy.classify(command.iter().map(String::as_str));
-            let paths = if intent.paths.is_empty() {
-                "-".to_string()
-            } else {
-                intent
-                    .paths
-                    .iter()
-                    .map(|path| path.display().to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            };
-            Ok(format!(
-                "writes: {}\npaths: {}\n",
-                if intent.writes { "yes" } else { "no" },
-                paths
-            ))
-        }
-    }
-}
-
-pub fn run_cli_from_env() -> ! {
-    let command = match parse_cli_args(env::args()) {
-        Ok(command) => command,
-        Err(error) => {
-            eprintln!("{error}");
-            process::exit(2);
-        }
-    };
-    let mut stdin = String::new();
-    if command_reads_stdin(&command)
-        && let Err(error) = io::stdin().read_to_string(&mut stdin)
-    {
-        eprintln!("{error}");
-        process::exit(1);
-    }
-    let project_dir = match env::current_dir() {
-        Ok(path) => path,
-        Err(error) => {
-            eprintln!("{error}");
-            process::exit(1);
-        }
-    };
-    match run_cli_command(command, project_dir, &stdin) {
-        Ok(output) => {
-            print!("{output}");
-            process::exit(0);
-        }
-        Err(error) => {
-            eprintln!("{error}");
-            process::exit(1);
-        }
-    }
-}
-
-fn parse_new(args: &[String]) -> Result<CliCommand, CliError> {
-    let (model, args) = parse_optional_model(args)?;
-    if args.len() < 3 {
-        return Err(CliError::Usage(
-            "new requires <agent-id> <feature> <prompt...>".to_string(),
-        ));
-    }
-    Ok(CliCommand::NewAgent {
-        agent_id: args[0].clone(),
-        feature: args[1].clone(),
-        prompt: args[2..].join(" "),
-        model,
-    })
-}
-
-fn parse_patch(args: &[String]) -> Result<CliCommand, CliError> {
-    if args.len() != 4 {
-        return Err(CliError::Usage(
-            "patch requires <agent-id> <feature> <reason> <diff-file|->".to_string(),
-        ));
-    }
-    Ok(CliCommand::Patch {
-        agent_id: args[0].clone(),
-        feature: args[1].clone(),
-        reason: args[2].clone(),
-        diff_path: PathBuf::from(&args[3]),
-    })
-}
-
-fn parse_review(args: &[String]) -> Result<CliCommand, CliError> {
-    let (model, mut args) = parse_optional_model(args)?;
-    let mut max_rounds = 8;
-    while !args.is_empty() {
-        match args[0].as_str() {
-            "--max-rounds" => {
-                if args.len() < 2 {
-                    return Err(CliError::Usage(
-                        "review --max-rounds requires a value".to_string(),
-                    ));
-                }
-                max_rounds = args[1]
-                    .parse()
-                    .map_err(|_| CliError::Usage("max rounds must be a number".to_string()))?;
-                args.drain(0..2);
-            }
-            other => {
-                return Err(CliError::Usage(format!("unknown review option `{other}`")));
+                writeln!(output, "{} [{}]", question.agent_id, question.feature)?;
+                writeln!(output, "{}", question.prompt)?;
             }
         }
+        CommandChatResult::Quit => return Ok(true),
     }
-    Ok(CliCommand::Review { max_rounds, model })
-}
-
-fn parse_locks(args: &[String]) -> Result<CliCommand, CliError> {
-    if args.first().map(String::as_str) != Some("classify") {
-        return Err(CliError::Usage(
-            "locks requires `classify <command...>`".to_string(),
-        ));
-    }
-    if args.len() < 2 {
-        return Err(CliError::Usage(
-            "locks classify requires <command...>".to_string(),
-        ));
-    }
-    Ok(CliCommand::ClassifyCommand {
-        command: args[1..].to_vec(),
-    })
-}
-
-fn parse_optional_model(args: &[String]) -> Result<(Option<String>, Vec<String>), CliError> {
-    let mut model = None;
-    let mut remaining = Vec::new();
-    let mut index = 0;
-    while index < args.len() {
-        if args[index] == "--model" {
-            if index + 1 >= args.len() {
-                return Err(CliError::Usage("--model requires a value".to_string()));
-            }
-            model = Some(args[index + 1].clone());
-            index += 2;
-        } else {
-            remaining.push(args[index].clone());
-            index += 1;
-        }
-    }
-    Ok((model, remaining))
-}
-
-fn expect_no_extra(command: &str, args: &[String]) -> Result<(), CliError> {
-    if args.is_empty() {
-        Ok(())
-    } else {
-        Err(CliError::Usage(format!(
-            "{command} does not accept extra arguments"
-        )))
-    }
+    Ok(false)
 }
 
 fn codex_backend(project_dir: PathBuf, model: Option<String>) -> CodexBackend {
@@ -303,57 +309,8 @@ fn codex_backend(project_dir: PathBuf, model: Option<String>) -> CodexBackend {
     CodexBackend::new(config, PromptPolicy::for_restricted_agents())
 }
 
-fn run_new_agent<B>(
-    mut backend: B,
-    agent_id: AgentId,
-    feature: String,
-    prompt: String,
-) -> Result<String, CliError>
-where
-    B: AgentBackend,
-{
-    let session = backend
-        .launch(AgentLaunch::new(
-            agent_id.clone(),
-            AgentKind::Codex,
-            feature,
-            prompt,
-        ))
-        .map_err(CliError::Agent)?;
-    let reply = session
-        .messages
-        .last()
-        .map(|message| message.text.as_str())
-        .unwrap_or("");
-    Ok(format!("launched {agent_id}\n{reply}\n"))
-}
-
-fn read_diff(path: &PathBuf, stdin: &str) -> Result<String, CliError> {
-    if path.as_os_str() == "-" {
-        Ok(stdin.to_string())
-    } else {
-        fs::read_to_string(path).map_err(CliError::Io)
-    }
-}
-
-fn command_reads_stdin(command: &CliCommand) -> bool {
-    matches!(command, CliCommand::Patch { diff_path, .. } if diff_path.as_os_str() == "-")
-}
-
-pub fn usage() -> String {
-    [
-        "Usage: work-leaf <command>",
-        "",
-        "Commands:",
-        "  new <agent-id> <feature> <prompt...> [--model <model>]",
-        "  patch <agent-id> <feature> <reason> <diff-file|->",
-        "  review [--model <model>] [--max-rounds <n>]",
-        "  linearize-questions",
-        "  locks classify <command...>",
-        "  help",
-        "",
-    ]
-    .join("\n")
+fn split_command_line(line: &str) -> Vec<String> {
+    line.split_whitespace().map(str::to_string).collect()
 }
 
 #[derive(Debug)]
@@ -361,17 +318,15 @@ pub enum CliError {
     Usage(String),
     Agent(crate::agent::AgentError),
     Io(io::Error),
-    Patch(crate::patch::PatchError),
     Review(crate::review::ReviewError),
 }
 
 impl fmt::Display for CliError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Usage(message) => write!(formatter, "{message}\n\n{}", usage()),
+            Self::Usage(message) => write!(formatter, "{message}\n\n{}", render_process_help()),
             Self::Agent(error) => write!(formatter, "{error}"),
             Self::Io(error) => write!(formatter, "{error}"),
-            Self::Patch(error) => write!(formatter, "{error}"),
             Self::Review(error) => write!(formatter, "{error}"),
         }
     }
@@ -382,7 +337,6 @@ impl std::error::Error for CliError {
         match self {
             Self::Agent(error) => Some(error),
             Self::Io(error) => Some(error),
-            Self::Patch(error) => Some(error),
             Self::Review(error) => Some(error),
             Self::Usage(_) => None,
         }
@@ -392,12 +346,6 @@ impl std::error::Error for CliError {
 impl From<io::Error> for CliError {
     fn from(error: io::Error) -> Self {
         Self::Io(error)
-    }
-}
-
-impl From<crate::patch::PatchError> for CliError {
-    fn from(error: crate::patch::PatchError) -> Self {
-        Self::Patch(error)
     }
 }
 

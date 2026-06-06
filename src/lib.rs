@@ -11,7 +11,10 @@ pub use agent::{
     AgentError, AgentId, AgentKind, AgentLaunch, AgentSession, ChatMessage, MessageRole,
     PromptPolicy,
 };
-pub use cli::{CliCommand, CliError, parse_cli_args, run_cli_command, run_cli_from_env};
+pub use cli::{
+    CliError, CommandChat, CommandChatResult, ProcessCommand, parse_process_args,
+    render_command_chat_help, render_process_help, run_cli_from_env,
+};
 pub use codex::{AgentBackend, CodexBackend, CodexCommandConfig, CodexInvocation, SandboxMode};
 pub use linearize::{
     LinearizeAction, LinearizeError, LinearizeGroup, LinearizeHandoff, LinearizePlan,
