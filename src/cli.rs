@@ -161,7 +161,6 @@ where
     fn launch_agent(&mut self, args: &[String]) -> Result<CommandChatResult, CliError> {
         let agent_id =
             AgentId::new(format!("user-{}", self.next_user_agent)).map_err(CliError::Agent)?;
-        self.next_user_agent += 1;
         let feature = "user-agent".to_string();
         let prompt = if args.is_empty() {
             DEFAULT_NEW_AGENT_PROMPT.to_string()
@@ -179,6 +178,7 @@ where
                 prompt,
             ))
             .map_err(CliError::Agent)?;
+        self.next_user_agent += 1;
         let reply = session
             .messages
             .last()
@@ -309,13 +309,17 @@ where
                 prompt_buffer.clear();
                 ui.handle_key(UiKey::Esc);
                 if !line.is_empty() {
-                    let result = chat.handle_line(&line)?;
-                    let should_quit = matches!(result, CommandChatResult::Quit);
                     transcript.push(format!("work-leaf> {line}"));
-                    apply_command_result_to_ui(&mut ui, &result);
-                    transcript.push(command_result_text(&result));
-                    if should_quit {
-                        break;
+                    match chat.handle_line(&line) {
+                        Ok(result) => {
+                            let should_quit = matches!(result, CommandChatResult::Quit);
+                            apply_command_result_to_ui(&mut ui, &result);
+                            transcript.push(command_result_text(&result));
+                            if should_quit {
+                                break;
+                            }
+                        }
+                        Err(error) => transcript.push(command_chat_error_text(&error)),
                     }
                 }
             }
@@ -324,9 +328,11 @@ where
                     let message = chat_buffer.trim().to_string();
                     chat_buffer.clear();
                     if !message.is_empty() {
-                        let result = chat.send_to_agent(&agent_id, &message)?;
                         transcript.push(format!("{agent_id}> {message}"));
-                        transcript.push(command_result_text(&result));
+                        match chat.send_to_agent(&agent_id, &message) {
+                            Ok(result) => transcript.push(command_result_text(&result)),
+                            Err(error) => transcript.push(command_chat_error_text(&error)),
+                        }
                     }
                 }
             }
@@ -374,8 +380,14 @@ where
     writeln!(stdout, "{}", render_command_chat_help())?;
 
     for line in stdin.lock().lines() {
-        if render_command_result(chat.handle_line(&line?)?, &mut stdout)? {
-            break;
+        let line = line?;
+        match chat.handle_line(&line) {
+            Ok(result) => {
+                if render_command_result(result, &mut stdout)? {
+                    break;
+                }
+            }
+            Err(error) => writeln!(stdout, "{}", command_chat_error_text(&error))?,
         }
     }
     Ok(())
@@ -463,6 +475,16 @@ fn command_result_text(result: &CommandChatResult) -> String {
         }
         CommandChatResult::Quit => "quit".to_string(),
     }
+}
+
+fn command_chat_error_text(error: &CliError) -> String {
+    let message = match error {
+        CliError::Usage(message) => message.clone(),
+        CliError::Agent(error) => error.to_string(),
+        CliError::Io(error) => error.to_string(),
+        CliError::Review(error) => error.to_string(),
+    };
+    format!("error: {message}")
 }
 
 fn apply_command_result_to_ui(ui: &mut TerminalUi, result: &CommandChatResult) {
