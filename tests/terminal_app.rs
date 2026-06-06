@@ -130,6 +130,31 @@ fn terminal_app_does_not_clear_screen_on_each_render_or_drop_fast_input() {
 }
 
 #[test]
+fn terminal_app_keeps_chat_prompt_visible_after_large_agent_output() {
+    let long_reply = (0..48)
+        .map(|index| format!("agent-output-line-{index:02}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let backend = FakeBackend {
+        replies: VecDeque::from([long_reply]),
+        launches: Vec::new(),
+        sends: Vec::new(),
+    };
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 80, 12);
+
+    app.handle_bytes(b":new large output\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    let frame = app.render_frame();
+    assert!(frame.contains("agent-output-line-47"));
+    assert!(frame.contains("chat> "));
+
+    app.handle_bytes(b"next question");
+    assert!(app.render_frame().contains("chat> next question"));
+}
+
+#[test]
 fn terminal_app_new_adds_agent_immediately_while_backend_is_loading() {
     let backend = SlowBackend;
     let chat = CommandChat::new(PathBuf::from("/repo"), backend);

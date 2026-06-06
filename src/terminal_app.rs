@@ -3,6 +3,8 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
+use rustyline::line_buffer::{ChangeListener, DeleteListener, Direction, LineBuffer};
+
 use crate::agent::AgentId;
 use crate::cli::{
     CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
@@ -19,8 +21,8 @@ where
     chat: Option<CommandChat<B>>,
     worker: Option<Worker<B>>,
     ui: TerminalUi,
-    prompt_buffer: String,
-    chat_buffer: String,
+    prompt_buffer: PromptLine,
+    chat_buffer: PromptLine,
     command_transcript: Vec<String>,
     agent_chats: BTreeMap<AgentId, AgentChat>,
     escape_sequence: Option<Vec<u8>>,
@@ -38,8 +40,8 @@ where
             chat: Some(chat),
             worker: None,
             ui: TerminalUi::new(width, height),
-            prompt_buffer: String::new(),
-            chat_buffer: String::new(),
+            prompt_buffer: PromptLine::new(),
+            chat_buffer: PromptLine::new(),
             command_transcript: vec![crate::cli::render_command_chat_help()],
             agent_chats: BTreeMap::new(),
             escape_sequence: None,
@@ -148,7 +150,7 @@ where
     pub fn render_frame(&self) -> String {
         let right_content = self.right_content();
         self.ui
-            .render_screen_with_prompt(&right_content, &self.prompt_buffer)
+            .render_screen_with_prompt(&right_content, self.prompt_buffer.as_str())
     }
 
     pub fn poll_worker(&mut self) {
@@ -184,15 +186,15 @@ where
                 self.dirty = true;
             }
             TerminalAppInput::Backspace if self.ui.mode() == UiMode::Prompt => {
-                self.prompt_buffer.pop();
+                self.prompt_buffer.backspace();
                 self.dirty = true;
             }
             TerminalAppInput::Backspace if self.ui.mode() == UiMode::Insert => {
-                self.chat_buffer.pop();
+                self.chat_buffer.backspace();
                 self.dirty = true;
             }
             TerminalAppInput::Enter if self.ui.mode() == UiMode::Prompt => {
-                let line = self.prompt_buffer.trim().to_string();
+                let line = self.prompt_buffer.trimmed_string();
                 self.prompt_buffer.clear();
                 self.ui.handle_key(UiKey::Esc);
                 if !line.is_empty() {
@@ -341,7 +343,7 @@ where
             return;
         }
 
-        let message = self.chat_buffer.trim().to_string();
+        let message = self.chat_buffer.trimmed_string();
         self.chat_buffer.clear();
         if message.is_empty() {
             self.dirty = true;
@@ -468,7 +470,7 @@ where
                     SPINNER[self.spinner]
                 ));
             }
-            return terminal_right_content(&self.chat_buffer, &lines);
+            return terminal_right_content(self.chat_buffer.as_str(), &lines);
         }
         terminal_right_content("", &self.command_transcript)
     }
@@ -612,4 +614,58 @@ impl TerminalAppInput {
             _ => None,
         }
     }
+}
+
+#[derive(Debug)]
+struct PromptLine {
+    buffer: LineBuffer,
+}
+
+impl PromptLine {
+    const CAPACITY: usize = 64 * 1024;
+
+    fn new() -> Self {
+        Self {
+            buffer: LineBuffer::with_capacity(Self::CAPACITY),
+        }
+    }
+
+    fn as_str(&self) -> &str {
+        self.buffer.as_str()
+    }
+
+    fn trimmed_string(&self) -> String {
+        self.as_str().trim().to_string()
+    }
+
+    fn push(&mut self, ch: char) {
+        let mut listener = NoopLineListener;
+        let _ = self.buffer.insert(ch, 1, &mut listener);
+    }
+
+    fn backspace(&mut self) {
+        let mut listener = NoopLineListener;
+        self.buffer.backspace(1, &mut listener);
+    }
+
+    fn clear(&mut self) {
+        let mut listener = NoopLineListener;
+        let len = self.buffer.as_str().len();
+        self.buffer.replace(0..len, "", &mut listener);
+    }
+}
+
+#[derive(Debug)]
+struct NoopLineListener;
+
+impl DeleteListener for NoopLineListener {
+    fn delete(&mut self, _idx: usize, _string: &str, _dir: Direction) {}
+}
+
+impl ChangeListener for NoopLineListener {
+    fn insert_char(&mut self, _idx: usize, _c: char) {}
+
+    fn insert_str(&mut self, _idx: usize, _string: &str) {}
+
+    fn replace(&mut self, _idx: usize, _old: &str, _new: &str) {}
 }

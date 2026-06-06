@@ -357,11 +357,17 @@ impl TerminalUi {
     }
 
     pub fn render_screen_with_prompt(&self, right_content: &str, prompt: &str) -> String {
-        let buffer = self.render_tui_buffer(right_content, prompt);
+        let visible_right_content = self.visible_right_content(right_content);
+        let buffer = self.render_tui_buffer(&visible_right_content, prompt);
         let mut rendered = String::from("\u{1b}[H");
         rendered.push_str(&buffer_to_string(&buffer));
-        rendered.push_str(&self.cursor_sequence(right_content, prompt));
+        rendered.push_str(&self.cursor_sequence(&visible_right_content, prompt));
         rendered
+    }
+
+    fn visible_right_content(&self, right_content: &str) -> String {
+        let (inner_width, inner_height) = self.right_inner_size();
+        tail_visible_content(right_content, inner_width, inner_height)
     }
 
     fn render_tui_buffer(&self, right_content: &str, prompt: &str) -> Buffer {
@@ -750,6 +756,14 @@ impl TerminalUi {
         (row, column)
     }
 
+    fn right_inner_size(&self) -> (u16, u16) {
+        let layout = self.layout();
+        let inner_width = layout.right_width.saturating_sub(2).max(1);
+        let body_height = self.height.saturating_sub(1);
+        let inner_height = body_height.saturating_sub(2).max(1);
+        (inner_width, inner_height)
+    }
+
     fn next_window(&mut self) {
         if !self.windows.is_empty() {
             self.active_window = (self.active_window + 1) % self.windows.len();
@@ -829,4 +843,25 @@ fn visual_rows(line: &str, width: u16) -> u16 {
     let width = width.max(1);
     let len = line.chars().count().min(usize::from(u16::MAX)) as u16;
     (len / width).saturating_add(1)
+}
+
+fn tail_visible_content(content: &str, width: u16, height: u16) -> String {
+    if content.is_empty() {
+        return String::new();
+    }
+
+    let lines = content.lines().collect::<Vec<_>>();
+    let mut selected = Vec::new();
+    let mut used_rows = 0_u16;
+    for line in lines.iter().rev() {
+        let rows = visual_rows(line, width);
+        if selected.is_empty() || used_rows.saturating_add(rows) <= height {
+            selected.push(*line);
+            used_rows = used_rows.saturating_add(rows);
+        } else {
+            break;
+        }
+    }
+    selected.reverse();
+    selected.join("\n")
 }

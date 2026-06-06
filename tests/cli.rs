@@ -5,8 +5,9 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 use work_leaf::{
-    AgentBackend, AgentError, AgentId, AgentSession, ChatMessage, CommandChat, CommandChatResult,
-    MessageRole, ProcessCommand, parse_process_args, render_process_help,
+    AgentBackend, AgentError, AgentId, AgentSession, ChatMessage, CodexBackend, CodexCommandConfig,
+    CommandChat, CommandChatResult, MessageRole, ProcessCommand, PromptPolicy, parse_process_args,
+    render_process_help,
 };
 
 #[test]
@@ -168,6 +169,81 @@ diff --git a/lib.rs b/lib.rs
     assert!(reply.contains("applied patch from user-1"));
     assert_eq!(
         fs::read_to_string(root.join("lib.rs")).unwrap(),
+        "pub fn value() -> u8 { 2 }\n"
+    );
+    let message = git_output(&root, ["log", "-1", "--pretty=%B"]);
+    assert!(message.contains("Agent-ID: user-1"));
+    assert!(message.contains("Feature: user-agent"));
+    assert!(message.contains("Reason: return value two"));
+}
+
+#[test]
+fn command_chat_spawned_codex_handles_read_classify_patch_and_route_directives() {
+    let root = temp_git_repo("command-chat-spawned-codex-protocol");
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(root.join("src/lib.rs"), "pub fn value() -> u8 { 1 }\n").unwrap();
+    git(&root, ["add", "."]);
+    git(
+        &root,
+        ["commit", "-m", "ADD initial spawned protocol fixture"],
+    );
+    let fake_bin = root.join("bin");
+    fs::create_dir_all(&fake_bin).unwrap();
+    let codex = fake_bin.join("codex");
+    fs::write(
+        &codex,
+        "\
+#!/bin/sh
+seen_resume=0
+for arg in \"$@\"; do
+  if [ \"$arg\" = \"resume\" ]; then
+    seen_resume=1
+  fi
+done
+input=$(cat)
+if [ \"$seen_resume\" = \"1\" ]; then
+  case \"$input\" in
+    *\"work-leaf file text\"*)
+      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"read-follow-up\",\"type\":\"agent_message\",\"text\":\"read follow-up received src/lib.rs\"}}'
+      ;;
+    *\"work-leaf command classification\"*)
+      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"classify-follow-up\",\"type\":\"agent_message\",\"text\":\"classification follow-up received target lock\"}}'
+      ;;
+    *\"Message from user-1\"*)
+      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"route-follow-up\",\"type\":\"agent_message\",\"text\":\"routed follow-up received\"}}'
+      ;;
+    *)
+      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"unexpected\",\"type\":\"agent_message\",\"text\":\"unexpected resume prompt\"}}'
+      ;;
+  esac
+else
+  printf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-protocol\"}'
+  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"protocol\",\"type\":\"agent_message\",\"text\":\"@work-leaf read src/lib.rs\\n@work-leaf locks classify cargo test\\n@work-leaf patch return value two\\ndiff --git a/src/lib.rs b/src/lib.rs\\n--- a/src/lib.rs\\n+++ b/src/lib.rs\\n@@ -1 +1 @@\\n-pub fn value() -> u8 { 1 }\\n+pub fn value() -> u8 { 2 }\\n@work-leaf end\\n@work-leaf send user-2 please check this patch\"}}'
+fi
+",
+    )
+    .unwrap();
+    make_executable(&codex);
+    let backend = CodexBackend::new(
+        CodexCommandConfig::new(root.clone()).with_binary(&codex),
+        PromptPolicy::for_restricted_agents(),
+    );
+    let mut chat = CommandChat::new(root.clone(), backend);
+
+    let result = chat.handle_line("new run full protocol").unwrap();
+
+    let CommandChatResult::AgentLaunched { reply, .. } = result else {
+        panic!("expected launched agent");
+    };
+    assert!(reply.contains("sent file text to user-1: src/lib.rs"));
+    assert!(reply.contains("classified command for user-1: writes=yes paths=target"));
+    assert!(reply.contains("applied patch from user-1: return value two"));
+    assert!(reply.contains("routed message from user-1 to user-2"));
+    assert!(reply.contains("read follow-up received src/lib.rs"));
+    assert!(reply.contains("classification follow-up received target lock"));
+    assert!(reply.contains("routed follow-up received"));
+    assert_eq!(
+        fs::read_to_string(root.join("src/lib.rs")).unwrap(),
         "pub fn value() -> u8 { 2 }\n"
     );
     let message = git_output(&root, ["log", "-1", "--pretty=%B"]);
