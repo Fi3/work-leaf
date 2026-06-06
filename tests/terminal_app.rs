@@ -207,6 +207,36 @@ fn terminal_app_new_adds_next_agent_while_existing_agent_is_busy() {
 }
 
 #[test]
+fn terminal_app_new_adds_next_agent_while_existing_agent_is_busy() {
+    let backend = SlowBackend;
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new first slow launch\n");
+    assert!(app.is_busy());
+
+    app.handle_bytes(b"\x1b:new second slow launch\n");
+
+    assert_eq!(
+        app.ui().selected_agent().map(AgentId::as_str),
+        Some("user-2")
+    );
+    assert_eq!(app.ui().focus(), PaneFocus::Right);
+    assert_eq!(app.ui().mode(), UiMode::Insert);
+    let frame = app.render_frame();
+    assert!(frame.contains("user-1"));
+    assert!(frame.contains("user-2"));
+    assert!(frame.contains("Starting Codex session"));
+    assert!(!frame.contains("work-leaf is busy with another agent operation"));
+
+    app.wait_for_idle(Duration::from_secs(2));
+    let frame = app.render_frame();
+    assert!(frame.contains("user-1"));
+    assert!(frame.contains("user-2"));
+    assert!(frame.contains("slow launch reply"));
+}
+
+#[test]
 fn terminal_app_chat_pane_shows_only_the_selected_agent_session() {
     let backend = FakeBackend::new([
         "first launch",
