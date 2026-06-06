@@ -2,13 +2,15 @@ use std::env;
 use std::fmt;
 use std::io::{self, BufRead, IsTerminal, Read, Write};
 use std::path::PathBuf;
-use std::process::{self, Command};
+use std::process::{self, Command, Stdio};
 
 use crate::agent::{AgentId, AgentKind, AgentLaunch, PromptPolicy};
 use crate::codex::{AgentBackend, CodexBackend, CodexCommandConfig};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::review::{GitHistory, ReviewCoordinator, ReviewResult};
 use crate::ui::{AgentListEntry, TerminalUi, UiAction, UiKey, UiMode};
+
+const DEFAULT_NEW_AGENT_PROMPT: &str = "Start a new work-leaf user-agent session. Ask the user what to work on if the task is not already clear, then report the broad feature before proposing patches.";
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ProcessCommand {
@@ -157,16 +159,15 @@ where
     }
 
     fn launch_agent(&mut self, args: &[String]) -> Result<CommandChatResult, CliError> {
-        if args.is_empty() {
-            return Err(CliError::Usage(
-                "command chat `new` requires <prompt...>".to_string(),
-            ));
-        }
         let agent_id =
             AgentId::new(format!("user-{}", self.next_user_agent)).map_err(CliError::Agent)?;
         self.next_user_agent += 1;
         let feature = "user-agent".to_string();
-        let prompt = args.join(" ");
+        let prompt = if args.is_empty() {
+            DEFAULT_NEW_AGENT_PROMPT.to_string()
+        } else {
+            args.join(" ")
+        };
         let session = self
             .backend
             .as_mut()
@@ -236,7 +237,7 @@ pub fn render_process_help() -> String {
         "Agents are created inside the command chat. Patches, file locks, review routing, and linearization handoff are orchestrator-controlled workflows, not top-level process commands.",
         "",
         "Inside command chat:",
-        "  new <prompt...>",
+        "  new [prompt...]",
         "  review",
         "  linearize",
         "  quit",
@@ -248,7 +249,7 @@ pub fn render_process_help() -> String {
 pub fn render_command_chat_help() -> String {
     [
         "Command chat:",
-        "  new <prompt...>",
+        "  new [prompt...]",
         "  review",
         "  linearize",
         "  quit",
@@ -273,8 +274,8 @@ fn run_terminal_ui<B>(chat: &mut CommandChat<B>) -> Result<(), CliError>
 where
     B: AgentBackend,
 {
-    let _raw_mode = RawTerminalMode::enter()?;
     let (width, height) = terminal_size();
+    let _raw_mode = RawTerminalMode::enter()?;
     let mut ui = TerminalUi::new(width, height);
     let mut prompt_buffer = String::new();
     let mut chat_buffer = String::new();
@@ -306,6 +307,7 @@ where
             TerminalInput::Enter if ui.mode() == UiMode::Prompt => {
                 let line = prompt_buffer.trim().to_string();
                 prompt_buffer.clear();
+                ui.handle_key(UiKey::Esc);
                 if !line.is_empty() {
                     let result = chat.handle_line(&line)?;
                     let should_quit = matches!(result, CommandChatResult::Quit);
@@ -333,6 +335,12 @@ where
             }
             TerminalInput::Char(ch) if ui.mode() == UiMode::Insert => {
                 chat_buffer.push(ch);
+            }
+            TerminalInput::Key(UiKey::Esc) => {
+                prompt_buffer.clear();
+                for action in ui.handle_key(UiKey::Esc) {
+                    transcript.push(ui_action_text(action));
+                }
             }
             TerminalInput::Key(key) => {
                 for action in ui.handle_key(key) {
@@ -504,17 +512,10 @@ struct RawTerminalMode {
 
 impl RawTerminalMode {
     fn enter() -> Result<Self, CliError> {
-        let saved_state = Command::new("stty")
-            .arg("-g")
-            .output()
-            .ok()
-            .filter(|output| output.status.success())
-            .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string());
+        let saved_state = stty_output(&["-g"]);
 
         if saved_state.is_some() {
-            let _ = Command::new("stty")
-                .args(["raw", "-echo", "min", "1", "time", "0"])
-                .status();
+            let _ = stty_status(&["raw", "-echo", "min", "1", "time", "0"]);
         }
 
         Ok(Self { saved_state })
@@ -524,7 +525,7 @@ impl RawTerminalMode {
 impl Drop for RawTerminalMode {
     fn drop(&mut self) {
         if let Some(saved_state) = &self.saved_state {
-            let _ = Command::new("stty").arg(saved_state).status();
+            let _ = stty_status(&[saved_state.as_str()]);
         }
     }
 }
@@ -563,15 +564,32 @@ fn terminal_size() -> (u16, u16) {
 }
 
 fn terminal_size_from_stty() -> Option<(u16, u16)> {
-    let output = Command::new("stty").arg("size").output().ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    let text = String::from_utf8_lossy(&output.stdout);
+    let text = stty_output(&["size"])?;
     let mut parts = text.split_whitespace();
     let rows = parts.next()?.parse::<u16>().ok()?;
     let columns = parts.next()?.parse::<u16>().ok()?;
     Some((columns.max(20), rows.max(5)))
+}
+
+fn stty_output(args: &[&str]) -> Option<String> {
+    let output = Command::new("stty")
+        .args(args)
+        .stdin(Stdio::inherit())
+        .output()
+        .ok()?;
+    output
+        .status
+        .success()
+        .then(|| String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn stty_status(args: &[&str]) -> Option<()> {
+    let status = Command::new("stty")
+        .args(args)
+        .stdin(Stdio::inherit())
+        .status()
+        .ok()?;
+    status.success().then_some(())
 }
 
 fn render_command_result(
@@ -679,5 +697,28 @@ impl From<io::Error> for CliError {
 impl From<crate::review::ReviewError> for CliError {
     fn from(error: crate::review::ReviewError) -> Self {
         Self::Review(error)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ui::PaneFocus;
+
+    #[test]
+    fn launched_agent_result_selects_chat_and_enters_insert_mode() {
+        let mut ui = TerminalUi::new(100, 30);
+        let agent_id = AgentId::new("user-1").unwrap();
+        let result = CommandChatResult::AgentLaunched {
+            agent_id: agent_id.clone(),
+            feature: "user-agent".to_string(),
+            reply: String::new(),
+        };
+
+        apply_command_result_to_ui(&mut ui, &result);
+
+        assert_eq!(ui.selected_agent(), Some(&agent_id));
+        assert_eq!(ui.focus(), PaneFocus::Right);
+        assert_eq!(ui.mode(), UiMode::Insert);
     }
 }

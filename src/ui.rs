@@ -429,15 +429,20 @@ impl TerminalUi {
     fn cursor_sequence(&self, prompt: &str) -> String {
         let layout = self.layout();
         let (row, column) = if self.mode == UiMode::Prompt {
-            let prompt_column = layout.left_width.saturating_add(1);
+            let prompt_column = prompt
+                .chars()
+                .count()
+                .saturating_add(2)
+                .min(usize::from(u16::MAX)) as u16;
             (self.height, prompt_column)
         } else {
             match self.focus {
-                PaneFocus::Left => (1, 1),
-                PaneFocus::Right => (1, layout.left_width.saturating_add(1)),
+                PaneFocus::Left => (2, 2),
+                PaneFocus::Right => (2, layout.left_width.saturating_add(2)),
             }
         };
-        let _ = prompt;
+        let row = row.clamp(1, self.height.max(1));
+        let column = column.clamp(1, self.width.max(1));
         format!("\u{1b}[{row};{column}H")
     }
 
@@ -572,7 +577,7 @@ fn buffer_to_string(buffer: &Buffer) -> String {
             output.push_str(&buffer.get(x, y).symbol);
         }
         if y + 1 < buffer.area.height {
-            output.push('\n');
+            output.push_str("\r\n");
         }
     }
     output

@@ -77,11 +77,35 @@ fn command_chat_launches_agents_inside_the_orchestrator() {
 }
 
 #[test]
+fn command_chat_new_without_prompt_opens_interactive_agent_session() {
+    let backend = FakeBackend::new(["agent ready"]);
+    let mut chat = CommandChat::new(PathBuf::from("/repo"), backend);
+
+    let result = chat.handle_line("new").unwrap();
+
+    assert_eq!(
+        result,
+        CommandChatResult::AgentLaunched {
+            agent_id: AgentId::new("user-1").unwrap(),
+            feature: "user-agent".to_string(),
+            reply: "agent ready".to_string(),
+        }
+    );
+    let backend = chat.into_backend();
+    assert_eq!(backend.launches.len(), 1);
+    assert!(
+        backend.launches[0]
+            .prompt
+            .contains("Ask the user what to work on")
+    );
+}
+
+#[test]
 fn process_help_mentions_internal_actions_as_in_app_commands_only() {
     let help = render_process_help();
 
     assert!(help.contains("Inside command chat"));
-    assert!(help.contains("new <prompt...>"));
+    assert!(help.contains("new [prompt...]"));
     assert!(help.contains("review"));
     assert!(help.contains("linearize"));
     assert!(!help.contains("Usage: work-leaf <command>"));

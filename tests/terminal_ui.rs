@@ -187,22 +187,31 @@ fn prompt_mode_renders_colon_command_line_and_cursor_on_bottom_row() {
     let mut ui = TerminalUi::new(80, 10);
     ui.handle_key(UiKey::Char(':'));
 
-    let rendered = ui.render_screen_with_prompt("chat", "new parser work");
+    let rendered = ui.render_screen_with_prompt("chat", "new p");
 
-    assert!(rendered.contains(":new parser work"));
-    assert!(rendered.ends_with("\u{1b}[10;17H"));
+    assert!(rendered.contains(":new p"));
+    assert!(rendered.ends_with("\u{1b}[10;7H"));
 }
 
 #[test]
 fn focus_cursor_stays_inside_left_or_right_pane() {
     let mut ui = TerminalUi::new(100, 20);
     let left = ui.render_screen("command chat");
-    assert!(left.ends_with("\u{1b}[1;1H"));
+    assert!(left.ends_with("\u{1b}[2;2H"));
 
     ui.handle_key(UiKey::CtrlW);
     ui.handle_key(UiKey::Char('l'));
     let right = ui.render_screen("command chat");
-    assert!(right.ends_with("\u{1b}[1;21H"));
+    assert!(right.ends_with("\u{1b}[2;22H"));
+}
+
+#[test]
+fn raw_mode_screen_uses_crlf_so_frame_fills_terminal_width() {
+    let ui = TerminalUi::new(80, 8);
+    let rendered = ui.render_screen("command chat");
+
+    assert!(rendered.contains("\r\n"));
+    assert!(!rendered.contains(" \n"));
 }
 
 fn strip_ansi(input: &str) -> String {
