@@ -19,6 +19,28 @@ fn scripted_harness_renders_full_width_crlf_frame() {
 }
 
 #[test]
+fn scripted_harness_bells_and_highlights_ready_chat_in_left_pane() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(b":new ready notification\n");
+    assert_eq!(
+        harness.ui().selected_agent().map(|id| id.as_str()),
+        Some("user-3")
+    );
+    assert!(!harness.render_frame().contains('\u{7}'));
+
+    harness
+        .mark_agent_ready("user-3")
+        .expect("new fixture agent can become ready");
+
+    let ready_frame = harness.render_frame();
+    assert!(ready_frame.contains('\u{7}'));
+    assert!(harness.ui().render_left_pane().contains(
+        "\u{1b}[7m>harness-agent user-3  working: harness-agent  READY\u{1b}[0m"
+    ));
+}
+
+#[test]
 fn scripted_harness_switches_modes_without_enter() {
     let mut harness = UiHarness::new(80, 24);
 
