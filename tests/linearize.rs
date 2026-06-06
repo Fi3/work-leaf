@@ -137,9 +137,10 @@ fn agent_commit(hash: &str, agent_id: &str, feature: &str, reason: &str) -> Agen
         agent_id: AgentId::new(agent_id).unwrap(),
         feature: feature.to_string(),
         reason: reason.to_string(),
+        context: format!("context for {feature}"),
         subject: format!("UPDATE apply {feature} patch from {agent_id}"),
         body: format!(
-            "UPDATE apply {feature} patch from {agent_id}\n\nAgent-ID: {agent_id}\nFeature: {feature}\nReason: {reason}"
+            "UPDATE apply {feature} patch from {agent_id}\n\nAgent-ID: {agent_id}\nFeature: {feature}\nReason: {reason}\nContext: context for {feature}"
         ),
     }
 }

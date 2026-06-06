@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -34,10 +35,12 @@ fn terminal_app_new_and_chat_message_use_real_command_chat_backend() {
     assert!(app.render_frame().contains("user: please continue"));
     assert!(app.render_frame().contains("follow reply"));
     let backend = app.into_chat().into_backend();
-    assert_eq!(backend.launches.len(), 1);
-    assert_eq!(backend.sends.len(), 1);
-    assert_eq!(backend.sends[0].0.as_str(), "user-1");
-    assert_eq!(backend.sends[0].1, "please continue");
+    let launches = backend.launches();
+    let sends = backend.sends();
+    assert_eq!(launches.len(), 1);
+    assert_eq!(sends.len(), 1);
+    assert_eq!(sends[0].0.as_str(), "user-1");
+    assert_eq!(sends[0].1, "please continue");
 }
 
 #[test]
@@ -136,11 +139,7 @@ fn terminal_app_keeps_chat_prompt_visible_after_large_agent_output() {
         .map(|index| format!("agent-output-line-{index:02}"))
         .collect::<Vec<_>>()
         .join("\n");
-    let backend = FakeBackend {
-        replies: VecDeque::from([long_reply]),
-        launches: Vec::new(),
-        sends: Vec::new(),
-    };
+    let backend = FakeBackend::from_replies(VecDeque::from([long_reply]));
     let chat = CommandChat::new(PathBuf::from("/repo"), backend);
     let mut app = TerminalApp::new(chat, 80, 12);
 
@@ -486,11 +485,12 @@ fn terminal_app_answers_agent_file_requests_even_when_one_requested_path_is_miss
     assert!(frame.contains("I can answer after receiving the available file text"));
 
     let backend = app.into_chat().into_backend();
-    assert_eq!(backend.sends.len(), 1);
-    assert!(backend.sends[0].1.contains("Cargo.toml"));
-    assert!(backend.sends[0].1.contains("name = \"work-leaf\""));
-    assert!(backend.sends[0].1.contains("Unavailable file text"));
-    assert!(backend.sends[0].1.contains("README.md"));
+    let sends = backend.sends();
+    assert_eq!(sends.len(), 1);
+    assert!(sends[0].1.contains("Cargo.toml"));
+    assert!(sends[0].1.contains("name = \"work-leaf\""));
+    assert!(sends[0].1.contains("Unavailable file text"));
+    assert!(sends[0].1.contains("README.md"));
 }
 
 #[test]
@@ -513,6 +513,80 @@ fn terminal_app_streams_automatic_agent_follow_up_output() {
         app.render_frame()
             .contains("final answer from directive follow-up")
     );
+}
+
+#[test]
+fn terminal_app_sends_to_one_chat_while_another_chat_is_waiting_for_codex() {
+    let backend = ConcurrentChatBackend::default();
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new first parser task\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"\x1b:new second docs task\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    app.handle_bytes(b"slow question\n");
+    assert!(app.is_busy());
+
+    app.handle_bytes(&[27, 23, b'h', b'k', b'l']);
+    app.handle_bytes(b"iquick question\n");
+
+    assert!(app.wait_for_frame_contains("quick reply for user-1", Duration::from_millis(150)));
+    assert!(
+        !app.render_frame()
+            .contains("work-leaf: Codex is still working")
+    );
+}
+
+#[test]
+fn terminal_app_review_adds_reviewer_chat_and_streams_output_immediately() {
+    let root = git_repo("terminal-app-review-streams");
+    fs::write(
+        root.join("README.md"),
+        "Agent-ID: user-1\nFeature: parser\nReason: parse configs\nContext: parser work",
+    )
+    .unwrap();
+    Command::new("git")
+        .current_dir(&root)
+        .args(["add", "README.md"])
+        .status()
+        .unwrap();
+    Command::new("git")
+        .current_dir(&root)
+        .args([
+            "commit",
+            "-m",
+            "UPDATE apply parser patch from user-1",
+            "-m",
+            "Agent-ID: user-1\nFeature: parser\nReason: parse configs\nContext: parser work",
+        ])
+        .status()
+        .unwrap();
+
+    let chat = CommandChat::new(root, ReviewStreamingBackend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":review\n");
+
+    assert!(app.render_frame().contains("review-user-1"));
+    assert!(app.wait_for_frame_contains(
+        "reviewer streamed before finishing",
+        Duration::from_millis(150)
+    ));
+}
+
+#[test]
+fn terminal_app_names_user_session_from_first_prompt_immediately() {
+    let backend = FakeBackend::new(["launch reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new implement parser combinator for config files\n");
+
+    let frame = app.render_frame();
+    assert!(frame.contains("parser"));
+    assert!(!frame.contains("working: user-agent"));
 }
 
 #[cfg(unix)]
@@ -574,18 +648,36 @@ done
     assert!(root.join("codex.terminated").exists());
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct FakeBackend {
+    state: Arc<Mutex<FakeBackendState>>,
+}
+
+#[derive(Debug)]
+struct FakeBackendState {
     replies: VecDeque<String>,
     launches: Vec<AgentLaunch>,
     sends: Vec<(AgentId, String)>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct SlowBackend;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct StreamingDirectiveBackend;
+
+#[derive(Clone, Debug, Default)]
+struct ConcurrentChatBackend {
+    state: Arc<Mutex<ConcurrentChatState>>,
+}
+
+#[derive(Debug, Default)]
+struct ConcurrentChatState {
+    launches: usize,
+}
+
+#[derive(Clone, Debug)]
+struct ReviewStreamingBackend;
 
 fn temp_dir(name: &str) -> PathBuf {
     let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
@@ -662,30 +754,46 @@ fn terminate_process(pid: u32) {
 
 impl FakeBackend {
     fn new<const N: usize>(replies: [&str; N]) -> Self {
+        Self::from_replies(replies.into_iter().map(String::from).collect())
+    }
+
+    fn from_replies(replies: VecDeque<String>) -> Self {
         Self {
-            replies: replies.into_iter().map(String::from).collect(),
-            launches: Vec::new(),
-            sends: Vec::new(),
+            state: Arc::new(Mutex::new(FakeBackendState {
+                replies,
+                launches: Vec::new(),
+                sends: Vec::new(),
+            })),
         }
+    }
+
+    fn launches(&self) -> Vec<AgentLaunch> {
+        self.state.lock().unwrap().launches.clone()
+    }
+
+    fn sends(&self) -> Vec<(AgentId, String)> {
+        self.state.lock().unwrap().sends.clone()
     }
 }
 
 impl AgentBackend for FakeBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
-        self.launches.push(request.clone());
+        let mut state = self.state.lock().unwrap();
+        state.launches.push(request.clone());
         let mut session = AgentSession::new(request);
         session.push_message(
             MessageRole::Agent,
-            self.replies.pop_front().expect("missing fake reply"),
+            state.replies.pop_front().expect("missing fake reply"),
         );
         Ok(session)
     }
 
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
-        self.sends.push((agent_id.clone(), prompt.to_string()));
+        let mut state = self.state.lock().unwrap();
+        state.sends.push((agent_id.clone(), prompt.to_string()));
         Ok(ChatMessage::new(
             MessageRole::Agent,
-            self.replies.pop_front().expect("missing fake reply"),
+            state.replies.pop_front().expect("missing fake reply"),
         ))
     }
 }
@@ -733,4 +841,71 @@ impl AgentBackend for StreamingDirectiveBackend {
             "final answer from directive follow-up",
         ))
     }
+}
+
+impl AgentBackend for ConcurrentChatBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        self.state.lock().unwrap().launches += 1;
+        let mut session = AgentSession::new(request);
+        session.push_message(MessageRole::Agent, "ready");
+        Ok(session)
+    }
+
+    fn send(&mut self, agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+        if agent_id.as_str() == "user-2" {
+            thread::sleep(Duration::from_millis(350));
+            return Ok(ChatMessage::new(
+                MessageRole::Agent,
+                "slow reply for user-2",
+            ));
+        }
+        Ok(ChatMessage::new(
+            MessageRole::Agent,
+            "quick reply for user-1",
+        ))
+    }
+}
+
+impl AgentBackend for ReviewStreamingBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        let mut session = AgentSession::new(request);
+        session.push_message(MessageRole::Agent, "NO_FINDINGS");
+        Ok(session)
+    }
+
+    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+        Ok(ChatMessage::new(MessageRole::Agent, "summary"))
+    }
+
+    fn launch_streaming(
+        &mut self,
+        request: AgentLaunch,
+        sink: &mut dyn FnMut(work_leaf::AgentStreamEvent),
+    ) -> Result<AgentSession, AgentError> {
+        sink(work_leaf::AgentStreamEvent::AgentMessage(
+            "reviewer streamed before finishing".to_string(),
+        ));
+        thread::sleep(Duration::from_millis(350));
+        self.launch(request)
+    }
+}
+
+fn git_repo(name: &str) -> PathBuf {
+    let root = temp_dir(name);
+    Command::new("git")
+        .current_dir(&root)
+        .args(["init", "-q"])
+        .status()
+        .unwrap();
+    Command::new("git")
+        .current_dir(&root)
+        .args(["config", "user.email", "test@example.com"])
+        .status()
+        .unwrap();
+    Command::new("git")
+        .current_dir(&root)
+        .args(["config", "user.name", "Test User"])
+        .status()
+        .unwrap();
+    root
 }

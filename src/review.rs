@@ -12,6 +12,7 @@ pub struct AgentCommit {
     pub agent_id: AgentId,
     pub feature: String,
     pub reason: String,
+    pub context: String,
     pub subject: String,
     pub body: String,
 }
@@ -101,8 +102,8 @@ where
 
     fn review_commit(&mut self, commit: AgentCommit) -> Result<ReviewResult, ReviewError> {
         let summary_prompt = format!(
-            "Please summarize the final patch for Agent-ID {}.\nCommit: {}\nFeature: {}\nReason: {}\n\nFocus on what behavior the patch changes.",
-            commit.agent_id, commit.hash, commit.feature, commit.reason
+            "Please summarize the final patch for Agent-ID {}.\nCommit: {}\nFeature: {}\nReason: {}\nContext: {}\n\nFocus on what behavior the patch changes.",
+            commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context
         );
         let summary = self
             .backend
@@ -113,8 +114,8 @@ where
         let reviewer_id = AgentId::new(format!("review-{}", commit.agent_id.as_str()))
             .map_err(ReviewError::Agent)?;
         let review_prompt = format!(
-            "Review the final patch for Agent-ID {}.\nCommit: {}\nFeature: {}\nReason: {}\nSummary from original agent:\n{}\n\nReply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.",
-            commit.agent_id, commit.hash, commit.feature, commit.reason, summary
+            "Review the final patch for Agent-ID {}.\nCommit: {}\nFeature: {}\nReason: {}\nContext: {}\nSummary from original agent:\n{}\n\nReply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.",
+            commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context, summary
         );
         let reviewer_session = self
             .backend
@@ -172,12 +173,14 @@ fn parse_agent_commit(record: &str) -> Result<Option<AgentCommit>, ReviewError> 
     };
     let feature = metadata_value(body, "Feature:").unwrap_or_default();
     let reason = metadata_value(body, "Reason:").unwrap_or_default();
+    let context = metadata_value(body, "Context:").unwrap_or_default();
     let subject = body.lines().next().unwrap_or_default().to_string();
     Ok(Some(AgentCommit {
         hash: hash.trim().to_string(),
         agent_id: AgentId::new(agent_id).map_err(ReviewError::Agent)?,
         feature,
         reason,
+        context,
         subject,
         body: body.trim().to_string(),
     }))
@@ -190,7 +193,7 @@ fn metadata_value(body: &str, prefix: &str) -> Option<String> {
         .map(str::to_string)
 }
 
-fn has_no_findings(text: &str) -> bool {
+pub(crate) fn has_no_findings(text: &str) -> bool {
     text.lines()
         .find(|line| !line.trim().is_empty())
         .is_some_and(|line| line.trim().eq_ignore_ascii_case("NO_FINDINGS"))

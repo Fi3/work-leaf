@@ -44,6 +44,10 @@ diff --git a/src/lib.rs b/src/lib.rs
     assert!(message.contains("Agent-ID: chat-1"));
     assert!(message.contains("Feature: parser"));
     assert!(message.contains("Reason: return the parsed value"));
+    assert!(message.contains("Context:"));
+    assert!(message.contains("The orchestrator applied this provisional patch for chat-1"));
+    assert!(message.contains("src/lib.rs"));
+    assert!(message.contains("validated with `git apply --check`"));
 }
 
 #[test]

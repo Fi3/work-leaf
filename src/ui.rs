@@ -335,11 +335,14 @@ impl TerminalUi {
         for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
             let agent = &self.agents[*agent_index];
             if self.control_selected == visible_position + 1 {
-                rendered.push_str("> ");
+                rendered.push('>');
             } else {
-                rendered.push_str("  ");
+                rendered.push(' ');
             }
-            rendered.push_str(agent.id.as_str());
+            let (primary, secondary) = agent_list_labels(agent);
+            rendered.push_str(primary);
+            rendered.push(' ');
+            rendered.push_str(secondary);
             rendered.push_str("  working: ");
             rendered.push_str(&agent.feature);
             if agent.ready {
@@ -429,12 +432,15 @@ impl TerminalUi {
             let mut line = Vec::new();
             line.push(Span::raw(
                 if self.control_selected == visible_position + 1 {
-                    "> "
+                    ">"
                 } else {
-                    "  "
+                    " "
                 },
             ));
-            line.push(Span::raw(agent.id.as_str().to_string()));
+            let (primary, secondary) = agent_list_labels(agent);
+            line.push(Span::raw(primary.to_string()));
+            line.push(Span::raw(" "));
+            line.push(Span::raw(secondary.to_string()));
             line.push(Span::raw("  working: "));
             line.push(Span::raw(agent.feature.clone()));
             if agent.ready {
@@ -837,6 +843,14 @@ impl PaneFocus {
             Self::Left => "left",
             Self::Right => "right",
         }
+    }
+}
+
+fn agent_list_labels(agent: &AgentListEntry) -> (&str, &str) {
+    if agent.id.as_str().starts_with("review-") {
+        (agent.id.as_str(), &agent.feature)
+    } else {
+        (&agent.feature, agent.id.as_str())
     }
 }
 

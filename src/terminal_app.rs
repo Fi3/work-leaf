@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::BTreeMap;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
@@ -7,8 +7,8 @@ use rustyline::line_buffer::{ChangeListener, DeleteListener, Direction, LineBuff
 
 use crate::agent::{AgentId, AgentLaunch};
 use crate::cli::{
-    CliError, CommandChat, CommandChatResult, build_user_agent_launch, command_chat_error_text,
-    command_result_text, terminal_right_content, ui_action_text,
+    CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
+    terminal_right_content, ui_action_text,
 };
 use crate::codex::{AgentBackend, AgentShutdownHandle, AgentStreamEvent};
 use crate::ui::{AgentListEntry, TerminalUi, UiKey, UiMode};
@@ -16,13 +16,12 @@ use crate::ui::{AgentListEntry, TerminalUi, UiKey, UiMode};
 #[derive(Debug)]
 pub struct TerminalApp<B>
 where
-    B: AgentBackend + Send + 'static,
+    B: AgentBackend + Clone + Send + 'static,
 {
     chat: Option<CommandChat<B>>,
     shutdown: AgentShutdownHandle,
     shutdown_on_drop: bool,
-    worker: Option<Worker<B>>,
-    pending_operations: VecDeque<PendingOperation>,
+    workers: Vec<Worker>,
     ui: TerminalUi,
     prompt_buffer: PromptLine,
     chat_buffer: PromptLine,
@@ -37,7 +36,7 @@ where
 
 impl<B> TerminalApp<B>
 where
-    B: AgentBackend + Send + 'static,
+    B: AgentBackend + Clone + Send + 'static,
 {
     pub fn new(chat: CommandChat<B>, width: u16, height: u16) -> Self {
         let shutdown = chat.shutdown_handle();
@@ -46,8 +45,7 @@ where
             chat: Some(chat),
             shutdown,
             shutdown_on_drop: true,
-            worker: None,
-            pending_operations: VecDeque::new(),
+            workers: Vec::new(),
             ui: TerminalUi::new(width, height),
             prompt_buffer: PromptLine::new(),
             chat_buffer: PromptLine::new(),
@@ -83,7 +81,7 @@ where
 
     pub fn is_busy(&mut self) -> bool {
         self.poll_worker();
-        self.worker.is_some()
+        !self.workers.is_empty()
     }
 
     pub fn needs_render(&self) -> bool {
@@ -96,7 +94,7 @@ where
 
     pub fn tick(&mut self) {
         self.poll_worker();
-        if self.worker.is_some() {
+        if !self.workers.is_empty() {
             self.spinner = (self.spinner + 1) % SPINNER.len();
             self.dirty = true;
         }
@@ -106,13 +104,13 @@ where
         let start = Instant::now();
         while start.elapsed() < timeout {
             self.poll_worker();
-            if self.worker.is_none() {
+            if self.workers.is_empty() {
                 return true;
             }
             thread::sleep(Duration::from_millis(10));
         }
         self.poll_worker();
-        self.worker.is_none()
+        self.workers.is_empty()
     }
 
     pub fn wait_for_frame_contains(&mut self, needle: &str, timeout: Duration) -> bool {
@@ -168,7 +166,7 @@ where
 
     pub fn poll_worker(&mut self) {
         let mut events = Vec::new();
-        if let Some(worker) = &self.worker {
+        for worker in &self.workers {
             while let Ok(event) = worker.receiver.try_recv() {
                 events.push(event);
             }
@@ -177,19 +175,18 @@ where
             self.apply_worker_event(event);
         }
 
-        if self
-            .worker
-            .as_ref()
-            .is_some_and(|worker| worker.handle.is_finished())
-        {
-            let worker = self.worker.take().expect("worker is present");
-            while let Ok(event) = worker.receiver.try_recv() {
-                self.apply_worker_event(event);
+        let mut index = 0;
+        while index < self.workers.len() {
+            if self.workers[index].handle.is_finished() {
+                let worker = self.workers.swap_remove(index);
+                while let Ok(event) = worker.receiver.try_recv() {
+                    self.apply_worker_event(event);
+                }
+                worker.handle.join().expect("terminal worker did not panic");
+                self.dirty = true;
+            } else {
+                index += 1;
             }
-            self.chat = Some(worker.handle.join().expect("terminal worker did not panic"));
-            self.clear_loading();
-            self.start_next_pending_operation();
-            self.dirty = true;
         }
     }
 
@@ -256,65 +253,90 @@ where
         match command {
             "quit" | "exit" => self.request_quit(),
             "new" => self.start_new_agent(parts[1..].to_vec()),
+            "review" => self.start_review_workers(),
             _ => self.start_command_worker(line.to_string()),
         }
     }
 
     fn start_new_agent(&mut self, args: Vec<String>) {
-        let launch = if self.worker.is_none() {
-            match self.chat.as_mut() {
-                Some(chat) => match chat.prepare_agent_launch(&args) {
-                    Ok(launch) => {
-                        self.next_user_agent = chat.next_user_agent_index();
-                        launch
-                    }
-                    Err(error) => {
-                        self.command_transcript
-                            .push(command_chat_error_text(&error));
-                        return;
-                    }
-                },
-                None => match self.prepare_queued_agent_launch(&args) {
-                    Ok(launch) => launch,
-                    Err(error) => {
-                        self.command_transcript
-                            .push(command_chat_error_text(&error));
-                        return;
-                    }
-                },
+        let Some(chat) = self.chat.as_mut() else {
+            return;
+        };
+        let launch = match chat.prepare_agent_launch(&args) {
+            Ok(launch) => {
+                self.next_user_agent = chat.next_user_agent_index();
+                launch
             }
-        } else {
-            match self.prepare_queued_agent_launch(&args) {
-                Ok(launch) => launch,
-                Err(error) => {
-                    self.command_transcript
-                        .push(command_chat_error_text(&error));
-                    return;
-                }
+            Err(error) => {
+                self.command_transcript
+                    .push(command_chat_error_text(&error));
+                return;
             }
         };
+        chat.register_agent_feature(launch.id.clone(), launch.feature.clone());
 
         self.add_launching_agent(&launch);
-        if self.worker.is_some() || self.chat.is_none() {
-            self.pending_operations
-                .push_back(PendingOperation::Launch(launch));
+        self.start_launch_worker(launch);
+    }
+
+    fn display_feature_for_prompt(prompt: &str, fallback: &str) -> String {
+        let title = session_title_from_prompt(prompt);
+        if title.is_empty() {
+            fallback.to_string()
+        } else {
+            title
+        }
+    }
+
+    fn start_review_workers(&mut self) {
+        let Some(chat) = self.chat.as_ref() else {
+            return;
+        };
+        let commits = match crate::review::GitHistory::new(chat.project_dir().to_path_buf())
+            .latest_agent_commits()
+        {
+            Ok(commits) => commits,
+            Err(error) => {
+                self.command_transcript.push(error.to_string());
+                self.dirty = true;
+                return;
+            }
+        };
+        if commits.is_empty() {
+            self.command_transcript
+                .push("no agent commits found".to_string());
             self.dirty = true;
             return;
         }
 
-        self.start_launch_worker(launch);
-    }
-
-    fn prepare_queued_agent_launch(&mut self, args: &[String]) -> Result<AgentLaunch, CliError> {
-        let launch = build_user_agent_launch(self.next_user_agent, args)?;
-        self.next_user_agent += 1;
-        Ok(launch)
+        for (index, commit) in commits.into_iter().enumerate() {
+            let reviewer_id = match AgentId::new(format!("review-{}", commit.agent_id.as_str())) {
+                Ok(launch) => launch,
+                Err(error) => {
+                    self.command_transcript.push(error.to_string());
+                    return;
+                }
+            };
+            self.ui.add_agent(AgentListEntry::new(
+                reviewer_id.clone(),
+                format!("review {}", commit.feature),
+            ));
+            if index == 0 {
+                let _ = self.ui.activate_agent_chat(&reviewer_id);
+            }
+            self.agent_chats
+                .entry(reviewer_id.clone())
+                .or_default()
+                .loading = Some(LoadingKind::WaitingForReply);
+            self.start_review_worker(commit, reviewer_id);
+        }
+        self.dirty = true;
     }
 
     fn add_launching_agent(&mut self, launch: &AgentLaunch) {
         self.ui.add_agent(AgentListEntry::new(
             launch.id.clone(),
-            launch.feature.clone(),
+            Self::display_feature_for_prompt(&launch.prompt, &launch.feature),
         ));
         let _ = self.ui.activate_agent_chat(&launch.id);
         self.agent_chats
@@ -329,7 +351,7 @@ where
             .entry(agent_id.clone())
             .or_default()
             .loading = Some(LoadingKind::Launching);
-        self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
+        self.start_worker(move |mut chat, sender| {
             let stream_sender = sender.clone();
             let mut stream = move |event_agent_id: &AgentId, event| {
                 let _ = stream_sender.send(WorkerEvent::Stream {
@@ -351,45 +373,49 @@ where
                     });
                 }
             }
-            chat
         });
     }
 
-    fn start_next_pending_operation(&mut self) {
-        if self.worker.is_some() || self.chat.is_none() {
-            return;
-        }
-        let Some(operation) = self.pending_operations.pop_front() else {
-            return;
-        };
-        match operation {
-            PendingOperation::Launch(launch) => self.start_launch_worker(launch),
-        }
-    }
-
-    fn start_command_worker(&mut self, line: String) {
-        if self.worker.is_some() {
-            self.command_transcript
-                .push("work-leaf is busy with another agent operation".to_string());
-            return;
-        }
-
-        self.start_worker(None, move |mut chat, sender| {
-            match chat.handle_line(&line) {
+    fn start_review_worker(&mut self, commit: crate::review::AgentCommit, reviewer_id: AgentId) {
+        self.start_worker(move |mut chat, sender| {
+            let stream_sender = sender.clone();
+            let mut stream = move |event_agent_id: &AgentId, event| {
+                let _ = stream_sender.send(WorkerEvent::Stream {
+                    agent_id: event_agent_id.clone(),
+                    text: stream_event_text(event),
+                });
+            };
+            match chat.review_commit_streaming_with_ids(commit, &mut stream) {
                 Ok(result) => {
                     let _ = sender.send(WorkerEvent::Complete {
-                        agent_id: None,
-                        result,
+                        agent_id: Some(reviewer_id),
+                        result: CommandChatResult::ReviewComplete(vec![result]),
                     });
                 }
                 Err(error) => {
                     let _ = sender.send(WorkerEvent::Error {
-                        agent_id: None,
-                        message: command_chat_error_text(&error),
+                        agent_id: Some(reviewer_id),
+                        message: error.to_string(),
                     });
                 }
             }
-            chat
+        });
+    }
+
+    fn start_command_worker(&mut self, line: String) {
+        self.start_worker(move |mut chat, sender| match chat.handle_line(&line) {
+            Ok(result) => {
+                let _ = sender.send(WorkerEvent::Complete {
+                    agent_id: None,
+                    result,
+                });
+            }
+            Err(error) => {
+                let _ = sender.send(WorkerEvent::Error {
+                    agent_id: None,
+                    message: command_chat_error_text(&error),
+                });
+            }
         });
     }
 
@@ -397,7 +423,12 @@ where
         let Some(agent_id) = self.ui.selected_agent().cloned() else {
             return;
         };
-        if self.worker.is_some() {
+        if self
+            .agent_chats
+            .get(&agent_id)
+            .and_then(|chat| chat.loading)
+            .is_some()
+        {
             self.agent_chats
                 .entry(agent_id)
                 .or_default()
@@ -424,7 +455,7 @@ where
             .or_default()
             .loading = Some(LoadingKind::WaitingForReply);
 
-        self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
+        self.start_worker(move |mut chat, sender| {
             let stream_sender = sender.clone();
             let mut stream = move |event_agent_id: &AgentId, event| {
                 let _ = stream_sender.send(WorkerEvent::Stream {
@@ -446,21 +477,20 @@ where
                     });
                 }
             }
-            chat
         });
         self.dirty = true;
     }
 
-    fn start_worker<F>(&mut self, _agent_id: Option<AgentId>, operation: F)
+    fn start_worker<F>(&mut self, operation: F)
     where
-        F: FnOnce(CommandChat<B>, Sender<WorkerEvent>) -> CommandChat<B> + Send + 'static,
+        F: FnOnce(CommandChat<B>, Sender<WorkerEvent>) + Send + 'static,
     {
-        let Some(chat) = self.chat.take() else {
+        let Some(chat) = self.chat.as_ref().cloned() else {
             return;
         };
         let (sender, receiver) = mpsc::channel();
         let handle = thread::spawn(move || operation(chat, sender));
-        self.worker = Some(Worker { receiver, handle });
+        self.workers.push(Worker { receiver, handle });
         self.dirty = true;
     }
 
@@ -472,6 +502,7 @@ where
             WorkerEvent::Complete { agent_id, result } => {
                 if let Some(agent_id) = agent_id {
                     self.apply_agent_result(&agent_id, &result);
+                    self.clear_agent_loading(&agent_id);
                 } else {
                     self.command_transcript.push(command_result_text(&result));
                     if matches!(result, CommandChatResult::Quit) {
@@ -482,6 +513,7 @@ where
             WorkerEvent::Error { agent_id, message } => {
                 if let Some(agent_id) = agent_id {
                     self.append_agent_line(&agent_id, message);
+                    self.clear_agent_loading(&agent_id);
                 } else {
                     self.command_transcript.push(message);
                 }
@@ -512,8 +544,8 @@ where
         }
     }
 
-    fn clear_loading(&mut self) {
-        for chat in self.agent_chats.values_mut() {
+    fn clear_agent_loading(&mut self, agent_id: &AgentId) {
+        if let Some(chat) = self.agent_chats.get_mut(agent_id) {
             chat.loading = None;
         }
     }
@@ -574,7 +606,7 @@ where
 
 impl<B> Drop for TerminalApp<B>
 where
-    B: AgentBackend + Send + 'static,
+    B: AgentBackend + Clone + Send + 'static,
 {
     fn drop(&mut self) {
         if self.shutdown_on_drop {
@@ -584,17 +616,9 @@ where
 }
 
 #[derive(Debug)]
-enum PendingOperation {
-    Launch(AgentLaunch),
-}
-
-#[derive(Debug)]
-struct Worker<B>
-where
-    B: AgentBackend + Send + 'static,
-{
+struct Worker {
     receiver: Receiver<WorkerEvent>,
-    handle: JoinHandle<CommandChat<B>>,
+    handle: JoinHandle<()>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -646,6 +670,62 @@ fn stream_event_text(event: AgentStreamEvent) -> String {
 
 fn split_command_line(line: &str) -> Vec<String> {
     line.split_whitespace().map(str::to_string).collect()
+}
+
+fn session_title_from_prompt(prompt: &str) -> String {
+    const STOP_WORDS: &[&str] = &[
+        "a",
+        "an",
+        "and",
+        "for",
+        "the",
+        "to",
+        "with",
+        "please",
+        "implement",
+        "add",
+        "fix",
+        "update",
+        "create",
+        "build",
+    ];
+
+    let mut title = String::new();
+    for word in prompt
+        .split_whitespace()
+        .map(|word| {
+            word.trim_matches(|ch: char| !ch.is_ascii_alphanumeric() && ch != '-' && ch != '_')
+                .to_ascii_lowercase()
+        })
+        .filter(|word| !word.is_empty())
+        .filter(|word| !STOP_WORDS.contains(&word.as_str()))
+    {
+        let next_len = if title.is_empty() {
+            word.len()
+        } else {
+            title.len() + 1 + word.len()
+        };
+        if next_len > 16 {
+            continue;
+        }
+        if !title.is_empty() {
+            title.push(' ');
+        }
+        title.push_str(&word);
+        if !title.is_empty() {
+            break;
+        }
+    }
+
+    if title.is_empty() {
+        prompt
+            .split_whitespace()
+            .take(4)
+            .collect::<Vec<_>>()
+            .join(" ")
+    } else {
+        title
+    }
 }
 
 const MAX_ESCAPE_SEQUENCE: usize = 64;

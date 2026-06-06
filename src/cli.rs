@@ -14,6 +14,7 @@ use crate::codex::{
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::locks::{CommandWritePolicy, FileLockTable};
 use crate::orchestrator::{AgentFollowUp, OrchestratorEvent, handle_agent_directives_streaming};
+use crate::review::{AgentCommit, has_no_findings};
 use crate::review::{GitHistory, ReviewCoordinator, ReviewResult};
 use crate::terminal_app::TerminalApp;
 use crate::ui::UiAction;
@@ -109,6 +110,24 @@ pub struct CommandChat<B> {
     next_user_agent: usize,
 }
 
+impl<B> Clone for CommandChat<B>
+where
+    B: AgentBackend + Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            project_dir: self.project_dir.clone(),
+            backend: self.backend.clone(),
+            shutdown: self.shutdown.clone(),
+            locks: self.locks.clone(),
+            command_policy: self.command_policy.clone(),
+            agents: self.agents.clone(),
+            max_review_rounds: self.max_review_rounds,
+            next_user_agent: self.next_user_agent,
+        }
+    }
+}
+
 impl<B> CommandChat<B>
 where
     B: AgentBackend,
@@ -146,6 +165,14 @@ where
 
     pub(crate) fn next_user_agent_index(&self) -> usize {
         self.next_user_agent
+    }
+
+    pub(crate) fn project_dir(&self) -> &std::path::Path {
+        &self.project_dir
+    }
+
+    pub(crate) fn register_agent_feature(&mut self, agent_id: AgentId, feature: String) {
+        self.agents.insert(agent_id, feature);
     }
 
     pub fn handle_line(&mut self, line: &str) -> Result<CommandChatResult, CliError> {
@@ -356,6 +383,88 @@ where
         Ok(CommandChatResult::ReviewComplete(results))
     }
 
+    pub(crate) fn review_commit_streaming_with_ids(
+        &mut self,
+        commit: AgentCommit,
+        stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+    ) -> Result<ReviewResult, CliError> {
+        let summary_prompt = format!(
+            "Please summarize the final patch for Agent-ID {}.\nCommit: {}\nFeature: {}\nReason: {}\nContext: {}\n\nFocus on what behavior the patch changes.",
+            commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context
+        );
+        let mut summary_stream = |event| stream(&commit.agent_id, event);
+        let summary = self
+            .backend
+            .as_mut()
+            .expect("command chat backend is present")
+            .send_streaming(&commit.agent_id, &summary_prompt, &mut summary_stream)
+            .map_err(CliError::Agent)?
+            .text;
+
+        let reviewer_id = AgentId::new(format!("review-{}", commit.agent_id.as_str()))
+            .map_err(CliError::Agent)?;
+        let review_prompt = format!(
+            "Review the final patch for Agent-ID {}.\nCommit: {}\nFeature: {}\nReason: {}\nContext: {}\nSummary from original agent:\n{}\n\nReply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.",
+            commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context, summary
+        );
+        let mut review_stream = |event| stream(&reviewer_id, event);
+        let reviewer_session = self
+            .backend
+            .as_mut()
+            .expect("command chat backend is present")
+            .launch_streaming(
+                AgentLaunch::new(
+                    reviewer_id.clone(),
+                    AgentKind::Codex,
+                    format!("review {}", commit.feature),
+                    review_prompt,
+                ),
+                &mut review_stream,
+            )
+            .map_err(CliError::Agent)?;
+        let mut review_text = reviewer_session
+            .messages
+            .last()
+            .map(|message| message.text.clone())
+            .unwrap_or_default();
+        let mut rounds = 1;
+
+        while !has_no_findings(&review_text) && rounds < self.max_review_rounds {
+            let fix_prompt = format!(
+                "The reviewer found issues in your patch for commit {}.\n{}\n\nPlease fix the patch through the orchestrator patch flow.",
+                commit.hash, review_text
+            );
+            let mut fix_stream = |event| stream(&commit.agent_id, event);
+            self.backend
+                .as_mut()
+                .expect("command chat backend is present")
+                .send_streaming(&commit.agent_id, &fix_prompt, &mut fix_stream)
+                .map_err(CliError::Agent)?;
+
+            let recheck_prompt = format!(
+                "The original agent has responded to the findings for commit {}. Please check the patch again and reply with NO_FINDINGS if resolved, otherwise list remaining FINDINGS.",
+                commit.hash
+            );
+            let mut recheck_stream = |event| stream(&reviewer_id, event);
+            review_text = self
+                .backend
+                .as_mut()
+                .expect("command chat backend is present")
+                .send_streaming(&reviewer_id, &recheck_prompt, &mut recheck_stream)
+                .map_err(CliError::Agent)?
+                .text;
+            rounds += 1;
+        }
+
+        Ok(ReviewResult {
+            agent_id: commit.agent_id.clone(),
+            reviewer_id,
+            findings_resolved: has_no_findings(&review_text),
+            rounds,
+            commit,
+        })
+    }
+
     fn linearize_questions(&self) -> Result<CommandChatResult, CliError> {
         let commits = GitHistory::new(self.project_dir.clone()).latest_agent_commits()?;
         Ok(CommandChatResult::LinearizeQuestions(
@@ -461,7 +570,7 @@ pub fn render_command_chat_help() -> String {
 
 fn run_command_chat<B>(chat: CommandChat<B>) -> Result<(), CliError>
 where
-    B: AgentBackend + Send + 'static,
+    B: AgentBackend + Clone + Send + 'static,
 {
     if io::stdin().is_terminal() && io::stdout().is_terminal() {
         run_terminal_ui(chat)
@@ -472,7 +581,7 @@ where
 
 fn run_terminal_ui<B>(chat: CommandChat<B>) -> Result<(), CliError>
 where
-    B: AgentBackend + Send + 'static,
+    B: AgentBackend + Clone + Send + 'static,
 {
     let (width, height) = terminal_size();
     let _raw_mode = RawTerminalMode::enter()?;
@@ -531,7 +640,7 @@ where
 
 fn render_terminal_frame<B>(output: &mut impl Write, app: &TerminalApp<B>) -> Result<(), CliError>
 where
-    B: AgentBackend + Send + 'static,
+    B: AgentBackend + Clone + Send + 'static,
 {
     write!(output, "{}", app.render_frame())?;
     output.flush()?;

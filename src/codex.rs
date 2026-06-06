@@ -240,9 +240,27 @@ pub struct CodexInvocation {
 pub struct CodexBackend {
     config: CodexCommandConfig,
     policy: PromptPolicy,
+    state: Arc<Mutex<CodexBackendState>>,
+    shutdown: AgentShutdownHandle,
+    lifecycle: Arc<()>,
+}
+
+impl Clone for CodexBackend {
+    fn clone(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            policy: self.policy.clone(),
+            state: self.state.clone(),
+            shutdown: self.shutdown.clone(),
+            lifecycle: self.lifecycle.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+struct CodexBackendState {
     sessions: BTreeMap<AgentId, AgentSession>,
     thread_ids: BTreeMap<AgentId, String>,
-    shutdown: AgentShutdownHandle,
 }
 
 impl CodexBackend {
@@ -250,9 +268,9 @@ impl CodexBackend {
         Self {
             config,
             policy,
-            sessions: BTreeMap::new(),
-            thread_ids: BTreeMap::new(),
+            state: Arc::new(Mutex::new(CodexBackendState::default())),
             shutdown: AgentShutdownHandle::default(),
+            lifecycle: Arc::new(()),
         }
     }
 
@@ -268,18 +286,25 @@ impl CodexBackend {
         agent_id: &AgentId,
         prompt: &str,
     ) -> Result<CodexInvocation, AgentError> {
-        let feature = self
-            .sessions
-            .get(agent_id)
-            .map(|session| session.feature.as_str())
-            .unwrap_or("unknown");
-        let stdin = self.policy.inject(agent_id, feature, prompt);
-        let resume_id = self
-            .thread_ids
-            .get(agent_id)
-            .map(String::as_str)
-            .unwrap_or_else(|| agent_id.as_str());
-        self.resume_invocation(resume_id, stdin)
+        let (feature, resume_id) = {
+            let state = self
+                .state
+                .lock()
+                .expect("codex backend state mutex poisoned");
+            let feature = state
+                .sessions
+                .get(agent_id)
+                .map(|session| session.feature.clone())
+                .unwrap_or_else(|| "unknown".to_string());
+            let resume_id = state
+                .thread_ids
+                .get(agent_id)
+                .cloned()
+                .unwrap_or_else(|| agent_id.as_str().to_string());
+            (feature, resume_id)
+        };
+        let stdin = self.policy.inject(agent_id, &feature, prompt);
+        self.resume_invocation(&resume_id, stdin)
     }
 
     pub fn record_launch_reply(
@@ -289,7 +314,11 @@ impl CodexBackend {
     ) -> Result<AgentSession, AgentError> {
         let mut session = AgentSession::new(request);
         session.push_message(MessageRole::Agent, reply);
-        self.sessions.insert(session.id.clone(), session.clone());
+        self.state
+            .lock()
+            .expect("codex backend state mutex poisoned")
+            .sessions
+            .insert(session.id.clone(), session.clone());
         Ok(session)
     }
 
@@ -300,13 +329,22 @@ impl CodexBackend {
     ) -> Result<AgentSession, AgentError> {
         let parsed = parse_codex_output(&output);
         if let Some(thread_id) = parsed.thread_id {
-            self.thread_ids.insert(request.id.clone(), thread_id);
+            self.state
+                .lock()
+                .expect("codex backend state mutex poisoned")
+                .thread_ids
+                .insert(request.id.clone(), thread_id);
         }
         self.record_launch_reply(request, parsed.agent_reply.unwrap_or(output))
     }
 
-    pub fn session(&self, agent_id: &AgentId) -> Option<&AgentSession> {
-        self.sessions.get(agent_id)
+    pub fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
+        self.state
+            .lock()
+            .expect("codex backend state mutex poisoned")
+            .sessions
+            .get(agent_id)
+            .cloned()
     }
 
     fn exec_invocation(&self, stdin: String) -> CodexInvocation {
@@ -428,7 +466,9 @@ impl CodexBackend {
 
 impl Drop for CodexBackend {
     fn drop(&mut self) {
-        self.shutdown.shutdown();
+        if Arc::strong_count(&self.lifecycle) == 1 {
+            self.shutdown.shutdown();
+        }
     }
 }
 
@@ -444,10 +484,14 @@ impl AgentBackend for CodexBackend {
         let output = self.run_invocation(&invocation)?;
         let reply = parse_codex_output(&output).agent_reply.unwrap_or(output);
         let message = ChatMessage::new(MessageRole::Agent, reply);
-        if let Some(session) = self.sessions.get_mut(agent_id) {
+        let mut state = self
+            .state
+            .lock()
+            .expect("codex backend state mutex poisoned");
+        if let Some(session) = state.sessions.get_mut(agent_id) {
             session.push_message(MessageRole::User, prompt);
         } else {
-            self.sessions.insert(
+            state.sessions.insert(
                 agent_id.clone(),
                 AgentSession::new(AgentLaunch::new(
                     agent_id.clone(),
@@ -457,7 +501,7 @@ impl AgentBackend for CodexBackend {
                 )),
             );
         }
-        let session = self
+        let session = state
             .sessions
             .get_mut(agent_id)
             .ok_or_else(|| AgentError::UnknownSession(agent_id.clone()))?;
@@ -489,10 +533,14 @@ impl AgentBackend for CodexBackend {
         let output = self.run_invocation_streaming(&invocation, sink)?;
         let reply = parse_codex_output(&output).agent_reply.unwrap_or(output);
         let message = ChatMessage::new(MessageRole::Agent, reply);
-        if let Some(session) = self.sessions.get_mut(agent_id) {
+        let mut state = self
+            .state
+            .lock()
+            .expect("codex backend state mutex poisoned");
+        if let Some(session) = state.sessions.get_mut(agent_id) {
             session.push_message(MessageRole::User, prompt);
         } else {
-            self.sessions.insert(
+            state.sessions.insert(
                 agent_id.clone(),
                 AgentSession::new(AgentLaunch::new(
                     agent_id.clone(),
@@ -502,7 +550,7 @@ impl AgentBackend for CodexBackend {
                 )),
             );
         }
-        let session = self
+        let session = state
             .sessions
             .get_mut(agent_id)
             .ok_or_else(|| AgentError::UnknownSession(agent_id.clone()))?;

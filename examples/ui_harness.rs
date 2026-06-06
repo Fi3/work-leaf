@@ -46,7 +46,7 @@ fn render_frame(output: &mut impl Write, app: &TerminalApp<HarnessBackend>) -> i
     output.flush()
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 struct HarnessBackend;
 
 impl AgentBackend for HarnessBackend {

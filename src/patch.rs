@@ -78,7 +78,7 @@ impl GitPatcher {
             .map_err(PatchError::Git)?;
 
         self.git_add(&files).map_err(PatchError::Git)?;
-        self.git_commit(&request).map_err(PatchError::Git)?;
+        self.git_commit(&request, &files).map_err(PatchError::Git)?;
         let commit = self
             .git_output(["rev-parse", "HEAD"])
             .map_err(PatchError::Git)?;
@@ -127,14 +127,15 @@ impl GitPatcher {
             .map(|_| ())
     }
 
-    fn git_commit(&self, request: &PatchRequest) -> Result<(), std::io::Error> {
+    fn git_commit(&self, request: &PatchRequest, files: &[PathBuf]) -> Result<(), std::io::Error> {
         let subject = format!(
             "UPDATE apply {} patch from {}",
             request.feature, request.agent_id
         );
+        let context = render_patch_context(request, files);
         let body = format!(
-            "Agent-ID: {}\nFeature: {}\nReason: {}",
-            request.agent_id, request.feature, request.reason
+            "Agent-ID: {}\nFeature: {}\nReason: {}\nContext: {}",
+            request.agent_id, request.feature, request.reason, context
         );
         self.require_success(
             Command::new("git")
@@ -185,6 +186,28 @@ impl GitPatcher {
             )))
         }
     }
+}
+
+fn render_patch_context(request: &PatchRequest, files: &[PathBuf]) -> String {
+    let files = files
+        .iter()
+        .map(|path| path.display().to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    let additions = request
+        .diff
+        .lines()
+        .filter(|line| line.starts_with('+') && !line.starts_with("+++"))
+        .count();
+    let removals = request
+        .diff
+        .lines()
+        .filter(|line| line.starts_with('-') && !line.starts_with("---"))
+        .count();
+    format!(
+        "The orchestrator applied this provisional patch for {} while the agent was working on feature `{}`. The agent stated the reason as `{}`. The patch touched {} and changed the working tree with {} added line(s) and {} removed line(s). The orchestrator validated with `git apply --check`, applied the submitted unified diff under the repository write locks, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.",
+        request.agent_id, request.feature, request.reason, files, additions, removals
+    )
 }
 
 #[derive(Debug)]
