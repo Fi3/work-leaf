@@ -70,3 +70,31 @@ When asked to one or more feature, always write a test that test the feature (un
 ## Review rules
 Any patch that increases algorithmic complexity to O(n²) or worse must be flagged.
 
+## Required Checks
+Run these before submitting changes:
+
+1. `cargo fmt`
+2. `cargo clippy --all-targets --all-features -- -D warnings`
+
+2. Broader top-level rule, but only in history on origin/ImproveShareHandling2, commit 53bc5206 from June 1, 2026:
+
+- Any code change must leave the relevant build and clippy invocations clean: no build warnings,
+  clippy errors, or clippy warnings are allowed. Existing warnings or clippy findings encountered
+  while validating the change must be fixed, not left in place.
+
+## Tests
+Adding a test do not require human permission, removing or changing one (that is committed in main) does.
+
+## Terminal UI Harness
+Terminal UI behavior is exercised through `src/ui_harness.rs::UiHarness`. The harness accepts raw
+input bytes and renders through the same `src/ui.rs::TerminalUi` frame path used by the interactive
+example, so UI tests should drive `UiHarness::handle_byte` or `UiHarness::handle_bytes` instead of
+duplicating modal-input logic.
+
+Run `cargo test --test ui_harness` for automatic terminal UI checks. This target covers full-width
+CRLF rendering, immediate nvim-style mode switches, `Ctrl-W h/j/k/l` pane navigation, right-pane
+toggle behavior, prompt cursor placement, `new [prompt...]`, and insert-mode chat text.
+
+Run `cargo run --example ui_harness` in a real interactive terminal for visual UI development. The
+manual fixture uses the same harness state machine and supports `Esc`, `i`, `:`, `Ctrl-W h/j/k/l`,
+`,`, `new [prompt...]`, and `q`.

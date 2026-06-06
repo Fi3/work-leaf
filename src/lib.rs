@@ -6,6 +6,7 @@ pub mod locks;
 pub mod patch;
 pub mod review;
 pub mod ui;
+pub mod ui_harness;
 
 pub use agent::{
     AgentError, AgentId, AgentKind, AgentLaunch, AgentSession, ChatMessage, MessageRole,
@@ -28,3 +29,4 @@ pub use review::{AgentCommit, GitHistory, ReviewCoordinator, ReviewError, Review
 pub use ui::{
     AgentListEntry, PaneFocus, TerminalLayout, TerminalUi, UiAction, UiKey, UiMode, UiSurface,
 };
+pub use ui_harness::UiHarness;
