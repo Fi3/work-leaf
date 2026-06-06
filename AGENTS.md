@@ -98,3 +98,35 @@ toggle behavior, prompt cursor placement, `new [prompt...]`, and insert-mode cha
 Run `cargo run --example ui_harness` in a real interactive terminal for visual UI development. The
 manual fixture uses the same harness state machine and supports `Esc`, `i`, `:`, `Ctrl-W h/j/k/l`,
 `,`, `new [prompt...]`, and `q`.
+
+## Architecture and Extension Boundaries
+The UI-neutral application surface is `src/workspace.rs::WorkLeafController<B>`. It owns session
+state, per-agent loading state, prompt-derived chat titles, background launch/send/review workers,
+review startup, command transcripts, and stream routing. UIs should drive this controller through
+methods such as `create_agent`, `send_message`, `start_review`, `execute_command_line`,
+`drain_events`, and `snapshot`.
+
+Controller output is exposed through DTOs in `src/workspace.rs`: `WorkLeafSnapshot`,
+`WorkLeafSession`, `WorkLeafEvent`, and `WorkLeafLoading`. A UI that is not terminal-based should
+consume these DTOs and should not duplicate worker spawning, git-history review lookup, session
+naming, loading bookkeeping, or orchestrator event routing.
+
+The terminal application is an adapter in `src/terminal_app.rs::TerminalApp`. It translates terminal
+bytes and modal editing state into controller commands, applies controller events to
+`src/ui.rs::TerminalUi`, and renders controller snapshots. Terminal-specific code should stay out of
+orchestration, review, patching, locking, and agent-provider selection.
+
+Agent provider selection is carried by `src/agent.rs::AgentProfile`. `src/cli.rs::CommandChat::new`
+uses the Codex profile by default, and callers can select another provider with
+`CommandChat::with_agent_profile`. User agents, reviewers, and linearizer sessions must use the
+active profile instead of constructing `AgentKind::Codex` directly. Provider implementations satisfy
+the `AgentBackend` trait re-exported from `src/lib.rs`; `src/codex.rs::CodexBackend` is the Codex
+implementation.
+
+Core workflow behavior remains in core modules: `src/orchestrator.rs` parses and handles
+`@work-leaf` directives, `src/patch.rs::GitPatcher` validates and commits patches under file locks,
+`src/review.rs::GitHistory` and `ReviewCoordinator` read agent commits and run review loops,
+`src/linearize.rs::LinearizePlanner` prepares linearization handoffs, and `src/locks.rs` owns file
+access policy. New UIs and agent providers should integrate through the controller, DTOs,
+`AgentProfile`, and `AgentBackend` without editing the terminal adapter or the stable core workflow
+modules.

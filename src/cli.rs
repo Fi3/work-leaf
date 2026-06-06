@@ -7,7 +7,7 @@ use std::process::{self, Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use crate::agent::{AgentId, AgentKind, AgentLaunch, PromptPolicy};
+use crate::agent::{AgentId, AgentLaunch, AgentProfile, PromptPolicy};
 use crate::codex::{
     AgentBackend, AgentShutdownHandle, AgentStreamEvent, CodexBackend, CodexCommandConfig,
 };
@@ -112,6 +112,7 @@ pub struct CommandChat<B> {
     locks: FileLockTable,
     command_policy: CommandWritePolicy,
     agents: BTreeMap<AgentId, String>,
+    agent_profile: AgentProfile,
     max_review_rounds: usize,
     next_user_agent: usize,
 }
@@ -128,6 +129,7 @@ where
             locks: self.locks.clone(),
             command_policy: self.command_policy.clone(),
             agents: self.agents.clone(),
+            agent_profile: self.agent_profile.clone(),
             max_review_rounds: self.max_review_rounds,
             next_user_agent: self.next_user_agent,
         }
@@ -147,9 +149,19 @@ where
             shutdown,
             command_policy: CommandWritePolicy,
             agents: BTreeMap::new(),
+            agent_profile: AgentProfile::codex(),
             max_review_rounds: 8000,
             next_user_agent: 1,
         }
+    }
+
+    pub fn with_agent_profile(mut self, agent_profile: AgentProfile) -> Self {
+        self.agent_profile = agent_profile;
+        self
+    }
+
+    pub fn agent_profile(&self) -> &AgentProfile {
+        &self.agent_profile
     }
 
     pub fn with_max_review_rounds(mut self, max_review_rounds: usize) -> Self {
@@ -167,10 +179,6 @@ where
 
     pub fn shutdown_agents(&self) {
         self.shutdown.shutdown();
-    }
-
-    pub(crate) fn next_user_agent_index(&self) -> usize {
-        self.next_user_agent
     }
 
     pub(crate) fn project_dir(&self) -> &std::path::Path {
@@ -259,7 +267,7 @@ where
     }
 
     pub fn prepare_agent_launch(&mut self, args: &[String]) -> Result<AgentLaunch, CliError> {
-        let launch = build_user_agent_launch(self.next_user_agent, args)?;
+        let launch = build_user_agent_launch(self.next_user_agent, args, &self.agent_profile)?;
         self.next_user_agent += 1;
         Ok(launch)
     }
@@ -383,6 +391,7 @@ where
             .take()
             .expect("command chat backend is present");
         let mut coordinator = ReviewCoordinator::new(self.project_dir.clone(), backend)
+            .with_agent_profile(self.agent_profile.clone())
             .with_max_rounds(self.max_review_rounds);
         let results = coordinator.review_latest_agent_commits()?;
         self.backend = Some(coordinator.into_backend());
@@ -421,7 +430,7 @@ where
             .launch_streaming(
                 AgentLaunch::new(
                     reviewer_id.clone(),
-                    AgentKind::Codex,
+                    self.agent_profile.kind.clone(),
                     format!("review {}", commit.feature),
                     review_prompt,
                 ),
@@ -482,9 +491,10 @@ where
 pub(crate) fn build_user_agent_launch(
     agent_number: usize,
     args: &[String],
+    agent_profile: &AgentProfile,
 ) -> Result<AgentLaunch, CliError> {
     let agent_id = AgentId::new(format!("user-{agent_number}")).map_err(CliError::Agent)?;
-    let feature = "user-agent".to_string();
+    let feature = agent_profile.default_feature.clone();
     let prompt = if args.is_empty() {
         DEFAULT_NEW_AGENT_PROMPT.to_string()
     } else {
@@ -492,7 +502,7 @@ pub(crate) fn build_user_agent_launch(
     };
     Ok(AgentLaunch::new(
         agent_id,
-        AgentKind::Codex,
+        agent_profile.kind.clone(),
         feature,
         prompt,
     ))

@@ -3,7 +3,7 @@ use std::fmt;
 use std::path::PathBuf;
 use std::process::Command;
 
-use crate::agent::{AgentError, AgentId, AgentKind, AgentLaunch};
+use crate::agent::{AgentError, AgentId, AgentLaunch, AgentProfile};
 use crate::codex::AgentBackend;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -68,6 +68,7 @@ pub struct ReviewResult {
 pub struct ReviewCoordinator<B> {
     root: PathBuf,
     backend: B,
+    agent_profile: AgentProfile,
     max_rounds: usize,
 }
 
@@ -79,8 +80,14 @@ where
         Self {
             root,
             backend,
+            agent_profile: AgentProfile::codex(),
             max_rounds: 8,
         }
+    }
+
+    pub fn with_agent_profile(mut self, agent_profile: AgentProfile) -> Self {
+        self.agent_profile = agent_profile;
+        self
     }
 
     pub fn with_max_rounds(mut self, max_rounds: usize) -> Self {
@@ -121,7 +128,7 @@ where
             .backend
             .launch(AgentLaunch::new(
                 reviewer_id.clone(),
-                AgentKind::Codex,
+                self.agent_profile.kind.clone(),
                 format!("review {}", commit.feature),
                 review_prompt,
             ))

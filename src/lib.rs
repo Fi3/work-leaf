@@ -11,10 +11,11 @@ pub mod review;
 pub mod terminal_app;
 pub mod ui;
 pub mod ui_harness;
+pub mod workspace;
 
 pub use agent::{
-    AgentError, AgentId, AgentKind, AgentLaunch, AgentSession, ChatMessage, MessageRole,
-    PromptPolicy,
+    AgentError, AgentId, AgentKind, AgentLaunch, AgentProfile, AgentSession, ChatMessage,
+    MessageRole, PromptPolicy,
 };
 pub use cli::{
     CliError, CommandChat, CommandChatResult, ProcessCommand, parse_process_args,
@@ -39,3 +40,6 @@ pub use ui::{
     AgentListEntry, PaneFocus, TerminalLayout, TerminalUi, UiAction, UiKey, UiMode, UiSurface,
 };
 pub use ui_harness::UiHarness;
+pub use workspace::{
+    WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession, WorkLeafSnapshot,
+};

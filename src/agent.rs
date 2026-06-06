@@ -41,6 +41,45 @@ impl fmt::Display for AgentId {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AgentKind {
     Codex,
+    External(String),
+}
+
+impl AgentKind {
+    pub fn display_name(&self) -> &str {
+        match self {
+            Self::Codex => "Codex",
+            Self::External(name) => name,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AgentProfile {
+    pub kind: AgentKind,
+    pub display_name: String,
+    pub default_feature: String,
+}
+
+impl AgentProfile {
+    pub fn new(
+        kind: AgentKind,
+        display_name: impl Into<String>,
+        default_feature: impl Into<String>,
+    ) -> Self {
+        Self {
+            kind,
+            display_name: display_name.into(),
+            default_feature: default_feature.into(),
+        }
+    }
+
+    pub fn codex() -> Self {
+        Self {
+            kind: AgentKind::Codex,
+            display_name: "Codex".to_string(),
+            default_feature: "user-agent".to_string(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

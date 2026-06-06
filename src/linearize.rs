@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use crate::agent::{AgentError, AgentId, AgentKind, AgentLaunch};
+use crate::agent::{AgentError, AgentId, AgentLaunch, AgentProfile};
 use crate::codex::AgentBackend;
 use crate::review::AgentCommit;
 
@@ -85,6 +85,7 @@ pub struct LinearizeHandoff {
 #[derive(Debug)]
 pub struct LinearizePlanner<B> {
     backend: B,
+    agent_profile: AgentProfile,
 }
 
 impl<B> LinearizePlanner<B>
@@ -92,7 +93,15 @@ where
     B: AgentBackend,
 {
     pub fn new(backend: B) -> Self {
-        Self { backend }
+        Self {
+            backend,
+            agent_profile: AgentProfile::codex(),
+        }
+    }
+
+    pub fn with_agent_profile(mut self, agent_profile: AgentProfile) -> Self {
+        self.agent_profile = agent_profile;
+        self
     }
 
     pub fn into_backend(self) -> B {
@@ -124,7 +133,7 @@ where
             .backend
             .launch(AgentLaunch::new(
                 linearizer_id.clone(),
-                AgentKind::Codex,
+                self.agent_profile.kind.clone(),
                 "linearize reviewed patches",
                 prompt.clone(),
             ))
