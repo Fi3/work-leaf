@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 use crate::agent::{
-    AgentError, AgentId, AgentLaunch, AgentSession, ChatMessage, MessageRole, PromptPolicy,
+    AgentError, AgentId, AgentKind, AgentLaunch, AgentSession, ChatMessage, MessageRole,
+    PromptPolicy,
 };
 
 pub trait AgentBackend {
@@ -98,11 +99,12 @@ impl CodexBackend {
         agent_id: &AgentId,
         prompt: &str,
     ) -> Result<CodexInvocation, AgentError> {
-        let session = self
+        let feature = self
             .sessions
             .get(agent_id)
-            .ok_or_else(|| AgentError::UnknownSession(agent_id.clone()))?;
-        let stdin = self.policy.inject(agent_id, &session.feature, prompt);
+            .map(|session| session.feature.as_str())
+            .unwrap_or("unknown");
+        let stdin = self.policy.inject(agent_id, feature, prompt);
         self.resume_invocation(agent_id, stdin)
     }
 
@@ -211,11 +213,23 @@ impl AgentBackend for CodexBackend {
         let invocation = self.build_send_invocation(agent_id, prompt)?;
         let reply = self.run_invocation(&invocation)?;
         let message = ChatMessage::new(MessageRole::Agent, reply);
+        if let Some(session) = self.sessions.get_mut(agent_id) {
+            session.push_message(MessageRole::User, prompt);
+        } else {
+            self.sessions.insert(
+                agent_id.clone(),
+                AgentSession::new(AgentLaunch::new(
+                    agent_id.clone(),
+                    AgentKind::Codex,
+                    "unknown",
+                    prompt,
+                )),
+            );
+        }
         let session = self
             .sessions
             .get_mut(agent_id)
             .ok_or_else(|| AgentError::UnknownSession(agent_id.clone()))?;
-        session.push_message(MessageRole::User, prompt);
         session.messages.push(message.clone());
         Ok(message)
     }

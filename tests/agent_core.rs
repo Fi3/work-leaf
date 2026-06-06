@@ -85,3 +85,33 @@ fn codex_backend_records_agent_replies_in_session_history() {
     assert_eq!(session.messages[1].role, MessageRole::Agent);
     assert_eq!(session.messages[1].text, "ready to patch");
 }
+
+#[test]
+fn codex_backend_can_build_resume_invocation_without_in_memory_session() {
+    let config = CodexCommandConfig::new(PathBuf::from("/repo")).with_binary("codex");
+    let backend = CodexBackend::new(config, PromptPolicy::for_restricted_agents());
+
+    let invocation = backend
+        .build_send_invocation(&AgentId::new("chat-a").unwrap(), "review the patch")
+        .unwrap();
+
+    assert_eq!(invocation.program, PathBuf::from("codex"));
+    assert_eq!(
+        invocation.args,
+        vec![
+            "--cd",
+            "/repo",
+            "--sandbox",
+            "workspace-write",
+            "--ask-for-approval",
+            "never",
+            "exec",
+            "resume",
+            "chat-a",
+            "-"
+        ]
+    );
+    assert!(invocation.stdin.contains("Agent-ID: chat-a"));
+    assert!(invocation.stdin.contains("Feature: unknown"));
+    assert!(invocation.stdin.contains("review the patch"));
+}

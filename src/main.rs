@@ -1,3 +1,3 @@
 fn main() {
-    println!("{}", work_leaf::greeting());
+    work_leaf::run_cli_from_env();
 }
