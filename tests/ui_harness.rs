@@ -6,7 +6,8 @@ fn scripted_harness_renders_full_width_crlf_frame() {
     let rendered = harness.render_frame();
     let lines = rendered.split("\r\n").collect::<Vec<_>>();
 
-    assert!(rendered.starts_with("\u{1b}[2J\u{1b}[H"));
+    assert!(rendered.starts_with("\u{1b}[H"));
+    assert!(!rendered.contains("\u{1b}[2J"));
     assert!(rendered.contains("UI harness"));
     assert!(rendered.contains("user-1"));
     assert_eq!(lines.len(), 24);

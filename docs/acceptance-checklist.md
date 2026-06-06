@@ -12,6 +12,8 @@ commands.
 `new [prompt...]` creates a user agent inside the orchestrator. A created agent appears in the left
 control pane, becomes selectable from that pane, and has a right-pane chat surface. Text typed in
 that chat is sent to the selected agent, and the agent response is shown in the chat transcript.
+Agent creation updates the UI immediately: the left-pane entry and selected chat appear before the
+Codex backend finishes launching, and the chat shows a loading indicator while Codex is starting.
 
 `review` starts the review workflow from inside the orchestrator. `linearize` starts the
 linearization question workflow from inside the orchestrator. `patch` and `locks` are automatic
@@ -30,6 +32,9 @@ The visible cursor location must match the logical interaction point. The cursor
 the upper-left pane corner. In the left pane it follows the selected command/agent row. In the right
 chat pane it follows the chat input. In prompt mode it follows the bottom command prompt text.
 
+Redraws do not clear the full screen on every keypress. The alternate screen is cleared when the UI
+starts, then frames update in place so typing does not flash, blink, or drop fast input characters.
+
 The left pane behaves like a navigable control tree. It lists the work-leaf command interface and
 all running agents. Command-mode navigation selects entries, opens the selected entry, hides/shows
 agents, and lets the user return to any agent chat. Ready agents are highlighted.
@@ -37,11 +42,19 @@ agents, and lets the user return to any agent chat. Ready agents are highlighted
 Agent entries show introspection: agent id, feature/work description, readiness, modified files,
 conflicting agents, dependencies, and dependents.
 
+The right chat pane shows only the selected agent session. Switching agents changes the visible
+conversation to that agent's chat history and does not show command-chat help, global transcripts,
+or messages from other agents.
+
 ## Agent Communication
 
 The orchestrator can launch Codex-backed user agents and keep enough session state to send later
 chat messages to the same Codex thread. Backend failures are shown in the orchestrator transcript
 without exiting the app.
+
+Codex launch and resume operations run without blocking terminal input. Codex JSONL status, error,
+and agent-message events are streamed into the selected agent chat while the process is still
+running, and loading indicators are removed when the operation completes.
 
 The orchestrator can route text between agents where workflows require it. Review sends an original
 agent summary to a reviewer agent, sends reviewer findings back to the original agent, and asks the

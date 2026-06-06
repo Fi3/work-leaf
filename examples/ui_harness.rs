@@ -19,8 +19,8 @@ fn main() -> io::Result<()> {
     let mut stdout = io::stdout();
     let _screen_mode = AlternateScreenMode::enter(&mut stdout)?;
     let backend = HarnessBackend;
-    let mut chat = CommandChat::new(PathBuf::from("."), backend);
-    let mut app = TerminalApp::new(&mut chat, width, height);
+    let chat = CommandChat::new(PathBuf::from("."), backend);
+    let mut app = TerminalApp::new(chat, width, height);
     let mut stdin = io::stdin().lock();
 
     render_frame(&mut stdout, &app)?;
@@ -41,7 +41,7 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn render_frame(output: &mut impl Write, app: &TerminalApp<'_, HarnessBackend>) -> io::Result<()> {
+fn render_frame(output: &mut impl Write, app: &TerminalApp<HarnessBackend>) -> io::Result<()> {
     write!(output, "{}", app.render_frame())?;
     output.flush()
 }

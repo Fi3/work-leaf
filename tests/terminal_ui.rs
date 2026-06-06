@@ -140,7 +140,8 @@ fn screen_renderer_draws_left_fifth_right_pane_and_status_line() {
 
     let rendered = ui.render_screen("new chat-a parser implement parser");
 
-    assert!(rendered.starts_with("\u{1b}[2J\u{1b}[H"));
+    assert!(rendered.starts_with("\u{1b}[H"));
+    assert!(!rendered.contains("\u{1b}[2J"));
     assert!(rendered.contains("work-leaf"));
     assert!(rendered.contains("chat-a"));
     assert!(rendered.contains("command"));

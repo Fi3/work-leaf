@@ -18,6 +18,8 @@ classification are automatic agent/orchestrator interactions, not user-facing to
 
 The UI is a full-screen terminal workspace. It must use the whole terminal viewport, not only the
 upper-left portion. Rendered frames must keep stable terminal geometry across redraws.
+The alternate screen is cleared when the UI opens; normal redraws update the frame in place without
+emitting a full-screen clear sequence, so typing does not flash or blink.
 
 The left pane occupies one fifth of the total terminal width when the right pane is visible. The
 left pane is the control pane: it lists the work-leaf command interface and all running agents.
@@ -27,6 +29,8 @@ Ready agents are visually highlighted.
 
 The right pane shows the selected surface. It can show the work-leaf command interface or the chat
 for the selected agent. Pressing `,` in command mode hides or shows the right pane.
+An agent chat surface contains only that agent's conversation, loading state, and streamed Codex
+events. It does not include command-chat help, global command output, or messages from other agents.
 
 ## Modal Input
 
@@ -39,6 +43,7 @@ mode writes a chat character instead of opening the command prompt.
 The cursor stays inside either the left control pane or the right chat pane during normal command
 and insert interaction. The cursor enters the bottom command prompt only after `Esc` followed by
 `:`.
+Insert-mode input is echoed as each byte is handled, including fast typing bursts.
 
 ## Pane And Window Navigation
 
@@ -56,6 +61,9 @@ The command prompt belongs inside the full-screen UI. `:new [prompt...]` creates
 from inside the orchestrator, selects that agent, moves focus to the right chat pane, and enters
 insert mode so the user can talk to the new session. When no prompt is provided, the new agent asks
 the user what to work on from inside the chat.
+The agent entry and chat surface appear immediately. Codex launch runs in the background and the
+chat shows a progress indicator plus streamed Codex JSONL status/error/message output until the
+session is ready or fails.
 
 `review` and `linearize` are command-chat workflows. `patch` and `locks` are not user commands;
 they are triggered automatically when agents need to modify files or interact with the filesystem.

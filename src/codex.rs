@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
-use std::io::Write;
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::thread;
 
 use crate::agent::{
     AgentError, AgentId, AgentKind, AgentLaunch, AgentSession, ChatMessage, MessageRole,
@@ -11,6 +12,30 @@ use crate::agent::{
 pub trait AgentBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError>;
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError>;
+
+    fn launch_streaming(
+        &mut self,
+        request: AgentLaunch,
+        _sink: &mut dyn FnMut(AgentStreamEvent),
+    ) -> Result<AgentSession, AgentError> {
+        self.launch(request)
+    }
+
+    fn send_streaming(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+        _sink: &mut dyn FnMut(AgentStreamEvent),
+    ) -> Result<ChatMessage, AgentError> {
+        self.send(agent_id, prompt)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum AgentStreamEvent {
+    Status(String),
+    AgentMessage(String),
+    Error(String),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -199,6 +224,14 @@ impl CodexBackend {
     }
 
     fn run_invocation(&self, invocation: &CodexInvocation) -> Result<String, AgentError> {
+        self.run_invocation_streaming(invocation, &mut |_| {})
+    }
+
+    fn run_invocation_streaming(
+        &self,
+        invocation: &CodexInvocation,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+    ) -> Result<String, AgentError> {
         let mut child = Command::new(&invocation.program)
             .args(&invocation.args)
             .stdin(Stdio::piped())
@@ -209,15 +242,40 @@ impl CodexBackend {
         if let Some(stdin) = child.stdin.as_mut() {
             stdin.write_all(invocation.stdin.as_bytes())?;
         }
+        drop(child.stdin.take());
 
-        let output = child.wait_with_output()?;
-        if output.status.success() {
-            Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        let stderr_reader = child.stderr.take().map(|mut stderr| {
+            thread::spawn(move || {
+                let mut text = String::new();
+                let _ = stderr.read_to_string(&mut text);
+                text
+            })
+        });
+
+        let mut stdout_text = String::new();
+        if let Some(stdout) = child.stdout.take() {
+            for line in BufReader::new(stdout).lines() {
+                let line = line?;
+                if let Some(event) = codex_stream_event(&line) {
+                    sink(event);
+                }
+                stdout_text.push_str(&line);
+                stdout_text.push('\n');
+            }
+        }
+
+        let status = child.wait()?;
+        let stderr = stderr_reader
+            .and_then(|reader| reader.join().ok())
+            .unwrap_or_default();
+
+        if status.success() {
+            Ok(stdout_text.trim().to_string())
         } else {
             Err(AgentError::ProcessFailed {
                 program: invocation.program.clone(),
-                status: output.status.code(),
-                stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+                status: status.code(),
+                stderr,
             })
         }
     }
@@ -233,6 +291,47 @@ impl AgentBackend for CodexBackend {
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
         let invocation = self.build_send_invocation(agent_id, prompt)?;
         let output = self.run_invocation(&invocation)?;
+        let reply = parse_codex_output(&output).agent_reply.unwrap_or(output);
+        let message = ChatMessage::new(MessageRole::Agent, reply);
+        if let Some(session) = self.sessions.get_mut(agent_id) {
+            session.push_message(MessageRole::User, prompt);
+        } else {
+            self.sessions.insert(
+                agent_id.clone(),
+                AgentSession::new(AgentLaunch::new(
+                    agent_id.clone(),
+                    AgentKind::Codex,
+                    "unknown",
+                    prompt,
+                )),
+            );
+        }
+        let session = self
+            .sessions
+            .get_mut(agent_id)
+            .ok_or_else(|| AgentError::UnknownSession(agent_id.clone()))?;
+        session.messages.push(message.clone());
+        Ok(message)
+    }
+
+    fn launch_streaming(
+        &mut self,
+        request: AgentLaunch,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+    ) -> Result<AgentSession, AgentError> {
+        let invocation = self.build_launch_invocation(&request);
+        let output = self.run_invocation_streaming(&invocation, sink)?;
+        self.record_launch_output(request, output)
+    }
+
+    fn send_streaming(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+    ) -> Result<ChatMessage, AgentError> {
+        let invocation = self.build_send_invocation(agent_id, prompt)?;
+        let output = self.run_invocation_streaming(&invocation, sink)?;
         let reply = parse_codex_output(&output).agent_reply.unwrap_or(output);
         let message = ChatMessage::new(MessageRole::Agent, reply);
         if let Some(session) = self.sessions.get_mut(agent_id) {
@@ -275,6 +374,23 @@ fn parse_codex_output(output: &str) -> ParsedCodexOutput {
         }
     }
     parsed
+}
+
+fn codex_stream_event(line: &str) -> Option<AgentStreamEvent> {
+    if line.contains(r#""type":"item.completed""#) && line.contains(r#""type":"agent_message""#) {
+        return json_string_field(line, "text").map(AgentStreamEvent::AgentMessage);
+    }
+    if line.contains(r#""type":"error""#) {
+        return json_string_field(line, "message").map(AgentStreamEvent::Error);
+    }
+    if line.contains(r#""type":"thread.started""#) {
+        return json_string_field(line, "thread_id")
+            .map(|thread_id| AgentStreamEvent::Status(format!("Codex session {thread_id}")));
+    }
+    if line.contains(r#""type":"turn.started""#) {
+        return Some(AgentStreamEvent::Status("Codex is working".to_string()));
+    }
+    None
 }
 
 fn json_string_field(line: &str, field: &str) -> Option<String> {

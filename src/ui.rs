@@ -348,7 +348,7 @@ impl TerminalUi {
 
     pub fn render_screen_with_prompt(&self, right_content: &str, prompt: &str) -> String {
         let buffer = self.render_tui_buffer(right_content, prompt);
-        let mut rendered = String::from("\u{1b}[2J\u{1b}[H");
+        let mut rendered = String::from("\u{1b}[H");
         rendered.push_str(&buffer_to_string(&buffer));
         rendered.push_str(&self.cursor_sequence(right_content, prompt));
         rendered

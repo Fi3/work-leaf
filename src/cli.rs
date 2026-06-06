@@ -4,15 +4,17 @@ use std::fmt;
 use std::io::{self, BufRead, IsTerminal, Read, Write};
 use std::path::PathBuf;
 use std::process::{self, Command, Stdio};
+use std::thread;
+use std::time::Duration;
 
 use crate::agent::{AgentId, AgentKind, AgentLaunch, PromptPolicy};
-use crate::codex::{AgentBackend, CodexBackend, CodexCommandConfig};
+use crate::codex::{AgentBackend, AgentStreamEvent, CodexBackend, CodexCommandConfig};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::locks::{CommandWritePolicy, FileLockTable};
 use crate::orchestrator::{AgentFollowUp, OrchestratorEvent, handle_agent_directives};
 use crate::review::{GitHistory, ReviewCoordinator, ReviewResult};
 use crate::terminal_app::TerminalApp;
-use crate::ui::{AgentListEntry, TerminalUi, UiAction};
+use crate::ui::UiAction;
 
 const DEFAULT_NEW_AGENT_PROMPT: &str = "Start a new work-leaf user-agent session. Ask the user what to work on if the task is not already clear, then report the broad feature before proposing patches.";
 
@@ -83,8 +85,8 @@ pub fn run_cli_from_env() -> ! {
                 }
             };
             let backend = codex_backend(project_dir.clone(), model);
-            let mut chat = CommandChat::new(project_dir, backend);
-            if let Err(error) = run_command_chat(&mut chat) {
+            let chat = CommandChat::new(project_dir, backend);
+            if let Err(error) = run_command_chat(chat) {
                 eprintln!("{error}");
                 process::exit(1);
             }
@@ -155,6 +157,15 @@ where
         agent_id: &AgentId,
         message: &str,
     ) -> Result<CommandChatResult, CliError> {
+        self.send_to_agent_streaming(agent_id, message, &mut |_| {})
+    }
+
+    pub fn send_to_agent_streaming(
+        &mut self,
+        agent_id: &AgentId,
+        message: &str,
+        stream: &mut dyn FnMut(AgentStreamEvent),
+    ) -> Result<CommandChatResult, CliError> {
         let feature = self
             .agents
             .get(agent_id)
@@ -164,7 +175,7 @@ where
             .backend
             .as_mut()
             .expect("command chat backend is present")
-            .send(agent_id, message)
+            .send_streaming(agent_id, message, stream)
             .map_err(CliError::Agent)?
             .text;
         let reply = self.process_agent_reply(agent_id, &feature, reply)?;
@@ -175,26 +186,48 @@ where
     }
 
     fn launch_agent(&mut self, args: &[String]) -> Result<CommandChatResult, CliError> {
+        let original_next_user_agent = self.next_user_agent;
+        let launch = self.prepare_agent_launch(args)?;
+        match self.launch_prepared_agent_streaming(launch, &mut |_| {}) {
+            Ok(result) => Ok(result),
+            Err(error) => {
+                self.next_user_agent = original_next_user_agent;
+                Err(error)
+            }
+        }
+    }
+
+    pub fn prepare_agent_launch(&mut self, args: &[String]) -> Result<AgentLaunch, CliError> {
         let agent_id =
             AgentId::new(format!("user-{}", self.next_user_agent)).map_err(CliError::Agent)?;
+        self.next_user_agent += 1;
         let feature = "user-agent".to_string();
         let prompt = if args.is_empty() {
             DEFAULT_NEW_AGENT_PROMPT.to_string()
         } else {
             args.join(" ")
         };
+        Ok(AgentLaunch::new(
+            agent_id,
+            AgentKind::Codex,
+            feature,
+            prompt,
+        ))
+    }
+
+    pub fn launch_prepared_agent_streaming(
+        &mut self,
+        launch: AgentLaunch,
+        stream: &mut dyn FnMut(AgentStreamEvent),
+    ) -> Result<CommandChatResult, CliError> {
+        let agent_id = launch.id.clone();
+        let feature = launch.feature.clone();
         let session = self
             .backend
             .as_mut()
             .expect("command chat backend is present")
-            .launch(AgentLaunch::new(
-                agent_id.clone(),
-                AgentKind::Codex,
-                feature.clone(),
-                prompt,
-            ))
+            .launch_streaming(launch, stream)
             .map_err(CliError::Agent)?;
-        self.next_user_agent += 1;
         let reply = session
             .messages
             .last()
@@ -352,9 +385,9 @@ pub fn render_command_chat_help() -> String {
     .join("\n")
 }
 
-fn run_command_chat<B>(chat: &mut CommandChat<B>) -> Result<(), CliError>
+fn run_command_chat<B>(chat: CommandChat<B>) -> Result<(), CliError>
 where
-    B: AgentBackend,
+    B: AgentBackend + Send + 'static,
 {
     if io::stdin().is_terminal() && io::stdout().is_terminal() {
         run_terminal_ui(chat)
@@ -363,9 +396,9 @@ where
     }
 }
 
-fn run_terminal_ui<B>(chat: &mut CommandChat<B>) -> Result<(), CliError>
+fn run_terminal_ui<B>(chat: CommandChat<B>) -> Result<(), CliError>
 where
-    B: AgentBackend,
+    B: AgentBackend + Send + 'static,
 {
     let (width, height) = terminal_size();
     let _raw_mode = RawTerminalMode::enter()?;
@@ -377,14 +410,20 @@ where
     render_terminal_frame(&mut stdout, &app)?;
 
     loop {
+        app.tick();
         let mut byte = [0_u8; 1];
-        if stdin.read(&mut byte)? == 0 {
-            break;
+        match stdin.read(&mut byte)? {
+            0 => thread::sleep(Duration::from_millis(10)),
+            _ => {
+                if !app.handle_byte(byte[0]) {
+                    break;
+                }
+            }
         }
-        if !app.handle_byte(byte[0]) {
-            break;
+        if app.needs_render() {
+            render_terminal_frame(&mut stdout, &app)?;
+            app.mark_rendered();
         }
-        render_terminal_frame(&mut stdout, &app)?;
     }
 
     write!(stdout, "\u{1b}[2J\u{1b}[H")?;
@@ -392,7 +431,7 @@ where
     Ok(())
 }
 
-fn run_scripted_command_chat<B>(chat: &mut CommandChat<B>) -> Result<(), CliError>
+fn run_scripted_command_chat<B>(mut chat: CommandChat<B>) -> Result<(), CliError>
 where
     B: AgentBackend,
 {
@@ -416,12 +455,9 @@ where
     Ok(())
 }
 
-fn render_terminal_frame<B>(
-    output: &mut impl Write,
-    app: &TerminalApp<'_, B>,
-) -> Result<(), CliError>
+fn render_terminal_frame<B>(output: &mut impl Write, app: &TerminalApp<B>) -> Result<(), CliError>
 where
-    B: AgentBackend,
+    B: AgentBackend + Send + 'static,
 {
     write!(output, "{}", app.render_frame())?;
     output.flush()?;
@@ -506,12 +542,19 @@ pub(crate) fn command_chat_error_text(error: &CliError) -> String {
     format!("error: {message}")
 }
 
-pub(crate) fn apply_command_result_to_ui(ui: &mut TerminalUi, result: &CommandChatResult) {
+#[cfg(test)]
+pub(crate) fn apply_command_result_to_ui(
+    ui: &mut crate::ui::TerminalUi,
+    result: &CommandChatResult,
+) {
     if let CommandChatResult::AgentLaunched {
         agent_id, feature, ..
     } = result
     {
-        ui.add_agent(AgentListEntry::new(agent_id.clone(), feature.clone()));
+        ui.add_agent(crate::ui::AgentListEntry::new(
+            agent_id.clone(),
+            feature.clone(),
+        ));
         let _ = ui.activate_agent_chat(agent_id);
     }
 }
@@ -533,7 +576,7 @@ impl RawTerminalMode {
         let saved_state = stty_output(&["-g"]);
 
         if saved_state.is_some() {
-            let _ = stty_status(&["raw", "-echo", "min", "1", "time", "0"]);
+            let _ = stty_status(&["raw", "-echo", "min", "0", "time", "1"]);
         }
 
         Ok(Self { saved_state })
@@ -730,7 +773,7 @@ impl From<crate::review::ReviewError> for CliError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ui::{PaneFocus, UiMode};
+    use crate::ui::{PaneFocus, TerminalUi, UiMode};
 
     #[test]
     fn launched_agent_result_selects_chat_and_enters_insert_mode() {

@@ -1,6 +1,8 @@
 use std::collections::VecDeque;
 use std::fs;
 use std::path::PathBuf;
+use std::thread;
+use std::time::{Duration, Instant};
 
 use work_leaf::{
     AgentBackend, AgentError, AgentId, AgentLaunch, AgentSession, ChatMessage, CodexBackend,
@@ -10,10 +12,11 @@ use work_leaf::{
 #[test]
 fn terminal_app_new_and_chat_message_use_real_command_chat_backend() {
     let backend = FakeBackend::new(["launch reply", "follow reply"]);
-    let mut chat = CommandChat::new(PathBuf::from("/repo"), backend);
-    let mut app = TerminalApp::new(&mut chat, 100, 24);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
 
     app.handle_bytes(b":new implement parser\n");
+    app.wait_for_idle(Duration::from_secs(1));
 
     assert_eq!(
         app.ui().selected_agent().map(AgentId::as_str),
@@ -25,10 +28,11 @@ fn terminal_app_new_and_chat_message_use_real_command_chat_backend() {
     assert!(app.render_frame().contains("launch reply"));
 
     app.handle_bytes(b"please continue\n");
+    app.wait_for_idle(Duration::from_secs(1));
 
-    assert!(app.render_frame().contains("user-1> please continue"));
+    assert!(app.render_frame().contains("user: please continue"));
     assert!(app.render_frame().contains("follow reply"));
-    let backend = chat.into_backend();
+    let backend = app.into_chat().into_backend();
     assert_eq!(backend.launches.len(), 1);
     assert_eq!(backend.sends.len(), 1);
     assert_eq!(backend.sends[0].0.as_str(), "user-1");
@@ -38,13 +42,13 @@ fn terminal_app_new_and_chat_message_use_real_command_chat_backend() {
 #[test]
 fn terminal_app_keeps_visible_cursor_on_chat_input() {
     let backend = FakeBackend::new(["launch reply"]);
-    let mut chat = CommandChat::new(PathBuf::from("/repo"), backend);
-    let mut app = TerminalApp::new(&mut chat, 100, 24);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
 
     app.handle_bytes(b":new implement parser\nhello");
 
     assert_eq!(app.ui().focus(), PaneFocus::Right);
-    assert!(app.render_frame().ends_with("\u{1b}[13;33H"));
+    assert!(app.render_frame().ends_with("\u{1b}[3;33H"));
 }
 
 #[test]
@@ -91,10 +95,11 @@ fi
         CodexCommandConfig::new(root.clone()).with_binary(&codex),
         PromptPolicy::for_restricted_agents(),
     );
-    let mut chat = CommandChat::new(root, backend);
-    let mut app = TerminalApp::new(&mut chat, 100, 24);
+    let chat = CommandChat::new(root, backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
 
     app.handle_bytes(b":new spawned process\n");
+    app.wait_for_idle(Duration::from_secs(1));
 
     assert_eq!(
         app.ui().selected_agent().map(AgentId::as_str),
@@ -104,9 +109,112 @@ fi
     assert!(app.render_frame().contains("launch reply from fake codex"));
 
     app.handle_bytes(b"continue\n");
+    app.wait_for_idle(Duration::from_secs(1));
 
-    assert!(app.render_frame().contains("user-1> continue"));
+    assert!(app.render_frame().contains("user: continue"));
     assert!(app.render_frame().contains("resume reply from fake codex"));
+}
+
+#[test]
+fn terminal_app_does_not_clear_screen_on_each_render_or_drop_fast_input() {
+    let backend = FakeBackend::new(["launch reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new fast input\nabcdef");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    let frame = app.render_frame();
+    assert!(!frame.contains("\u{1b}[2J"));
+    assert!(frame.contains("chat> abcdef"));
+}
+
+#[test]
+fn terminal_app_new_adds_agent_immediately_while_backend_is_loading() {
+    let backend = SlowBackend;
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+    let start = Instant::now();
+
+    app.handle_bytes(b":new slow launch\n");
+
+    assert!(start.elapsed() < Duration::from_millis(100));
+    assert_eq!(
+        app.ui().selected_agent().map(AgentId::as_str),
+        Some("user-1")
+    );
+    assert!(app.render_frame().contains("user-1"));
+    assert!(app.render_frame().contains("Starting Codex session"));
+
+    app.wait_for_idle(Duration::from_secs(2));
+    assert!(app.render_frame().contains("slow launch reply"));
+}
+
+#[test]
+fn terminal_app_chat_pane_shows_only_the_selected_agent_session() {
+    let backend = FakeBackend::new([
+        "first launch",
+        "second launch",
+        "second reply",
+        "first reply",
+    ]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new first\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"\x1b:new second\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"message for second\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    assert!(app.render_frame().contains("message for second"));
+    app.handle_bytes(&[27, 23, b'h', b'k', b'l']);
+
+    let frame = app.render_frame();
+    assert!(frame.contains("first launch"));
+    assert!(!frame.contains("message for second"));
+    assert!(!frame.contains("second reply"));
+
+    app.handle_bytes(b"imessage for first\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    let frame = app.render_frame();
+    assert!(frame.contains("message for first"));
+    assert!(frame.contains("first reply"));
+    assert!(!frame.contains("message for second"));
+}
+
+#[test]
+fn terminal_app_streams_spawned_codex_output_before_process_finishes() {
+    let root = temp_dir("terminal-app-codex-streaming");
+    let fake_bin = root.join("bin");
+    fs::create_dir_all(&fake_bin).unwrap();
+    let codex = fake_bin.join("codex");
+    fs::write(
+        &codex,
+        "\
+#!/bin/sh
+printf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-stream\"}'
+printf '%s\\n' '{\"type\":\"error\",\"message\":\"streamed progress before final\"}'
+sleep 1
+printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"item-1\",\"type\":\"agent_message\",\"text\":\"streamed final reply\"}}'
+",
+    )
+    .unwrap();
+    make_executable(&codex);
+    let backend = CodexBackend::new(
+        CodexCommandConfig::new(root.clone()).with_binary(&codex),
+        PromptPolicy::for_restricted_agents(),
+    );
+    let chat = CommandChat::new(root, backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new stream output\n");
+
+    assert!(app.wait_for_frame_contains("streamed progress before final", Duration::from_secs(1)));
+    assert!(app.is_busy());
+    app.wait_for_idle(Duration::from_secs(2));
+    assert!(app.render_frame().contains("streamed final reply"));
 }
 
 #[derive(Debug)]
@@ -115,6 +223,9 @@ struct FakeBackend {
     launches: Vec<AgentLaunch>,
     sends: Vec<(AgentId, String)>,
 }
+
+#[derive(Debug)]
+struct SlowBackend;
 
 fn temp_dir(name: &str) -> PathBuf {
     let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
@@ -162,5 +273,19 @@ impl AgentBackend for FakeBackend {
             MessageRole::Agent,
             self.replies.pop_front().expect("missing fake reply"),
         ))
+    }
+}
+
+impl AgentBackend for SlowBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        thread::sleep(Duration::from_millis(250));
+        let mut session = AgentSession::new(request);
+        session.push_message(MessageRole::Agent, "slow launch reply");
+        Ok(session)
+    }
+
+    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+        thread::sleep(Duration::from_millis(250));
+        Ok(ChatMessage::new(MessageRole::Agent, "slow send reply"))
     }
 }
