@@ -53,6 +53,7 @@ fn codex_backend_builds_exec_invocation_for_project_directory() {
             "gpt-5",
             "--color",
             "never",
+            "--json",
             "-"
         ]
     );
@@ -87,6 +88,47 @@ fn codex_backend_records_agent_replies_in_session_history() {
 }
 
 #[test]
+fn codex_backend_records_json_thread_id_for_follow_up_messages() {
+    let config = CodexCommandConfig::new(PathBuf::from("/repo")).with_binary("codex");
+    let mut backend = CodexBackend::new(config, PromptPolicy::for_restricted_agents());
+    let agent_id = AgentId::new("chat-a").unwrap();
+
+    let session = backend
+        .record_launch_output(
+            AgentLaunch::new(agent_id.clone(), AgentKind::Codex, "parser", "implement parser"),
+            r#"{"type":"thread.started","thread_id":"thread-123"}"#
+                .to_string()
+                + "\n"
+                + r#"{"type":"item.completed","item":{"id":"item-1","type":"agent_message","text":"ready to patch"}}"#,
+        )
+        .unwrap();
+
+    assert_eq!(session.messages[1].text, "ready to patch");
+
+    let invocation = backend
+        .build_send_invocation(&agent_id, "continue")
+        .unwrap();
+
+    assert_eq!(
+        invocation.args,
+        vec![
+            "--cd",
+            "/repo",
+            "--sandbox",
+            "workspace-write",
+            "--ask-for-approval",
+            "never",
+            "exec",
+            "resume",
+            "--json",
+            "thread-123",
+            "-"
+        ]
+    );
+    assert!(invocation.stdin.contains("continue"));
+}
+
+#[test]
 fn codex_backend_can_build_resume_invocation_without_in_memory_session() {
     let config = CodexCommandConfig::new(PathBuf::from("/repo")).with_binary("codex");
     let backend = CodexBackend::new(config, PromptPolicy::for_restricted_agents());
@@ -107,6 +149,7 @@ fn codex_backend_can_build_resume_invocation_without_in_memory_session() {
             "never",
             "exec",
             "resume",
+            "--json",
             "chat-a",
             "-"
         ]
