@@ -1,3 +1,4 @@
+use std::collections::{BTreeMap, VecDeque};
 use std::env;
 use std::fmt;
 use std::io::{self, BufRead, IsTerminal, Read, Write};
@@ -7,8 +8,11 @@ use std::process::{self, Command, Stdio};
 use crate::agent::{AgentId, AgentKind, AgentLaunch, PromptPolicy};
 use crate::codex::{AgentBackend, CodexBackend, CodexCommandConfig};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
+use crate::locks::{CommandWritePolicy, FileLockTable};
+use crate::orchestrator::{AgentFollowUp, OrchestratorEvent, handle_agent_directives};
 use crate::review::{GitHistory, ReviewCoordinator, ReviewResult};
-use crate::ui::{AgentListEntry, TerminalUi, UiAction, UiKey, UiMode};
+use crate::terminal_app::TerminalApp;
+use crate::ui::{AgentListEntry, TerminalUi, UiAction};
 
 const DEFAULT_NEW_AGENT_PROMPT: &str = "Start a new work-leaf user-agent session. Ask the user what to work on if the task is not already clear, then report the broad feature before proposing patches.";
 
@@ -93,6 +97,9 @@ pub fn run_cli_from_env() -> ! {
 pub struct CommandChat<B> {
     project_dir: PathBuf,
     backend: Option<B>,
+    locks: FileLockTable,
+    command_policy: CommandWritePolicy,
+    agents: BTreeMap<AgentId, String>,
     max_review_rounds: usize,
     next_user_agent: usize,
 }
@@ -103,8 +110,11 @@ where
 {
     pub fn new(project_dir: PathBuf, backend: B) -> Self {
         Self {
+            locks: FileLockTable::new(project_dir.clone()),
             project_dir,
             backend: Some(backend),
+            command_policy: CommandWritePolicy,
+            agents: BTreeMap::new(),
             max_review_rounds: 8,
             next_user_agent: 1,
         }
@@ -145,6 +155,11 @@ where
         agent_id: &AgentId,
         message: &str,
     ) -> Result<CommandChatResult, CliError> {
+        let feature = self
+            .agents
+            .get(agent_id)
+            .cloned()
+            .unwrap_or_else(|| "user-agent".to_string());
         let reply = self
             .backend
             .as_mut()
@@ -152,6 +167,7 @@ where
             .send(agent_id, message)
             .map_err(CliError::Agent)?
             .text;
+        let reply = self.process_agent_reply(agent_id, &feature, reply)?;
         Ok(CommandChatResult::AgentMessage {
             agent_id: agent_id.clone(),
             reply,
@@ -184,11 +200,64 @@ where
             .last()
             .map(|message| message.text.clone())
             .unwrap_or_default();
+        self.agents.insert(agent_id.clone(), feature.clone());
+        let reply = self.process_agent_reply(&agent_id, &feature, reply)?;
         Ok(CommandChatResult::AgentLaunched {
             agent_id,
             feature,
             reply,
         })
+    }
+
+    fn process_agent_reply(
+        &mut self,
+        agent_id: &AgentId,
+        feature: &str,
+        reply: String,
+    ) -> Result<String, CliError> {
+        let mut text = reply.clone();
+        let mut pending = VecDeque::from([AgentFollowUp {
+            agent_id: agent_id.clone(),
+            text: reply,
+        }]);
+        let mut rounds = 0;
+
+        while let Some(current) = pending.pop_front() {
+            if rounds >= self.max_review_rounds {
+                text.push_str(
+                    "\n\norchestrator:\nstopped processing agent directives after the configured round limit",
+                );
+                break;
+            }
+            rounds += 1;
+
+            let run = {
+                let backend = self
+                    .backend
+                    .as_mut()
+                    .expect("command chat backend is present");
+                handle_agent_directives(
+                    backend,
+                    &self.project_dir,
+                    &self.locks,
+                    &self.command_policy,
+                    &current.agent_id,
+                    feature,
+                    &current.text,
+                )?
+            };
+
+            append_orchestrator_events(&mut text, &run.events);
+            append_follow_ups(&mut text, &run.follow_up_replies);
+
+            for follow_up in run.follow_up_replies {
+                if follow_up.agent_id == *agent_id && !follow_up.text.is_empty() {
+                    pending.push_back(follow_up);
+                }
+            }
+        }
+
+        Ok(text)
     }
 
     fn review(&mut self) -> Result<CommandChatResult, CliError> {
@@ -227,6 +296,30 @@ pub enum CommandChatResult {
     ReviewComplete(Vec<ReviewResult>),
     LinearizeQuestions(Vec<LinearizeQuestion>),
     Quit,
+}
+
+fn append_orchestrator_events(text: &mut String, events: &[OrchestratorEvent]) {
+    if events.is_empty() {
+        return;
+    }
+
+    text.push_str("\n\norchestrator:");
+    for event in events {
+        text.push('\n');
+        text.push_str(&event.summary());
+    }
+}
+
+fn append_follow_ups(text: &mut String, follow_ups: &[AgentFollowUp]) {
+    for follow_up in follow_ups {
+        if follow_up.text.is_empty() {
+            continue;
+        }
+        text.push_str("\n\nagent follow-up from ");
+        text.push_str(follow_up.agent_id.as_str());
+        text.push_str(":\n");
+        text.push_str(&follow_up.text);
+    }
 }
 
 pub fn render_process_help() -> String {
@@ -276,92 +369,22 @@ where
 {
     let (width, height) = terminal_size();
     let _raw_mode = RawTerminalMode::enter()?;
-    let mut ui = TerminalUi::new(width, height);
-    let mut prompt_buffer = String::new();
-    let mut chat_buffer = String::new();
-    let mut transcript = vec![render_command_chat_help()];
+    let mut app = TerminalApp::new(chat, width, height);
     let mut stdin = io::stdin().lock();
     let mut stdout = io::stdout();
     let _screen_mode = AlternateScreenMode::enter(&mut stdout)?;
 
-    render_terminal_frame(&mut stdout, &ui, &prompt_buffer, &chat_buffer, &transcript)?;
+    render_terminal_frame(&mut stdout, &app)?;
 
     loop {
         let mut byte = [0_u8; 1];
         if stdin.read(&mut byte)? == 0 {
             break;
         }
-        let Some(event) = TerminalInput::from_byte(byte[0]) else {
-            render_terminal_frame(&mut stdout, &ui, &prompt_buffer, &chat_buffer, &transcript)?;
-            continue;
-        };
-
-        match event {
-            TerminalInput::Quit => break,
-            TerminalInput::Backspace if ui.mode() == UiMode::Prompt => {
-                prompt_buffer.pop();
-            }
-            TerminalInput::Backspace if ui.mode() == UiMode::Insert => {
-                chat_buffer.pop();
-            }
-            TerminalInput::Enter if ui.mode() == UiMode::Prompt => {
-                let line = prompt_buffer.trim().to_string();
-                prompt_buffer.clear();
-                ui.handle_key(UiKey::Esc);
-                if !line.is_empty() {
-                    transcript.push(format!("work-leaf> {line}"));
-                    match chat.handle_line(&line) {
-                        Ok(result) => {
-                            let should_quit = matches!(result, CommandChatResult::Quit);
-                            apply_command_result_to_ui(&mut ui, &result);
-                            transcript.push(command_result_text(&result));
-                            if should_quit {
-                                break;
-                            }
-                        }
-                        Err(error) => transcript.push(command_chat_error_text(&error)),
-                    }
-                }
-            }
-            TerminalInput::Enter if ui.mode() == UiMode::Insert => {
-                if let Some(agent_id) = ui.selected_agent().cloned() {
-                    let message = chat_buffer.trim().to_string();
-                    chat_buffer.clear();
-                    if !message.is_empty() {
-                        transcript.push(format!("{agent_id}> {message}"));
-                        match chat.send_to_agent(&agent_id, &message) {
-                            Ok(result) => transcript.push(command_result_text(&result)),
-                            Err(error) => transcript.push(command_chat_error_text(&error)),
-                        }
-                    }
-                }
-            }
-            TerminalInput::Char(ch) if ui.mode() == UiMode::Prompt => {
-                prompt_buffer.push(ch);
-            }
-            TerminalInput::Char(ch) if ui.mode() == UiMode::Insert => {
-                chat_buffer.push(ch);
-            }
-            TerminalInput::Key(UiKey::Esc) => {
-                prompt_buffer.clear();
-                for action in ui.handle_key(UiKey::Esc) {
-                    transcript.push(ui_action_text(action));
-                }
-            }
-            TerminalInput::Key(key) => {
-                for action in ui.handle_key(key) {
-                    transcript.push(ui_action_text(action));
-                }
-            }
-            TerminalInput::Char(ch) => {
-                for action in ui.handle_key(UiKey::Char(ch)) {
-                    transcript.push(ui_action_text(action));
-                }
-            }
-            TerminalInput::Backspace | TerminalInput::Enter => {}
+        if !app.handle_byte(byte[0]) {
+            break;
         }
-
-        render_terminal_frame(&mut stdout, &ui, &prompt_buffer, &chat_buffer, &transcript)?;
+        render_terminal_frame(&mut stdout, &app)?;
     }
 
     write!(stdout, "\u{1b}[2J\u{1b}[H")?;
@@ -393,24 +416,19 @@ where
     Ok(())
 }
 
-fn render_terminal_frame(
+fn render_terminal_frame<B>(
     output: &mut impl Write,
-    ui: &TerminalUi,
-    prompt_buffer: &str,
-    chat_buffer: &str,
-    transcript: &[String],
-) -> Result<(), CliError> {
-    let right_content = terminal_right_content(chat_buffer, transcript);
-    write!(
-        output,
-        "{}",
-        ui.render_screen_with_prompt(&right_content, prompt_buffer)
-    )?;
+    app: &TerminalApp<'_, B>,
+) -> Result<(), CliError>
+where
+    B: AgentBackend,
+{
+    write!(output, "{}", app.render_frame())?;
     output.flush()?;
     Ok(())
 }
 
-fn terminal_right_content(chat_buffer: &str, transcript: &[String]) -> String {
+pub(crate) fn terminal_right_content(chat_buffer: &str, transcript: &[String]) -> String {
     let mut content = transcript.join("\n");
     if !content.is_empty() {
         content.push('\n');
@@ -420,7 +438,7 @@ fn terminal_right_content(chat_buffer: &str, transcript: &[String]) -> String {
     content
 }
 
-fn command_result_text(result: &CommandChatResult) -> String {
+pub(crate) fn command_result_text(result: &CommandChatResult) -> String {
     match result {
         CommandChatResult::Noop => String::new(),
         CommandChatResult::Help(help) => help.clone(),
@@ -477,17 +495,18 @@ fn command_result_text(result: &CommandChatResult) -> String {
     }
 }
 
-fn command_chat_error_text(error: &CliError) -> String {
+pub(crate) fn command_chat_error_text(error: &CliError) -> String {
     let message = match error {
         CliError::Usage(message) => message.clone(),
         CliError::Agent(error) => error.to_string(),
         CliError::Io(error) => error.to_string(),
+        CliError::Orchestrator(error) => error.to_string(),
         CliError::Review(error) => error.to_string(),
     };
     format!("error: {message}")
 }
 
-fn apply_command_result_to_ui(ui: &mut TerminalUi, result: &CommandChatResult) {
+pub(crate) fn apply_command_result_to_ui(ui: &mut TerminalUi, result: &CommandChatResult) {
     if let CommandChatResult::AgentLaunched {
         agent_id, feature, ..
     } = result
@@ -497,34 +516,11 @@ fn apply_command_result_to_ui(ui: &mut TerminalUi, result: &CommandChatResult) {
     }
 }
 
-fn ui_action_text(action: UiAction) -> String {
+pub(crate) fn ui_action_text(action: UiAction) -> String {
     match action {
         UiAction::OpenChatSamePane(agent_id) => format!("opened {agent_id} in split pane"),
         UiAction::OpenChatNewWindow(agent_id) => format!("opened {agent_id} in new window"),
         UiAction::ForkAgent(agent_id) => format!("fork requested for {agent_id}"),
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum TerminalInput {
-    Key(UiKey),
-    Char(char),
-    Enter,
-    Backspace,
-    Quit,
-}
-
-impl TerminalInput {
-    fn from_byte(byte: u8) -> Option<Self> {
-        match byte {
-            3 | 4 => Some(Self::Quit),
-            13 | 10 => Some(Self::Enter),
-            27 => Some(Self::Key(UiKey::Esc)),
-            23 => Some(Self::Key(UiKey::CtrlW)),
-            8 | 127 => Some(Self::Backspace),
-            byte if byte.is_ascii_graphic() || byte == b' ' => Some(Self::Char(byte as char)),
-            _ => None,
-        }
     }
 }
 
@@ -685,6 +681,7 @@ pub enum CliError {
     Usage(String),
     Agent(crate::agent::AgentError),
     Io(io::Error),
+    Orchestrator(crate::orchestrator::OrchestratorError),
     Review(crate::review::ReviewError),
 }
 
@@ -694,6 +691,7 @@ impl fmt::Display for CliError {
             Self::Usage(message) => write!(formatter, "{message}\n\n{}", render_process_help()),
             Self::Agent(error) => write!(formatter, "{error}"),
             Self::Io(error) => write!(formatter, "{error}"),
+            Self::Orchestrator(error) => write!(formatter, "{error}"),
             Self::Review(error) => write!(formatter, "{error}"),
         }
     }
@@ -704,6 +702,7 @@ impl std::error::Error for CliError {
         match self {
             Self::Agent(error) => Some(error),
             Self::Io(error) => Some(error),
+            Self::Orchestrator(error) => Some(error),
             Self::Review(error) => Some(error),
             Self::Usage(_) => None,
         }
@@ -716,6 +715,12 @@ impl From<io::Error> for CliError {
     }
 }
 
+impl From<crate::orchestrator::OrchestratorError> for CliError {
+    fn from(error: crate::orchestrator::OrchestratorError) -> Self {
+        Self::Orchestrator(error)
+    }
+}
+
 impl From<crate::review::ReviewError> for CliError {
     fn from(error: crate::review::ReviewError) -> Self {
         Self::Review(error)
@@ -725,7 +730,7 @@ impl From<crate::review::ReviewError> for CliError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ui::PaneFocus;
+    use crate::ui::{PaneFocus, UiMode};
 
     #[test]
     fn launched_agent_result_selects_chat_and_enters_insert_mode() {

@@ -3,8 +3,10 @@ pub mod cli;
 pub mod codex;
 pub mod linearize;
 pub mod locks;
+pub mod orchestrator;
 pub mod patch;
 pub mod review;
+pub mod terminal_app;
 pub mod ui;
 pub mod ui_harness;
 
@@ -24,8 +26,10 @@ pub use linearize::{
 pub use locks::{
     CommandWriteIntent, CommandWritePolicy, FileAccessError, FileLockTable, FileSnapshot,
 };
+pub use orchestrator::{AgentOrchestrator, OrchestratorError, OrchestratorEvent};
 pub use patch::{GitPatcher, PatchCoordinator, PatchError, PatchOutcome, PatchRequest};
 pub use review::{AgentCommit, GitHistory, ReviewCoordinator, ReviewError, ReviewResult};
+pub use terminal_app::TerminalApp;
 pub use ui::{
     AgentListEntry, PaneFocus, TerminalLayout, TerminalUi, UiAction, UiKey, UiMode, UiSurface,
 };

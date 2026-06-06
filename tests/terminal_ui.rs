@@ -206,6 +206,44 @@ fn focus_cursor_stays_inside_left_or_right_pane() {
 }
 
 #[test]
+fn left_pane_navigation_moves_cursor_to_selected_agent_row_and_opens_chat() {
+    let mut ui = TerminalUi::new(100, 20);
+    let chat_a = AgentId::new("chat-a").unwrap();
+    let chat_b = AgentId::new("chat-b").unwrap();
+    ui.add_agent(AgentListEntry::new(chat_a.clone(), "parser"));
+    ui.add_agent(AgentListEntry::new(chat_b.clone(), "docs"));
+
+    assert!(ui.render_screen("command chat").ends_with("\u{1b}[2;2H"));
+
+    ui.handle_key(UiKey::Char('j'));
+    assert!(ui.render_screen("command chat").ends_with("\u{1b}[3;2H"));
+    assert_eq!(ui.selected_agent(), None);
+
+    ui.handle_key(UiKey::Char('l'));
+
+    assert_eq!(ui.selected_agent(), Some(&chat_a));
+    assert_eq!(ui.focus(), PaneFocus::Right);
+    assert!(ui.render_screen("agent chat").contains("chat-a"));
+}
+
+#[test]
+fn left_pane_can_hide_selected_agents_from_control_list() {
+    let mut ui = TerminalUi::new(100, 20);
+    let chat_a = AgentId::new("chat-a").unwrap();
+    let chat_b = AgentId::new("chat-b").unwrap();
+    ui.add_agent(AgentListEntry::new(chat_a.clone(), "parser"));
+    ui.add_agent(AgentListEntry::new(chat_b.clone(), "docs"));
+
+    ui.handle_key(UiKey::Char('j'));
+    ui.handle_key(UiKey::Char('x'));
+
+    let rendered = ui.render_left_pane();
+    assert!(!rendered.contains("chat-a"));
+    assert!(rendered.contains("chat-b"));
+    assert!(ui.render_screen("command chat").ends_with("\u{1b}[3;2H"));
+}
+
+#[test]
 fn raw_mode_screen_uses_crlf_so_frame_fills_terminal_width() {
     let ui = TerminalUi::new(80, 8);
     let rendered = ui.render_screen("command chat");

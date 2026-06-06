@@ -1,8 +1,12 @@
 use std::env;
 use std::io::{self, IsTerminal, Read, Write};
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-use work_leaf::UiHarness;
+use work_leaf::{
+    AgentBackend, AgentError, AgentId, AgentLaunch, AgentSession, ChatMessage, CommandChat,
+    MessageRole, TerminalApp,
+};
 
 fn main() -> io::Result<()> {
     if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
@@ -14,20 +18,22 @@ fn main() -> io::Result<()> {
     let _raw_mode = RawTerminalMode::enter();
     let mut stdout = io::stdout();
     let _screen_mode = AlternateScreenMode::enter(&mut stdout)?;
-    let mut harness = UiHarness::new(width, height);
+    let backend = HarnessBackend;
+    let mut chat = CommandChat::new(PathBuf::from("."), backend);
+    let mut app = TerminalApp::new(&mut chat, width, height);
     let mut stdin = io::stdin().lock();
 
-    render_frame(&mut stdout, &harness)?;
+    render_frame(&mut stdout, &app)?;
 
     loop {
         let mut byte = [0_u8; 1];
         if stdin.read(&mut byte)? == 0 {
             break;
         }
-        if !harness.handle_byte(byte[0]) {
+        if !app.handle_byte(byte[0]) {
             break;
         }
-        render_frame(&mut stdout, &harness)?;
+        render_frame(&mut stdout, &app)?;
     }
 
     write!(stdout, "\u{1b}[2J\u{1b}[H")?;
@@ -35,9 +41,31 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn render_frame(output: &mut impl Write, harness: &UiHarness) -> io::Result<()> {
-    write!(output, "{}", harness.render_frame())?;
+fn render_frame(output: &mut impl Write, app: &TerminalApp<'_, HarnessBackend>) -> io::Result<()> {
+    write!(output, "{}", app.render_frame())?;
     output.flush()
+}
+
+#[derive(Debug, Default)]
+struct HarnessBackend;
+
+impl AgentBackend for HarnessBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        let id = request.id.clone();
+        let mut session = AgentSession::new(request);
+        session.push_message(
+            MessageRole::Agent,
+            format!("{id} ready; send a chat message to test the reply path"),
+        );
+        Ok(session)
+    }
+
+    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        Ok(ChatMessage::new(
+            MessageRole::Agent,
+            format!("{agent_id} received: {prompt}"),
+        ))
+    }
 }
 
 struct RawTerminalMode {

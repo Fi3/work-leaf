@@ -57,6 +57,7 @@ pub struct AgentListEntry {
     pub id: AgentId,
     pub feature: String,
     pub ready: bool,
+    pub hidden: bool,
     pub modified_files: Vec<PathBuf>,
     pub conflicting_agents: Vec<AgentId>,
     pub depends_on: Vec<AgentId>,
@@ -69,6 +70,7 @@ impl AgentListEntry {
             id,
             feature: feature.into(),
             ready: false,
+            hidden: false,
             modified_files: Vec::new(),
             conflicting_agents: Vec::new(),
             depends_on: Vec::new(),
@@ -78,6 +80,11 @@ impl AgentListEntry {
 
     pub fn with_ready(mut self, ready: bool) -> Self {
         self.ready = ready;
+        self
+    }
+
+    pub fn with_hidden(mut self, hidden: bool) -> Self {
+        self.hidden = hidden;
         self
     }
 
@@ -139,6 +146,7 @@ pub struct TerminalUi {
     right_visible: bool,
     agents: Vec<AgentListEntry>,
     selected_agent: Option<AgentId>,
+    control_selected: usize,
     split_chats: Vec<AgentId>,
     windows: Vec<UiWindow>,
     active_window: usize,
@@ -155,6 +163,7 @@ impl TerminalUi {
             right_visible: true,
             agents: Vec::new(),
             selected_agent: None,
+            control_selected: 0,
             split_chats: Vec::new(),
             windows: vec![UiWindow::command()],
             active_window: 0,
@@ -199,6 +208,10 @@ impl TerminalUi {
         self.selected_agent.as_ref()
     }
 
+    pub fn control_selected_row(&self) -> usize {
+        self.control_selected
+    }
+
     pub fn add_agent(&mut self, agent: AgentListEntry) {
         self.agents.push(agent);
     }
@@ -207,6 +220,12 @@ impl TerminalUi {
         if self.agents.iter().any(|agent| &agent.id == agent_id) {
             self.selected_agent = Some(agent_id.clone());
             self.windows[self.active_window] = UiWindow::chat(agent_id.clone());
+            self.control_selected = self
+                .visible_agent_indices()
+                .iter()
+                .position(|index| self.agents[*index].id == *agent_id)
+                .map(|position| position + 1)
+                .unwrap_or(self.control_selected);
             Ok(())
         } else {
             Err(format!("unknown agent `{agent_id}`"))
@@ -223,6 +242,7 @@ impl TerminalUi {
     pub fn select_command_interface(&mut self) {
         self.selected_agent = None;
         self.windows[self.active_window] = UiWindow::command();
+        self.control_selected = 0;
     }
 
     pub fn handle_key(&mut self, key: UiKey) -> Vec<UiAction> {
@@ -258,6 +278,22 @@ impl TerminalUi {
                 }
                 Vec::new()
             }
+            UiKey::Char('j') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(1);
+                Vec::new()
+            }
+            UiKey::Char('k') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(-1);
+                Vec::new()
+            }
+            UiKey::Char('l') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.open_control_selection();
+                Vec::new()
+            }
+            UiKey::Char('x') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.hide_control_selection();
+                Vec::new()
+            }
             UiKey::Char('s') if self.mode == UiMode::Command => self.open_selected_same_pane(),
             UiKey::Char('t') if self.mode == UiMode::Command => self.open_selected_new_window(),
             UiKey::Char('f') if self.mode == UiMode::Command => self.fork_selected_agent(),
@@ -267,17 +303,14 @@ impl TerminalUi {
 
     pub fn render_left_pane(&self) -> String {
         let mut rendered = String::new();
-        if self.selected_agent.is_none() {
+        if self.control_selected == 0 {
             rendered.push_str("> work-leaf  command\n");
         } else {
             rendered.push_str("  work-leaf  command\n");
         }
-        for agent in &self.agents {
-            let selected = self
-                .selected_agent
-                .as_ref()
-                .is_some_and(|selected| selected == &agent.id);
-            if selected {
+        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
+            let agent = &self.agents[*agent_index];
+            if self.control_selected == visible_position + 1 {
                 rendered.push_str("> ");
             } else {
                 rendered.push_str("  ");
@@ -317,7 +350,7 @@ impl TerminalUi {
         let buffer = self.render_tui_buffer(right_content, prompt);
         let mut rendered = String::from("\u{1b}[2J\u{1b}[H");
         rendered.push_str(&buffer_to_string(&buffer));
-        rendered.push_str(&self.cursor_sequence(prompt));
+        rendered.push_str(&self.cursor_sequence(right_content, prompt));
         rendered
     }
 
@@ -354,18 +387,21 @@ impl TerminalUi {
     }
 
     fn left_widget(&self) -> List<'static> {
-        let mut items = vec![ListItem::new(if self.selected_agent.is_none() {
+        let mut items = vec![ListItem::new(if self.control_selected == 0 {
             Spans::from(vec![Span::raw("> work-leaf  command")])
         } else {
             Spans::from(vec![Span::raw("  work-leaf  command")])
         })];
-        for agent in &self.agents {
+        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
+            let agent = &self.agents[*agent_index];
             let mut line = Vec::new();
-            let selected = self
-                .selected_agent
-                .as_ref()
-                .is_some_and(|selected| selected == &agent.id);
-            line.push(Span::raw(if selected { "> " } else { "  " }));
+            line.push(Span::raw(
+                if self.control_selected == visible_position + 1 {
+                    "> "
+                } else {
+                    "  "
+                },
+            ));
             line.push(Span::raw(agent.id.as_str().to_string()));
             line.push(Span::raw("  working: "));
             line.push(Span::raw(agent.feature.clone()));
@@ -426,8 +462,7 @@ impl TerminalUi {
         }
     }
 
-    fn cursor_sequence(&self, prompt: &str) -> String {
-        let layout = self.layout();
+    fn cursor_sequence(&self, right_content: &str, prompt: &str) -> String {
         let (row, column) = if self.mode == UiMode::Prompt {
             let prompt_column = prompt
                 .chars()
@@ -437,8 +472,8 @@ impl TerminalUi {
             (self.height, prompt_column)
         } else {
             match self.focus {
-                PaneFocus::Left => (2, 2),
-                PaneFocus::Right => (2, layout.left_width.saturating_add(2)),
+                PaneFocus::Left => (self.control_cursor_row(), 2),
+                PaneFocus::Right => self.right_cursor_position(right_content),
             }
         };
         let row = row.clamp(1, self.height.max(1));
@@ -483,7 +518,7 @@ impl TerminalUi {
     }
 
     fn open_selected_same_pane(&mut self) -> Vec<UiAction> {
-        let Some(agent_id) = self.selected_agent.clone() else {
+        let Some(agent_id) = self.action_agent_id() else {
             return Vec::new();
         };
         self.split_chats.push(agent_id.clone());
@@ -491,7 +526,7 @@ impl TerminalUi {
     }
 
     fn open_selected_new_window(&mut self) -> Vec<UiAction> {
-        let Some(agent_id) = self.selected_agent.clone() else {
+        let Some(agent_id) = self.action_agent_id() else {
             return Vec::new();
         };
         self.windows.push(UiWindow::chat(agent_id.clone()));
@@ -501,11 +536,111 @@ impl TerminalUi {
     }
 
     fn fork_selected_agent(&self) -> Vec<UiAction> {
-        self.selected_agent
-            .clone()
+        self.action_agent_id()
             .map(UiAction::ForkAgent)
             .into_iter()
             .collect()
+    }
+
+    fn open_control_selection(&mut self) {
+        if self.control_selected == 0 {
+            self.select_command_interface();
+            self.focus = PaneFocus::Right;
+            return;
+        }
+        if let Some(agent_id) = self.control_selected_agent_id() {
+            let _ = self.select_agent(&agent_id);
+            self.focus = PaneFocus::Right;
+        }
+    }
+
+    fn hide_control_selection(&mut self) {
+        if self.control_selected == 0 {
+            return;
+        }
+        let Some(agent_index) = self.control_selected_agent_index() else {
+            return;
+        };
+        let hidden_agent = self.agents[agent_index].id.clone();
+        self.agents[agent_index].hidden = true;
+        if self
+            .selected_agent
+            .as_ref()
+            .is_some_and(|selected| selected == &hidden_agent)
+        {
+            self.select_command_interface();
+        }
+        self.clamp_control_selection();
+    }
+
+    fn move_control_selection(&mut self, delta: isize) {
+        let max_row = self.visible_agent_indices().len();
+        let current = self.control_selected as isize;
+        let next = (current + delta).clamp(0, max_row as isize);
+        self.control_selected = next as usize;
+    }
+
+    fn clamp_control_selection(&mut self) {
+        let max_row = self.visible_agent_indices().len();
+        if self.control_selected > max_row {
+            self.control_selected = max_row;
+        }
+    }
+
+    fn visible_agent_indices(&self) -> Vec<usize> {
+        self.agents
+            .iter()
+            .enumerate()
+            .filter_map(|(index, agent)| (!agent.hidden).then_some(index))
+            .collect()
+    }
+
+    fn control_selected_agent_index(&self) -> Option<usize> {
+        if self.control_selected == 0 {
+            return None;
+        }
+        self.visible_agent_indices()
+            .get(self.control_selected - 1)
+            .copied()
+    }
+
+    fn control_selected_agent_id(&self) -> Option<AgentId> {
+        self.control_selected_agent_index()
+            .map(|index| self.agents[index].id.clone())
+    }
+
+    fn action_agent_id(&self) -> Option<AgentId> {
+        self.control_selected_agent_id()
+            .or_else(|| self.selected_agent.clone())
+    }
+
+    fn control_cursor_row(&self) -> u16 {
+        (self.control_selected + 2).min(usize::from(u16::MAX)) as u16
+    }
+
+    fn right_cursor_position(&self, right_content: &str) -> (u16, u16) {
+        let layout = self.layout();
+        let inner_width = layout.right_width.saturating_sub(2).max(1);
+        let lines = right_content.lines().collect::<Vec<_>>();
+        let Some(line) = lines.last().copied() else {
+            return (2, layout.left_width.saturating_add(2));
+        };
+        if !line.starts_with("chat> ") {
+            return (2, layout.left_width.saturating_add(2));
+        }
+        let previous_rows = lines[..lines.len() - 1]
+            .iter()
+            .map(|line| visual_rows(line, inner_width))
+            .sum::<u16>();
+        let line_len = line.chars().count().min(usize::from(u16::MAX)) as u16;
+        let row = 2_u16
+            .saturating_add(previous_rows)
+            .saturating_add(line_len / inner_width);
+        let column = layout
+            .left_width
+            .saturating_add(2)
+            .saturating_add(line_len % inner_width);
+        (row, column)
     }
 
     fn next_window(&mut self) {
@@ -581,4 +716,10 @@ fn buffer_to_string(buffer: &Buffer) -> String {
         }
     }
     output
+}
+
+fn visual_rows(line: &str, width: u16) -> u16 {
+    let width = width.max(1);
+    let len = line.chars().count().min(usize::from(u16::MAX)) as u16;
+    (len / width).saturating_add(1)
 }

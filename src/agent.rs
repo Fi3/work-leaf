@@ -143,6 +143,10 @@ impl PromptPolicy {
                 "You are not allowed to write files directly; provide a unified diff patch for every file you want to change.",
                 "Commands that create, update, delete, format, build, test, or otherwise write files require orchestrator mediation.",
                 "Keep every patch focused on the current feature and explain the specific reason for the patch.",
+                "Use `@work-leaf read <path>` to request file text from the orchestrator.",
+                "Use `@work-leaf patch <reason>` followed by a unified diff and `@work-leaf end` to request a write.",
+                "Use `@work-leaf locks classify <command>` to ask whether a command writes project files.",
+                "Use `@work-leaf send <agent-id> <message>` to route context to another agent.",
             ]
             .join("\n"),
         }

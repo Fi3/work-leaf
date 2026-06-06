@@ -20,6 +20,10 @@ fn prompt_policy_wraps_every_agent_prompt_with_file_access_rules() {
     assert!(wrapped.contains("ask the orchestrator to provide file text"));
     assert!(wrapped.contains("not allowed to write files directly"));
     assert!(wrapped.contains("provide a unified diff patch"));
+    assert!(wrapped.contains("@work-leaf read <path>"));
+    assert!(wrapped.contains("@work-leaf patch <reason>"));
+    assert!(wrapped.contains("@work-leaf locks classify <command>"));
+    assert!(wrapped.contains("@work-leaf send <agent-id> <message>"));
     assert!(wrapped.contains("implement the flag parser"));
 }
 

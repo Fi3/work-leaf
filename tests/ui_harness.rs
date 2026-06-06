@@ -42,11 +42,11 @@ fn scripted_harness_drives_ctrl_w_navigation_and_right_toggle() {
 
     harness.handle_bytes(&[23, b'l']);
     assert_eq!(harness.ui().focus(), PaneFocus::Right);
-    assert!(harness.render_frame().ends_with("\u{1b}[2;18H"));
+    assert!(harness.render_frame().ends_with("\u{1b}[5;24H"));
 
     harness.handle_bytes(&[23, b'h']);
     assert_eq!(harness.ui().focus(), PaneFocus::Left);
-    assert!(harness.render_frame().ends_with("\u{1b}[2;2H"));
+    assert!(harness.render_frame().ends_with("\u{1b}[3;2H"));
 
     harness.handle_byte(b',');
     assert_eq!(harness.ui().layout().right_surface, None);

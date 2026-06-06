@@ -103,6 +103,80 @@ fn command_chat_new_without_prompt_opens_interactive_agent_session() {
 }
 
 #[test]
+fn command_chat_processes_agent_orchestrator_requests_automatically() {
+    let root = temp_dir("command-chat-agent-side-channel");
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(
+        root.join("src/lib.rs"),
+        "pub fn parsed() -> bool { true }\n",
+    )
+    .unwrap();
+    let backend = FakeBackend::new([
+        "@work-leaf read src/lib.rs",
+        "the parser can use the provided source text",
+    ]);
+    let mut chat = CommandChat::new(root, backend);
+
+    let result = chat.handle_line("new inspect parser").unwrap();
+
+    let CommandChatResult::AgentLaunched {
+        agent_id,
+        feature,
+        reply,
+    } = result
+    else {
+        panic!("expected launched agent");
+    };
+    assert_eq!(agent_id, AgentId::new("user-1").unwrap());
+    assert_eq!(feature, "user-agent");
+    assert!(reply.contains("@work-leaf read src/lib.rs"));
+    assert!(reply.contains("orchestrator:"));
+    assert!(reply.contains("sent file text to user-1"));
+    assert!(reply.contains("agent follow-up from user-1:"));
+    assert!(reply.contains("the parser can use the provided source text"));
+
+    let backend = chat.into_backend();
+    assert_eq!(backend.sends.len(), 1);
+    assert_eq!(backend.sends[0].0, AgentId::new("user-1").unwrap());
+    assert!(backend.sends[0].1.contains("src/lib.rs"));
+    assert!(backend.sends[0].1.contains("pub fn parsed()"));
+}
+
+#[test]
+fn command_chat_applies_agent_patch_requests_automatically() {
+    let root = temp_git_repo("command-chat-agent-patch");
+    fs::write(root.join("lib.rs"), "pub fn value() -> u8 { 1 }\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial patch fixture"]);
+    let backend = FakeBackend::new(["\
+@work-leaf patch return value two
+diff --git a/lib.rs b/lib.rs
+--- a/lib.rs
++++ b/lib.rs
+@@ -1 +1 @@
+-pub fn value() -> u8 { 1 }
++pub fn value() -> u8 { 2 }
+@work-leaf end"]);
+    let mut chat = CommandChat::new(root.clone(), backend);
+
+    let result = chat.handle_line("new update value").unwrap();
+
+    let CommandChatResult::AgentLaunched { reply, .. } = result else {
+        panic!("expected launched agent");
+    };
+    assert!(reply.contains("orchestrator:"));
+    assert!(reply.contains("applied patch from user-1"));
+    assert_eq!(
+        fs::read_to_string(root.join("lib.rs")).unwrap(),
+        "pub fn value() -> u8 { 2 }\n"
+    );
+    let message = git_output(&root, ["log", "-1", "--pretty=%B"]);
+    assert!(message.contains("Agent-ID: user-1"));
+    assert!(message.contains("Feature: user-agent"));
+    assert!(message.contains("Reason: return value two"));
+}
+
+#[test]
 fn failed_agent_launch_does_not_consume_user_agent_id() {
     let backend = FlakyLaunchBackend::default();
     let mut chat = CommandChat::new(PathBuf::from("/repo"), backend);
@@ -174,6 +248,43 @@ fn temp_dir(name: &str) -> PathBuf {
     root
 }
 
+fn temp_git_repo(name: &str) -> PathBuf {
+    let root = temp_dir(name);
+    git(&root, ["init"]);
+    git(&root, ["config", "user.name", "Work Leaf Test"]);
+    git(&root, ["config", "user.email", "work-leaf@example.test"]);
+    root
+}
+
+fn git<const N: usize>(root: &std::path::Path, args: [&str; N]) {
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(root)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "git failed: {}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+fn git_output<const N: usize>(root: &std::path::Path, args: [&str; N]) -> String {
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(root)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "git failed: {}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
 fn current_path() -> String {
     std::env::var("PATH").unwrap_or_default()
 }
@@ -194,6 +305,7 @@ fn make_executable(_path: &std::path::Path) {}
 struct FakeBackend {
     replies: VecDeque<String>,
     launches: Vec<work_leaf::AgentLaunch>,
+    sends: Vec<(AgentId, String)>,
 }
 
 impl FakeBackend {
@@ -201,6 +313,7 @@ impl FakeBackend {
         Self {
             replies: replies.into_iter().map(String::from).collect(),
             launches: Vec::new(),
+            sends: Vec::new(),
         }
     }
 }
@@ -216,7 +329,8 @@ impl AgentBackend for FakeBackend {
         Ok(session)
     }
 
-    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        self.sends.push((agent_id.clone(), prompt.to_string()));
         Ok(ChatMessage::new(
             MessageRole::Agent,
             self.replies.pop_front().expect("missing fake reply"),
