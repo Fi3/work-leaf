@@ -432,6 +432,29 @@ impl TerminalUi {
         rendered
     }
 
+    pub fn render_screen_with_cursors(
+        &self,
+        right_content: &str,
+        prompt: &str,
+        prompt_cursor: usize,
+        right_cursor_column: Option<usize>,
+    ) -> String {
+        let visible_right_content = self.visible_right_content(right_content);
+        let buffer = self.render_tui_buffer(&visible_right_content, prompt);
+        let mut rendered = String::new();
+        if self.ready_bell_pending.replace(false) {
+            rendered.push('\u{7}');
+        }
+        rendered.push_str("\u{1b}[H");
+        rendered.push_str(&buffer_to_string(&buffer));
+        rendered.push_str(&self.cursor_sequence_with_cursors(
+            &visible_right_content,
+            prompt,
+            prompt_cursor,
+            right_cursor_column,
+        ));
+        rendered
+    }
     fn visible_right_content(&self, right_content: &str) -> String {
         let (inner_width, inner_height) = self.right_inner_size();
         tail_visible_content(right_content, inner_width, inner_height)
@@ -558,6 +581,33 @@ impl TerminalUi {
         format!("\u{1b}[{row};{column}H")
     }
 
+    fn cursor_sequence_with_cursors(
+        &self,
+        right_content: &str,
+        prompt: &str,
+        prompt_cursor: usize,
+        right_cursor_column: Option<usize>,
+    ) -> String {
+        let (row, column) = if self.mode == UiMode::Prompt {
+            let prompt_column = prompt
+                .char_indices()
+                .take_while(|(index, _)| *index < prompt_cursor)
+                .count()
+                .saturating_add(2)
+                .min(usize::from(u16::MAX)) as u16;
+            (self.height, prompt_column)
+        } else {
+            match self.focus {
+                PaneFocus::Left => (self.control_cursor_row(), 2),
+                PaneFocus::Right => {
+                    self.right_cursor_position_with_cursor(right_content, right_cursor_column)
+                }
+            }
+        };
+        let row = row.clamp(1, self.height.max(1));
+        let column = column.clamp(1, self.width.max(1));
+        format!("\u{1b}[{row};{column}H")
+    }
     fn handle_pending_key(&mut self, pending: PendingKey, key: UiKey) -> Vec<UiAction> {
         match (pending, key) {
             (PendingKey::CtrlW, UiKey::Char('h')) if self.mode == UiMode::Command => {
@@ -815,6 +865,38 @@ impl TerminalUi {
         (row, column)
     }
 
+    fn right_cursor_position_with_cursor(
+        &self,
+        right_content: &str,
+        cursor_column: Option<usize>,
+    ) -> (u16, u16) {
+        let layout = self.layout();
+        let inner_width = layout.right_width.saturating_sub(2).max(1);
+        let lines = right_content.lines().collect::<Vec<_>>();
+        let Some(line) = lines.last().copied() else {
+            return (2, layout.left_width.saturating_add(2));
+        };
+        if !line.starts_with("chat> ") {
+            return (2, layout.left_width.saturating_add(2));
+        }
+        let previous_rows = lines[..lines.len() - 1]
+            .iter()
+            .map(|line| visual_rows(line, inner_width))
+            .sum::<u16>();
+        let line_chars = line.chars().count();
+        let line_len = cursor_column
+            .unwrap_or(line_chars)
+            .min(line_chars)
+            .min(usize::from(u16::MAX)) as u16;
+        let row = 2_u16
+            .saturating_add(previous_rows)
+            .saturating_add(line_len / inner_width);
+        let column = layout
+            .left_width
+            .saturating_add(2)
+            .saturating_add(line_len % inner_width);
+        (row, column)
+    }
     fn right_inner_size(&self) -> (u16, u16) {
         let layout = self.layout();
         let inner_width = layout.right_width.saturating_sub(2).max(1);

@@ -6,6 +6,9 @@ use crate::{
 pub struct UiHarness {
     ui: TerminalUi,
     prompt_buffer: String,
+    prompt_cursor: usize,
+    prompt_history: Vec<String>,
+    prompt_history_index: Option<usize>,
     chat_buffer: String,
     chat_cursor: usize,
     chat_history: Vec<String>,
@@ -28,6 +31,9 @@ impl UiHarness {
         Self {
             ui: fixture_ui(width, height, parser, tests),
             prompt_buffer: String::new(),
+            prompt_cursor: 0,
+            prompt_history: Vec::new(),
+            prompt_history_index: None,
             chat_buffer: String::new(),
             chat_cursor: 0,
             chat_history: Vec::new(),
@@ -107,15 +113,19 @@ impl UiHarness {
     }
 
     pub fn render_frame(&self) -> String {
-        self.ui
-            .render_screen_with_prompt(&self.right_content(), &self.prompt_buffer)
+        self.ui.render_screen_with_cursors(
+            &self.right_content(),
+            &self.prompt_buffer,
+            self.prompt_cursor,
+            Some(self.chat_cursor_column()),
+        )
     }
 
     fn handle_input(&mut self, input: HarnessInput) {
         match input {
             HarnessInput::Quit => self.quit = true,
             HarnessInput::Backspace if self.ui.mode() == UiMode::Prompt => {
-                self.prompt_buffer.pop();
+                self.backspace_prompt_char();
             }
             HarnessInput::Backspace if self.ui.mode() == UiMode::Insert => {
                 self.backspace_chat_char();
@@ -123,8 +133,11 @@ impl UiHarness {
             HarnessInput::Enter if self.ui.mode() == UiMode::Prompt => {
                 let line = self.prompt_buffer.trim().to_string();
                 self.prompt_buffer.clear();
+                self.prompt_cursor = 0;
+                self.prompt_history_index = None;
                 self.ui.handle_key(UiKey::Esc);
                 if !line.is_empty() {
+                    self.prompt_history.push(line.clone());
                     self.transcript.push(format!("work-leaf> {line}"));
                     self.execute_prompt(&line);
                 }
@@ -150,10 +163,22 @@ impl UiHarness {
                 }
             }
             HarnessInput::Char(ch) if self.ui.mode() == UiMode::Prompt => {
-                self.prompt_buffer.push(ch);
+                self.insert_prompt_char(ch);
             }
             HarnessInput::Char(ch) if self.ui.mode() == UiMode::Insert => {
                 self.insert_chat_char(ch);
+            }
+            HarnessInput::Key(UiKey::Left) if self.ui.mode() == UiMode::Prompt => {
+                self.move_prompt_cursor_left();
+            }
+            HarnessInput::Key(UiKey::Right) if self.ui.mode() == UiMode::Prompt => {
+                self.move_prompt_cursor_right();
+            }
+            HarnessInput::Key(UiKey::Up) if self.ui.mode() == UiMode::Prompt => {
+                self.recall_prompt_history(-1);
+            }
+            HarnessInput::Key(UiKey::Down) if self.ui.mode() == UiMode::Prompt => {
+                self.recall_prompt_history(1);
             }
             HarnessInput::Key(UiKey::Left) if self.should_route_chat_arrow() => {
                 self.move_chat_cursor_left();
@@ -169,6 +194,8 @@ impl UiHarness {
             }
             HarnessInput::Key(UiKey::Esc) => {
                 self.prompt_buffer.clear();
+                self.prompt_cursor = 0;
+                self.prompt_history_index = None;
                 let actions = self.ui.handle_key(UiKey::Esc);
                 self.record_actions(actions);
             }
@@ -238,6 +265,54 @@ impl UiHarness {
         let _ = self.ui.update_agent_feature(agent_id, title);
     }
 
+    fn insert_prompt_char(&mut self, ch: char) {
+        self.prompt_buffer.insert(self.prompt_cursor, ch);
+        self.prompt_cursor += ch.len_utf8();
+        self.prompt_history_index = None;
+    }
+    fn backspace_prompt_char(&mut self) {
+        let Some((previous, _)) = self.prompt_buffer[..self.prompt_cursor]
+            .char_indices()
+            .next_back()
+        else {
+            return;
+        };
+        self.prompt_buffer.drain(previous..self.prompt_cursor);
+        self.prompt_cursor = previous;
+        self.prompt_history_index = None;
+    }
+    fn move_prompt_cursor_left(&mut self) {
+        if let Some((previous, _)) = self.prompt_buffer[..self.prompt_cursor]
+            .char_indices()
+            .next_back()
+        {
+            self.prompt_cursor = previous;
+        }
+    }
+    fn move_prompt_cursor_right(&mut self) {
+        if self.prompt_cursor >= self.prompt_buffer.len() {
+            return;
+        }
+        let next = self.prompt_buffer[self.prompt_cursor..]
+            .chars()
+            .next()
+            .map(|ch| self.prompt_cursor + ch.len_utf8())
+            .unwrap_or(self.prompt_buffer.len());
+        self.prompt_cursor = next;
+    }
+    fn recall_prompt_history(&mut self, delta: isize) {
+        if self.prompt_history.is_empty() {
+            return;
+        }
+        let current = self
+            .prompt_history_index
+            .unwrap_or(self.prompt_history.len()) as isize;
+        let max = self.prompt_history.len().saturating_sub(1) as isize;
+        let next = (current + delta).clamp(0, max) as usize;
+        self.prompt_history_index = Some(next);
+        self.prompt_buffer = self.prompt_history[next].clone();
+        self.prompt_cursor = self.prompt_buffer.len();
+    }
     fn insert_chat_char(&mut self, ch: char) {
         self.chat_buffer.insert(self.chat_cursor, ch);
         self.chat_cursor += ch.len_utf8();
@@ -290,6 +365,9 @@ impl UiHarness {
         self.chat_cursor = self.chat_buffer.len();
     }
 
+    fn chat_cursor_column(&self) -> usize {
+        CHAT_PROMPT.chars().count() + cursor_char_count(&self.chat_buffer, self.chat_cursor)
+    }
     fn record_actions(&mut self, actions: Vec<crate::UiAction>) {
         self.transcript
             .extend(actions.into_iter().map(|action| format!("{action:?}")));
@@ -301,7 +379,8 @@ impl UiHarness {
     }
 
     fn defer_escape_key(&self) -> bool {
-        self.ui.mode() == UiMode::Insert && self.ui.focus() == PaneFocus::Right
+        self.ui.mode() == UiMode::Prompt
+            || (self.ui.mode() == UiMode::Insert && self.ui.focus() == PaneFocus::Right)
     }
 
     fn finish_pending_escape_sequence(&mut self) {
@@ -370,7 +449,7 @@ impl UiHarness {
         if !content.is_empty() {
             content.push('\n');
         }
-        content.push_str("chat> ");
+        content.push_str(CHAT_PROMPT);
         content.push_str(&self.chat_buffer);
         content
     }
@@ -383,6 +462,7 @@ struct PendingEscapeSequence {
     escape_dispatched: bool,
 }
 
+const CHAT_PROMPT: &str = "chat> ";
 const MAX_ESCAPE_SEQUENCE: usize = 8;
 
 fn parse_key_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
@@ -418,6 +498,11 @@ impl HarnessInput {
     }
 }
 
+fn cursor_char_count(text: &str, cursor: usize) -> usize {
+    text.char_indices()
+        .take_while(|(index, _)| *index < cursor)
+        .count()
+}
 fn fixture_ui(width: u16, height: u16, parser: AgentId, tests: AgentId) -> TerminalUi {
     let mut ui = TerminalUi::new(width, height);
     ui.add_agent(
