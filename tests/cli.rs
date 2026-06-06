@@ -104,6 +104,19 @@ fn command_chat_new_without_prompt_opens_interactive_agent_session() {
 }
 
 #[test]
+fn restricted_agent_prompt_advertises_completion_signal() {
+    let prompt = PromptPolicy::for_restricted_agents().inject(
+        &AgentId::new("user-1").unwrap(),
+        "user-agent",
+        "finish the task",
+    );
+
+    assert!(prompt.contains(
+        "Use `@work-leaf done` when no more orchestrator work is required."
+    ));
+}
+
+#[test]
 fn command_chat_processes_agent_orchestrator_requests_automatically() {
     let root = temp_dir("command-chat-agent-side-channel");
     fs::create_dir_all(root.join("src")).unwrap();
@@ -141,6 +154,59 @@ fn command_chat_processes_agent_orchestrator_requests_automatically() {
     assert_eq!(backend.sends[0].0, AgentId::new("user-1").unwrap());
     assert!(backend.sends[0].1.contains("src/lib.rs"));
     assert!(backend.sends[0].1.contains("pub fn parsed()"));
+}
+
+#[test]
+fn command_chat_continues_past_old_round_cutoff_until_agent_reports_done() {
+    let root = temp_dir("command-chat-agent-done-convergence");
+    let mut replies = Vec::new();
+    for index in 0..10 {
+        let path = format!("round-{index}.txt");
+        fs::write(root.join(&path), format!("round {index}\n")).unwrap();
+        replies.push(format!("@work-leaf read {path}"));
+    }
+    replies.push("@work-leaf done".to_string());
+    let backend = FakeBackend::from_replies(replies);
+    let mut chat = CommandChat::new(root, backend);
+
+    let result = chat.handle_line("new converge through reads").unwrap();
+
+    let CommandChatResult::AgentLaunched { reply, .. } = result else {
+        panic!("expected launched agent");
+    };
+    assert!(reply.contains("sent file text to user-1: round-9.txt"));
+    assert!(reply.contains("agent user-1 reported done"));
+    assert!(!reply.contains("agent did not converge"));
+
+    let backend = chat.into_backend();
+    assert_eq!(backend.sends.len(), 10);
+    assert!(backend.sends[9].1.contains("round-9.txt"));
+}
+
+#[test]
+fn command_chat_reports_non_convergence_when_emergency_guard_trips() {
+    let root = temp_dir("command-chat-agent-non-convergence");
+    fs::write(root.join("loop.txt"), "loop\n").unwrap();
+    let backend = FakeBackend::from_replies([
+        "@work-leaf read loop.txt",
+        "@work-leaf read loop.txt",
+        "@work-leaf read loop.txt",
+        "@work-leaf read loop.txt",
+    ]);
+    let mut chat = CommandChat::new(root, backend).with_max_review_rounds(3);
+
+    let result = chat.handle_line("new loop forever").unwrap();
+
+    let CommandChatResult::AgentLaunched { reply, .. } = result else {
+        panic!("expected launched agent");
+    };
+    assert!(reply.contains("agent did not converge after 3 orchestrator rounds"));
+    assert!(!reply.contains(
+        "stopped processing agent directives after the configured round limit"
+    ));
+
+    let backend = chat.into_backend();
+    assert_eq!(backend.sends.len(), 3);
 }
 
 #[test]
@@ -386,8 +452,16 @@ struct FakeBackend {
 
 impl FakeBackend {
     fn new<const N: usize>(replies: [&str; N]) -> Self {
+        Self::from_replies(replies)
+    }
+
+    fn from_replies<I, S>(replies: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
         Self {
-            replies: replies.into_iter().map(String::from).collect(),
+            replies: replies.into_iter().map(Into::into).collect(),
             launches: Vec::new(),
             sends: Vec::new(),
         }
