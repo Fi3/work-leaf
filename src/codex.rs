@@ -144,7 +144,6 @@ impl CodexBackend {
 
     fn exec_invocation(&self, stdin: String) -> CodexInvocation {
         let mut args = vec![
-            "exec".to_string(),
             "--cd".to_string(),
             self.config.project_dir.display().to_string(),
             "--sandbox".to_string(),
@@ -156,6 +155,7 @@ impl CodexBackend {
             args.push("--model".to_string());
             args.push(model.clone());
         }
+        args.push("exec".to_string());
         args.push("--color".to_string());
         args.push("never".to_string());
         args.push("--json".to_string());

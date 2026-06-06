@@ -46,7 +46,6 @@ fn codex_backend_builds_exec_invocation_for_project_directory() {
     assert_eq!(
         invocation.args,
         vec![
-            "exec",
             "--cd",
             "/repo",
             "--sandbox",
@@ -55,6 +54,7 @@ fn codex_backend_builds_exec_invocation_for_project_directory() {
             "never",
             "--model",
             "gpt-5",
+            "exec",
             "--color",
             "never",
             "--json",
