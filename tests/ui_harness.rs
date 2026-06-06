@@ -151,6 +151,29 @@ fn scripted_harness_arrow_keys_recall_chat_history() {
 }
 
 #[test]
+fn scripted_harness_bytewise_arrow_keys_edit_focused_chat_without_switching_to_command() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(&[23, b'l']);
+    harness.handle_byte(b'i');
+    harness.handle_byte(b'a');
+    harness.handle_byte(b'b');
+    harness.handle_byte(27);
+    harness.handle_byte(b'[');
+    harness.handle_byte(b'D');
+    harness.handle_byte(b'Z');
+    harness.handle_byte(b'\n');
+
+    assert_eq!(harness.ui().mode(), UiMode::Insert);
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| line == "user-1> aZb")
+    );
+}
+
+#[test]
 fn scripted_harness_arrow_keys_move_left_pane_selection_like_j_k() {
     let mut harness = UiHarness::new(80, 24);
 
@@ -167,6 +190,29 @@ fn scripted_harness_arrow_keys_move_left_pane_selection_like_j_k() {
     );
 
     harness.handle_bytes(b"\x1b[A");
+    assert_eq!(
+        harness.ui().selected_agent().map(|id| id.as_str()),
+        Some("user-1")
+    );
+}
+
+#[test]
+fn scripted_harness_left_right_arrows_move_left_pane_selection_like_j_k() {
+    let mut harness = UiHarness::new(80, 24);
+
+    assert_eq!(harness.ui().focus(), PaneFocus::Left);
+    assert_eq!(
+        harness.ui().selected_agent().map(|id| id.as_str()),
+        Some("user-1")
+    );
+
+    harness.handle_bytes(b"\x1b[C");
+    assert_eq!(
+        harness.ui().selected_agent().map(|id| id.as_str()),
+        Some("user-2")
+    );
+
+    harness.handle_bytes(b"\x1b[D");
     assert_eq!(
         harness.ui().selected_agent().map(|id| id.as_str()),
         Some("user-1")
