@@ -59,21 +59,20 @@ fn command_chat_launches_agents_inside_the_orchestrator() {
     let backend = FakeBackend::new(["agent ready"]);
     let mut chat = CommandChat::new(PathBuf::from("/repo"), backend);
 
-    let result = chat
-        .handle_line("new chat-a parser implement the parser")
-        .unwrap();
+    let result = chat.handle_line("new implement the parser").unwrap();
 
     assert_eq!(
         result,
         CommandChatResult::AgentLaunched {
-            agent_id: AgentId::new("chat-a").unwrap(),
+            agent_id: AgentId::new("user-1").unwrap(),
+            feature: "user-agent".to_string(),
             reply: "agent ready".to_string(),
         }
     );
     let backend = chat.into_backend();
     assert_eq!(backend.launches.len(), 1);
-    assert_eq!(backend.launches[0].id.as_str(), "chat-a");
-    assert_eq!(backend.launches[0].feature, "parser");
+    assert_eq!(backend.launches[0].id.as_str(), "user-1");
+    assert_eq!(backend.launches[0].feature, "user-agent");
     assert_eq!(backend.launches[0].prompt, "implement the parser");
 }
 
@@ -82,7 +81,7 @@ fn process_help_mentions_internal_actions_as_in_app_commands_only() {
     let help = render_process_help();
 
     assert!(help.contains("Inside command chat"));
-    assert!(help.contains("new <agent-id> <feature> <prompt...>"));
+    assert!(help.contains("new <prompt...>"));
     assert!(help.contains("review"));
     assert!(help.contains("linearize"));
     assert!(!help.contains("Usage: work-leaf <command>"));

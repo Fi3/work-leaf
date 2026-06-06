@@ -1,11 +1,21 @@
 use std::path::PathBuf;
 
 use crate::agent::AgentId;
+use tui::{
+    Terminal,
+    backend::TestBackend,
+    buffer::Buffer,
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Modifier, Style},
+    text::{Span, Spans},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum UiMode {
     Command,
     Insert,
+    Prompt,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -185,6 +195,10 @@ impl TerminalUi {
         self.active_window
     }
 
+    pub fn selected_agent(&self) -> Option<&AgentId> {
+        self.selected_agent.as_ref()
+    }
+
     pub fn add_agent(&mut self, agent: AgentListEntry) {
         self.agents.push(agent);
     }
@@ -197,6 +211,13 @@ impl TerminalUi {
         } else {
             Err(format!("unknown agent `{agent_id}`"))
         }
+    }
+
+    pub fn activate_agent_chat(&mut self, agent_id: &AgentId) -> Result<(), String> {
+        self.select_agent(agent_id)?;
+        self.focus = PaneFocus::Right;
+        self.mode = UiMode::Insert;
+        Ok(())
     }
 
     pub fn select_command_interface(&mut self) {
@@ -222,8 +243,12 @@ impl TerminalUi {
                 self.pending = Some(PendingKey::G);
                 Vec::new()
             }
-            UiKey::Char('i') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+            UiKey::Char('i') if self.mode == UiMode::Command => {
                 self.mode = UiMode::Insert;
+                Vec::new()
+            }
+            UiKey::Char(':') if self.mode == UiMode::Command => {
+                self.mode = UiMode::Prompt;
                 Vec::new()
             }
             UiKey::Char(',') if self.mode == UiMode::Command => {
@@ -285,31 +310,135 @@ impl TerminalUi {
     }
 
     pub fn render_screen(&self, right_content: &str) -> String {
-        let layout = self.layout();
-        let left_lines = self.render_left_pane();
-        let left_lines = left_lines.lines().collect::<Vec<_>>();
-        let right_lines = self.render_right_pane(right_content);
-        let right_lines = right_lines.lines().collect::<Vec<_>>();
-        let mut rendered = String::from("\u{1b}[2J\u{1b}[H");
+        self.render_screen_with_prompt(right_content, "")
+    }
 
-        let content_height = self.height.saturating_sub(1) as usize;
-        for row in 0..content_height {
-            let left = left_lines.get(row).copied().unwrap_or("");
-            rendered.push_str(&fit_cell(left, layout.left_width as usize));
-            if layout.right_surface.is_some() {
-                rendered.push('│');
-                let right = right_lines.get(row).copied().unwrap_or("");
-                rendered.push_str(&fit_cell(
-                    right,
-                    layout.right_width.saturating_sub(1) as usize,
+    pub fn render_screen_with_prompt(&self, right_content: &str, prompt: &str) -> String {
+        let buffer = self.render_tui_buffer(right_content, prompt);
+        let mut rendered = String::from("\u{1b}[2J\u{1b}[H");
+        rendered.push_str(&buffer_to_string(&buffer));
+        rendered.push_str(&self.cursor_sequence(prompt));
+        rendered
+    }
+
+    fn render_tui_buffer(&self, right_content: &str, prompt: &str) -> Buffer {
+        let backend = TestBackend::new(self.width, self.height);
+        let mut terminal = Terminal::new(backend).expect("test backend is valid");
+        terminal
+            .draw(|frame| {
+                let area = frame.size();
+                let body_height = area.height.saturating_sub(1);
+                let body = Rect::new(area.x, area.y, area.width, body_height);
+                let bottom = Rect::new(area.x, body_height, area.width, 1);
+                let layout = self.layout();
+                let panes = if layout.right_surface.is_some() {
+                    Layout::default()
+                        .direction(Direction::Horizontal)
+                        .constraints([
+                            Constraint::Length(layout.left_width),
+                            Constraint::Length(layout.right_width),
+                        ])
+                        .split(body)
+                } else {
+                    vec![body]
+                };
+
+                frame.render_widget(self.left_widget(), panes[0]);
+                if panes.len() > 1 {
+                    frame.render_widget(self.right_widget(right_content), panes[1]);
+                }
+                frame.render_widget(Paragraph::new(self.bottom_line(prompt)), bottom);
+            })
+            .expect("test backend draw succeeds");
+        terminal.backend().buffer().clone()
+    }
+
+    fn left_widget(&self) -> List<'static> {
+        let mut items = vec![ListItem::new(if self.selected_agent.is_none() {
+            Spans::from(vec![Span::raw("> work-leaf  command")])
+        } else {
+            Spans::from(vec![Span::raw("  work-leaf  command")])
+        })];
+        for agent in &self.agents {
+            let mut line = Vec::new();
+            let selected = self
+                .selected_agent
+                .as_ref()
+                .is_some_and(|selected| selected == &agent.id);
+            line.push(Span::raw(if selected { "> " } else { "  " }));
+            line.push(Span::raw(agent.id.as_str().to_string()));
+            line.push(Span::raw("  working: "));
+            line.push(Span::raw(agent.feature.clone()));
+            if agent.ready {
+                line.push(Span::raw("  "));
+                line.push(Span::styled(
+                    "READY",
+                    Style::default().add_modifier(Modifier::REVERSED),
                 ));
             }
-            rendered.push('\n');
+            items.push(ListItem::new(Spans::from(line)));
+            if !agent.modified_files.is_empty() {
+                items.push(ListItem::new(Spans::from(vec![Span::raw(format!(
+                    "    files: {}",
+                    agent
+                        .modified_files
+                        .iter()
+                        .map(|path| path.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ))])));
+            }
+            for (label, agents) in [
+                ("conflicts", &agent.conflicting_agents),
+                ("depends-on", &agent.depends_on),
+                ("depended-on-by", &agent.depended_on_by),
+            ] {
+                if !agents.is_empty() {
+                    items.push(ListItem::new(Spans::from(vec![Span::raw(format!(
+                        "    {label}: {}",
+                        agents
+                            .iter()
+                            .map(AgentId::as_str)
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ))])));
+                }
+            }
         }
+        List::new(items).block(Block::default().title("work-leaf").borders(Borders::ALL))
+    }
 
-        rendered.push_str(&self.render_status_line());
-        rendered.push('\n');
-        rendered
+    fn right_widget(&self, right_content: &str) -> Paragraph<'static> {
+        let title = match self.windows[self.active_window].surface {
+            UiSurface::WorkLeafCommand => "command",
+            UiSurface::AgentChat => "chat",
+        };
+        Paragraph::new(right_content.to_string())
+            .block(Block::default().title(title).borders(Borders::ALL))
+            .wrap(Wrap { trim: false })
+    }
+
+    fn bottom_line(&self, prompt: &str) -> String {
+        if self.mode == UiMode::Prompt {
+            format!(":{prompt}")
+        } else {
+            self.render_status_line()
+        }
+    }
+
+    fn cursor_sequence(&self, prompt: &str) -> String {
+        let layout = self.layout();
+        let (row, column) = if self.mode == UiMode::Prompt {
+            let prompt_column = layout.left_width.saturating_add(1);
+            (self.height, prompt_column)
+        } else {
+            match self.focus {
+                PaneFocus::Left => (1, 1),
+                PaneFocus::Right => (1, layout.left_width.saturating_add(1)),
+            }
+        };
+        let _ = prompt;
+        format!("\u{1b}[{row};{column}H")
     }
 
     fn handle_pending_key(&mut self, pending: PendingKey, key: UiKey) -> Vec<UiAction> {
@@ -318,7 +447,18 @@ impl TerminalUi {
                 self.focus = PaneFocus::Left;
                 Vec::new()
             }
+            (PendingKey::CtrlW, UiKey::Char('k')) if self.mode == UiMode::Command => {
+                self.focus = PaneFocus::Left;
+                Vec::new()
+            }
             (PendingKey::CtrlW, UiKey::Char('l'))
+                if self.mode == UiMode::Command && self.right_visible =>
+            {
+                self.focus = PaneFocus::Right;
+                self.mode = UiMode::Command;
+                Vec::new()
+            }
+            (PendingKey::CtrlW, UiKey::Char('j'))
                 if self.mode == UiMode::Command && self.right_visible =>
             {
                 self.focus = PaneFocus::Right;
@@ -395,22 +535,6 @@ impl TerminalUi {
         rendered.push('\n');
     }
 
-    fn render_right_pane(&self, right_content: &str) -> String {
-        let mut rendered = String::new();
-        match self.windows[self.active_window].surface {
-            UiSurface::WorkLeafCommand => rendered.push_str("command\n"),
-            UiSurface::AgentChat => {
-                rendered.push_str("chat ");
-                if let Some(agent_id) = &self.windows[self.active_window].agent_id {
-                    rendered.push_str(agent_id.as_str());
-                }
-                rendered.push('\n');
-            }
-        }
-        rendered.push_str(right_content);
-        rendered
-    }
-
     fn render_status_line(&self) -> String {
         format!(
             "mode={} focus={} window={}/{}",
@@ -427,6 +551,7 @@ impl UiMode {
         match self {
             Self::Command => "command",
             Self::Insert => "insert",
+            Self::Prompt => "prompt",
         }
     }
 }
@@ -440,53 +565,15 @@ impl PaneFocus {
     }
 }
 
-fn fit_cell(text: &str, width: usize) -> String {
-    let clipped = clip_ansi_text(text, width);
-    let visible = visible_width(&clipped);
-    if visible >= width {
-        clipped
-    } else {
-        format!("{clipped}{}", " ".repeat(width - visible))
-    }
-}
-
-fn clip_ansi_text(text: &str, width: usize) -> String {
+fn buffer_to_string(buffer: &Buffer) -> String {
     let mut output = String::new();
-    let mut visible = 0;
-    let mut chars = text.chars().peekable();
-    while let Some(ch) = chars.next() {
-        if ch == '\u{1b}' {
-            output.push(ch);
-            for next in chars.by_ref() {
-                output.push(next);
-                if next.is_ascii_alphabetic() {
-                    break;
-                }
-            }
-            continue;
+    for y in 0..buffer.area.height {
+        for x in 0..buffer.area.width {
+            output.push_str(&buffer.get(x, y).symbol);
         }
-        if visible >= width {
-            break;
+        if y + 1 < buffer.area.height {
+            output.push('\n');
         }
-        output.push(ch);
-        visible += 1;
     }
     output
-}
-
-fn visible_width(text: &str) -> usize {
-    let mut width = 0;
-    let mut chars = text.chars().peekable();
-    while let Some(ch) = chars.next() {
-        if ch == '\u{1b}' {
-            for next in chars.by_ref() {
-                if next.is_ascii_alphabetic() {
-                    break;
-                }
-            }
-        } else {
-            width += 1;
-        }
-    }
-    width
 }

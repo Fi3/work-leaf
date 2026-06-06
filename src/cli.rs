@@ -8,7 +8,7 @@ use crate::agent::{AgentId, AgentKind, AgentLaunch, PromptPolicy};
 use crate::codex::{AgentBackend, CodexBackend, CodexCommandConfig};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::review::{GitHistory, ReviewCoordinator, ReviewResult};
-use crate::ui::{TerminalUi, UiAction, UiKey, UiMode};
+use crate::ui::{AgentListEntry, TerminalUi, UiAction, UiKey, UiMode};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ProcessCommand {
@@ -92,6 +92,7 @@ pub struct CommandChat<B> {
     project_dir: PathBuf,
     backend: Option<B>,
     max_review_rounds: usize,
+    next_user_agent: usize,
 }
 
 impl<B> CommandChat<B>
@@ -103,6 +104,7 @@ where
             project_dir,
             backend: Some(backend),
             max_review_rounds: 8,
+            next_user_agent: 1,
         }
     }
 
@@ -136,15 +138,35 @@ where
         }
     }
 
+    pub fn send_to_agent(
+        &mut self,
+        agent_id: &AgentId,
+        message: &str,
+    ) -> Result<CommandChatResult, CliError> {
+        let reply = self
+            .backend
+            .as_mut()
+            .expect("command chat backend is present")
+            .send(agent_id, message)
+            .map_err(CliError::Agent)?
+            .text;
+        Ok(CommandChatResult::AgentMessage {
+            agent_id: agent_id.clone(),
+            reply,
+        })
+    }
+
     fn launch_agent(&mut self, args: &[String]) -> Result<CommandChatResult, CliError> {
-        if args.len() < 3 {
+        if args.is_empty() {
             return Err(CliError::Usage(
-                "command chat `new` requires <agent-id> <feature> <prompt...>".to_string(),
+                "command chat `new` requires <prompt...>".to_string(),
             ));
         }
-        let agent_id = AgentId::new(args[0].clone()).map_err(CliError::Agent)?;
-        let feature = args[1].clone();
-        let prompt = args[2..].join(" ");
+        let agent_id =
+            AgentId::new(format!("user-{}", self.next_user_agent)).map_err(CliError::Agent)?;
+        self.next_user_agent += 1;
+        let feature = "user-agent".to_string();
+        let prompt = args.join(" ");
         let session = self
             .backend
             .as_mut()
@@ -152,7 +174,7 @@ where
             .launch(AgentLaunch::new(
                 agent_id.clone(),
                 AgentKind::Codex,
-                feature,
+                feature.clone(),
                 prompt,
             ))
             .map_err(CliError::Agent)?;
@@ -161,7 +183,11 @@ where
             .last()
             .map(|message| message.text.clone())
             .unwrap_or_default();
-        Ok(CommandChatResult::AgentLaunched { agent_id, reply })
+        Ok(CommandChatResult::AgentLaunched {
+            agent_id,
+            feature,
+            reply,
+        })
     }
 
     fn review(&mut self) -> Result<CommandChatResult, CliError> {
@@ -188,7 +214,15 @@ where
 pub enum CommandChatResult {
     Noop,
     Help(String),
-    AgentLaunched { agent_id: AgentId, reply: String },
+    AgentLaunched {
+        agent_id: AgentId,
+        feature: String,
+        reply: String,
+    },
+    AgentMessage {
+        agent_id: AgentId,
+        reply: String,
+    },
     ReviewComplete(Vec<ReviewResult>),
     LinearizeQuestions(Vec<LinearizeQuestion>),
     Quit,
@@ -202,7 +236,7 @@ pub fn render_process_help() -> String {
         "Agents are created inside the command chat. Patches, file locks, review routing, and linearization handoff are orchestrator-controlled workflows, not top-level process commands.",
         "",
         "Inside command chat:",
-        "  new <agent-id> <feature> <prompt...>",
+        "  new <prompt...>",
         "  review",
         "  linearize",
         "  quit",
@@ -214,7 +248,7 @@ pub fn render_process_help() -> String {
 pub fn render_command_chat_help() -> String {
     [
         "Command chat:",
-        "  new <agent-id> <feature> <prompt...>",
+        "  new <prompt...>",
         "  review",
         "  linearize",
         "  quit",
@@ -242,12 +276,14 @@ where
     let _raw_mode = RawTerminalMode::enter()?;
     let (width, height) = terminal_size();
     let mut ui = TerminalUi::new(width, height);
-    let mut command_buffer = String::new();
+    let mut prompt_buffer = String::new();
+    let mut chat_buffer = String::new();
     let mut transcript = vec![render_command_chat_help()];
     let mut stdin = io::stdin().lock();
     let mut stdout = io::stdout();
+    let _screen_mode = AlternateScreenMode::enter(&mut stdout)?;
 
-    render_terminal_frame(&mut stdout, &ui, &command_buffer, &transcript)?;
+    render_terminal_frame(&mut stdout, &ui, &prompt_buffer, &chat_buffer, &transcript)?;
 
     loop {
         let mut byte = [0_u8; 1];
@@ -255,30 +291,48 @@ where
             break;
         }
         let Some(event) = TerminalInput::from_byte(byte[0]) else {
-            render_terminal_frame(&mut stdout, &ui, &command_buffer, &transcript)?;
+            render_terminal_frame(&mut stdout, &ui, &prompt_buffer, &chat_buffer, &transcript)?;
             continue;
         };
 
         match event {
             TerminalInput::Quit => break,
-            TerminalInput::Backspace if ui.mode() == UiMode::Insert => {
-                command_buffer.pop();
+            TerminalInput::Backspace if ui.mode() == UiMode::Prompt => {
+                prompt_buffer.pop();
             }
-            TerminalInput::Enter if ui.mode() == UiMode::Insert => {
-                let line = command_buffer.trim().to_string();
-                command_buffer.clear();
+            TerminalInput::Backspace if ui.mode() == UiMode::Insert => {
+                chat_buffer.pop();
+            }
+            TerminalInput::Enter if ui.mode() == UiMode::Prompt => {
+                let line = prompt_buffer.trim().to_string();
+                prompt_buffer.clear();
                 if !line.is_empty() {
                     let result = chat.handle_line(&line)?;
                     let should_quit = matches!(result, CommandChatResult::Quit);
                     transcript.push(format!("work-leaf> {line}"));
+                    apply_command_result_to_ui(&mut ui, &result);
                     transcript.push(command_result_text(&result));
                     if should_quit {
                         break;
                     }
                 }
             }
+            TerminalInput::Enter if ui.mode() == UiMode::Insert => {
+                if let Some(agent_id) = ui.selected_agent().cloned() {
+                    let message = chat_buffer.trim().to_string();
+                    chat_buffer.clear();
+                    if !message.is_empty() {
+                        let result = chat.send_to_agent(&agent_id, &message)?;
+                        transcript.push(format!("{agent_id}> {message}"));
+                        transcript.push(command_result_text(&result));
+                    }
+                }
+            }
+            TerminalInput::Char(ch) if ui.mode() == UiMode::Prompt => {
+                prompt_buffer.push(ch);
+            }
             TerminalInput::Char(ch) if ui.mode() == UiMode::Insert => {
-                command_buffer.push(ch);
+                chat_buffer.push(ch);
             }
             TerminalInput::Key(key) => {
                 for action in ui.handle_key(key) {
@@ -293,7 +347,7 @@ where
             TerminalInput::Backspace | TerminalInput::Enter => {}
         }
 
-        render_terminal_frame(&mut stdout, &ui, &command_buffer, &transcript)?;
+        render_terminal_frame(&mut stdout, &ui, &prompt_buffer, &chat_buffer, &transcript)?;
     }
 
     write!(stdout, "\u{1b}[2J\u{1b}[H")?;
@@ -322,22 +376,27 @@ where
 fn render_terminal_frame(
     output: &mut impl Write,
     ui: &TerminalUi,
-    command_buffer: &str,
+    prompt_buffer: &str,
+    chat_buffer: &str,
     transcript: &[String],
 ) -> Result<(), CliError> {
-    let right_content = terminal_right_content(command_buffer, transcript);
-    write!(output, "{}", ui.render_screen(&right_content))?;
+    let right_content = terminal_right_content(chat_buffer, transcript);
+    write!(
+        output,
+        "{}",
+        ui.render_screen_with_prompt(&right_content, prompt_buffer)
+    )?;
     output.flush()?;
     Ok(())
 }
 
-fn terminal_right_content(command_buffer: &str, transcript: &[String]) -> String {
+fn terminal_right_content(chat_buffer: &str, transcript: &[String]) -> String {
     let mut content = transcript.join("\n");
     if !content.is_empty() {
         content.push('\n');
     }
-    content.push_str("work-leaf> ");
-    content.push_str(command_buffer);
+    content.push_str("chat> ");
+    content.push_str(chat_buffer);
     content
 }
 
@@ -345,12 +404,17 @@ fn command_result_text(result: &CommandChatResult) -> String {
     match result {
         CommandChatResult::Noop => String::new(),
         CommandChatResult::Help(help) => help.clone(),
-        CommandChatResult::AgentLaunched { agent_id, reply } => {
+        CommandChatResult::AgentLaunched {
+            agent_id, reply, ..
+        } => {
             if reply.is_empty() {
                 format!("agent {agent_id} launched")
             } else {
                 format!("agent {agent_id} launched\n{reply}")
             }
+        }
+        CommandChatResult::AgentMessage { agent_id, reply } => {
+            format!("{agent_id} replied\n{reply}")
         }
         CommandChatResult::ReviewComplete(results) => {
             if results.is_empty() {
@@ -390,6 +454,16 @@ fn command_result_text(result: &CommandChatResult) -> String {
                 .join("\n")
         }
         CommandChatResult::Quit => "quit".to_string(),
+    }
+}
+
+fn apply_command_result_to_ui(ui: &mut TerminalUi, result: &CommandChatResult) {
+    if let CommandChatResult::AgentLaunched {
+        agent_id, feature, ..
+    } = result
+    {
+        ui.add_agent(AgentListEntry::new(agent_id.clone(), feature.clone()));
+        let _ = ui.activate_agent_chat(agent_id);
     }
 }
 
@@ -455,6 +529,24 @@ impl Drop for RawTerminalMode {
     }
 }
 
+struct AlternateScreenMode;
+
+impl AlternateScreenMode {
+    fn enter(output: &mut impl Write) -> Result<Self, CliError> {
+        write!(output, "\u{1b}[?1049h\u{1b}[2J\u{1b}[H")?;
+        output.flush()?;
+        Ok(Self)
+    }
+}
+
+impl Drop for AlternateScreenMode {
+    fn drop(&mut self) {
+        let mut stdout = io::stdout();
+        let _ = write!(stdout, "\u{1b}[?1049l\u{1b}[?25h");
+        let _ = stdout.flush();
+    }
+}
+
 fn terminal_size() -> (u16, u16) {
     if let Some(size) = terminal_size_from_stty() {
         return size;
@@ -489,8 +581,16 @@ fn render_command_result(
     match result {
         CommandChatResult::Noop => {}
         CommandChatResult::Help(help) => writeln!(output, "{help}")?,
-        CommandChatResult::AgentLaunched { agent_id, reply } => {
+        CommandChatResult::AgentLaunched {
+            agent_id, reply, ..
+        } => {
             writeln!(output, "agent {agent_id} launched")?;
+            if !reply.is_empty() {
+                writeln!(output, "{reply}")?;
+            }
+        }
+        CommandChatResult::AgentMessage { agent_id, reply } => {
+            writeln!(output, "{agent_id} replied")?;
             if !reply.is_empty() {
                 writeln!(output, "{reply}")?;
             }
