@@ -133,6 +133,30 @@ fn codex_backend_records_json_thread_id_for_follow_up_messages() {
 }
 
 #[test]
+fn codex_backend_preserves_multiple_agent_messages_from_one_jsonl_turn() {
+    let config = CodexCommandConfig::new(PathBuf::from("/repo")).with_binary("codex");
+    let mut backend = CodexBackend::new(config, PromptPolicy::for_restricted_agents());
+    let agent_id = AgentId::new("chat-a").unwrap();
+
+    let session = backend
+        .record_launch_output(
+            AgentLaunch::new(agent_id, AgentKind::Codex, "parser", "implement parser"),
+            r#"{"type":"thread.started","thread_id":"thread-123"}"#
+                .to_string()
+                + "\n"
+                + r#"{"type":"item.completed","item":{"id":"item-1","type":"agent_message","text":"@work-leaf read src/ui.rs"}}"#
+                + "\n"
+                + r#"{"type":"item.completed","item":{"id":"item-2","type":"agent_message","text":"I have requested the relevant files."}}"#,
+        )
+        .unwrap();
+
+    assert_eq!(
+        session.messages[1].text,
+        "@work-leaf read src/ui.rs\n\nI have requested the relevant files."
+    );
+}
+
+#[test]
 fn codex_backend_can_build_resume_invocation_without_in_memory_session() {
     let config = CodexCommandConfig::new(PathBuf::from("/repo")).with_binary("codex");
     let backend = CodexBackend::new(config, PromptPolicy::for_restricted_agents());

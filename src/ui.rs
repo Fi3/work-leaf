@@ -150,7 +150,7 @@ pub struct TerminalUi {
     height: u16,
     mode: UiMode,
     focus: PaneFocus,
-    right_visible: bool,
+    left_visible: bool,
     agents: Vec<AgentListEntry>,
     selected_agent: Option<AgentId>,
     control_selected: usize,
@@ -167,7 +167,7 @@ impl TerminalUi {
             height,
             mode: UiMode::Command,
             focus: PaneFocus::Left,
-            right_visible: true,
+            left_visible: true,
             agents: Vec::new(),
             selected_agent: None,
             control_selected: 0,
@@ -179,19 +179,13 @@ impl TerminalUi {
     }
 
     pub fn layout(&self) -> TerminalLayout {
-        let left_width = if self.right_visible {
-            self.width / 5
-        } else {
-            self.width
-        };
+        let left_width = if self.left_visible { self.width / 5 } else { 0 };
         let right_width = self.width.saturating_sub(left_width);
         TerminalLayout {
             left_width,
             right_width,
             height: self.height,
-            right_surface: self
-                .right_visible
-                .then_some(self.windows[self.active_window].surface),
+            right_surface: Some(self.windows[self.active_window].surface),
         }
     }
 
@@ -225,7 +219,6 @@ impl TerminalUi {
 
     pub fn select_agent(&mut self, agent_id: &AgentId) -> Result<(), String> {
         if self.agents.iter().any(|agent| &agent.id == agent_id) {
-            self.right_visible = true;
             self.selected_agent = Some(agent_id.clone());
             self.windows[self.active_window] = UiWindow::chat(agent_id.clone());
             self.control_selected = self
@@ -284,19 +277,23 @@ impl TerminalUi {
                 self.mode = UiMode::Prompt;
                 Vec::new()
             }
-            UiKey::Char(',') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
-                self.right_visible = !self.right_visible;
-                if !self.right_visible {
-                    self.focus = PaneFocus::Left;
-                }
+            UiKey::Char(',') if self.mode == UiMode::Command => {
+                self.left_visible = !self.left_visible;
+                self.focus = if self.left_visible {
+                    PaneFocus::Left
+                } else {
+                    PaneFocus::Right
+                };
                 Vec::new()
             }
             UiKey::Char('j') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
                 self.move_control_selection(1);
+                self.select_control_row_surface();
                 Vec::new()
             }
             UiKey::Char('k') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
                 self.move_control_selection(-1);
+                self.select_control_row_surface();
                 Vec::new()
             }
             UiKey::Char('l') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
@@ -377,7 +374,7 @@ impl TerminalUi {
                 let body = Rect::new(area.x, area.y, area.width, body_height);
                 let bottom = Rect::new(area.x, body_height, area.width, 1);
                 let layout = self.layout();
-                let panes = if layout.right_surface.is_some() {
+                let panes = if layout.left_width > 0 {
                     Layout::default()
                         .direction(Direction::Horizontal)
                         .constraints([
@@ -389,9 +386,11 @@ impl TerminalUi {
                     vec![body]
                 };
 
-                frame.render_widget(self.left_widget(), panes[0]);
-                if panes.len() > 1 {
+                if layout.left_width > 0 {
+                    frame.render_widget(self.left_widget(), panes[0]);
                     frame.render_widget(self.right_widget(right_content), panes[1]);
+                } else {
+                    frame.render_widget(self.right_widget(right_content), panes[0]);
                 }
                 frame.render_widget(Paragraph::new(self.bottom_line(prompt)), bottom);
             })
@@ -497,23 +496,23 @@ impl TerminalUi {
     fn handle_pending_key(&mut self, pending: PendingKey, key: UiKey) -> Vec<UiAction> {
         match (pending, key) {
             (PendingKey::CtrlW, UiKey::Char('h')) if self.mode == UiMode::Command => {
-                self.focus = PaneFocus::Left;
+                if self.left_visible {
+                    self.focus = PaneFocus::Left;
+                }
                 Vec::new()
             }
             (PendingKey::CtrlW, UiKey::Char('k')) if self.mode == UiMode::Command => {
-                self.focus = PaneFocus::Left;
+                if self.left_visible {
+                    self.focus = PaneFocus::Left;
+                }
                 Vec::new()
             }
-            (PendingKey::CtrlW, UiKey::Char('l'))
-                if self.mode == UiMode::Command && self.right_visible =>
-            {
+            (PendingKey::CtrlW, UiKey::Char('l')) if self.mode == UiMode::Command => {
                 self.focus = PaneFocus::Right;
                 self.mode = UiMode::Command;
                 Vec::new()
             }
-            (PendingKey::CtrlW, UiKey::Char('j'))
-                if self.mode == UiMode::Command && self.right_visible =>
-            {
+            (PendingKey::CtrlW, UiKey::Char('j')) if self.mode == UiMode::Command => {
                 self.focus = PaneFocus::Right;
                 self.mode = UiMode::Command;
                 Vec::new()
@@ -544,7 +543,6 @@ impl TerminalUi {
         };
         self.windows.push(UiWindow::chat(agent_id.clone()));
         self.active_window = self.windows.len() - 1;
-        self.right_visible = true;
         vec![UiAction::OpenChatNewWindow(agent_id)]
     }
 
@@ -558,7 +556,6 @@ impl TerminalUi {
     fn open_control_selection(&mut self) {
         if self.control_selected == 0 {
             self.select_command_interface();
-            self.right_visible = true;
             self.focus = PaneFocus::Right;
             return;
         }
@@ -568,19 +565,26 @@ impl TerminalUi {
         }
     }
 
+    fn select_control_row_surface(&mut self) {
+        if self.control_selected == 0 {
+            self.select_command_interface();
+            self.focus = PaneFocus::Left;
+            return;
+        }
+        if let Some(agent_id) = self.control_selected_agent_id() {
+            let _ = self.select_agent(&agent_id);
+            self.focus = PaneFocus::Left;
+        }
+    }
+
     fn handle_mouse_click(&mut self, column: u16, row: u16) -> Vec<UiAction> {
         if column == 0 || row == 0 {
             return Vec::new();
         }
 
-        let layout = self.layout();
-        let left_width = if self.right_visible {
-            layout.left_width
-        } else {
-            self.width
-        };
+        let left_width = self.layout().left_width;
 
-        if column <= left_width {
+        if self.left_visible && column <= left_width {
             self.mode = UiMode::Command;
             self.focus = PaneFocus::Left;
             let Some(target) = self.left_pane_click_target(row) else {
@@ -589,14 +593,13 @@ impl TerminalUi {
             match target {
                 LeftPaneClickTarget::Command => {
                     self.select_command_interface();
-                    self.right_visible = true;
                     self.focus = PaneFocus::Right;
                 }
                 LeftPaneClickTarget::Agent(agent_id) => {
                     let _ = self.activate_agent_chat(&agent_id);
                 }
             }
-        } else if self.right_visible {
+        } else {
             self.focus = PaneFocus::Right;
             self.mode = if self.selected_agent.is_some()
                 && self.windows[self.active_window].surface == UiSurface::AgentChat
@@ -619,14 +622,14 @@ impl TerminalUi {
         };
         let hidden_agent = self.agents[agent_index].id.clone();
         self.agents[agent_index].hidden = true;
-        if self
+        let hidden_was_selected = self
             .selected_agent
             .as_ref()
-            .is_some_and(|selected| selected == &hidden_agent)
-        {
-            self.select_command_interface();
-        }
+            .is_some_and(|selected| selected == &hidden_agent);
         self.clamp_control_selection();
+        if hidden_was_selected {
+            self.select_control_row_surface();
+        }
     }
 
     fn move_control_selection(&mut self, delta: isize) {

@@ -25,9 +25,12 @@ fn vim_style_keys_drive_mode_focus_visibility_and_tabs() {
 
     ui.handle_key(UiKey::Esc);
     ui.handle_key(UiKey::Char(','));
-    assert_eq!(ui.layout().right_surface, None);
+    assert_eq!(ui.layout().left_width, 0);
+    assert_eq!(ui.layout().right_width, 100);
+    assert_eq!(ui.layout().right_surface, Some(UiSurface::AgentChat));
 
     ui.handle_key(UiKey::Char(','));
+    assert_eq!(ui.layout().left_width, 20);
     ui.handle_key(UiKey::CtrlW);
     ui.handle_key(UiKey::Char('l'));
     assert_eq!(ui.focus(), PaneFocus::Right);
@@ -70,14 +73,21 @@ fn comma_does_not_hide_the_right_chat_while_chat_focus_is_active() {
     ui.handle_key(UiKey::Char(','));
 
     assert_eq!(ui.focus(), PaneFocus::Right);
+    assert_eq!(ui.layout().left_width, 0);
+    assert_eq!(ui.layout().right_width, 100);
     assert_eq!(ui.layout().right_surface, Some(UiSurface::AgentChat));
 
     ui.handle_key(UiKey::CtrlW);
     ui.handle_key(UiKey::Char('h'));
+
+    assert_eq!(ui.focus(), PaneFocus::Right);
+
     ui.handle_key(UiKey::Char(','));
 
     assert_eq!(ui.focus(), PaneFocus::Left);
-    assert_eq!(ui.layout().right_surface, None);
+    assert_eq!(ui.layout().left_width, 20);
+    assert_eq!(ui.layout().right_width, 80);
+    assert_eq!(ui.layout().right_surface, Some(UiSurface::AgentChat));
 }
 
 #[test]
@@ -239,13 +249,15 @@ fn left_pane_navigation_moves_cursor_to_selected_agent_row_and_opens_chat() {
 
     ui.handle_key(UiKey::Char('j'));
     assert!(ui.render_screen("command chat").ends_with("\u{1b}[3;2H"));
-    assert_eq!(ui.selected_agent(), None);
-
-    ui.handle_key(UiKey::Char('l'));
-
     assert_eq!(ui.selected_agent(), Some(&chat_a));
-    assert_eq!(ui.focus(), PaneFocus::Right);
+    assert_eq!(ui.focus(), PaneFocus::Left);
     assert!(ui.render_screen("agent chat").contains("chat-a"));
+
+    ui.handle_key(UiKey::Char('j'));
+
+    assert_eq!(ui.selected_agent(), Some(&chat_b));
+    assert_eq!(ui.focus(), PaneFocus::Left);
+    assert!(ui.render_screen("agent chat").contains("chat-b"));
 }
 
 #[test]

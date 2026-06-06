@@ -185,6 +185,67 @@ fn terminal_app_chat_pane_shows_only_the_selected_agent_session() {
 }
 
 #[test]
+fn terminal_app_left_pane_keyboard_selection_switches_the_visible_chat() {
+    let backend = FakeBackend::new(["first launch", "second launch"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new first\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"\x1b:new second\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    assert_eq!(
+        app.ui().selected_agent().map(AgentId::as_str),
+        Some("user-2")
+    );
+
+    app.handle_bytes(&[27, 23, b'h', b'k']);
+
+    assert_eq!(
+        app.ui().selected_agent().map(AgentId::as_str),
+        Some("user-1")
+    );
+    assert!(app.render_frame().contains("first launch"));
+    assert!(!app.render_frame().contains("second launch"));
+
+    app.handle_bytes(b"j");
+
+    assert_eq!(
+        app.ui().selected_agent().map(AgentId::as_str),
+        Some("user-2")
+    );
+    assert!(app.render_frame().contains("second launch"));
+    assert!(!app.render_frame().contains("first launch"));
+}
+
+#[test]
+fn terminal_app_comma_collapses_left_pane_and_keeps_selected_chat_visible() {
+    let backend = FakeBackend::new(["launch reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new keep chat visible\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    app.handle_bytes(b"\x1b,");
+
+    let layout = app.ui().layout();
+    assert_eq!(layout.left_width, 0);
+    assert_eq!(layout.right_width, 100);
+    assert!(app.render_frame().contains("launch reply"));
+    assert!(app.render_frame().contains("chat> "));
+
+    app.handle_bytes(b",");
+
+    let layout = app.ui().layout();
+    assert_eq!(layout.left_width, 20);
+    assert_eq!(layout.right_width, 80);
+    assert!(app.render_frame().contains("user-1"));
+    assert!(app.render_frame().contains("launch reply"));
+}
+
+#[test]
 fn terminal_app_sgr_mouse_click_on_left_agent_row_selects_that_chat() {
     let backend = FakeBackend::new(["first launch", "second launch"]);
     let chat = CommandChat::new(PathBuf::from("/repo"), backend);
@@ -201,6 +262,27 @@ fn terminal_app_sgr_mouse_click_on_left_agent_row_selects_that_chat() {
     );
 
     app.handle_bytes(b"\x1b[<0;4;3M");
+
+    assert_eq!(
+        app.ui().selected_agent().map(AgentId::as_str),
+        Some("user-1")
+    );
+    assert!(app.render_frame().contains("first launch"));
+    assert!(!app.render_frame().contains("second launch"));
+}
+
+#[test]
+fn terminal_app_sgr_mouse_release_on_left_agent_row_selects_that_chat() {
+    let backend = FakeBackend::new(["first launch", "second launch"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new first\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"\x1b:new second\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    app.handle_bytes(b"\x1b[<0;4;3m");
 
     assert_eq!(
         app.ui().selected_agent().map(AgentId::as_str),
@@ -241,6 +323,60 @@ printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"item-1\",\"type\
     assert!(app.is_busy());
     app.wait_for_idle(Duration::from_secs(2));
     assert!(app.render_frame().contains("streamed final reply"));
+}
+
+#[test]
+fn terminal_app_spawned_codex_processes_directive_message_before_later_prose_message() {
+    let root = temp_dir("terminal-app-codex-directive-before-prose");
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(root.join("src/ui.rs"), "pub fn ui() {}\n").unwrap();
+    fs::write(root.join("src/ui_harness.rs"), "pub fn harness() {}\n").unwrap();
+    let fake_bin = root.join("bin");
+    fs::create_dir_all(&fake_bin).unwrap();
+    let codex = fake_bin.join("codex");
+    fs::write(
+        &codex,
+        "\
+#!/bin/sh
+seen_resume=0
+for arg in \"$@\"; do
+  if [ \"$arg\" = \"resume\" ]; then
+    seen_resume=1
+  fi
+done
+input=$(cat)
+if [ \"$seen_resume\" = \"1\" ]; then
+  case \"$input\" in
+    *\"work-leaf file text\"*)
+      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"item-follow\",\"type\":\"agent_message\",\"text\":\"I can patch after receiving src/ui.rs and src/ui_harness.rs.\"}}'
+      ;;
+    *)
+      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"item-bad\",\"type\":\"agent_message\",\"text\":\"missing orchestrator file text\"}}'
+      ;;
+  esac
+else
+  printf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-directive-prose\"}'
+  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"item-directive\",\"type\":\"agent_message\",\"text\":\"@work-leaf read src/ui.rs src/ui_harness.rs\"}}'
+  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"item-prose\",\"type\":\"agent_message\",\"text\":\"I have requested the relevant UI and harness files from the orchestrator.\"}}'
+fi
+",
+    )
+    .unwrap();
+    make_executable(&codex);
+    let backend = CodexBackend::new(
+        CodexCommandConfig::new(root.clone()).with_binary(&codex),
+        PromptPolicy::for_restricted_agents(),
+    );
+    let chat = CommandChat::new(root, backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new patch arrow keys\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    let frame = app.render_frame();
+    assert!(frame.contains("I have requested the relevant UI and harness files"));
+    assert!(frame.contains("sent file text to user-1: src/ui.rs, src/ui_harness.rs"));
+    assert!(frame.contains("I can patch after receiving src/ui.rs and src/ui_harness.rs"));
 }
 
 #[test]

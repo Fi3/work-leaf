@@ -38,7 +38,7 @@ fn scripted_harness_switches_modes_without_enter() {
 }
 
 #[test]
-fn scripted_harness_drives_ctrl_w_navigation_and_right_toggle() {
+fn scripted_harness_drives_ctrl_w_navigation_and_left_toggle() {
     let mut harness = UiHarness::new(80, 24);
 
     harness.handle_bytes(&[23, b'l']);
@@ -50,10 +50,14 @@ fn scripted_harness_drives_ctrl_w_navigation_and_right_toggle() {
     assert!(harness.render_frame().ends_with("\u{1b}[3;2H"));
 
     harness.handle_byte(b',');
-    assert_eq!(harness.ui().layout().right_surface, None);
-    assert_eq!(harness.ui().focus(), PaneFocus::Left);
+    assert_eq!(harness.ui().layout().left_width, 0);
+    assert_eq!(harness.ui().layout().right_width, 80);
+    assert!(harness.ui().layout().right_surface.is_some());
+    assert_eq!(harness.ui().focus(), PaneFocus::Right);
 
     harness.handle_byte(b',');
+    assert_eq!(harness.ui().layout().left_width, 16);
+    assert_eq!(harness.ui().focus(), PaneFocus::Left);
     harness.handle_bytes(&[23, b'j']);
     assert_eq!(harness.ui().focus(), PaneFocus::Right);
 

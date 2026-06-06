@@ -21,16 +21,16 @@ upper-left portion. Rendered frames must keep stable terminal geometry across re
 The alternate screen is cleared when the UI opens; normal redraws update the frame in place without
 emitting a full-screen clear sequence, so typing does not flash or blink.
 
-The left pane occupies one fifth of the total terminal width when the right pane is visible. The
-left pane is the control pane: it lists the work-leaf command interface and all running agents.
+The left pane occupies one fifth of the total terminal width while it is visible. The left pane is
+the control pane: it lists the work-leaf command interface and all running agents. Pressing `,` in
+command mode hides or shows this left control pane. When hidden, the selected right-side chat or
+command surface remains visible and expands to the full terminal width.
 Each agent entry shows the agent id, broad feature/work description, readiness state, modified
 files, agents touching the same files, dependencies on other agents, and agents depending on it.
 Ready agents are visually highlighted.
 
 The right pane shows the selected surface. It can show the work-leaf command interface or the chat
-for the selected agent. Pressing `,` from command mode while the left control pane is focused hides
-or shows the right pane. Pressing `,` while the right chat pane is focused does not close the active
-chat.
+for the selected agent. Pressing `,` never closes the selected right-side chat surface.
 An agent chat surface contains only that agent's conversation, loading state, and streamed Codex
 events. It does not include command-chat help, global command output, or messages from other agents.
 
@@ -49,8 +49,8 @@ Insert-mode input is echoed as each byte is handled, including fast typing burst
 
 ## Pane And Window Navigation
 
-`Ctrl-W` followed by `h` or `k` focuses the left pane from command mode. `Ctrl-W` followed by `l`
-or `j` focuses the right pane from command mode when the right pane is visible.
+`Ctrl-W` followed by `h` or `k` focuses the left pane from command mode while the left pane is
+visible. `Ctrl-W` followed by `l` or `j` focuses the right pane from command mode.
 
 Clicking an agent row in the left pane selects that agent, opens its chat on the right pane, and
 places input focus in that chat. Clicking the work-leaf row opens the command surface. Terminal mouse

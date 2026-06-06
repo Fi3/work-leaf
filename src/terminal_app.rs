@@ -574,7 +574,8 @@ fn parse_control_sequence(sequence: &[u8]) -> Option<UiKey> {
 }
 
 fn parse_sgr_mouse_click(sequence: &[u8]) -> Option<UiKey> {
-    if !sequence.starts_with(b"[<") || *sequence.last()? != b'M' {
+    let final_byte = *sequence.last()?;
+    if !sequence.starts_with(b"[<") || !matches!(final_byte, b'M' | b'm') {
         return None;
     }
 

@@ -22,9 +22,9 @@ agent/orchestrator mechanisms, not user commands.
 ## Terminal UI
 
 The terminal workspace uses the full terminal viewport. The left pane occupies one fifth of the
-viewport while the right pane is visible. The right pane can be hidden and shown with `,` from
-command mode while the left control pane is focused. `,` does not close the selected chat while the
-right chat pane is focused.
+viewport while it is visible. `,` hides and shows the left control pane from command mode. The
+selected right-side chat or command surface remains visible when the left pane is hidden and expands
+to the full terminal width.
 
 The UI behaves like nvim for modal input. `Esc`, `i`, `:`, `,`, and `Ctrl-W h/j/k/l` act
 immediately without requiring Enter. `:` opens the bottom command prompt only from command mode.

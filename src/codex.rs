@@ -368,12 +368,25 @@ fn parse_codex_output(output: &str) -> ParsedCodexOutput {
         if line.contains(r#""type":"thread.started""#) {
             parsed.thread_id = json_string_field(line, "thread_id").or(parsed.thread_id);
         }
-        if line.contains(r#""type":"item.completed""#) && line.contains(r#""type":"agent_message""#)
+        if line.contains(r#""type":"item.completed""#)
+            && line.contains(r#""type":"agent_message""#)
+            && let Some(text) = json_string_field(line, "text")
         {
-            parsed.agent_reply = json_string_field(line, "text").or(parsed.agent_reply);
+            append_agent_reply(&mut parsed.agent_reply, text);
         }
     }
     parsed
+}
+
+fn append_agent_reply(reply: &mut Option<String>, text: String) {
+    match reply {
+        Some(existing) if !existing.is_empty() && !text.is_empty() => {
+            existing.push_str("\n\n");
+            existing.push_str(&text);
+        }
+        Some(existing) => existing.push_str(&text),
+        None => *reply = Some(text),
+    }
 }
 
 fn codex_stream_event(line: &str) -> Option<AgentStreamEvent> {
