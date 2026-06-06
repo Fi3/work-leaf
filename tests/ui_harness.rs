@@ -121,6 +121,36 @@ fn scripted_harness_new_commands_select_new_agent_chat() {
 }
 
 #[test]
+fn scripted_harness_names_new_chat_from_first_inserted_prompt() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(b":new\n");
+    assert!(
+        harness
+            .ui()
+            .render_left_pane()
+            .contains(">harness-agent user-3  working: harness-agent")
+    );
+
+    harness.handle_bytes(b"please fix the OAuth redirect handler\n");
+
+    let named_left_pane = harness.ui().render_left_pane();
+    assert!(
+        named_left_pane.contains(">oauth redirect handler user-3  working: oauth redirect handler")
+    );
+    assert!(!named_left_pane.contains("harness-agent user-3"));
+
+    harness.handle_bytes(b"add cookie coverage\n");
+
+    let unchanged_left_pane = harness.ui().render_left_pane();
+    assert!(
+        unchanged_left_pane
+            .contains(">oauth redirect handler user-3  working: oauth redirect handler")
+    );
+    assert!(!unchanged_left_pane.contains("cookie coverage user-3"));
+}
+
+#[test]
 fn scripted_harness_insert_mode_records_chat_text_and_literal_colons() {
     let mut harness = UiHarness::new(80, 24);
 
@@ -196,6 +226,29 @@ fn scripted_harness_bytewise_arrow_keys_edit_focused_chat_without_switching_to_c
             .iter()
             .any(|line| line == "user-1> aZb")
     );
+}
+
+#[test]
+fn scripted_harness_bytewise_arrow_prefix_keeps_focused_chat_in_insert_mode() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(&[23, b'l']);
+    harness.handle_byte(b'i');
+    harness.handle_byte(b'a');
+    harness.handle_byte(27);
+
+    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+    assert_eq!(harness.ui().mode(), UiMode::Insert);
+    assert!(harness.render_frame().contains("mode=insert focus=right"));
+
+    harness.handle_byte(b'[');
+    assert_eq!(harness.ui().mode(), UiMode::Insert);
+
+    harness.handle_byte(b'D');
+    harness.handle_byte(b'Z');
+    harness.handle_byte(b'\n');
+
+    assert!(harness.transcript().iter().any(|line| line == "user-1> Za"));
 }
 
 #[test]

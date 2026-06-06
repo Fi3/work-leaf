@@ -472,6 +472,7 @@ impl TerminalUi {
     }
 
     fn left_widget(&self) -> List<'static> {
+        let inner_width = usize::from(self.layout().left_width.saturating_sub(2).max(1));
         let mut items = vec![ListItem::new(if self.control_selected == 0 {
             Spans::from(vec![Span::raw("> work-leaf  command")])
         } else {
@@ -479,25 +480,12 @@ impl TerminalUi {
         })];
         for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
             let agent = &self.agents[*agent_index];
-            let mut line = Vec::new();
-            line.push(Span::raw(
-                if self.control_selected == visible_position + 1 {
-                    ">"
-                } else {
-                    " "
-                },
-            ));
-            let (primary, secondary) = agent_list_labels(agent);
-            line.push(Span::raw(primary.to_string()));
-            line.push(Span::raw(" "));
-            line.push(Span::raw(secondary.to_string()));
-            line.push(Span::raw("  working: "));
-            line.push(Span::raw(agent.feature.clone()));
-            if agent.ready {
-                line.push(Span::raw("  "));
-                line.push(Span::raw("READY"));
-            }
-            let mut item = ListItem::new(Spans::from(line));
+            let selected = self.control_selected == visible_position + 1;
+            let mut item = ListItem::new(Spans::from(vec![Span::raw(compact_agent_row(
+                agent,
+                selected,
+                inner_width,
+            ))]));
             if agent.ready {
                 item = item.style(Style::default().add_modifier(Modifier::REVERSED));
             }
@@ -903,6 +891,62 @@ fn agent_list_labels(agent: &AgentListEntry) -> (&str, &str) {
     } else {
         (&agent.feature, agent.id.as_str())
     }
+}
+
+fn compact_agent_row(agent: &AgentListEntry, selected: bool, width: usize) -> String {
+    let prefix = if selected { ">" } else { " " };
+    let status = if agent.ready { " READY" } else { "" };
+    let id = agent.id.as_str();
+    let width = width.max(1);
+
+    let row = if id.starts_with("review-") {
+        compact_fixed_first(prefix, id, &agent.feature, status, width)
+    } else {
+        compact_fixed_last(prefix, &agent.feature, id, status, width)
+    };
+    truncate_to_width(&row, width)
+}
+
+fn compact_fixed_first(
+    prefix: &str,
+    fixed: &str,
+    flexible: &str,
+    status: &str,
+    width: usize,
+) -> String {
+    let fixed_width = prefix.chars().count() + fixed.chars().count() + status.chars().count();
+    if fixed_width >= width {
+        return format!("{prefix}{fixed}{status}");
+    }
+
+    let flexible_width = width.saturating_sub(fixed_width + 1);
+    format!(
+        "{prefix}{fixed} {}{status}",
+        truncate_to_width(flexible, flexible_width)
+    )
+}
+
+fn compact_fixed_last(
+    prefix: &str,
+    flexible: &str,
+    fixed: &str,
+    status: &str,
+    width: usize,
+) -> String {
+    let fixed_width = prefix.chars().count() + 1 + fixed.chars().count() + status.chars().count();
+    if fixed_width >= width {
+        return format!("{prefix}{fixed}{status}");
+    }
+
+    let flexible_width = width.saturating_sub(fixed_width);
+    format!(
+        "{prefix}{} {fixed}{status}",
+        truncate_to_width(flexible, flexible_width)
+    )
+}
+
+fn truncate_to_width(text: &str, width: usize) -> String {
+    text.chars().take(width).collect()
 }
 
 fn buffer_to_string(buffer: &Buffer) -> String {

@@ -6,12 +6,13 @@ use std::time::{Duration, Instant};
 use rustyline::line_buffer::{ChangeListener, DeleteListener, Direction, LineBuffer};
 
 use crate::agent::{AgentId, AgentLaunch};
+use crate::chat_title::{ChatTitleAgent, chat_title_from_prompt};
 use crate::cli::{
     CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
     terminal_right_content, ui_action_text,
 };
 use crate::codex::{AgentBackend, AgentShutdownHandle, AgentStreamEvent};
-use crate::ui::{AgentListEntry, TerminalUi, UiKey, UiMode};
+use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode};
 
 #[derive(Debug)]
 pub struct TerminalApp<B>
@@ -25,9 +26,12 @@ where
     ui: TerminalUi,
     prompt_buffer: PromptLine,
     chat_buffer: PromptLine,
+    chat_history: Vec<String>,
+    chat_history_index: Option<usize>,
     command_transcript: Vec<String>,
     agent_chats: BTreeMap<AgentId, AgentChat>,
-    escape_sequence: Option<Vec<u8>>,
+    chat_title_agent: ChatTitleAgent,
+    escape_sequence: Option<PendingEscapeSequence>,
     next_user_agent: usize,
     spinner: usize,
     dirty: bool,
@@ -49,8 +53,11 @@ where
             ui: TerminalUi::new(width, height),
             prompt_buffer: PromptLine::new(),
             chat_buffer: PromptLine::new(),
+            chat_history: Vec::new(),
+            chat_history_index: None,
             command_transcript: vec![crate::cli::render_command_chat_help()],
             agent_chats: BTreeMap::new(),
+            chat_title_agent: ChatTitleAgent::new(),
             escape_sequence: None,
             next_user_agent,
             spinner: 0,
@@ -132,7 +139,8 @@ where
                 return false;
             }
         }
-        true
+        self.finish_pending_escape_sequence();
+        !self.quit
     }
 
     pub fn handle_byte(&mut self, byte: u8) -> bool {
@@ -146,8 +154,15 @@ where
         }
 
         if byte == 27 {
-            self.escape_sequence = Some(Vec::new());
-            self.handle_input(TerminalAppInput::Key(UiKey::Esc));
+            let defer_escape = self.defer_escape_key();
+            self.escape_sequence = Some(PendingEscapeSequence {
+                bytes: Vec::new(),
+                mode_before: self.ui.mode(),
+                escape_dispatched: !defer_escape,
+            });
+            if !defer_escape {
+                self.handle_input(TerminalAppInput::Key(UiKey::Esc));
+            }
             return !self.quit;
         }
 
@@ -201,6 +216,7 @@ where
             }
             TerminalAppInput::Backspace if self.ui.mode() == UiMode::Insert => {
                 self.chat_buffer.backspace();
+                self.chat_history_index = None;
                 self.dirty = true;
             }
             TerminalAppInput::Enter if self.ui.mode() == UiMode::Prompt => {
@@ -222,6 +238,23 @@ where
             }
             TerminalAppInput::Char(ch) if self.ui.mode() == UiMode::Insert => {
                 self.chat_buffer.push(ch);
+                self.chat_history_index = None;
+                self.dirty = true;
+            }
+            TerminalAppInput::Key(UiKey::Left) if self.should_route_chat_arrow() => {
+                self.chat_buffer.move_left();
+                self.dirty = true;
+            }
+            TerminalAppInput::Key(UiKey::Right) if self.should_route_chat_arrow() => {
+                self.chat_buffer.move_right();
+                self.dirty = true;
+            }
+            TerminalAppInput::Key(UiKey::Up) if self.should_route_chat_arrow() => {
+                self.recall_chat_history(-1);
+                self.dirty = true;
+            }
+            TerminalAppInput::Key(UiKey::Down) if self.should_route_chat_arrow() => {
+                self.recall_chat_history(1);
                 self.dirty = true;
             }
             TerminalAppInput::Key(UiKey::Esc) => {
@@ -262,6 +295,7 @@ where
         let Some(chat) = self.chat.as_mut() else {
             return;
         };
+        let title_pending = args.is_empty();
         let launch = match chat.prepare_agent_launch(&args) {
             Ok(launch) => {
                 self.next_user_agent = chat.next_user_agent_index();
@@ -275,12 +309,12 @@ where
         };
         chat.register_agent_feature(launch.id.clone(), launch.feature.clone());
 
-        self.add_launching_agent(&launch);
+        self.add_launching_agent(&launch, title_pending);
         self.start_launch_worker(launch);
     }
 
     fn display_feature_for_prompt(prompt: &str, fallback: &str) -> String {
-        let title = session_title_from_prompt(prompt);
+        let title = chat_title_from_prompt(prompt);
         if title.is_empty() {
             fallback.to_string()
         } else {
@@ -324,33 +358,28 @@ where
             if index == 0 {
                 let _ = self.ui.activate_agent_chat(&reviewer_id);
             }
-            self.agent_chats
-                .entry(reviewer_id.clone())
-                .or_default()
-                .loading = Some(LoadingKind::WaitingForReply);
+            self.set_agent_loading(&reviewer_id, Some(LoadingKind::WaitingForReply));
             self.start_review_worker(commit, reviewer_id);
         }
         self.dirty = true;
     }
 
-    fn add_launching_agent(&mut self, launch: &AgentLaunch) {
-        self.ui.add_agent(AgentListEntry::new(
-            launch.id.clone(),
-            Self::display_feature_for_prompt(&launch.prompt, &launch.feature),
-        ));
+    fn add_launching_agent(&mut self, launch: &AgentLaunch, title_pending: bool) {
+        let feature = if title_pending {
+            launch.feature.clone()
+        } else {
+            self.chat_title_agent.mark_named(&launch.id);
+            Self::display_feature_for_prompt(&launch.prompt, &launch.feature)
+        };
+        self.ui
+            .add_agent(AgentListEntry::new(launch.id.clone(), feature));
         let _ = self.ui.activate_agent_chat(&launch.id);
-        self.agent_chats
-            .entry(launch.id.clone())
-            .or_default()
-            .loading = Some(LoadingKind::Launching);
+        self.set_agent_loading(&launch.id, Some(LoadingKind::Launching));
     }
 
     fn start_launch_worker(&mut self, launch: AgentLaunch) {
         let agent_id = launch.id.clone();
-        self.agent_chats
-            .entry(agent_id.clone())
-            .or_default()
-            .loading = Some(LoadingKind::Launching);
+        self.set_agent_loading(&agent_id, Some(LoadingKind::Launching));
         self.start_worker(move |mut chat, sender| {
             let stream_sender = sender.clone();
             let mut stream = move |event_agent_id: &AgentId, event| {
@@ -440,20 +469,20 @@ where
 
         let message = self.chat_buffer.trimmed_string();
         self.chat_buffer.clear();
+        self.chat_history_index = None;
         if message.is_empty() {
             self.dirty = true;
             return;
         }
 
+        self.chat_history.push(message.clone());
+        self.name_chat_from_first_prompt(&agent_id, &message);
         self.agent_chats
             .entry(agent_id.clone())
             .or_default()
             .lines
             .push(format!("user: {message}"));
-        self.agent_chats
-            .entry(agent_id.clone())
-            .or_default()
-            .loading = Some(LoadingKind::WaitingForReply);
+        self.set_agent_loading(&agent_id, Some(LoadingKind::WaitingForReply));
 
         self.start_worker(move |mut chat, sender| {
             let stream_sender = sender.clone();
@@ -479,6 +508,22 @@ where
             }
         });
         self.dirty = true;
+    }
+
+    fn name_chat_from_first_prompt(&mut self, agent_id: &AgentId, prompt: &str) {
+        if !agent_id.as_str().starts_with("user-") {
+            return;
+        }
+        let Some(title) = self
+            .chat_title_agent
+            .title_for_first_prompt(agent_id, prompt)
+        else {
+            return;
+        };
+        let _ = self.ui.update_agent_feature(agent_id, title.clone());
+        if let Some(chat) = self.chat.as_mut() {
+            chat.register_agent_feature(agent_id.clone(), title);
+        }
     }
 
     fn start_worker<F>(&mut self, operation: F)
@@ -545,14 +590,61 @@ where
     }
 
     fn clear_agent_loading(&mut self, agent_id: &AgentId) {
-        if let Some(chat) = self.agent_chats.get_mut(agent_id) {
-            chat.loading = None;
-        }
+        self.set_agent_loading(agent_id, None);
+    }
+
+    fn set_agent_loading(&mut self, agent_id: &AgentId, loading: Option<LoadingKind>) {
+        self.agent_chats
+            .entry(agent_id.clone())
+            .or_default()
+            .loading = loading;
+        let _ = self.ui.set_agent_ready(agent_id, loading.is_none());
     }
 
     fn record_actions(&mut self, actions: Vec<crate::UiAction>) {
         self.command_transcript
             .extend(actions.into_iter().map(ui_action_text));
+    }
+
+    fn should_route_chat_arrow(&self) -> bool {
+        self.ui.mode() == UiMode::Insert
+            || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right)
+    }
+
+    fn defer_escape_key(&self) -> bool {
+        self.ui.mode() == UiMode::Insert && self.ui.focus() == PaneFocus::Right
+    }
+
+    fn finish_pending_escape_sequence(&mut self) {
+        let should_finish = self
+            .escape_sequence
+            .as_ref()
+            .is_some_and(|sequence| sequence.bytes.is_empty());
+        if should_finish {
+            let sequence = self
+                .escape_sequence
+                .take()
+                .expect("escape sequence is present");
+            self.dispatch_pending_escape_if_needed(&sequence);
+        }
+    }
+
+    fn dispatch_pending_escape_if_needed(&mut self, sequence: &PendingEscapeSequence) {
+        if !sequence.escape_dispatched {
+            self.handle_input(TerminalAppInput::Key(UiKey::Esc));
+        }
+    }
+
+    fn recall_chat_history(&mut self, delta: isize) {
+        if self.chat_history.is_empty() {
+            return;
+        }
+
+        let current = self.chat_history_index.unwrap_or(self.chat_history.len()) as isize;
+        let max = self.chat_history.len().saturating_sub(1) as isize;
+        let next = (current + delta).clamp(0, max) as usize;
+        self.chat_history_index = Some(next);
+        self.chat_buffer.replace(&self.chat_history[next]);
     }
 
     fn request_quit(&mut self) {
@@ -582,22 +674,37 @@ where
             return false;
         };
 
-        if sequence.is_empty() && byte != b'[' {
-            self.escape_sequence = None;
-            return false;
-        }
-
-        sequence.push(byte);
-        if is_complete_control_sequence(sequence) {
-            let complete = self
+        if sequence.bytes.is_empty() && byte != b'[' {
+            let sequence = self
                 .escape_sequence
                 .take()
                 .expect("escape sequence is present");
-            if let Some(key) = parse_control_sequence(&complete) {
+            self.dispatch_pending_escape_if_needed(&sequence);
+            return false;
+        }
+
+        sequence.bytes.push(byte);
+        if is_complete_control_sequence(&sequence.bytes) {
+            let sequence = self
+                .escape_sequence
+                .take()
+                .expect("escape sequence is present");
+            if sequence.escape_dispatched
+                && sequence.mode_before == UiMode::Insert
+                && self.ui.mode() != UiMode::Insert
+            {
+                let actions = self.ui.handle_key(UiKey::Char('i'));
+                self.record_actions(actions);
+            }
+            if let Some(key) = parse_control_sequence(&sequence.bytes) {
                 self.handle_input(TerminalAppInput::Key(key));
             }
-        } else if sequence.len() > MAX_ESCAPE_SEQUENCE {
-            self.escape_sequence = None;
+        } else if sequence.bytes.len() > MAX_ESCAPE_SEQUENCE {
+            let sequence = self
+                .escape_sequence
+                .take()
+                .expect("escape sequence is present");
+            self.dispatch_pending_escape_if_needed(&sequence);
         }
 
         true
@@ -658,6 +765,13 @@ struct AgentChat {
     loading: Option<LoadingKind>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct PendingEscapeSequence {
+    bytes: Vec<u8>,
+    mode_before: UiMode,
+    escape_dispatched: bool,
+}
+
 const SPINNER: [&str; 4] = ["|", "/", "-", "\\"];
 
 fn stream_event_text(event: AgentStreamEvent) -> String {
@@ -672,62 +786,6 @@ fn split_command_line(line: &str) -> Vec<String> {
     line.split_whitespace().map(str::to_string).collect()
 }
 
-fn session_title_from_prompt(prompt: &str) -> String {
-    const STOP_WORDS: &[&str] = &[
-        "a",
-        "an",
-        "and",
-        "for",
-        "the",
-        "to",
-        "with",
-        "please",
-        "implement",
-        "add",
-        "fix",
-        "update",
-        "create",
-        "build",
-    ];
-
-    let mut title = String::new();
-    for word in prompt
-        .split_whitespace()
-        .map(|word| {
-            word.trim_matches(|ch: char| !ch.is_ascii_alphanumeric() && ch != '-' && ch != '_')
-                .to_ascii_lowercase()
-        })
-        .filter(|word| !word.is_empty())
-        .filter(|word| !STOP_WORDS.contains(&word.as_str()))
-    {
-        let next_len = if title.is_empty() {
-            word.len()
-        } else {
-            title.len() + 1 + word.len()
-        };
-        if next_len > 16 {
-            continue;
-        }
-        if !title.is_empty() {
-            title.push(' ');
-        }
-        title.push_str(&word);
-        if !title.is_empty() {
-            break;
-        }
-    }
-
-    if title.is_empty() {
-        prompt
-            .split_whitespace()
-            .take(4)
-            .collect::<Vec<_>>()
-            .join(" ")
-    } else {
-        title
-    }
-}
-
 const MAX_ESCAPE_SEQUENCE: usize = 64;
 
 fn is_complete_control_sequence(sequence: &[u8]) -> bool {
@@ -738,7 +796,13 @@ fn is_complete_control_sequence(sequence: &[u8]) -> bool {
 }
 
 fn parse_control_sequence(sequence: &[u8]) -> Option<UiKey> {
-    parse_sgr_mouse_click(sequence)
+    match sequence {
+        [b'[', b'A'] => Some(UiKey::Up),
+        [b'[', b'B'] => Some(UiKey::Down),
+        [b'[', b'C'] => Some(UiKey::Right),
+        [b'[', b'D'] => Some(UiKey::Left),
+        _ => parse_sgr_mouse_click(sequence),
+    }
 }
 
 fn parse_sgr_mouse_click(sequence: &[u8]) -> Option<UiKey> {
@@ -809,6 +873,14 @@ impl PromptLine {
         let _ = self.buffer.insert(ch, 1, &mut listener);
     }
 
+    fn move_left(&mut self) {
+        self.buffer.move_backward(1);
+    }
+
+    fn move_right(&mut self) {
+        self.buffer.move_forward(1);
+    }
+
     fn backspace(&mut self) {
         let mut listener = NoopLineListener;
         self.buffer.backspace(1, &mut listener);
@@ -818,6 +890,13 @@ impl PromptLine {
         let mut listener = NoopLineListener;
         let len = self.buffer.as_str().len();
         self.buffer.replace(0..len, "", &mut listener);
+    }
+
+    fn replace(&mut self, text: &str) {
+        let mut listener = NoopLineListener;
+        let len = self.buffer.as_str().len();
+        self.buffer.replace(0..len, text, &mut listener);
+        self.buffer.move_end();
     }
 }
 
@@ -834,4 +913,52 @@ impl ChangeListener for NoopLineListener {
     fn insert_str(&mut self, _idx: usize, _string: &str) {}
 
     fn replace(&mut self, _idx: usize, _old: &str, _new: &str) {}
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::*;
+    use crate::agent::{AgentError, AgentSession, ChatMessage, MessageRole};
+
+    #[derive(Clone, Debug)]
+    struct NoopBackend;
+
+    impl AgentBackend for NoopBackend {
+        fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+            Ok(AgentSession::new(request))
+        }
+
+        fn send(&mut self, _agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+            Ok(ChatMessage::new(MessageRole::Agent, prompt))
+        }
+    }
+
+    #[test]
+    fn clearing_agent_loading_marks_chat_ready_for_bell_and_left_highlight() {
+        let chat = CommandChat::new(PathBuf::from("."), NoopBackend);
+        let mut app = TerminalApp::new(chat, 80, 24);
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+
+        app.ui
+            .add_agent(AgentListEntry::new(agent_id.clone(), "feature"));
+        app.ui
+            .activate_agent_chat(&agent_id)
+            .expect("test agent is registered");
+        app.set_agent_loading(&agent_id, Some(LoadingKind::WaitingForReply));
+
+        assert!(!app.render_frame().contains('\u{7}'));
+        assert!(!app.ui.render_left_pane().contains("READY"));
+
+        app.clear_agent_loading(&agent_id);
+
+        let ready_frame = app.render_frame();
+        assert!(ready_frame.contains('\u{7}'));
+        assert!(
+            app.ui
+                .render_left_pane()
+                .contains("\u{1b}[7m>feature user-1  working: feature  READY\u{1b}[0m")
+        );
+    }
 }

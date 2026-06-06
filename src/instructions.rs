@@ -29,6 +29,10 @@ impl RequiredCheck {
         &self.args
     }
 
+    fn is_cargo_test(&self) -> bool {
+        self.program == "cargo" && self.args.first().is_some_and(|arg| arg == "test")
+    }
+
     fn parse(command_line: &str) -> Option<Self> {
         let command_line = command_line.trim();
         let parts = command_line
@@ -70,14 +74,41 @@ pub(crate) fn required_checks(files: &[ProjectInstructionFile]) -> Vec<RequiredC
                 let Some(command) = RequiredCheck::parse(command_line) else {
                     continue;
                 };
-                if seen.insert(command.command_line.clone()) {
-                    commands.push(command);
-                }
+                push_unique_check(&mut commands, &mut seen, command);
             }
         }
     }
 
     commands
+}
+
+pub(crate) fn validation_checks(
+    root: &Path,
+    files: &[ProjectInstructionFile],
+) -> Vec<RequiredCheck> {
+    let mut commands = required_checks(files);
+    let mut seen = commands
+        .iter()
+        .map(|command| command.command_line.clone())
+        .collect::<BTreeSet<_>>();
+
+    if root.join("Cargo.toml").is_file() && !commands.iter().any(RequiredCheck::is_cargo_test) {
+        let command = RequiredCheck::parse("cargo test --all-targets --all-features")
+            .expect("built-in cargo test command is valid");
+        push_unique_check(&mut commands, &mut seen, command);
+    }
+
+    commands
+}
+
+fn push_unique_check(
+    commands: &mut Vec<RequiredCheck>,
+    seen: &mut BTreeSet<String>,
+    command: RequiredCheck,
+) {
+    if seen.insert(command.command_line.clone()) {
+        commands.push(command);
+    }
 }
 
 fn required_check_lines(text: &str) -> impl Iterator<Item = &str> {

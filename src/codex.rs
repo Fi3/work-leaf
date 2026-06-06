@@ -209,7 +209,7 @@ impl CodexCommandConfig {
             binary: PathBuf::from("codex"),
             project_dir,
             model: None,
-            sandbox: SandboxMode::WorkspaceWrite,
+            sandbox: SandboxMode::ReadOnly,
         }
     }
 

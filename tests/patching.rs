@@ -161,6 +161,109 @@ diff --git a/src/lib.rs b/src/lib.rs
 }
 
 #[test]
+fn patcher_rejects_patch_when_forced_cargo_test_fails() {
+    let root = git_repo("patch-forced-cargo-test-fails");
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(
+        root.join("Cargo.toml"),
+        "[package]\nname = \"patch-forced-cargo-test-fails\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    )
+    .unwrap();
+    let target_dir = std::env::temp_dir().join(format!(
+        "work-leaf-patch-forced-check-target-{}",
+        std::process::id()
+    ));
+    fs::write(
+        root.join("AGENTS.md"),
+        format!(
+            "## Required Checks\n1. `cargo check --locked --target-dir {}`\n",
+            target_dir.display()
+        ),
+    )
+    .unwrap();
+    fs::write(
+        root.join("src/lib.rs"),
+        "\
+pub fn value() -> u8 { 1 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn value_remains_one() {
+        assert_eq!(super::value(), 1);
+    }
+}
+",
+    )
+    .unwrap();
+    let lockfile = Command::new("cargo")
+        .current_dir(&root)
+        .args(["generate-lockfile"])
+        .output()
+        .unwrap();
+    assert!(
+        lockfile.status.success(),
+        "cargo generate-lockfile failed: {}\n{}",
+        String::from_utf8_lossy(&lockfile.stdout),
+        String::from_utf8_lossy(&lockfile.stderr)
+    );
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial rust test fixture"]);
+
+    let patcher = GitPatcher::new(root.clone(), FileLockTable::new(root.clone()));
+    let error = patcher
+        .apply(PatchRequest::new(
+            AgentId::new("chat-5").unwrap(),
+            "parser",
+            "change a value used by tests",
+            "\
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1,4 +1,4 @@
+-pub fn value() -> u8 { 1 }
++pub fn value() -> u8 { 2 }
+
+ #[cfg(test)]
+ mod tests {
+",
+        ))
+        .unwrap_err();
+
+    match error {
+        PatchError::ValidationFailed {
+            files,
+            command,
+            diagnostic,
+        } => {
+            assert_eq!(files, vec![PathBuf::from("src/lib.rs")]);
+            assert_eq!(command, "cargo test --all-targets --all-features");
+            assert!(diagnostic.contains("value_remains_one"));
+        }
+        other => panic!("unexpected error: {other:?}"),
+    }
+    assert_eq!(
+        fs::read_to_string(root.join("src/lib.rs")).unwrap(),
+        "\
+pub fn value() -> u8 { 1 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn value_remains_one() {
+        assert_eq!(super::value(), 1);
+    }
+}
+"
+    );
+    assert_eq!(
+        git_output(&root, ["log", "-1", "--pretty=%s"]),
+        "ADD initial rust test fixture"
+    );
+    assert!(git_output(&root, ["status", "--short", "--untracked-files=no"]).is_empty());
+}
+
+#[test]
 fn patch_coordinator_sends_conflict_diagnostics_back_to_agent() {
     let root = git_repo("patch-conflict-feedback");
     fs::write(root.join("README.md"), "actual\n").unwrap();

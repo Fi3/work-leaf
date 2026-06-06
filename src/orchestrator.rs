@@ -52,6 +52,9 @@ pub enum OrchestratorEvent {
     AgentDone {
         agent_id: AgentId,
     },
+    ProtocolCorrectionSent {
+        agent_id: AgentId,
+    },
     FileTextSent {
         agent_id: AgentId,
         paths: Vec<PathBuf>,
@@ -89,6 +92,9 @@ impl OrchestratorEvent {
         match self {
             Self::AgentDone { agent_id } => {
                 format!("agent {agent_id} reported done")
+            }
+            Self::ProtocolCorrectionSent { agent_id } => {
+                format!("sent protocol correction to {agent_id}")
             }
             Self::FileTextSent { agent_id, paths } => {
                 format!("sent file text to {agent_id}: {}", display_paths(paths))
@@ -182,6 +188,18 @@ where
 {
     let directives = parse_agent_directives(text)?;
     let mut run = DirectiveRun::default();
+
+    if directives.is_empty() && needs_protocol_correction(text) {
+        let mut sink = |event| stream(agent_id, event);
+        let reply =
+            backend.send_streaming(agent_id, &render_protocol_correction_prompt(), &mut sink)?;
+        run.follow_up_replies
+            .push(follow_up(agent_id.clone(), reply));
+        run.events.push(OrchestratorEvent::ProtocolCorrectionSent {
+            agent_id: agent_id.clone(),
+        });
+        return Ok(run);
+    }
 
     for directive in directives {
         match directive {
@@ -307,6 +325,20 @@ where
     }
 
     Ok(run)
+}
+
+fn needs_protocol_correction(text: &str) -> bool {
+    text.contains("@work-leaf")
+}
+
+fn render_protocol_correction_prompt() -> String {
+    [
+        "work-leaf protocol correction",
+        "`@work-leaf` is not a shell command. Do not run it in a shell and do not ask the user to run it.",
+        "Emit orchestrator requests as top-level plain response lines, for example `@work-leaf read src/lib.rs` or `@work-leaf done`.",
+        "Do not put directives in prose, quotes, or code fences. Continue the task by emitting the next required directive or `@work-leaf done`.",
+    ]
+    .join("\n")
 }
 
 fn follow_up(agent_id: AgentId, message: ChatMessage) -> AgentFollowUp {

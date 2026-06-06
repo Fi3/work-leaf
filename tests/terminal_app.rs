@@ -56,6 +56,85 @@ fn terminal_app_keeps_visible_cursor_on_chat_input() {
 }
 
 #[test]
+fn terminal_app_bytewise_arrow_prefix_keeps_focused_chat_in_insert_mode() {
+    let backend = FakeBackend::new(["launch reply", "follow reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new arrow editing\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"ab");
+    app.handle_byte(27);
+
+    assert_eq!(app.ui().focus(), PaneFocus::Right);
+    assert_eq!(app.ui().mode(), UiMode::Insert);
+    assert!(app.render_frame().contains("mode=insert focus=right"));
+
+    app.handle_byte(b'[');
+    assert_eq!(app.ui().mode(), UiMode::Insert);
+
+    app.handle_byte(b'D');
+    app.handle_byte(b'Z');
+    app.handle_byte(b'\n');
+    app.wait_for_idle(Duration::from_secs(1));
+
+    assert!(app.render_frame().contains("user: aZb"));
+}
+
+#[test]
+fn terminal_app_chat_focus_arrows_edit_buffer_while_command_mode_is_active() {
+    let backend = FakeBackend::new(["launch reply", "follow reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new command arrow editing\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"ab\x1b");
+
+    assert_eq!(app.ui().focus(), PaneFocus::Right);
+    assert_eq!(app.ui().mode(), UiMode::Command);
+
+    app.handle_bytes(b"\x1b[DiZ\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    assert!(app.render_frame().contains("user: aZb"));
+}
+
+#[test]
+fn terminal_app_chat_focus_arrows_recall_history_while_command_mode_is_active() {
+    let backend = FakeBackend::new([
+        "launch reply",
+        "first reply",
+        "second reply",
+        "repeat reply",
+    ]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new command history\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"first\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"second\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"\x1b");
+
+    assert_eq!(app.ui().focus(), PaneFocus::Right);
+    assert_eq!(app.ui().mode(), UiMode::Command);
+
+    app.handle_bytes(b"\x1b[Ai\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    let backend = app.into_chat().into_backend();
+    let second_sends = backend
+        .sends()
+        .iter()
+        .filter(|(_, prompt)| prompt == "second")
+        .count();
+    assert_eq!(second_sends, 2);
+}
+
+#[test]
 fn terminal_app_new_and_chat_work_through_spawned_codex_backend() {
     let root = temp_dir("terminal-app-codex-backend");
     let fake_bin = root.join("bin");
@@ -587,6 +666,34 @@ fn terminal_app_names_user_session_from_first_prompt_immediately() {
     let frame = app.render_frame();
     assert!(frame.contains("parser"));
     assert!(!frame.contains("working: user-agent"));
+}
+
+#[test]
+fn terminal_app_names_interactive_chat_from_first_inserted_prompt_immediately() {
+    let backend = FakeBackend::new(["launch reply", "follow reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    let initial_left_pane = app.ui().render_left_pane();
+    assert!(initial_left_pane.contains("user-1"));
+    assert!(!initial_left_pane.contains("oauth redirect handler"));
+
+    app.handle_bytes(b"please fix the OAuth redirect handler\n");
+
+    let named_left_pane = app.ui().render_left_pane();
+    assert!(
+        named_left_pane.contains(">oauth redirect handler user-1  working: oauth redirect handler")
+    );
+    assert!(!named_left_pane.contains("working: user-agent"));
+
+    app.wait_for_idle(Duration::from_secs(1));
+    let backend = app.into_chat().into_backend();
+    assert_eq!(
+        backend.sends()[0].1,
+        "please fix the OAuth redirect handler"
+    );
 }
 
 #[cfg(unix)]

@@ -1,4 +1,6 @@
-use crate::{AgentId, AgentListEntry, TerminalUi, UiKey, UiMode};
+use crate::{
+    AgentId, AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode, chat_title::ChatTitleAgent,
+};
 
 #[derive(Debug)]
 pub struct UiHarness {
@@ -10,14 +12,21 @@ pub struct UiHarness {
     chat_history_index: Option<usize>,
     escape_sequence: Option<PendingEscapeSequence>,
     transcript: Vec<String>,
+    chat_title_agent: ChatTitleAgent,
     next_agent: usize,
     quit: bool,
 }
 
 impl UiHarness {
     pub fn new(width: u16, height: u16) -> Self {
+        let parser = AgentId::new("user-1").expect("fixture agent id is valid");
+        let tests = AgentId::new("user-2").expect("fixture agent id is valid");
+        let mut chat_title_agent = ChatTitleAgent::new();
+        chat_title_agent.mark_named(&parser);
+        chat_title_agent.mark_named(&tests);
+
         Self {
-            ui: fixture_ui(width, height),
+            ui: fixture_ui(width, height, parser, tests),
             prompt_buffer: String::new(),
             chat_buffer: String::new(),
             chat_cursor: 0,
@@ -29,6 +38,7 @@ impl UiHarness {
                 "Esc command, i insert, : prompt, Ctrl-W h/j/k/l focus, , toggle right, q quit"
                     .to_string(),
             ],
+            chat_title_agent,
             next_agent: 3,
             quit: false,
         }
@@ -63,7 +73,8 @@ impl UiHarness {
                 index += 1;
             }
         }
-        true
+        self.finish_pending_escape_sequence();
+        !self.quit
     }
 
     pub fn handle_byte(&mut self, byte: u8) -> bool {
@@ -76,11 +87,15 @@ impl UiHarness {
         }
 
         if byte == 27 {
+            let defer_escape = self.defer_escape_key();
             self.escape_sequence = Some(PendingEscapeSequence {
                 bytes: vec![27],
                 mode_before: self.ui.mode(),
+                escape_dispatched: !defer_escape,
             });
-            self.handle_input(HarnessInput::Key(UiKey::Esc));
+            if !defer_escape {
+                self.handle_input(HarnessInput::Key(UiKey::Esc));
+            }
             return !self.quit;
         }
 
@@ -121,9 +136,12 @@ impl UiHarness {
                 self.chat_history_index = None;
                 if !message.is_empty() {
                     self.chat_history.push(message.clone());
-                    let target = self
-                        .ui
-                        .selected_agent()
+                    let target_agent = self.ui.selected_agent().cloned();
+                    if let Some(agent_id) = target_agent.as_ref() {
+                        self.name_chat_from_first_prompt(agent_id, &message);
+                    }
+                    let target = target_agent
+                        .as_ref()
                         .map(AgentId::as_str)
                         .unwrap_or("work-leaf");
                     self.transcript.push(format!("{target}> {message}"));
@@ -137,16 +155,16 @@ impl UiHarness {
             HarnessInput::Char(ch) if self.ui.mode() == UiMode::Insert => {
                 self.insert_chat_char(ch);
             }
-            HarnessInput::Key(UiKey::Left) if self.ui.mode() == UiMode::Insert => {
+            HarnessInput::Key(UiKey::Left) if self.should_route_chat_arrow() => {
                 self.move_chat_cursor_left();
             }
-            HarnessInput::Key(UiKey::Right) if self.ui.mode() == UiMode::Insert => {
+            HarnessInput::Key(UiKey::Right) if self.should_route_chat_arrow() => {
                 self.move_chat_cursor_right();
             }
-            HarnessInput::Key(UiKey::Up) if self.ui.mode() == UiMode::Insert => {
+            HarnessInput::Key(UiKey::Up) if self.should_route_chat_arrow() => {
                 self.recall_chat_history(-1);
             }
-            HarnessInput::Key(UiKey::Down) if self.ui.mode() == UiMode::Insert => {
+            HarnessInput::Key(UiKey::Down) if self.should_route_chat_arrow() => {
                 self.recall_chat_history(1);
             }
             HarnessInput::Key(UiKey::Esc) => {
@@ -210,6 +228,16 @@ impl UiHarness {
         }
     }
 
+    fn name_chat_from_first_prompt(&mut self, agent_id: &AgentId, prompt: &str) {
+        let Some(title) = self
+            .chat_title_agent
+            .title_for_first_prompt(agent_id, prompt)
+        else {
+            return;
+        };
+        let _ = self.ui.update_agent_feature(agent_id, title);
+    }
+
     fn insert_chat_char(&mut self, ch: char) {
         self.chat_buffer.insert(self.chat_cursor, ch);
         self.chat_cursor += ch.len_utf8();
@@ -267,13 +295,46 @@ impl UiHarness {
             .extend(actions.into_iter().map(|action| format!("{action:?}")));
     }
 
+    fn should_route_chat_arrow(&self) -> bool {
+        self.ui.mode() == UiMode::Insert
+            || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right)
+    }
+
+    fn defer_escape_key(&self) -> bool {
+        self.ui.mode() == UiMode::Insert && self.ui.focus() == PaneFocus::Right
+    }
+
+    fn finish_pending_escape_sequence(&mut self) {
+        let should_finish = self
+            .escape_sequence
+            .as_ref()
+            .is_some_and(|sequence| sequence.bytes.len() == 1);
+        if should_finish {
+            let sequence = self
+                .escape_sequence
+                .take()
+                .expect("escape sequence is present");
+            self.dispatch_pending_escape_if_needed(&sequence);
+        }
+    }
+
+    fn dispatch_pending_escape_if_needed(&mut self, sequence: &PendingEscapeSequence) {
+        if !sequence.escape_dispatched {
+            self.handle_input(HarnessInput::Key(UiKey::Esc));
+        }
+    }
+
     fn continue_escape_sequence(&mut self, byte: u8) -> bool {
         let Some(sequence) = self.escape_sequence.as_mut() else {
             return false;
         };
 
         if sequence.bytes.len() == 1 && byte != b'[' {
-            self.escape_sequence = None;
+            let sequence = self
+                .escape_sequence
+                .take()
+                .expect("escape sequence is present");
+            self.dispatch_pending_escape_if_needed(&sequence);
             return false;
         }
 
@@ -284,14 +345,21 @@ impl UiHarness {
                     .escape_sequence
                     .take()
                     .expect("escape sequence is present");
-                if sequence.mode_before == UiMode::Insert && self.ui.mode() != UiMode::Insert {
+                if sequence.escape_dispatched
+                    && sequence.mode_before == UiMode::Insert
+                    && self.ui.mode() != UiMode::Insert
+                {
                     let actions = self.ui.handle_key(UiKey::Char('i'));
                     self.record_actions(actions);
                 }
                 self.handle_input(HarnessInput::Key(key));
             }
         } else if sequence.bytes.len() > MAX_ESCAPE_SEQUENCE {
-            self.escape_sequence = None;
+            let sequence = self
+                .escape_sequence
+                .take()
+                .expect("escape sequence is present");
+            self.dispatch_pending_escape_if_needed(&sequence);
         }
 
         true
@@ -312,6 +380,7 @@ impl UiHarness {
 struct PendingEscapeSequence {
     bytes: Vec<u8>,
     mode_before: UiMode,
+    escape_dispatched: bool,
 }
 
 const MAX_ESCAPE_SEQUENCE: usize = 8;
@@ -349,9 +418,7 @@ impl HarnessInput {
     }
 }
 
-fn fixture_ui(width: u16, height: u16) -> TerminalUi {
-    let parser = AgentId::new("user-1").expect("fixture agent id is valid");
-    let tests = AgentId::new("user-2").expect("fixture agent id is valid");
+fn fixture_ui(width: u16, height: u16, parser: AgentId, tests: AgentId) -> TerminalUi {
     let mut ui = TerminalUi::new(width, height);
     ui.add_agent(
         AgentListEntry::new(parser.clone(), "parser")

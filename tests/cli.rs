@@ -155,6 +155,42 @@ fn command_chat_processes_agent_orchestrator_requests_automatically() {
 }
 
 #[test]
+fn command_chat_corrects_agents_that_treat_work_leaf_as_a_shell_command() {
+    let root = temp_dir("command-chat-agent-protocol-correction");
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(
+        root.join("src/lib.rs"),
+        "pub fn parsed() -> bool { true }\n",
+    )
+    .unwrap();
+    let backend = FakeBackend::new([
+        "The orchestrator mediation path is not applying patches or returning the requested runtime files, and the shell does not have an `@work-leaf` command available. To finish the requested feature end to end, I am switching to the local workspace tools.",
+        "@work-leaf read src/lib.rs",
+        "received orchestrator file text\n@work-leaf done",
+    ]);
+    let mut chat = CommandChat::new(root, backend);
+
+    let result = chat.handle_line("new inspect parser").unwrap();
+
+    let CommandChatResult::AgentLaunched { reply, .. } = result else {
+        panic!("expected launched agent");
+    };
+    assert!(reply.contains("sent protocol correction to user-1"));
+    assert!(reply.contains("sent file text to user-1: src/lib.rs"));
+    assert!(reply.contains("agent user-1 reported done"));
+
+    let backend = chat.into_backend();
+    assert_eq!(backend.sends.len(), 2);
+    assert!(
+        backend.sends[0]
+            .1
+            .contains("`@work-leaf` is not a shell command")
+    );
+    assert!(backend.sends[0].1.contains("plain response lines"));
+    assert!(backend.sends[1].1.contains("pub fn parsed()"));
+}
+
+#[test]
 fn command_chat_continues_past_old_round_cutoff_until_agent_reports_done() {
     let root = temp_dir("command-chat-agent-done-convergence");
     let mut replies = Vec::new();

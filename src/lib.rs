@@ -1,4 +1,5 @@
 pub mod agent;
+mod chat_title;
 pub mod cli;
 pub mod codex;
 mod instructions;

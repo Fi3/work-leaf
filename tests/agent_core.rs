@@ -21,6 +21,7 @@ fn prompt_policy_wraps_every_agent_prompt_with_file_access_rules() {
     assert!(wrapped.contains("ask the orchestrator to provide file text"));
     assert!(wrapped.contains("not allowed to write files directly"));
     assert!(wrapped.contains("provide a unified diff patch"));
+    assert!(wrapped.contains("Do not run `@work-leaf` in a shell"));
     assert!(wrapped.contains("@work-leaf read <path>"));
     assert!(wrapped.contains("@work-leaf patch <reason>"));
     assert!(wrapped.contains("@work-leaf locks classify <command>"));
@@ -148,7 +149,7 @@ fn codex_backend_records_json_thread_id_for_follow_up_messages() {
             "--cd",
             "/repo",
             "--sandbox",
-            "workspace-write",
+            "read-only",
             "--ask-for-approval",
             "never",
             "exec",
@@ -201,7 +202,7 @@ fn codex_backend_can_build_resume_invocation_without_in_memory_session() {
             "--cd",
             "/repo",
             "--sandbox",
-            "workspace-write",
+            "read-only",
             "--ask-for-approval",
             "never",
             "exec",
