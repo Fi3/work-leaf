@@ -262,6 +262,7 @@ impl TerminalUi {
                 .position(|index| self.agents[*index].id == *agent_id)
                 .map(|position| position + 1)
                 .unwrap_or(self.control_selected);
+            self.reset_right_scroll();
             Ok(())
         } else {
             Err(format!("unknown agent `{agent_id}`"))
@@ -279,6 +280,7 @@ impl TerminalUi {
         self.selected_agent = None;
         self.windows[self.active_window] = UiWindow::command();
         self.control_selected = 0;
+        self.reset_right_scroll();
     }
 
     pub fn handle_key(&mut self, key: UiKey) -> Vec<UiAction> {
@@ -443,9 +445,27 @@ impl TerminalUi {
         ));
         rendered
     }
+
+    pub fn scroll_right_pane_up(&mut self) {
+        self.right_scroll_rows = self.right_scroll_rows.saturating_add(3);
+    }
+
+    pub fn scroll_right_pane_down(&mut self) {
+        self.right_scroll_rows = self.right_scroll_rows.saturating_sub(3);
+    }
+
+    pub fn reset_right_scroll(&mut self) {
+        self.right_scroll_rows = 0;
+    }
+
     fn visible_right_content(&self, right_content: &str) -> String {
         let (inner_width, inner_height) = self.right_inner_size();
-        tail_visible_content(right_content, inner_width, inner_height)
+        visible_content(
+            right_content,
+            inner_width,
+            inner_height,
+            self.right_scroll_rows,
+        )
     }
 
     fn render_tui_buffer(&self, right_content: &str, prompt: &str, prompt_cursor: usize) -> Buffer {
@@ -1014,8 +1034,12 @@ fn buffer_to_string(buffer: &Buffer) -> String {
 }
 
 fn visual_rows(line: &str, width: u16) -> u16 {
-    let width = width.max(1);
-    let len = line.chars().count().min(usize::from(u16::MAX)) as u16;
+    visual_row_count(line, width).min(usize::from(u16::MAX)) as u16
+}
+
+fn visual_row_count(line: &str, width: u16) -> usize {
+    let width = usize::from(width.max(1));
+    let len = line.chars().count().min(usize::from(u16::MAX));
     (len / width).saturating_add(1)
 }
 
@@ -1025,23 +1049,56 @@ fn cursor_char_count(text: &str, cursor: usize) -> usize {
         .count()
 }
 
-fn tail_visible_content(content: &str, width: u16, height: u16) -> String {
-    if content.is_empty() {
+fn visible_content(content: &str, width: u16, height: u16, scroll_rows: usize) -> String {
+    let height = usize::from(height);
+    let Some((history, prompt)) = split_chat_prompt(content) else {
+        return tail_visible_content(content, width, height, scroll_rows);
+    };
+
+    let prompt_rows = visual_row_count(prompt, width);
+    let history_height = height.saturating_sub(prompt_rows).max(1);
+    let visible_history = tail_visible_content(history, width, history_height, scroll_rows);
+    if visible_history.is_empty() {
+        prompt.to_string()
+    } else {
+        format!("{visible_history}\n{prompt}")
+    }
+}
+
+fn split_chat_prompt(content: &str) -> Option<(&str, &str)> {
+    let (history, prompt) = content.rsplit_once('\n')?;
+    prompt.starts_with("chat> ").then_some((history, prompt))
+}
+
+fn tail_visible_content(content: &str, width: u16, height: usize, scroll_rows: usize) -> String {
+    if content.is_empty() || height == 0 {
         return String::new();
     }
 
     let lines = content.lines().collect::<Vec<_>>();
-    let mut selected = Vec::new();
-    let mut used_rows = 0_u16;
+    let rows_to_skip = scroll_rows.min(
+        lines
+            .iter()
+            .map(|line| visual_row_count(line, width))
+            .sum::<usize>()
+            .saturating_sub(height),
+    );
+    let mut visible = Vec::new();
+    let mut skipped_rows = 0_usize;
+    let mut used_rows = 0_usize;
     for line in lines.iter().rev() {
-        let rows = visual_rows(line, width);
-        if selected.is_empty() || used_rows.saturating_add(rows) <= height {
-            selected.push(*line);
+        let rows = visual_row_count(line, width);
+        if skipped_rows.saturating_add(rows) <= rows_to_skip {
+            skipped_rows = skipped_rows.saturating_add(rows);
+            continue;
+        }
+        if visible.is_empty() || used_rows.saturating_add(rows) <= height {
+            visible.push(*line);
             used_rows = used_rows.saturating_add(rows);
         } else {
             break;
         }
     }
-    selected.reverse();
-    selected.join("\n")
+    visible.reverse();
+    visible.join("\n")
 }
