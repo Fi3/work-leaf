@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{cell::Cell, path::PathBuf};
 
 use crate::agent::AgentId;
 use tui::{
@@ -6,6 +6,7 @@ use tui::{
     backend::TestBackend,
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
+    style::{Modifier, Style},
     text::{Span, Spans},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
 };
@@ -168,6 +169,7 @@ pub struct TerminalUi {
     active_window: usize,
     right_scroll_rows: usize,
     pending: Option<PendingKey>,
+    pending_bell: Cell<bool>,
 }
 
 impl TerminalUi {
@@ -186,6 +188,7 @@ impl TerminalUi {
             active_window: 0,
             right_scroll_rows: 0,
             pending: None,
+            pending_bell: Cell::new(false),
         }
     }
 
@@ -248,6 +251,9 @@ impl TerminalUi {
         let Some(agent) = self.agents.iter_mut().find(|agent| &agent.id == agent_id) else {
             return Err(format!("unknown agent `{agent_id}`"));
         };
+        if ready && !agent.ready {
+            self.pending_bell.set(true);
+        }
         agent.ready = ready;
         Ok(())
     }
@@ -377,19 +383,25 @@ impl TerminalUi {
         }
         for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
             let agent = &self.agents[*agent_index];
-            if self.control_selected == visible_position + 1 {
-                rendered.push('>');
+            let mut row = String::new();
+            row.push(if self.control_selected == visible_position + 1 {
+                '>'
             } else {
-                rendered.push(' ');
-            }
+                ' '
+            });
             let (primary, secondary) = agent_list_labels(agent);
-            rendered.push_str(primary);
-            rendered.push(' ');
-            rendered.push_str(secondary);
-            rendered.push_str("  working: ");
-            rendered.push_str(&agent.feature);
+            row.push_str(primary);
+            row.push(' ');
+            row.push_str(secondary);
+            row.push_str("  working: ");
+            row.push_str(&agent.feature);
             if agent.ready {
-                rendered.push_str("  \u{1b}[7mREADY\u{1b}[0m");
+                row.push_str("  READY");
+                rendered.push_str("\u{1b}[7m");
+                rendered.push_str(&row);
+                rendered.push_str("\u{1b}[0m");
+            } else {
+                rendered.push_str(&row);
             }
             rendered.push('\n');
             if !agent.modified_files.is_empty() {
@@ -420,7 +432,9 @@ impl TerminalUi {
         let visible_right_content = self.visible_right_content(right_content);
         let prompt_cursor = prompt.len();
         let buffer = self.render_tui_buffer(&visible_right_content, prompt, prompt_cursor);
-        let mut rendered = String::from("\u{1b}[H");
+        let mut rendered = String::new();
+        rendered.push_str(self.bell_prefix());
+        rendered.push_str("\u{1b}[H");
         rendered.push_str(&buffer_to_string(&buffer));
         rendered.push_str(&self.cursor_sequence(&visible_right_content, prompt));
         rendered
@@ -435,7 +449,9 @@ impl TerminalUi {
     ) -> String {
         let visible_right_content = self.visible_right_content(right_content);
         let buffer = self.render_tui_buffer(&visible_right_content, prompt, prompt_cursor);
-        let mut rendered = String::from("\u{1b}[H");
+        let mut rendered = String::new();
+        rendered.push_str(self.bell_prefix());
+        rendered.push_str("\u{1b}[H");
         rendered.push_str(&buffer_to_string(&buffer));
         rendered.push_str(&self.cursor_sequence_with_cursors(
             &visible_right_content,
@@ -520,6 +536,11 @@ impl TerminalUi {
                 selected,
                 inner_width,
             ))]));
+            let item = if agent.ready {
+                item.style(Style::default().add_modifier(Modifier::REVERSED))
+            } else {
+                item
+            };
             items.push(item);
             if !agent.modified_files.is_empty() {
                 items.push(ListItem::new(Spans::from(vec![Span::raw(format!(
@@ -619,6 +640,14 @@ impl TerminalUi {
         PromptView {
             line: format!(":{visible_prompt}"),
             cursor_column,
+        }
+    }
+
+    fn bell_prefix(&self) -> &'static str {
+        if self.pending_bell.replace(false) {
+            "\u{7}"
+        } else {
+            ""
         }
     }
 
@@ -1021,10 +1050,26 @@ fn truncate_to_width(text: &str, width: usize) -> String {
 }
 
 fn buffer_to_string(buffer: &Buffer) -> String {
+    const ANSI_REVERSE_VIDEO: &str = "\u{1b}[7m";
+    const ANSI_RESET: &str = "\u{1b}[0m";
     let mut output = String::new();
     for y in 0..buffer.area.height {
+        let mut reversed = false;
         for x in 0..buffer.area.width {
-            output.push_str(&buffer.get(x, y).symbol);
+            let cell = buffer.get(x, y);
+            let cell_reversed = cell.modifier.contains(Modifier::REVERSED);
+            if cell_reversed != reversed {
+                output.push_str(if cell_reversed {
+                    ANSI_REVERSE_VIDEO
+                } else {
+                    ANSI_RESET
+                });
+                reversed = cell_reversed;
+            }
+            output.push_str(&cell.symbol);
+        }
+        if reversed {
+            output.push_str(ANSI_RESET);
         }
         if y + 1 < buffer.area.height {
             output.push_str("\r\n");
@@ -1101,4 +1146,39 @@ fn tail_visible_content(content: &str, width: u16, height: usize, scroll_rows: u
     }
     visible.reverse();
     visible.join("\n")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn setting_agent_ready_queues_one_bell_for_next_render() {
+        let mut ui = TerminalUi::new(80, 24);
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        ui.add_agent(AgentListEntry::new(agent_id.clone(), "parser"));
+
+        ui.set_agent_ready_state(&agent_id, true)
+            .expect("test agent is registered");
+
+        assert!(ui.render_screen("reply").starts_with('\u{7}'));
+        assert!(!ui.render_screen("reply").contains('\u{7}'));
+    }
+
+    #[test]
+    fn ready_agent_row_is_reversed_across_the_tui_left_pane() {
+        let mut ui = TerminalUi::new(100, 24);
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        ui.add_agent(AgentListEntry::new(agent_id, "parser").with_ready(true));
+
+        let buffer = ui.render_tui_buffer("reply", "", 0);
+        let left_width = ui.layout().left_width;
+
+        for column in 1..left_width.saturating_sub(1) {
+            assert!(
+                buffer.get(column, 2).modifier.contains(Modifier::REVERSED),
+                "column {column} on the ready agent row should be reversed"
+            );
+        }
+    }
 }

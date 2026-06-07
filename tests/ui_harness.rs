@@ -19,6 +19,22 @@ fn scripted_harness_renders_full_width_crlf_frame() {
 }
 
 #[test]
+fn scripted_harness_rings_and_highlights_ready_chat() {
+    let mut harness = UiHarness::new(100, 24);
+
+    assert!(!harness.render_frame().starts_with('\u{7}'));
+
+    harness
+        .mark_agent_ready("user-2")
+        .expect("fixture user-2 agent is registered");
+
+    let ready_frame = harness.render_frame();
+    assert!(ready_frame.starts_with('\u{7}'));
+    assert!(ready_frame.contains("\u{1b}[7m test user-2 READY\u{1b}[0m"));
+    assert!(!harness.render_frame().starts_with('\u{7}'));
+}
+
+#[test]
 fn scripted_harness_switches_modes_without_enter() {
     let mut harness = UiHarness::new(80, 24);
 

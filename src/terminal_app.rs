@@ -697,11 +697,12 @@ mod tests {
 
         app.clear_agent_loading(&agent_id);
 
+        assert!(app.render_frame().starts_with('\u{7}'));
         assert!(!app.render_frame().contains('\u{7}'));
         assert!(
             app.ui
                 .render_left_pane()
-                .contains(">feature user-1  working: feature  \u{1b}[7mREADY\u{1b}[0m")
+                .contains("\u{1b}[7m>feature user-1  working: feature  READY\u{1b}[0m")
         );
     }
 
