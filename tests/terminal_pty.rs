@@ -14,9 +14,9 @@ use std::time::{Duration, Instant};
 #[test]
 fn real_terminal_pty_handles_file_read_left_toggle_and_chat_switching() {
     let root = temp_dir("workflow");
-    fs::write(root.join("Readme.md"), "pty workflow fixture\n").unwrap();
-    let fake_bin = write_fake_codex(&root, WORKFLOW_CODEX);
-    let mut app = PtyWorkLeaf::spawn(&root, &fake_bin, 120, 30);
+    fs::write(root.path().join("Readme.md"), "pty workflow fixture\n").unwrap();
+    let fake_bin = write_fake_codex(root.path(), WORKFLOW_CODEX);
+    let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 120, 30);
 
     app.wait_for_output_contains("Command chat:", Duration::from_secs(2));
     app.send(b":new patch ui\n");
@@ -65,8 +65,8 @@ fn real_terminal_pty_handles_file_read_left_toggle_and_chat_switching() {
 #[test]
 fn real_terminal_pty_keeps_chat_prompt_visible_after_large_agent_output() {
     let root = temp_dir("large-output");
-    let fake_bin = write_fake_codex(&root, LARGE_OUTPUT_CODEX);
-    let mut app = PtyWorkLeaf::spawn(&root, &fake_bin, 80, 12);
+    let fake_bin = write_fake_codex(root.path(), LARGE_OUTPUT_CODEX);
+    let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 80, 12);
 
     app.wait_for_output_contains("Command chat:", Duration::from_secs(2));
     app.send(b":new large\n");
@@ -223,7 +223,23 @@ fn write_fake_codex(root: &Path, script: &str) -> PathBuf {
     bin
 }
 
-fn temp_dir(name: &str) -> PathBuf {
+struct TempProject {
+    root: PathBuf,
+}
+
+impl TempProject {
+    fn path(&self) -> &Path {
+        &self.root
+    }
+}
+
+impl Drop for TempProject {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.root);
+    }
+}
+
+fn temp_dir(name: &str) -> TempProject {
     static COUNTER: AtomicUsize = AtomicUsize::new(0);
     let root = std::env::temp_dir().join(format!(
         "work-leaf-terminal-pty-{name}-{}-{}",
@@ -232,7 +248,7 @@ fn temp_dir(name: &str) -> PathBuf {
     ));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
-    root
+    TempProject { root }
 }
 
 #[cfg(unix)]
