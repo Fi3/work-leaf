@@ -380,7 +380,7 @@ where
             }
             return terminal_right_content(self.chat_buffer.as_str(), &lines);
         }
-        terminal_right_content("", &snapshot.command_transcript)
+        terminal_right_content(self.chat_buffer.as_str(), &snapshot.command_transcript)
     }
 
     fn continue_escape_sequence(&mut self, byte: u8) -> bool {
@@ -611,6 +611,16 @@ mod tests {
                 .render_left_pane()
                 .contains("\u{1b}[7m>feature user-1  working: feature  READY\u{1b}[0m")
         );
+    }
+
+    #[test]
+    fn command_surface_insert_mode_renders_chat_buffer() {
+        let chat = CommandChat::new(PathBuf::from("."), NoopBackend);
+        let mut app = TerminalApp::new(chat, 80, 24);
+
+        app.handle_bytes(b"itype in command agent");
+
+        assert!(app.render_frame().contains("type in command agent"));
     }
 
     #[test]
