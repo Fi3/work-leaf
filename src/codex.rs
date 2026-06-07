@@ -401,12 +401,13 @@ struct ParsedCodexOutput {
 fn parse_codex_output(output: &str) -> ParsedCodexOutput {
     let mut parsed = ParsedCodexOutput::default();
     for line in output.lines() {
-        if line.contains(r#""type":"thread.started""#) {
-            parsed.thread_id = json_string_field(line, "thread_id").or(parsed.thread_id);
+        let compact = compact_json_line(line);
+        if compact.contains(r#""type":"thread.started""#) {
+            parsed.thread_id = json_string_field(&compact, "thread_id").or(parsed.thread_id);
         }
-        if line.contains(r#""type":"item.completed""#)
-            && line.contains(r#""type":"agent_message""#)
-            && let Some(text) = json_string_field(line, "text")
+        if compact.contains(r#""type":"item.completed""#)
+            && compact.contains(r#""type":"agent_message""#)
+            && let Some(text) = json_string_field(&compact, "text")
         {
             append_agent_reply(&mut parsed.agent_reply, text);
         }
@@ -426,20 +427,49 @@ fn append_agent_reply(reply: &mut Option<String>, text: String) {
 }
 
 fn codex_stream_event(line: &str) -> Option<AgentStreamEvent> {
-    if line.contains(r#""type":"item.completed""#) && line.contains(r#""type":"agent_message""#) {
-        return json_string_field(line, "text").map(AgentStreamEvent::AgentMessage);
+    let compact = compact_json_line(line);
+    if compact.contains(r#""type":"item.completed""#)
+        && compact.contains(r#""type":"agent_message""#)
+    {
+        return json_string_field(&compact, "text").map(AgentStreamEvent::AgentMessage);
     }
-    if line.contains(r#""type":"error""#) {
-        return json_string_field(line, "message").map(AgentStreamEvent::Error);
+    if compact.contains(r#""type":"error""#) {
+        return json_string_field(&compact, "message").map(AgentStreamEvent::Error);
     }
-    if line.contains(r#""type":"thread.started""#) {
-        return json_string_field(line, "thread_id")
+    if compact.contains(r#""type":"thread.started""#) {
+        return json_string_field(&compact, "thread_id")
             .map(|thread_id| AgentStreamEvent::Status(format!("Codex session {thread_id}")));
     }
-    if line.contains(r#""type":"turn.started""#) {
+    if compact.contains(r#""type":"turn.started""#) {
         return Some(AgentStreamEvent::Status("Codex is working".to_string()));
     }
     None
+}
+
+fn compact_json_line(line: &str) -> String {
+    let mut compact = String::with_capacity(line.len());
+    let mut in_string = false;
+    let mut escaped = false;
+
+    for ch in line.chars() {
+        if in_string {
+            compact.push(ch);
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
+        } else if ch == '"' {
+            in_string = true;
+            compact.push(ch);
+        } else if !ch.is_whitespace() {
+            compact.push(ch);
+        }
+    }
+
+    compact
 }
 
 fn json_string_field(line: &str, field: &str) -> Option<String> {
@@ -475,4 +505,41 @@ fn json_string_field(line: &str, field: &str) -> Option<String> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn codex_parsing_accepts_json_field_whitespace() {
+        let output = [
+            r#"{ "type": "thread.started", "thread_id": "thread-spaced" }"#,
+            r#"{ "type": "item.completed", "item": { "type": "agent_message", "text": "first reply" } }"#,
+            r#"{ "type": "item.completed", "item": { "type": "agent_message", "text": "second reply" } }"#,
+        ]
+        .join("\n");
+
+        let parsed = parse_codex_output(&output);
+
+        assert_eq!(parsed.thread_id.as_deref(), Some("thread-spaced"));
+        assert_eq!(
+            parsed.agent_reply.as_deref(),
+            Some("first reply\n\nsecond reply")
+        );
+        assert_eq!(
+            codex_stream_event(
+                r#"{ "type": "item.completed", "item": { "type": "agent_message", "text": "streamed reply" } }"#
+            ),
+            Some(AgentStreamEvent::AgentMessage("streamed reply".to_string()))
+        );
+        assert_eq!(
+            codex_stream_event(r#"{ "type": "error", "message": "streamed error" }"#),
+            Some(AgentStreamEvent::Error("streamed error".to_string()))
+        );
+        assert_eq!(
+            codex_stream_event(r#"{ "type": "turn.started" }"#),
+            Some(AgentStreamEvent::Status("Codex is working".to_string()))
+        );
+    }
 }
