@@ -213,7 +213,8 @@ controller commands, applies `WorkLeafEvent` values to `TerminalUi`, and renders
 snapshots. It owns terminal event-loop concerns such as insert mode, prompt mode, `Ctrl-W`
 navigation, bytewise input parsing, rendering invalidation, and polling background workers. Insert
 mode sends chat text to the selected agent session, or to `command-agent` when the Work Leaf command
-surface is selected.
+surface is selected. Bracketed-paste newlines and Shift+Enter are chat prompt line breaks. A plain
+Enter submits the buffered chat text.
 
 The terminal app maps a session to a left-pane `READY` marker only when the controller exposes no
 loading or validation-failure state for that session.

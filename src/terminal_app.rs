@@ -28,6 +28,8 @@ where
     chat_history_index: Option<usize>,
     chat_history_draft: Option<String>,
     escape_sequence: Option<PendingEscapeSequence>,
+    paste_mode: bool,
+    skip_next_paste_lf: bool,
     spinner: usize,
     dirty: bool,
     quit: bool,
@@ -50,6 +52,8 @@ where
             chat_history_index: None,
             chat_history_draft: None,
             escape_sequence: None,
+            paste_mode: false,
+            skip_next_paste_lf: false,
             spinner: 0,
             dirty: true,
             quit: false,
@@ -156,7 +160,7 @@ where
             return !self.quit;
         }
 
-        let Some(input) = TerminalAppInput::from_byte(byte) else {
+        let Some(input) = self.input_from_byte(byte) else {
             return true;
         };
         self.handle_input(input);
@@ -215,6 +219,20 @@ where
             }
             TerminalAppInput::Enter if self.ui.mode() == UiMode::Insert => {
                 self.send_chat_buffer();
+            }
+            TerminalAppInput::LineBreak if self.ui.mode() == UiMode::Insert => {
+                self.chat_buffer.push('\n');
+                self.chat_history_index = None;
+                self.chat_history_draft = None;
+                self.dirty = true;
+            }
+            TerminalAppInput::PasteStart => {
+                self.paste_mode = true;
+                self.skip_next_paste_lf = false;
+            }
+            TerminalAppInput::PasteEnd => {
+                self.paste_mode = false;
+                self.skip_next_paste_lf = false;
             }
             TerminalAppInput::Char(ch) if self.ui.mode() == UiMode::Prompt => {
                 self.prompt_buffer.push(ch);
@@ -276,7 +294,8 @@ where
                 self.record_actions(actions);
                 self.dirty = true;
             }
-            TerminalAppInput::Backspace | TerminalAppInput::Enter => {}
+            TerminalAppInput::Backspace | TerminalAppInput::Enter | TerminalAppInput::LineBreak => {
+            }
         }
     }
 
@@ -391,6 +410,26 @@ where
         }
     }
 
+    fn input_from_byte(&mut self, byte: u8) -> Option<TerminalAppInput> {
+        if self.paste_mode {
+            match byte {
+                13 => {
+                    self.skip_next_paste_lf = true;
+                    return Some(TerminalAppInput::LineBreak);
+                }
+                10 if self.skip_next_paste_lf => {
+                    self.skip_next_paste_lf = false;
+                    return None;
+                }
+                10 => return Some(TerminalAppInput::LineBreak),
+                _ => {
+                    self.skip_next_paste_lf = false;
+                }
+            }
+        }
+        TerminalAppInput::from_byte(byte)
+    }
+
     fn recall_prompt_history(&mut self, delta: isize) {
         if self.prompt_history.is_empty() {
             return;
@@ -495,8 +534,8 @@ where
                 let actions = self.ui.handle_key(UiKey::Char('i'));
                 self.record_actions(actions);
             }
-            if let Some(key) = parse_control_sequence(&sequence.bytes) {
-                self.handle_input(TerminalAppInput::Key(key));
+            if let Some(input) = parse_control_sequence(&sequence.bytes) {
+                self.handle_input(input);
             }
         } else if sequence.bytes.len() > MAX_ESCAPE_SEQUENCE {
             let sequence = self
@@ -531,13 +570,20 @@ fn is_complete_control_sequence(sequence: &[u8]) -> bool {
             .is_some_and(|byte| (0x40..=0x7e).contains(byte))
 }
 
-fn parse_control_sequence(sequence: &[u8]) -> Option<UiKey> {
+fn parse_control_sequence(sequence: &[u8]) -> Option<TerminalAppInput> {
     match sequence {
-        [b'[', b'A'] => Some(UiKey::Up),
-        [b'[', b'B'] => Some(UiKey::Down),
-        [b'[', b'C'] => Some(UiKey::Right),
-        [b'[', b'D'] => Some(UiKey::Left),
-        _ => parse_sgr_mouse_click(sequence),
+        [b'[', b'A'] => Some(TerminalAppInput::Key(UiKey::Up)),
+        [b'[', b'B'] => Some(TerminalAppInput::Key(UiKey::Down)),
+        [b'[', b'C'] => Some(TerminalAppInput::Key(UiKey::Right)),
+        [b'[', b'D'] => Some(TerminalAppInput::Key(UiKey::Left)),
+        [b'[', b'2', b'0', b'0', b'~'] => Some(TerminalAppInput::PasteStart),
+        [b'[', b'2', b'0', b'1', b'~'] => Some(TerminalAppInput::PasteEnd),
+        [b'[', b'1', b'3', b';', b'2', b'u']
+        | [b'[', b'1', b'3', b';', b'2', b'~']
+        | [b'[', b'2', b'7', b';', b'2', b';', b'1', b'3', b'~'] => {
+            Some(TerminalAppInput::LineBreak)
+        }
+        _ => parse_sgr_mouse_click(sequence).map(TerminalAppInput::Key),
     }
 }
 
@@ -565,6 +611,9 @@ enum TerminalAppInput {
     Char(char),
     Enter,
     Backspace,
+    LineBreak,
+    PasteStart,
+    PasteEnd,
     Quit,
 }
 

@@ -932,7 +932,7 @@ impl AlternateScreenMode {
     fn enter(output: &mut impl Write) -> Result<Self, CliError> {
         write!(
             output,
-            "\u{1b}[?1049h\u{1b}[?1000h\u{1b}[?1006h\u{1b}[2J\u{1b}[H"
+            "\u{1b}[?1049h\u{1b}[?1000h\u{1b}[?1006h\u{1b}[?2004h\u{1b}[2J\u{1b}[H"
         )?;
         output.flush()?;
         Ok(Self)
@@ -942,7 +942,10 @@ impl AlternateScreenMode {
 impl Drop for AlternateScreenMode {
     fn drop(&mut self) {
         let mut stdout = io::stdout();
-        let _ = write!(stdout, "\u{1b}[?1006l\u{1b}[?1000l\u{1b}[?1049l\u{1b}[?25h");
+        let _ = write!(
+            stdout,
+            "\u{1b}[?2004l\u{1b}[?1006l\u{1b}[?1000l\u{1b}[?1049l\u{1b}[?25h"
+        );
         let _ = stdout.flush();
     }
 }
