@@ -22,7 +22,7 @@ public interfaces are:
   `WorkLeafLoading`.
 - Agent-provider integration: `AgentBackend`, `AgentStreamEvent`, `AgentShutdownHandle`,
   `AgentProfile`, `AgentKind`, `AgentLaunch`, `AgentSession`, `AgentId`, `ChatMessage`,
-  `MessageRole`, `PromptPolicy`, `AgentError`.
+  `MessageRole`, `PromptPolicy`, `ReadPermission`, `AgentError`.
 - Command orchestration: `CommandChat`, `CommandChatResult`, `ProcessCommand`, `CliError`.
 - Core workflows: `AgentOrchestrator`, `GitPatcher`, `PatchCoordinator`, `GitHistory`,
   `ReviewCoordinator`, `LinearizePlanner`, `FileLockTable`.
@@ -61,6 +61,8 @@ frontend wraps that same command-chat state in `WorkLeafController<B>` through
 - `AgentSession` stores the agent id, kind, feature, state, messages, and modified files.
 - `ChatMessage` and `MessageRole` model conversation history.
 - `PromptPolicy` injects project instructions and worktree access rules into agent prompts.
+- `ReadPermission` selects whether prompts require orchestrator-mediated reads or allow direct
+  filesystem reads while keeping writes mediated by patches.
 - `AgentError` is the shared error type for launch, send, prompt policy, and validation failures.
 
 `src/agent.rs` also re-exports `AgentBackend`, `AgentStreamEvent`, and `AgentShutdownHandle` from

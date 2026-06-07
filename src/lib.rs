@@ -16,7 +16,7 @@ pub mod workspace;
 
 pub use agent::{
     AgentBackend, AgentError, AgentId, AgentKind, AgentLaunch, AgentProfile, AgentSession,
-    AgentShutdownHandle, AgentStreamEvent, ChatMessage, MessageRole, PromptPolicy,
+    AgentShutdownHandle, AgentStreamEvent, ChatMessage, MessageRole, PromptPolicy, ReadPermission,
 };
 pub use cli::{
     CliError, CommandChat, CommandChatResult, ProcessCommand, parse_process_args,

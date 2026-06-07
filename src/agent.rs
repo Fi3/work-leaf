@@ -177,11 +177,25 @@ pub struct PromptPolicy {
     project_instructions: Vec<ProjectInstructionFile>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ReadPermission {
+    Orchestrator,
+    DirectFilesystem,
+}
+
 impl PromptPolicy {
     pub fn for_restricted_agents() -> Self {
-        Self {
-            preamble: [
-                "You are running under the work-leaf orchestrator.",
+        Self::for_read_permission(ReadPermission::Orchestrator)
+    }
+
+    pub fn for_direct_read_agents() -> Self {
+        Self::for_read_permission(ReadPermission::DirectFilesystem)
+    }
+
+    pub fn for_read_permission(read_permission: ReadPermission) -> Self {
+        let mut lines = vec!["You are running under the work-leaf orchestrator."];
+        match read_permission {
+            ReadPermission::Orchestrator => lines.extend([
                 "You are not allowed to read files directly; ask the orchestrator to provide file text.",
                 "You are not allowed to write files directly; provide a unified diff patch for every file you want to change.",
                 "Commands that create, update, delete, format, build, test, or otherwise write files require orchestrator mediation.",
@@ -190,19 +204,39 @@ impl PromptPolicy {
                 "Emit every `@work-leaf ...` request as a top-level plain response line, without quotes, prose, or code fences, so the orchestrator can parse it.",
                 "Never claim that you are switching to local workspace tools; keep using orchestrator directives until the orchestrator responds.",
                 "Use `@work-leaf read <path>` to request file text from the orchestrator.",
-                "Use `@work-leaf patch <reason>` followed by a unified diff and `@work-leaf end` to request a write.",
-                "Use `@work-leaf locks classify <command>` to ask whether a command writes project files.",
-                "Use `@work-leaf send <agent-id> <message>` to route context to another agent.",
-                "The orchestrator validates patches before committing, including repository checks and tests; keep fixing validation diagnostics until the patch validates.",
-                "Use `@work-leaf done` when no more orchestrator work is required.",
-            ]
-            .join("\n"),
+            ]),
+            ReadPermission::DirectFilesystem => lines.extend([
+                "You may read repository files directly from the filesystem.",
+                "Use direct filesystem reads and read-only inspection commands for repository context instead of `@work-leaf read`.",
+                "You are not allowed to write files directly; provide a unified diff patch for every file you want to change.",
+                "Commands that create, update, delete, format, build, test, or otherwise write files require orchestrator mediation.",
+                "Keep every patch focused on the current feature and explain the specific reason for the patch.",
+                "`@work-leaf` is an orchestrator response protocol, not an executable command. Do not run `@work-leaf` in a shell or ask the user to run it.",
+                "Emit every `@work-leaf ...` request as a top-level plain response line, without quotes, prose, or code fences, so the orchestrator can parse it.",
+            ]),
+        }
+        lines.extend([
+            "Use `@work-leaf patch <reason>` followed by a unified diff and `@work-leaf end` to request a write.",
+            "Use `@work-leaf locks classify <command>` to ask whether a command writes project files.",
+            "Use `@work-leaf send <agent-id> <message>` to route context to another agent.",
+            "The orchestrator validates patches before committing, including repository checks and tests; keep fixing validation diagnostics until the patch validates.",
+            "Use `@work-leaf done` when no more orchestrator work is required.",
+        ]);
+        Self {
+            preamble: lines.join("\n"),
             project_instructions: Vec::new(),
         }
     }
 
     pub fn for_project(root: impl AsRef<Path>) -> Result<Self, AgentError> {
-        let mut policy = Self::for_restricted_agents();
+        Self::for_project_with_read_permission(root, ReadPermission::Orchestrator)
+    }
+
+    pub fn for_project_with_read_permission(
+        root: impl AsRef<Path>,
+        read_permission: ReadPermission,
+    ) -> Result<Self, AgentError> {
+        let mut policy = Self::for_read_permission(read_permission);
         policy.project_instructions = load_project_instructions(root.as_ref())?;
         Ok(policy)
     }

@@ -5,9 +5,11 @@ normal development path for feature and bug-fix work. The terminology here is th
 used by developers and agents, even where the Rust modules still expose lower-level names such as
 `CommandChat`, `AgentBackend`, or `ReviewCoordinator`.
 
-The core invariant is that agents do not directly own repository file access. They interact with
-files through the orchestrator, and the orchestrator serializes reads, writes, stale context updates,
-patch application, and review routing.
+The core invariant is that agents do not directly own repository writes. By default, agents also
+request file text through the orchestrator so reads, writes, stale context updates, patch application,
+and review routing share the same coordination model. When the process is launched with
+`--no-read-permission`, agents may read repository files directly from the filesystem while writes
+still go through orchestrator patch application.
 
 ## Agent Nomenclature
 
@@ -32,16 +34,17 @@ for the user's request.
 ### Patch Agent
 
 A patch agent is created by the user, usually through the command agent, to add a feature, fix a bug,
-or make another concrete code change. Patch agents can request file text and can request writes by
-sending unified diff patches to the orchestrator.
+or make another concrete code change. Patch agents request file text through the orchestrator in the
+default read-permission mode, or inspect files directly in direct-read mode. Patch agents request
+writes by sending unified diff patches to the orchestrator.
 
-A patch agent does not write files directly. It emits:
+A patch agent does not write files directly. In default read-permission mode, it emits:
 
 ```text
 @work-leaf read <path...>
 ```
 
-to receive file text, and:
+to receive file text. In all read-permission modes, it emits:
 
 ```text
 @work-leaf patch <reason>
@@ -81,15 +84,17 @@ reviewer to recheck until `NO_FINDINGS` or the round limit.
 
 ### Inspection Agent
 
-An inspection agent has read-only access. It can request file text from the orchestrator and inspect
-state, but it cannot request writes and cannot submit `@work-leaf patch` directives.
+An inspection agent has read-only access. It can request file text from the orchestrator in the
+default read-permission mode, or inspect repository files directly in direct-read mode. It cannot
+request writes and cannot submit `@work-leaf patch` directives.
 
 Inspection agents are useful for planning, debugging, architecture review, log inspection, and
 answering questions about the repository without creating code changes.
 
-The distinct inspection-agent role is product nomenclature. The shared read path it depends on is the
-same orchestrator read protocol implemented in `src/orchestrator.rs::handle_agent_directives_streaming`
-and `src/orchestrator.rs::read_requested_files`.
+The distinct inspection-agent role is product nomenclature. In default read-permission mode, the
+shared read path it depends on is the same orchestrator read protocol implemented in
+`src/orchestrator.rs::handle_agent_directives_streaming` and
+`src/orchestrator.rs::read_requested_files`.
 
 ### System Agents
 
@@ -108,8 +113,10 @@ The current source already has system-style internal behavior:
 
 ## File Access Contract
 
-Every agent prompt includes a restricted file-access policy. `src/agent.rs::PromptPolicy` injects
-rules that tell agents:
+Every agent prompt includes a file-access policy. `src/agent.rs::PromptPolicy` injects rules selected
+by `src/agent.rs::ReadPermission`.
+
+With `ReadPermission::Orchestrator`, prompts tell agents:
 
 - do not read files directly;
 - ask the orchestrator for file text;
@@ -118,14 +125,28 @@ rules that tell agents:
 - use `@work-leaf locks classify <command>` when a command may write project files;
 - use `@work-leaf done` when no more orchestrator work is required.
 
+With `ReadPermission::DirectFilesystem`, prompts tell agents:
+
+- read repository files directly from the filesystem;
+- use read-only inspection commands for repository context instead of `@work-leaf read`;
+- do not write files directly;
+- provide unified diff patches for requested writes;
+- use `@work-leaf locks classify <command>` when a command may write project files;
+- use `@work-leaf done` when no more orchestrator work is required.
+
 The Codex backend applies this policy when launching and resuming sessions. The source chain is:
 
 1. `src/cli.rs::codex_backend` builds a `src/codex.rs::CodexBackend` with
-   `PromptPolicy::for_project`.
+   `PromptPolicy::for_project_with_read_permission`.
 2. `src/codex.rs::CodexBackend::build_launch_invocation` injects the policy into a launch prompt.
 3. `src/codex.rs::CodexBackend::build_send_invocation` injects the policy into a resumed prompt.
 4. Agent replies are processed by `src/cli.rs::CommandChat::process_agent_reply_streaming`.
 5. Directive handling enters `src/orchestrator.rs::handle_agent_directives_streaming`.
+
+The process starts in `ReadPermission::Orchestrator` by default. The top-level
+`--no-read-permission` option selects `ReadPermission::DirectFilesystem`; in that mode the
+orchestrator no longer receives normal file-read requests from agents and cannot record those direct
+reads as pending file snapshots.
 
 ## Lock Table
 
@@ -161,7 +182,7 @@ escapes before joining paths to the project root.
 
 ## Reads
 
-An agent requests file text with:
+In default read-permission mode, an agent requests file text with:
 
 ```text
 @work-leaf read src/lib.rs src/orchestrator.rs
@@ -186,17 +207,26 @@ works from that snapshot. The agent does not keep a long-lived lock lease.
 Unavailable paths are reported in the same response under `Unavailable file text`, so an agent can
 continue with partial context instead of stalling.
 
+In direct-read mode, the agent reads repository files from the filesystem through the provider's
+read-only execution environment. Direct reads do not call `read_requested_files`, do not acquire
+`FileLockTable` read locks, and do not create `FileReadTracker` entries. This mode avoids an
+orchestrator read round trip at the cost of weaker stale-context tracking for files the agent read
+directly.
+
 ## Pending Read Tracking
 
-The orchestrator treats successful file snapshots as agent context. `FileReadTracker` stores:
+The orchestrator treats successful orchestrator-provided file snapshots as agent context.
+`FileReadTracker` stores:
 
 ```text
 agent id -> set of files read by that agent
 ```
 
-This map is used to detect stale context. If an agent has read a file and another patch changes that
-file before the reader submits a patch or reports done, the reader may be about to produce a stale
-diff.
+This map is used to detect stale context for orchestrator-mediated reads. If an agent has read a file
+through `@work-leaf read` and another patch changes that file before the reader submits a patch or
+reports done, the reader may be about to produce a stale diff. Direct filesystem reads are not present
+in this map, so direct-read mode relies on patch validation, conflict diagnostics, and agent rereads
+instead of proactive stale-reader updates for those reads.
 
 The tracker updates as follows:
 
@@ -287,13 +317,13 @@ reads git history and parses latest commits per patch agent.
 
 The review flow uses that metadata to connect review findings back to the patch agent that produced
 the patch. The review agent must focus only on the reviewed patch. If it finds issues, the
-orchestrator sends those findings to the patch agent. The patch agent then continues through the same
-file-read and patch protocol. When the reviewer reports no findings, the review chat can be marked
-done by the user.
+orchestrator sends those findings to the patch agent. The patch agent then continues through the
+configured read path and patch protocol. When the reviewer reports no findings, the review chat can be
+marked done by the user.
 
 ## Developer Path
 
-A normal development session follows this shape:
+A normal development session in default read-permission mode follows this shape:
 
 1. The user opens `work-leaf` in the project directory.
 2. The command agent is available as the control surface.
@@ -314,9 +344,12 @@ A normal development session follows this shape:
 12. If the review agent reports no findings, the user can mark the review chat as done.
 13. Reviewed work can then be linearized into the final history.
 
+In direct-read mode, steps 4 and 5 are replaced by direct filesystem inspection from the agent. The
+write, validation, review, and linearization steps remain orchestrator-controlled.
+
 ## Example Session
 
-The example below shows the intended interaction, not the raw terminal rendering.
+The example below shows the default read-permission interaction, not the raw terminal rendering.
 
 The user asks the command agent:
 
@@ -411,6 +444,7 @@ the user can mark the review chat as done and proceed toward linearization.
 The important source symbols for this workflow are:
 
 - `src/agent.rs::PromptPolicy`: injects file-access rules into agent prompts.
+- `src/agent.rs::ReadPermission`: selects orchestrator-mediated or direct filesystem read prompts.
 - `src/codex.rs::CodexBackend`: launches and resumes Codex sessions with injected policy.
 - `src/cli.rs::CommandChat`: owns the command surface, backend, file locks, read tracker, and
   directive loop.

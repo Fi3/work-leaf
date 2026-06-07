@@ -6,8 +6,8 @@ use std::process::{Command, Stdio};
 
 use work_leaf::{
     AgentBackend, AgentError, AgentId, AgentSession, ChatMessage, CodexBackend, CodexCommandConfig,
-    CommandChat, CommandChatResult, MessageRole, ProcessCommand, PromptPolicy, parse_process_args,
-    render_process_help,
+    CommandChat, CommandChatResult, MessageRole, ProcessCommand, PromptPolicy, ReadPermission,
+    parse_process_args, render_process_help,
 };
 
 #[test]
@@ -19,9 +19,10 @@ fn binary_help_describes_launching_orchestrator_not_internal_operations() {
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("Usage: work-leaf [--model <model>]"));
+    assert!(stdout.contains("Usage: work-leaf [--model <model>] [--no-read-permission]"));
     assert!(stdout.contains("launches the orchestrator"));
     assert!(stdout.contains("command chat"));
+    assert!(stdout.contains("allow agents to read project files directly"));
     assert!(!stdout.contains("patch <agent-id>"));
     assert!(!stdout.contains("locks classify"));
     assert!(!stdout.contains("linearize-questions"));
@@ -31,7 +32,40 @@ fn binary_help_describes_launching_orchestrator_not_internal_operations() {
 fn no_args_launches_orchestrator_from_current_project_directory() {
     let command = parse_process_args(["work-leaf"]).unwrap();
 
-    assert_eq!(command, ProcessCommand::Launch { model: None });
+    assert_eq!(
+        command,
+        ProcessCommand::Launch {
+            model: None,
+            read_permission: ReadPermission::Orchestrator
+        }
+    );
+}
+
+#[test]
+fn no_read_permission_allows_direct_filesystem_reads() {
+    let command = parse_process_args(["work-leaf", "--no-read-permission"]).unwrap();
+
+    assert_eq!(
+        command,
+        ProcessCommand::Launch {
+            model: None,
+            read_permission: ReadPermission::DirectFilesystem
+        }
+    );
+}
+
+#[test]
+fn process_args_accept_model_and_no_read_permission_together() {
+    let command =
+        parse_process_args(["work-leaf", "--no-read-permission", "--model", "gpt-5"]).unwrap();
+
+    assert_eq!(
+        command,
+        ProcessCommand::Launch {
+            model: Some("gpt-5".to_string()),
+            read_permission: ReadPermission::DirectFilesystem
+        }
+    );
 }
 
 #[test]
@@ -501,6 +535,7 @@ fn process_help_mentions_internal_actions_as_in_app_commands_only() {
     let help = render_process_help();
 
     assert!(help.contains("Inside command chat"));
+    assert!(help.contains("--no-read-permission"));
     assert!(help.contains("new [prompt...]"));
     assert!(help.contains("review"));
     assert!(help.contains("linearize"));

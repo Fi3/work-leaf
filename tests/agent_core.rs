@@ -30,6 +30,24 @@ fn prompt_policy_wraps_every_agent_prompt_with_file_access_rules() {
 }
 
 #[test]
+fn prompt_policy_can_allow_direct_filesystem_reads() {
+    let policy = PromptPolicy::for_direct_read_agents();
+    let wrapped = policy.inject(
+        &AgentId::new("chat-1").unwrap(),
+        "feature flags",
+        "implement the flag parser",
+    );
+
+    assert!(wrapped.contains("may read repository files directly from the filesystem"));
+    assert!(!wrapped.contains("not allowed to read files directly"));
+    assert!(!wrapped.contains("ask the orchestrator to provide file text"));
+    assert!(!wrapped.contains("@work-leaf read <path>"));
+    assert!(wrapped.contains("not allowed to write files directly"));
+    assert!(wrapped.contains("@work-leaf patch <reason>"));
+    assert!(wrapped.contains("implement the flag parser"));
+}
+
+#[test]
 fn prompt_policy_injects_launch_project_agent_instructions() {
     let root = temp_dir("prompt-policy-project-instructions");
     fs::write(

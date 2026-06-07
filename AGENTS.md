@@ -79,6 +79,8 @@ Review agents MUST review only behavior introduced or modified by the reviewed p
 pre-existing issues, unrelated style preferences, or broader repository problems unless the reviewed
 patch makes them worse, depends on them, or claims to fix them.
 
+Review must go trough all the docs and check if they needs updates.
+
 ## Required Checks
 Run these before submitting changes. A patch is not ready until all required checks are green:
 

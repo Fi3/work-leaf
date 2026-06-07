@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use crate::agent::{
     AgentBackend, AgentId, AgentLaunch, AgentProfile, AgentShutdownHandle, AgentStreamEvent,
-    PromptPolicy,
+    PromptPolicy, ReadPermission,
 };
 use crate::codex::{CodexBackend, CodexCommandConfig};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
@@ -28,7 +28,10 @@ const DEFAULT_NEW_AGENT_PROMPT: &str = "Start a new work-leaf user-agent session
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ProcessCommand {
     Help,
-    Launch { model: Option<String> },
+    Launch {
+        model: Option<String>,
+        read_permission: ReadPermission,
+    },
 }
 
 pub fn parse_process_args<I, S>(args: I) -> Result<ProcessCommand, CliError>
@@ -42,14 +45,22 @@ where
     }
 
     if args.is_empty() {
-        return Ok(ProcessCommand::Launch { model: None });
+        return Ok(ProcessCommand::Launch {
+            model: None,
+            read_permission: ReadPermission::Orchestrator,
+        });
     }
 
     let mut model = None;
+    let mut read_permission = ReadPermission::Orchestrator;
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
             "--help" | "-h" | "help" => return Ok(ProcessCommand::Help),
+            "--no-read-permission" => {
+                read_permission = ReadPermission::DirectFilesystem;
+                index += 1;
+            }
             "--model" => {
                 if index + 1 >= args.len() {
                     return Err(CliError::Usage("--model requires a value".to_string()));
@@ -66,7 +77,10 @@ where
         }
     }
 
-    Ok(ProcessCommand::Launch { model })
+    Ok(ProcessCommand::Launch {
+        model,
+        read_permission,
+    })
 }
 
 pub fn run_cli_from_env() -> ! {
@@ -83,7 +97,10 @@ pub fn run_cli_from_env() -> ! {
             print!("{}", render_process_help());
             process::exit(0);
         }
-        ProcessCommand::Launch { model } => {
+        ProcessCommand::Launch {
+            model,
+            read_permission,
+        } => {
             let project_dir = match env::current_dir() {
                 Ok(path) => path,
                 Err(error) => {
@@ -91,7 +108,7 @@ pub fn run_cli_from_env() -> ! {
                     process::exit(1);
                 }
             };
-            let backend = match codex_backend(project_dir.clone(), model) {
+            let backend = match codex_backend(project_dir.clone(), model, read_permission) {
                 Ok(backend) => backend,
                 Err(error) => {
                     eprintln!("{error}");
@@ -566,10 +583,14 @@ fn append_follow_ups(text: &mut String, follow_ups: &[AgentFollowUp]) {
 
 pub fn render_process_help() -> String {
     [
-        "Usage: work-leaf [--model <model>]",
+        "Usage: work-leaf [--model <model>] [--no-read-permission]",
         "",
         "launches the orchestrator from the current project directory.",
         "Agents are created inside the command chat. Patches, file locks, review routing, and linearization handoff are orchestrator-controlled workflows, not top-level process commands.",
+        "",
+        "Options:",
+        "  --model <model>          select the Codex model",
+        "  --no-read-permission     allow agents to read project files directly; writes still require orchestrator patches",
         "",
         "Inside command chat:",
         "  new [prompt...]",
@@ -919,14 +940,19 @@ fn render_command_result(
     Ok(false)
 }
 
-fn codex_backend(project_dir: PathBuf, model: Option<String>) -> Result<CodexBackend, CliError> {
+fn codex_backend(
+    project_dir: PathBuf,
+    model: Option<String>,
+    read_permission: ReadPermission,
+) -> Result<CodexBackend, CliError> {
     let mut config = CodexCommandConfig::new(project_dir.clone());
     if let Some(model) = model {
         config = config.with_model(model);
     }
     Ok(CodexBackend::new(
         config,
-        PromptPolicy::for_project(&project_dir).map_err(CliError::Agent)?,
+        PromptPolicy::for_project_with_read_permission(&project_dir, read_permission)
+            .map_err(CliError::Agent)?,
     ))
 }
 
