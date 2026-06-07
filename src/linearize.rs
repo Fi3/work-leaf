@@ -107,6 +107,10 @@ where
         self.backend
     }
 
+    pub fn interactive_prompt(commits: &[AgentCommit]) -> String {
+        build_interactive_linearize_prompt(commits)
+    }
+
     pub fn questions_for(commits: &[AgentCommit]) -> Vec<LinearizeQuestion> {
         commits
             .iter()
@@ -158,6 +162,36 @@ where
         }
         Ok(())
     }
+}
+
+fn build_interactive_linearize_prompt(commits: &[AgentCommit]) -> String {
+    let mut prompt = String::new();
+    prompt.push_str("You are the work-leaf linearizer for reviewed agent patches.\n\n");
+    prompt.push_str("Reviewed commits:\n");
+    for commit in commits {
+        prompt.push_str(&format!(
+            "- Agent-ID: {}\n  Commit: {}\n  Feature: {}\n  Reason: {}\n  Subject: {}\n  Context: {}\n",
+            commit.agent_id,
+            commit.hash,
+            commit.feature,
+            commit.reason,
+            commit.subject,
+            commit.context
+        ));
+    }
+
+    prompt.push_str(
+        "\nRequired workflow:\n\
+1. Inspect git history, the current branch, and the merge base with main or master before proposing a rewrite.\n\
+2. Propose the solution before changing history. For each reviewed patch, state which final commit message should be kept, which provisional commit message should be removed, and whether related work should be grouped or merged.\n\
+3. Ask the user to accept the solution or request changes. Do not rewrite history until the user accepts.\n\
+4. After acceptance, rewrite provisional work-leaf commits into coherent final commits and remove provisional agent commits.\n\
+5. Keep the diff against main/master as small as possible while preserving reviewed behavior.\n\
+6. Run the checks required by the repository instructions and iterate until they pass.\n\
+7. Report the final commit messages, removed provisional messages, grouping decisions, and verification results.\n\
+\nUse orchestrator mediation for file access, command classification, patches, and any operation that mutates files or history.\n",
+    );
+    prompt
 }
 
 fn build_linearize_prompt(plan: &LinearizePlan) -> String {

@@ -36,6 +36,25 @@ fn linearize_questions_cover_each_reviewed_chat_id() {
 }
 
 #[test]
+fn interactive_linearize_prompt_requires_user_accepted_plan_before_rewrite() {
+    let commits = vec![agent_commit(
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "chat-a",
+        "parser",
+        "parse values",
+    )];
+
+    let prompt = LinearizePlanner::<FakeBackend>::interactive_prompt(&commits);
+
+    assert!(prompt.contains("which final commit message should be kept"));
+    assert!(prompt.contains("which provisional commit message should be removed"));
+    assert!(prompt.contains("Ask the user to accept the solution or request changes"));
+    assert!(prompt.contains("Do not rewrite history until the user accepts"));
+    assert!(prompt.contains("diff against main/master as small as possible"));
+    assert!(prompt.contains("Run the checks required by the repository instructions"));
+}
+
+#[test]
 fn linearize_handoff_launches_codex_agent_with_decisions_groups_and_tests() {
     let commits = vec![
         agent_commit(
