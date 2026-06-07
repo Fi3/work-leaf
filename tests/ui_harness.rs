@@ -63,6 +63,51 @@ fn scripted_harness_switches_modes_without_enter() {
 }
 
 #[test]
+fn scripted_harness_prompt_arrow_keys_move_visible_cursor() {
+    let mut harness = UiHarness::new(80, 24);
+    harness.handle_bytes(b":ab\x1b[D");
+    assert_eq!(harness.ui().mode(), UiMode::Prompt);
+    assert!(harness.render_frame().ends_with("\u{1b}[24;3H"));
+    harness.handle_bytes(b"\x1b[C");
+    assert_eq!(harness.ui().mode(), UiMode::Prompt);
+    assert!(harness.render_frame().ends_with("\u{1b}[24;4H"));
+}
+#[test]
+fn scripted_harness_prompt_arrow_keys_recall_prompt_history() {
+    let mut harness = UiHarness::new(80, 24);
+    harness.handle_bytes(b":review\n:linearize\n:\x1b[A\x1b[A\x1b[B\n");
+    assert_eq!(harness.ui().mode(), UiMode::Command);
+    assert_eq!(
+        harness
+            .transcript()
+            .iter()
+            .filter(|line| line.as_str() == "work-leaf> linearize")
+            .count(),
+        2
+    );
+}
+#[test]
+fn scripted_harness_bytewise_prompt_arrow_keys_edit_without_leaving_prompt() {
+    let mut harness = UiHarness::new(80, 24);
+    harness.handle_byte(b':');
+    harness.handle_byte(b'a');
+    harness.handle_byte(b'b');
+    harness.handle_byte(27);
+    assert_eq!(harness.ui().mode(), UiMode::Prompt);
+    harness.handle_byte(b'[');
+    assert_eq!(harness.ui().mode(), UiMode::Prompt);
+    harness.handle_byte(b'D');
+    harness.handle_byte(b'Z');
+    harness.handle_byte(b'\n');
+    assert_eq!(harness.ui().mode(), UiMode::Command);
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| line == "unknown fixture command: aZb")
+    );
+}
+#[test]
 fn scripted_harness_drives_ctrl_w_navigation_and_left_toggle() {
     let mut harness = UiHarness::new(80, 24);
 
@@ -187,6 +232,17 @@ fn scripted_harness_arrow_keys_edit_focused_chat_without_switching_to_command() 
     );
 }
 
+#[test]
+fn scripted_harness_insert_arrow_keys_move_visible_chat_cursor() {
+    let mut harness = UiHarness::new(80, 24);
+    harness.handle_bytes(&[23, b'l']);
+    harness.handle_bytes(b"iab\x1b[D");
+    assert_eq!(harness.ui().mode(), UiMode::Insert);
+    assert!(harness.render_frame().ends_with("\u{1b}[5;25H"));
+    harness.handle_bytes(b"\x1b[C");
+    assert_eq!(harness.ui().mode(), UiMode::Insert);
+    assert!(harness.render_frame().ends_with("\u{1b}[5;26H"));
+}
 #[test]
 fn scripted_harness_arrow_keys_recall_chat_history() {
     let mut harness = UiHarness::new(80, 24);

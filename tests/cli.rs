@@ -317,6 +317,57 @@ diff --git a/lib.rs b/lib.rs
 }
 
 #[test]
+fn command_chat_proactively_updates_agents_with_stale_file_reads() {
+    let root = temp_git_repo("command-chat-stale-file-update");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial stale file fixture"]);
+    let backend = FakeBackend::from_replies([
+        "@work-leaf read README.md",
+        "user-1 is drafting from the provided snapshot",
+        "\
+@work-leaf patch update readme
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-before
++after
+@work-leaf end",
+        "@work-leaf done",
+    ]);
+    let mut chat = CommandChat::new(root.clone(), backend);
+
+    let first = chat.handle_line("new inspect readme").unwrap();
+    let CommandChatResult::AgentLaunched { reply, .. } = first else {
+        panic!("expected first launched agent");
+    };
+    assert!(reply.contains("sent file text to user-1: README.md"));
+    assert!(reply.contains("user-1 is drafting from the provided snapshot"));
+
+    let second = chat.handle_line("new patch readme").unwrap();
+    let CommandChatResult::AgentLaunched { reply, .. } = second else {
+        panic!("expected second launched agent");
+    };
+
+    assert!(reply.contains("applied patch from user-2"));
+    assert!(reply.contains("sent file update to user-1: README.md"));
+    assert!(reply.contains("agent user-1 reported done"));
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "after\n"
+    );
+
+    let backend = chat.into_backend();
+    assert_eq!(backend.sends.len(), 2);
+    assert_eq!(backend.sends[0].0, AgentId::new("user-1").unwrap());
+    assert!(backend.sends[0].1.contains("before"));
+    assert_eq!(backend.sends[1].0, AgentId::new("user-1").unwrap());
+    assert!(backend.sends[1].1.contains("work-leaf file update"));
+    assert!(backend.sends[1].1.contains("after"));
+}
+
+#[test]
 fn command_chat_spawned_codex_handles_read_classify_patch_and_route_directives() {
     let root = temp_git_repo("command-chat-spawned-codex-protocol");
     fs::create_dir_all(root.join("src")).unwrap();

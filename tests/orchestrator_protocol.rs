@@ -150,6 +150,9 @@ diff --git a/README.md b/README.md
     assert_eq!(backend.sends[0].0, agent_id);
     assert!(backend.sends[0].1.contains("could not apply your patch"));
     assert!(backend.sends[0].1.contains("README.md"));
+    assert!(backend.sends[0].1.contains("work-leaf file text"));
+    assert!(backend.sends[0].1.contains("--- README.md ---"));
+    assert!(backend.sends[0].1.contains("actual"));
 }
 
 #[test]
@@ -215,6 +218,9 @@ diff --git a/README.md b/README.md
             .1
             .contains("validation failed from orchestrator fixture")
     );
+    assert!(backend.sends[0].1.contains("work-leaf file text"));
+    assert!(backend.sends[0].1.contains("--- README.md ---"));
+    assert!(backend.sends[0].1.contains("actual"));
 }
 
 #[test]
@@ -263,6 +269,107 @@ README.md should say changed.
             .1
             .contains("recognizable unified diff file headers")
     );
+}
+
+#[test]
+fn orchestrator_protocol_proactively_sends_updated_files_to_stale_readers() {
+    let root = temp_git_repo("protocol-stale-reader-update");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial stale reader fixture"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let reader = AgentId::new("user-1").unwrap();
+    let patcher = AgentId::new("user-2").unwrap();
+
+    orchestrator
+        .handle_agent_message(&reader, "docs", "@work-leaf read README.md")
+        .unwrap();
+    let events = orchestrator
+        .handle_agent_message(
+            &patcher,
+            "docs",
+            "\
+@work-leaf patch update readme
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-before
++after
+@work-leaf end",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "after\n"
+    );
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::PatchApplied { agent_id, files, .. }
+                if agent_id == &patcher && files == &vec![PathBuf::from("README.md")]
+        )
+    }));
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::FileUpdateSent { agent_id, paths }
+                if agent_id == &reader && paths == &vec![PathBuf::from("README.md")]
+        )
+    }));
+    assert_eq!(backend.sends.len(), 2);
+    assert_eq!(backend.sends[0].0, reader);
+    assert!(backend.sends[0].1.contains("before"));
+    assert_eq!(backend.sends[1].0, AgentId::new("user-1").unwrap());
+    assert!(backend.sends[1].1.contains("work-leaf file update"));
+    assert!(backend.sends[1].1.contains("README.md"));
+    assert!(backend.sends[1].1.contains("after"));
+}
+
+#[test]
+fn orchestrator_protocol_does_not_update_readers_after_done() {
+    let root = temp_git_repo("protocol-stale-reader-done");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial done fixture"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root, backend);
+    let reader = AgentId::new("user-1").unwrap();
+    let patcher = AgentId::new("user-2").unwrap();
+
+    orchestrator
+        .handle_agent_message(&reader, "docs", "@work-leaf read README.md")
+        .unwrap();
+    orchestrator
+        .handle_agent_message(&reader, "docs", "@work-leaf done")
+        .unwrap();
+    let events = orchestrator
+        .handle_agent_message(
+            &patcher,
+            "docs",
+            "\
+@work-leaf patch update readme
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-before
++after
+@work-leaf end",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(!events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::FileUpdateSent { agent_id, .. } if agent_id == &reader
+        )
+    }));
+    assert_eq!(backend.sends.len(), 1);
 }
 
 #[derive(Default)]

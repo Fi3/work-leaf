@@ -89,6 +89,49 @@ diff --git a/README.md b/README.md
 }
 
 #[test]
+fn patcher_rejects_multi_file_conflict_without_partially_applying_clean_hunks() {
+    let root = git_repo("patch-multi-file-conflict");
+    fs::write(root.join("a.txt"), "actual a\n").unwrap();
+    fs::write(root.join("b.txt"), "actual b\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial multi file fixture"]);
+
+    let patcher = GitPatcher::new(root.clone(), FileLockTable::new(root.clone()));
+    let error = patcher
+        .apply(PatchRequest::new(
+            AgentId::new("chat-7").unwrap(),
+            "docs",
+            "update two files atomically",
+            "\
+diff --git a/a.txt b/a.txt
+--- a/a.txt
++++ b/a.txt
+@@ -1 +1 @@
+-actual a
++changed a
+diff --git a/b.txt b/b.txt
+--- a/b.txt
++++ b/b.txt
+@@ -1 +1 @@
+-expected b
++changed b
+",
+        ))
+        .unwrap_err();
+
+    assert!(matches!(error, PatchError::Conflict { .. }));
+    assert_eq!(
+        fs::read_to_string(root.join("a.txt")).unwrap(),
+        "actual a\n"
+    );
+    assert_eq!(
+        fs::read_to_string(root.join("b.txt")).unwrap(),
+        "actual b\n"
+    );
+    assert!(git_output(&root, ["status", "--short"]).is_empty());
+}
+
+#[test]
 fn patcher_applies_indented_fenced_unified_diff_from_agent_reply() {
     let root = git_repo("patch-indented-fenced-diff");
     fs::write(root.join("README.md"), "actual\n").unwrap();

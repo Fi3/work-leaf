@@ -13,7 +13,10 @@ use crate::codex::{
 };
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::locks::{CommandWritePolicy, FileLockTable};
-use crate::orchestrator::{AgentFollowUp, OrchestratorEvent, handle_agent_directives_streaming};
+use crate::orchestrator::{
+    AgentFollowUp, DirectiveServices, FileReadTracker, OrchestratorEvent,
+    handle_agent_directives_streaming,
+};
 use crate::review::{AgentCommit, has_no_findings};
 use crate::review::{GitHistory, ReviewCoordinator, ReviewResult};
 use crate::terminal_app::TerminalApp;
@@ -110,6 +113,7 @@ pub struct CommandChat<B> {
     backend: Option<B>,
     shutdown: AgentShutdownHandle,
     locks: FileLockTable,
+    file_reads: FileReadTracker,
     command_policy: CommandWritePolicy,
     agents: BTreeMap<AgentId, String>,
     agent_profile: AgentProfile,
@@ -127,6 +131,7 @@ where
             backend: self.backend.clone(),
             shutdown: self.shutdown.clone(),
             locks: self.locks.clone(),
+            file_reads: self.file_reads.clone(),
             command_policy: self.command_policy.clone(),
             agents: self.agents.clone(),
             agent_profile: self.agent_profile.clone(),
@@ -144,6 +149,7 @@ where
         let shutdown = backend.shutdown_handle();
         Self {
             locks: FileLockTable::new(project_dir.clone()),
+            file_reads: FileReadTracker::default(),
             project_dir,
             backend: Some(backend),
             shutdown,
@@ -359,8 +365,11 @@ where
                     .expect("command chat backend is present");
                 handle_agent_directives_streaming(
                     backend,
-                    &self.locks,
-                    &self.command_policy,
+                    DirectiveServices {
+                        locks: &self.locks,
+                        file_reads: &self.file_reads,
+                        command_policy: &self.command_policy,
+                    },
                     &current.agent_id,
                     &current_feature,
                     &current.text,
