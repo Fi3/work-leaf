@@ -107,6 +107,10 @@ public lifecycle extension is required before external child processes can parti
   `codex exec` and `codex exec resume` calls.
 - `CodexBackend::record_launch_reply`, `record_launch_output`, and `session` maintain in-memory
   session state.
+- `CodexBackend` parses Codex `--json` event lines from stdout to capture `thread.started`
+  identifiers for resume and to convert agent message, error, and status events into
+  `AgentStreamEvent` values. The parser accepts standard JSON whitespace around field separators
+  while preserving string contents.
 
 `CodexBackend` is a provider implementation, not the owner of the generic agent contract. Callers
 that need provider-neutral behavior import `AgentBackend` from `work_leaf::agent` or from the
