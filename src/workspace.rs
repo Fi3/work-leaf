@@ -134,6 +134,11 @@ where
                     self.push_command_line(command_chat_error_text(&error));
                 }
             }
+            "linearize" => {
+                if let Err(error) = self.start_linearize() {
+                    self.push_command_line(command_chat_error_text(&error));
+                }
+            }
             _ => self.start_command_worker(trimmed.to_string()),
         }
     }
@@ -277,6 +282,37 @@ where
             reviewer_ids.push(reviewer_id);
         }
         Ok(reviewer_ids)
+    }
+
+    pub fn start_linearize(&mut self) -> Result<Option<AgentId>, CliError> {
+        let launch = {
+            let chat = self
+                .chat
+                .as_mut()
+                .expect("work-leaf controller command chat is present");
+            chat.prepare_linearize_launch()?
+        };
+        let Some(launch) = launch else {
+            self.push_command_line("no reviewed agent commits found".to_string());
+            return Ok(None);
+        };
+
+        let agent_id = launch.id.clone();
+        let title = launch.feature.clone();
+        self.register_agent_feature(agent_id.clone(), title.clone());
+        self.add_session(WorkLeafSession {
+            id: agent_id.clone(),
+            kind: launch.kind.clone(),
+            title: title.clone(),
+            feature: title,
+            lines: Vec::new(),
+            loading: Some(WorkLeafLoading::Launching),
+        });
+        self.pending_events.push(WorkLeafEvent::AgentSelected {
+            agent_id: agent_id.clone(),
+        });
+        self.start_launch_worker(launch);
+        Ok(Some(agent_id))
     }
 
     pub fn loading_text(&self, loading: WorkLeafLoading) -> String {
