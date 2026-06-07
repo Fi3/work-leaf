@@ -52,6 +52,8 @@ fn interactive_linearize_prompt_requires_user_accepted_plan_before_rewrite() {
     assert!(prompt.contains("Do not rewrite history until the user accepts"));
     assert!(prompt.contains("diff against main/master as small as possible"));
     assert!(prompt.contains("Run the checks required by the repository instructions"));
+    assert!(prompt.contains("Agent-ID: chat-a"));
+    assert!(prompt.contains("Subject: UPDATE apply parser patch from chat-a"));
 }
 
 #[test]
