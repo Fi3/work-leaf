@@ -235,6 +235,58 @@ fn controller_reviews_only_unreviewed_patch_agent_commits() {
 }
 
 #[test]
+fn controller_auto_review_ignores_historical_agents_outside_current_patch_agent() {
+    let root = git_repo("workspace-auto-review-current-agent-only");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    for old_agent in ["user-2", "user-3"] {
+        fs::write(
+            root.join("README.md"),
+            format!("historical commit from {old_agent}\n"),
+        )
+        .unwrap();
+        git(&root, ["add", "README.md"]);
+        git(
+            &root,
+            [
+                "commit",
+                "-m",
+                "UPDATE apply historical patch",
+                "-m",
+                &format!(
+                    "Agent-ID: {old_agent}\nFeature: historical\nReason: previous work\nContext: old patch"
+                ),
+            ],
+        );
+    }
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "UPDATE reset live fixture"]);
+    let backend = FakeBackend::new([
+        "live patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+        "summary: live README change",
+        "NO_FINDINGS",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("update readme").unwrap();
+    assert_eq!(agent_id.as_str(), "user-1");
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    let launches = backend.launches();
+    assert_eq!(
+        launches
+            .iter()
+            .filter(|launch| launch.id.as_str().starts_with("review-"))
+            .map(|launch| launch.id.as_str().to_string())
+            .collect::<Vec<_>>(),
+        vec!["review-user-1".to_string()]
+    );
+}
+
+#[test]
 fn controller_sends_required_check_failures_back_to_agent_until_checks_pass() {
     let root = git_repo("workspace-validation-failure-feedback");
     fs::write(

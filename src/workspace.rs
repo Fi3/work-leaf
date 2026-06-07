@@ -276,6 +276,20 @@ where
     }
 
     pub fn start_review(&mut self) -> Result<Vec<AgentId>, CliError> {
+        self.start_review_for_agent(None)
+    }
+
+    fn start_review_for_patch_agent(
+        &mut self,
+        agent_id: &AgentId,
+    ) -> Result<Vec<AgentId>, CliError> {
+        self.start_review_for_agent(Some(agent_id))
+    }
+
+    fn start_review_for_agent(
+        &mut self,
+        target_agent_id: Option<&AgentId>,
+    ) -> Result<Vec<AgentId>, CliError> {
         let (project_dir, agent_profile) = {
             let chat = self
                 .chat
@@ -294,6 +308,9 @@ where
 
         let mut reviewer_ids = Vec::new();
         for commit in commits {
+            if target_agent_id.is_some_and(|agent_id| &commit.agent_id != agent_id) {
+                continue;
+            }
             if self
                 .reviewed_agent_commits
                 .get(&commit.agent_id)
@@ -686,7 +703,7 @@ where
         let start_review = start_review || self.pending_validation_reviews.remove(agent_id);
         self.set_session_loading(agent_id, None);
         self.clear_workspace_validation_status();
-        if start_review && let Err(error) = self.start_review() {
+        if start_review && let Err(error) = self.start_review_for_patch_agent(agent_id) {
             self.push_command_line(command_chat_error_text(&error));
         }
     }

@@ -82,7 +82,8 @@ The current implementation path for this review loop finds latest agent commits 
 agent's `review-<agent-id>` reviewer, sends findings back to the original agent, and asks the
 reviewer to recheck until `NO_FINDINGS` or the round limit. Command-chat and controller review
 startup keep one reviewer identity per patch agent and skip latest commits that already completed a
-review pass.
+review pass. Automatic review after a patch-agent validation pass is scoped to that patch agent's
+latest commit; an explicit `review` command is the history-wide review entry point.
 
 ### Inspection Agent
 
@@ -345,7 +346,7 @@ A normal development session in default read-permission mode follows this shape:
    patch.
 8. If another agent read any touched file and has not cleared that context, the orchestrator sends
    that agent a proactive `work-leaf file update` with fresh file text.
-9. The orchestrator runs or schedules the review agent for the patch.
+9. The orchestrator runs or schedules that patch agent's review agent for the patch.
 10. The review agent reviews only behavior introduced or modified by the patch.
 11. If the review agent reports findings, the orchestrator sends them to the patch agent and the patch
     agent keeps patching.
