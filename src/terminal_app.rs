@@ -268,7 +268,7 @@ where
 
     #[cfg(test)]
     fn set_agent_loading(&mut self, agent_id: &AgentId, loading: Option<LoadingKind>) {
-        let _ = self.ui.set_agent_ready(agent_id, loading.is_none());
+        let _ = self.ui.set_agent_ready_state(agent_id, loading.is_none());
     }
 
     fn record_actions(&mut self, actions: Vec<crate::UiAction>) {
@@ -304,7 +304,7 @@ where
     fn apply_session_to_ui(&mut self, session: &WorkLeafSession) {
         if self
             .ui
-            .update_agent_feature(&session.id, session.title.clone())
+            .set_agent_feature(&session.id, session.title.clone())
             .is_err()
         {
             self.ui.add_agent(AgentListEntry::new(
@@ -314,7 +314,7 @@ where
         }
         let _ = self
             .ui
-            .set_agent_ready(&session.id, session.loading.is_none());
+            .set_agent_ready_state(&session.id, session.loading.is_none());
     }
 
     fn should_route_chat_arrow(&self) -> bool {
@@ -587,7 +587,7 @@ mod tests {
     }
 
     #[test]
-    fn clearing_agent_loading_marks_chat_ready_for_bell_and_left_highlight() {
+    fn clearing_agent_loading_marks_chat_ready_in_left_pane() {
         let chat = CommandChat::new(PathBuf::from("."), NoopBackend);
         let mut app = TerminalApp::new(chat, 80, 24);
         let agent_id = AgentId::new("user-1").expect("test agent id is valid");
@@ -604,12 +604,11 @@ mod tests {
 
         app.clear_agent_loading(&agent_id);
 
-        let ready_frame = app.render_frame();
-        assert!(ready_frame.contains('\u{7}'));
+        assert!(!app.render_frame().contains('\u{7}'));
         assert!(
             app.ui
                 .render_left_pane()
-                .contains("\u{1b}[7m>feature user-1  working: feature  READY\u{1b}[0m")
+                .contains(">feature user-1  working: feature  \u{1b}[7mREADY\u{1b}[0m")
         );
     }
 

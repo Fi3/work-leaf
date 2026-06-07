@@ -60,7 +60,7 @@ impl UiHarness {
 
     pub fn mark_agent_ready(&mut self, agent_id: &str) -> Result<(), String> {
         let agent_id = AgentId::new(agent_id).map_err(|error| error.to_string())?;
-        self.ui.set_agent_ready(&agent_id, true)
+        self.ui.set_agent_ready_state(&agent_id, true)
     }
 
     pub fn is_quit(&self) -> bool {
@@ -262,7 +262,7 @@ impl UiHarness {
         else {
             return;
         };
-        let _ = self.ui.update_agent_feature(agent_id, title);
+        let _ = self.ui.set_agent_feature(agent_id, title);
     }
 
     fn insert_prompt_char(&mut self, ch: char) {

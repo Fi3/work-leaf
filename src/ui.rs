@@ -1,4 +1,3 @@
-use std::cell::Cell;
 use std::path::PathBuf;
 
 use crate::agent::AgentId;
@@ -7,7 +6,6 @@ use tui::{
     backend::TestBackend,
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style},
     text::{Span, Spans},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
 };
@@ -163,7 +161,6 @@ pub struct TerminalUi {
     windows: Vec<UiWindow>,
     active_window: usize,
     pending: Option<PendingKey>,
-    ready_bell_pending: Cell<bool>,
 }
 
 impl TerminalUi {
@@ -181,7 +178,6 @@ impl TerminalUi {
             windows: vec![UiWindow::command()],
             active_window: 0,
             pending: None,
-            ready_bell_pending: Cell::new(false),
         }
     }
 
@@ -224,7 +220,7 @@ impl TerminalUi {
         self.agents.push(agent);
     }
 
-    pub fn update_agent_feature(
+    pub(crate) fn set_agent_feature(
         &mut self,
         agent_id: &AgentId,
         feature: impl Into<String>,
@@ -236,18 +232,15 @@ impl TerminalUi {
         Ok(())
     }
 
-    pub fn set_agent_ready(&mut self, agent_id: &AgentId, ready: bool) -> Result<(), String> {
+    pub(crate) fn set_agent_ready_state(
+        &mut self,
+        agent_id: &AgentId,
+        ready: bool,
+    ) -> Result<(), String> {
         let Some(agent) = self.agents.iter_mut().find(|agent| &agent.id == agent_id) else {
             return Err(format!("unknown agent `{agent_id}`"));
         };
-
-        let became_ready = ready && !agent.ready;
         agent.ready = ready;
-
-        if became_ready {
-            self.ready_bell_pending.set(true);
-        }
-
         Ok(())
     }
 
@@ -374,9 +367,6 @@ impl TerminalUi {
         }
         for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
             let agent = &self.agents[*agent_index];
-            if agent.ready {
-                rendered.push_str("\u{1b}[7m");
-            }
             if self.control_selected == visible_position + 1 {
                 rendered.push('>');
             } else {
@@ -389,10 +379,7 @@ impl TerminalUi {
             rendered.push_str("  working: ");
             rendered.push_str(&agent.feature);
             if agent.ready {
-                rendered.push_str("  READY");
-            }
-            if agent.ready {
-                rendered.push_str("\u{1b}[0m");
+                rendered.push_str("  \u{1b}[7mREADY\u{1b}[0m");
             }
             rendered.push('\n');
             if !agent.modified_files.is_empty() {
@@ -421,15 +408,10 @@ impl TerminalUi {
 
     pub fn render_screen_with_prompt(&self, right_content: &str, prompt: &str) -> String {
         let visible_right_content = self.visible_right_content(right_content);
-        let prompt_view = PromptView::new(prompt, prompt.len(), self.width);
-        let buffer = self.render_tui_buffer(&visible_right_content, &prompt_view.visible_prompt);
-        let mut rendered = String::new();
-        if self.ready_bell_pending.replace(false) {
-            rendered.push('\u{7}');
-        }
-        rendered.push_str("\u{1b}[H");
+        let buffer = self.render_tui_buffer(&visible_right_content, prompt);
+        let mut rendered = String::from("\u{1b}[H");
         rendered.push_str(&buffer_to_string(&buffer));
-        rendered.push_str(&self.cursor_sequence(&visible_right_content, prompt_view.cursor_column));
+        rendered.push_str(&self.cursor_sequence(&visible_right_content, prompt));
         rendered
     }
 
@@ -441,17 +423,13 @@ impl TerminalUi {
         right_cursor_column: Option<usize>,
     ) -> String {
         let visible_right_content = self.visible_right_content(right_content);
-        let prompt_view = PromptView::new(prompt, prompt_cursor, self.width);
-        let buffer = self.render_tui_buffer(&visible_right_content, &prompt_view.visible_prompt);
-        let mut rendered = String::new();
-        if self.ready_bell_pending.replace(false) {
-            rendered.push('\u{7}');
-        }
-        rendered.push_str("\u{1b}[H");
+        let buffer = self.render_tui_buffer(&visible_right_content, prompt);
+        let mut rendered = String::from("\u{1b}[H");
         rendered.push_str(&buffer_to_string(&buffer));
         rendered.push_str(&self.cursor_sequence_with_cursors(
             &visible_right_content,
-            prompt_view.cursor_column,
+            prompt,
+            prompt_cursor,
             right_cursor_column,
         ));
         rendered
@@ -505,14 +483,11 @@ impl TerminalUi {
         for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
             let agent = &self.agents[*agent_index];
             let selected = self.control_selected == visible_position + 1;
-            let mut item = ListItem::new(Spans::from(vec![Span::raw(compact_agent_row(
+            let item = ListItem::new(Spans::from(vec![Span::raw(compact_agent_row(
                 agent,
                 selected,
                 inner_width,
             ))]));
-            if agent.ready {
-                item = item.style(Style::default().add_modifier(Modifier::REVERSED));
-            }
             items.push(item);
             if !agent.modified_files.is_empty() {
                 items.push(ListItem::new(Spans::from(vec![Span::raw(format!(
@@ -563,9 +538,14 @@ impl TerminalUi {
         }
     }
 
-    fn cursor_sequence(&self, right_content: &str, prompt_cursor_column: u16) -> String {
+    fn cursor_sequence(&self, right_content: &str, prompt: &str) -> String {
         let (row, column) = if self.mode == UiMode::Prompt {
-            (self.height, prompt_cursor_column)
+            let prompt_column = prompt
+                .chars()
+                .count()
+                .saturating_add(2)
+                .min(usize::from(u16::MAX)) as u16;
+            (self.height, prompt_column)
         } else {
             match self.focus {
                 PaneFocus::Left => (self.control_cursor_row(), 2),
@@ -580,11 +560,18 @@ impl TerminalUi {
     fn cursor_sequence_with_cursors(
         &self,
         right_content: &str,
-        prompt_cursor_column: u16,
+        prompt: &str,
+        prompt_cursor: usize,
         right_cursor_column: Option<usize>,
     ) -> String {
         let (row, column) = if self.mode == UiMode::Prompt {
-            (self.height, prompt_cursor_column)
+            let prompt_column = prompt
+                .char_indices()
+                .take_while(|(index, _)| *index < prompt_cursor)
+                .count()
+                .saturating_add(2)
+                .min(usize::from(u16::MAX)) as u16;
+            (self.height, prompt_column)
         } else {
             match self.focus {
                 PaneFocus::Left => (self.control_cursor_row(), 2),
@@ -935,39 +922,6 @@ impl TerminalUi {
             self.windows.len()
         )
     }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct PromptView {
-    visible_prompt: String,
-    cursor_column: u16,
-}
-
-impl PromptView {
-    fn new(prompt: &str, cursor: usize, terminal_width: u16) -> Self {
-        let visible_width = usize::from(terminal_width.saturating_sub(2).max(1));
-        let cursor_chars = cursor_char_count(prompt, cursor);
-        let start_char = cursor_chars.saturating_sub(visible_width);
-        let visible_prompt = prompt
-            .chars()
-            .skip(start_char)
-            .take(visible_width)
-            .collect::<String>();
-        let cursor_column = cursor_chars
-            .saturating_sub(start_char)
-            .saturating_add(2)
-            .min(usize::from(u16::MAX)) as u16;
-        Self {
-            visible_prompt,
-            cursor_column,
-        }
-    }
-}
-
-fn cursor_char_count(text: &str, cursor: usize) -> usize {
-    text.char_indices()
-        .take_while(|(index, _)| *index < cursor)
-        .count()
 }
 
 impl UiMode {

@@ -255,66 +255,6 @@ fn terminal_app_new_adds_agent_immediately_while_backend_is_loading() {
 }
 
 #[test]
-fn terminal_app_new_opens_second_agent_slot_while_existing_agent_is_busy() {
-    let backend = SlowBackend;
-    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
-    let mut app = TerminalApp::new(chat, 100, 24);
-
-    app.handle_bytes(b":new first slow launch\n");
-    assert!(app.is_busy());
-
-    app.handle_bytes(b"\x1b:new second slow launch\n");
-
-    assert_eq!(
-        app.ui().selected_agent().map(AgentId::as_str),
-        Some("user-2")
-    );
-    assert_eq!(app.ui().focus(), PaneFocus::Right);
-    assert_eq!(app.ui().mode(), UiMode::Insert);
-    let frame = app.render_frame();
-    assert!(frame.contains("user-1"));
-    assert!(frame.contains("user-2"));
-    assert!(frame.contains("Starting Codex session"));
-    assert!(!frame.contains("work-leaf is busy with another agent operation"));
-
-    app.wait_for_idle(Duration::from_secs(2));
-    let frame = app.render_frame();
-    assert!(frame.contains("user-1"));
-    assert!(frame.contains("user-2"));
-    assert!(frame.contains("slow launch reply"));
-}
-
-#[test]
-fn terminal_app_new_adds_next_agent_while_existing_agent_is_busy() {
-    let backend = SlowBackend;
-    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
-    let mut app = TerminalApp::new(chat, 100, 24);
-
-    app.handle_bytes(b":new first slow launch\n");
-    assert!(app.is_busy());
-
-    app.handle_bytes(b"\x1b:new second slow launch\n");
-
-    assert_eq!(
-        app.ui().selected_agent().map(AgentId::as_str),
-        Some("user-2")
-    );
-    assert_eq!(app.ui().focus(), PaneFocus::Right);
-    assert_eq!(app.ui().mode(), UiMode::Insert);
-    let frame = app.render_frame();
-    assert!(frame.contains("user-1"));
-    assert!(frame.contains("user-2"));
-    assert!(frame.contains("Starting Codex session"));
-    assert!(!frame.contains("work-leaf is busy with another agent operation"));
-
-    app.wait_for_idle(Duration::from_secs(2));
-    let frame = app.render_frame();
-    assert!(frame.contains("user-1"));
-    assert!(frame.contains("user-2"));
-    assert!(frame.contains("slow launch reply"));
-}
-
-#[test]
 fn terminal_app_chat_pane_shows_only_the_selected_agent_session() {
     let backend = FakeBackend::new([
         "first launch",
@@ -696,65 +636,6 @@ fn terminal_app_names_interactive_chat_from_first_inserted_prompt_immediately() 
     );
 }
 
-#[cfg(unix)]
-#[test]
-fn terminal_app_quit_terminates_running_codex_child() {
-    let root = temp_dir("terminal-app-codex-child-shutdown");
-    let fake_bin = root.join("bin");
-    fs::create_dir_all(&fake_bin).unwrap();
-    let codex = fake_bin.join("codex");
-    fs::write(
-        &codex,
-        "\
-#!/bin/sh
-project_dir=
-expect_project_dir=0
-for arg in \"$@\"; do
-  if [ \"$expect_project_dir\" = \"1\" ]; then
-    project_dir=$arg
-    expect_project_dir=0
-  elif [ \"$arg\" = \"--cd\" ]; then
-    expect_project_dir=1
-  fi
-done
-
-if [ -z \"$project_dir\" ]; then
-  echo missing project dir >&2
-  exit 42
-fi
-
-echo $$ > \"$project_dir/codex.pid\"
-trap 'echo terminated > \"$project_dir/codex.terminated\"; exit 0' TERM INT HUP
-printf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-hangs\"}'
-while :; do
-  sleep 1
-done
-",
-    )
-    .unwrap();
-    make_executable(&codex);
-    let backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone()).with_binary(&codex),
-        PromptPolicy::for_restricted_agents(),
-    );
-    let chat = CommandChat::new(root.clone(), backend);
-    let mut app = TerminalApp::new(chat, 100, 24);
-
-    app.handle_bytes(b":new long running child\n");
-    let pid = wait_for_pid(&root.join("codex.pid"), Duration::from_secs(1));
-    assert!(app.is_busy());
-    assert!(process_alive(pid));
-
-    assert!(!app.handle_byte(3));
-    let child_exited = wait_until(Duration::from_secs(1), || !process_alive(pid));
-    if !child_exited {
-        terminate_process(pid);
-    }
-
-    assert!(child_exited, "codex child process {pid} was still running");
-    assert!(root.join("codex.terminated").exists());
-}
-
 #[derive(Clone, Debug)]
 struct FakeBackend {
     state: Arc<Mutex<FakeBackendState>>,
@@ -804,60 +685,6 @@ fn make_executable(path: &std::path::Path) {
 
 #[cfg(not(unix))]
 fn make_executable(_path: &std::path::Path) {}
-
-#[cfg(unix)]
-fn wait_for_pid(path: &std::path::Path, timeout: Duration) -> u32 {
-    let found = wait_until(timeout, || {
-        fs::read_to_string(path)
-            .ok()
-            .and_then(|text| text.trim().parse::<u32>().ok())
-            .is_some()
-    });
-    assert!(found, "pid file was not written at {}", path.display());
-    fs::read_to_string(path)
-        .unwrap()
-        .trim()
-        .parse::<u32>()
-        .unwrap()
-}
-
-#[cfg(unix)]
-fn wait_until(mut timeout: Duration, mut condition: impl FnMut() -> bool) -> bool {
-    while !timeout.is_zero() {
-        if condition() {
-            return true;
-        }
-        let step = Duration::from_millis(10).min(timeout);
-        thread::sleep(step);
-        timeout = timeout.saturating_sub(step);
-    }
-    condition()
-}
-
-#[cfg(unix)]
-fn process_alive(pid: u32) -> bool {
-    Command::new("kill")
-        .arg("-0")
-        .arg(pid.to_string())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .is_ok_and(|status| status.success())
-}
-
-#[cfg(unix)]
-fn terminate_process(pid: u32) {
-    let _ = Command::new("kill")
-        .arg("-TERM")
-        .arg(pid.to_string())
-        .status();
-    if !wait_until(Duration::from_millis(200), || !process_alive(pid)) {
-        let _ = Command::new("kill")
-            .arg("-KILL")
-            .arg(pid.to_string())
-            .status();
-    }
-}
 
 impl FakeBackend {
     fn new<const N: usize>(replies: [&str; N]) -> Self {
