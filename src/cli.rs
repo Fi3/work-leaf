@@ -7,10 +7,11 @@ use std::process::{self, Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use crate::agent::{AgentId, AgentLaunch, AgentProfile, PromptPolicy};
-use crate::codex::{
-    AgentBackend, AgentShutdownHandle, AgentStreamEvent, CodexBackend, CodexCommandConfig,
+use crate::agent::{
+    AgentBackend, AgentId, AgentLaunch, AgentProfile, AgentShutdownHandle, AgentStreamEvent,
+    PromptPolicy,
 };
+use crate::codex::{CodexBackend, CodexCommandConfig};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::locks::{CommandWritePolicy, FileLockTable};
 use crate::orchestrator::{
@@ -156,7 +157,7 @@ where
             command_policy: CommandWritePolicy,
             agents: BTreeMap::new(),
             agent_profile: AgentProfile::codex(),
-            max_review_rounds: 8000,
+            max_review_rounds: 80_000_000,
             next_user_agent: 1,
         }
     }

@@ -2,6 +2,7 @@ use std::collections::BTreeSet;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+pub use crate::agent_runtime::{AgentBackend, AgentShutdownHandle, AgentStreamEvent};
 use crate::instructions::{ProjectInstructionFile, load_project_instructions};
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]

@@ -3,13 +3,14 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
-use crate::agent::{AgentId, AgentKind, AgentLaunch};
+use crate::agent::{
+    AgentBackend, AgentId, AgentKind, AgentLaunch, AgentShutdownHandle, AgentStreamEvent,
+};
 use crate::chat_title::{ChatTitleAgent, chat_title_from_prompt};
 use crate::cli::{
     CliError, CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
     render_command_chat_help,
 };
-use crate::codex::{AgentBackend, AgentShutdownHandle, AgentStreamEvent};
 use crate::review::GitHistory;
 
 #[derive(Debug)]

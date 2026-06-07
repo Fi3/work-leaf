@@ -3,8 +3,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::{fmt, fs};
 
-use crate::agent::{AgentError, AgentId, ChatMessage};
-use crate::codex::{AgentBackend, AgentStreamEvent};
+use crate::agent::{AgentBackend, AgentError, AgentId, AgentStreamEvent, ChatMessage};
 use crate::locks::{CommandWriteIntent, CommandWritePolicy, FileAccessError, FileLockTable};
 use crate::patch::{GitPatcher, PatchError, PatchRequest, render_no_files_prompt};
 

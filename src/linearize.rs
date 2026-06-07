@@ -1,8 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use crate::agent::{AgentError, AgentId, AgentLaunch, AgentProfile};
-use crate::codex::AgentBackend;
+use crate::agent::{AgentBackend, AgentError, AgentId, AgentLaunch, AgentProfile};
 use crate::review::AgentCommit;
 
 #[derive(Clone, Debug, Eq, PartialEq)]

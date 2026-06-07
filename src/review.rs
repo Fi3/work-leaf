@@ -3,8 +3,7 @@ use std::fmt;
 use std::path::PathBuf;
 use std::process::Command;
 
-use crate::agent::{AgentError, AgentId, AgentLaunch, AgentProfile};
-use crate::codex::AgentBackend;
+use crate::agent::{AgentBackend, AgentError, AgentId, AgentLaunch, AgentProfile};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AgentCommit {

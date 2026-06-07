@@ -3,8 +3,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 
-use crate::agent::{AgentError, AgentId};
-use crate::codex::AgentBackend;
+use crate::agent::{AgentBackend, AgentError, AgentId};
 use crate::instructions::{load_project_instructions, validation_checks};
 use crate::locks::{FileAccessError, FileLockTable};
 

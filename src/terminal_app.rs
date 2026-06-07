@@ -3,10 +3,10 @@ use std::time::{Duration, Instant};
 
 use rustyline::line_buffer::{ChangeListener, DeleteListener, Direction, LineBuffer};
 
+use crate::agent::AgentBackend;
 #[cfg(test)]
 use crate::agent::AgentId;
 use crate::cli::{CommandChat, terminal_right_content, ui_action_text};
-use crate::codex::AgentBackend;
 use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode};
 #[cfg(test)]
 use crate::workspace::WorkLeafLoading;
