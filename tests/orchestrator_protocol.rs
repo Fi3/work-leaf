@@ -48,6 +48,40 @@ fn orchestrator_protocol_reads_files_and_classifies_commands_for_agents() {
 }
 
 #[test]
+fn orchestrator_protocol_batches_consecutive_file_reads_into_one_agent_follow_up() {
+    let root = temp_git_repo("protocol-batched-reads");
+    fs::write(root.join("README.md"), "readme\n").unwrap();
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(root.join("src/lib.rs"), "pub fn value() -> u8 { 1 }\n").unwrap();
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root, backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "parser",
+            "@work-leaf read README.md\n@work-leaf read src/lib.rs",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert_eq!(
+        events,
+        vec![OrchestratorEvent::FileTextSent {
+            agent_id: agent_id.clone(),
+            paths: vec![PathBuf::from("README.md"), PathBuf::from("src/lib.rs")]
+        }]
+    );
+    assert_eq!(backend.sends.len(), 1);
+    assert_eq!(backend.sends[0].0, agent_id);
+    assert!(backend.sends[0].1.contains("--- README.md ---"));
+    assert!(backend.sends[0].1.contains("readme"));
+    assert!(backend.sends[0].1.contains("--- src/lib.rs ---"));
+    assert!(backend.sends[0].1.contains("pub fn value()"));
+}
+
+#[test]
 fn orchestrator_protocol_applies_agent_patch_and_routes_messages_between_agents() {
     let root = temp_git_repo("protocol-patch-route");
     fs::write(root.join("lib.rs"), "pub fn value() -> u8 { 1 }\n").unwrap();

@@ -188,10 +188,15 @@ In default read-permission mode, an agent requests file text with:
 @work-leaf read src/lib.rs src/orchestrator.rs
 ```
 
+A single read directive can name multiple paths. When one agent reply contains consecutive read
+directives, `src/orchestrator.rs::handle_agent_directives_streaming` handles them as one grouped
+read response to the same agent session.
+
 The read path is:
 
 1. `src/orchestrator.rs::parse_agent_directives` parses the directive into `AgentDirective::Read`.
-2. `src/orchestrator.rs::handle_agent_directives_streaming` calls `read_requested_files`.
+2. `src/orchestrator.rs::handle_agent_directives_streaming` groups consecutive read directives and
+   calls `read_requested_files` once for the grouped path set.
 3. `read_requested_files` normalizes all valid paths.
 4. The orchestrator acquires shared read locks for the full valid path set.
 5. The orchestrator reads file contents while those read locks are held.

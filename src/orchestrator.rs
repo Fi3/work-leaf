@@ -279,41 +279,16 @@ where
         return Ok(run);
     }
 
-    for directive in directives {
+    let mut directives = directives.into_iter().peekable();
+    while let Some(directive) = directives.next() {
         match directive {
-            AgentDirective::Read(paths) => {
-                let response = read_requested_files(services.locks, &paths)?;
-                let normalized_paths = response
-                    .snapshots
-                    .iter()
-                    .map(|snapshot| snapshot.path.clone())
-                    .collect::<Vec<_>>();
-                let unavailable_paths = response
-                    .failures
-                    .iter()
-                    .map(|failure| failure.path.clone())
-                    .collect::<Vec<_>>();
-                let prompt = render_file_read_response(&response.snapshots, &response.failures);
-                let mut sink = |event| stream(agent_id, event);
-                let reply = backend.send_streaming(agent_id, &prompt, &mut sink)?;
-                services
-                    .file_reads
-                    .record_snapshots(agent_id, &response.snapshots);
-                run.follow_up_replies
-                    .push(follow_up(agent_id.clone(), reply));
-                if !normalized_paths.is_empty() {
-                    run.events.push(OrchestratorEvent::FileTextSent {
-                        agent_id: agent_id.clone(),
-                        paths: normalized_paths,
-                    });
+            AgentDirective::Read(mut paths) => {
+                while matches!(directives.peek(), Some(AgentDirective::Read(_))) {
+                    if let Some(AgentDirective::Read(next_paths)) = directives.next() {
+                        paths.extend(next_paths);
+                    }
                 }
-                if !unavailable_paths.is_empty() {
-                    run.events.push(OrchestratorEvent::FileTextUnavailable {
-                        agent_id: agent_id.clone(),
-                        paths: unavailable_paths,
-                        diagnostic: render_file_read_failures(&response.failures),
-                    });
-                }
+                send_file_read_response(backend, services, agent_id, &paths, stream, &mut run)?;
             }
             AgentDirective::Classify(command) => {
                 let intent = services
@@ -447,6 +422,52 @@ where
     }
 
     Ok(run)
+}
+
+fn send_file_read_response<B>(
+    backend: &mut B,
+    services: DirectiveServices<'_>,
+    agent_id: &AgentId,
+    paths: &[PathBuf],
+    stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+    run: &mut DirectiveRun,
+) -> Result<(), OrchestratorError>
+where
+    B: AgentBackend,
+{
+    let response = read_requested_files(services.locks, paths)?;
+    let normalized_paths = response
+        .snapshots
+        .iter()
+        .map(|snapshot| snapshot.path.clone())
+        .collect::<Vec<_>>();
+    let unavailable_paths = response
+        .failures
+        .iter()
+        .map(|failure| failure.path.clone())
+        .collect::<Vec<_>>();
+    let prompt = render_file_read_response(&response.snapshots, &response.failures);
+    let mut sink = |event| stream(agent_id, event);
+    let reply = backend.send_streaming(agent_id, &prompt, &mut sink)?;
+    services
+        .file_reads
+        .record_snapshots(agent_id, &response.snapshots);
+    run.follow_up_replies
+        .push(follow_up(agent_id.clone(), reply));
+    if !normalized_paths.is_empty() {
+        run.events.push(OrchestratorEvent::FileTextSent {
+            agent_id: agent_id.clone(),
+            paths: normalized_paths,
+        });
+    }
+    if !unavailable_paths.is_empty() {
+        run.events.push(OrchestratorEvent::FileTextUnavailable {
+            agent_id: agent_id.clone(),
+            paths: unavailable_paths,
+            diagnostic: render_file_read_failures(&response.failures),
+        });
+    }
+    Ok(())
 }
 
 fn send_stale_file_updates<B>(

@@ -23,6 +23,7 @@ fn prompt_policy_wraps_every_agent_prompt_with_file_access_rules() {
     assert!(wrapped.contains("provide a unified diff patch"));
     assert!(wrapped.contains("Do not run `@work-leaf` in a shell"));
     assert!(wrapped.contains("@work-leaf read <path>"));
+    assert!(wrapped.contains("@work-leaf read <path> <path...>"));
     assert!(wrapped.contains("@work-leaf patch <reason>"));
     assert!(wrapped.contains("@work-leaf locks classify <command>"));
     assert!(wrapped.contains("@work-leaf send <agent-id> <message>"));

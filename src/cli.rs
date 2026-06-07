@@ -224,7 +224,8 @@ where
             "quit" | "exit" => Ok(CommandChatResult::Quit),
             "new" => self.launch_agent(&parts[1..]),
             "review" => self.review(),
-            "linearize" => self.linearize_questions(),
+            "linearize" => self.linearize(),
+            "linearize-questions" => self.linearize_questions(),
             "patch" | "locks" => Err(CliError::Usage(format!(
                 "`{command}` is automatic orchestrator machinery, not a command chat command"
             ))),
@@ -294,6 +295,21 @@ where
         let launch = build_user_agent_launch(self.next_user_agent, args, &self.agent_profile)?;
         self.next_user_agent += 1;
         Ok(launch)
+    }
+
+    pub fn prepare_linearize_launch(&mut self) -> Result<Option<AgentLaunch>, CliError> {
+        let commits = GitHistory::new(self.project_dir.clone()).latest_agent_commits()?;
+        if commits.is_empty() {
+            return Ok(None);
+        }
+
+        let agent_id = self.next_linearizer_id()?;
+        Ok(Some(AgentLaunch::new(
+            agent_id,
+            self.agent_profile.kind.clone(),
+            "linearize reviewed patches",
+            LinearizePlanner::<B>::interactive_prompt(&commits),
+        )))
     }
 
     pub fn launch_prepared_agent_streaming(
@@ -507,11 +523,34 @@ where
         })
     }
 
+    fn linearize(&mut self) -> Result<CommandChatResult, CliError> {
+        let Some(launch) = self.prepare_linearize_launch()? else {
+            return Ok(CommandChatResult::LinearizeQuestions(Vec::new()));
+        };
+        self.launch_prepared_agent_streaming(launch, &mut |_| {})
+    }
+
     fn linearize_questions(&self) -> Result<CommandChatResult, CliError> {
         let commits = GitHistory::new(self.project_dir.clone()).latest_agent_commits()?;
         Ok(CommandChatResult::LinearizeQuestions(
             LinearizePlanner::<B>::questions_for(&commits),
         ))
+    }
+
+    fn next_linearizer_id(&self) -> Result<AgentId, CliError> {
+        let base = AgentId::new("linearize").map_err(CliError::Agent)?;
+        if !self.agents.contains_key(&base) {
+            return Ok(base);
+        }
+
+        let mut number = 2;
+        loop {
+            let candidate = AgentId::new(format!("linearize-{number}")).map_err(CliError::Agent)?;
+            if !self.agents.contains_key(&candidate) {
+                return Ok(candidate);
+            }
+            number += 1;
+        }
     }
 }
 

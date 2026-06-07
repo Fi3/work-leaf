@@ -204,6 +204,7 @@ impl PromptPolicy {
                 "Emit every `@work-leaf ...` request as a top-level plain response line, without quotes, prose, or code fences, so the orchestrator can parse it.",
                 "Never claim that you are switching to local workspace tools; keep using orchestrator directives until the orchestrator responds.",
                 "Use `@work-leaf read <path>` to request file text from the orchestrator.",
+                "Request related files together, because `@work-leaf read <path> <path...>` returns multiple file snapshots in one orchestrator response.",
             ]),
             ReadPermission::DirectFilesystem => lines.extend([
                 "You may read repository files directly from the filesystem.",
