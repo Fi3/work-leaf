@@ -138,6 +138,28 @@ where
         }
     }
 
+    pub fn send_command_agent_message(&mut self, message: &str) {
+        let message = message.trim();
+        if message.is_empty() {
+            return;
+        }
+
+        self.push_command_line(format!("user: {message}"));
+        let display_name = self.agent_display_name();
+        match command_agent_response(message, &display_name) {
+            CommandAgentResponse::Execute {
+                command_line,
+                reply,
+            } => {
+                self.push_command_line(format!("command-agent: {reply}"));
+                self.execute_command_line(&command_line);
+            }
+            CommandAgentResponse::Reply(reply) => {
+                self.push_command_line(format!("command-agent: {reply}"));
+            }
+        }
+    }
+
     pub fn create_agent(&mut self, prompt: impl Into<String>) -> Result<AgentId, CliError> {
         let prompt = prompt.into();
         let args = split_command_line(&prompt);
@@ -621,6 +643,111 @@ fn stream_event_text(event: AgentStreamEvent, agent_display_name: &str) -> Strin
         AgentStreamEvent::AgentMessage(text) => text,
         AgentStreamEvent::Error(text) => format!("{label} error: {text}"),
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum CommandAgentResponse {
+    Execute { command_line: String, reply: String },
+    Reply(String),
+}
+
+fn command_agent_response(message: &str, agent_display_name: &str) -> CommandAgentResponse {
+    if let Some(command_line) = literal_command_line(message) {
+        return CommandAgentResponse::Execute {
+            reply: format!("running `{command_line}`"),
+            command_line,
+        };
+    }
+
+    let lower = message.to_ascii_lowercase();
+    if asks_for_new_agent(&lower) {
+        let prompt = command_agent_new_prompt(message);
+        let command_line = if prompt.is_empty() {
+            "new".to_string()
+        } else {
+            format!("new {prompt}")
+        };
+        let reply = if prompt.is_empty() {
+            format!("launching {agent_display_name} user agent")
+        } else {
+            format!("launching {agent_display_name} user agent for {prompt}")
+        };
+        return CommandAgentResponse::Execute {
+            command_line,
+            reply,
+        };
+    }
+
+    for (needle, command_line) in [
+        ("linearize", "linearize"),
+        ("linearise", "linearize"),
+        ("review", "review"),
+        ("help", "help"),
+        ("quit", "quit"),
+        ("exit", "quit"),
+    ] {
+        if lower.contains(needle) {
+            return CommandAgentResponse::Execute {
+                command_line: command_line.to_string(),
+                reply: format!("running `{command_line}`"),
+            };
+        }
+    }
+
+    CommandAgentResponse::Reply(
+        "I can run help, new [prompt...], review, linearize, or quit.".to_string(),
+    )
+}
+
+fn literal_command_line(message: &str) -> Option<String> {
+    let command = split_command_line(message).into_iter().next()?;
+    matches!(
+        command.as_str(),
+        "help" | "?" | "new" | "review" | "linearize" | "quit" | "exit"
+    )
+    .then(|| message.to_string())
+}
+
+fn asks_for_new_agent(lower: &str) -> bool {
+    lower.contains("agent")
+        && ["new", "spawn", "create", "start", "launch"]
+            .iter()
+            .any(|verb| lower.contains(verb))
+}
+
+fn command_agent_new_prompt(message: &str) -> String {
+    let trimmed = strip_polite_prefix(message.trim());
+    [
+        "spawn a new ",
+        "spawn new ",
+        "create a new ",
+        "create new ",
+        "start a new ",
+        "start new ",
+        "launch a new ",
+        "launch new ",
+        "make a new ",
+        "make new ",
+        "new ",
+    ]
+    .iter()
+    .find_map(|prefix| strip_ascii_prefix_case_insensitive(trimmed, prefix))
+    .unwrap_or(trimmed)
+    .to_string()
+}
+
+fn strip_polite_prefix(message: &str) -> &str {
+    ["please ", "can you ", "could you ", "would you "]
+        .iter()
+        .find_map(|prefix| strip_ascii_prefix_case_insensitive(message, prefix))
+        .unwrap_or(message)
+}
+
+fn strip_ascii_prefix_case_insensitive<'a>(message: &'a str, prefix: &str) -> Option<&'a str> {
+    message
+        .to_ascii_lowercase()
+        .starts_with(prefix)
+        .then(|| message[prefix.len()..].trim())
 }
 
 fn split_command_line(line: &str) -> Vec<String> {

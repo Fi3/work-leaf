@@ -243,9 +243,6 @@ where
     }
 
     fn send_chat_buffer(&mut self) {
-        let Some(agent_id) = self.ui.selected_agent().cloned() else {
-            return;
-        };
         let message = self.chat_buffer.trimmed_string();
         self.chat_buffer.clear();
         self.chat_history_index = None;
@@ -255,7 +252,11 @@ where
         }
 
         self.chat_history.push(message.clone());
-        let _ = self.controller.send_message(&agent_id, &message);
+        if let Some(agent_id) = self.ui.selected_agent().cloned() {
+            let _ = self.controller.send_message(&agent_id, &message);
+        } else {
+            self.controller.send_command_agent_message(&message);
+        }
         self.apply_controller_events();
         self.dirty = true;
     }
@@ -609,6 +610,27 @@ mod tests {
             app.ui
                 .render_left_pane()
                 .contains("\u{1b}[7m>feature user-1  working: feature  READY\u{1b}[0m")
+        );
+    }
+
+    #[test]
+    fn command_surface_chat_uses_command_agent_to_spawn_codex_agent() {
+        let chat = CommandChat::new(PathBuf::from("."), NoopBackend);
+        let mut app = TerminalApp::new(chat, 80, 24);
+
+        assert_eq!(app.ui.selected_agent(), None);
+
+        app.handle_bytes(b"ispawn a new patch agent that uses codex\n");
+
+        assert!(app.wait_for_idle(Duration::from_secs(1)));
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        assert_eq!(app.ui.selected_agent(), Some(&agent_id));
+        assert!(app.transcript().iter().any(|line| line
+            == "command-agent: launching Codex user agent for patch agent that uses codex"));
+        assert!(
+            app.transcript()
+                .iter()
+                .any(|line| line == "work-leaf> new patch agent that uses codex")
         );
     }
 }

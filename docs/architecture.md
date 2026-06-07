@@ -157,6 +157,10 @@ The controller owns:
 - review startup and reviewer-session creation,
 - shutdown propagation to running agents.
 
+The command transcript is also the conversation history for the persistent `command-agent`. That
+system agent interprets chat sent to the Work Leaf command surface and dispatches supported core
+commands through the same controller paths used by command-mode input.
+
 Frontend code should use these methods:
 
 - `WorkLeafController::new` to wrap a `CommandChat<B>`.
@@ -164,6 +168,7 @@ Frontend code should use these methods:
 - `drain_events` to consume UI-neutral events.
 - `execute_command_line` to run command-mode input.
 - `create_agent` to reserve, select, and launch an agent session from a prompt.
+- `send_command_agent_message` to route chat from the Work Leaf command surface to `command-agent`.
 - `send_message` to send a prompt to one session while other sessions may still be busy.
 - `start_review` to create reviewer sessions and stream reviewer output.
 - `is_busy`, `wait_for_idle`, and `wait_for_session_line` for tests and event loops.
@@ -188,7 +193,9 @@ The terminal frontend is an adapter over the UI-neutral controller.
 `src/terminal_app.rs::TerminalApp<B>` translates raw terminal bytes and modal editing state into
 controller commands, applies `WorkLeafEvent` values to `TerminalUi`, and renders controller
 snapshots. It owns terminal event-loop concerns such as insert mode, prompt mode, `Ctrl-W`
-navigation, bytewise input parsing, rendering invalidation, and polling background workers.
+navigation, bytewise input parsing, rendering invalidation, and polling background workers. Insert
+mode sends chat text to the selected agent session, or to `command-agent` when the Work Leaf command
+surface is selected.
 
 `src/ui.rs::TerminalUi` owns terminal-specific presentation state:
 
