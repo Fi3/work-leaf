@@ -166,6 +166,7 @@ pub struct TerminalUi {
     split_chats: Vec<AgentId>,
     windows: Vec<UiWindow>,
     active_window: usize,
+    right_scroll_rows: usize,
     pending: Option<PendingKey>,
 }
 
@@ -183,6 +184,7 @@ impl TerminalUi {
             split_chats: Vec::new(),
             windows: vec![UiWindow::command()],
             active_window: 0,
+            right_scroll_rows: 0,
             pending: None,
         }
     }
