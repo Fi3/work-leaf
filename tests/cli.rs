@@ -351,6 +351,64 @@ diff --git a/lib.rs b/lib.rs
 }
 
 #[test]
+fn command_chat_reuses_reviewer_for_later_commit_from_same_patch_agent() {
+    let root = temp_git_repo("command-chat-reuses-reviewer");
+    fs::write(root.join("README.md"), "first\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(
+        &root,
+        [
+            "commit",
+            "-m",
+            "UPDATE apply docs patch from user-1",
+            "-m",
+            "Agent-ID: user-1\nFeature: docs\nReason: first pass\nContext: docs context",
+        ],
+    );
+    let backend = FakeBackend::new([
+        "summary: first docs pass",
+        "NO_FINDINGS",
+        "summary: second docs pass",
+        "NO_FINDINGS",
+    ]);
+    let mut chat = CommandChat::new(root.clone(), backend);
+
+    let first = chat.handle_line("review").unwrap();
+    assert!(matches!(first, CommandChatResult::ReviewComplete(_)));
+
+    fs::write(root.join("README.md"), "second\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(
+        &root,
+        [
+            "commit",
+            "-m",
+            "UPDATE apply docs patch from user-1",
+            "-m",
+            "Agent-ID: user-1\nFeature: docs\nReason: second pass\nContext: docs context",
+        ],
+    );
+
+    let second = chat.handle_line("review").unwrap();
+    assert!(matches!(second, CommandChatResult::ReviewComplete(_)));
+
+    let backend = chat.into_backend();
+    assert_eq!(
+        backend
+            .launches
+            .iter()
+            .filter(|launch| launch.id.as_str() == "review-user-1")
+            .count(),
+        1
+    );
+    assert!(backend.sends.iter().any(|(target, prompt)| {
+        target.as_str() == "review-user-1"
+            && prompt.contains("Review the final patch")
+            && prompt.contains("second pass")
+    }));
+}
+
+#[test]
 fn command_chat_proactively_updates_agents_with_stale_file_reads() {
     let root = temp_git_repo("command-chat-stale-file-update");
     fs::write(root.join("README.md"), "before\n").unwrap();

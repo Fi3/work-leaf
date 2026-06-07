@@ -77,10 +77,12 @@ The intended lifecycle is:
 6. The patch agent keeps patching through the orchestrator until the review agent reports no
    findings.
 
-The current implementation path for this review loop is `src/review.rs::ReviewCoordinator`. It finds
-latest agent commits through `src/review.rs::GitHistory`, asks the original agent for a summary,
-launches a `review-<agent-id>` reviewer, sends findings back to the original agent, and asks the
-reviewer to recheck until `NO_FINDINGS` or the round limit.
+The current implementation path for this review loop finds latest agent commits through
+`src/review.rs::GitHistory`, asks the original agent for a summary, launches or resumes the patch
+agent's `review-<agent-id>` reviewer, sends findings back to the original agent, and asks the
+reviewer to recheck until `NO_FINDINGS` or the round limit. Command-chat and controller review
+startup keep one reviewer identity per patch agent and skip latest commits that already completed a
+review pass.
 
 ### Inspection Agent
 
@@ -322,10 +324,10 @@ A provisional patch commit records metadata that review and linearization use:
 reads git history and parses latest commits per patch agent.
 
 The review flow uses that metadata to connect review findings back to the patch agent that produced
-the patch. The review agent must focus only on the reviewed patch. If it finds issues, the
-orchestrator sends those findings to the patch agent. The patch agent then continues through the
-configured read path and patch protocol. When the reviewer reports no findings, the review chat can be
-marked done by the user.
+the patch. Each patch agent uses a stable `review-<agent-id>` reviewer identity. The review agent
+must focus only on the reviewed patch. If it finds issues, the orchestrator sends those findings to
+the patch agent. The patch agent then continues through the configured read path and patch protocol.
+When the reviewer reports no findings, the review chat can be marked done by the user.
 
 ## Developer Path
 

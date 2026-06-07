@@ -14,7 +14,7 @@ use crate::cli::{
     render_command_chat_help,
 };
 use crate::instructions::{RequiredCheck, load_project_instructions, required_checks};
-use crate::review::GitHistory;
+use crate::review::{GitHistory, ReviewResult};
 
 const MAX_VALIDATION_FIX_ATTEMPTS: usize = 3;
 
@@ -34,6 +34,9 @@ where
     validation_generation: u64,
     validation_fix_attempts: BTreeMap<AgentId, usize>,
     pending_validation_reviews: BTreeSet<AgentId>,
+    reviewers: BTreeSet<AgentId>,
+    review_commits_in_progress: BTreeMap<AgentId, String>,
+    reviewed_agent_commits: BTreeMap<AgentId, String>,
 }
 
 impl<B> WorkLeafController<B>
@@ -54,6 +57,9 @@ where
             validation_generation: 0,
             validation_fix_attempts: BTreeMap::new(),
             pending_validation_reviews: BTreeSet::new(),
+            reviewers: BTreeSet::new(),
+            review_commits_in_progress: BTreeMap::new(),
+            reviewed_agent_commits: BTreeMap::new(),
         }
     }
 
@@ -287,23 +293,50 @@ where
         }
 
         let mut reviewer_ids = Vec::new();
-        for (index, commit) in commits.into_iter().enumerate() {
+        for commit in commits {
+            if self
+                .reviewed_agent_commits
+                .get(&commit.agent_id)
+                .is_some_and(|hash| hash == &commit.hash)
+                || self
+                    .review_commits_in_progress
+                    .get(&commit.agent_id)
+                    .is_some_and(|hash| hash == &commit.hash)
+            {
+                continue;
+            }
             let reviewer_id = AgentId::new(format!("review-{}", commit.agent_id.as_str()))
                 .map_err(CliError::Agent)?;
-            self.add_session(WorkLeafSession {
-                id: reviewer_id.clone(),
-                kind: agent_profile.kind.clone(),
-                title: format!("review {}", commit.feature),
-                feature: format!("review {}", commit.feature),
-                lines: Vec::new(),
-                loading: Some(WorkLeafLoading::WaitingForReply),
-            });
-            if index == 0 {
+            let reviewer_busy = self
+                .sessions
+                .get(&reviewer_id)
+                .and_then(|session| session.loading)
+                .is_some();
+            if reviewer_busy {
+                continue;
+            }
+            let session_exists = self.sessions.contains_key(&reviewer_id);
+            let reuse_reviewer = self.reviewers.contains(&reviewer_id);
+            if session_exists {
+                self.set_session_loading(&reviewer_id, Some(WorkLeafLoading::WaitingForReply));
+            } else {
+                self.add_session(WorkLeafSession {
+                    id: reviewer_id.clone(),
+                    kind: agent_profile.kind.clone(),
+                    title: format!("review {}", commit.feature),
+                    feature: format!("review {}", commit.feature),
+                    lines: Vec::new(),
+                    loading: Some(WorkLeafLoading::WaitingForReply),
+                });
+            }
+            if reviewer_ids.is_empty() {
                 self.pending_events.push(WorkLeafEvent::AgentSelected {
                     agent_id: reviewer_id.clone(),
                 });
             }
-            self.start_review_worker(commit, reviewer_id.clone());
+            self.review_commits_in_progress
+                .insert(commit.agent_id.clone(), commit.hash.clone());
+            self.start_review_worker(commit, reviewer_id.clone(), reuse_reviewer);
             reviewer_ids.push(reviewer_id);
         }
         Ok(reviewer_ids)
@@ -457,17 +490,28 @@ where
         });
     }
 
-    fn start_review_worker(&mut self, commit: crate::review::AgentCommit, reviewer_id: AgentId) {
+    fn start_review_worker(
+        &mut self,
+        commit: crate::review::AgentCommit,
+        reviewer_id: AgentId,
+        reuse_reviewer: bool,
+    ) {
         self.start_worker(move |mut chat, sender| {
             let stream_sender = sender.clone();
             let display_name = chat.agent_profile().display_name.clone();
+            let reviewed_agent_id = commit.agent_id.clone();
             let mut stream = move |event_agent_id: &AgentId, event| {
                 let _ = stream_sender.send(WorkerEvent::Stream {
                     agent_id: event_agent_id.clone(),
                     text: stream_event_text(event, &display_name),
                 });
             };
-            match chat.review_commit_streaming_with_ids(commit, &mut stream) {
+            match chat.review_commit_streaming_with_ids(
+                commit,
+                reviewer_id.clone(),
+                reuse_reviewer,
+                &mut stream,
+            ) {
                 Ok(result) => {
                     let _ = sender.send(WorkerEvent::Complete {
                         agent_id: Some(reviewer_id),
@@ -475,8 +519,9 @@ where
                     });
                 }
                 Err(error) => {
-                    let _ = sender.send(WorkerEvent::Error {
-                        agent_id: Some(reviewer_id),
+                    let _ = sender.send(WorkerEvent::ReviewError {
+                        reviewer_id,
+                        reviewed_agent_id,
                         message: error.to_string(),
                     });
                 }
@@ -610,6 +655,15 @@ where
                     self.push_command_line(message);
                 }
             }
+            WorkerEvent::ReviewError {
+                reviewer_id,
+                reviewed_agent_id,
+                message,
+            } => {
+                self.review_commits_in_progress.remove(&reviewed_agent_id);
+                self.append_agent_line(&reviewer_id, message);
+                self.start_validation_or_finish(reviewer_id, false);
+            }
             WorkerEvent::ValidationComplete {
                 agent_id,
                 generation,
@@ -699,6 +753,7 @@ where
                 let text = command_result_text(result);
                 self.push_command_line(text.clone());
                 for review in results {
+                    self.record_review_result(review);
                     self.append_agent_line(&review.commit.agent_id, format!("review: {text}"));
                 }
             }
@@ -728,6 +783,29 @@ where
         self.pending_events.push(WorkLeafEvent::AgentUpdated {
             session: session.clone(),
         });
+    }
+
+    fn record_review_result(&mut self, review: &ReviewResult) {
+        self.review_commits_in_progress.remove(&review.agent_id);
+        let latest_hash = self
+            .latest_agent_commit_hash(&review.agent_id)
+            .unwrap_or_else(|| review.commit.hash.clone());
+        self.reviewed_agent_commits
+            .insert(review.agent_id.clone(), latest_hash);
+        self.reviewers.insert(review.reviewer_id.clone());
+    }
+
+    fn latest_agent_commit_hash(&self, agent_id: &AgentId) -> Option<String> {
+        let root = self
+            .chat
+            .as_ref()
+            .map(|chat| chat.project_dir().to_path_buf())?;
+        GitHistory::new(root)
+            .latest_agent_commits()
+            .ok()?
+            .into_iter()
+            .find(|commit| &commit.agent_id == agent_id)
+            .map(|commit| commit.hash)
     }
 
     fn set_session_loading(&mut self, agent_id: &AgentId, loading: Option<WorkLeafLoading>) {
@@ -908,6 +986,11 @@ enum WorkerEvent {
     },
     Error {
         agent_id: Option<AgentId>,
+        message: String,
+    },
+    ReviewError {
+        reviewer_id: AgentId,
+        reviewed_agent_id: AgentId,
         message: String,
     },
     ValidationComplete {

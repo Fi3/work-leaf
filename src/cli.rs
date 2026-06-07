@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::env;
 use std::fmt;
 use std::io::{self, BufRead, IsTerminal, Read, Write};
@@ -19,7 +19,7 @@ use crate::orchestrator::{
     handle_agent_directives_streaming,
 };
 use crate::review::{AgentCommit, has_no_findings};
-use crate::review::{GitHistory, ReviewCoordinator, ReviewResult};
+use crate::review::{GitHistory, ReviewResult};
 use crate::terminal_app::TerminalApp;
 use crate::ui::UiAction;
 
@@ -134,6 +134,8 @@ pub struct CommandChat<B> {
     file_reads: FileReadTracker,
     command_policy: CommandWritePolicy,
     agents: BTreeMap<AgentId, String>,
+    reviewers: BTreeSet<AgentId>,
+    reviewed_agent_commits: BTreeMap<AgentId, String>,
     agent_profile: AgentProfile,
     max_review_rounds: usize,
     next_user_agent: usize,
@@ -152,6 +154,8 @@ where
             file_reads: self.file_reads.clone(),
             command_policy: self.command_policy.clone(),
             agents: self.agents.clone(),
+            reviewers: self.reviewers.clone(),
+            reviewed_agent_commits: self.reviewed_agent_commits.clone(),
             agent_profile: self.agent_profile.clone(),
             max_review_rounds: self.max_review_rounds,
             next_user_agent: self.next_user_agent,
@@ -173,6 +177,8 @@ where
             shutdown,
             command_policy: CommandWritePolicy,
             agents: BTreeMap::new(),
+            reviewers: BTreeSet::new(),
+            reviewed_agent_commits: BTreeMap::new(),
             agent_profile: AgentProfile::codex(),
             max_review_rounds: 80_000_000,
             next_user_agent: 1,
@@ -429,21 +435,35 @@ where
     }
 
     fn review(&mut self) -> Result<CommandChatResult, CliError> {
-        let backend = self
-            .backend
-            .take()
-            .expect("command chat backend is present");
-        let mut coordinator = ReviewCoordinator::new(self.project_dir.clone(), backend)
-            .with_agent_profile(self.agent_profile.clone())
-            .with_max_rounds(self.max_review_rounds);
-        let results = coordinator.review_latest_agent_commits()?;
-        self.backend = Some(coordinator.into_backend());
+        let commits = GitHistory::new(self.project_dir.clone()).latest_agent_commits()?;
+        let mut results = Vec::new();
+        for commit in commits {
+            if self
+                .reviewed_agent_commits
+                .get(&commit.agent_id)
+                .is_some_and(|hash| hash == &commit.hash)
+            {
+                continue;
+            }
+            let reviewer_id = reviewer_id_for(&commit.agent_id)?;
+            let reuse_reviewer = self.reviewers.contains(&reviewer_id);
+            let result = self.review_commit_streaming_with_ids(
+                commit,
+                reviewer_id,
+                reuse_reviewer,
+                &mut |_, _| {},
+            )?;
+            self.record_review_result(&result);
+            results.push(result);
+        }
         Ok(CommandChatResult::ReviewComplete(results))
     }
 
     pub(crate) fn review_commit_streaming_with_ids(
         &mut self,
         commit: AgentCommit,
+        reviewer_id: AgentId,
+        reuse_reviewer: bool,
         stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
     ) -> Result<ReviewResult, CliError> {
         let summary_prompt = format!(
@@ -459,32 +479,40 @@ where
             .map_err(CliError::Agent)?
             .text;
 
-        let reviewer_id = AgentId::new(format!("review-{}", commit.agent_id.as_str()))
-            .map_err(CliError::Agent)?;
         let review_prompt = format!(
             "Review the final patch for Agent-ID {}.\nCommit: {}\nFeature: {}\nReason: {}\nContext: {}\nSummary from original agent:\n{}\n\nReply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.",
             commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context, summary
         );
         let mut review_stream = |event| stream(&reviewer_id, event);
-        let reviewer_session = self
-            .backend
-            .as_mut()
-            .expect("command chat backend is present")
-            .launch_streaming(
-                AgentLaunch::new(
-                    reviewer_id.clone(),
-                    self.agent_profile.kind.clone(),
-                    format!("review {}", commit.feature),
-                    review_prompt,
-                ),
-                &mut review_stream,
-            )
-            .map_err(CliError::Agent)?;
-        let mut review_text = reviewer_session
-            .messages
-            .last()
-            .map(|message| message.text.clone())
-            .unwrap_or_default();
+        let mut review_text = if reuse_reviewer {
+            self.backend
+                .as_mut()
+                .expect("command chat backend is present")
+                .send_streaming(&reviewer_id, &review_prompt, &mut review_stream)
+                .map_err(CliError::Agent)?
+                .text
+        } else {
+            let reviewer_session = self
+                .backend
+                .as_mut()
+                .expect("command chat backend is present")
+                .launch_streaming(
+                    AgentLaunch::new(
+                        reviewer_id.clone(),
+                        self.agent_profile.kind.clone(),
+                        format!("review {}", commit.feature),
+                        review_prompt,
+                    ),
+                    &mut review_stream,
+                )
+                .map_err(CliError::Agent)?;
+            reviewer_session
+                .messages
+                .last()
+                .map(|message| message.text.clone())
+                .unwrap_or_default()
+        };
+        self.reviewers.insert(reviewer_id.clone());
         let mut rounds = 1;
 
         while !has_no_findings(&review_text) && rounds < self.max_review_rounds {
@@ -537,6 +565,24 @@ where
             rounds,
             commit,
         })
+    }
+
+    fn record_review_result(&mut self, result: &ReviewResult) {
+        let latest_hash = self
+            .latest_agent_commit_hash(&result.agent_id)
+            .unwrap_or_else(|| result.commit.hash.clone());
+        self.reviewed_agent_commits
+            .insert(result.agent_id.clone(), latest_hash);
+        self.reviewers.insert(result.reviewer_id.clone());
+    }
+
+    fn latest_agent_commit_hash(&self, agent_id: &AgentId) -> Option<String> {
+        GitHistory::new(self.project_dir.clone())
+            .latest_agent_commits()
+            .ok()?
+            .into_iter()
+            .find(|commit| &commit.agent_id == agent_id)
+            .map(|commit| commit.hash)
     }
 
     fn linearize(&mut self) -> Result<CommandChatResult, CliError> {
@@ -592,6 +638,10 @@ pub(crate) fn build_user_agent_launch(
 
 fn user_agent_number(agent_id: &AgentId) -> Option<usize> {
     agent_id.as_str().strip_prefix("user-")?.parse().ok()
+}
+
+fn reviewer_id_for(agent_id: &AgentId) -> Result<AgentId, CliError> {
+    AgentId::new(format!("review-{}", agent_id.as_str())).map_err(CliError::Agent)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -146,6 +146,95 @@ fn controller_starts_review_after_patch_agent_done_and_loops_until_clean() {
 }
 
 #[test]
+fn controller_reuses_one_reviewer_for_repeated_patch_agent_iterations() {
+    let root = git_repo("workspace-reuses-reviewer");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "first patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after first\n@work-leaf end\n@work-leaf done",
+        "summary: README changes to after first",
+        "NO_FINDINGS",
+        "second patch\n@work-leaf patch update readme again\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-after first\n+after second\n@work-leaf end\n@work-leaf done",
+        "summary: README changes to after second",
+        "NO_FINDINGS",
+    ]);
+    let chat = CommandChat::new(root.clone(), backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("update readme").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    controller
+        .send_message(&agent_id, "make the second update")
+        .unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "after second\n"
+    );
+    let reviewer_id = AgentId::new("review-user-1").unwrap();
+    let launches = backend.launches();
+    assert_eq!(
+        launches
+            .iter()
+            .filter(|launch| launch.id == reviewer_id)
+            .count(),
+        1
+    );
+    let sends = backend.sends();
+    assert!(sends.iter().any(|(target, prompt)| {
+        target == &reviewer_id
+            && prompt.contains("Review the final patch")
+            && prompt.contains("after second")
+    }));
+}
+
+#[test]
+fn controller_reviews_only_unreviewed_patch_agent_commits() {
+    let root = git_repo("workspace-reviews-only-unreviewed");
+    fs::write(root.join("README.md"), "readme before\n").unwrap();
+    fs::write(root.join("CHANGELOG.md"), "changelog before\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial docs fixture"]);
+    let backend = FakeBackend::new([
+        "readme patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-readme before\n+readme after\n@work-leaf end\n@work-leaf done",
+        "summary: README changes",
+        "NO_FINDINGS",
+        "changelog patch\n@work-leaf patch update changelog\n--- a/CHANGELOG.md\n+++ b/CHANGELOG.md\n@@ -1 +1 @@\n-changelog before\n+changelog after\n@work-leaf end\n@work-leaf done",
+        "summary: changelog changes",
+        "NO_FINDINGS",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let first = controller.create_agent("update readme").unwrap();
+    assert_eq!(first.as_str(), "user-1");
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    let second = controller.create_agent("update changelog").unwrap();
+    assert_eq!(second.as_str(), "user-2");
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    let launches = backend.launches();
+    assert_eq!(
+        launches
+            .iter()
+            .filter(|launch| launch.id.as_str() == "review-user-1")
+            .count(),
+        1
+    );
+    assert_eq!(
+        launches
+            .iter()
+            .filter(|launch| launch.id.as_str() == "review-user-2")
+            .count(),
+        1
+    );
+}
+
+#[test]
 fn controller_sends_required_check_failures_back_to_agent_until_checks_pass() {
     let root = git_repo("workspace-validation-failure-feedback");
     fs::write(

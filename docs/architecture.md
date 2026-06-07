@@ -155,7 +155,7 @@ The controller owns:
 - background launch/send/review workers,
 - background required-check validation workers,
 - stream routing from `AgentStreamEvent` into the selected session,
-- review startup and reviewer-session creation,
+- review startup, reviewer-session creation, and reviewed-commit bookkeeping,
 - shutdown propagation to running agents.
 
 When an agent worker finishes, the controller runs the commands listed in the project instruction
@@ -181,7 +181,7 @@ Frontend code should use these methods:
 - `create_agent` to reserve, select, and launch an agent session from a prompt.
 - `send_command_agent_message` to route chat from the Work Leaf command surface to `command-agent`.
 - `send_message` to send a prompt to one session while other sessions may still be busy.
-- `start_review` to create reviewer sessions and stream reviewer output.
+- `start_review` to create or resume one reviewer session per patch agent and stream reviewer output.
 - `is_busy`, `wait_for_idle`, and `wait_for_session_line` for tests and event loops.
 - `shutdown` to terminate active backend processes.
 
@@ -246,8 +246,10 @@ and `PatchError` are the public patch workflow types.
 
 `src/review.rs::GitHistory` reads latest agent commits from repository history.
 `ReviewCoordinator<B>` launches reviewer agents against those commits and loops until the reviewer
-reports no findings or the configured maximum round count is reached. `AgentCommit`,
-`ReviewResult`, and `ReviewError` are the public review workflow types.
+reports no findings or the configured maximum round count is reached. `CommandChat` and
+`WorkLeafController` keep a stable `review-<agent-id>` reviewer identity for each patch agent and
+skip latest agent commits that have already completed review. `AgentCommit`, `ReviewResult`, and
+`ReviewError` are the public review workflow types.
 
 `src/linearize.rs::LinearizePlanner<B>` prepares linearization questions and launches a linearizer
 agent with decisions, groups, and required tests. `LinearizeAction`, `LinearizeGroup`,
