@@ -44,6 +44,63 @@ fn terminal_app_new_and_chat_message_use_real_command_chat_backend() {
 }
 
 #[test]
+fn terminal_app_does_not_mark_agent_ready_when_required_checks_fail() {
+    let root = temp_dir("terminal-app-required-check-fails");
+    fs::write(
+        root.join("AGENTS.md"),
+        "## Required Checks\n- `./check.sh`\n",
+    )
+    .unwrap();
+    let check = root.join("check.sh");
+    fs::write(&check, "#!/bin/sh\necho compile failed\nexit 1\n").unwrap();
+    make_executable(&check);
+    let backend = FakeBackend::new([
+        "launch reply",
+        "still broken",
+        "still broken",
+        "still broken",
+    ]);
+    let chat = CommandChat::new(root, backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new break compile\n");
+    assert!(app.wait_for_idle(Duration::from_secs(1)));
+
+    let frame = app.render_frame();
+    assert!(frame.contains("required check failed"));
+    assert!(frame.contains("compile failed"));
+    assert!(!frame.contains("READY"));
+}
+
+#[test]
+fn terminal_app_command_agent_opens_multiple_patch_agents_from_chat_request() {
+    let backend = FakeBackend::new([
+        "launch reply",
+        "launch reply",
+        "launch reply",
+        "launch reply",
+    ]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b"iopen 4 pacth agents\n");
+    assert!(app.wait_for_idle(Duration::from_secs(1)));
+
+    assert_eq!(
+        app.ui().selected_agent().map(AgentId::as_str),
+        Some("user-4")
+    );
+    let frame = app.render_frame();
+    assert!(frame.contains("user-4"));
+    assert!(frame.contains("launch reply"));
+
+    let backend = app.into_chat().into_backend();
+    let launches = backend.launches();
+    assert_eq!(launches.len(), 4);
+    assert!(launches.iter().all(|launch| launch.prompt == "patch"));
+}
+
+#[test]
 fn terminal_app_keeps_visible_cursor_on_chat_input() {
     let backend = FakeBackend::new(["launch reply"]);
     let chat = CommandChat::new(PathBuf::from("/repo"), backend);
@@ -53,6 +110,80 @@ fn terminal_app_keeps_visible_cursor_on_chat_input() {
 
     assert_eq!(app.ui().focus(), PaneFocus::Right);
     assert!(app.render_frame().ends_with("\u{1b}[3;33H"));
+}
+
+#[test]
+fn terminal_app_command_prompt_arrows_keep_visible_cursor_at_edit_position() {
+    let backend = FakeBackend::from_replies(VecDeque::new());
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 20, 10);
+
+    app.handle_bytes(b":abcdefghijklmnopqrstuvwxyz0123\x1b[D\x1b[D\x1b[D\x1b[D\x1b[DX");
+
+    assert_eq!(app.ui().mode(), UiMode::Prompt);
+    let frame = app.render_frame();
+    assert!(frame.contains(":ijklmnopqrstuvwxyXz"));
+    assert!(frame.ends_with("\u{1b}[10;20H"));
+}
+
+#[test]
+fn terminal_app_prompt_history_down_restores_in_progress_command() {
+    let backend = FakeBackend::from_replies(VecDeque::new());
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 80, 24);
+
+    app.handle_bytes(b":help\n");
+    app.handle_bytes(b":draft command\x1b[A");
+
+    assert_eq!(app.ui().mode(), UiMode::Prompt);
+    assert!(app.render_frame().contains(":help"));
+
+    app.handle_bytes(b"\x1b[B");
+
+    assert_eq!(app.ui().mode(), UiMode::Prompt);
+    assert!(app.render_frame().contains(":draft command"));
+}
+
+#[test]
+fn terminal_app_chat_arrows_keep_visible_cursor_at_edit_position() {
+    let backend = FakeBackend::new(["launch reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 80, 24);
+
+    app.handle_bytes(b":new cursor render\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"abcdefghijklmnopqrstuvwxyz0123\x1b[D\x1b[D\x1b[D\x1b[D\x1b[DX");
+
+    let frame = app.render_frame();
+    assert!(frame.contains("chat> abcdefghijklmnopqrstuvwxyXz0123"));
+    assert!(frame.ends_with("\u{1b}[3;50H"));
+}
+
+#[test]
+fn terminal_app_chat_history_down_restores_in_progress_message() {
+    let backend = FakeBackend::new(["launch reply", "first reply", "draft reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new chat history\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"first\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"draft message\x1b[A");
+    assert!(app.render_frame().contains("chat> first"));
+
+    app.handle_bytes(b"\x1b[B\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    let backend = app.into_chat().into_backend();
+    let sends = backend.sends();
+    assert_eq!(
+        sends
+            .iter()
+            .filter(|(_, prompt)| prompt == "draft message")
+            .count(),
+        1
+    );
 }
 
 #[test]

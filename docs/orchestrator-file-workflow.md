@@ -272,7 +272,8 @@ Patch agents request writes with a unified diff. The patch path is:
    files.
 6. `GitPatcher::apply_with_locks` runs `git apply --check -` for the entire diff.
 7. If the check passes, it runs `git apply -` for the entire diff.
-8. Required checks from project instructions run through `src/instructions.rs::validation_checks`.
+8. Required checks declared in project instructions run through
+   `src/instructions.rs::required_checks`.
 9. Passing patches are staged with `git add -- <files>` and committed as provisional agent commits.
 
 The atomicity rule is strict: validation and application happen for the patch as one unit. The
@@ -462,7 +463,8 @@ The important source symbols for this workflow are:
 - `src/locks.rs::CommandWritePolicy`: classifies commands that write project files.
 - `src/patch.rs::GitPatcher`: applies whole unified diffs under write locks and creates provisional
   metadata commits.
-- `src/instructions.rs::validation_checks`: derives repository validation commands.
+- `src/instructions.rs::required_checks`: derives repository validation commands from project
+  instruction files.
 - `src/review.rs::ReviewCoordinator`: runs reviewer conversations over agent patch commits.
 - `src/review.rs::GitHistory`: finds latest agent commits from git history.
 - `src/workspace.rs::WorkLeafController`: exposes UI-neutral orchestration state and events.

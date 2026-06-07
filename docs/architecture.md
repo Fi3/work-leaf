@@ -149,17 +149,28 @@ application state and hides worker management from frontend adapters.
 The controller owns:
 
 - session selection and session snapshots,
-- per-session loading state,
+- per-session loading and required-check validation state,
 - prompt-derived chat titles through `src/chat_title.rs::ChatTitleAgent`,
 - command transcripts,
 - background launch/send/review workers,
+- background required-check validation workers,
 - stream routing from `AgentStreamEvent` into the selected session,
 - review startup and reviewer-session creation,
 - shutdown propagation to running agents.
 
+When an agent worker finishes, the controller runs the commands listed in the project instruction
+files' `Required Checks` sections before clearing the session loading state. A session is renderable
+as ready only after those checks pass. Failed required checks keep idle sessions in a validation
+failed state, append the failing command output to the agent chat, and send the failure back to the
+agent as a repair prompt through the normal patch flow. The controller does not infer validation
+commands from repository language or build files; repositories define their own required checks in
+their instruction files.
+
 The command transcript is also the conversation history for the persistent `command-agent`. That
-system agent interprets chat sent to the Work Leaf command surface and dispatches supported core
-commands through the same controller paths used by command-mode input.
+system agent interprets chat sent to the Work Leaf command surface. It recognizes literal command
+lines and common natural-language requests for help, review, linearization, quitting, and launching
+one or more user agents. Multi-agent launch requests dispatch `new [prompt...]` once per requested
+agent through the same controller paths used by command-mode input.
 
 Frontend code should use these methods:
 
@@ -181,7 +192,8 @@ The controller exposes renderable state through:
   state, and modified files.
 - `WorkLeafEvent`, which reports session creation, selection, title changes, streamed lines,
   transcript lines, readiness, and errors.
-- `WorkLeafLoading`, which distinguishes launch, send, review, and command loading states.
+- `WorkLeafLoading`, which distinguishes launch, send, required-check validation, and validation
+  failure states.
 
 New UIs should consume `WorkLeafController` and these DTOs. They should not duplicate worker
 spawning, session naming, review lookup, loading bookkeeping, or orchestrator event routing.
@@ -196,6 +208,9 @@ snapshots. It owns terminal event-loop concerns such as insert mode, prompt mode
 navigation, bytewise input parsing, rendering invalidation, and polling background workers. Insert
 mode sends chat text to the selected agent session, or to `command-agent` when the Work Leaf command
 surface is selected.
+
+The terminal app maps a session to a left-pane `READY` marker only when the controller exposes no
+loading or validation-failure state for that session.
 
 `src/ui.rs::TerminalUi` owns terminal-specific presentation state:
 

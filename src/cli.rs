@@ -488,20 +488,36 @@ where
         let mut rounds = 1;
 
         while !has_no_findings(&review_text) && rounds < self.max_review_rounds {
+            stream(
+                &commit.agent_id,
+                AgentStreamEvent::Status("reviewer findings routed back for fixes".to_string()),
+            );
             let fix_prompt = format!(
                 "The reviewer found issues in your patch for commit {}.\n{}\n\nPlease fix the patch through the orchestrator patch flow.",
                 commit.hash, review_text
             );
+            stream(
+                &commit.agent_id,
+                AgentStreamEvent::AgentMessage(format!("reviewer findings:\n{review_text}")),
+            );
             let mut fix_stream = |event| stream(&commit.agent_id, event);
-            self.backend
+            let fix_reply = self
+                .backend
                 .as_mut()
                 .expect("command chat backend is present")
                 .send_streaming(&commit.agent_id, &fix_prompt, &mut fix_stream)
-                .map_err(CliError::Agent)?;
+                .map_err(CliError::Agent)?
+                .text;
+            let fix_reply = self.process_agent_reply_streaming(
+                &commit.agent_id,
+                &commit.feature,
+                fix_reply,
+                stream,
+            )?;
 
             let recheck_prompt = format!(
-                "The original agent has responded to the findings for commit {}. Please check the patch again and reply with NO_FINDINGS if resolved, otherwise list remaining FINDINGS.",
-                commit.hash
+                "The original agent has responded to the findings for commit {}.\n{}\n\nPlease check the patch again and reply with NO_FINDINGS if resolved, otherwise list remaining FINDINGS.",
+                commit.hash, fix_reply
             );
             let mut recheck_stream = |event| stream(&reviewer_id, event);
             review_text = self

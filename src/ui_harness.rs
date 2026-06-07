@@ -9,10 +9,12 @@ pub struct UiHarness {
     prompt_cursor: usize,
     prompt_history: Vec<String>,
     prompt_history_index: Option<usize>,
+    prompt_history_draft: Option<String>,
     chat_buffer: String,
     chat_cursor: usize,
     chat_history: Vec<String>,
     chat_history_index: Option<usize>,
+    chat_history_draft: Option<String>,
     escape_sequence: Option<PendingEscapeSequence>,
     transcript: Vec<String>,
     chat_title_agent: ChatTitleAgent,
@@ -34,10 +36,12 @@ impl UiHarness {
             prompt_cursor: 0,
             prompt_history: Vec::new(),
             prompt_history_index: None,
+            prompt_history_draft: None,
             chat_buffer: String::new(),
             chat_cursor: 0,
             chat_history: Vec::new(),
             chat_history_index: None,
+            chat_history_draft: None,
             escape_sequence: None,
             transcript: vec![
                 "UI harness".to_string(),
@@ -135,6 +139,7 @@ impl UiHarness {
                 self.prompt_buffer.clear();
                 self.prompt_cursor = 0;
                 self.prompt_history_index = None;
+                self.prompt_history_draft = None;
                 self.ui.handle_key(UiKey::Esc);
                 if !line.is_empty() {
                     self.prompt_history.push(line.clone());
@@ -147,6 +152,7 @@ impl UiHarness {
                 self.chat_buffer.clear();
                 self.chat_cursor = 0;
                 self.chat_history_index = None;
+                self.chat_history_draft = None;
                 if !message.is_empty() {
                     self.chat_history.push(message.clone());
                     let target_agent = self.ui.selected_agent().cloned();
@@ -196,6 +202,7 @@ impl UiHarness {
                 self.prompt_buffer.clear();
                 self.prompt_cursor = 0;
                 self.prompt_history_index = None;
+                self.prompt_history_draft = None;
                 let actions = self.ui.handle_key(UiKey::Esc);
                 self.record_actions(actions);
             }
@@ -269,6 +276,7 @@ impl UiHarness {
         self.prompt_buffer.insert(self.prompt_cursor, ch);
         self.prompt_cursor += ch.len_utf8();
         self.prompt_history_index = None;
+        self.prompt_history_draft = None;
     }
     fn backspace_prompt_char(&mut self) {
         let Some((previous, _)) = self.prompt_buffer[..self.prompt_cursor]
@@ -280,6 +288,7 @@ impl UiHarness {
         self.prompt_buffer.drain(previous..self.prompt_cursor);
         self.prompt_cursor = previous;
         self.prompt_history_index = None;
+        self.prompt_history_draft = None;
     }
     fn move_prompt_cursor_left(&mut self) {
         if let Some((previous, _)) = self.prompt_buffer[..self.prompt_cursor]
@@ -304,19 +313,31 @@ impl UiHarness {
         if self.prompt_history.is_empty() {
             return;
         }
+        if self.prompt_history_index.is_none() {
+            self.prompt_history_draft = Some(self.prompt_buffer.clone());
+        }
         let current = self
             .prompt_history_index
             .unwrap_or(self.prompt_history.len()) as isize;
-        let max = self.prompt_history.len().saturating_sub(1) as isize;
-        let next = (current + delta).clamp(0, max) as usize;
-        self.prompt_history_index = Some(next);
-        self.prompt_buffer = self.prompt_history[next].clone();
+        let next = current + delta;
+        if next < 0 {
+            self.prompt_history_index = Some(0);
+            self.prompt_buffer = self.prompt_history[0].clone();
+        } else if next >= self.prompt_history.len() as isize {
+            self.prompt_history_index = None;
+            self.prompt_buffer = self.prompt_history_draft.take().unwrap_or_default();
+        } else {
+            let next = next as usize;
+            self.prompt_history_index = Some(next);
+            self.prompt_buffer = self.prompt_history[next].clone();
+        }
         self.prompt_cursor = self.prompt_buffer.len();
     }
     fn insert_chat_char(&mut self, ch: char) {
         self.chat_buffer.insert(self.chat_cursor, ch);
         self.chat_cursor += ch.len_utf8();
         self.chat_history_index = None;
+        self.chat_history_draft = None;
     }
 
     fn backspace_chat_char(&mut self) {
@@ -329,6 +350,7 @@ impl UiHarness {
         self.chat_buffer.drain(previous..self.chat_cursor);
         self.chat_cursor = previous;
         self.chat_history_index = None;
+        self.chat_history_draft = None;
     }
 
     fn move_chat_cursor_left(&mut self) {
@@ -357,11 +379,23 @@ impl UiHarness {
             return;
         }
 
+        if self.chat_history_index.is_none() {
+            self.chat_history_draft = Some(self.chat_buffer.clone());
+        }
+
         let current = self.chat_history_index.unwrap_or(self.chat_history.len()) as isize;
-        let max = self.chat_history.len().saturating_sub(1) as isize;
-        let next = (current + delta).clamp(0, max) as usize;
-        self.chat_history_index = Some(next);
-        self.chat_buffer = self.chat_history[next].clone();
+        let next = current + delta;
+        if next < 0 {
+            self.chat_history_index = Some(0);
+            self.chat_buffer = self.chat_history[0].clone();
+        } else if next >= self.chat_history.len() as isize {
+            self.chat_history_index = None;
+            self.chat_buffer = self.chat_history_draft.take().unwrap_or_default();
+        } else {
+            let next = next as usize;
+            self.chat_history_index = Some(next);
+            self.chat_buffer = self.chat_history[next].clone();
+        }
         self.chat_cursor = self.chat_buffer.len();
     }
 

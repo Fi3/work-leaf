@@ -20,9 +20,13 @@ where
     controller: WorkLeafController<B>,
     ui: TerminalUi,
     prompt_buffer: PromptLine,
+    prompt_history: Vec<String>,
+    prompt_history_index: Option<usize>,
+    prompt_history_draft: Option<String>,
     chat_buffer: PromptLine,
     chat_history: Vec<String>,
     chat_history_index: Option<usize>,
+    chat_history_draft: Option<String>,
     escape_sequence: Option<PendingEscapeSequence>,
     spinner: usize,
     dirty: bool,
@@ -38,9 +42,13 @@ where
             controller: WorkLeafController::new(chat),
             ui: TerminalUi::new(width, height),
             prompt_buffer: PromptLine::new(),
+            prompt_history: Vec::new(),
+            prompt_history_index: None,
+            prompt_history_draft: None,
             chat_buffer: PromptLine::new(),
             chat_history: Vec::new(),
             chat_history_index: None,
+            chat_history_draft: None,
             escape_sequence: None,
             spinner: 0,
             dirty: true,
@@ -158,8 +166,15 @@ where
 
     pub fn render_frame(&self) -> String {
         let right_content = self.right_content();
-        self.ui
-            .render_screen_with_prompt(&right_content, self.prompt_buffer.as_str())
+        let right_cursor_column = (self.ui.focus() == PaneFocus::Right
+            && self.ui.mode() != UiMode::Prompt)
+            .then_some(6 + self.chat_buffer.cursor_char_count());
+        self.ui.render_screen_with_cursors(
+            &right_content,
+            self.prompt_buffer.as_str(),
+            self.prompt_buffer.cursor(),
+            right_cursor_column,
+        )
     }
 
     pub fn poll_worker(&mut self) {
@@ -173,11 +188,14 @@ where
             }
             TerminalAppInput::Backspace if self.ui.mode() == UiMode::Prompt => {
                 self.prompt_buffer.backspace();
+                self.prompt_history_index = None;
+                self.prompt_history_draft = None;
                 self.dirty = true;
             }
             TerminalAppInput::Backspace if self.ui.mode() == UiMode::Insert => {
                 self.chat_buffer.backspace();
                 self.chat_history_index = None;
+                self.chat_history_draft = None;
                 self.dirty = true;
             }
             TerminalAppInput::Enter if self.ui.mode() == UiMode::Prompt => {
@@ -185,7 +203,13 @@ where
                 self.prompt_buffer.clear();
                 self.ui.handle_key(UiKey::Esc);
                 if !line.is_empty() {
+                    self.prompt_history.push(line.clone());
+                    self.prompt_history_index = None;
+                    self.prompt_history_draft = None;
                     self.handle_command_line(&line);
+                } else {
+                    self.prompt_history_index = None;
+                    self.prompt_history_draft = None;
                 }
                 self.dirty = true;
             }
@@ -194,11 +218,30 @@ where
             }
             TerminalAppInput::Char(ch) if self.ui.mode() == UiMode::Prompt => {
                 self.prompt_buffer.push(ch);
+                self.prompt_history_index = None;
+                self.prompt_history_draft = None;
                 self.dirty = true;
             }
             TerminalAppInput::Char(ch) if self.ui.mode() == UiMode::Insert => {
                 self.chat_buffer.push(ch);
                 self.chat_history_index = None;
+                self.chat_history_draft = None;
+                self.dirty = true;
+            }
+            TerminalAppInput::Key(UiKey::Left) if self.ui.mode() == UiMode::Prompt => {
+                self.prompt_buffer.move_left();
+                self.dirty = true;
+            }
+            TerminalAppInput::Key(UiKey::Right) if self.ui.mode() == UiMode::Prompt => {
+                self.prompt_buffer.move_right();
+                self.dirty = true;
+            }
+            TerminalAppInput::Key(UiKey::Up) if self.ui.mode() == UiMode::Prompt => {
+                self.recall_prompt_history(-1);
+                self.dirty = true;
+            }
+            TerminalAppInput::Key(UiKey::Down) if self.ui.mode() == UiMode::Prompt => {
+                self.recall_prompt_history(1);
                 self.dirty = true;
             }
             TerminalAppInput::Key(UiKey::Left) if self.should_route_chat_arrow() => {
@@ -246,6 +289,7 @@ where
         let message = self.chat_buffer.trimmed_string();
         self.chat_buffer.clear();
         self.chat_history_index = None;
+        self.chat_history_draft = None;
         if message.is_empty() {
             self.dirty = true;
             return;
@@ -323,7 +367,8 @@ where
     }
 
     fn defer_escape_key(&self) -> bool {
-        self.ui.mode() == UiMode::Insert && self.ui.focus() == PaneFocus::Right
+        self.ui.mode() == UiMode::Prompt
+            || (self.ui.mode() == UiMode::Insert && self.ui.focus() == PaneFocus::Right)
     }
 
     fn finish_pending_escape_sequence(&mut self) {
@@ -346,16 +391,56 @@ where
         }
     }
 
+    fn recall_prompt_history(&mut self, delta: isize) {
+        if self.prompt_history.is_empty() {
+            return;
+        }
+
+        if self.prompt_history_index.is_none() {
+            self.prompt_history_draft = Some(self.prompt_buffer.as_str().to_string());
+        }
+
+        let current = self
+            .prompt_history_index
+            .unwrap_or(self.prompt_history.len()) as isize;
+        let next = current + delta;
+        if next < 0 {
+            self.prompt_history_index = Some(0);
+            self.prompt_buffer.replace(&self.prompt_history[0]);
+        } else if next >= self.prompt_history.len() as isize {
+            self.prompt_history_index = None;
+            let draft = self.prompt_history_draft.take().unwrap_or_default();
+            self.prompt_buffer.replace(&draft);
+        } else {
+            let next = next as usize;
+            self.prompt_history_index = Some(next);
+            self.prompt_buffer.replace(&self.prompt_history[next]);
+        }
+    }
+
     fn recall_chat_history(&mut self, delta: isize) {
         if self.chat_history.is_empty() {
             return;
         }
 
+        if self.chat_history_index.is_none() {
+            self.chat_history_draft = Some(self.chat_buffer.as_str().to_string());
+        }
+
         let current = self.chat_history_index.unwrap_or(self.chat_history.len()) as isize;
-        let max = self.chat_history.len().saturating_sub(1) as isize;
-        let next = (current + delta).clamp(0, max) as usize;
-        self.chat_history_index = Some(next);
-        self.chat_buffer.replace(&self.chat_history[next]);
+        let next = current + delta;
+        if next < 0 {
+            self.chat_history_index = Some(0);
+            self.chat_buffer.replace(&self.chat_history[0]);
+        } else if next >= self.chat_history.len() as isize {
+            self.chat_history_index = None;
+            let draft = self.chat_history_draft.take().unwrap_or_default();
+            self.chat_buffer.replace(&draft);
+        } else {
+            let next = next as usize;
+            self.chat_history_index = Some(next);
+            self.chat_buffer.replace(&self.chat_history[next]);
+        }
     }
 
     fn request_quit(&mut self) {
@@ -515,6 +600,14 @@ impl PromptLine {
         self.buffer.as_str()
     }
 
+    fn cursor(&self) -> usize {
+        self.buffer.pos()
+    }
+
+    fn cursor_char_count(&self) -> usize {
+        self.as_str()[..self.cursor()].chars().count()
+    }
+
     fn trimmed_string(&self) -> String {
         self.as_str().trim().to_string()
     }
@@ -624,7 +717,11 @@ mod tests {
 
     #[test]
     fn command_surface_chat_uses_command_agent_to_spawn_codex_agent() {
-        let chat = CommandChat::new(PathBuf::from("."), NoopBackend);
+        let root =
+            std::env::temp_dir().join(format!("work-leaf-command-surface-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let chat = CommandChat::new(root, NoopBackend);
         let mut app = TerminalApp::new(chat, 80, 24);
 
         assert!(app.ui.selected_agent().is_none());

@@ -1,4 +1,4 @@
-# DEMAND Repo Guide for Agents
+# Work-Leaf Repo Guide for Agents
 
 This file exists to make agents productive quickly AND to prevent low-signal, ungrounded output.
 When in doubt, inspect the repo and cite concrete file paths + symbols.
@@ -70,7 +70,7 @@ or important implementation notes, but keep the first line strong enough to stan
 When asked to fix a bug, always write a test that reproduces the bug, verify that the test fails, and then write the fix.
 
 ## New feature rules
-When asked to one or more feature, always write a test that test the feature (unit or integration), verify that the test fails, and then write the feature.
+When asked to add one or more feature, always write a test that test the feature (unit or integration), verify that the test fails, and then write the feature.
 
 ## Review rules
 Any patch that increases algorithmic complexity to O(n²) or worse must be flagged.

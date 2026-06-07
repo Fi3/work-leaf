@@ -1,4 +1,6 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
+use std::process::{Command, Output};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
@@ -11,7 +13,10 @@ use crate::cli::{
     CliError, CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
     render_command_chat_help,
 };
+use crate::instructions::{RequiredCheck, load_project_instructions, required_checks};
 use crate::review::GitHistory;
+
+const MAX_VALIDATION_FIX_ATTEMPTS: usize = 3;
 
 #[derive(Debug)]
 pub struct WorkLeafController<B>
@@ -26,6 +31,9 @@ where
     sessions: BTreeMap<AgentId, WorkLeafSession>,
     title_agent: ChatTitleAgent,
     pending_events: Vec<WorkLeafEvent>,
+    validation_generation: u64,
+    validation_fix_attempts: BTreeMap<AgentId, usize>,
+    pending_validation_reviews: BTreeSet<AgentId>,
 }
 
 impl<B> WorkLeafController<B>
@@ -43,6 +51,9 @@ where
             sessions: BTreeMap::new(),
             title_agent: ChatTitleAgent::new(),
             pending_events: Vec::new(),
+            validation_generation: 0,
+            validation_fix_attempts: BTreeMap::new(),
+            pending_validation_reviews: BTreeSet::new(),
         }
     }
 
@@ -151,6 +162,20 @@ where
 
         self.push_command_line(format!("user: {message}"));
         let display_name = self.agent_display_name();
+        if literal_command_line(message).is_none()
+            && let Some(request) = command_agent_new_request(message)
+        {
+            self.push_command_line(format!(
+                "command-agent: {}",
+                command_agent_launch_reply(&display_name, &request)
+            ));
+            let command_line = command_agent_new_command_line(&request.prompt);
+            for _ in 0..request.count {
+                self.execute_command_line(&command_line);
+            }
+            return;
+        }
+
         match command_agent_response(message, &display_name) {
             CommandAgentResponse::Execute {
                 command_line,
@@ -199,11 +224,11 @@ where
         if message.is_empty() {
             return Ok(());
         }
-        if self
+        if let Some(loading) = self
             .sessions
             .get(agent_id)
             .and_then(|session| session.loading)
-            .is_some()
+            && loading != WorkLeafLoading::ValidationFailed
         {
             self.append_agent_line(
                 agent_id,
@@ -323,6 +348,8 @@ where
             WorkLeafLoading::WaitingForReply => {
                 format!("Waiting for {}", self.agent_display_name())
             }
+            WorkLeafLoading::Validating => "Running required checks".to_string(),
+            WorkLeafLoading::ValidationFailed => "Required checks failed".to_string(),
         }
     }
 
@@ -474,6 +501,78 @@ where
         });
     }
 
+    fn start_validation_or_finish(&mut self, agent_id: AgentId, start_review: bool) {
+        if start_review {
+            self.pending_validation_reviews.insert(agent_id.clone());
+        }
+
+        let Some(root) = self
+            .chat
+            .as_ref()
+            .map(|chat| chat.project_dir().to_path_buf())
+        else {
+            self.apply_validation_success(&agent_id, start_review);
+            return;
+        };
+
+        let checks = match project_required_checks(&root) {
+            Ok(checks) if checks.is_empty() => {
+                self.apply_validation_success(&agent_id, start_review);
+                return;
+            }
+            Ok(checks) => checks,
+            Err(message) => {
+                self.apply_validation_failure(&agent_id, message);
+                return;
+            }
+        };
+
+        self.validation_generation = self.validation_generation.saturating_add(1);
+        let generation = self.validation_generation;
+        self.set_session_loading(&agent_id, Some(WorkLeafLoading::Validating));
+        let (sender, receiver) = mpsc::channel();
+        let validation_agent_id = agent_id.clone();
+        let handle = thread::spawn(move || {
+            let result = run_required_checks(&root, &checks);
+            let _ = sender.send(WorkerEvent::ValidationComplete {
+                agent_id: validation_agent_id,
+                generation,
+                start_review,
+                result,
+            });
+        });
+        self.workers.push(Worker { receiver, handle });
+    }
+
+    fn start_validation_fix_worker(&mut self, agent_id: AgentId, message: String) {
+        self.set_session_loading(&agent_id, Some(WorkLeafLoading::WaitingForReply));
+        let prompt = render_required_check_failure_prompt(&message);
+        self.start_worker(move |mut chat, sender| {
+            let stream_sender = sender.clone();
+            let display_name = chat.agent_profile().display_name.clone();
+            let mut stream = move |event_agent_id: &AgentId, event| {
+                let _ = stream_sender.send(WorkerEvent::Stream {
+                    agent_id: event_agent_id.clone(),
+                    text: stream_event_text(event, &display_name),
+                });
+            };
+            match chat.send_to_agent_streaming_with_ids(&agent_id, &prompt, &mut stream) {
+                Ok(result) => {
+                    let _ = sender.send(WorkerEvent::Complete {
+                        agent_id: Some(agent_id),
+                        result,
+                    });
+                }
+                Err(error) => {
+                    let _ = sender.send(WorkerEvent::Error {
+                        agent_id: Some(agent_id),
+                        message: command_chat_error_text(&error),
+                    });
+                }
+            }
+        });
+    }
+
     fn start_worker<F>(&mut self, operation: F)
     where
         F: FnOnce(CommandChat<B>, Sender<WorkerEvent>) + Send + 'static,
@@ -494,7 +593,8 @@ where
             WorkerEvent::Complete { agent_id, result } => {
                 if let Some(agent_id) = agent_id {
                     self.apply_agent_result(&agent_id, &result);
-                    self.set_session_loading(&agent_id, None);
+                    let start_review = should_start_review(&agent_id, &result);
+                    self.start_validation_or_finish(agent_id, start_review);
                 } else {
                     self.push_command_line(command_result_text(&result));
                     if matches!(result, CommandChatResult::Quit) {
@@ -505,11 +605,85 @@ where
             WorkerEvent::Error { agent_id, message } => {
                 if let Some(agent_id) = agent_id {
                     self.append_agent_line(&agent_id, message);
-                    self.set_session_loading(&agent_id, None);
+                    self.start_validation_or_finish(agent_id, false);
                 } else {
                     self.push_command_line(message);
                 }
             }
+            WorkerEvent::ValidationComplete {
+                agent_id,
+                generation,
+                start_review,
+                result,
+            } => {
+                if generation != self.validation_generation {
+                    return;
+                }
+                match result {
+                    Ok(()) => self.apply_validation_success(&agent_id, start_review),
+                    Err(message) => self.apply_validation_failure(&agent_id, message),
+                }
+            }
+        }
+    }
+
+    fn apply_validation_success(&mut self, agent_id: &AgentId, start_review: bool) {
+        self.validation_fix_attempts.remove(agent_id);
+        let start_review = start_review || self.pending_validation_reviews.remove(agent_id);
+        self.set_session_loading(agent_id, None);
+        self.clear_workspace_validation_status();
+        if start_review && let Err(error) = self.start_review() {
+            self.push_command_line(command_chat_error_text(&error));
+        }
+    }
+
+    fn apply_validation_failure(&mut self, agent_id: &AgentId, message: String) {
+        self.append_agent_line(
+            agent_id,
+            format!("work-leaf: required check failed\n{message}"),
+        );
+        self.mark_workspace_validation_failed();
+        let attempts = self
+            .validation_fix_attempts
+            .entry(agent_id.clone())
+            .and_modify(|attempts| *attempts += 1)
+            .or_insert(1);
+        if *attempts <= MAX_VALIDATION_FIX_ATTEMPTS {
+            self.start_validation_fix_worker(agent_id.clone(), message);
+        }
+    }
+
+    fn clear_workspace_validation_status(&mut self) {
+        let mut updated = Vec::new();
+        for session in self.sessions.values_mut() {
+            if matches!(
+                session.loading,
+                Some(WorkLeafLoading::Validating | WorkLeafLoading::ValidationFailed)
+            ) {
+                session.loading = None;
+                updated.push(session.clone());
+            }
+        }
+        for session in updated {
+            self.pending_events
+                .push(WorkLeafEvent::AgentUpdated { session });
+        }
+    }
+
+    fn mark_workspace_validation_failed(&mut self) {
+        let mut updated = Vec::new();
+        for session in self.sessions.values_mut() {
+            if matches!(
+                session.loading,
+                None | Some(WorkLeafLoading::Validating) | Some(WorkLeafLoading::ValidationFailed)
+            ) {
+                session.loading = Some(WorkLeafLoading::ValidationFailed);
+                updated.push(session.clone());
+            }
+        }
+        for session in updated {
+            self.pending_events
+                .push(WorkLeafEvent::AgentUpdated { session });
         }
     }
 
@@ -521,7 +695,16 @@ where
                     self.append_agent_line(agent_id, reply.clone());
                 }
             }
-            other => self.push_command_line(command_result_text(other)),
+            CommandChatResult::ReviewComplete(results) => {
+                let text = command_result_text(result);
+                self.push_command_line(text.clone());
+                for review in results {
+                    self.append_agent_line(&review.commit.agent_id, format!("review: {text}"));
+                }
+            }
+            other => {
+                self.push_command_line(command_result_text(other));
+            }
         }
     }
 
@@ -599,6 +782,61 @@ where
     }
 }
 
+fn should_start_review(agent_id: &AgentId, result: &CommandChatResult) -> bool {
+    agent_id.as_str().starts_with("user-")
+        && match result {
+            CommandChatResult::AgentLaunched { reply, .. }
+            | CommandChatResult::AgentMessage { reply, .. } => contains_patch_directive(reply),
+            _ => false,
+        }
+}
+
+fn contains_patch_directive(text: &str) -> bool {
+    text.lines()
+        .any(|line| line.trim_start().starts_with("@work-leaf patch "))
+}
+
+fn project_required_checks(root: &Path) -> Result<Vec<RequiredCheck>, String> {
+    let instructions = load_project_instructions(root).map_err(|error| error.to_string())?;
+    Ok(required_checks(&instructions))
+}
+
+fn run_required_checks(root: &Path, checks: &[RequiredCheck]) -> Result<(), String> {
+    for check in checks {
+        let output = Command::new(check.program())
+            .current_dir(root)
+            .args(check.args())
+            .output()
+            .map_err(|error| {
+                format!(
+                    "Validation command `{}` failed to start: {error}",
+                    check.command_line()
+                )
+            })?;
+        if !output.status.success() {
+            return Err(format!(
+                "Validation command `{}` failed:\n{}",
+                check.command_line(),
+                command_output_text(&output)
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn render_required_check_failure_prompt(message: &str) -> String {
+    format!(
+        "The project required checks failed after your last response.\n\n{message}\n\nFix the repository through the @work-leaf patch flow. Do not report the work complete until the required checks pass."
+    )
+}
+
+fn command_output_text(output: &Output) -> String {
+    let mut text = String::new();
+    text.push_str(&String::from_utf8_lossy(&output.stdout));
+    text.push_str(&String::from_utf8_lossy(&output.stderr));
+    text.trim().to_string()
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct WorkLeafSnapshot {
     pub command_transcript: Vec<String>,
@@ -638,6 +876,8 @@ impl WorkLeafSession {
 pub enum WorkLeafLoading {
     Launching,
     WaitingForReply,
+    Validating,
+    ValidationFailed,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -670,6 +910,12 @@ enum WorkerEvent {
         agent_id: Option<AgentId>,
         message: String,
     },
+    ValidationComplete {
+        agent_id: AgentId,
+        generation: u64,
+        start_review: bool,
+        result: Result<(), String>,
+    },
 }
 
 fn stream_event_text(event: AgentStreamEvent, agent_display_name: &str) -> String {
@@ -685,6 +931,12 @@ fn stream_event_text(event: AgentStreamEvent, agent_display_name: &str) -> Strin
 enum CommandAgentResponse {
     Execute { command_line: String, reply: String },
     Reply(String),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct CommandAgentNewRequest {
+    count: usize,
+    prompt: String,
 }
 
 fn command_agent_response(message: &str, agent_display_name: &str) -> CommandAgentResponse {
@@ -749,6 +1001,168 @@ fn asks_for_new_agent(lower: &str) -> bool {
         && ["new", "spawn", "create", "start", "launch"]
             .iter()
             .any(|verb| lower.contains(verb))
+}
+
+fn command_agent_new_request(message: &str) -> Option<CommandAgentNewRequest> {
+    let lower = message.to_ascii_lowercase();
+    if !asks_for_agent_launch_request(&lower) {
+        return None;
+    }
+
+    let prompt = command_agent_launch_prompt(message);
+    let count = agent_launch_count(&prompt).unwrap_or(1);
+    let prompt = strip_agent_launch_count_and_noun(&prompt);
+    Some(CommandAgentNewRequest {
+        count,
+        prompt: normalize_common_agent_typos(&prompt),
+    })
+}
+
+fn asks_for_agent_launch_request(lower: &str) -> bool {
+    lower.contains("agent")
+        && ["new", "spawn", "create", "start", "launch", "open", "make"]
+            .iter()
+            .any(|verb| lower.contains(verb))
+}
+
+fn command_agent_launch_prompt(message: &str) -> String {
+    let trimmed = strip_polite_prefix(message.trim());
+    [
+        "open a new ",
+        "open new ",
+        "open an ",
+        "open a ",
+        "open ",
+        "spawn a new ",
+        "spawn new ",
+        "spawn an ",
+        "spawn a ",
+        "spawn ",
+        "create a new ",
+        "create new ",
+        "create an ",
+        "create a ",
+        "create ",
+        "start a new ",
+        "start new ",
+        "start an ",
+        "start a ",
+        "start ",
+        "launch a new ",
+        "launch new ",
+        "launch an ",
+        "launch a ",
+        "launch ",
+        "make a new ",
+        "make new ",
+        "make an ",
+        "make a ",
+        "make ",
+        "new an ",
+        "new a ",
+        "new ",
+    ]
+    .iter()
+    .find_map(|prefix| strip_ascii_prefix_case_insensitive(trimmed, prefix))
+    .unwrap_or(trimmed)
+    .to_string()
+}
+
+fn command_agent_new_command_line(prompt: &str) -> String {
+    if prompt.is_empty() {
+        "new".to_string()
+    } else {
+        format!("new {prompt}")
+    }
+}
+
+fn command_agent_launch_reply(
+    agent_display_name: &str,
+    request: &CommandAgentNewRequest,
+) -> String {
+    let count_prefix = if request.count > 1 {
+        format!("{} ", request.count)
+    } else {
+        String::new()
+    };
+    let agent_label = if request.count == 1 {
+        "user agent"
+    } else {
+        "user agents"
+    };
+
+    if request.prompt.is_empty() {
+        format!("launching {count_prefix}{agent_display_name} {agent_label}")
+    } else {
+        format!(
+            "launching {count_prefix}{agent_display_name} {agent_label} for {}",
+            request.prompt
+        )
+    }
+}
+
+fn agent_launch_count(text: &str) -> Option<usize> {
+    text.split_whitespace().next().and_then(agent_count_word)
+}
+
+fn strip_agent_launch_count_and_noun(prompt: &str) -> String {
+    let words = prompt.split_whitespace().collect::<Vec<_>>();
+    let mut start = 0;
+    let mut end = words.len();
+    if words
+        .first()
+        .and_then(|word| agent_count_word(word))
+        .is_some()
+    {
+        start = 1;
+    }
+    if words.last().is_some_and(|word| is_agent_noun(word)) {
+        end -= 1;
+    }
+    words[start..end].join(" ")
+}
+
+fn agent_count_word(word: &str) -> Option<usize> {
+    let clean = clean_agent_word(word);
+    if let Ok(count) = clean.parse::<usize>() {
+        return (count > 0).then_some(count);
+    }
+
+    match clean.as_str() {
+        "a" | "an" | "one" => Some(1),
+        "two" => Some(2),
+        "three" => Some(3),
+        "four" => Some(4),
+        "five" => Some(5),
+        "six" => Some(6),
+        "seven" => Some(7),
+        "eight" => Some(8),
+        "nine" => Some(9),
+        "ten" => Some(10),
+        _ => None,
+    }
+}
+
+fn is_agent_noun(word: &str) -> bool {
+    matches!(clean_agent_word(word).as_str(), "agent" | "agents")
+}
+
+fn normalize_common_agent_typos(text: &str) -> String {
+    text.split_whitespace()
+        .map(|word| {
+            if clean_agent_word(word) == "pacth" {
+                "patch"
+            } else {
+                word
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn clean_agent_word(word: &str) -> String {
+    word.trim_matches(|ch: char| !ch.is_ascii_alphanumeric())
+        .to_ascii_lowercase()
 }
 
 fn command_agent_new_prompt(message: &str) -> String {

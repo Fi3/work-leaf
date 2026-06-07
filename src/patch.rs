@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 
 use crate::agent::{AgentBackend, AgentError, AgentId};
-use crate::instructions::{load_project_instructions, validation_checks};
+use crate::instructions::{load_project_instructions, required_checks};
 use crate::locks::{FileAccessError, FileLockTable};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -141,7 +141,7 @@ impl GitPatcher {
 
     fn run_required_checks(&self, files: &[PathBuf]) -> Result<(), PatchError> {
         let instructions = load_project_instructions(&self.root).map_err(PatchError::Git)?;
-        for check in validation_checks(&self.root, &instructions) {
+        for check in required_checks(&instructions) {
             let output = Command::new(check.program())
                 .current_dir(&self.root)
                 .args(check.args())

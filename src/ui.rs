@@ -148,6 +148,12 @@ impl UiWindow {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+struct PromptView {
+    line: String,
+    cursor_column: u16,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TerminalUi {
     width: u16,
     height: u16,
@@ -408,7 +414,8 @@ impl TerminalUi {
 
     pub fn render_screen_with_prompt(&self, right_content: &str, prompt: &str) -> String {
         let visible_right_content = self.visible_right_content(right_content);
-        let buffer = self.render_tui_buffer(&visible_right_content, prompt);
+        let prompt_cursor = prompt.len();
+        let buffer = self.render_tui_buffer(&visible_right_content, prompt, prompt_cursor);
         let mut rendered = String::from("\u{1b}[H");
         rendered.push_str(&buffer_to_string(&buffer));
         rendered.push_str(&self.cursor_sequence(&visible_right_content, prompt));
@@ -423,7 +430,7 @@ impl TerminalUi {
         right_cursor_column: Option<usize>,
     ) -> String {
         let visible_right_content = self.visible_right_content(right_content);
-        let buffer = self.render_tui_buffer(&visible_right_content, prompt);
+        let buffer = self.render_tui_buffer(&visible_right_content, prompt, prompt_cursor);
         let mut rendered = String::from("\u{1b}[H");
         rendered.push_str(&buffer_to_string(&buffer));
         rendered.push_str(&self.cursor_sequence_with_cursors(
@@ -439,7 +446,7 @@ impl TerminalUi {
         tail_visible_content(right_content, inner_width, inner_height)
     }
 
-    fn render_tui_buffer(&self, right_content: &str, prompt: &str) -> Buffer {
+    fn render_tui_buffer(&self, right_content: &str, prompt: &str, prompt_cursor: usize) -> Buffer {
         let backend = TestBackend::new(self.width, self.height);
         let mut terminal = Terminal::new(backend).expect("test backend is valid");
         terminal
@@ -467,7 +474,10 @@ impl TerminalUi {
                 } else {
                     frame.render_widget(self.right_widget(right_content), panes[0]);
                 }
-                frame.render_widget(Paragraph::new(self.bottom_line(prompt)), bottom);
+                frame.render_widget(
+                    Paragraph::new(self.bottom_line(prompt, prompt_cursor)),
+                    bottom,
+                );
             })
             .expect("test backend draw succeeds");
         terminal.backend().buffer().clone()
@@ -530,31 +540,16 @@ impl TerminalUi {
             .wrap(Wrap { trim: false })
     }
 
-    fn bottom_line(&self, prompt: &str) -> String {
+    fn bottom_line(&self, prompt: &str, prompt_cursor: usize) -> String {
         if self.mode == UiMode::Prompt {
-            format!(":{prompt}")
+            self.prompt_view(prompt, prompt_cursor).line
         } else {
             self.render_status_line()
         }
     }
 
     fn cursor_sequence(&self, right_content: &str, prompt: &str) -> String {
-        let (row, column) = if self.mode == UiMode::Prompt {
-            let prompt_column = prompt
-                .chars()
-                .count()
-                .saturating_add(2)
-                .min(usize::from(u16::MAX)) as u16;
-            (self.height, prompt_column)
-        } else {
-            match self.focus {
-                PaneFocus::Left => (self.control_cursor_row(), 2),
-                PaneFocus::Right => self.right_cursor_position(right_content),
-            }
-        };
-        let row = row.clamp(1, self.height.max(1));
-        let column = column.clamp(1, self.width.max(1));
-        format!("\u{1b}[{row};{column}H")
+        self.cursor_sequence_with_cursors(right_content, prompt, prompt.len(), None)
     }
 
     fn cursor_sequence_with_cursors(
@@ -565,13 +560,10 @@ impl TerminalUi {
         right_cursor_column: Option<usize>,
     ) -> String {
         let (row, column) = if self.mode == UiMode::Prompt {
-            let prompt_column = prompt
-                .char_indices()
-                .take_while(|(index, _)| *index < prompt_cursor)
-                .count()
-                .saturating_add(2)
-                .min(usize::from(u16::MAX)) as u16;
-            (self.height, prompt_column)
+            (
+                self.height,
+                self.prompt_view(prompt, prompt_cursor).cursor_column,
+            )
         } else {
             match self.focus {
                 PaneFocus::Left => (self.control_cursor_row(), 2),
@@ -584,6 +576,30 @@ impl TerminalUi {
         let column = column.clamp(1, self.width.max(1));
         format!("\u{1b}[{row};{column}H")
     }
+
+    fn prompt_view(&self, prompt: &str, prompt_cursor: usize) -> PromptView {
+        let width = usize::from(self.width.max(1));
+        let input_width = width.saturating_sub(1);
+        let max_cursor_offset = width.saturating_sub(2);
+        let cursor_chars = cursor_char_count(prompt, prompt_cursor);
+        let start = cursor_chars.saturating_sub(max_cursor_offset);
+        let visible_prompt = prompt
+            .chars()
+            .skip(start)
+            .take(input_width)
+            .collect::<String>();
+        let cursor_offset = cursor_chars.saturating_sub(start).min(max_cursor_offset);
+        let cursor_column = if self.width <= 1 {
+            1
+        } else {
+            cursor_offset.saturating_add(2).min(width) as u16
+        };
+        PromptView {
+            line: format!(":{visible_prompt}"),
+            cursor_column,
+        }
+    }
+
     fn handle_pending_key(&mut self, pending: PendingKey, key: UiKey) -> Vec<UiAction> {
         match (pending, key) {
             (PendingKey::CtrlW, UiKey::Char('h')) if self.mode == UiMode::Command => {
@@ -816,31 +832,6 @@ impl TerminalUi {
         (self.control_selected + 2).min(usize::from(u16::MAX)) as u16
     }
 
-    fn right_cursor_position(&self, right_content: &str) -> (u16, u16) {
-        let layout = self.layout();
-        let inner_width = layout.right_width.saturating_sub(2).max(1);
-        let lines = right_content.lines().collect::<Vec<_>>();
-        let Some(line) = lines.last().copied() else {
-            return (2, layout.left_width.saturating_add(2));
-        };
-        if !line.starts_with("chat> ") {
-            return (2, layout.left_width.saturating_add(2));
-        }
-        let previous_rows = lines[..lines.len() - 1]
-            .iter()
-            .map(|line| visual_rows(line, inner_width))
-            .sum::<u16>();
-        let line_len = line.chars().count().min(usize::from(u16::MAX)) as u16;
-        let row = 2_u16
-            .saturating_add(previous_rows)
-            .saturating_add(line_len / inner_width);
-        let column = layout
-            .left_width
-            .saturating_add(2)
-            .saturating_add(line_len % inner_width);
-        (row, column)
-    }
-
     fn right_cursor_position_with_cursor(
         &self,
         right_content: &str,
@@ -1024,6 +1015,12 @@ fn visual_rows(line: &str, width: u16) -> u16 {
     let width = width.max(1);
     let len = line.chars().count().min(usize::from(u16::MAX)) as u16;
     (len / width).saturating_add(1)
+}
+
+fn cursor_char_count(text: &str, cursor: usize) -> usize {
+    text.char_indices()
+        .take_while(|(index, _)| *index < cursor)
+        .count()
 }
 
 fn tail_visible_content(content: &str, width: u16, height: u16) -> String {

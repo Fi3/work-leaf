@@ -47,6 +47,26 @@ fn scripted_harness_prompt_arrow_keys_move_visible_cursor() {
     assert_eq!(harness.ui().mode(), UiMode::Prompt);
     assert!(harness.render_frame().ends_with("\u{1b}[24;4H"));
 }
+
+#[test]
+fn scripted_harness_long_prompt_arrows_keep_rendered_cursor_at_edit_position() {
+    let mut harness = UiHarness::new(20, 10);
+
+    harness.handle_bytes(b":abcdefghijklmnopqrstuvwxyz0123\x1b[D\x1b[D\x1b[D\x1b[D\x1b[DX");
+
+    let frame = harness.render_frame();
+    assert!(frame.contains(":ijklmnopqrstuvwxyXz"));
+    assert!(frame.ends_with("\u{1b}[10;20H"));
+
+    harness.handle_bytes(b"\n");
+
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| line == "unknown fixture command: abcdefghijklmnopqrstuvwxyXz0123")
+    );
+}
 #[test]
 fn scripted_harness_prompt_arrow_keys_recall_prompt_history() {
     let mut harness = UiHarness::new(80, 24);
@@ -61,6 +81,21 @@ fn scripted_harness_prompt_arrow_keys_recall_prompt_history() {
         2
     );
 }
+
+#[test]
+fn scripted_harness_prompt_history_down_restores_in_progress_prompt() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(b":review\n:draft command\x1b[A\x1b[B\n");
+
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| line == "unknown fixture command: draft command")
+    );
+}
+
 #[test]
 fn scripted_harness_bytewise_prompt_arrow_keys_edit_without_leaving_prompt() {
     let mut harness = UiHarness::new(80, 24);
@@ -233,6 +268,20 @@ fn scripted_harness_arrow_keys_recall_chat_history() {
             .filter(|line| line.as_str() == "user-1> second")
             .count(),
         2
+    );
+}
+
+#[test]
+fn scripted_harness_chat_history_down_restores_in_progress_message() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(b"ifirst\nsecond draft\x1b[A\x1b[B\n");
+
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| line == "user-1> second draft")
     );
 }
 

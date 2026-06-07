@@ -89,6 +89,114 @@ fn controller_uses_agent_profile_for_non_codex_launches_and_reviews() {
 }
 
 #[test]
+fn controller_starts_review_after_patch_agent_done_and_loops_until_clean() {
+    let root = git_repo("workspace-automatic-review-loop");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+        "summary: README changes from before to after",
+        "FINDINGS\n- missing reviewed wording",
+        "fixed review finding\n@work-leaf patch address review\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-after\n+after review\n@work-leaf end\n@work-leaf done",
+        "NO_FINDINGS",
+    ]);
+    let chat = CommandChat::new(root.clone(), backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("update readme").unwrap();
+
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "after review\n"
+    );
+
+    let reviewer_id = AgentId::new("review-user-1").unwrap();
+    let snapshot = controller.snapshot();
+    let reviewer = snapshot
+        .session(&reviewer_id)
+        .expect("reviewer session exists");
+    assert_eq!(reviewer.title, "review user-agent");
+    assert_eq!(reviewer.loading, None);
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert!(
+        patch_agent
+            .lines
+            .iter()
+            .any(|line| line.contains("missing reviewed wording"))
+    );
+    assert!(
+        patch_agent.lines.iter().any(|line| {
+            line.contains("user-1 reviewed by review-user-1: rounds=2 resolved=yes")
+        })
+    );
+
+    let sends = backend.sends();
+    assert!(sends.iter().any(|(target, prompt)| {
+        target == &agent_id
+            && prompt.contains("missing reviewed wording")
+            && prompt.contains("Please fix the patch")
+    }));
+    assert!(sends.iter().any(|(target, prompt)| {
+        target == &reviewer_id
+            && prompt.contains("The original agent has responded to the findings")
+            && prompt.contains("Please check the patch again")
+    }));
+}
+
+#[test]
+fn controller_sends_required_check_failures_back_to_agent_until_checks_pass() {
+    let root = git_repo("workspace-validation-failure-feedback");
+    fs::write(
+        root.join("AGENTS.md"),
+        "## Required Checks\n- `sh check.sh`\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join("check.sh"),
+        "#!/bin/sh\nif grep -q '^good$' state.txt; then exit 0; fi\necho state is bad\nexit 1\n",
+    )
+    .unwrap();
+    fs::write(root.join("state.txt"), "bad\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD validation fixture"]);
+    let backend = FakeBackend::new([
+        "launch reply",
+        "fixed required check\n@work-leaf patch fix state\n--- a/state.txt\n+++ b/state.txt\n@@ -1 +1 @@\n-bad\n+good\n@work-leaf end\n@work-leaf done",
+        "summary: state changes from bad to good",
+        "NO_FINDINGS",
+    ]);
+    let chat = CommandChat::new(root.clone(), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("fix required checks").unwrap();
+
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    assert_eq!(
+        fs::read_to_string(root.join("state.txt")).unwrap(),
+        "good\n"
+    );
+    let snapshot = controller.snapshot();
+    let session = snapshot.session(&agent_id).expect("session exists");
+    assert_eq!(session.loading, None);
+    assert!(
+        session
+            .lines
+            .iter()
+            .any(|line| line.contains("required check failed"))
+    );
+
+    let sends = backend.sends();
+    assert!(sends.iter().any(|(target, prompt)| {
+        target == &agent_id
+            && prompt.contains("project required checks failed")
+            && prompt.contains("state is bad")
+            && prompt.contains("@work-leaf patch flow")
+    }));
+}
+
+#[test]
 fn controller_keeps_agent_loading_scoped_to_the_active_session() {
     let backend = ConcurrentBackend;
     let chat = CommandChat::new(PathBuf::from("/repo"), backend);
@@ -150,6 +258,10 @@ impl FakeBackend {
 
     fn launches(&self) -> Vec<AgentLaunch> {
         self.state.lock().unwrap().launches.clone()
+    }
+
+    fn sends(&self) -> Vec<(AgentId, String)> {
+        self.state.lock().unwrap().sends.clone()
     }
 
     fn next_reply(&self) -> String {

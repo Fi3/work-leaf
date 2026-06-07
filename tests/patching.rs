@@ -239,12 +239,12 @@ diff --git a/src/lib.rs b/src/lib.rs
 }
 
 #[test]
-fn patcher_rejects_patch_when_forced_cargo_test_fails() {
-    let root = git_repo("patch-forced-cargo-test-fails");
+fn patcher_does_not_run_undeclared_cargo_test_for_rust_projects() {
+    let root = git_repo("patch-no-undeclared-cargo-test");
     fs::create_dir_all(root.join("src")).unwrap();
     fs::write(
         root.join("Cargo.toml"),
-        "[package]\nname = \"patch-forced-cargo-test-fails\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+        "[package]\nname = \"patch-no-undeclared-cargo-test\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
     )
     .unwrap();
     let target_dir = std::env::temp_dir().join(format!(
@@ -289,7 +289,7 @@ mod tests {
     git(&root, ["commit", "-m", "ADD initial rust test fixture"]);
 
     let patcher = GitPatcher::new(root.clone(), FileLockTable::new(root.clone()));
-    let error = patcher
+    let outcome = patcher
         .apply(PatchRequest::new(
             AgentId::new("chat-5").unwrap(),
             "parser",
@@ -306,24 +306,13 @@ diff --git a/src/lib.rs b/src/lib.rs
  mod tests {
 ",
         ))
-        .unwrap_err();
+        .unwrap();
 
-    match error {
-        PatchError::ValidationFailed {
-            files,
-            command,
-            diagnostic,
-        } => {
-            assert_eq!(files, vec![PathBuf::from("src/lib.rs")]);
-            assert_eq!(command, "cargo test --all-targets --all-features");
-            assert!(diagnostic.contains("value_remains_one"));
-        }
-        other => panic!("unexpected error: {other:?}"),
-    }
+    assert_eq!(outcome.files, vec![PathBuf::from("src/lib.rs")]);
     assert_eq!(
         fs::read_to_string(root.join("src/lib.rs")).unwrap(),
         "\
-pub fn value() -> u8 { 1 }
+pub fn value() -> u8 { 2 }
 
 #[cfg(test)]
 mod tests {
@@ -334,10 +323,7 @@ mod tests {
 }
 "
     );
-    assert_eq!(
-        git_output(&root, ["log", "-1", "--pretty=%s"]),
-        "ADD initial rust test fixture"
-    );
+    assert!(outcome.commit.len() == 40);
     assert!(git_output(&root, ["status", "--short", "--untracked-files=no"]).is_empty());
 }
 
