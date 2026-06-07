@@ -421,14 +421,15 @@ impl TerminalUi {
 
     pub fn render_screen_with_prompt(&self, right_content: &str, prompt: &str) -> String {
         let visible_right_content = self.visible_right_content(right_content);
-        let buffer = self.render_tui_buffer(&visible_right_content, prompt);
+        let prompt_view = PromptView::new(prompt, prompt.len(), self.width);
+        let buffer = self.render_tui_buffer(&visible_right_content, &prompt_view.visible_prompt);
         let mut rendered = String::new();
         if self.ready_bell_pending.replace(false) {
             rendered.push('\u{7}');
         }
         rendered.push_str("\u{1b}[H");
         rendered.push_str(&buffer_to_string(&buffer));
-        rendered.push_str(&self.cursor_sequence(&visible_right_content, prompt));
+        rendered.push_str(&self.cursor_sequence(&visible_right_content, prompt_view.cursor_column));
         rendered
     }
 
@@ -440,7 +441,8 @@ impl TerminalUi {
         right_cursor_column: Option<usize>,
     ) -> String {
         let visible_right_content = self.visible_right_content(right_content);
-        let buffer = self.render_tui_buffer(&visible_right_content, prompt);
+        let prompt_view = PromptView::new(prompt, prompt_cursor, self.width);
+        let buffer = self.render_tui_buffer(&visible_right_content, &prompt_view.visible_prompt);
         let mut rendered = String::new();
         if self.ready_bell_pending.replace(false) {
             rendered.push('\u{7}');
@@ -449,8 +451,7 @@ impl TerminalUi {
         rendered.push_str(&buffer_to_string(&buffer));
         rendered.push_str(&self.cursor_sequence_with_cursors(
             &visible_right_content,
-            prompt,
-            prompt_cursor,
+            prompt_view.cursor_column,
             right_cursor_column,
         ));
         rendered
@@ -562,14 +563,9 @@ impl TerminalUi {
         }
     }
 
-    fn cursor_sequence(&self, right_content: &str, prompt: &str) -> String {
+    fn cursor_sequence(&self, right_content: &str, prompt_cursor_column: u16) -> String {
         let (row, column) = if self.mode == UiMode::Prompt {
-            let prompt_column = prompt
-                .chars()
-                .count()
-                .saturating_add(2)
-                .min(usize::from(u16::MAX)) as u16;
-            (self.height, prompt_column)
+            (self.height, prompt_cursor_column)
         } else {
             match self.focus {
                 PaneFocus::Left => (self.control_cursor_row(), 2),
@@ -584,18 +580,11 @@ impl TerminalUi {
     fn cursor_sequence_with_cursors(
         &self,
         right_content: &str,
-        prompt: &str,
-        prompt_cursor: usize,
+        prompt_cursor_column: u16,
         right_cursor_column: Option<usize>,
     ) -> String {
         let (row, column) = if self.mode == UiMode::Prompt {
-            let prompt_column = prompt
-                .char_indices()
-                .take_while(|(index, _)| *index < prompt_cursor)
-                .count()
-                .saturating_add(2)
-                .min(usize::from(u16::MAX)) as u16;
-            (self.height, prompt_column)
+            (self.height, prompt_cursor_column)
         } else {
             match self.focus {
                 PaneFocus::Left => (self.control_cursor_row(), 2),
@@ -946,6 +935,39 @@ impl TerminalUi {
             self.windows.len()
         )
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct PromptView {
+    visible_prompt: String,
+    cursor_column: u16,
+}
+
+impl PromptView {
+    fn new(prompt: &str, cursor: usize, terminal_width: u16) -> Self {
+        let visible_width = usize::from(terminal_width.saturating_sub(2).max(1));
+        let cursor_chars = cursor_char_count(prompt, cursor);
+        let start_char = cursor_chars.saturating_sub(visible_width);
+        let visible_prompt = prompt
+            .chars()
+            .skip(start_char)
+            .take(visible_width)
+            .collect::<String>();
+        let cursor_column = cursor_chars
+            .saturating_sub(start_char)
+            .saturating_add(2)
+            .min(usize::from(u16::MAX)) as u16;
+        Self {
+            visible_prompt,
+            cursor_column,
+        }
+    }
+}
+
+fn cursor_char_count(text: &str, cursor: usize) -> usize {
+    text.char_indices()
+        .take_while(|(index, _)| *index < cursor)
+        .count()
 }
 
 impl UiMode {
