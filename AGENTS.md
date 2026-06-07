@@ -80,12 +80,11 @@ pre-existing issues, unrelated style preferences, or broader repository problems
 patch makes them worse, depends on them, or claims to fix them.
 
 ## Required Checks
-Run these before submitting changes:
+Run these before submitting changes. A patch is not ready until all required checks are green:
 
 1. `cargo fmt`
 2. `cargo clippy --all-targets --all-features -- -D warnings`
-
-2. Broader top-level rule, but only in history on origin/ImproveShareHandling2, commit 53bc5206 from June 1, 2026:
+3. `cargo test --all-targets --all-features`
 
 - Any code change must leave the relevant build and clippy invocations clean: no build warnings,
   clippy errors, or clippy warnings are allowed. Existing warnings or clippy findings encountered
@@ -115,9 +114,21 @@ input bytes and renders through the same `src/ui.rs::TerminalUi` frame path used
 example, so UI tests should drive `UiHarness::handle_byte` or `UiHarness::handle_bytes` instead of
 duplicating modal-input logic.
 
-Run `cargo test --test ui_harness` for automatic terminal UI checks. This target covers full-width
-CRLF rendering, immediate nvim-style mode switches, `Ctrl-W h/j/k/l` pane navigation, right-pane
-toggle behavior, prompt cursor placement, `new [prompt...]`, and insert-mode chat text.
+Run `cargo test --test ui_harness` for automatic terminal UI state-machine checks. This target
+covers full-width CRLF rendering, immediate nvim-style mode switches, `Ctrl-W h/j/k/l` pane
+navigation, left-pane visibility toggling, prompt cursor placement, `new [prompt...]`, and
+insert-mode chat text.
+
+Run `cargo test --test terminal_pty` for automatic real-terminal checks. This target starts the
+`work-leaf` binary under a pseudo-terminal, drives raw key bytes against the real UI event loop, and
+uses a deterministic fake `codex` executable to verify agent creation, orchestrator file-read
+follow-up, left-pane hide/show with `,`, left-pane keyboard and mouse chat selection, large agent
+output, and visible chat prompt behavior.
+
+Any feature or bug fix that requires the UI harness, a pseudo-terminal run, or manual terminal
+interaction to verify behavior must include the same scenario in the automatic tests. Manual harness
+runs can be used while developing, but the patch is not ready until the equivalent `cargo test`
+coverage is present and green.
 
 Run `cargo run --example ui_harness` in a real interactive terminal for visual UI development. The
 manual fixture uses the same harness state machine and supports `Esc`, `i`, `:`, `Ctrl-W h/j/k/l`,
