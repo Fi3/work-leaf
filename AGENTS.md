@@ -37,6 +37,11 @@ The description must be system-oriented, not patch-oriented.
 The place to describe what changed and why is the commit message or PR description, not the documentation itself.
 Only exepction is migrations.md file.
 
+Update documentation only when the task changes the documented behavior, public workflow, required
+checks, architecture, terminology, or developer operating model. Do not churn docs for unrelated
+implementation-only edits, formatting-only edits, or private helper changes that do not alter what a
+reader needs to know.
+
 ## Commit message rules
 Every commit message must clearly say what was done and why it was done. When adding new features it
 must describe which is the underling logic. Never include things that can be seen with a git diff,
@@ -69,6 +74,10 @@ When asked to one or more feature, always write a test that test the feature (un
 
 ## Review rules
 Any patch that increases algorithmic complexity to O(n²) or worse must be flagged.
+
+Review agents MUST review only behavior introduced or modified by the reviewed patch. Do not report
+pre-existing issues, unrelated style preferences, or broader repository problems unless the reviewed
+patch makes them worse, depends on them, or claims to fix them.
 
 ## Required Checks
 Run these before submitting changes:
