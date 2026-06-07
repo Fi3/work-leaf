@@ -628,7 +628,7 @@ mod tests {
         let chat = CommandChat::new(PathBuf::from("."), NoopBackend);
         let mut app = TerminalApp::new(chat, 80, 24);
 
-        assert_eq!(app.ui.selected_agent(), None);
+        assert!(app.ui.selected_agent().is_none());
 
         app.handle_bytes(b"ispawn a new patch agent that uses codex\n");
 
