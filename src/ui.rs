@@ -189,6 +189,7 @@ pub struct TerminalUi {
     pending_bell: Cell<bool>,
     status_notice: Option<StatusNotice>,
     command_mode_typing_count: usize,
+    command_mode_typing_controls_only: bool,
 }
 
 impl TerminalUi {
@@ -210,6 +211,7 @@ impl TerminalUi {
             pending_bell: Cell::new(false),
             status_notice: None,
             command_mode_typing_count: 0,
+            command_mode_typing_controls_only: true,
         }
     }
 
@@ -328,9 +330,9 @@ impl TerminalUi {
     }
 
     pub fn handle_key(&mut self, key: UiKey) -> Vec<UiAction> {
-        let command_mode_text_key = self.is_command_mode_text_key(key);
+        let command_mode_text_key = self.command_mode_text_key_control_status(key);
         let actions = self.handle_key_inner(key);
-        self.update_command_mode_typing_notice(command_mode_text_key && actions.is_empty());
+        self.update_command_mode_typing_notice(command_mode_text_key);
         actions
     }
 
@@ -745,27 +747,41 @@ impl TerminalUi {
         }
     }
 
-    fn is_command_mode_text_key(&self, key: UiKey) -> bool {
-        self.mode == UiMode::Command
-            && self.pending.is_none()
-            && matches!(
-                key,
-                UiKey::Char(ch) if ch.is_ascii_alphanumeric() || ch == ' '
-            )
+    fn command_mode_text_key_control_status(&self, key: UiKey) -> Option<bool> {
+        if self.mode != UiMode::Command || self.pending.is_some() {
+            return None;
+        }
+        let UiKey::Char(ch) = key else {
+            return None;
+        };
+        (ch.is_ascii_alphanumeric() || ch == ' ').then(|| self.is_command_control_char(ch))
     }
 
-    fn update_command_mode_typing_notice(&mut self, command_mode_text_key: bool) {
-        if command_mode_text_key && self.mode == UiMode::Command && self.pending.is_none() {
+    fn is_command_control_char(&self, ch: char) -> bool {
+        matches!(ch, 'i' | ':' | ',' | 's' | 't' | 'f' | 'g')
+            || (self.focus == PaneFocus::Left && matches!(ch, 'j' | 'k' | 'l' | 'x'))
+    }
+
+    fn update_command_mode_typing_notice(&mut self, command_mode_text_key_control: Option<bool>) {
+        if let Some(command_mode_text_key_control) = command_mode_text_key_control
+            && self.mode == UiMode::Command
+            && self.pending.is_none()
+        {
             self.command_mode_typing_count = self.command_mode_typing_count.saturating_add(1);
+            self.command_mode_typing_controls_only &= command_mode_text_key_control;
             if self.command_mode_typing_count >= COMMAND_MODE_TYPING_NOTICE_THRESHOLD {
-                self.show_status_notice(
-                    COMMAND_MODE_TYPING_NOTICE,
-                    Duration::from_secs(STATUS_NOTICE_SECONDS),
-                );
+                if !self.command_mode_typing_controls_only {
+                    self.show_status_notice(
+                        COMMAND_MODE_TYPING_NOTICE,
+                        Duration::from_secs(STATUS_NOTICE_SECONDS),
+                    );
+                }
                 self.command_mode_typing_count = 0;
+                self.command_mode_typing_controls_only = true;
             }
         } else {
             self.command_mode_typing_count = 0;
+            self.command_mode_typing_controls_only = true;
         }
     }
 

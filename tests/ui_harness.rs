@@ -225,6 +225,20 @@ fn scripted_harness_structural_command_keys_do_not_show_typing_notice() {
 }
 
 #[test]
+fn scripted_harness_left_pane_navigation_does_not_show_typing_notice() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(b"jjjjj");
+
+    assert_eq!(harness.ui().focus(), PaneFocus::Left);
+    assert_eq!(
+        harness.ui().selected_agent().map(|id| id.as_str()),
+        Some("user-2")
+    );
+    assert!(!harness.render_frame().contains("command mode: press i"));
+}
+
+#[test]
 fn scripted_harness_quits_only_through_colon_q() {
     let mut harness = UiHarness::new(80, 24);
 
