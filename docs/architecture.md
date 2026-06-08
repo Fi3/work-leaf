@@ -221,7 +221,9 @@ surface is selected. Bracketed-paste newlines and Shift+Enter are chat prompt li
 Enter submits the buffered chat text.
 
 The terminal app maps a session to a left-pane `READY` marker when the controller exposes no loading
-state for that session.
+state for that session. `TerminalUi` queues one terminal bell when a chat transitions into the ready
+state and renders ready rows in reverse video so they remain highlighted until the chat becomes busy
+again.
 
 `src/ui.rs::TerminalUi` owns terminal-specific presentation state:
 
