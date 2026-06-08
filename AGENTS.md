@@ -94,6 +94,7 @@ Run these before submitting changes. A patch is not ready until all required che
 
 ## Tests
 Adding a test do not require human permission, removing or changing one (that is committed in main) does.
+Every UI change MUST add an ui_harness automatic test.
 
 ## Architecture and API Governance
 Before making code changes, inspect `docs/architecture.md` and preserve the documented ownership,
