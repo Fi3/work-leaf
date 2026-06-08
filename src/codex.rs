@@ -120,7 +120,7 @@ impl CodexBackend {
         agent_id: &AgentId,
         prompt: &str,
     ) -> Result<CodexInvocation, AgentError> {
-        let (feature, resume_id) = {
+        let (has_session, feature, resume_id) = {
             let state = self
                 .state
                 .lock()
@@ -130,14 +130,19 @@ impl CodexBackend {
                 .get(agent_id)
                 .map(|session| session.feature.clone())
                 .unwrap_or_else(|| "unknown".to_string());
+            let has_session = state.sessions.contains_key(agent_id);
             let resume_id = state
                 .thread_ids
                 .get(agent_id)
                 .cloned()
                 .unwrap_or_else(|| agent_id.as_str().to_string());
-            (feature, resume_id)
+            (has_session, feature, resume_id)
         };
-        let stdin = send_invocation_stdin(&self.policy, agent_id, &feature, prompt);
+        let stdin = if has_session {
+            prompt.to_string()
+        } else {
+            self.policy.inject(agent_id, &feature, prompt)
+        };
         self.resume_invocation(&resume_id, stdin)
     }
 
@@ -310,7 +315,7 @@ impl CodexBackend {
             Err(AgentError::ProcessFailed {
                 program: invocation.program.clone(),
                 status: status.code(),
-                stderr,
+                stderr: process_failure_output(stderr, &stdout_text),
             })
         }
     }
@@ -459,20 +464,6 @@ fn append_agent_reply(reply: &mut Option<String>, text: String) {
     }
 }
 
-fn send_invocation_stdin(
-    policy: &PromptPolicy,
-    agent_id: &AgentId,
-    feature: &str,
-    prompt: &str,
-) -> String {
-    let command = prompt.trim();
-    if command.starts_with('/') && !command.contains('\n') && !command.contains('\r') {
-        command.to_string()
-    } else {
-        policy.inject(agent_id, feature, prompt)
-    }
-}
-
 fn codex_stream_event(line: &str) -> Option<AgentStreamEvent> {
     let compact = compact_json_line(line);
     if compact.contains(r#""type":"item.completed""#)
@@ -491,6 +482,18 @@ fn codex_stream_event(line: &str) -> Option<AgentStreamEvent> {
         return Some(AgentStreamEvent::Status("Codex is working".to_string()));
     }
     None
+}
+
+fn process_failure_output(stderr: String, stdout: &str) -> String {
+    if !stderr.trim().is_empty() {
+        return stderr;
+    }
+    let stdout = stdout.trim();
+    if stdout.is_empty() {
+        "process exited without stderr or stdout".to_string()
+    } else {
+        format!("stdout:\n{stdout}")
+    }
 }
 
 fn compact_json_line(line: &str) -> String {

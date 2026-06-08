@@ -112,6 +112,38 @@ Review agents must treat missing real-agent verification as a finding for agent-
 Do not accept fake-backend or harness-only coverage as proof that an agent-facing workflow works in
 the real orchestrator.
 
+### Real Codex verification troubleshooting
+When the real configured backend is Codex, use a bounded smoke check and do not loop indefinitely on
+local Codex CLI setup failures.
+
+Use the same top-level option ordering as `src/codex.rs::CodexBackend`:
+
+```sh
+printf 'Reply exactly with WORK_LEAF_REAL_AGENT_OK and do not modify files.\n' | \
+  codex --cd "$PWD" --sandbox read-only --ask-for-approval never \
+    exec --color never --json -
+```
+
+For resume behavior, capture the `thread.started` `thread_id` from the launch JSONL, then send a raw
+follow-up through `codex exec resume --json <thread-id> -`. The follow-up must not include a new
+copy of `AGENTS.md` or the full launch policy unless the behavior being tested specifically requires
+a fresh launch.
+
+If the smoke check fails before `thread.started` with
+`failed to initialize in-process app-server client: Read-only file system`, run `codex doctor` once
+and record that Codex could not initialize its local app-server/state from the current sandbox. Do
+not keep retrying the same command.
+
+If using a temporary `CODEX_HOME` under `/tmp` gets past app-server initialization but fails with
+`401 Unauthorized` or missing bearer/basic authentication, record that the temporary home does not
+have the stored Codex auth state. Do not copy `~/.codex/auth.json`, API keys, ChatGPT tokens, or any
+other credential material into `/tmp` or into the repository.
+
+When real Codex verification is blocked by local Codex initialization or auth-state isolation, the
+ready report must say exactly which command was attempted, which pre-agent error occurred, and which
+automated tests cover the behavior instead. A blocked real-agent smoke check is not a green
+real-agent verification.
+
 ## Architecture and API Governance
 Before making code changes, inspect `docs/architecture.md` and preserve the documented ownership,
 dependency direction, extension boundaries, and public interfaces.

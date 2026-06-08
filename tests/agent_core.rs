@@ -2,8 +2,8 @@ use std::fs;
 use std::path::PathBuf;
 
 use work_leaf::{
-    AgentId, AgentKind, AgentLaunch, CodexBackend, CodexCommandConfig, MessageRole, PromptPolicy,
-    SandboxMode,
+    AgentBackend, AgentId, AgentKind, AgentLaunch, CodexBackend, CodexCommandConfig, MessageRole,
+    PromptPolicy, SandboxMode,
 };
 
 #[test]
@@ -121,6 +121,18 @@ fn temp_dir(name: &str) -> PathBuf {
     root
 }
 
+#[cfg(unix)]
+fn make_executable(path: &std::path::Path) {
+    use std::os::unix::fs::PermissionsExt;
+
+    let mut permissions = fs::metadata(path).unwrap().permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(path, permissions).unwrap();
+}
+
+#[cfg(not(unix))]
+fn make_executable(_path: &std::path::Path) {}
+
 #[test]
 fn codex_backend_records_agent_replies_in_session_history() {
     let config = CodexCommandConfig::new(PathBuf::from("/repo")).with_binary("printf");
@@ -186,6 +198,67 @@ fn codex_backend_records_json_thread_id_for_follow_up_messages() {
         ]
     );
     assert!(invocation.stdin.contains("continue"));
+}
+
+#[test]
+fn codex_backend_resume_invocation_uses_raw_follow_up_after_launch_context() {
+    let root = temp_dir("codex-resume-raw-follow-up");
+    fs::write(
+        root.join("AGENTS.md"),
+        "Project-specific rule that must appear only in launch context.\n",
+    )
+    .unwrap();
+    let config = CodexCommandConfig::new(root.clone()).with_binary("codex");
+    let mut backend = CodexBackend::new(config, PromptPolicy::for_project(&root).unwrap());
+    let agent_id = AgentId::new("chat-a").unwrap();
+    backend
+        .record_launch_output(
+            AgentLaunch::new(
+                agent_id.clone(),
+                AgentKind::Codex,
+                "parser",
+                "implement parser",
+            ),
+            r#"{"type":"thread.started","thread_id":"thread-123"}"#.to_string(),
+        )
+        .unwrap();
+
+    let prompt = "work-leaf patch applied\nfiles: tests/agent_core.rs\nContinue from the repository instructions.";
+    let invocation = backend.build_send_invocation(&agent_id, prompt).unwrap();
+
+    assert_eq!(invocation.stdin, prompt);
+    assert!(!invocation.stdin.contains("Agent-ID: chat-a"));
+    assert!(!invocation.stdin.contains("Project-specific rule"));
+}
+
+#[test]
+fn codex_backend_process_failure_reports_stdout_when_stderr_is_empty() {
+    let root = temp_dir("codex-failure-stdout");
+    let codex = root.join("codex");
+    fs::write(
+        &codex,
+        "#!/bin/sh\nprintf '%s\\n' '{\"type\":\"error\",\"message\":\"Codex ran out of room in the model context window\"}'\nexit 1\n",
+    )
+    .unwrap();
+    make_executable(&codex);
+    let mut backend = CodexBackend::new(
+        CodexCommandConfig::new(root).with_binary(&codex),
+        PromptPolicy::for_restricted_agents(),
+    );
+
+    let error = backend
+        .launch(AgentLaunch::new(
+            AgentId::new("chat-a").unwrap(),
+            AgentKind::Codex,
+            "parser",
+            "implement parser",
+        ))
+        .unwrap_err()
+        .to_string();
+
+    assert!(error.contains("status Some(1)"));
+    assert!(error.contains("stdout:"));
+    assert!(error.contains("Codex ran out of room"));
 }
 
 #[test]
