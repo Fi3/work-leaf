@@ -139,6 +139,7 @@ pub struct CommandChat<B> {
     reviewed_agent_commits: BTreeMap<AgentId, String>,
     agent_profile: AgentProfile,
     max_review_rounds: usize,
+    locked_command_timeout: Duration,
     next_user_agent: usize,
 }
 
@@ -165,6 +166,7 @@ where
             reviewed_agent_commits: self.reviewed_agent_commits.clone(),
             agent_profile: self.agent_profile.clone(),
             max_review_rounds: self.max_review_rounds,
+            locked_command_timeout: self.locked_command_timeout,
             next_user_agent: self.next_user_agent,
         }
     }
@@ -188,6 +190,7 @@ where
             reviewed_agent_commits: BTreeMap::new(),
             agent_profile: AgentProfile::codex(),
             max_review_rounds: 80_000_000,
+            locked_command_timeout: Duration::from_secs(5 * 60),
             next_user_agent: 1,
         }
     }
@@ -203,6 +206,11 @@ where
 
     pub fn with_max_review_rounds(mut self, max_review_rounds: usize) -> Self {
         self.max_review_rounds = max_review_rounds.max(1);
+        self
+    }
+
+    pub fn with_locked_command_timeout(mut self, timeout: Duration) -> Self {
+        self.locked_command_timeout = timeout;
         self
     }
 
@@ -468,6 +476,7 @@ where
                         locks: &self.locks,
                         file_reads: &self.file_reads,
                         command_policy: &self.command_policy,
+                        locked_command_timeout: self.locked_command_timeout,
                     },
                     &current.agent_id,
                     &current_feature,
@@ -479,7 +488,7 @@ where
             append_orchestrator_events(&mut text, &run.events);
             append_follow_ups(&mut text, &run.follow_up_replies);
 
-            if run.completed {
+            if run.completed && current.agent_id == *agent_id {
                 break;
             }
 

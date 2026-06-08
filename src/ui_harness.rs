@@ -501,7 +501,7 @@ struct PendingEscapeSequence {
 }
 
 const CHAT_PROMPT: &str = "chat> ";
-const MAX_ESCAPE_SEQUENCE: usize = 8;
+const MAX_ESCAPE_SEQUENCE: usize = 64;
 
 fn parse_key_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
     match bytes {
@@ -509,8 +509,36 @@ fn parse_key_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
         [27, b'[', b'B', ..] => Some((UiKey::Down, 3)),
         [27, b'[', b'C', ..] => Some((UiKey::Right, 3)),
         [27, b'[', b'D', ..] => Some((UiKey::Left, 3)),
-        _ => None,
+        _ => parse_sgr_mouse_sequence(bytes),
     }
+}
+
+fn parse_sgr_mouse_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
+    if !bytes.starts_with(b"\x1b[<") {
+        return None;
+    }
+
+    let final_index = bytes.iter().position(|byte| matches!(byte, b'M' | b'm'))?;
+    let final_byte = bytes[final_index];
+    let body = std::str::from_utf8(&bytes[3..final_index]).ok()?;
+    let mut parts = body.split(';');
+    let button = parts.next()?.parse::<u16>().ok()?;
+    let column = parts.next()?.parse::<u16>().ok()?;
+    let row = parts.next()?.parse::<u16>().ok()?;
+    if parts.next().is_some() {
+        return None;
+    }
+
+    let button_kind = button & !0b0001_1100_u16;
+    let key = match (button_kind, final_byte) {
+        (64, b'M') => UiKey::MouseScrollUp { column, row },
+        (65, b'M') => UiKey::MouseScrollDown { column, row },
+        (_, b'M' | b'm') if button_kind < 64 && button & 0b11 == 0 => {
+            UiKey::MouseClick { column, row }
+        }
+        _ => return None,
+    };
+    Some((key, final_index + 1))
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

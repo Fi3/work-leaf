@@ -1,7 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::{Duration, Instant};
 use std::{fmt, fs};
 
 use crate::agent::{AgentBackend, AgentError, AgentId, AgentStreamEvent, ChatMessage};
@@ -13,6 +15,7 @@ pub struct AgentOrchestrator<B> {
     locks: FileLockTable,
     file_reads: FileReadTracker,
     command_policy: CommandWritePolicy,
+    locked_command_timeout: Duration,
     backend: B,
 }
 
@@ -25,8 +28,14 @@ where
             locks: FileLockTable::new(root),
             file_reads: FileReadTracker::default(),
             command_policy: CommandWritePolicy,
+            locked_command_timeout: default_locked_command_timeout(),
             backend,
         }
+    }
+
+    pub fn with_locked_command_timeout(mut self, timeout: Duration) -> Self {
+        self.locked_command_timeout = timeout;
+        self
     }
 
     pub fn handle_agent_message(
@@ -41,6 +50,7 @@ where
                 locks: &self.locks,
                 file_reads: &self.file_reads,
                 command_policy: &self.command_policy,
+                locked_command_timeout: self.locked_command_timeout,
             },
             agent_id,
             feature,
@@ -188,6 +198,7 @@ pub(crate) struct DirectiveServices<'a> {
     pub locks: &'a FileLockTable,
     pub file_reads: &'a FileReadTracker,
     pub command_policy: &'a CommandWritePolicy,
+    pub locked_command_timeout: Duration,
 }
 
 impl FileReadTracker {
@@ -286,6 +297,7 @@ where
 {
     let directives = parse_agent_directives(text)?;
     let mut run = DirectiveRun::default();
+    let mut applied_patch_files = BTreeSet::new();
 
     if directives.is_empty() && needs_protocol_correction(text) {
         let mut sink = |event| stream(agent_id, event);
@@ -351,6 +363,7 @@ where
                     Ok(outcome) => {
                         let files = outcome.files.clone();
                         services.file_reads.clear_files(agent_id, &files);
+                        applied_patch_files.extend(files.iter().cloned());
                         run.events.push(OrchestratorEvent::PatchApplied {
                             agent_id: agent_id.clone(),
                             feature: feature.to_string(),
@@ -423,6 +436,15 @@ where
                 break;
             }
         }
+    }
+
+    if !applied_patch_files.is_empty() && !run.completed {
+        let files = applied_patch_files.into_iter().collect::<Vec<_>>();
+        let mut sink = |event| stream(agent_id, event);
+        let reply =
+            backend.send_streaming(agent_id, &render_patch_applied_prompt(&files), &mut sink)?;
+        run.follow_up_replies
+            .push(follow_up(agent_id.clone(), reply));
     }
 
     Ok(run)
@@ -517,7 +539,12 @@ where
 {
     let locked_paths = normalize_paths(services.locks, lock_paths)?;
     let output = services.locks.with_write_locks(&locked_paths, || {
-        run_shell_command(services.locks.root(), command).map_err(FileAccessError::Io)
+        run_shell_command(
+            services.locks.root(),
+            command,
+            services.locked_command_timeout,
+        )
+        .map_err(FileAccessError::Io)
     })?;
     let prompt = render_command_result(command, &locked_paths, &output);
     let mut sink = |event| stream(agent_id, event);
@@ -556,25 +583,77 @@ fn normalize_paths(
     Ok(normalized)
 }
 
-fn run_shell_command(root: &std::path::Path, command: &str) -> std::io::Result<CommandRunOutput> {
+fn run_shell_command(
+    root: &std::path::Path,
+    command: &str,
+    timeout: Duration,
+) -> std::io::Result<CommandRunOutput> {
     #[cfg(windows)]
-    let output = Command::new("cmd")
+    let mut child = Command::new("cmd")
         .args(["/C", command])
         .current_dir(root)
-        .output()?;
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
 
     #[cfg(not(windows))]
-    let output = Command::new("sh")
-        .arg("-c")
-        .arg(command)
-        .current_dir(root)
-        .output()?;
+    let mut child = {
+        use std::os::unix::process::CommandExt;
+
+        let wrapped_command = format!(
+            "trap 'trap - TERM INT; kill -TERM 0 2>/dev/null' TERM INT; ({command}) & work_leaf_child=$!; wait $work_leaf_child"
+        );
+        let mut command_builder = Command::new("sh");
+        command_builder
+            .arg("-c")
+            .arg(wrapped_command)
+            .current_dir(root)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        command_builder.process_group(0).spawn()?
+    };
+
+    let start = Instant::now();
+    while start.elapsed() < timeout {
+        if child.try_wait()?.is_some() {
+            let output = child.wait_with_output()?;
+            return Ok(CommandRunOutput {
+                status: output.status.code(),
+                stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+                stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+                timed_out: false,
+                timeout,
+            });
+        }
+        let remaining = timeout.saturating_sub(start.elapsed());
+        thread::sleep(remaining.min(Duration::from_millis(10)));
+    }
+
+    terminate_child(&mut child);
+    let output = child.wait_with_output()?;
 
     Ok(CommandRunOutput {
         status: output.status.code(),
         stdout: String::from_utf8_lossy(&output.stdout).to_string(),
         stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+        timed_out: true,
+        timeout,
     })
+}
+
+#[cfg(unix)]
+fn terminate_child(child: &mut std::process::Child) {
+    let child_id = child.id().to_string();
+    let _ = Command::new("kill").args(["-TERM", &child_id]).status();
+    thread::sleep(Duration::from_millis(10));
+    if child.try_wait().ok().flatten().is_none() {
+        let _ = child.kill();
+    }
+}
+
+#[cfg(windows)]
+fn terminate_child(child: &mut std::process::Child) {
+    let _ = child.kill();
 }
 
 fn needs_protocol_correction(text: &str) -> bool {
@@ -869,6 +948,13 @@ fn render_command_result(
         display_status(output.status),
         display_paths(locked_paths)
     );
+    if output.timed_out {
+        text.push_str("\ntimed out: yes\ntimeout: ");
+        text.push_str(&format_duration(output.timeout));
+        text.push_str(
+            "\nuser authorization is required to rerun locked commands for longer than this limit.",
+        );
+    }
     text.push_str("\nstdout:\n");
     if output.stdout.is_empty() {
         text.push_str("<empty>\n");
@@ -901,6 +987,15 @@ fn render_patch_conflict_prompt(
         diagnostic
     );
     append_file_response(&mut text, response);
+    text
+}
+
+fn render_patch_applied_prompt(files: &[PathBuf]) -> String {
+    let mut text = format!("work-leaf patch applied\nfiles: {}\n", display_paths(files));
+    text.push_str("Continue from the repository instructions.\n");
+    text.push_str("Run any required or relevant checks through `@work-leaf locks run <path>... -- <command>` when the command may write files.\n");
+    text.push_str("Keep locked command runs within five minutes unless the user authorizes a longer lock-holding command.\n");
+    text.push_str("Provide additional patches if checks fail or more work is needed; emit `@work-leaf done` only when this patch is ready for review.");
     text
 }
 
@@ -940,11 +1035,25 @@ fn display_status(status: Option<i32>) -> String {
         .unwrap_or_else(|| "terminated".to_string())
 }
 
+fn format_duration(duration: Duration) -> String {
+    if duration.as_secs() > 0 {
+        format!("{}s", duration.as_secs())
+    } else {
+        format!("{}ms", duration.as_millis())
+    }
+}
+
+fn default_locked_command_timeout() -> Duration {
+    Duration::from_secs(5 * 60)
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct CommandRunOutput {
     status: Option<i32>,
     stdout: String,
     stderr: String,
+    timed_out: bool,
+    timeout: Duration,
 }
 
 #[derive(Debug)]

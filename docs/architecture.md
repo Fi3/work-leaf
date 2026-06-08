@@ -164,13 +164,16 @@ The controller owns:
 - shutdown propagation to running agents.
 
 When an agent worker finishes, the controller records the agent output and clears that session's
-loading state. If a user-agent response contains a patch directive, the controller starts review for
-the patch agent after the patch workflow records the provisional commit. Repository build, test,
-format, and required-check commands run only through agent-emitted orchestrator directives that name
-the command and the write-lock paths the command may touch. `PromptPolicy` injects project
+loading state. A user-agent response becomes review-ready only when the orchestrator transcript shows
+an applied patch from that agent and the agent emits `@work-leaf done`. Successful patch application
+returns a continuation prompt to the patch agent when the agent has not reported done, so the agent can
+run repository-required checks through locked command directives, provide follow-up patches, or signal
+review readiness. Repository build, test, format, and required-check commands run only through
+agent-emitted orchestrator directives that name the command and the write-lock paths the command may
+touch. Locked command runs have a five-minute default timeout, after which the command is terminated,
+locks are released, and a longer run requires user authorization. `PromptPolicy` injects project
 instruction files into agent prompts, and the active backend agent is responsible for choosing and
-requesting the repository checks required by those instructions before submitting patches or reporting
-work done.
+requesting the repository checks required by those instructions before reporting work done.
 
 The command transcript is also the conversation history for the persistent `command-agent`. That
 system agent interprets chat sent to the Work Leaf command surface. It recognizes literal command
@@ -211,8 +214,9 @@ The terminal frontend is an adapter over the UI-neutral controller.
 `src/terminal_app.rs::TerminalApp<B>` translates raw terminal bytes and modal editing state into
 controller commands, applies `WorkLeafEvent` values to `TerminalUi`, and renders controller
 snapshots. It owns terminal event-loop concerns such as insert mode, prompt mode, `Ctrl-W`
-navigation, bytewise input parsing, rendering invalidation, and polling background workers. Insert
-mode sends chat text to the selected agent session, or to `command-agent` when the Work Leaf command
+navigation, SGR mouse clicks, SGR mouse wheel scrolling of the right pane, bytewise input parsing,
+rendering invalidation, and polling background workers. Insert mode sends chat text to the selected
+agent session, or to `command-agent` when the Work Leaf command
 surface is selected. Bracketed-paste newlines and Shift+Enter are chat prompt line breaks. A plain
 Enter submits the buffered chat text.
 
@@ -225,7 +229,8 @@ state for that session.
 - `AgentListEntry` is the terminal left-pane representation of an agent row.
 - `TerminalLayout` computes pane geometry.
 - `TerminalUi` renders left/right panes, prompts, cursor placement, command-interface selection, and
-  terminal navigation actions.
+  terminal navigation actions. The right pane keeps the chat prompt visible while scroll offsets
+  reveal earlier transcript rows.
 
 `src/ui_harness.rs::UiHarness` is the test harness for terminal behavior. It exercises the same
 `TerminalUi` frame path used by the interactive example. UI tests should drive
@@ -242,10 +247,11 @@ command classification, `PatchCoordinator` for patch requests, and the active `A
 routed follow-up messages. Its public output is `OrchestratorEvent`.
 
 `src/locks.rs::FileLockTable` owns root-scoped path normalization and read/write locking.
-`FileSnapshot` carries file read results. `CommandWritePolicy` and `CommandWriteIntent` classify
-shell commands as read-only or write-intent operations. Agent-requested command runs execute in the
-project root while `FileLockTable` holds write locks for the normalized lock paths supplied by the
-agent. File paths are normalized relative to the project root and cannot escape that root.
+`FileSnapshot` carries file read results. `CommandWritePolicy` and `CommandWriteIntent` provide
+heuristic read-only/write-intent classification for commands when an agent is unsure. Agent-requested
+command runs execute in the project root while `FileLockTable` holds write locks for the normalized
+lock paths supplied by the agent. File paths are normalized relative to the project root and cannot
+escape that root.
 
 `src/patch.rs::GitPatcher` validates and applies unified diffs under write locks and creates
 metadata commits for accepted patches. `PatchCoordinator<B>` connects patch conflicts and malformed
@@ -259,7 +265,7 @@ reviewer `@work-leaf` directives, such as file reads, before interpreting review
 findings. `CommandChat` and `WorkLeafController` keep a stable `review-<agent-id>` reviewer identity
 for each patch agent and skip latest agent commits that have already completed review. `AgentCommit`,
 `ReviewResult`, and `ReviewError` are the public review workflow types.
-`WorkLeafController` scopes automatic review after patch application to the patch agent that
+`WorkLeafController` scopes automatic review after a patch agent reports done to the patch agent that
 produced the provisional commit; explicit review commands use the history-wide latest-commit lookup.
 
 `src/linearize.rs::LinearizePlanner<B>` prepares linearization questions and launches a linearizer

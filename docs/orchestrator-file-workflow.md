@@ -71,12 +71,16 @@ The intended lifecycle is:
 
 1. A patch agent submits a patch.
 2. The orchestrator records the patch as a provisional agent commit.
-3. The orchestrator runs a review agent for that patch.
-4. If the review agent emits `@work-leaf` directives, the orchestrator resolves those directives for
+3. The orchestrator prompts the patch agent to continue when the agent has not emitted
+   `@work-leaf done`.
+4. The patch agent runs required checks through locked command directives, submits follow-up patches
+   when needed, and emits `@work-leaf done` when the patch is ready for review.
+5. The orchestrator runs a review agent for that patch.
+6. If the review agent emits `@work-leaf` directives, the orchestrator resolves those directives for
    the review agent before treating reviewer output as findings.
-5. If there are no findings, the user can mark the review-agent chat as done.
-6. If there are findings, the orchestrator sends those findings to the corresponding patch agent.
-7. The patch agent keeps patching through the orchestrator until the review agent reports no
+7. If there are no findings, the user can mark the review-agent chat as done.
+8. If there are findings, the orchestrator sends those findings to the corresponding patch agent.
+9. The patch agent keeps patching through the orchestrator until the review agent reports no
    findings.
 
 The current implementation path for this review loop finds latest agent commits through
@@ -84,9 +88,9 @@ The current implementation path for this review loop finds latest agent commits 
 agent's `review-<agent-id>` reviewer, resolves reviewer orchestrator directives such as file reads,
 sends findings back to the original agent, and asks the reviewer to recheck until `NO_FINDINGS` or
 the round limit. Command-chat and controller review startup keep one reviewer identity per patch
-agent and skip latest commits that already completed a review pass. Automatic review after patch
-application is scoped to that patch agent's latest commit; an explicit `review` command is the
-history-wide review entry point.
+agent and skip latest commits that already completed a review pass. Automatic review requires an
+applied patch from the patch agent and that agent's `@work-leaf done` directive, and is scoped to that
+patch agent's latest commit. An explicit `review` command is the history-wide review entry point.
 
 ### Inspection Agent
 
@@ -129,9 +133,12 @@ With `ReadPermission::Orchestrator`, prompts tell agents:
 - ask the orchestrator for file text;
 - do not write files directly;
 - provide unified diff patches for requested writes;
-- use `@work-leaf locks classify <command>` when a command may write project files;
+- use `@work-leaf locks classify <command>` when the agent is unsure whether a command writes
+  project files;
 - use `@work-leaf locks run <path> <path...> -- <command>` to run commands while the orchestrator
   holds write locks for paths the command may write;
+- keep locked command runs within five minutes unless the user authorizes a longer lock-holding
+  command;
 - use `@work-leaf done` when no more orchestrator work is required.
 
 With `ReadPermission::DirectFilesystem`, prompts tell agents:
@@ -140,9 +147,12 @@ With `ReadPermission::DirectFilesystem`, prompts tell agents:
 - use read-only inspection commands for repository context instead of `@work-leaf read`;
 - do not write files directly;
 - provide unified diff patches for requested writes;
-- use `@work-leaf locks classify <command>` when a command may write project files;
+- use `@work-leaf locks classify <command>` when the agent is unsure whether a command writes
+  project files;
 - use `@work-leaf locks run <path> <path...> -- <command>` to run commands while the orchestrator
   holds write locks for paths the command may write;
+- keep locked command runs within five minutes unless the user authorizes a longer lock-holding
+  command;
 - use `@work-leaf done` when no more orchestrator work is required.
 
 The Codex backend applies this policy when launching and resuming sessions. The source chain is:
@@ -251,8 +261,20 @@ The tracker updates as follows:
 - a successful patch clears the patching agent's pending read entries for the touched files;
 - `@work-leaf done` clears all pending read entries for that agent.
 
-After a successful patch, the orchestrator checks all other agents with pending reads for the touched
-files. For each stale reader, it sends:
+After a successful patch, the orchestrator prompts the patch agent to continue when the same
+directive turn does not include `@work-leaf done`:
+
+```text
+work-leaf patch applied
+files: path
+Continue from the repository instructions.
+Run any required or relevant checks through `@work-leaf locks run <path>... -- <command>` when the command may write files.
+Keep locked command runs within five minutes unless the user authorizes a longer lock-holding command.
+Provide additional patches if checks fail or more work is needed; emit `@work-leaf done` only when this patch is ready for review.
+```
+
+The orchestrator also checks all other agents with pending reads for the touched files. For each
+stale reader, it sends:
 
 ```text
 work-leaf file update
@@ -300,15 +322,18 @@ protocol prompt asking the agent to resend a complete unified diff.
 
 ## Command Write Classification
 
-Agents can ask whether a command is write-producing:
+Agents can ask whether a command is write-producing when they are unsure:
 
 ```text
 @work-leaf locks classify cargo test
 ```
 
-`src/locks.rs::CommandWritePolicy` classifies common build, test, format, package, compiler, and
-language runtime commands. For example, `cargo test` is treated as write-producing for `target`, and
-`cargo fmt` is treated as write-producing for `.`.
+`src/locks.rs::CommandWritePolicy` uses a conservative heuristic table for common build, test,
+format, package, compiler, and language runtime commands. For example, `cargo test` is treated as
+write-producing for `target`, and `cargo fmt` is treated as write-producing for `.`. The classifier is
+advice for uncertain cases; agents that know a command may write project files can skip
+classification and run it directly through `@work-leaf locks run` with the paths they expect the tool
+to touch.
 
 Classification is separate from patch application. It tells the agent which paths require
 orchestrator mediation. Commands run through an explicit lock directive:
@@ -318,10 +343,13 @@ orchestrator mediation. Commands run through an explicit lock directive:
 ```
 
 `src/orchestrator.rs::handle_agent_directives_streaming` parses the directive, normalizes and
-deduplicates the requested lock paths through `src/locks.rs::FileLockTable`, acquires write locks for
-those paths, runs the shell command in the project root, and sends the command status, stdout, stderr,
-and locked paths back to the same agent as `work-leaf command result`. The command output is agent
-context; manual feature edits still use the unified-diff patch flow.
+deduplicates the supplied paths, acquires the corresponding write locks, and runs the command in the
+project root. Locked command runs have a five-minute default timeout. When a locked command exceeds
+that timeout, the orchestrator terminates it, releases the locks, returns a timed-out command result to
+the agent, and requires user authorization before a longer lock-holding command is run. The
+orchestrator sends the command status, stdout, stderr, timeout state, and locked paths back to the
+same agent as `work-leaf command result`. The command output is agent context; manual feature edits
+still use the unified-diff patch flow.
 
 The command-lock rule is language- and tool-agnostic. Agents use it for any formatter, build, test,
 code generator, package manager, installer, cache-producing tool, or repository-required check that
@@ -342,12 +370,13 @@ A provisional patch commit records metadata that review and linearization use:
 reads git history and parses latest commits per patch agent.
 
 The review flow uses that metadata to connect review findings back to the patch agent that produced
-the patch. Each patch agent uses a stable `review-<agent-id>` reviewer identity. The review agent
-must focus only on the reviewed patch. Reviewer `@work-leaf` directives are resolved in the reviewer
-conversation before output is interpreted as findings. If the reviewer finds issues, the orchestrator
-sends those findings to the patch agent. The patch agent then continues through the configured read
-path and patch protocol. When the reviewer reports no findings, the review chat can be marked done by
-the user.
+the patch. Automatic review starts only after the patch agent has an applied patch and reports
+`@work-leaf done`; patch application alone is not a review-readiness signal. Each patch agent uses a
+stable `review-<agent-id>` reviewer identity. The review agent must focus only on the reviewed patch.
+Reviewer `@work-leaf` directives are resolved in the reviewer conversation before output is
+interpreted as findings. If the reviewer finds issues, the orchestrator sends those findings to the
+patch agent. The patch agent then continues through the configured read path and patch protocol. When
+the reviewer reports no findings, the review chat can be marked done by the user.
 
 ## Developer Path
 

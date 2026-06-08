@@ -40,6 +40,8 @@ pub enum UiKey {
     Left,
     Right,
     MouseClick { column: u16, row: u16 },
+    MouseScrollUp { column: u16, row: u16 },
+    MouseScrollDown { column: u16, row: u16 },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -290,9 +292,22 @@ impl TerminalUi {
     }
 
     pub fn handle_key(&mut self, key: UiKey) -> Vec<UiAction> {
-        if let UiKey::MouseClick { column, row } = key {
-            self.pending = None;
-            return self.handle_mouse_click(column, row);
+        match key {
+            UiKey::MouseClick { column, row } => {
+                self.pending = None;
+                return self.handle_mouse_click(column, row);
+            }
+            UiKey::MouseScrollUp { column, row } => {
+                self.pending = None;
+                self.handle_mouse_scroll(column, row, true);
+                return Vec::new();
+            }
+            UiKey::MouseScrollDown { column, row } => {
+                self.pending = None;
+                self.handle_mouse_scroll(column, row, false);
+                return Vec::new();
+            }
+            _ => {}
         }
 
         if let Some(pending) = self.pending.take() {
@@ -769,6 +784,23 @@ impl TerminalUi {
         }
 
         Vec::new()
+    }
+
+    fn handle_mouse_scroll(&mut self, column: u16, row: u16, up: bool) {
+        if column == 0 || row == 0 || row >= self.height {
+            return;
+        }
+
+        let left_width = self.layout().left_width;
+        if self.left_visible && column <= left_width {
+            return;
+        }
+
+        if up {
+            self.scroll_right_pane_up();
+        } else {
+            self.scroll_right_pane_down();
+        }
     }
 
     fn hide_control_selection(&mut self) {

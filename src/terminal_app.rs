@@ -592,11 +592,11 @@ fn parse_control_sequence(sequence: &[u8]) -> Option<TerminalAppInput> {
         | [b'[', b'2', b'7', b';', b'2', b';', b'1', b'3', b'~'] => {
             Some(TerminalAppInput::LineBreak)
         }
-        _ => parse_sgr_mouse_click(sequence).map(TerminalAppInput::Key),
+        _ => parse_sgr_mouse_event(sequence).map(TerminalAppInput::Key),
     }
 }
 
-fn parse_sgr_mouse_click(sequence: &[u8]) -> Option<UiKey> {
+fn parse_sgr_mouse_event(sequence: &[u8]) -> Option<UiKey> {
     let final_byte = *sequence.last()?;
     if !sequence.starts_with(b"[<") || !matches!(final_byte, b'M' | b'm') {
         return None;
@@ -607,11 +607,19 @@ fn parse_sgr_mouse_click(sequence: &[u8]) -> Option<UiKey> {
     let button = parts.next()?.parse::<u16>().ok()?;
     let column = parts.next()?.parse::<u16>().ok()?;
     let row = parts.next()?.parse::<u16>().ok()?;
-    if parts.next().is_some() || button & 0b11 != 0 {
+    if parts.next().is_some() {
         return None;
     }
 
-    Some(UiKey::MouseClick { column, row })
+    let button_kind = button & !0b0001_1100_u16;
+    match (button_kind, final_byte) {
+        (64, b'M') => Some(UiKey::MouseScrollUp { column, row }),
+        (65, b'M') => Some(UiKey::MouseScrollDown { column, row }),
+        (_, b'M' | b'm') if button_kind < 64 && button & 0b11 == 0 => {
+            Some(UiKey::MouseClick { column, row })
+        }
+        _ => None,
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

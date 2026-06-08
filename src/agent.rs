@@ -218,10 +218,11 @@ impl PromptPolicy {
         }
         lines.extend([
             "Use `@work-leaf patch <reason>` followed by a unified diff and `@work-leaf end` to request a write.",
-            "Use `@work-leaf locks classify <command>` to ask whether a command writes project files.",
+            "Use `@work-leaf locks classify <command>` only when you are unsure whether a command writes project files.",
             "Use `@work-leaf locks run <path> <path...> -- <command>` to run a command while the orchestrator holds write locks for every path the command may write.",
             "This command-lock rule is language- and tool-agnostic: use it for any formatter, build, test, code generator, package manager, installer, cache-producing tool, or repository-required check that may write files.",
             "Choose the command from the repository instructions and project context; choose the lock paths from the files, directories, caches, build outputs, dependency folders, or lockfiles that command may write.",
+            "Locked command runs are limited to five minutes; user authorization is required for longer lock-holding commands.",
             "Do not use command locks for manual feature edits; manual code or documentation changes must still be submitted with the unified-diff patch directive.",
             "Use `@work-leaf send <agent-id> <message>` to route context to another agent.",
             "You are responsible for following the project instructions, including running the repository's required checks before you submit a patch or report work done.",

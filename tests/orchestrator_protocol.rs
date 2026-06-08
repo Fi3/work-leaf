@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{Duration, Instant};
 
 use work_leaf::{
     AgentBackend, AgentError, AgentId, AgentOrchestrator, AgentSession, ChatMessage, MessageRole,
@@ -132,6 +133,58 @@ fn orchestrator_protocol_runs_command_under_requested_write_locks() {
 }
 
 #[test]
+fn orchestrator_protocol_times_out_long_locked_command_runs() {
+    let root = temp_git_repo("protocol-locked-command-timeout");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    fs::write(
+        root.join("slow.sh"),
+        "sleep 1\nprintf 'late\\n' > README.md\n",
+    )
+    .unwrap();
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend)
+        .with_locked_command_timeout(Duration::from_millis(50));
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let start = Instant::now();
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "@work-leaf locks run README.md -- sh slow.sh",
+        )
+        .unwrap();
+    assert!(
+        start.elapsed() < Duration::from_millis(800),
+        "locked command should release shortly after timeout"
+    );
+    let backend = orchestrator.into_backend();
+
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "before\n"
+    );
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::CommandRun {
+                agent_id: id,
+                command,
+                status,
+                locked_paths,
+                ..
+            } if id == &agent_id
+                && command == "sh slow.sh"
+                && status.is_none()
+                && locked_paths == &vec![PathBuf::from("README.md")]
+        )
+    }));
+    assert_eq!(backend.sends.len(), 1);
+    assert!(backend.sends[0].1.contains("timed out"));
+    assert!(backend.sends[0].1.contains("user authorization"));
+}
+
+#[test]
 fn orchestrator_protocol_returns_failing_command_output_to_agent() {
     let root = temp_git_repo("protocol-failing-command-run");
     fs::write(
@@ -222,10 +275,13 @@ diff --git a/lib.rs b/lib.rs
             OrchestratorEvent::MessageRouted { from, to } if from == &source && to == &target
         )
     }));
-    assert_eq!(backend.sends.len(), 1);
+    assert_eq!(backend.sends.len(), 2);
     assert_eq!(backend.sends[0].0, target);
     assert!(backend.sends[0].1.contains("user-1"));
     assert!(backend.sends[0].1.contains("please review"));
+    assert_eq!(backend.sends[1].0, source);
+    assert!(backend.sends[1].1.contains("work-leaf patch applied"));
+    assert!(backend.sends[1].1.contains("@work-leaf done"));
 
     let message = git_output(&root, ["log", "-1", "--pretty=%B"]);
     assert!(message.contains("Agent-ID: user-1"));
@@ -339,7 +395,9 @@ diff --git a/README.md b/README.md
                 && files == &vec![PathBuf::from("README.md")]
         )
     }));
-    assert!(backend.sends.is_empty());
+    assert_eq!(backend.sends.len(), 1);
+    assert_eq!(backend.sends[0].0, agent_id);
+    assert!(backend.sends[0].1.contains("work-leaf patch applied"));
 }
 
 #[test]
@@ -439,13 +497,15 @@ diff --git a/README.md b/README.md
                 if agent_id == &reader && paths == &vec![PathBuf::from("README.md")]
         )
     }));
-    assert_eq!(backend.sends.len(), 2);
+    assert_eq!(backend.sends.len(), 3);
     assert_eq!(backend.sends[0].0, reader);
     assert!(backend.sends[0].1.contains("before"));
     assert_eq!(backend.sends[1].0, AgentId::new("user-1").unwrap());
     assert!(backend.sends[1].1.contains("work-leaf file update"));
     assert!(backend.sends[1].1.contains("README.md"));
     assert!(backend.sends[1].1.contains("after"));
+    assert_eq!(backend.sends[2].0, patcher);
+    assert!(backend.sends[2].1.contains("work-leaf patch applied"));
 }
 
 #[test]
@@ -488,7 +548,9 @@ diff --git a/README.md b/README.md
             OrchestratorEvent::FileUpdateSent { agent_id, .. } if agent_id == &reader
         )
     }));
-    assert_eq!(backend.sends.len(), 1);
+    assert_eq!(backend.sends.len(), 2);
+    assert_eq!(backend.sends[1].0, patcher);
+    assert!(backend.sends[1].1.contains("work-leaf patch applied"));
 }
 
 #[derive(Default)]

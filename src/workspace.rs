@@ -774,14 +774,22 @@ fn should_start_review(agent_id: &AgentId, result: &CommandChatResult) -> bool {
     agent_id.as_str().starts_with("user-")
         && match result {
             CommandChatResult::AgentLaunched { reply, .. }
-            | CommandChatResult::AgentMessage { reply, .. } => contains_patch_directive(reply),
+            | CommandChatResult::AgentMessage { reply, .. } => {
+                contains_applied_patch(agent_id, reply) && contains_done_directive(reply)
+            }
             _ => false,
         }
 }
 
-fn contains_patch_directive(text: &str) -> bool {
+fn contains_applied_patch(agent_id: &AgentId, text: &str) -> bool {
+    let prefix = format!("applied patch from {agent_id}:");
     text.lines()
-        .any(|line| line.trim_start().starts_with("@work-leaf patch "))
+        .any(|line| line.trim_start().starts_with(&prefix))
+}
+
+fn contains_done_directive(text: &str) -> bool {
+    text.lines()
+        .any(|line| line.trim_start() == "@work-leaf done")
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

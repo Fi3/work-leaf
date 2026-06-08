@@ -445,6 +445,42 @@ fn terminal_app_keeps_chat_prompt_visible_after_large_agent_output() {
 }
 
 #[test]
+fn terminal_app_mouse_wheel_scrolls_chat_history() {
+    let long_reply = (0..48)
+        .map(|index| format!("agent-output-line-{index:02}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let backend = FakeBackend::from_replies(VecDeque::from([long_reply]));
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 80, 12);
+
+    app.handle_bytes(b":new large scroll\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    let bottom_frame = app.render_frame();
+    assert!(bottom_frame.contains("agent-output-line-47"));
+    assert!(!bottom_frame.contains("agent-output-line-00"));
+    assert!(bottom_frame.contains("chat> "));
+
+    for _ in 0..16 {
+        app.handle_bytes(b"\x1b[<64;20;3M");
+    }
+
+    let scrolled_frame = app.render_frame();
+    assert!(scrolled_frame.contains("agent-output-line-00"));
+    assert!(scrolled_frame.contains("chat> "));
+
+    for _ in 0..16 {
+        app.handle_bytes(b"\x1b[<65;20;3M");
+    }
+
+    let bottom_again = app.render_frame();
+    assert!(bottom_again.contains("agent-output-line-47"));
+    assert!(!bottom_again.contains("agent-output-line-00"));
+    assert!(bottom_again.contains("chat> "));
+}
+
+#[test]
 fn terminal_app_new_adds_agent_immediately_while_backend_is_loading() {
     let backend = SlowBackend;
     let chat = CommandChat::new(PathBuf::from("/repo"), backend);

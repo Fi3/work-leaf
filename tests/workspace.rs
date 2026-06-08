@@ -171,6 +171,46 @@ fn controller_starts_review_after_patch_agent_done_and_loops_until_clean() {
 }
 
 #[test]
+fn controller_does_not_start_review_until_patch_agent_reports_done() {
+    let root = git_repo("workspace-review-waits-for-done");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end",
+        "summary that should not be requested",
+        "NO_FINDINGS",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("update readme").unwrap();
+
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    let snapshot = controller.snapshot();
+    assert!(
+        snapshot
+            .session(&AgentId::new("review-user-1").unwrap())
+            .is_none(),
+        "review must wait for the patch agent to report done"
+    );
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert_eq!(patch_agent.loading, None);
+    let launches = backend.launches();
+    assert!(
+        !launches
+            .iter()
+            .any(|launch| launch.id.as_str() == "review-user-1")
+    );
+    let sends = backend.sends();
+    assert!(sends.iter().any(|(target, prompt)| {
+        target == &agent_id
+            && prompt.contains("work-leaf patch applied")
+            && prompt.contains("@work-leaf done")
+    }));
+}
+
+#[test]
 fn controller_reuses_one_reviewer_for_repeated_patch_agent_iterations() {
     let root = git_repo("workspace-reuses-reviewer");
     fs::write(root.join("README.md"), "before\n").unwrap();

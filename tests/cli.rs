@@ -3,6 +3,7 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::time::Duration;
 
 use work_leaf::{
     AgentBackend, AgentError, AgentId, AgentSession, ChatMessage, CodexBackend, CodexCommandConfig,
@@ -189,6 +190,38 @@ fn command_chat_processes_agent_orchestrator_requests_automatically() {
 }
 
 #[test]
+fn command_chat_times_out_long_locked_command_runs() {
+    let root = temp_git_repo("command-chat-locked-command-timeout");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    fs::write(
+        root.join("slow.sh"),
+        "sleep 1\nprintf 'late\\n' > README.md\n",
+    )
+    .unwrap();
+    let backend = FakeBackend::new([
+        "@work-leaf locks run README.md -- sh slow.sh",
+        "@work-leaf done",
+    ]);
+    let mut chat = CommandChat::new(root.clone(), backend)
+        .with_locked_command_timeout(Duration::from_millis(50));
+
+    let result = chat.handle_line("new validate timeout").unwrap();
+
+    let CommandChatResult::AgentLaunched { reply, .. } = result else {
+        panic!("expected launched agent");
+    };
+    assert!(reply.contains("agent follow-up from user-1"));
+    let backend = chat.into_backend();
+    assert_eq!(backend.sends.len(), 1);
+    assert!(backend.sends[0].1.contains("timed out: yes"));
+    assert!(backend.sends[0].1.contains("user authorization"));
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "before\n"
+    );
+}
+
+#[test]
 fn command_chat_corrects_agents_that_treat_work_leaf_as_a_shell_command() {
     let root = temp_dir("command-chat-agent-protocol-correction");
     fs::create_dir_all(root.join("src")).unwrap();
@@ -322,7 +355,8 @@ fn command_chat_applies_agent_patch_requests_automatically() {
     fs::write(root.join("lib.rs"), "pub fn value() -> u8 { 1 }\n").unwrap();
     git(&root, ["add", "."]);
     git(&root, ["commit", "-m", "ADD initial patch fixture"]);
-    let backend = FakeBackend::new(["\
+    let backend = FakeBackend::new([
+        "\
 @work-leaf patch return value two
 diff --git a/lib.rs b/lib.rs
 --- a/lib.rs
@@ -330,7 +364,9 @@ diff --git a/lib.rs b/lib.rs
 @@ -1 +1 @@
 -pub fn value() -> u8 { 1 }
 +pub fn value() -> u8 { 2 }
-@work-leaf end"]);
+@work-leaf end",
+        "@work-leaf done",
+    ]);
     let mut chat = CommandChat::new(root.clone(), backend);
 
     let result = chat.handle_line("new update value").unwrap();
@@ -348,6 +384,11 @@ diff --git a/lib.rs b/lib.rs
     assert!(message.contains("Agent-ID: user-1"));
     assert!(message.contains("Feature: user-agent"));
     assert!(message.contains("Reason: return value two"));
+    let backend = chat.into_backend();
+    assert_eq!(backend.sends.len(), 1);
+    assert_eq!(backend.sends[0].0, AgentId::new("user-1").unwrap());
+    assert!(backend.sends[0].1.contains("work-leaf patch applied"));
+    assert!(backend.sends[0].1.contains("@work-leaf done"));
 }
 
 #[test]
@@ -469,6 +510,7 @@ diff --git a/README.md b/README.md
 +after
 @work-leaf end",
         "@work-leaf done",
+        "@work-leaf done",
     ]);
     let mut chat = CommandChat::new(root.clone(), backend);
 
@@ -487,18 +529,21 @@ diff --git a/README.md b/README.md
     assert!(reply.contains("applied patch from user-2"));
     assert!(reply.contains("sent file update to user-1: README.md"));
     assert!(reply.contains("agent user-1 reported done"));
+    assert!(reply.contains("agent user-2 reported done"));
     assert_eq!(
         fs::read_to_string(root.join("README.md")).unwrap(),
         "after\n"
     );
 
     let backend = chat.into_backend();
-    assert_eq!(backend.sends.len(), 2);
+    assert_eq!(backend.sends.len(), 3);
     assert_eq!(backend.sends[0].0, AgentId::new("user-1").unwrap());
     assert!(backend.sends[0].1.contains("before"));
     assert_eq!(backend.sends[1].0, AgentId::new("user-1").unwrap());
     assert!(backend.sends[1].1.contains("work-leaf file update"));
     assert!(backend.sends[1].1.contains("after"));
+    assert_eq!(backend.sends[2].0, AgentId::new("user-2").unwrap());
+    assert!(backend.sends[2].1.contains("work-leaf patch applied"));
 }
 
 #[test]
