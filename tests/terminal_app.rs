@@ -99,6 +99,85 @@ fn terminal_app_command_agent_opens_multiple_patch_agents_from_chat_request() {
 }
 
 #[test]
+fn terminal_app_ctrl_c_never_quits_and_only_right_focus_interrupts_agent() {
+    let backend = InterruptRecordingBackend::default();
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new interruptible task\n");
+    assert!(app.is_busy());
+    assert_eq!(app.ui().focus(), PaneFocus::Right);
+
+    assert!(app.handle_byte(3));
+    assert!(!app.is_quit());
+    assert_eq!(backend.interrupts(), vec![AgentId::new("user-1").unwrap()]);
+    assert!(app.render_frame().contains("work-leaf: sent Ctrl-C to Codex"));
+
+    app.handle_bytes(&[27, 23, b'h']);
+    assert_eq!(app.ui().focus(), PaneFocus::Left);
+    assert!(app.handle_byte(3));
+    assert!(!app.is_quit());
+    assert_eq!(backend.interrupts(), vec![AgentId::new("user-1").unwrap()]);
+
+    assert!(app.wait_for_idle(Duration::from_secs(1)));
+}
+
+#[test]
+fn terminal_app_quits_only_from_prompt_q() {
+    let backend = FakeBackend::from_replies(VecDeque::new());
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    assert!(app.handle_byte(3));
+    assert!(!app.is_quit());
+    assert!(app.handle_byte(b'q'));
+    assert!(!app.is_quit());
+
+    assert!(!app.handle_bytes(b":q\n"));
+    assert!(app.is_quit());
+}
+
+#[derive(Clone, Debug, Default)]
+struct InterruptRecordingBackend {
+    state: Arc<Mutex<InterruptRecordingState>>,
+}
+
+#[derive(Debug, Default)]
+struct InterruptRecordingState {
+    interrupts: Vec<AgentId>,
+}
+
+impl InterruptRecordingBackend {
+    fn interrupts(&self) -> Vec<AgentId> {
+        self.state.lock().unwrap().interrupts.clone()
+    }
+}
+
+impl AgentBackend for InterruptRecordingBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        if request.id.as_str().starts_with("title-") {
+            let mut session = AgentSession::new(request);
+            session.push_message(MessageRole::Agent, "interruptible-task");
+            return Ok(session);
+        }
+
+        thread::sleep(Duration::from_millis(250));
+        let mut session = AgentSession::new(request);
+        session.push_message(MessageRole::Agent, "finished without interrupt");
+        Ok(session)
+    }
+
+    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+        Ok(ChatMessage::new(MessageRole::Agent, "follow-up"))
+    }
+
+    fn interrupt(&mut self, agent_id: &AgentId) -> Result<(), AgentError> {
+        self.state.lock().unwrap().interrupts.push(agent_id.clone());
+        Ok(())
+    }
+}
+
+#[test]
 fn terminal_app_keeps_visible_cursor_on_chat_input() {
     let backend = FakeBackend::new(["launch reply"]);
     let chat = CommandChat::new(PathBuf::from("/repo"), backend);

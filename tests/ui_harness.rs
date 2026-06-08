@@ -162,6 +162,43 @@ fn scripted_harness_drives_ctrl_w_navigation_and_left_toggle() {
 }
 
 #[test]
+fn scripted_harness_ctrl_c_never_quits_and_only_right_focus_interrupts_agent() {
+    let mut harness = UiHarness::new(80, 24);
+
+    assert_eq!(harness.ui().focus(), PaneFocus::Left);
+    assert!(harness.handle_byte(3));
+    assert!(!harness.is_quit());
+    assert!(
+        !harness
+            .transcript()
+            .iter()
+            .any(|line| line.contains("sent Ctrl-C"))
+    );
+
+    harness.handle_bytes(&[23, b'l']);
+    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+    assert!(harness.handle_byte(3));
+    assert!(!harness.is_quit());
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| line == "work-leaf: sent Ctrl-C to user-1")
+    );
+}
+
+#[test]
+fn scripted_harness_quits_only_through_colon_q() {
+    let mut harness = UiHarness::new(80, 24);
+
+    assert!(harness.handle_byte(b'q'));
+    assert!(!harness.is_quit());
+
+    assert!(!harness.handle_bytes(b":q\n"));
+    assert!(harness.is_quit());
+}
+
+#[test]
 fn scripted_harness_new_commands_select_new_agent_chat() {
     let mut harness = UiHarness::new(80, 24);
 

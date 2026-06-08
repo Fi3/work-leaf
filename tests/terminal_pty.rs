@@ -85,6 +85,43 @@ fn real_terminal_pty_keeps_chat_prompt_visible_after_large_agent_output() {
     });
 }
 
+#[test]
+fn real_terminal_pty_ignores_ctrl_c_and_exits_on_colon_q() {
+    let root = temp_dir("quit");
+    let fake_bin = write_fake_codex(root.path(), LARGE_OUTPUT_CODEX);
+    let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 80, 12);
+
+    app.wait_for_output_contains("Command chat:", Duration::from_secs(2));
+    app.send(&[3]);
+    thread::sleep(Duration::from_millis(100));
+    assert_pty_running(&mut app);
+
+    app.send(b":q\n");
+    wait_for_pty_exit(&mut app, Duration::from_secs(2));
+}
+
+fn assert_pty_running(app: &mut PtyWorkLeaf) {
+    assert!(
+        app.child.try_wait().unwrap().is_none(),
+        "work-leaf should still be running"
+    );
+}
+
+fn wait_for_pty_exit(app: &mut PtyWorkLeaf, timeout: Duration) {
+    let start = Instant::now();
+    loop {
+        if app.child.try_wait().unwrap().is_some() {
+            return;
+        }
+        assert!(
+            start.elapsed() < timeout,
+            "timed out waiting for work-leaf to exit\nlast frame:\n{}",
+            last_frame(&app.output())
+        );
+        thread::sleep(Duration::from_millis(20));
+    }
+}
+
 struct PtyWorkLeaf {
     child: Child,
     writer: File,
