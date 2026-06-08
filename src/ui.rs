@@ -1,4 +1,8 @@
-use std::{cell::Cell, path::PathBuf};
+use std::{
+    cell::Cell,
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 
 use crate::agent::AgentId;
 use tui::{
@@ -123,6 +127,18 @@ enum PendingKey {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+struct StatusNotice {
+    message: String,
+    expires_at: Instant,
+}
+
+const STATUS_NOTICE_SECONDS: u64 = 5;
+const COMMAND_MODE_TYPING_NOTICE_THRESHOLD: usize = 5;
+const COMMAND_MODE_TYPING_NOTICE: &str =
+    "command mode: press i for insert mode before typing";
+const CTRL_C_EXIT_NOTICE: &str = "to exit, press Esc then :q then Enter";
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 enum LeftPaneClickTarget {
     Command,
     Agent(AgentId),
@@ -172,6 +188,8 @@ pub struct TerminalUi {
     right_scroll_rows: usize,
     pending: Option<PendingKey>,
     pending_bell: Cell<bool>,
+    status_notice: Option<StatusNotice>,
+    command_mode_typing_count: usize,
 }
 
 impl TerminalUi {
@@ -191,6 +209,8 @@ impl TerminalUi {
             right_scroll_rows: 0,
             pending: None,
             pending_bell: Cell::new(false),
+            status_notice: None,
+            command_mode_typing_count: 0,
         }
     }
 
@@ -211,6 +231,23 @@ impl TerminalUi {
 
     pub fn focus(&self) -> PaneFocus {
         self.focus
+    }
+
+    pub(crate) fn show_ctrl_c_exit_notice(&mut self) {
+        self.show_status_notice(
+            CTRL_C_EXIT_NOTICE,
+            Duration::from_secs(STATUS_NOTICE_SECONDS),
+        );
+    }
+
+    pub(crate) fn has_status_notice(&self) -> bool {
+        self.status_notice.is_some()
+    }
+
+    pub(crate) fn clear_expired_status_notice(&mut self) {
+        if self.status_notice_expired() {
+            self.status_notice = None;
+        }
     }
 
     pub fn window_count(&self) -> usize {
@@ -292,6 +329,13 @@ impl TerminalUi {
     }
 
     pub fn handle_key(&mut self, key: UiKey) -> Vec<UiAction> {
+        let command_mode_text_key = self.is_command_mode_text_key(key);
+        let actions = self.handle_key_inner(key);
+        self.update_command_mode_typing_notice(command_mode_text_key && actions.is_empty());
+        actions
+    }
+
+    fn handle_key_inner(&mut self, key: UiKey) -> Vec<UiAction> {
         match key {
             UiKey::MouseClick { column, row } => {
                 self.pending = None;
@@ -702,6 +746,50 @@ impl TerminalUi {
         }
     }
 
+    fn is_command_mode_text_key(&self, key: UiKey) -> bool {
+        self.mode == UiMode::Command
+            && self.pending.is_none()
+            && matches!(
+                key,
+                UiKey::Char(ch) if ch.is_ascii_alphanumeric() || ch == ' '
+            )
+    }
+
+    fn update_command_mode_typing_notice(&mut self, command_mode_text_key: bool) {
+        if command_mode_text_key && self.mode == UiMode::Command && self.pending.is_none() {
+            self.command_mode_typing_count = self.command_mode_typing_count.saturating_add(1);
+            if self.command_mode_typing_count >= COMMAND_MODE_TYPING_NOTICE_THRESHOLD {
+                self.show_status_notice(
+                    COMMAND_MODE_TYPING_NOTICE,
+                    Duration::from_secs(STATUS_NOTICE_SECONDS),
+                );
+                self.command_mode_typing_count = 0;
+            }
+        } else {
+            self.command_mode_typing_count = 0;
+        }
+    }
+
+    fn show_status_notice(&mut self, message: impl Into<String>, duration: Duration) {
+        self.status_notice = Some(StatusNotice {
+            message: message.into(),
+            expires_at: Instant::now() + duration,
+        });
+    }
+
+    fn active_status_notice(&self) -> Option<&str> {
+        self.status_notice
+            .as_ref()
+            .filter(|notice| Instant::now() < notice.expires_at)
+            .map(|notice| notice.message.as_str())
+    }
+
+    fn status_notice_expired(&self) -> bool {
+        self.status_notice
+            .as_ref()
+            .is_some_and(|notice| Instant::now() >= notice.expires_at)
+    }
+
     fn open_selected_same_pane(&mut self) -> Vec<UiAction> {
         let Some(agent_id) = self.action_agent_id() else {
             return Vec::new();
@@ -988,6 +1076,10 @@ impl TerminalUi {
     }
 
     fn render_status_line(&self) -> String {
+        if let Some(notice) = self.active_status_notice() {
+            return notice.to_string();
+        }
+
         format!(
             "mode={} focus={} window={}/{}",
             self.mode.as_str(),

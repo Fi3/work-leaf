@@ -84,11 +84,12 @@ where
     }
 
     pub fn needs_render(&self) -> bool {
-        self.dirty
+        self.dirty || self.ui.has_status_notice()
     }
 
     pub fn mark_rendered(&mut self) {
         self.dirty = false;
+        self.ui.clear_expired_status_notice();
     }
 
     pub fn tick(&mut self) {
@@ -191,6 +192,7 @@ where
                 self.request_quit();
             }
             TerminalAppInput::Interrupt => {
+                self.ui.show_ctrl_c_exit_notice();
                 if self.ui.focus() == PaneFocus::Right
                     && let Some(agent_id) = self.ui.selected_agent().cloned()
                 {

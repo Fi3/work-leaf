@@ -130,6 +130,7 @@ impl UiHarness {
         match input {
             HarnessInput::Quit => self.quit = true,
             HarnessInput::Interrupt => {
+                self.ui.show_ctrl_c_exit_notice();
                 if self.ui.focus() == PaneFocus::Right
                     && let Some(agent_id) = self.ui.selected_agent()
                 {
