@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -14,6 +14,7 @@ use crate::patch::{GitPatcher, PatchError, PatchRequest, render_no_files_prompt}
 pub struct AgentOrchestrator<B> {
     locks: FileLockTable,
     file_reads: FileReadTracker,
+    command_changes: CommandChangeTracker,
     command_policy: CommandWritePolicy,
     locked_command_timeout: Duration,
     backend: B,
@@ -27,6 +28,7 @@ where
         Self {
             locks: FileLockTable::new(root),
             file_reads: FileReadTracker::default(),
+            command_changes: CommandChangeTracker::default(),
             command_policy: CommandWritePolicy,
             locked_command_timeout: default_locked_command_timeout(),
             backend,
@@ -49,6 +51,7 @@ where
             DirectiveServices {
                 locks: &self.locks,
                 file_reads: &self.file_reads,
+                command_changes: &self.command_changes,
                 command_policy: &self.command_policy,
                 locked_command_timeout: self.locked_command_timeout,
             },
@@ -187,6 +190,11 @@ pub(crate) struct FileReadTracker {
     inner: Arc<Mutex<BTreeMap<AgentId, BTreeSet<PathBuf>>>>,
 }
 
+#[derive(Clone, Debug, Default)]
+pub(crate) struct CommandChangeTracker {
+    inner: Arc<Mutex<BTreeMap<AgentId, BTreeSet<PathBuf>>>>,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct StaleFileUpdate {
     agent_id: AgentId,
@@ -197,6 +205,7 @@ struct StaleFileUpdate {
 pub(crate) struct DirectiveServices<'a> {
     pub locks: &'a FileLockTable,
     pub file_reads: &'a FileReadTracker,
+    pub command_changes: &'a CommandChangeTracker,
     pub command_policy: &'a CommandWritePolicy,
     pub locked_command_timeout: Duration,
 }
@@ -255,6 +264,53 @@ impl FileReadTracker {
                 }
             })
             .collect()
+    }
+}
+
+impl CommandChangeTracker {
+    fn record_files(&self, agent_id: &AgentId, files: &[PathBuf]) {
+        if files.is_empty() {
+            return;
+        }
+        let mut pending = self
+            .inner
+            .lock()
+            .expect("command change tracker mutex poisoned");
+        pending
+            .entry(agent_id.clone())
+            .or_default()
+            .extend(files.iter().cloned());
+    }
+
+    fn clear_files(&self, agent_id: &AgentId, files: &[PathBuf]) {
+        let mut pending = self
+            .inner
+            .lock()
+            .expect("command change tracker mutex poisoned");
+        if let Some(paths) = pending.get_mut(agent_id) {
+            for file in files {
+                paths.remove(file);
+            }
+            if paths.is_empty() {
+                pending.remove(agent_id);
+            }
+        }
+    }
+
+    fn clear_agent(&self, agent_id: &AgentId) {
+        self.inner
+            .lock()
+            .expect("command change tracker mutex poisoned")
+            .remove(agent_id);
+    }
+
+    fn pending_files(&self, agent_id: &AgentId) -> Vec<PathBuf> {
+        self.inner
+            .lock()
+            .expect("command change tracker mutex poisoned")
+            .get(agent_id)
+            .map(|paths| paths.iter().cloned().collect())
+            .unwrap_or_default()
     }
 }
 
@@ -363,6 +419,7 @@ where
                     Ok(outcome) => {
                         let files = outcome.files.clone();
                         services.file_reads.clear_files(agent_id, &files);
+                        services.command_changes.clear_files(agent_id, &files);
                         applied_patch_files.extend(files.iter().cloned());
                         run.events.push(OrchestratorEvent::PatchApplied {
                             agent_id: agent_id.clone(),
@@ -428,7 +485,21 @@ where
                 });
             }
             AgentDirective::Done => {
+                let pending_files = services.command_changes.pending_files(agent_id);
+                if !pending_files.is_empty() {
+                    let diff = git_diff_head(services.locks.root(), &pending_files);
+                    let mut sink = |event| stream(agent_id, event);
+                    let reply = backend.send_streaming(
+                        agent_id,
+                        &render_pending_command_changes_prompt(&pending_files, &diff),
+                        &mut sink,
+                    )?;
+                    run.follow_up_replies
+                        .push(follow_up(agent_id.clone(), reply));
+                    break;
+                }
                 services.file_reads.clear_agent(agent_id);
+                services.command_changes.clear_agent(agent_id);
                 run.completed = true;
                 run.events.push(OrchestratorEvent::AgentDone {
                     agent_id: agent_id.clone(),
@@ -538,6 +609,7 @@ where
     B: AgentBackend,
 {
     let locked_paths = normalize_paths(services.locks, lock_paths)?;
+    let dirty_before = tracked_changed_files(services.locks.root());
     let output = services.locks.with_write_locks(&locked_paths, || {
         run_shell_command(
             services.locks.root(),
@@ -546,6 +618,14 @@ where
         )
         .map_err(FileAccessError::Io)
     })?;
+    let command_changed_files = command_changed_files(
+        &dirty_before,
+        &tracked_changed_files(services.locks.root()),
+        &locked_paths,
+    );
+    services
+        .command_changes
+        .record_files(agent_id, &command_changed_files);
     let prompt = render_command_result(command, &locked_paths, &output);
     let mut sink = |event| stream(agent_id, event);
     let reply = backend.send_streaming(agent_id, &prompt, &mut sink)?;
@@ -568,6 +648,60 @@ where
         send_stale_file_updates(backend, services, agent_id, &file_paths, stream, run)?;
     }
     Ok(())
+}
+
+fn tracked_changed_files(root: &Path) -> BTreeSet<PathBuf> {
+    let Ok(output) = Command::new("git")
+        .current_dir(root)
+        .args(["diff", "--name-only", "HEAD", "--"])
+        .output()
+    else {
+        return BTreeSet::new();
+    };
+    if !output.status.success() {
+        return BTreeSet::new();
+    }
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(PathBuf::from)
+        .collect()
+}
+
+fn command_changed_files(
+    before: &BTreeSet<PathBuf>,
+    after: &BTreeSet<PathBuf>,
+    locked_paths: &[PathBuf],
+) -> Vec<PathBuf> {
+    after
+        .difference(before)
+        .filter(|path| {
+            locked_paths
+                .iter()
+                .any(|locked| path_is_under_lock(path, locked))
+        })
+        .cloned()
+        .collect()
+}
+
+fn path_is_under_lock(path: &Path, locked: &Path) -> bool {
+    path == locked || path.starts_with(locked)
+}
+
+fn git_diff_head(root: &Path, files: &[PathBuf]) -> String {
+    let mut command = Command::new("git");
+    command.current_dir(root).args(["diff", "HEAD", "--"]);
+    for file in files {
+        command.arg(file);
+    }
+    let Ok(output) = command.output() else {
+        return String::new();
+    };
+    if !output.status.success() {
+        return String::new();
+    }
+    String::from_utf8_lossy(&output.stdout).to_string()
 }
 
 fn normalize_paths(
@@ -996,6 +1130,24 @@ fn render_patch_applied_prompt(files: &[PathBuf]) -> String {
     text.push_str("Run any required or relevant checks through `@work-leaf locks run <path>... -- <command>` when the command may write files.\n");
     text.push_str("Keep locked command runs within five minutes unless the user authorizes a longer lock-holding command.\n");
     text.push_str("Provide additional patches if checks fail or more work is needed; emit `@work-leaf done` only when this patch is ready for review.");
+    text
+}
+
+fn render_pending_command_changes_prompt(files: &[PathBuf], diff: &str) -> String {
+    let mut text = format!(
+        "work-leaf command left tracked working-tree changes\nfiles: {}\n",
+        display_paths(files)
+    );
+    text.push_str("Review cannot start until command-produced tracked changes are saved in a provisional commit or reverted.\n");
+    text.push_str("If these changes are required, submit them with `@work-leaf patch <reason>` using the diff below; the orchestrator accepts matching already-applied diffs and commits them.\n");
+    text.push_str("If they are not required, submit a patch that reverts them. Then rerun required checks if needed and emit `@work-leaf done` only when no tracked command changes remain.\n");
+    if !diff.trim().is_empty() {
+        text.push_str("\nCurrent tracked diff:\n");
+        text.push_str(diff);
+        if !diff.ends_with('\n') {
+            text.push('\n');
+        }
+    }
     text
 }
 

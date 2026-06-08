@@ -50,6 +50,9 @@ fn interactive_linearize_prompt_requires_user_accepted_plan_before_rewrite() {
     assert!(prompt.contains("which provisional commit message should be removed"));
     assert!(prompt.contains("Ask the user to accept the solution or request changes"));
     assert!(prompt.contains("Do not rewrite history until the user accepts"));
+    assert!(prompt.contains("Only the reviewed commits listed in this prompt are in scope"));
+    assert!(prompt.contains("one final commit per listed patch agent"));
+    assert!(prompt.contains("AGENTS.md commit message rules"));
     assert!(prompt.contains("diff against main/master as small as possible"));
     assert!(prompt.contains("Run the checks required by the repository instructions"));
     assert!(prompt.contains("Agent-ID: chat-a"));

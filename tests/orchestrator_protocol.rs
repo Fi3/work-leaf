@@ -133,6 +133,106 @@ fn orchestrator_protocol_runs_command_under_requested_write_locks() {
 }
 
 #[test]
+fn orchestrator_protocol_blocks_done_until_command_changes_are_committed() {
+    let root = temp_git_repo("protocol-command-dirty-blocks-done");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    fs::write(root.join("format.sh"), "printf 'after\\n' > README.md\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial formatting fixture"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "@work-leaf locks run README.md -- sh format.sh\n@work-leaf done",
+        )
+        .unwrap();
+
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "after\n"
+    );
+    assert!(git_output(&root, ["status", "--short"]).contains("README.md"));
+    assert!(events.iter().any(|event| matches!(
+        event,
+        OrchestratorEvent::CommandRun {
+            agent_id: id,
+            command,
+            status,
+            ..
+        } if id == &agent_id && command == "sh format.sh" && status == &Some(0)
+    )));
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, OrchestratorEvent::AgentDone { .. }))
+    );
+
+    let backend = orchestrator.into_backend();
+    assert_eq!(backend.sends.len(), 2);
+    assert!(backend.sends[1].1.contains("tracked working-tree changes"));
+    assert!(backend.sends[1].1.contains("README.md"));
+    assert!(
+        backend.sends[1]
+            .1
+            .contains("diff --git a/README.md b/README.md")
+    );
+    assert!(backend.sends[1].1.contains("@work-leaf patch <reason>"));
+}
+
+#[test]
+fn orchestrator_protocol_commits_already_applied_command_diff_before_done() {
+    let root = temp_git_repo("protocol-command-dirty-already-applied-patch");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    fs::write(root.join("format.sh"), "printf 'after\\n' > README.md\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial formatting fixture"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "@work-leaf locks run README.md -- sh format.sh\n@work-leaf done",
+        )
+        .unwrap();
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "\
+@work-leaf patch include formatter output
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-before
++after
+@work-leaf end
+@work-leaf done",
+        )
+        .unwrap();
+
+    assert!(git_output(&root, ["status", "--short"]).is_empty());
+    assert!(events.iter().any(|event| matches!(
+        event,
+        OrchestratorEvent::PatchApplied {
+            agent_id: id,
+            files,
+            ..
+        } if id == &agent_id && files == &vec![PathBuf::from("README.md")]
+    )));
+    assert!(events.iter().any(
+        |event| matches!(event, OrchestratorEvent::AgentDone { agent_id: id } if id == &agent_id)
+    ));
+}
+
+#[test]
 fn orchestrator_protocol_times_out_long_locked_command_runs() {
     let root = temp_git_repo("protocol-locked-command-timeout");
     fs::write(root.join("README.md"), "before\n").unwrap();

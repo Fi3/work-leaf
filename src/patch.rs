@@ -73,6 +73,19 @@ impl GitPatcher {
             .git_with_stdin(["apply", "--check", "-"], &request.diff)
             .map_err(PatchError::Git)?;
         if !check.status.success() {
+            let reverse_check = self
+                .git_with_stdin(["apply", "--reverse", "--check", "-"], &request.diff)
+                .map_err(PatchError::Git)?;
+            if reverse_check.status.success()
+                && self.has_head_diff(&files).map_err(PatchError::Git)?
+            {
+                self.git_add(&files).map_err(PatchError::Git)?;
+                self.git_commit(&request, &files).map_err(PatchError::Git)?;
+                let commit = self
+                    .git_output(["rev-parse", "HEAD"])
+                    .map_err(PatchError::Git)?;
+                return Ok(PatchOutcome { commit, files });
+            }
             return Err(PatchError::Conflict {
                 files,
                 diagnostic: output_text(&check),
@@ -160,6 +173,17 @@ impl GitPatcher {
             .output()?;
         self.require_success(output, "git output")
             .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+    }
+
+    fn has_head_diff(&self, files: &[PathBuf]) -> Result<bool, std::io::Error> {
+        let mut command = Command::new("git");
+        command
+            .current_dir(&self.root)
+            .args(["diff", "--quiet", "HEAD", "--"]);
+        for file in files {
+            command.arg(file);
+        }
+        Ok(!command.status()?.success())
     }
 
     fn git_with_stdin<const N: usize>(

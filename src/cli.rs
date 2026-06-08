@@ -16,7 +16,7 @@ use crate::codex::{CodexBackend, CodexCommandConfig};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::locks::{CommandWritePolicy, FileLockTable};
 use crate::orchestrator::{
-    AgentFollowUp, DirectiveServices, FileReadTracker, OrchestratorEvent,
+    AgentFollowUp, CommandChangeTracker, DirectiveServices, FileReadTracker, OrchestratorEvent,
     handle_agent_directives_streaming,
 };
 use crate::review::{AgentCommit, has_no_findings};
@@ -133,6 +133,7 @@ pub struct CommandChat<B> {
     shutdown: AgentShutdownHandle,
     locks: FileLockTable,
     file_reads: FileReadTracker,
+    command_changes: CommandChangeTracker,
     command_policy: CommandWritePolicy,
     agents: BTreeMap<AgentId, String>,
     reviewers: BTreeSet<AgentId>,
@@ -160,6 +161,7 @@ where
             shutdown: self.shutdown.clone(),
             locks: self.locks.clone(),
             file_reads: self.file_reads.clone(),
+            command_changes: self.command_changes.clone(),
             command_policy: self.command_policy.clone(),
             agents: self.agents.clone(),
             reviewers: self.reviewers.clone(),
@@ -181,6 +183,7 @@ where
         Self {
             locks: FileLockTable::new(project_dir.clone()),
             file_reads: FileReadTracker::default(),
+            command_changes: CommandChangeTracker::default(),
             project_dir,
             backend: Some(backend),
             shutdown,
@@ -232,6 +235,10 @@ where
 
     pub(crate) fn register_agent_feature(&mut self, agent_id: AgentId, feature: String) {
         self.agents.insert(agent_id, feature);
+    }
+
+    pub(crate) fn mark_reviewed_agent_commit(&mut self, agent_id: AgentId, hash: String) {
+        self.reviewed_agent_commits.insert(agent_id, hash);
     }
 
     pub(crate) fn interrupt_agent(&mut self, agent_id: &AgentId) -> Result<(), CliError> {
@@ -353,7 +360,7 @@ where
     }
 
     pub fn prepare_linearize_launch(&mut self) -> Result<Option<AgentLaunch>, CliError> {
-        let commits = GitHistory::new(self.project_dir.clone()).latest_agent_commits()?;
+        let commits = self.linearize_commits()?;
         if commits.is_empty() {
             return Ok(None);
         }
@@ -475,6 +482,7 @@ where
                     DirectiveServices {
                         locks: &self.locks,
                         file_reads: &self.file_reads,
+                        command_changes: &self.command_changes,
                         command_policy: &self.command_policy,
                         locked_command_timeout: self.locked_command_timeout,
                     },
@@ -681,10 +689,31 @@ where
     }
 
     fn linearize_questions(&self) -> Result<CommandChatResult, CliError> {
-        let commits = GitHistory::new(self.project_dir.clone()).latest_agent_commits()?;
+        let commits = self.linearize_commits()?;
         Ok(CommandChatResult::LinearizeQuestions(
             LinearizePlanner::<B>::questions_for(&commits),
         ))
+    }
+
+    fn linearize_commits(&self) -> Result<Vec<AgentCommit>, CliError> {
+        if self.reviewed_agent_commits.is_empty() {
+            return Ok(Vec::new());
+        }
+        let latest = GitHistory::new(self.project_dir.clone()).latest_agent_commits()?;
+        let mut by_agent = latest
+            .into_iter()
+            .map(|commit| (commit.agent_id.clone(), commit))
+            .collect::<BTreeMap<_, _>>();
+        let commits = self
+            .reviewed_agent_commits
+            .iter()
+            .filter_map(|(agent_id, reviewed_hash)| {
+                by_agent
+                    .remove(agent_id)
+                    .filter(|commit| &commit.hash == reviewed_hash)
+            })
+            .collect();
+        Ok(commits)
     }
 
     fn next_linearizer_id(&self) -> Result<AgentId, CliError> {

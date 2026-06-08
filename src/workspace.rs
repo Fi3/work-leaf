@@ -701,7 +701,10 @@ where
             .latest_agent_commit_hash(&review.agent_id)
             .unwrap_or_else(|| review.commit.hash.clone());
         self.reviewed_agent_commits
-            .insert(review.agent_id.clone(), latest_hash);
+            .insert(review.agent_id.clone(), latest_hash.clone());
+        if let Some(chat) = self.chat.as_mut() {
+            chat.mark_reviewed_agent_commit(review.agent_id.clone(), latest_hash);
+        }
         self.reviewers.insert(review.reviewer_id.clone());
     }
 

@@ -181,6 +181,15 @@ fn build_interactive_linearize_prompt(commits: &[AgentCommit]) -> String {
     }
 
     prompt.push_str(
+        "\nScope and commit-shaping rules:\n\
+- Only the reviewed commits listed in this prompt are in scope for this linearization run. Ignore other provisional work-leaf commits in git history unless the user explicitly adds them.\n\
+- Default to one final commit per listed patch agent. If one listed patch agent produced multiple provisional commits, compact that agent's provisional commits into one final commit.\n\
+- Merge work from multiple listed patch agents only when they implemented the same feature or behavior.\n\
+- The repository's AGENTS.md commit message rules have priority over all linearizer examples and must be followed exactly.\n\
+- Keep each final commit's diff against main/master as small as possible while preserving the reviewed behavior.\n",
+    );
+
+    prompt.push_str(
         "\nRequired workflow:\n\
 1. Inspect git history, the current branch, and the merge base with main or master before proposing a rewrite.\n\
 2. Propose the solution before changing history. For each reviewed patch, state which final commit message should be kept, which provisional commit message should be removed, and whether related work should be grouped or merged.\n\
@@ -200,7 +209,9 @@ fn build_linearize_prompt(plan: &LinearizePlan) -> String {
     prompt.push_str(
         "Rewrite the provisional git history into clean final commits using the decisions below.\n",
     );
-    prompt.push_str("Merge commits selected for integration into the commit that best carries their behavior, and make the diff against master/main as small as possible.\n\n");
+    prompt.push_str("Only the reviewed commits listed below are in scope. Ignore other provisional work-leaf commits in git history unless the user explicitly adds them.\n");
+    prompt.push_str("Default to one final commit per listed patch agent, compact multiple provisional commits from that agent into that final commit, and merge multiple listed patch agents only when they implemented the same feature or behavior.\n");
+    prompt.push_str("The repository's AGENTS.md commit message rules have priority over all linearizer examples, and make the diff against master/main as small as possible for each final commit.\n\n");
 
     prompt.push_str("Reviewed commits:\n");
     for commit in &plan.commits {

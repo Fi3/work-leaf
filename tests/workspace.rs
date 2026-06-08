@@ -352,6 +352,51 @@ fn controller_auto_review_ignores_historical_agents_outside_current_patch_agent(
 }
 
 #[test]
+fn controller_linearize_uses_only_commits_reviewed_in_this_session() {
+    let root = git_repo("workspace-linearize-current-reviewed-only");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    fs::write(root.join("legacy.txt"), "legacy before\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial linearize fixture"]);
+    fs::write(root.join("legacy.txt"), "legacy after\n").unwrap();
+    git(&root, ["add", "legacy.txt"]);
+    git(
+        &root,
+        [
+            "commit",
+            "-m",
+            "UPDATE apply legacy patch from user-2",
+            "-m",
+            "Agent-ID: user-2\nFeature: legacy\nReason: old run\nContext: old session",
+        ],
+    );
+    let backend = FakeBackend::new([
+        "live patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+        "summary: live README change",
+        "NO_FINDINGS",
+        "linearizer ready",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("update readme").unwrap();
+    assert_eq!(agent_id.as_str(), "user-1");
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    assert!(controller.start_linearize().unwrap().is_some());
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    let launches = backend.launches();
+    let linearize_launch = launches
+        .iter()
+        .find(|launch| launch.id.as_str() == "linearize")
+        .expect("linearize agent launched");
+    assert!(linearize_launch.prompt.contains("Agent-ID: user-1"));
+    assert!(linearize_launch.prompt.contains("Commit:"));
+    assert!(!linearize_launch.prompt.contains("Agent-ID: user-2"));
+    assert!(!linearize_launch.prompt.contains("old session"));
+}
+
+#[test]
 fn controller_does_not_run_project_required_checks_after_agent_reply() {
     let root = git_repo("workspace-no-required-check-run");
     fs::write(

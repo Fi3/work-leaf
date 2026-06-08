@@ -174,6 +174,10 @@ touch. Locked command runs have a five-minute default timeout, after which the c
 locks are released, and a longer run requires user authorization. `PromptPolicy` injects project
 instruction files into agent prompts, and the active backend agent is responsible for choosing and
 requesting the repository checks required by those instructions before reporting work done.
+Tracked file changes produced by locked commands remain pending for that patch agent until the agent
+commits them through the patch protocol or reverts them. Pending command changes block
+`@work-leaf done`, and the orchestrator returns the tracked diff so the agent can submit the command
+output as a provisional patch when it belongs in the final work.
 
 The command transcript is also the conversation history for the persistent `command-agent`. That
 system agent interprets chat sent to the Work Leaf command surface. It recognizes literal command
@@ -256,9 +260,11 @@ lock paths supplied by the agent. File paths are normalized relative to the proj
 escape that root.
 
 `src/patch.rs::GitPatcher` validates and applies unified diffs under write locks and creates
-metadata commits for accepted patches. `PatchCoordinator<B>` connects patch conflicts and malformed
-patch diagnostics back to the active agent backend. `PatchRequest`, `PatchOutcome`, and `PatchError`
-are the public patch workflow types.
+metadata commits for accepted patches. It also accepts a matching already-applied diff when a locked
+command has produced the tracked working-tree change, so the command output can be saved as the
+agent's provisional patch. `PatchCoordinator<B>` connects patch conflicts and malformed patch
+diagnostics back to the active agent backend. `PatchRequest`, `PatchOutcome`, and `PatchError` are
+the public patch workflow types.
 
 `src/review.rs::GitHistory` reads latest agent commits from repository history.
 `ReviewCoordinator<B>` launches reviewer agents against those commits and loops until the reviewer
@@ -273,7 +279,10 @@ produced the provisional commit; explicit review commands use the history-wide l
 `src/linearize.rs::LinearizePlanner<B>` prepares linearization questions and launches a linearizer
 agent with decisions, groups, and required tests. `LinearizeAction`, `LinearizeGroup`,
 `LinearizePlan`, `LinearizeQuestion`, `LinearizeHandoff`, and `LinearizeError` are the public
-linearization workflow types.
+linearization workflow types. `CommandChat` and `WorkLeafController` launch linearization from the
+commits recorded as reviewed in the current command-chat or controller instance; unrelated historical
+agent metadata commits are outside the linearizer scope unless the user explicitly reviews or adds
+them in that session.
 
 `src/instructions.rs` is crate-private. It loads project instruction files used by `PromptPolicy`
 for agent launch prompts.

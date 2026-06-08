@@ -351,6 +351,13 @@ orchestrator sends the command status, stdout, stderr, timeout state, and locked
 same agent as `work-leaf command result`. The command output is agent context; manual feature edits
 still use the unified-diff patch flow.
 
+If a locked command leaves tracked file changes under the requested lock paths, those paths are
+tracked as pending command changes for that patch agent. The agent cannot finish with
+`@work-leaf done` while pending command changes remain. The orchestrator returns the current tracked
+diff and asks the agent to either submit that diff through `@work-leaf patch <reason>` or submit a
+reverting patch. Matching already-applied diffs are accepted by the patch flow so formatter, build,
+test, or generator output can be saved as a provisional patch commit without reapplying the diff.
+
 The command-lock rule is language- and tool-agnostic. Agents use it for any formatter, build, test,
 code generator, package manager, installer, cache-producing tool, or repository-required check that
 may write files. The agent chooses the command from repository instructions and project context, and
@@ -393,13 +400,19 @@ A normal development session in default read-permission mode follows this shape:
    checks the entire diff, applies the entire diff, stages, and commits the provisional patch.
 8. If another agent read any touched file and has not cleared that context, the orchestrator sends
    that agent a proactive `work-leaf file update` with fresh file text.
-9. The orchestrator runs or schedules that patch agent's review agent for the patch.
-10. The review agent reviews only behavior introduced or modified by the patch.
-11. The review agent can request file text through the orchestrator before reporting findings.
-12. If the review agent reports findings, the orchestrator sends them to the patch agent and the patch
+9. The orchestrator returns a patch-applied continuation prompt when the patch agent has not reported
+   done.
+10. The patch agent runs required checks through locked command directives, commits or reverts any
+    tracked command output through the patch protocol, and reports `@work-leaf done` when the patch is
+    ready for review.
+11. The orchestrator runs or schedules that patch agent's review agent for the patch.
+12. The review agent reviews only behavior introduced or modified by the patch.
+13. The review agent can request file text through the orchestrator before reporting findings.
+14. If the review agent reports findings, the orchestrator sends them to the patch agent and the patch
     agent keeps patching.
-13. If the review agent reports no findings, the user can mark the review chat as done.
-14. Reviewed work can then be linearized into the final history.
+15. If the review agent reports no findings, the user can mark the review chat as done.
+16. Reviewed work from the current command-chat or controller instance can then be linearized into the
+    final history.
 
 In direct-read mode, steps 4 and 5 are replaced by direct filesystem inspection from the agent. The
 write, review, and linearization steps remain orchestrator-controlled.
