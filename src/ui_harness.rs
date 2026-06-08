@@ -177,6 +177,9 @@ impl UiHarness {
                         .push("fixture reply: message recorded".to_string());
                 }
             }
+            HarnessInput::Char('/') if self.should_start_agent_slash_command() => {
+                self.start_agent_slash_command();
+            }
             HarnessInput::Char(ch) if self.ui.mode() == UiMode::Prompt => {
                 self.insert_prompt_char(ch);
             }
@@ -409,6 +412,19 @@ impl UiHarness {
     fn record_actions(&mut self, actions: Vec<crate::UiAction>) {
         self.transcript
             .extend(actions.into_iter().map(|action| format!("{action:?}")));
+    }
+
+    fn should_start_agent_slash_command(&self) -> bool {
+        self.ui.mode() == UiMode::Command && self.ui.selected_agent().is_some()
+    }
+
+    fn start_agent_slash_command(&mut self) {
+        let Some(agent_id) = self.ui.selected_agent().cloned() else {
+            return;
+        };
+        if self.ui.activate_agent_chat(&agent_id).is_ok() {
+            self.insert_chat_char('/');
+        }
     }
 
     fn should_route_chat_arrow(&self) -> bool {
