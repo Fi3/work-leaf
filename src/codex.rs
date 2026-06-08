@@ -599,12 +599,7 @@ mod tests {
         let agent_id = AgentId::new("user-1").expect("test agent id is valid");
         backend
             .record_launch_output(
-                AgentLaunch::new(
-                    agent_id.clone(),
-                    AgentKind::Codex,
-                    "user-agent",
-                    "start",
-                ),
+                AgentLaunch::new(agent_id.clone(), AgentKind::Codex, "user-agent", "start"),
                 r#"{"type":"thread.started","thread_id":"thread-user-1"}"#.to_string(),
             )
             .expect("test launch output records the thread id");
