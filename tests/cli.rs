@@ -530,19 +530,22 @@ if [ \"$seen_resume\" = \"1\" ]; then
     *\"work-leaf file text\"*)
       printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"read-follow-up\",\"type\":\"agent_message\",\"text\":\"read follow-up received src/lib.rs\"}}'
       ;;
-    *\"work-leaf command classification\"*)
-      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"classify-follow-up\",\"type\":\"agent_message\",\"text\":\"classification follow-up received target lock\"}}'
-      ;;
-    *\"Message from user-1\"*)
-      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"route-follow-up\",\"type\":\"agent_message\",\"text\":\"routed follow-up received\"}}'
-      ;;
+	    *\"work-leaf command classification\"*)
+	      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"classify-follow-up\",\"type\":\"agent_message\",\"text\":\"classification follow-up received target lock\"}}'
+	      ;;
+	    *\"work-leaf command result\"*)
+	      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"run-follow-up\",\"type\":\"agent_message\",\"text\":\"command result follow-up received\"}}'
+	      ;;
+	    *\"Message from user-1\"*)
+	      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"route-follow-up\",\"type\":\"agent_message\",\"text\":\"routed follow-up received\"}}'
+	      ;;
     *)
       printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"unexpected\",\"type\":\"agent_message\",\"text\":\"unexpected resume prompt\"}}'
       ;;
   esac
 else
   printf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-protocol\"}'
-  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"protocol\",\"type\":\"agent_message\",\"text\":\"@work-leaf read src/lib.rs\\n@work-leaf locks classify cargo test\\n@work-leaf patch return value two\\ndiff --git a/src/lib.rs b/src/lib.rs\\n--- a/src/lib.rs\\n+++ b/src/lib.rs\\n@@ -1 +1 @@\\n-pub fn value() -> u8 { 1 }\\n+pub fn value() -> u8 { 2 }\\n@work-leaf end\\n@work-leaf send user-2 please check this patch\"}}'
+	  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"protocol\",\"type\":\"agent_message\",\"text\":\"@work-leaf read src/lib.rs\\n@work-leaf locks classify cargo test\\n@work-leaf locks run target -- sh -c \\\"printf command-run-ok\\\"\\n@work-leaf patch return value two\\ndiff --git a/src/lib.rs b/src/lib.rs\\n--- a/src/lib.rs\\n+++ b/src/lib.rs\\n@@ -1 +1 @@\\n-pub fn value() -> u8 { 1 }\\n+pub fn value() -> u8 { 2 }\\n@work-leaf end\\n@work-leaf send user-2 please check this patch\"}}'
 fi
 ",
     )
@@ -561,10 +564,12 @@ fi
     };
     assert!(reply.contains("sent file text to user-1: src/lib.rs"));
     assert!(reply.contains("classified command for user-1: writes=yes paths=target"));
+    assert!(reply.contains("ran command for user-1: status=0 paths=target"));
     assert!(reply.contains("applied patch from user-1: return value two"));
     assert!(reply.contains("routed message from user-1 to user-2"));
     assert!(reply.contains("read follow-up received src/lib.rs"));
     assert!(reply.contains("classification follow-up received target lock"));
+    assert!(reply.contains("command result follow-up received"));
     assert!(reply.contains("routed follow-up received"));
     assert_eq!(
         fs::read_to_string(root.join("src/lib.rs")).unwrap(),

@@ -129,6 +129,14 @@ impl UiHarness {
     fn handle_input(&mut self, input: HarnessInput) {
         match input {
             HarnessInput::Quit => self.quit = true,
+            HarnessInput::Interrupt => {
+                if self.ui.focus() == PaneFocus::Right
+                    && let Some(agent_id) = self.ui.selected_agent()
+                {
+                    self.transcript
+                        .push(format!("work-leaf: sent Ctrl-C to {agent_id}"));
+                }
+            }
             HarnessInput::Backspace if self.ui.mode() == UiMode::Prompt => {
                 self.backspace_prompt_char();
             }
@@ -206,9 +214,6 @@ impl UiHarness {
                 self.prompt_history_draft = None;
                 let actions = self.ui.handle_key(UiKey::Esc);
                 self.record_actions(actions);
-            }
-            HarnessInput::Char('q') if self.ui.mode() == UiMode::Command => {
-                self.quit = true;
             }
             HarnessInput::Key(key) => {
                 let actions = self.ui.handle_key(key);
@@ -514,13 +519,15 @@ enum HarnessInput {
     Char(char),
     Enter,
     Backspace,
+    Interrupt,
     Quit,
 }
 
 impl HarnessInput {
     fn from_byte(byte: u8) -> Option<Self> {
         match byte {
-            3 | 4 => Some(Self::Quit),
+            3 => Some(Self::Interrupt),
+            4 => Some(Self::Quit),
             13 | 10 => Some(Self::Enter),
             27 => Some(Self::Key(UiKey::Esc)),
             23 => Some(Self::Key(UiKey::CtrlW)),

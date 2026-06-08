@@ -190,6 +190,15 @@ where
             TerminalAppInput::Quit => {
                 self.request_quit();
             }
+            TerminalAppInput::Interrupt => {
+                if self.ui.focus() == PaneFocus::Right
+                    && let Some(agent_id) = self.ui.selected_agent().cloned()
+                {
+                    self.controller.interrupt_agent(&agent_id);
+                    self.apply_controller_events();
+                }
+                self.dirty = true;
+            }
             TerminalAppInput::Backspace if self.ui.mode() == UiMode::Prompt => {
                 self.prompt_buffer.backspace();
                 self.prompt_history_index = None;
@@ -614,13 +623,15 @@ enum TerminalAppInput {
     LineBreak,
     PasteStart,
     PasteEnd,
+    Interrupt,
     Quit,
 }
 
 impl TerminalAppInput {
     fn from_byte(byte: u8) -> Option<Self> {
         match byte {
-            3 | 4 => Some(Self::Quit),
+            3 => Some(Self::Interrupt),
+            4 => Some(Self::Quit),
             13 | 10 => Some(Self::Enter),
             27 => Some(Self::Key(UiKey::Esc)),
             23 => Some(Self::Key(UiKey::CtrlW)),

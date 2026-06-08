@@ -128,7 +128,7 @@ where
         };
 
         match command {
-            "quit" | "exit" => self.request_quit(),
+            "quit" | "exit" | "q" => self.request_quit(),
             "new" => {
                 let prompt = parts[1..].join(" ");
                 if let Err(error) = self.create_agent(prompt) {
@@ -182,6 +182,22 @@ where
             CommandAgentResponse::Reply(reply) => {
                 self.push_command_line(format!("command-agent: {reply}"));
             }
+        }
+    }
+
+    pub fn interrupt_agent(&mut self, agent_id: &AgentId) {
+        let display_name = self.agent_display_name();
+        let result = self
+            .chat
+            .as_mut()
+            .expect("work-leaf controller command chat is present")
+            .interrupt_agent(agent_id);
+        match result {
+            Ok(()) => self.append_agent_line(
+                agent_id,
+                format!("work-leaf: sent Ctrl-C to {display_name}"),
+            ),
+            Err(error) => self.append_agent_line(agent_id, command_chat_error_text(&error)),
         }
     }
 
@@ -923,7 +939,7 @@ fn literal_command_line(message: &str) -> Option<String> {
     let command = split_command_line(message).into_iter().next()?;
     matches!(
         command.as_str(),
-        "help" | "?" | "new" | "review" | "linearize" | "quit" | "exit"
+        "help" | "?" | "new" | "review" | "linearize" | "quit" | "exit" | "q"
     )
     .then(|| message.to_string())
 }

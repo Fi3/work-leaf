@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::{fmt, fs};
 
@@ -79,6 +80,14 @@ pub enum OrchestratorEvent {
         writes: bool,
         paths: Vec<PathBuf>,
     },
+    CommandRun {
+        agent_id: AgentId,
+        command: String,
+        status: Option<i32>,
+        locked_paths: Vec<PathBuf>,
+        stdout: String,
+        stderr: String,
+    },
     PatchApplied {
         agent_id: AgentId,
         feature: String,
@@ -128,6 +137,17 @@ impl OrchestratorEvent {
                 "classified command for {agent_id}: writes={} paths={}",
                 if *writes { "yes" } else { "no" },
                 display_paths(paths)
+            ),
+            Self::CommandRun {
+                agent_id,
+                command,
+                status,
+                locked_paths,
+                ..
+            } => format!(
+                "ran command for {agent_id}: status={} paths={} command={command}",
+                display_status(*status),
+                display_paths(locked_paths)
             ),
             Self::PatchApplied {
                 agent_id,
@@ -308,6 +328,20 @@ where
                     paths: intent.paths,
                 });
             }
+            AgentDirective::Run {
+                command,
+                lock_paths,
+            } => {
+                run_command_for_agent(
+                    backend,
+                    services,
+                    agent_id,
+                    &command,
+                    &lock_paths,
+                    stream,
+                    &mut run,
+                )?;
+            }
             AgentDirective::Patch { reason, diff } => {
                 let patcher =
                     GitPatcher::new(services.locks.root().to_path_buf(), services.locks.clone());
@@ -469,6 +503,80 @@ where
     Ok(())
 }
 
+fn run_command_for_agent<B>(
+    backend: &mut B,
+    services: DirectiveServices<'_>,
+    agent_id: &AgentId,
+    command: &str,
+    lock_paths: &[PathBuf],
+    stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+    run: &mut DirectiveRun,
+) -> Result<(), OrchestratorError>
+where
+    B: AgentBackend,
+{
+    let locked_paths = normalize_paths(services.locks, lock_paths)?;
+    let output = services.locks.with_write_locks(&locked_paths, || {
+        run_shell_command(services.locks.root(), command).map_err(FileAccessError::Io)
+    })?;
+    let prompt = render_command_result(command, &locked_paths, &output);
+    let mut sink = |event| stream(agent_id, event);
+    let reply = backend.send_streaming(agent_id, &prompt, &mut sink)?;
+    run.follow_up_replies
+        .push(follow_up(agent_id.clone(), reply));
+    run.events.push(OrchestratorEvent::CommandRun {
+        agent_id: agent_id.clone(),
+        command: command.to_string(),
+        status: output.status,
+        locked_paths: locked_paths.clone(),
+        stdout: output.stdout,
+        stderr: output.stderr,
+    });
+    let file_paths = locked_paths
+        .iter()
+        .filter(|path| services.locks.root().join(path).is_file())
+        .cloned()
+        .collect::<Vec<_>>();
+    if !file_paths.is_empty() {
+        send_stale_file_updates(backend, services, agent_id, &file_paths, stream, run)?;
+    }
+    Ok(())
+}
+
+fn normalize_paths(
+    locks: &FileLockTable,
+    paths: &[PathBuf],
+) -> Result<Vec<PathBuf>, FileAccessError> {
+    let mut normalized = paths
+        .iter()
+        .map(|path| locks.normalize_path(path))
+        .collect::<Result<Vec<_>, _>>()?;
+    normalized.sort();
+    normalized.dedup();
+    Ok(normalized)
+}
+
+fn run_shell_command(root: &std::path::Path, command: &str) -> std::io::Result<CommandRunOutput> {
+    #[cfg(windows)]
+    let output = Command::new("cmd")
+        .args(["/C", command])
+        .current_dir(root)
+        .output()?;
+
+    #[cfg(not(windows))]
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg(command)
+        .current_dir(root)
+        .output()?;
+
+    Ok(CommandRunOutput {
+        status: output.status.code(),
+        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+        stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+    })
+}
+
 fn needs_protocol_correction(text: &str) -> bool {
     text.contains("@work-leaf")
 }
@@ -556,8 +664,18 @@ fn read_requested_files(
 enum AgentDirective {
     Read(Vec<PathBuf>),
     Classify(Vec<String>),
-    Patch { reason: String, diff: String },
-    Send { target: AgentId, message: String },
+    Run {
+        command: String,
+        lock_paths: Vec<PathBuf>,
+    },
+    Patch {
+        reason: String,
+        diff: String,
+    },
+    Send {
+        target: AgentId,
+        message: String,
+    },
     Done,
 }
 
@@ -587,6 +705,12 @@ fn parse_agent_directives(text: &str) -> Result<Vec<AgentDirective>, Orchestrato
                 rest,
                 "locks classify requires a command",
             )?));
+        } else if let Some(rest) = directive_rest(body, "locks run") {
+            let (lock_paths, command) = parse_locked_run(rest)?;
+            directives.push(AgentDirective::Run {
+                command,
+                lock_paths,
+            });
         } else if let Some(rest) = directive_rest(body, "patch") {
             let reason = rest.trim();
             if reason.is_empty() {
@@ -674,6 +798,25 @@ fn split_required(rest: &str, error: &str) -> Result<Vec<String>, OrchestratorEr
     }
 }
 
+fn parse_locked_run(rest: &str) -> Result<(Vec<PathBuf>, String), OrchestratorError> {
+    let Some((paths, command)) = rest.split_once(" -- ") else {
+        return Err(OrchestratorError::Usage(
+            "locks run requires lock paths, `--`, and a command".to_string(),
+        ));
+    };
+    let lock_paths = split_required(paths, "locks run requires at least one lock path before --")?
+        .into_iter()
+        .map(PathBuf::from)
+        .collect::<Vec<_>>();
+    let command = command.trim();
+    if command.is_empty() {
+        return Err(OrchestratorError::Usage(
+            "locks run requires a command after --".to_string(),
+        ));
+    }
+    Ok((lock_paths, command.to_string()))
+}
+
 fn render_file_read_response(
     snapshots: &[crate::locks::FileSnapshot],
     failures: &[FileReadFailure],
@@ -714,6 +857,37 @@ fn render_command_classification(command: &[String], intent: &CommandWriteIntent
         if intent.writes { "yes" } else { "no" },
         display_paths(&intent.paths)
     )
+}
+
+fn render_command_result(
+    command: &str,
+    locked_paths: &[PathBuf],
+    output: &CommandRunOutput,
+) -> String {
+    let mut text = format!(
+        "work-leaf command result\ncommand: {command}\nstatus: {}\nlocked paths: {}",
+        display_status(output.status),
+        display_paths(locked_paths)
+    );
+    text.push_str("\nstdout:\n");
+    if output.stdout.is_empty() {
+        text.push_str("<empty>\n");
+    } else {
+        text.push_str(&output.stdout);
+        if !output.stdout.ends_with('\n') {
+            text.push('\n');
+        }
+    }
+    text.push_str("stderr:\n");
+    if output.stderr.is_empty() {
+        text.push_str("<empty>\n");
+    } else {
+        text.push_str(&output.stderr);
+        if !output.stderr.ends_with('\n') {
+            text.push('\n');
+        }
+    }
+    text
 }
 
 fn render_patch_conflict_prompt(
@@ -758,6 +932,19 @@ fn display_paths(paths: &[PathBuf]) -> String {
         .map(|path| path.display().to_string())
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+fn display_status(status: Option<i32>) -> String {
+    status
+        .map(|status| status.to_string())
+        .unwrap_or_else(|| "terminated".to_string())
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct CommandRunOutput {
+    status: Option<i32>,
+    stdout: String,
+    stderr: String,
 }
 
 #[derive(Debug)]

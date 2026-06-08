@@ -226,6 +226,14 @@ where
         self.agents.insert(agent_id, feature);
     }
 
+    pub(crate) fn interrupt_agent(&mut self, agent_id: &AgentId) -> Result<(), CliError> {
+        self.backend
+            .as_mut()
+            .expect("command chat backend is present")
+            .interrupt(agent_id)
+            .map_err(CliError::Agent)
+    }
+
     pub(crate) fn generate_chat_title(
         &mut self,
         source_agent_id: &AgentId,
@@ -260,7 +268,7 @@ where
 
         match command {
             "help" | "?" => Ok(CommandChatResult::Help(render_command_chat_help())),
-            "quit" | "exit" => Ok(CommandChatResult::Quit),
+            "quit" | "exit" | "q" => Ok(CommandChatResult::Quit),
             "new" => self.launch_agent(&parts[1..]),
             "review" => self.review(),
             "linearize" => self.linearize(),

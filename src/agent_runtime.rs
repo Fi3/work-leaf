@@ -9,6 +9,10 @@ use crate::agent::{AgentError, AgentId, AgentLaunch, AgentSession, ChatMessage};
 pub trait AgentBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError>;
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError>;
+    fn interrupt(&mut self, _agent_id: &AgentId) -> Result<(), AgentError> {
+        Ok(())
+    }
+
     fn shutdown_handle(&self) -> AgentShutdownHandle {
         AgentShutdownHandle::default()
     }
@@ -95,6 +99,22 @@ impl AgentShutdownHandle {
             .values()
             .copied()
             .collect()
+    }
+
+    pub(crate) fn terminate_process(&self, pid: u32) -> bool {
+        let process = self
+            .registry
+            .lock()
+            .expect("agent process registry mutex poisoned")
+            .processes
+            .get(&pid)
+            .copied();
+        if let Some(process) = process {
+            process.terminate();
+            true
+        } else {
+            false
+        }
     }
 
     fn wait_for_processes(&self, timeout: Duration) -> bool {

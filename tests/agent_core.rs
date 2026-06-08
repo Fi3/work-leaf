@@ -26,6 +26,11 @@ fn prompt_policy_wraps_every_agent_prompt_with_file_access_rules() {
     assert!(wrapped.contains("@work-leaf read <path> <path...>"));
     assert!(wrapped.contains("@work-leaf patch <reason>"));
     assert!(wrapped.contains("@work-leaf locks classify <command>"));
+    assert!(wrapped.contains("@work-leaf locks run <path> <path...> -- <command>"));
+    assert!(wrapped.contains("language- and tool-agnostic"));
+    assert!(wrapped.contains("formatter, build, test, code generator, package manager"));
+    assert!(wrapped.contains("Choose the command from the repository instructions"));
+    assert!(wrapped.contains("Do not use command locks for manual feature edits"));
     assert!(wrapped.contains("@work-leaf send <agent-id> <message>"));
     assert!(wrapped.contains("implement the flag parser"));
 }
@@ -45,6 +50,8 @@ fn prompt_policy_can_allow_direct_filesystem_reads() {
     assert!(!wrapped.contains("@work-leaf read <path>"));
     assert!(wrapped.contains("not allowed to write files directly"));
     assert!(wrapped.contains("@work-leaf patch <reason>"));
+    assert!(wrapped.contains("@work-leaf locks run <path> <path...> -- <command>"));
+    assert!(wrapped.contains("language- and tool-agnostic"));
     assert!(wrapped.contains("implement the flag parser"));
 }
 

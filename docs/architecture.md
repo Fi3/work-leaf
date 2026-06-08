@@ -165,10 +165,12 @@ The controller owns:
 
 When an agent worker finishes, the controller records the agent output and clears that session's
 loading state. If a user-agent response contains a patch directive, the controller starts review for
-the patch agent after the patch workflow records the provisional commit. The controller does not run
-repository build, test, or required-check commands. `PromptPolicy` injects project instruction files
-into agent prompts, and the active backend agent is responsible for following those instructions
-before submitting patches or reporting work done.
+the patch agent after the patch workflow records the provisional commit. Repository build, test,
+format, and required-check commands run only through agent-emitted orchestrator directives that name
+the command and the write-lock paths the command may touch. `PromptPolicy` injects project
+instruction files into agent prompts, and the active backend agent is responsible for choosing and
+requesting the repository checks required by those instructions before submitting patches or reporting
+work done.
 
 The command transcript is also the conversation history for the persistent `command-agent`. That
 system agent interprets chat sent to the Work Leaf command surface. It recognizes literal command
@@ -235,14 +237,15 @@ A web UI, desktop UI, or non-terminal integration should not depend on `Terminal
 ## Core Workflow Modules
 
 `src/orchestrator.rs::AgentOrchestrator<B>` parses and executes `@work-leaf` directives emitted by
-agents. It uses `FileLockTable` for file reads, `CommandWritePolicy` for command classification,
-`PatchCoordinator` for patch requests, and the active `AgentBackend` for routed follow-up messages.
-Its public output is `OrchestratorEvent`.
+agents. It uses `FileLockTable` for file reads and command write locks, `CommandWritePolicy` for
+command classification, `PatchCoordinator` for patch requests, and the active `AgentBackend` for
+routed follow-up messages. Its public output is `OrchestratorEvent`.
 
 `src/locks.rs::FileLockTable` owns root-scoped path normalization and read/write locking.
 `FileSnapshot` carries file read results. `CommandWritePolicy` and `CommandWriteIntent` classify
-shell commands as read-only or write-intent operations. File paths are normalized relative to the
-project root and cannot escape that root.
+shell commands as read-only or write-intent operations. Agent-requested command runs execute in the
+project root while `FileLockTable` holds write locks for the normalized lock paths supplied by the
+agent. File paths are normalized relative to the project root and cannot escape that root.
 
 `src/patch.rs::GitPatcher` validates and applies unified diffs under write locks and creates
 metadata commits for accepted patches. `PatchCoordinator<B>` connects patch conflicts and malformed

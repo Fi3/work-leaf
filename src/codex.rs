@@ -94,6 +94,7 @@ impl Clone for CodexBackend {
 struct CodexBackendState {
     sessions: BTreeMap<AgentId, AgentSession>,
     thread_ids: BTreeMap<AgentId, String>,
+    active_processes: BTreeMap<AgentId, u32>,
 }
 
 impl CodexBackend {
@@ -236,13 +237,10 @@ impl CodexBackend {
         })
     }
 
-    fn run_invocation(&self, invocation: &CodexInvocation) -> Result<String, AgentError> {
-        self.run_invocation_streaming(invocation, &mut |_| {})
-    }
-
     fn run_invocation_streaming(
         &self,
         invocation: &CodexInvocation,
+        agent_id: Option<&AgentId>,
         sink: &mut dyn FnMut(AgentStreamEvent),
     ) -> Result<String, AgentError> {
         let mut command = Command::new(&invocation.program);
@@ -253,7 +251,15 @@ impl CodexBackend {
             .stderr(Stdio::piped());
         configure_agent_child_process(&mut command);
         let mut child = command.spawn()?;
+        let child_pid = child.id();
         let _process_guard = self.shutdown.register(child.id());
+        if let Some(agent_id) = agent_id {
+            self.state
+                .lock()
+                .expect("codex backend state mutex poisoned")
+                .active_processes
+                .insert(agent_id.clone(), child_pid);
+        }
 
         if let Some(stdin) = child.stdin.as_mut() {
             stdin.write_all(invocation.stdin.as_bytes())?;
@@ -281,6 +287,19 @@ impl CodexBackend {
         }
 
         let status = child.wait()?;
+        if let Some(agent_id) = agent_id {
+            let mut state = self
+                .state
+                .lock()
+                .expect("codex backend state mutex poisoned");
+            if state
+                .active_processes
+                .get(agent_id)
+                .is_some_and(|pid| *pid == child_pid)
+            {
+                state.active_processes.remove(agent_id);
+            }
+        }
         let stderr = stderr_reader
             .and_then(|reader| reader.join().ok())
             .unwrap_or_default();
@@ -308,13 +327,13 @@ impl Drop for CodexBackend {
 impl AgentBackend for CodexBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
         let invocation = self.build_launch_invocation(&request);
-        let output = self.run_invocation(&invocation)?;
+        let output = self.run_invocation_streaming(&invocation, Some(&request.id), &mut |_| {})?;
         self.record_launch_output(request, output)
     }
 
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
         let invocation = self.build_send_invocation(agent_id, prompt)?;
-        let output = self.run_invocation(&invocation)?;
+        let output = self.run_invocation_streaming(&invocation, Some(agent_id), &mut |_| {})?;
         let reply = parse_codex_output(&output).agent_reply.unwrap_or(output);
         let message = ChatMessage::new(MessageRole::Agent, reply);
         let mut state = self
@@ -346,13 +365,27 @@ impl AgentBackend for CodexBackend {
         self.shutdown.clone()
     }
 
+    fn interrupt(&mut self, agent_id: &AgentId) -> Result<(), AgentError> {
+        let pid = self
+            .state
+            .lock()
+            .expect("codex backend state mutex poisoned")
+            .active_processes
+            .get(agent_id)
+            .copied();
+        if let Some(pid) = pid {
+            let _ = self.shutdown.terminate_process(pid);
+        }
+        Ok(())
+    }
+
     fn launch_streaming(
         &mut self,
         request: AgentLaunch,
         sink: &mut dyn FnMut(AgentStreamEvent),
     ) -> Result<AgentSession, AgentError> {
         let invocation = self.build_launch_invocation(&request);
-        let output = self.run_invocation_streaming(&invocation, sink)?;
+        let output = self.run_invocation_streaming(&invocation, Some(&request.id), sink)?;
         self.record_launch_output(request, output)
     }
 
@@ -363,7 +396,7 @@ impl AgentBackend for CodexBackend {
         sink: &mut dyn FnMut(AgentStreamEvent),
     ) -> Result<ChatMessage, AgentError> {
         let invocation = self.build_send_invocation(agent_id, prompt)?;
-        let output = self.run_invocation_streaming(&invocation, sink)?;
+        let output = self.run_invocation_streaming(&invocation, Some(agent_id), sink)?;
         let reply = parse_codex_output(&output).agent_reply.unwrap_or(output);
         let message = ChatMessage::new(MessageRole::Agent, reply);
         let mut state = self

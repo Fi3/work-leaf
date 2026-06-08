@@ -130,6 +130,8 @@ With `ReadPermission::Orchestrator`, prompts tell agents:
 - do not write files directly;
 - provide unified diff patches for requested writes;
 - use `@work-leaf locks classify <command>` when a command may write project files;
+- use `@work-leaf locks run <path> <path...> -- <command>` to run commands while the orchestrator
+  holds write locks for paths the command may write;
 - use `@work-leaf done` when no more orchestrator work is required.
 
 With `ReadPermission::DirectFilesystem`, prompts tell agents:
@@ -139,6 +141,8 @@ With `ReadPermission::DirectFilesystem`, prompts tell agents:
 - do not write files directly;
 - provide unified diff patches for requested writes;
 - use `@work-leaf locks classify <command>` when a command may write project files;
+- use `@work-leaf locks run <path> <path...> -- <command>` to run commands while the orchestrator
+  holds write locks for paths the command may write;
 - use `@work-leaf done` when no more orchestrator work is required.
 
 The Codex backend applies this policy when launching and resuming sessions. The source chain is:
@@ -307,8 +311,23 @@ language runtime commands. For example, `cargo test` is treated as write-produci
 `cargo fmt` is treated as write-producing for `.`.
 
 Classification is separate from patch application. It tells the agent which paths require
-orchestrator mediation. Arbitrary shell command execution under write locks is a product goal, not the
-same mechanism as the atomic patch flow.
+orchestrator mediation. Commands run through an explicit lock directive:
+
+```text
+@work-leaf locks run target -- cargo test
+```
+
+`src/orchestrator.rs::handle_agent_directives_streaming` parses the directive, normalizes and
+deduplicates the requested lock paths through `src/locks.rs::FileLockTable`, acquires write locks for
+those paths, runs the shell command in the project root, and sends the command status, stdout, stderr,
+and locked paths back to the same agent as `work-leaf command result`. The command output is agent
+context; manual feature edits still use the unified-diff patch flow.
+
+The command-lock rule is language- and tool-agnostic. Agents use it for any formatter, build, test,
+code generator, package manager, installer, cache-producing tool, or repository-required check that
+may write files. The agent chooses the command from repository instructions and project context, and
+chooses lock paths from the files, directories, caches, build outputs, dependency folders, or lockfiles
+that command may write.
 
 ## Review Flow
 

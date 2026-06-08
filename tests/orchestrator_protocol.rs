@@ -82,6 +82,98 @@ fn orchestrator_protocol_batches_consecutive_file_reads_into_one_agent_follow_up
 }
 
 #[test]
+fn orchestrator_protocol_runs_command_under_requested_write_locks() {
+    let root = temp_git_repo("protocol-locked-command-run");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    fs::write(
+        root.join("format.sh"),
+        "printf 'format stdout\\n'\nprintf 'after\\n' > README.md\n",
+    )
+    .unwrap();
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "@work-leaf locks run README.md -- sh format.sh",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "after\n"
+    );
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::CommandRun {
+                agent_id: id,
+                command,
+                status,
+                locked_paths,
+                ..
+            } if id == &agent_id
+                && command == "sh format.sh"
+                && status == &Some(0)
+                && locked_paths == &vec![PathBuf::from("README.md")]
+        )
+    }));
+    assert_eq!(backend.sends.len(), 1);
+    assert_eq!(backend.sends[0].0, agent_id);
+    assert!(backend.sends[0].1.contains("work-leaf command result"));
+    assert!(backend.sends[0].1.contains("command: sh format.sh"));
+    assert!(backend.sends[0].1.contains("status: 0"));
+    assert!(backend.sends[0].1.contains("locked paths: README.md"));
+    assert!(backend.sends[0].1.contains("format stdout"));
+}
+
+#[test]
+fn orchestrator_protocol_returns_failing_command_output_to_agent() {
+    let root = temp_git_repo("protocol-failing-command-run");
+    fs::write(
+        root.join("validate.sh"),
+        "echo bad stdout\necho bad stderr >&2\nexit 7\n",
+    )
+    .unwrap();
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root, backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "@work-leaf locks run target -- sh validate.sh",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::CommandRun {
+                agent_id: id,
+                command,
+                status,
+                locked_paths,
+                ..
+            } if id == &agent_id
+                && command == "sh validate.sh"
+                && status == &Some(7)
+                && locked_paths == &vec![PathBuf::from("target")]
+        )
+    }));
+    assert_eq!(backend.sends.len(), 1);
+    assert!(backend.sends[0].1.contains("status: 7"));
+    assert!(backend.sends[0].1.contains("bad stdout"));
+    assert!(backend.sends[0].1.contains("bad stderr"));
+}
+
+#[test]
 fn orchestrator_protocol_applies_agent_patch_and_routes_messages_between_agents() {
     let root = temp_git_repo("protocol-patch-route");
     fs::write(root.join("lib.rs"), "pub fn value() -> u8 { 1 }\n").unwrap();

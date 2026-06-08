@@ -111,7 +111,10 @@ fn terminal_app_ctrl_c_never_quits_and_only_right_focus_interrupts_agent() {
     assert!(app.handle_byte(3));
     assert!(!app.is_quit());
     assert_eq!(backend.interrupts(), vec![AgentId::new("user-1").unwrap()]);
-    assert!(app.render_frame().contains("work-leaf: sent Ctrl-C to Codex"));
+    assert!(
+        app.render_frame()
+            .contains("work-leaf: sent Ctrl-C to Codex")
+    );
 
     app.handle_bytes(&[27, 23, b'h']);
     assert_eq!(app.ui().focus(), PaneFocus::Left);
