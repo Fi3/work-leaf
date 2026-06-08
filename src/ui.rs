@@ -843,7 +843,7 @@ impl TerminalUi {
             }
             PaneFocus::Right => {
                 let lines = self.visual_pane_lines(visible_right_content, PaneFocus::Right);
-                let row = lines.len().saturating_sub(1);
+                let row = self.right_visual_start_row(&lines);
                 let line_len = lines
                     .get(row)
                     .map(|line| line.chars().count())
@@ -851,10 +851,27 @@ impl TerminalUi {
                 let max_column = line_len.saturating_sub(1);
                 VisualPoint {
                     row,
-                    column: right_cursor_column.unwrap_or(0).min(max_column),
+                    column: if self.mode == UiMode::Command {
+                        0
+                    } else {
+                        right_cursor_column.unwrap_or(0).min(max_column)
+                    },
                 }
             }
         }
+    }
+
+    fn right_visual_start_row(&self, lines: &[String]) -> usize {
+        if lines.is_empty() {
+            return 0;
+        }
+        if self.mode == UiMode::Command
+            && let Some(prompt_row) = lines.iter().rposition(|line| line.starts_with("chat> "))
+            && let Some(history_row) = prompt_row.checked_sub(1)
+        {
+            return history_row;
+        }
+        lines.len().saturating_sub(1)
     }
 
     fn move_visual_cursor(

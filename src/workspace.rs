@@ -255,13 +255,13 @@ where
         if message.is_empty() {
             return Ok(());
         }
-        if self.session_completion(agent_id) == Some(WorkLeafCompletion::NeedsDecision) {
-            self.handle_completion_answer(agent_id, message);
-            return Ok(());
-        }
         if let Some(command) = AgentSlashCommand::parse(message) {
             self.append_agent_line(agent_id, format!("user: {message}"));
             self.handle_agent_slash_command(agent_id, command);
+            return Ok(());
+        }
+        if self.session_completion(agent_id) == Some(WorkLeafCompletion::NeedsDecision) {
+            self.handle_completion_answer(agent_id, message);
             return Ok(());
         }
         if self

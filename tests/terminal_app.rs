@@ -598,10 +598,10 @@ fn terminal_app_visual_mode_yanks_right_pane_without_resuming_backend() {
     assert!(app.render_frame().contains("mode=visual-line focus=right"));
     app.handle_byte(b'Y');
 
-    assert_eq!(app.ui().copied_text(), Some("chat> "));
+    assert_eq!(app.ui().copied_text(), Some("launch reply"));
     assert!(
         app.render_frame()
-            .starts_with("\u{1b}]52;c;Y2hhdD4g\u{7}\u{1b}[H")
+            .starts_with("\u{1b}]52;c;bGF1bmNoIHJlcGx5\u{7}\u{1b}[H")
     );
     let backend = app.into_chat().into_backend();
     assert!(backend.sends().is_empty());
@@ -1003,7 +1003,13 @@ fn terminal_app_marks_reviewed_patch_agent_done_and_closed_visibly() {
     assert!(frame.contains("work-leaf: is this feature done? [yes/no]"));
     let sends_after_review = backend.sends().len();
 
-    app.handle_bytes(b"imaybe\n");
+    app.handle_bytes(b"i/status\n");
+    let frame = app.render_frame();
+    assert!(frame.contains("user: /status"));
+    assert!(frame.contains("status: needs user decision"));
+    assert_eq!(backend.sends().len(), sends_after_review);
+
+    app.handle_bytes(b"maybe\n");
     assert!(app.render_frame().contains("work-leaf: answer yes or no"));
     assert_eq!(backend.sends().len(), sends_after_review);
 

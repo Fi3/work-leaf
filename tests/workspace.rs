@@ -278,6 +278,7 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
         "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
         "summary: README changes from before to after",
         "NO_FINDINGS",
+        "fork launch reply",
         "follow reply",
     ]);
     let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
@@ -300,6 +301,42 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
         "{patch_agent:?}"
     );
     let sends_after_review = backend.sends().len();
+
+    controller.send_message(&agent_id, "/status").unwrap();
+    let snapshot = controller.snapshot();
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert_eq!(
+        patch_agent.completion,
+        Some(WorkLeafCompletion::NeedsDecision)
+    );
+    assert!(patch_agent.lines.iter().any(|line| line == "user: /status"));
+    assert!(
+        patch_agent
+            .lines
+            .iter()
+            .any(|line| line.contains("status: needs user decision"))
+    );
+    assert_eq!(backend.sends().len(), sends_after_review);
+
+    controller
+        .send_message(&agent_id, "/fork try another approach")
+        .unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    let snapshot = controller.snapshot();
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert_eq!(
+        patch_agent.completion,
+        Some(WorkLeafCompletion::NeedsDecision)
+    );
+    let fork_agent = AgentId::new("user-2").unwrap();
+    let fork_session = snapshot.session(&fork_agent).expect("fork session exists");
+    assert!(
+        fork_session
+            .lines
+            .iter()
+            .any(|line| line == "fork launch reply")
+    );
+    assert_eq!(backend.sends().len(), sends_after_review);
 
     controller.send_message(&agent_id, "maybe").unwrap();
     let snapshot = controller.snapshot();
