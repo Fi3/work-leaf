@@ -76,7 +76,9 @@ where
     }
 
     pub fn drain_events(&mut self) -> Vec<WorkLeafEvent> {
-        self.poll_worker();
+        if self.pending_events.is_empty() {
+            self.poll_worker();
+        }
         self.pending_events.drain(..).collect()
     }
 
