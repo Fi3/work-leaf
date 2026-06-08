@@ -223,6 +223,9 @@ rendering invalidation, and polling background workers. Insert mode sends chat t
 agent session, or to `command-agent` when the Work Leaf command
 surface is selected. Bracketed-paste newlines and Shift+Enter are chat prompt line breaks. A plain
 Enter submits the buffered chat text.
+When an agent chat is selected in command mode, `/` focuses the chat, seeds the chat buffer with
+`/`, and enters insert mode so `/status`-style input submits through the same selected-agent chat
+path.
 
 The terminal app maps a session to a left-pane `READY` marker when the controller exposes no loading
 state for that session. `TerminalUi` queues one terminal bell when a chat transitions into the ready
