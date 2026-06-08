@@ -7,7 +7,9 @@ use crate::agent::{AgentBackend, AgentId};
 use crate::cli::{CommandChat, terminal_right_content, ui_action_text};
 use crate::http_controller::HttpControllerClient;
 use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode};
-use crate::workspace::{WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession};
+use crate::workspace::{
+    WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession, WorkLeafSnapshot,
+};
 
 #[derive(Debug)]
 pub struct TerminalApp<B>
@@ -82,6 +84,14 @@ where
         self.inner.handle_byte(byte)
     }
 
+    pub(crate) fn handle_terminal_bytes(&mut self, bytes: &[u8]) -> bool {
+        self.inner.handle_terminal_bytes(bytes)
+    }
+
+    pub(crate) fn finish_pending_terminal_input(&mut self) {
+        self.inner.finish_pending_terminal_input();
+    }
+
     pub fn render_frame(&self) -> String {
         self.inner.render_frame()
     }
@@ -151,6 +161,14 @@ impl RemoteTerminalApp {
 
     pub fn handle_byte(&mut self, byte: u8) -> bool {
         self.inner.handle_byte(byte)
+    }
+
+    pub(crate) fn handle_terminal_bytes(&mut self, bytes: &[u8]) -> bool {
+        self.inner.handle_terminal_bytes(bytes)
+    }
+
+    pub(crate) fn finish_pending_terminal_input(&mut self) {
+        self.inner.finish_pending_terminal_input();
     }
 
     pub fn render_frame(&self) -> String {
@@ -294,6 +312,8 @@ where
     paste_mode: bool,
     skip_next_paste_lf: bool,
     spinner: usize,
+    snapshot: WorkLeafSnapshot,
+    loading_text: [(WorkLeafLoading, String); 2],
     dirty: bool,
     quit: bool,
 }
@@ -303,7 +323,18 @@ where
     C: TerminalController,
 {
     fn new(controller: C, width: u16, height: u16) -> Self {
-        Self {
+        let snapshot = controller.snapshot();
+        let loading_text = [
+            (
+                WorkLeafLoading::Launching,
+                controller.loading_text(WorkLeafLoading::Launching),
+            ),
+            (
+                WorkLeafLoading::WaitingForReply,
+                controller.loading_text(WorkLeafLoading::WaitingForReply),
+            ),
+        ];
+        let mut app = Self {
             controller,
             ui: TerminalUi::new(width, height),
             prompt_buffer: PromptLine::new(),
@@ -318,9 +349,16 @@ where
             paste_mode: false,
             skip_next_paste_lf: false,
             spinner: 0,
+            snapshot,
+            loading_text,
             dirty: true,
             quit: false,
+        };
+        let sessions = app.snapshot.sessions.clone();
+        for session in sessions {
+            app.apply_session_to_ui(&session);
         }
+        app
     }
 
     fn ui(&self) -> &TerminalUi {
@@ -382,18 +420,38 @@ where
     }
 
     fn handle_bytes(&mut self, bytes: &[u8]) -> bool {
+        if !self.handle_terminal_bytes(bytes) {
+            return false;
+        }
+        self.finish_pending_terminal_input();
+        !self.quit
+    }
+
+    fn handle_terminal_bytes(&mut self, bytes: &[u8]) -> bool {
+        self.apply_controller_events();
         for byte in bytes {
-            if !self.handle_byte(*byte) {
+            if !self.handle_byte_without_poll(*byte) {
+                self.apply_controller_events();
                 return false;
             }
         }
-        self.finish_pending_escape_sequence();
         self.apply_controller_events();
         !self.quit
     }
 
     pub fn handle_byte(&mut self, byte: u8) -> bool {
         self.apply_controller_events();
+        let keep_running = self.handle_byte_without_poll(byte);
+        self.apply_controller_events();
+        keep_running && !self.quit
+    }
+
+    fn finish_pending_terminal_input(&mut self) {
+        self.finish_pending_escape_sequence();
+        self.apply_controller_events();
+    }
+
+    fn handle_byte_without_poll(&mut self, byte: u8) -> bool {
         if self.quit {
             return false;
         }
@@ -419,7 +477,6 @@ where
             return true;
         };
         self.handle_input(input);
-        self.apply_controller_events();
         !self.quit
     }
 
@@ -618,19 +675,104 @@ where
         for event in events {
             match event {
                 WorkLeafEvent::AgentAdded { session } | WorkLeafEvent::AgentUpdated { session } => {
+                    self.upsert_cached_session(session.clone());
                     self.apply_session_to_ui(&session);
+                }
+                WorkLeafEvent::AgentStatusUpdated {
+                    agent_id,
+                    kind,
+                    title,
+                    feature,
+                    loading,
+                } => {
+                    let session =
+                        self.upsert_cached_session_status(agent_id, kind, title, feature, loading);
+                    self.apply_session_to_ui(&session);
+                }
+                WorkLeafEvent::AgentLineAppended { agent_id, line } => {
+                    self.append_cached_agent_line(&agent_id, line);
                 }
                 WorkLeafEvent::AgentSelected { agent_id } => {
                     let _ = self.ui.activate_agent_chat(&agent_id);
                 }
+                WorkLeafEvent::CommandTranscriptLine { line } => {
+                    self.snapshot.command_transcript.push(line);
+                }
                 WorkLeafEvent::QuitRequested => {
                     self.quit = true;
                 }
-                WorkLeafEvent::AgentLineAppended { .. }
-                | WorkLeafEvent::CommandTranscriptLine { .. } => {}
             }
         }
         self.dirty = true;
+    }
+
+    fn upsert_cached_session(&mut self, session: WorkLeafSession) {
+        if let Some(existing) = self
+            .snapshot
+            .sessions
+            .iter_mut()
+            .find(|existing| existing.id == session.id)
+        {
+            *existing = session;
+        } else {
+            self.snapshot.sessions.push(session);
+            self.snapshot
+                .sessions
+                .sort_by(|left, right| left.id.as_str().cmp(right.id.as_str()));
+        }
+    }
+
+    fn upsert_cached_session_status(
+        &mut self,
+        agent_id: AgentId,
+        kind: crate::agent::AgentKind,
+        title: String,
+        feature: String,
+        loading: Option<WorkLeafLoading>,
+    ) -> WorkLeafSession {
+        if let Some(session) = self
+            .snapshot
+            .sessions
+            .iter_mut()
+            .find(|session| session.id == agent_id)
+        {
+            session.kind = kind;
+            session.title = title;
+            session.feature = feature;
+            session.loading = loading;
+            return session.clone();
+        }
+
+        let session = WorkLeafSession {
+            id: agent_id,
+            kind,
+            title,
+            feature,
+            lines: Vec::new(),
+            loading,
+        };
+        self.snapshot.sessions.push(session.clone());
+        self.snapshot
+            .sessions
+            .sort_by(|left, right| left.id.as_str().cmp(right.id.as_str()));
+        session
+    }
+
+    fn append_cached_agent_line(&mut self, agent_id: &AgentId, line: String) {
+        if line.is_empty() {
+            return;
+        }
+        let Some(session) = self
+            .snapshot
+            .sessions
+            .iter_mut()
+            .find(|session| &session.id == agent_id)
+        else {
+            return;
+        };
+        if !session.lines.iter().any(|existing| existing == &line) {
+            session.lines.push(line);
+        }
     }
 
     fn apply_session_to_ui(&mut self, session: &WorkLeafSession) {
@@ -773,22 +915,29 @@ where
     }
 
     fn right_content(&self) -> String {
-        let snapshot = self.controller.snapshot();
         if let Some(agent_id) = self.ui.selected_agent() {
-            let session = snapshot.session(agent_id);
+            let session = self.snapshot.session(agent_id);
             let mut lines = session
                 .map(|session| session.lines.clone())
                 .unwrap_or_default();
             if let Some(loading) = session.and_then(|session| session.loading) {
                 lines.push(format!(
                     "work-leaf: {} {}",
-                    self.controller.loading_text(loading),
+                    self.cached_loading_text(loading),
                     SPINNER[self.spinner]
                 ));
             }
             return terminal_right_content(self.chat_buffer.as_str(), &lines);
         }
-        terminal_right_content(self.chat_buffer.as_str(), &snapshot.command_transcript)
+        terminal_right_content(self.chat_buffer.as_str(), &self.snapshot.command_transcript)
+    }
+
+    fn cached_loading_text(&self, loading: WorkLeafLoading) -> &str {
+        self.loading_text
+            .iter()
+            .find(|(kind, _)| *kind == loading)
+            .map(|(_, text)| text.as_str())
+            .unwrap_or("Waiting for agent")
     }
 
     fn continue_escape_sequence(&mut self, byte: u8) -> bool {
@@ -1005,9 +1154,15 @@ impl ChangeListener for NoopLineListener {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
 
     use super::*;
-    use crate::agent::{AgentError, AgentLaunch, AgentSession, ChatMessage, MessageRole};
+    use crate::agent::{
+        AgentError, AgentKind, AgentLaunch, AgentSession, ChatMessage, MessageRole,
+    };
 
     #[derive(Clone, Debug)]
     struct NoopBackend;
@@ -1020,6 +1175,118 @@ mod tests {
         fn send(&mut self, _agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
             Ok(ChatMessage::new(MessageRole::Agent, prompt))
         }
+    }
+
+    #[derive(Debug)]
+    struct CountingController {
+        snapshot: crate::WorkLeafSnapshot,
+        snapshot_calls: Arc<AtomicUsize>,
+        drain_calls: Arc<AtomicUsize>,
+    }
+
+    impl CountingController {
+        fn new(
+            snapshot: crate::WorkLeafSnapshot,
+            snapshot_calls: Arc<AtomicUsize>,
+            drain_calls: Arc<AtomicUsize>,
+        ) -> Self {
+            Self {
+                snapshot,
+                snapshot_calls,
+                drain_calls,
+            }
+        }
+    }
+
+    impl TerminalController for CountingController {
+        fn snapshot(&self) -> crate::WorkLeafSnapshot {
+            self.snapshot_calls.fetch_add(1, Ordering::Relaxed);
+            self.snapshot.clone()
+        }
+
+        fn drain_events(&mut self) -> Vec<WorkLeafEvent> {
+            self.drain_calls.fetch_add(1, Ordering::Relaxed);
+            Vec::new()
+        }
+
+        fn execute_command_line(&mut self, _line: &str) {}
+
+        fn send_command_agent_message(&mut self, _message: &str) {}
+
+        fn send_message(&mut self, _agent_id: &AgentId, _message: &str) {}
+
+        fn interrupt_agent(&mut self, _agent_id: &AgentId) {}
+
+        fn push_transcript_line(&mut self, _line: String) {}
+
+        fn is_busy(&mut self) -> bool {
+            false
+        }
+
+        fn loading_text(&self, _loading: WorkLeafLoading) -> String {
+            "Waiting for Codex".to_string()
+        }
+
+        fn shutdown(&mut self) {}
+    }
+
+    #[test]
+    fn pasted_command_prompt_input_polls_controller_once_per_chunk() {
+        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+        let drain_calls = Arc::new(AtomicUsize::new(0));
+        let controller = CountingController::new(
+            crate::WorkLeafSnapshot {
+                command_transcript: Vec::new(),
+                sessions: Vec::new(),
+            },
+            Arc::clone(&snapshot_calls),
+            Arc::clone(&drain_calls),
+        );
+        let mut app = TerminalAppCore::new(controller, 80, 24);
+        app.handle_bytes(b":");
+        drain_calls.store(0, Ordering::Relaxed);
+
+        let paste = "a".repeat(4096);
+        assert!(app.handle_bytes(paste.as_bytes()));
+
+        assert_eq!(app.prompt_buffer.as_str(), paste);
+        assert!(
+            drain_calls.load(Ordering::Relaxed) <= 3,
+            "large input chunks should not drain events once per byte"
+        );
+    }
+
+    #[test]
+    fn rendering_uses_cached_snapshot_instead_of_refetching_full_transcripts() {
+        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+        let drain_calls = Arc::new(AtomicUsize::new(0));
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        let controller = CountingController::new(
+            crate::WorkLeafSnapshot {
+                command_transcript: vec!["help".to_string()],
+                sessions: vec![WorkLeafSession {
+                    id: agent_id,
+                    kind: AgentKind::Codex,
+                    title: "feature".to_string(),
+                    feature: "feature".to_string(),
+                    lines: vec!["large transcript line".repeat(256)],
+                    loading: None,
+                }],
+            },
+            Arc::clone(&snapshot_calls),
+            Arc::clone(&drain_calls),
+        );
+        let app = TerminalAppCore::new(controller, 80, 24);
+        snapshot_calls.store(0, Ordering::Relaxed);
+
+        assert!(app.render_frame().contains("help"));
+        assert!(app.render_frame().contains("help"));
+
+        assert_eq!(
+            snapshot_calls.load(Ordering::Relaxed),
+            0,
+            "rendering and scrolling should use the local snapshot cache"
+        );
     }
 
     #[test]

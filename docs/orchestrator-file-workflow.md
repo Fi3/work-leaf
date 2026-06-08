@@ -256,19 +256,21 @@ The orchestrator treats successful orchestrator-provided file snapshots as agent
 `FileReadTracker` stores:
 
 ```text
-agent id -> set of files read by that agent
+agent id -> path -> last file text snapshot sent to that agent
 ```
 
-This map is used to detect stale context for orchestrator-mediated reads. If an agent has read a file
-through `@work-leaf read` and another patch changes that file before the reader submits a patch or
-reports done, the reader may be about to produce a stale diff. Direct filesystem reads are not present
-in this map, so direct-read mode relies on `git apply --check`, conflict diagnostics, and agent
-rereads instead of proactive stale-reader updates for those reads.
+This map is used to detect stale context for orchestrator-mediated reads and to compute compact
+refreshes. If an agent has read a file through `@work-leaf read` and another patch changes that file
+before the reader submits a patch or reports done, the reader may be about to produce a stale diff.
+Direct filesystem reads are not present in this map, so direct-read mode relies on
+`git apply --check`, conflict diagnostics, and agent rereads instead of proactive stale-reader
+updates for those reads.
 
 The tracker updates as follows:
 
-- successful `@work-leaf read` responses add files to the agent's read set;
-- patch conflict responses that include fresh file text also refresh the patching agent's read set;
+- successful `@work-leaf read` responses store the returned file snapshots for the agent;
+- patch conflict responses that include compact file refreshes also refresh the patching agent's
+  stored snapshots;
 - a successful patch clears the patching agent's pending read entries for the touched files;
 - `@work-leaf done` clears all pending read entries for that agent.
 
@@ -290,17 +292,26 @@ stale reader, it sends:
 ```text
 work-leaf file update
 Another agent changed files you previously read before you submitted a patch.
-Rebase any pending patch against the fresh file text below.
+Rebase any pending patch against the compact file refresh below.
 
-work-leaf file text
+work-leaf file refresh
+This is a compact refresh, not a patch to submit. It shows changes from the last file text this agent received. Request full text with `@work-leaf read <path>` only if the compact refresh is insufficient.
 
 --- path ---
-<fresh text>
+current digest: fnv64:<hash>; bytes:<n>
+previous digest: fnv64:<hash>; bytes:<n>
+status: changed since this agent's last snapshot
+diff --git a/path b/path
+--- a/path
++++ b/path
+@@ ...
+<snapshot-to-current diff>
 ```
 
-That update is grouped per stale agent and contains the fresh snapshots for the relevant touched
-files. The point is to make the next patch more likely to apply without forcing the agent to rediscover
-that its context is stale.
+That update is grouped per stale agent and contains a bounded unified diff from the stale snapshot to
+the current file. Large refresh diffs are omitted with the current digest, byte count, and an explicit
+`@work-leaf read <path>` instruction. The point is to make the next patch more likely to apply while
+keeping multi-agent stale-context updates small enough for long-running agent sessions.
 
 ## Writes And Atomic Patches
 
@@ -325,8 +336,9 @@ If `git apply --check` fails, no part of the diff is applied. The orchestrator s
 
 - the touched file list;
 - the git diagnostic;
-- fresh file text for the touched files;
-- instructions to rebase the patch against that fresh text.
+- a compact file refresh for the touched files when the agent has a prior orchestrator snapshot;
+- instructions to rebase the patch against that refresh, with explicit `@work-leaf read` guidance
+  when a full file reread is necessary.
 
 Malformed patch bodies that do not contain recognizable unified diff file headers are rejected with a
 protocol prompt asking the agent to resend a complete unified diff.
@@ -495,12 +507,16 @@ If another patch agent previously read `Cargo.toml`, the orchestrator sends that
 ```text
 work-leaf file update
 Another agent changed files you previously read before you submitted a patch.
-Rebase any pending patch against the fresh file text below.
+Rebase any pending patch against the compact file refresh below.
 
-work-leaf file text
+work-leaf file refresh
 
 --- Cargo.toml ---
-<fresh manifest after user-1 patch>
+diff --git a/Cargo.toml b/Cargo.toml
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ ...
+<snapshot-to-current manifest diff>
 ```
 
 The orchestrator runs a review agent:

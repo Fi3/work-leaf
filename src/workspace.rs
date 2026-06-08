@@ -260,8 +260,8 @@ where
         }
 
         let title_prompt = self.reserve_first_chat_title_prompt(agent_id, message);
-        self.append_agent_line(agent_id, format!("user: {message}"));
         self.set_session_loading(agent_id, Some(WorkLeafLoading::WaitingForReply));
+        self.append_agent_line(agent_id, format!("user: {message}"));
         let agent_id = agent_id.clone();
         let message = message.to_string();
         if let Some(first_prompt) = title_prompt {
@@ -638,9 +638,9 @@ where
             }
             WorkerEvent::Complete { agent_id, result } => {
                 if let Some(agent_id) = agent_id {
-                    self.apply_agent_result(&agent_id, &result);
                     let start_review = should_start_review(&agent_id, &result);
                     self.set_session_loading(&agent_id, None);
+                    self.apply_agent_result(&agent_id, &result);
                     if start_review && let Err(error) = self.start_review_for_patch_agent(&agent_id)
                     {
                         self.push_command_line(command_chat_error_text(&error));
@@ -654,8 +654,8 @@ where
             }
             WorkerEvent::Error { agent_id, message } => {
                 if let Some(agent_id) = agent_id {
-                    self.append_agent_line(&agent_id, message);
                     self.set_session_loading(&agent_id, None);
+                    self.append_agent_line(&agent_id, message);
                 } else {
                     self.push_command_line(message);
                 }
@@ -666,8 +666,8 @@ where
                 message,
             } => {
                 self.review_commits_in_progress.remove(&reviewed_agent_id);
-                self.append_agent_line(&reviewer_id, message);
                 self.set_session_loading(&reviewer_id, None);
+                self.append_agent_line(&reviewer_id, message);
             }
         }
     }
@@ -698,8 +698,12 @@ where
         if let Some(session) = self.sessions.get_mut(agent_id) {
             session.title = title.clone();
             session.feature = title.clone();
-            self.pending_events.push(WorkLeafEvent::AgentUpdated {
-                session: session.clone(),
+            self.pending_events.push(WorkLeafEvent::AgentStatusUpdated {
+                agent_id: session.id.clone(),
+                kind: session.kind.clone(),
+                title: session.title.clone(),
+                feature: session.feature.clone(),
+                loading: session.loading,
             });
         }
         self.register_agent_feature(agent_id.clone(), title);
@@ -710,10 +714,16 @@ where
             return;
         }
         let fallback_kind = self.agent_kind();
+        if !self.sessions.contains_key(agent_id) {
+            let session = WorkLeafSession::unknown(agent_id.clone(), fallback_kind);
+            self.sessions.insert(agent_id.clone(), session.clone());
+            self.pending_events
+                .push(WorkLeafEvent::AgentAdded { session });
+        }
         let session = self
             .sessions
-            .entry(agent_id.clone())
-            .or_insert_with(|| WorkLeafSession::unknown(agent_id.clone(), fallback_kind));
+            .get_mut(agent_id)
+            .expect("session was inserted before appending a line");
         if session.lines.iter().any(|existing| existing == &line) {
             return;
         }
@@ -721,9 +731,6 @@ where
         self.pending_events.push(WorkLeafEvent::AgentLineAppended {
             agent_id: agent_id.clone(),
             line,
-        });
-        self.pending_events.push(WorkLeafEvent::AgentUpdated {
-            session: session.clone(),
         });
     }
 
@@ -759,13 +766,23 @@ where
 
     fn set_session_loading(&mut self, agent_id: &AgentId, loading: Option<WorkLeafLoading>) {
         let fallback_kind = self.agent_kind();
+        if !self.sessions.contains_key(agent_id) {
+            let session = WorkLeafSession::unknown(agent_id.clone(), fallback_kind);
+            self.sessions.insert(agent_id.clone(), session.clone());
+            self.pending_events
+                .push(WorkLeafEvent::AgentAdded { session });
+        }
         let session = self
             .sessions
-            .entry(agent_id.clone())
-            .or_insert_with(|| WorkLeafSession::unknown(agent_id.clone(), fallback_kind));
+            .get_mut(agent_id)
+            .expect("session was inserted before updating loading");
         session.loading = loading;
-        self.pending_events.push(WorkLeafEvent::AgentUpdated {
-            session: session.clone(),
+        self.pending_events.push(WorkLeafEvent::AgentStatusUpdated {
+            agent_id: session.id.clone(),
+            kind: session.kind.clone(),
+            title: session.title.clone(),
+            feature: session.feature.clone(),
+            loading: session.loading,
         });
     }
 
@@ -874,11 +891,29 @@ pub enum WorkLeafLoading {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum WorkLeafEvent {
-    AgentAdded { session: WorkLeafSession },
-    AgentUpdated { session: WorkLeafSession },
-    AgentLineAppended { agent_id: AgentId, line: String },
-    AgentSelected { agent_id: AgentId },
-    CommandTranscriptLine { line: String },
+    AgentAdded {
+        session: WorkLeafSession,
+    },
+    AgentUpdated {
+        session: WorkLeafSession,
+    },
+    AgentStatusUpdated {
+        agent_id: AgentId,
+        kind: AgentKind,
+        title: String,
+        feature: String,
+        loading: Option<WorkLeafLoading>,
+    },
+    AgentLineAppended {
+        agent_id: AgentId,
+        line: String,
+    },
+    AgentSelected {
+        agent_id: AgentId,
+    },
+    CommandTranscriptLine {
+        line: String,
+    },
     QuitRequested,
 }
 

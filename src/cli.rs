@@ -1013,13 +1013,16 @@ where
 
     render_terminal_frame(&mut stdout, &app)?;
 
+    let mut input = [0_u8; 4096];
     loop {
         app.tick();
-        let mut byte = [0_u8; 1];
-        match stdin.read(&mut byte)? {
-            0 => thread::sleep(Duration::from_millis(10)),
-            _ => {
-                if !app.handle_byte(byte[0]) {
+        match stdin.read(&mut input)? {
+            0 => {
+                app.finish_pending_terminal_input();
+                thread::sleep(Duration::from_millis(10));
+            }
+            count => {
+                if !app.handle_terminal_bytes(&input[..count]) {
                     break;
                 }
             }
@@ -1046,13 +1049,16 @@ fn run_remote_terminal_ui(client: HttpControllerClient) -> Result<(), CliError> 
     write!(stdout, "{}", app.render_frame())?;
     stdout.flush()?;
 
+    let mut input = [0_u8; 4096];
     loop {
         app.tick();
-        let mut byte = [0_u8; 1];
-        match stdin.read(&mut byte)? {
-            0 => thread::sleep(Duration::from_millis(10)),
-            _ => {
-                if !app.handle_byte(byte[0]) {
+        match stdin.read(&mut input)? {
+            0 => {
+                app.finish_pending_terminal_input();
+                thread::sleep(Duration::from_millis(10));
+            }
+            count => {
+                if !app.handle_terminal_bytes(&input[..count]) {
                     break;
                 }
             }

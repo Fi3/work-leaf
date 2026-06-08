@@ -238,6 +238,14 @@ The controller exposes renderable state through:
   changes, transcript lines, and quit requests.
 - `WorkLeafLoading`, which distinguishes launch and waiting-for-reply states.
 
+`WorkLeafEvent` uses append-oriented transcript events for efficient remote frontends. `AgentAdded`
+provides the initial session snapshot, `AgentLineAppended` carries one new session line, and
+`CommandTranscriptLine` carries one new command transcript line. `AgentStatusUpdated` carries
+session metadata and loading state without re-sending the session transcript. `AgentUpdated` remains
+part of the DTO surface for full-session replacement when an integration needs it. Session line
+appends and status changes are not paired with full-session replacement events, so remote frontends
+can update long transcripts without re-receiving the full transcript text.
+
 New UIs should consume `WorkLeafController` and these DTOs. They should not duplicate worker
 spawning, session naming, review lookup, loading bookkeeping, or orchestrator event routing.
 
@@ -269,12 +277,13 @@ The terminal frontend is an adapter over the UI-neutral controller surface.
 `src/terminal_app.rs::TerminalApp<B>` translates raw terminal bytes and modal editing state into
 direct `WorkLeafController<B>` calls for in-process use. `src/terminal_app.rs::RemoteTerminalApp`
 uses the same terminal state machine with `HttpControllerClient` for the CLI/daemon process split.
-Both adapters apply `WorkLeafEvent` values to `TerminalUi` and render controller snapshots. They own
-terminal event-loop concerns such as insert mode, prompt mode, `Ctrl-W` navigation, SGR mouse clicks,
-SGR mouse wheel scrolling of the right pane, bytewise input parsing, rendering invalidation, and
-polling background workers. Insert mode sends chat text to the selected agent session, or to
-`command-agent` when the Work Leaf command surface is selected. Bracketed-paste newlines and
-Shift+Enter are chat prompt line breaks. A plain Enter submits the buffered chat text.
+Both adapters keep a local render snapshot, apply `WorkLeafEvent` values to that cache and to
+`TerminalUi`, and render from the cache rather than fetching a full controller snapshot for every
+frame. They own terminal event-loop concerns such as insert mode, prompt mode, `Ctrl-W` navigation,
+SGR mouse clicks, SGR mouse wheel scrolling of the right pane, chunked terminal input parsing,
+rendering invalidation, and polling background workers. Insert mode sends chat text to the selected
+agent session, or to `command-agent` when the Work Leaf command surface is selected. Bracketed-paste
+newlines and Shift+Enter are chat prompt line breaks. A plain Enter submits the buffered chat text.
 When an agent chat is selected in command mode, `/` focuses the chat, seeds the chat buffer with
 `/`, and enters insert mode so `/status`-style input submits through the same selected-agent chat
 path.

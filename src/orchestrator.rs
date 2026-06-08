@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -187,7 +188,7 @@ impl OrchestratorEvent {
 
 #[derive(Clone, Debug, Default)]
 pub(crate) struct FileReadTracker {
-    inner: Arc<Mutex<BTreeMap<AgentId, BTreeSet<PathBuf>>>>,
+    inner: Arc<Mutex<BTreeMap<AgentId, BTreeMap<PathBuf, TrackedFileSnapshot>>>>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -199,6 +200,11 @@ pub(crate) struct CommandChangeTracker {
 struct StaleFileUpdate {
     agent_id: AgentId,
     paths: Vec<PathBuf>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct TrackedFileSnapshot {
+    text: String,
 }
 
 #[derive(Clone, Copy)]
@@ -219,8 +225,21 @@ impl FileReadTracker {
         let mut reads = self.inner.lock().expect("file read tracker mutex poisoned");
         let paths = reads.entry(agent_id.clone()).or_default();
         for snapshot in snapshots {
-            paths.insert(snapshot.path.clone());
+            paths.insert(
+                snapshot.path.clone(),
+                TrackedFileSnapshot {
+                    text: snapshot.text.clone(),
+                },
+            );
         }
+    }
+
+    fn snapshot_for(&self, agent_id: &AgentId, path: &Path) -> Option<TrackedFileSnapshot> {
+        self.inner
+            .lock()
+            .expect("file read tracker mutex poisoned")
+            .get(agent_id)
+            .and_then(|paths| paths.get(path).cloned())
     }
 
     fn clear_files(&self, agent_id: &AgentId, files: &[PathBuf]) {
@@ -250,7 +269,7 @@ impl FileReadTracker {
             .filter(|(agent_id, _)| *agent_id != changed_by)
             .filter_map(|(agent_id, paths)| {
                 let stale_paths = paths
-                    .iter()
+                    .keys()
                     .filter(|path| changed.contains(path))
                     .cloned()
                     .collect::<Vec<_>>();
@@ -437,7 +456,13 @@ where
                         let mut sink = |event| stream(agent_id, event);
                         let reply = backend.send_streaming(
                             agent_id,
-                            &render_patch_conflict_prompt(&files, &diagnostic, &response),
+                            &render_patch_conflict_prompt(
+                                agent_id,
+                                services.file_reads,
+                                &files,
+                                &diagnostic,
+                                &response,
+                            ),
                             &mut sink,
                         )?;
                         services
@@ -580,7 +605,7 @@ where
 {
     for update in services.file_reads.stale_readers(changed_by, files) {
         let response = read_requested_files(services.locks, &update.paths)?;
-        let prompt = render_file_update_prompt(&response);
+        let prompt = render_file_update_prompt(&update.agent_id, services.file_reads, &response);
         let mut sink = |event| stream(&update.agent_id, event);
         let reply = backend.send_streaming(&update.agent_id, &prompt, &mut sink)?;
         services
@@ -1051,6 +1076,159 @@ fn render_file_read_response(
     text
 }
 
+const MAX_AUTOMATIC_REFRESH_DIFF_BYTES: usize = 48 * 1024;
+const MAX_AUTOMATIC_FULL_REFRESH_BYTES: usize = 8 * 1024;
+
+fn render_file_refresh_response(
+    agent_id: &AgentId,
+    file_reads: &FileReadTracker,
+    snapshots: &[crate::locks::FileSnapshot],
+    failures: &[FileReadFailure],
+) -> String {
+    let mut text = String::from("work-leaf file refresh\n");
+    text.push_str(
+        "This is a compact refresh, not a patch to submit. It shows changes from the last file text this agent received. Request full text with `@work-leaf read <path>` only if the compact refresh is insufficient.\n",
+    );
+
+    for snapshot in snapshots {
+        text.push_str("\n--- ");
+        text.push_str(&snapshot.path.display().to_string());
+        text.push_str(" ---\n");
+        text.push_str("current digest: ");
+        text.push_str(&content_digest(&snapshot.text));
+        text.push('\n');
+
+        let Some(previous) = file_reads.snapshot_for(agent_id, &snapshot.path) else {
+            render_untracked_refresh_snapshot(&mut text, snapshot);
+            continue;
+        };
+
+        text.push_str("previous digest: ");
+        text.push_str(&content_digest(&previous.text));
+        text.push('\n');
+
+        if previous.text == snapshot.text {
+            text.push_str("status: unchanged since this agent's last snapshot\n");
+            continue;
+        }
+
+        match render_snapshot_diff(&snapshot.path, &previous.text, &snapshot.text) {
+            Some(diff) if diff.len() <= MAX_AUTOMATIC_REFRESH_DIFF_BYTES => {
+                text.push_str("status: changed since this agent's last snapshot\n");
+                text.push_str(&diff);
+                if !diff.ends_with('\n') {
+                    text.push('\n');
+                }
+            }
+            Some(diff) => {
+                text.push_str("status: changed since this agent's last snapshot\n");
+                text.push_str("diff omitted: compact refresh would be ");
+                text.push_str(&diff.len().to_string());
+                text.push_str(" bytes. Request exact text with `@work-leaf read ");
+                text.push_str(&snapshot.path.display().to_string());
+                text.push_str("` if this file is still needed.\n");
+            }
+            None => {
+                text.push_str("status: changed since this agent's last snapshot\n");
+                text.push_str("diff unavailable. Request exact text with `@work-leaf read ");
+                text.push_str(&snapshot.path.display().to_string());
+                text.push_str("` if this file is still needed.\n");
+            }
+        }
+    }
+
+    if !failures.is_empty() {
+        text.push_str("\nUnavailable file text\n");
+        text.push_str(&render_file_read_failures(failures));
+    }
+    text
+}
+
+fn render_untracked_refresh_snapshot(text: &mut String, snapshot: &crate::locks::FileSnapshot) {
+    text.push_str("status: no previous snapshot recorded for this agent\n");
+    if snapshot.text.len() <= MAX_AUTOMATIC_FULL_REFRESH_BYTES {
+        text.push_str("work-leaf file text\n\n--- ");
+        text.push_str(&snapshot.path.display().to_string());
+        text.push_str(" ---\n");
+        text.push_str(&snapshot.text);
+        if !snapshot.text.ends_with('\n') {
+            text.push('\n');
+        }
+    } else {
+        text.push_str("current file text omitted: file is ");
+        text.push_str(&snapshot.text.len().to_string());
+        text.push_str(" bytes. Request exact text with `@work-leaf read ");
+        text.push_str(&snapshot.path.display().to_string());
+        text.push_str("` if this file is still needed.\n");
+    }
+}
+
+fn render_snapshot_diff(path: &Path, previous: &str, current: &str) -> Option<String> {
+    static DIFF_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    let counter = DIFF_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let base = std::env::temp_dir().join(format!(
+        "work-leaf-refresh-diff-{}-{counter}",
+        std::process::id()
+    ));
+    let previous_path = base.with_extension("previous");
+    let current_path = base.with_extension("current");
+    if fs::write(&previous_path, previous).is_err() || fs::write(&current_path, current).is_err() {
+        let _ = fs::remove_file(&previous_path);
+        let _ = fs::remove_file(&current_path);
+        return None;
+    }
+
+    let output = Command::new("git")
+        .args(["diff", "--no-index", "--no-color", "--unified=3", "--"])
+        .arg(&previous_path)
+        .arg(&current_path)
+        .output()
+        .ok();
+    let _ = fs::remove_file(&previous_path);
+    let _ = fs::remove_file(&current_path);
+
+    let output = output?;
+    if output.stdout.is_empty() {
+        return Some(String::new());
+    }
+    let raw = String::from_utf8_lossy(&output.stdout);
+    Some(rewrite_diff_paths(&raw, path))
+}
+
+fn rewrite_diff_paths(diff: &str, path: &Path) -> String {
+    let display = path.display();
+    let mut rewritten = String::new();
+    let mut old_header_rewritten = false;
+    let mut new_header_rewritten = false;
+    for line in diff.lines() {
+        if line.starts_with("diff --git ") {
+            rewritten.push_str(&format!("diff --git a/{display} b/{display}\n"));
+        } else if line.starts_with("--- ") && !old_header_rewritten {
+            old_header_rewritten = true;
+            rewritten.push_str(&format!("--- a/{display}\n"));
+        } else if line.starts_with("+++ ") && old_header_rewritten && !new_header_rewritten {
+            new_header_rewritten = true;
+            rewritten.push_str(&format!("+++ b/{display}\n"));
+        } else if line.starts_with("index ") {
+            continue;
+        } else {
+            rewritten.push_str(line);
+            rewritten.push('\n');
+        }
+    }
+    rewritten
+}
+
+fn content_digest(text: &str) -> String {
+    let mut hash = 0xcbf2_9ce4_8422_2325_u64;
+    for byte in text.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("fnv64:{hash:016x}; bytes:{}", text.len())
+}
+
 fn render_file_read_failures(failures: &[FileReadFailure]) -> String {
     let mut text = String::new();
     for failure in failures {
@@ -1111,16 +1289,18 @@ fn render_command_result(
 }
 
 fn render_patch_conflict_prompt(
+    agent_id: &AgentId,
+    file_reads: &FileReadTracker,
     files: &[PathBuf],
     diagnostic: &str,
     response: &FileReadResponse,
 ) -> String {
     let mut text = format!(
-        "The orchestrator could not apply your patch.\nFiles: {}\n\nGit diagnostic:\n{}\n\nRebase your patch against the fresh file text below and provide a corrected unified diff patch.",
+        "The orchestrator could not apply your patch.\nFiles: {}\n\nGit diagnostic:\n{}\n\nRebase your patch against the compact file refresh below and provide a corrected unified diff patch.",
         display_paths(files),
         diagnostic
     );
-    append_file_response(&mut text, response);
+    append_file_refresh_response(&mut text, agent_id, file_reads, response);
     text
 }
 
@@ -1151,20 +1331,31 @@ fn render_pending_command_changes_prompt(files: &[PathBuf], diff: &str) -> Strin
     text
 }
 
-fn render_file_update_prompt(response: &FileReadResponse) -> String {
+fn render_file_update_prompt(
+    agent_id: &AgentId,
+    file_reads: &FileReadTracker,
+    response: &FileReadResponse,
+) -> String {
     let mut text = [
         "work-leaf file update",
         "Another agent changed files you previously read before you submitted a patch.",
-        "Rebase any pending patch against the fresh file text below.",
+        "Rebase any pending patch against the compact file refresh below.",
     ]
     .join("\n");
-    append_file_response(&mut text, response);
+    append_file_refresh_response(&mut text, agent_id, file_reads, response);
     text
 }
 
-fn append_file_response(text: &mut String, response: &FileReadResponse) {
+fn append_file_refresh_response(
+    text: &mut String,
+    agent_id: &AgentId,
+    file_reads: &FileReadTracker,
+    response: &FileReadResponse,
+) {
     text.push_str("\n\n");
-    text.push_str(&render_file_read_response(
+    text.push_str(&render_file_refresh_response(
+        agent_id,
+        file_reads,
         &response.snapshots,
         &response.failures,
     ));

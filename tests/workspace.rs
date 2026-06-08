@@ -46,6 +46,103 @@ fn controller_exposes_ui_neutral_events_and_snapshot_without_terminal_ui() {
 }
 
 #[test]
+fn controller_line_events_do_not_resend_full_session_transcripts() {
+    let backend = FakeBackend::new(["launch reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("stream compactly").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+
+    let events = controller.drain_events();
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            WorkLeafEvent::AgentLineAppended { agent_id: id, line }
+                if id == &agent_id && line == "launch reply"
+        )
+    }));
+    assert!(
+        !events.iter().any(|event| {
+            matches!(
+                event,
+                WorkLeafEvent::AgentUpdated { session }
+                    if session.id == agent_id
+                        && session.lines.iter().any(|line| line == "launch reply")
+            )
+        }),
+        "line append events should not be paired with full-session transcript updates"
+    );
+}
+
+#[test]
+fn controller_status_events_do_not_resend_existing_large_transcripts() {
+    let large_reply = "large transcript line\n".repeat(8192);
+    let backend = FakeBackend::new([large_reply.as_str(), "follow reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("keep status compact").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    controller.drain_events();
+
+    controller.send_message(&agent_id, "continue").unwrap();
+    let waiting_events = controller.drain_events();
+    assert!(waiting_events.iter().any(|event| {
+        matches!(
+            event,
+            WorkLeafEvent::AgentStatusUpdated {
+                agent_id: id,
+                loading: Some(WorkLeafLoading::WaitingForReply),
+                ..
+            } if id == &agent_id
+        )
+    }));
+    assert!(
+        !waiting_events.iter().any(|event| {
+            matches!(
+                event,
+                WorkLeafEvent::AgentUpdated { session }
+                    if session.id == agent_id
+                        && session.lines.iter().any(|line| line == &large_reply)
+            )
+        }),
+        "status changes should not serialize existing transcript text"
+    );
+
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    let ready_events = controller.drain_events();
+    assert!(ready_events.iter().any(|event| {
+        matches!(
+            event,
+            WorkLeafEvent::AgentStatusUpdated {
+                agent_id: id,
+                loading: None,
+                ..
+            } if id == &agent_id
+        )
+    }));
+    assert!(ready_events.iter().any(|event| {
+        matches!(
+            event,
+            WorkLeafEvent::AgentLineAppended { agent_id: id, line }
+                if id == &agent_id && line == "follow reply"
+        )
+    }));
+    assert!(
+        !ready_events.iter().any(|event| {
+            matches!(
+                event,
+                WorkLeafEvent::AgentUpdated { session }
+                    if session.id == agent_id
+                        && session.lines.iter().any(|line| line == &large_reply)
+            )
+        }),
+        "ready status changes should not serialize existing transcript text"
+    );
+}
+
+#[test]
 fn controller_uses_backend_agent_to_name_chat_from_first_prompt() {
     let backend = FakeBackend::new(["launch reply"]);
     let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());

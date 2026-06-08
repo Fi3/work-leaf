@@ -438,6 +438,69 @@ diff --git a/README.md b/README.md
 }
 
 #[test]
+fn orchestrator_protocol_sends_compact_patch_conflict_refresh_for_previously_read_files() {
+    let root = temp_git_repo("protocol-compact-patch-conflict-refresh");
+    let original = numbered_lines("before", 700);
+    let current = original.replace("before-0350\n", "current-0350\n");
+    fs::write(root.join("README.md"), &original).unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial large readme fixture"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    orchestrator
+        .handle_agent_message(&agent_id, "docs", "@work-leaf read README.md")
+        .unwrap();
+    fs::write(root.join("README.md"), &current).unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "UPDATE readme from another patch"]);
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "\
+@work-leaf patch edit stale readme
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -348,7 +348,7 @@
+ before-0347
+ before-0348
+ before-0349
+-before-0350
++agent-0350
+ before-0351
+ before-0352
+ before-0353
+@work-leaf end",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(events.iter().any(|event| {
+        matches!(event, OrchestratorEvent::PatchRejected { agent_id: id, files, .. }
+            if id == &agent_id && files == &vec![PathBuf::from("README.md")])
+    }));
+    assert_eq!(backend.sends.len(), 2);
+    let conflict_prompt = &backend.sends[1].1;
+    assert!(conflict_prompt.contains("work-leaf file refresh"));
+    assert!(conflict_prompt.contains("-before-0350"));
+    assert!(conflict_prompt.contains("+current-0350"));
+    assert!(
+        conflict_prompt.len() < original.len() / 4,
+        "conflict prompt should be compact, prompt={} original={}",
+        conflict_prompt.len(),
+        original.len()
+    );
+    assert!(
+        !conflict_prompt.contains("before-0000\nbefore-0001\nbefore-0002"),
+        "compact refresh should not inline the whole file"
+    );
+}
+
+#[test]
 fn orchestrator_protocol_applies_patch_without_running_project_required_checks() {
     let root = temp_git_repo("protocol-no-required-check-run");
     fs::write(root.join("README.md"), "actual\n").unwrap();
@@ -609,6 +672,71 @@ diff --git a/README.md b/README.md
 }
 
 #[test]
+fn orchestrator_protocol_sends_compact_stale_updates_to_other_agents() {
+    let root = temp_git_repo("protocol-compact-stale-reader-update");
+    let original = numbered_lines("before", 700);
+    fs::write(root.join("README.md"), &original).unwrap();
+    git(&root, ["add", "."]);
+    git(
+        &root,
+        ["commit", "-m", "ADD initial large stale reader fixture"],
+    );
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let reader = AgentId::new("user-1").unwrap();
+    let patcher = AgentId::new("user-2").unwrap();
+
+    orchestrator
+        .handle_agent_message(&reader, "docs", "@work-leaf read README.md")
+        .unwrap();
+    let events = orchestrator
+        .handle_agent_message(
+            &patcher,
+            "docs",
+            "\
+@work-leaf patch update one large readme line
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -348,7 +348,7 @@
+ before-0347
+ before-0348
+ before-0349
+-before-0350
++after-0350
+ before-0351
+ before-0352
+ before-0353
+@work-leaf end",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::FileUpdateSent { agent_id, paths }
+                if agent_id == &reader && paths == &vec![PathBuf::from("README.md")]
+        )
+    }));
+    assert_eq!(backend.sends.len(), 3);
+    let update_prompt = &backend.sends[1].1;
+    assert!(update_prompt.contains("work-leaf file refresh"));
+    assert!(update_prompt.contains("-before-0350"));
+    assert!(update_prompt.contains("+after-0350"));
+    assert!(
+        update_prompt.len() < original.len() / 4,
+        "stale update should be compact, prompt={} original={}",
+        update_prompt.len(),
+        original.len()
+    );
+    assert!(
+        !update_prompt.contains("before-0000\nbefore-0001\nbefore-0002"),
+        "compact refresh should not inline the whole file"
+    );
+}
+
+#[test]
 fn orchestrator_protocol_does_not_update_readers_after_done() {
     let root = temp_git_repo("protocol-stale-reader-done");
     fs::write(root.join("README.md"), "before\n").unwrap();
@@ -706,4 +834,10 @@ fn git_output<const N: usize>(root: &Path, args: [&str; N]) -> String {
         String::from_utf8_lossy(&output.stderr)
     );
     String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
+fn numbered_lines(prefix: &str, count: usize) -> String {
+    (0..count)
+        .map(|index| format!("{prefix}-{index:04}\n"))
+        .collect()
 }
