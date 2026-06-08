@@ -188,6 +188,43 @@ fn scripted_harness_ctrl_c_never_quits_and_only_right_focus_interrupts_agent() {
 }
 
 #[test]
+fn scripted_harness_command_mode_typing_shows_insert_mode_notice() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(b"hello");
+
+    assert_eq!(harness.ui().mode(), UiMode::Command);
+    assert!(
+        harness
+            .render_frame()
+            .contains("command mode: press i for insert mode before typing")
+    );
+}
+
+#[test]
+fn scripted_harness_ctrl_c_shows_quit_notice() {
+    let mut harness = UiHarness::new(80, 24);
+
+    assert!(harness.handle_byte(3));
+    assert!(!harness.is_quit());
+    assert!(
+        harness
+            .render_frame()
+            .contains("to exit, press Esc then :q then Enter")
+    );
+}
+
+#[test]
+fn scripted_harness_structural_command_keys_do_not_show_typing_notice() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(&[23, b'l']);
+
+    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+    assert!(!harness.render_frame().contains("command mode: press i"));
+}
+
+#[test]
 fn scripted_harness_quits_only_through_colon_q() {
     let mut harness = UiHarness::new(80, 24);
 

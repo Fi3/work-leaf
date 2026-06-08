@@ -216,6 +216,35 @@ fn terminal_app_quits_only_from_prompt_q() {
     assert!(app.is_quit());
 }
 
+#[test]
+fn terminal_app_command_mode_typing_shows_insert_mode_notice() {
+    let backend = FakeBackend::from_replies(VecDeque::new());
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b"hello");
+
+    assert_eq!(app.ui().mode(), UiMode::Command);
+    assert!(
+        app.render_frame()
+            .contains("command mode: press i for insert mode before typing")
+    );
+}
+
+#[test]
+fn terminal_app_ctrl_c_shows_quit_notice() {
+    let backend = FakeBackend::from_replies(VecDeque::new());
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    assert!(app.handle_byte(3));
+    assert!(!app.is_quit());
+    assert!(
+        app.render_frame()
+            .contains("to exit, press Esc then :q then Enter")
+    );
+}
+
 #[derive(Clone, Debug, Default)]
 struct InterruptRecordingBackend {
     state: Arc<Mutex<InterruptRecordingState>>,
