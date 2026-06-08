@@ -19,14 +19,20 @@ The command agent is the always-available user-facing control surface. The user 
 start work, create patch agents, ask for orchestration actions, and run high-level commands through
 an LLM-mediated interface.
 
-In the current source, the command surface is represented by `src/cli.rs::CommandChat` and the
-terminal/workspace adapters around it:
+The command surface is represented by `src/cli.rs::CommandChat` and the controller, transport, and
+terminal adapters around it:
 
 - `src/cli.rs::CommandChat` owns the backend, file lock table, read tracker, command policy, known
   agents, and review/linearize entry points.
 - `src/workspace.rs::WorkLeafController` exposes the UI-neutral control surface used by the terminal
   app.
-- `src/terminal_app.rs::TerminalApp` adapts terminal input and rendering to the controller.
+- `src/http_controller.rs::HttpControllerServer` exposes `WorkLeafController<CodexBackend>` through
+  a localhost HTTP API for the `work-leaf-orchestrator` daemon.
+- `src/http_controller.rs::HttpControllerClient` drives that API for out-of-process frontends.
+- `src/terminal_app.rs::RemoteTerminalApp` adapts terminal input and rendering to the HTTP client
+  used by the `work-leaf` CLI.
+- `src/terminal_app.rs::TerminalApp` adapts terminal input and rendering to an in-process
+  controller for tests and embedders.
 
 The command agent is not a patch author. Its job is to coordinate work and create the correct agent
 for the user's request.
@@ -394,7 +400,8 @@ the reviewer reports no findings, the review chat can be marked done by the user
 
 A normal development session in default read-permission mode follows this shape:
 
-1. The user opens `work-leaf` in the project directory.
+1. The user runs `./start` in the project directory, or opens `work-leaf` directly so the CLI starts
+   its sibling `work-leaf-orchestrator` daemon.
 2. The command agent is available as the control surface.
 3. The user asks the command agent to create a patch agent for a feature or bug fix.
 4. The patch agent asks for file text with `@work-leaf read`.
@@ -524,6 +531,10 @@ The important source symbols for this workflow are:
   injection or raw slash-command stdin for resumed sessions.
 - `src/cli.rs::CommandChat`: owns the command surface, backend, file locks, read tracker, and
   directive loop.
+- `src/http_controller.rs::HttpControllerServer`: exposes the workspace controller as localhost HTTP
+  routes owned by the daemon process.
+- `src/http_controller.rs::HttpControllerClient`: sends CLI controller requests to the daemon and
+  decodes the same snapshots and events used by local frontends.
 - `src/orchestrator.rs::parse_agent_directives`: parses `@work-leaf` protocol directives.
 - `src/orchestrator.rs::handle_agent_directives_streaming`: handles reads, patches, command
   classification, sends, done, stale updates, and follow-up routing.
@@ -537,3 +548,5 @@ The important source symbols for this workflow are:
 - `src/review.rs::GitHistory`: finds latest agent commits from git history and builds cumulative
   review targets since launch or latest reviewed baselines.
 - `src/workspace.rs::WorkLeafController`: exposes UI-neutral orchestration state and events.
+- `src/terminal_app.rs::RemoteTerminalApp`: renders the CLI terminal UI through the HTTP controller
+  client.

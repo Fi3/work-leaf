@@ -3,21 +3,284 @@ use std::time::{Duration, Instant};
 
 use rustyline::line_buffer::{ChangeListener, DeleteListener, Direction, LineBuffer};
 
-use crate::agent::AgentBackend;
-#[cfg(test)]
-use crate::agent::AgentId;
+use crate::agent::{AgentBackend, AgentId};
 use crate::cli::{CommandChat, terminal_right_content, ui_action_text};
+use crate::http_controller::HttpControllerClient;
 use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode};
-#[cfg(test)]
-use crate::workspace::WorkLeafLoading;
-use crate::workspace::{WorkLeafController, WorkLeafEvent, WorkLeafSession};
+use crate::workspace::{WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession};
 
 #[derive(Debug)]
 pub struct TerminalApp<B>
 where
     B: AgentBackend + Clone + Send + 'static,
 {
+    inner: TerminalAppCore<LocalTerminalController<B>>,
+}
+
+impl<B> TerminalApp<B>
+where
+    B: AgentBackend + Clone + Send + 'static,
+{
+    pub fn new(chat: CommandChat<B>, width: u16, height: u16) -> Self {
+        Self {
+            inner: TerminalAppCore::new(
+                LocalTerminalController {
+                    controller: WorkLeafController::new(chat),
+                },
+                width,
+                height,
+            ),
+        }
+    }
+
+    pub fn into_chat(mut self) -> CommandChat<B> {
+        self.wait_for_idle(Duration::from_secs(5));
+        self.inner.controller.controller.into_chat()
+    }
+
+    pub fn ui(&self) -> &TerminalUi {
+        self.inner.ui()
+    }
+
+    pub fn transcript(&self) -> &[String] {
+        self.inner.controller.controller.transcript()
+    }
+
+    pub fn is_quit(&self) -> bool {
+        self.inner.is_quit()
+    }
+
+    pub fn is_busy(&mut self) -> bool {
+        self.inner.is_busy()
+    }
+
+    pub fn needs_render(&self) -> bool {
+        self.inner.needs_render()
+    }
+
+    pub fn mark_rendered(&mut self) {
+        self.inner.mark_rendered();
+    }
+
+    pub fn tick(&mut self) {
+        self.inner.tick();
+    }
+
+    pub fn wait_for_idle(&mut self, timeout: Duration) -> bool {
+        self.inner.wait_for_idle(timeout)
+    }
+
+    pub fn wait_for_frame_contains(&mut self, needle: &str, timeout: Duration) -> bool {
+        self.inner.wait_for_frame_contains(needle, timeout)
+    }
+
+    pub fn handle_bytes(&mut self, bytes: &[u8]) -> bool {
+        self.inner.handle_bytes(bytes)
+    }
+
+    pub fn handle_byte(&mut self, byte: u8) -> bool {
+        self.inner.handle_byte(byte)
+    }
+
+    pub fn render_frame(&self) -> String {
+        self.inner.render_frame()
+    }
+
+    pub fn poll_worker(&mut self) {
+        self.inner.poll_worker();
+    }
+
+    #[cfg(test)]
+    fn clear_agent_loading(&mut self, agent_id: &AgentId) {
+        self.inner.clear_agent_loading(agent_id);
+    }
+
+    #[cfg(test)]
+    fn set_agent_loading(&mut self, agent_id: &AgentId, loading: Option<LoadingKind>) {
+        self.inner.set_agent_loading(agent_id, loading);
+    }
+}
+
+#[derive(Debug)]
+pub struct RemoteTerminalApp {
+    inner: TerminalAppCore<HttpControllerClient>,
+}
+
+impl RemoteTerminalApp {
+    pub fn new(client: HttpControllerClient, width: u16, height: u16) -> Self {
+        Self {
+            inner: TerminalAppCore::new(client, width, height),
+        }
+    }
+
+    pub fn ui(&self) -> &TerminalUi {
+        self.inner.ui()
+    }
+
+    pub fn is_quit(&self) -> bool {
+        self.inner.is_quit()
+    }
+
+    pub fn is_busy(&mut self) -> bool {
+        self.inner.is_busy()
+    }
+
+    pub fn needs_render(&self) -> bool {
+        self.inner.needs_render()
+    }
+
+    pub fn mark_rendered(&mut self) {
+        self.inner.mark_rendered();
+    }
+
+    pub fn tick(&mut self) {
+        self.inner.tick();
+    }
+
+    pub fn wait_for_idle(&mut self, timeout: Duration) -> bool {
+        self.inner.wait_for_idle(timeout)
+    }
+
+    pub fn wait_for_frame_contains(&mut self, needle: &str, timeout: Duration) -> bool {
+        self.inner.wait_for_frame_contains(needle, timeout)
+    }
+
+    pub fn handle_bytes(&mut self, bytes: &[u8]) -> bool {
+        self.inner.handle_bytes(bytes)
+    }
+
+    pub fn handle_byte(&mut self, byte: u8) -> bool {
+        self.inner.handle_byte(byte)
+    }
+
+    pub fn render_frame(&self) -> String {
+        self.inner.render_frame()
+    }
+
+    pub fn poll_worker(&mut self) {
+        self.inner.poll_worker();
+    }
+}
+
+#[derive(Debug)]
+struct LocalTerminalController<B>
+where
+    B: AgentBackend + Clone + Send + 'static,
+{
     controller: WorkLeafController<B>,
+}
+
+trait TerminalController {
+    fn snapshot(&self) -> crate::WorkLeafSnapshot;
+    fn drain_events(&mut self) -> Vec<WorkLeafEvent>;
+    fn execute_command_line(&mut self, line: &str);
+    fn send_command_agent_message(&mut self, message: &str);
+    fn send_message(&mut self, agent_id: &AgentId, message: &str);
+    fn interrupt_agent(&mut self, agent_id: &AgentId);
+    fn push_transcript_line(&mut self, line: String);
+    fn is_busy(&mut self) -> bool;
+    fn loading_text(&self, loading: WorkLeafLoading) -> String;
+    fn shutdown(&mut self);
+}
+
+impl<B> TerminalController for LocalTerminalController<B>
+where
+    B: AgentBackend + Clone + Send + 'static,
+{
+    fn snapshot(&self) -> crate::WorkLeafSnapshot {
+        self.controller.snapshot()
+    }
+
+    fn drain_events(&mut self) -> Vec<WorkLeafEvent> {
+        self.controller.drain_events()
+    }
+
+    fn execute_command_line(&mut self, line: &str) {
+        self.controller.execute_command_line(line);
+    }
+
+    fn send_command_agent_message(&mut self, message: &str) {
+        self.controller.send_command_agent_message(message);
+    }
+
+    fn send_message(&mut self, agent_id: &AgentId, message: &str) {
+        let _ = self.controller.send_message(agent_id, message);
+    }
+
+    fn interrupt_agent(&mut self, agent_id: &AgentId) {
+        self.controller.interrupt_agent(agent_id);
+    }
+
+    fn push_transcript_line(&mut self, line: String) {
+        self.controller.push_transcript_line(line);
+    }
+
+    fn is_busy(&mut self) -> bool {
+        self.controller.is_busy()
+    }
+
+    fn loading_text(&self, loading: WorkLeafLoading) -> String {
+        self.controller.loading_text(loading)
+    }
+
+    fn shutdown(&mut self) {
+        self.controller.shutdown();
+    }
+}
+
+impl TerminalController for HttpControllerClient {
+    fn snapshot(&self) -> crate::WorkLeafSnapshot {
+        self.snapshot()
+            .unwrap_or_else(|error| crate::WorkLeafSnapshot {
+                command_transcript: vec![format!("error: {error}")],
+                sessions: Vec::new(),
+            })
+    }
+
+    fn drain_events(&mut self) -> Vec<WorkLeafEvent> {
+        HttpControllerClient::drain_events(self).unwrap_or_default()
+    }
+
+    fn execute_command_line(&mut self, line: &str) {
+        let _ = HttpControllerClient::execute_command_line(self, line);
+    }
+
+    fn send_command_agent_message(&mut self, message: &str) {
+        let _ = HttpControllerClient::send_command_agent_message(self, message);
+    }
+
+    fn send_message(&mut self, agent_id: &AgentId, message: &str) {
+        let _ = HttpControllerClient::send_message(self, agent_id, message);
+    }
+
+    fn interrupt_agent(&mut self, agent_id: &AgentId) {
+        let _ = HttpControllerClient::interrupt_agent(self, agent_id);
+    }
+
+    fn push_transcript_line(&mut self, line: String) {
+        let _ = HttpControllerClient::push_transcript_line(self, line);
+    }
+
+    fn is_busy(&mut self) -> bool {
+        HttpControllerClient::is_busy(self).unwrap_or(false)
+    }
+
+    fn loading_text(&self, loading: WorkLeafLoading) -> String {
+        HttpControllerClient::loading_text(self, loading)
+            .unwrap_or_else(|_| "Waiting for agent".to_string())
+    }
+
+    fn shutdown(&mut self) {
+        let _ = HttpControllerClient::shutdown(self);
+    }
+}
+
+#[derive(Debug)]
+struct TerminalAppCore<C>
+where
+    C: TerminalController,
+{
+    controller: C,
     ui: TerminalUi,
     prompt_buffer: PromptLine,
     prompt_history: Vec<String>,
@@ -35,13 +298,13 @@ where
     quit: bool,
 }
 
-impl<B> TerminalApp<B>
+impl<C> TerminalAppCore<C>
 where
-    B: AgentBackend + Clone + Send + 'static,
+    C: TerminalController,
 {
-    pub fn new(chat: CommandChat<B>, width: u16, height: u16) -> Self {
+    fn new(controller: C, width: u16, height: u16) -> Self {
         Self {
-            controller: WorkLeafController::new(chat),
+            controller,
             ui: TerminalUi::new(width, height),
             prompt_buffer: PromptLine::new(),
             prompt_history: Vec::new(),
@@ -60,39 +323,30 @@ where
         }
     }
 
-    pub fn into_chat(mut self) -> CommandChat<B> {
-        self.wait_for_idle(Duration::from_secs(5));
-        self.controller.into_chat()
-    }
-
-    pub fn ui(&self) -> &TerminalUi {
+    fn ui(&self) -> &TerminalUi {
         &self.ui
     }
 
-    pub fn transcript(&self) -> &[String] {
-        self.controller.transcript()
-    }
-
-    pub fn is_quit(&self) -> bool {
+    fn is_quit(&self) -> bool {
         self.quit
     }
 
-    pub fn is_busy(&mut self) -> bool {
+    fn is_busy(&mut self) -> bool {
         let busy = self.controller.is_busy();
         self.apply_controller_events();
         busy
     }
 
-    pub fn needs_render(&self) -> bool {
+    fn needs_render(&self) -> bool {
         self.dirty || self.ui.has_status_notice()
     }
 
-    pub fn mark_rendered(&mut self) {
+    fn mark_rendered(&mut self) {
         self.dirty = false;
         self.ui.clear_expired_status_notice();
     }
 
-    pub fn tick(&mut self) {
+    fn tick(&mut self) {
         let busy = self.controller.is_busy();
         self.apply_controller_events();
         if busy {
@@ -101,7 +355,7 @@ where
         }
     }
 
-    pub fn wait_for_idle(&mut self, timeout: Duration) -> bool {
+    fn wait_for_idle(&mut self, timeout: Duration) -> bool {
         let start = Instant::now();
         while start.elapsed() < timeout {
             self.apply_controller_events();
@@ -114,7 +368,7 @@ where
         !self.controller.is_busy()
     }
 
-    pub fn wait_for_frame_contains(&mut self, needle: &str, timeout: Duration) -> bool {
+    fn wait_for_frame_contains(&mut self, needle: &str, timeout: Duration) -> bool {
         let start = Instant::now();
         while start.elapsed() < timeout {
             self.apply_controller_events();
@@ -127,7 +381,7 @@ where
         self.render_frame().contains(needle)
     }
 
-    pub fn handle_bytes(&mut self, bytes: &[u8]) -> bool {
+    fn handle_bytes(&mut self, bytes: &[u8]) -> bool {
         for byte in bytes {
             if !self.handle_byte(*byte) {
                 return false;
@@ -331,7 +585,7 @@ where
 
         self.chat_history.push(message.clone());
         if let Some(agent_id) = self.ui.selected_agent().cloned() {
-            let _ = self.controller.send_message(&agent_id, &message);
+            self.controller.send_message(&agent_id, &message);
         } else {
             self.controller.send_command_agent_message(&message);
         }
@@ -774,22 +1028,24 @@ mod tests {
         let mut app = TerminalApp::new(chat, 80, 24);
         let agent_id = AgentId::new("user-1").expect("test agent id is valid");
 
-        app.ui
+        app.inner
+            .ui
             .add_agent(AgentListEntry::new(agent_id.clone(), "feature"));
-        app.ui
+        app.inner
+            .ui
             .activate_agent_chat(&agent_id)
             .expect("test agent is registered");
         app.set_agent_loading(&agent_id, Some(LoadingKind::WaitingForReply));
 
         assert!(!app.render_frame().contains('\u{7}'));
-        assert!(!app.ui.render_left_pane().contains("READY"));
+        assert!(!app.ui().render_left_pane().contains("READY"));
 
         app.clear_agent_loading(&agent_id);
 
         assert!(app.render_frame().starts_with('\u{7}'));
         assert!(!app.render_frame().contains('\u{7}'));
         assert!(
-            app.ui
+            app.ui()
                 .render_left_pane()
                 .contains("\u{1b}[7m>feature user-1  working: feature  READY\u{1b}[0m")
         );
@@ -814,13 +1070,13 @@ mod tests {
         let chat = CommandChat::new(root, NoopBackend);
         let mut app = TerminalApp::new(chat, 80, 24);
 
-        assert!(app.ui.selected_agent().is_none());
+        assert!(app.ui().selected_agent().is_none());
 
         app.handle_bytes(b"ispawn a new patch agent that uses codex\n");
 
         assert!(app.wait_for_idle(Duration::from_secs(1)));
         let agent_id = AgentId::new("user-1").expect("test agent id is valid");
-        assert_eq!(app.ui.selected_agent(), Some(&agent_id));
+        assert_eq!(app.ui().selected_agent(), Some(&agent_id));
         assert!(app.transcript().iter().any(|line| line
             == "command-agent: launching Codex user agent for patch agent that uses codex"));
         assert!(

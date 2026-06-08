@@ -1,11 +1,11 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::env;
 use std::fmt;
-use std::io::{self, BufRead, IsTerminal, Read, Write};
+use std::io::{self, BufRead, BufReader, IsTerminal, Read, Write};
 use std::path::PathBuf;
-use std::process::{self, Command, Stdio};
+use std::process::{self, Child, Command, Stdio};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::agent::{
     AgentBackend, AgentId, AgentLaunch, AgentProfile, AgentShutdownHandle, AgentStreamEvent,
@@ -21,8 +21,9 @@ use crate::orchestrator::{
 };
 use crate::review::{AgentCommit, has_no_findings};
 use crate::review::{GitHistory, ReviewResult};
-use crate::terminal_app::TerminalApp;
+use crate::terminal_app::{RemoteTerminalApp, TerminalApp};
 use crate::ui::UiAction;
+use crate::{HttpControllerClient, OrchestratorHttpError, WorkLeafSnapshot};
 
 const DEFAULT_NEW_AGENT_PROMPT: &str = "Start a new work-leaf user-agent session. Ask the user what to work on if the task is not already clear, then report the broad feature before proposing patches.";
 
@@ -102,28 +103,132 @@ pub fn run_cli_from_env() -> ! {
             model,
             read_permission,
         } => {
-            let project_dir = match env::current_dir() {
-                Ok(path) => path,
-                Err(error) => {
-                    eprintln!("{error}");
-                    process::exit(1);
-                }
+            let result = if env::var_os("WORK_LEAF_IN_PROCESS").is_some() {
+                run_in_process_cli(model, read_permission)
+            } else {
+                run_http_cli(model, read_permission)
             };
-            let backend = match codex_backend(project_dir.clone(), model, read_permission) {
-                Ok(backend) => backend,
-                Err(error) => {
-                    eprintln!("{error}");
-                    process::exit(1);
-                }
-            };
-            let chat = CommandChat::new(project_dir, backend);
-            if let Err(error) = run_command_chat(chat) {
+            if let Err(error) = result {
                 eprintln!("{error}");
                 process::exit(1);
             }
             process::exit(0);
         }
     }
+}
+
+fn run_in_process_cli(
+    model: Option<String>,
+    read_permission: ReadPermission,
+) -> Result<(), CliError> {
+    let project_dir = env::current_dir()?;
+    let backend = codex_backend(project_dir.clone(), model, read_permission)?;
+    let chat = CommandChat::new(project_dir, backend);
+    run_command_chat(chat)
+}
+
+fn run_http_cli(model: Option<String>, read_permission: ReadPermission) -> Result<(), CliError> {
+    let project_dir = env::current_dir()?;
+    let (client, _daemon) = http_client_from_env_or_spawn(model, read_permission)?;
+    run_http_command_chat(client, project_dir)
+}
+
+fn http_client_from_env_or_spawn(
+    model: Option<String>,
+    read_permission: ReadPermission,
+) -> Result<(HttpControllerClient, Option<ManagedOrchestrator>), CliError> {
+    if let Ok(url) = env::var("WORK_LEAF_ORCHESTRATOR_URL") {
+        let client = HttpControllerClient::connect(url).map_err(http_cli_error)?;
+        return Ok((client, None));
+    }
+
+    let mut daemon = ManagedOrchestrator::spawn(model, read_permission)?;
+    let client = HttpControllerClient::connect(daemon.url.clone()).map_err(http_cli_error)?;
+    daemon.client_url = Some(client.base_url().to_string());
+    Ok((client, Some(daemon)))
+}
+
+#[derive(Debug)]
+struct ManagedOrchestrator {
+    child: Child,
+    url: String,
+    client_url: Option<String>,
+}
+
+impl ManagedOrchestrator {
+    fn spawn(model: Option<String>, read_permission: ReadPermission) -> Result<Self, CliError> {
+        let mut command = Command::new(orchestrator_binary_path()?);
+        command.arg("--listen").arg("127.0.0.1:0");
+        if let Some(model) = model {
+            command.arg("--model").arg(model);
+        }
+        if read_permission == ReadPermission::DirectFilesystem {
+            command.arg("--no-read-permission");
+        }
+        command
+            .current_dir(env::current_dir()?)
+            .env("WORK_LEAF_PARENT_PID", process::id().to_string())
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null());
+
+        let mut child = command.spawn()?;
+        let stdout = child.stdout.take().ok_or_else(|| {
+            CliError::Io(io::Error::other("orchestrator stdout was not captured"))
+        })?;
+        let mut lines = BufReader::new(stdout).lines();
+        let line = lines.next().ok_or_else(|| {
+            CliError::Io(io::Error::other("orchestrator exited before startup"))
+        })??;
+        let url = line
+            .strip_prefix("WORK_LEAF_ORCHESTRATOR_URL=")
+            .ok_or_else(|| {
+                CliError::Io(io::Error::other("orchestrator did not print a startup URL"))
+            })?
+            .to_string();
+        thread::spawn(move || for _ in lines {});
+        Ok(Self {
+            child,
+            url,
+            client_url: None,
+        })
+    }
+}
+
+impl Drop for ManagedOrchestrator {
+    fn drop(&mut self) {
+        if self.child.try_wait().ok().flatten().is_some() {
+            return;
+        }
+        if let Some(url) = &self.client_url
+            && let Ok(mut client) = HttpControllerClient::connect(url.clone())
+        {
+            let _ = client.shutdown();
+        }
+        let start = Instant::now();
+        while start.elapsed() < Duration::from_secs(2) {
+            if self.child.try_wait().ok().flatten().is_some() {
+                return;
+            }
+            thread::sleep(Duration::from_millis(20));
+        }
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+fn orchestrator_binary_path() -> Result<PathBuf, CliError> {
+    let exe = env::current_exe()?;
+    let name = if cfg!(windows) {
+        "work-leaf-orchestrator.exe"
+    } else {
+        "work-leaf-orchestrator"
+    };
+    Ok(exe.with_file_name(name))
+}
+
+fn http_cli_error(error: OrchestratorHttpError) -> CliError {
+    CliError::Io(io::Error::other(error.to_string()))
 }
 
 #[derive(Debug)]
@@ -884,6 +989,17 @@ where
     }
 }
 
+fn run_http_command_chat(
+    client: HttpControllerClient,
+    project_dir: PathBuf,
+) -> Result<(), CliError> {
+    if io::stdin().is_terminal() && io::stdout().is_terminal() {
+        run_remote_terminal_ui(client)
+    } else {
+        run_remote_scripted_command_chat(client, project_dir)
+    }
+}
+
 fn run_terminal_ui<B>(chat: CommandChat<B>) -> Result<(), CliError>
 where
     B: AgentBackend + Clone + Send + 'static,
@@ -919,6 +1035,40 @@ where
     Ok(())
 }
 
+fn run_remote_terminal_ui(client: HttpControllerClient) -> Result<(), CliError> {
+    let (width, height) = terminal_size();
+    let _raw_mode = RawTerminalMode::enter()?;
+    let mut app = RemoteTerminalApp::new(client, width, height);
+    let mut stdin = io::stdin().lock();
+    let mut stdout = io::stdout();
+    let _screen_mode = AlternateScreenMode::enter(&mut stdout)?;
+
+    write!(stdout, "{}", app.render_frame())?;
+    stdout.flush()?;
+
+    loop {
+        app.tick();
+        let mut byte = [0_u8; 1];
+        match stdin.read(&mut byte)? {
+            0 => thread::sleep(Duration::from_millis(10)),
+            _ => {
+                if !app.handle_byte(byte[0]) {
+                    break;
+                }
+            }
+        }
+        if app.needs_render() {
+            write!(stdout, "{}", app.render_frame())?;
+            stdout.flush()?;
+            app.mark_rendered();
+        }
+    }
+
+    write!(stdout, "\u{1b}[2J\u{1b}[H")?;
+    stdout.flush()?;
+    Ok(())
+}
+
 fn run_scripted_command_chat<B>(mut chat: CommandChat<B>) -> Result<(), CliError>
 where
     B: AgentBackend,
@@ -939,6 +1089,94 @@ where
             }
             Err(error) => writeln!(stdout, "{}", command_chat_error_text(&error))?,
         }
+    }
+    Ok(())
+}
+
+fn run_remote_scripted_command_chat(
+    mut client: HttpControllerClient,
+    project_dir: PathBuf,
+) -> Result<(), CliError> {
+    let mut stdout = io::stdout();
+    let stdin = io::stdin();
+    writeln!(stdout, "work-leaf orchestrator")?;
+    writeln!(stdout, "project: {}", project_dir.display())?;
+    writeln!(stdout, "{}", render_command_chat_help())?;
+
+    let mut printed = PrintedRemoteState::new(
+        client
+            .snapshot()
+            .map_err(http_cli_error)
+            .unwrap_or_else(|_| WorkLeafSnapshot {
+                command_transcript: Vec::new(),
+                sessions: Vec::new(),
+            }),
+    );
+    for line in stdin.lock().lines() {
+        let line = line?;
+        let trimmed = line.trim().to_string();
+        client.execute_command_line(&line).map_err(http_cli_error)?;
+        wait_and_print_remote_updates(&mut client, &mut printed, &mut stdout)?;
+        if matches!(trimmed.as_str(), "quit" | "exit" | "q") {
+            break;
+        }
+    }
+    Ok(())
+}
+
+#[derive(Debug)]
+struct PrintedRemoteState {
+    command_lines: usize,
+    session_lines: BTreeMap<AgentId, usize>,
+}
+
+impl PrintedRemoteState {
+    fn new(snapshot: WorkLeafSnapshot) -> Self {
+        Self {
+            command_lines: snapshot.command_transcript.len(),
+            session_lines: snapshot
+                .sessions
+                .into_iter()
+                .map(|session| (session.id, session.lines.len()))
+                .collect(),
+        }
+    }
+
+    fn print_new_lines(
+        &mut self,
+        snapshot: WorkLeafSnapshot,
+        output: &mut impl Write,
+    ) -> Result<(), CliError> {
+        for line in snapshot.command_transcript.iter().skip(self.command_lines) {
+            writeln!(output, "{line}")?;
+        }
+        self.command_lines = snapshot.command_transcript.len();
+
+        for session in snapshot.sessions {
+            let printed = self.session_lines.entry(session.id.clone()).or_insert(0);
+            for line in session.lines.iter().skip(*printed) {
+                writeln!(output, "{line}")?;
+            }
+            *printed = session.lines.len();
+        }
+        output.flush()?;
+        Ok(())
+    }
+}
+
+fn wait_and_print_remote_updates(
+    client: &mut HttpControllerClient,
+    printed: &mut PrintedRemoteState,
+    output: &mut impl Write,
+) -> Result<(), CliError> {
+    loop {
+        let busy = client.is_busy().map_err(http_cli_error)?;
+        let snapshot = client.snapshot().map_err(http_cli_error)?;
+        printed.print_new_lines(snapshot, output)?;
+        if !busy {
+            break;
+        }
+        thread::sleep(Duration::from_millis(20));
     }
     Ok(())
 }
@@ -1201,7 +1439,7 @@ fn render_command_result(
     Ok(false)
 }
 
-fn codex_backend(
+pub(crate) fn codex_backend(
     project_dir: PathBuf,
     model: Option<String>,
     read_permission: ReadPermission,

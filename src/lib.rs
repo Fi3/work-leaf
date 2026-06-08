@@ -3,6 +3,7 @@ pub mod agent_runtime;
 mod chat_title;
 pub mod cli;
 pub mod codex;
+pub mod http_controller;
 mod instructions;
 pub mod linearize;
 pub mod locks;
@@ -23,6 +24,9 @@ pub use cli::{
     render_command_chat_help, render_process_help, run_cli_from_env,
 };
 pub use codex::{CodexBackend, CodexCommandConfig, CodexInvocation, SandboxMode};
+pub use http_controller::{
+    HttpControllerClient, HttpControllerServer, OrchestratorHttpError, run_orchestrator_from_env,
+};
 pub use linearize::{
     LinearizeAction, LinearizeError, LinearizeGroup, LinearizeHandoff, LinearizePlan,
     LinearizePlanner, LinearizeQuestion,
@@ -33,7 +37,7 @@ pub use locks::{
 pub use orchestrator::{AgentOrchestrator, OrchestratorError, OrchestratorEvent};
 pub use patch::{GitPatcher, PatchCoordinator, PatchError, PatchOutcome, PatchRequest};
 pub use review::{AgentCommit, GitHistory, ReviewCoordinator, ReviewError, ReviewResult};
-pub use terminal_app::TerminalApp;
+pub use terminal_app::{RemoteTerminalApp, TerminalApp};
 pub use ui::{
     AgentListEntry, PaneFocus, TerminalLayout, TerminalUi, UiAction, UiKey, UiMode, UiSurface,
 };

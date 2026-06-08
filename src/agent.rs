@@ -2,6 +2,8 @@ use std::collections::BTreeSet;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
+
 pub use crate::agent_runtime::{AgentBackend, AgentShutdownHandle, AgentStreamEvent};
 use crate::instructions::{ProjectInstructionFile, load_project_instructions};
 
@@ -39,7 +41,26 @@ impl fmt::Display for AgentId {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+impl Serialize for AgentId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for AgentId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        Self::new(value).map_err(de::Error::custom)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum AgentKind {
     Codex,
     External(String),
@@ -54,7 +75,7 @@ impl AgentKind {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct AgentProfile {
     pub kind: AgentKind,
     pub display_name: String,
@@ -83,7 +104,7 @@ impl AgentProfile {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum MessageRole {
     User,
     Agent,
@@ -91,7 +112,7 @@ pub enum MessageRole {
     System,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ChatMessage {
     pub role: MessageRole,
     pub text: String,
@@ -106,7 +127,7 @@ impl ChatMessage {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct AgentLaunch {
     pub id: AgentId,
     pub kind: AgentKind,
@@ -130,7 +151,7 @@ impl AgentLaunch {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum AgentState {
     Running,
     Ready,
@@ -140,7 +161,7 @@ pub enum AgentState {
     Failed,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct AgentSession {
     pub id: AgentId,
     pub kind: AgentKind,
@@ -177,7 +198,7 @@ pub struct PromptPolicy {
     project_instructions: Vec<ProjectInstructionFile>,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum ReadPermission {
     Orchestrator,
     DirectFilesystem,

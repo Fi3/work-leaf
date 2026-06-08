@@ -3,6 +3,8 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
+use serde::{Deserialize, Serialize};
+
 use crate::agent::{
     AgentBackend, AgentId, AgentKind, AgentLaunch, AgentShutdownHandle, AgentStreamEvent,
 };
@@ -829,7 +831,7 @@ fn contains_done_directive(text: &str) -> bool {
         .any(|line| line.trim_start() == "@work-leaf done")
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct WorkLeafSnapshot {
     pub command_transcript: Vec<String>,
     pub sessions: Vec<WorkLeafSession>,
@@ -841,7 +843,7 @@ impl WorkLeafSnapshot {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct WorkLeafSession {
     pub id: AgentId,
     pub kind: AgentKind,
@@ -864,13 +866,13 @@ impl WorkLeafSession {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum WorkLeafLoading {
     Launching,
     WaitingForReply,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum WorkLeafEvent {
     AgentAdded { session: WorkLeafSession },
     AgentUpdated { session: WorkLeafSession },

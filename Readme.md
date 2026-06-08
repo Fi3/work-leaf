@@ -6,4 +6,14 @@ for coding. The highly opinionated part is the flow of work: open many agent tha
 with atomic commits, review with an agent every single commit, patch them, rewrite git history to
 have the smallest diff possible and not too many commit, review again agent/human.
 
+## Running
 
+`./start` builds the `work-leaf` and `work-leaf-orchestrator` binaries in release mode, starts the
+orchestrator daemon on `127.0.0.1:7878`, and renders the terminal CLI. When the CLI exits, the script
+stops the daemon process. Set `WORK_LEAF_START_LISTEN` to choose a different listen address; the
+script fails when the requested address is unavailable.
+
+`work-leaf-orchestrator` owns the controller, agent backend, locks, review routing, and patch
+workflow. It prints `WORK_LEAF_ORCHESTRATOR_URL=http://...` after binding its localhost HTTP API.
+`work-leaf` connects to that URL through `WORK_LEAF_ORCHESTRATOR_URL`; when the variable is absent,
+the CLI starts the sibling daemon on an ephemeral localhost port and connects to it.

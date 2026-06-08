@@ -12,6 +12,8 @@ agent-provider integrations use:
 - `workspace` defines the UI-neutral controller and DTOs used by frontends.
 - `cli` defines the command-chat API used by the binary and by controller orchestration.
 - `codex` defines the Codex provider implementation.
+- `http_controller` defines the localhost HTTP transport used by the daemon and CLI process
+  boundary.
 - `orchestrator`, `patch`, `review`, `linearize`, and `locks` define core workflow behavior.
 - `terminal_app`, `ui`, and `ui_harness` define the terminal frontend and terminal-specific tests.
 
@@ -24,10 +26,12 @@ public interfaces are:
   `AgentProfile`, `AgentKind`, `AgentLaunch`, `AgentSession`, `AgentId`, `ChatMessage`,
   `MessageRole`, `PromptPolicy`, `ReadPermission`, `AgentError`.
 - Command orchestration: `CommandChat`, `CommandChatResult`, `ProcessCommand`, `CliError`.
+- Localhost controller transport: `HttpControllerClient`, `HttpControllerServer`,
+  `OrchestratorHttpError`.
 - Core workflows: `AgentOrchestrator`, `GitPatcher`, `PatchCoordinator`, `GitHistory`,
   `ReviewCoordinator`, `LinearizePlanner`, `FileLockTable`.
-- Terminal UI: `TerminalApp`, `TerminalUi`, `UiHarness`, `UiAction`, `UiKey`, `UiMode`,
-  `UiSurface`, `PaneFocus`, `AgentListEntry`.
+- Terminal UI: `TerminalApp`, `RemoteTerminalApp`, `TerminalUi`, `UiHarness`, `UiAction`, `UiKey`,
+  `UiMode`, `UiSurface`, `PaneFocus`, `AgentListEntry`.
 
 ## Layering
 
@@ -44,10 +48,26 @@ The dependency direction is inward. UIs drive `WorkLeafController`; the controll
 `CommandChat`; `CommandChat` drives the active `AgentBackend` and the workflow coordinators. Core
 workflow modules do not depend on terminal rendering, terminal input, or a specific agent provider.
 
-The binary entry point in `src/main.rs` calls `work_leaf::run_cli_from_env()`. CLI setup creates a
-`CommandChat<B>` with a backend and passes it to interactive or command-driven flows. The terminal
-frontend wraps that same command-chat state in `WorkLeafController<B>` through
-`src/terminal_app.rs::TerminalApp`.
+The package has two binary targets. `src/bin/work-leaf-orchestrator.rs` calls
+`work_leaf::run_orchestrator_from_env()`, creates the Codex backend and `CommandChat`, wraps them in
+`WorkLeafController<CodexBackend>`, and exposes that controller through
+`src/http_controller.rs::HttpControllerServer` on a localhost HTTP address. The daemon prints a
+machine-readable `WORK_LEAF_ORCHESTRATOR_URL=http://...` startup line after binding.
+
+`src/bin/work-leaf.rs` calls `work_leaf::run_cli_from_env()`. The CLI connects to
+`WORK_LEAF_ORCHESTRATOR_URL` when that environment variable is present; otherwise it starts the
+sibling `work-leaf-orchestrator` binary on `127.0.0.1:0`, reads the printed URL, and connects to that
+daemon. A CLI-managed daemon receives `WORK_LEAF_PARENT_PID`, does not inherit the terminal file
+descriptors, and exits when that parent process is gone. The terminal frontend renders through
+`src/terminal_app.rs::RemoteTerminalApp`, which drives `src/http_controller.rs::HttpControllerClient`.
+The in-process `src/terminal_app.rs::TerminalApp<B>` remains the local controller adapter used by
+tests and embedders that construct a `CommandChat<B>` directly.
+
+The project-root `start` script builds both binary targets in release mode, starts
+`work-leaf-orchestrator` on `127.0.0.1:7878` by default, exports the printed URL for `work-leaf`,
+and terminates the daemon when the CLI process exits. `WORK_LEAF_START_LISTEN` selects a different
+listen address when a caller needs an explicit override; the script does not fall back to another
+port when the requested address is unavailable.
 
 ## Agent Domain
 
@@ -220,18 +240,40 @@ The controller exposes renderable state through:
 New UIs should consume `WorkLeafController` and these DTOs. They should not duplicate worker
 spawning, session naming, review lookup, loading bookkeeping, or orchestrator event routing.
 
+## Localhost HTTP Controller
+
+`src/http_controller.rs::HttpControllerServer` is a transport adapter over `WorkLeafController`. It
+owns no workflow behavior; each HTTP route delegates to the corresponding controller method or DTO:
+
+- `GET /snapshot` returns `WorkLeafSnapshot`.
+- `POST /events/drain` returns pending `WorkLeafEvent` values after polling workers when needed.
+- `GET /busy` returns the controller busy state.
+- `POST /command` calls `WorkLeafController::execute_command_line`.
+- `POST /command-agent` calls `WorkLeafController::send_command_agent_message`.
+- `POST /agent/message` calls `WorkLeafController::send_message`.
+- `POST /agent/interrupt` calls `WorkLeafController::interrupt_agent`.
+- `POST /transcript` calls `WorkLeafController::push_transcript_line`.
+- `POST /loading-text` calls `WorkLeafController::loading_text`.
+- `POST /shutdown` calls `WorkLeafController::shutdown` and stops the daemon loop.
+
+`src/http_controller.rs::HttpControllerClient` is the matching blocking localhost client. It
+serializes and deserializes the same workspace DTOs used by in-process frontends. `AgentId`
+deserialization uses `src/agent.rs::AgentId::new`, so HTTP payloads preserve the same identifier
+validation as local controller calls.
+
 ## Terminal UI
 
-The terminal frontend is an adapter over the UI-neutral controller.
+The terminal frontend is an adapter over the UI-neutral controller surface.
 
 `src/terminal_app.rs::TerminalApp<B>` translates raw terminal bytes and modal editing state into
-controller commands, applies `WorkLeafEvent` values to `TerminalUi`, and renders controller
-snapshots. It owns terminal event-loop concerns such as insert mode, prompt mode, `Ctrl-W`
-navigation, SGR mouse clicks, SGR mouse wheel scrolling of the right pane, bytewise input parsing,
-rendering invalidation, and polling background workers. Insert mode sends chat text to the selected
-agent session, or to `command-agent` when the Work Leaf command
-surface is selected. Bracketed-paste newlines and Shift+Enter are chat prompt line breaks. A plain
-Enter submits the buffered chat text.
+direct `WorkLeafController<B>` calls for in-process use. `src/terminal_app.rs::RemoteTerminalApp`
+uses the same terminal state machine with `HttpControllerClient` for the CLI/daemon process split.
+Both adapters apply `WorkLeafEvent` values to `TerminalUi` and render controller snapshots. They own
+terminal event-loop concerns such as insert mode, prompt mode, `Ctrl-W` navigation, SGR mouse clicks,
+SGR mouse wheel scrolling of the right pane, bytewise input parsing, rendering invalidation, and
+polling background workers. Insert mode sends chat text to the selected agent session, or to
+`command-agent` when the Work Leaf command surface is selected. Bracketed-paste newlines and
+Shift+Enter are chat prompt line breaks. A plain Enter submits the buffered chat text.
 When an agent chat is selected in command mode, `/` focuses the chat, seeds the chat buffer with
 `/`, and enters insert mode so `/status`-style input submits through the same selected-agent chat
 path.
@@ -316,6 +358,11 @@ New UI support follows this path:
 4. Drive user actions through controller methods.
 5. Consume `WorkLeafEvent` values from `drain_events`.
 
+Out-of-process UI support uses `HttpControllerClient` against a running `HttpControllerServer` and
+the same snapshot, session, and event DTOs. The HTTP transport remains an adapter over
+`WorkLeafController`; new workflow behavior still belongs in the owning workflow or controller
+module.
+
 New agent-provider support follows this path:
 
 1. Define an `AgentProfile` with `AgentKind::External`.
@@ -358,6 +405,11 @@ that contract.
 Controller and UI behavior should use `WorkLeafController`, `TerminalApp`, and `UiHarness` tests
 instead of duplicating internal terminal or worker logic. Terminal UI behavior is covered through
 `tests/ui_harness.rs`, `tests/terminal_ui.rs`, and `tests/terminal_app.rs`.
+
+The CLI/daemon transport is covered by `tests/http_orchestrator.rs`, which starts the real
+`work-leaf-orchestrator` binary and drives it through `HttpControllerClient`. The release launcher is
+covered by `tests/start_script.rs`, which runs the root `start` script through a pseudo-terminal with
+prebuilt test binaries.
 
 Core workflow changes should test the owning module and the integration path that consumes it. The
 existing test suites under `tests/orchestrator_protocol.rs`, `tests/patching.rs`,
