@@ -104,7 +104,8 @@ public lifecycle extension is required before external child processes can parti
 - `CodexInvocation` records the command, arguments, and prompt used for an invocation.
 - `CodexBackend` stores Codex session history and implements `AgentBackend`.
 - `CodexBackend::build_launch_invocation` and `CodexBackend::build_send_invocation` construct
-  `codex exec` and `codex exec resume` calls.
+  `codex exec` and `codex exec resume` calls. Single-line sends whose trimmed text starts with `/`
+  are passed as raw resume stdin so Codex slash commands use the CLI command path.
 - `CodexBackend::record_launch_reply`, `record_launch_output`, and `session` maintain in-memory
   session state.
 - `CodexBackend` parses Codex `--json` event lines from stdout to capture `thread.started`

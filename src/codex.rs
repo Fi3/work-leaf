@@ -137,7 +137,7 @@ impl CodexBackend {
                 .unwrap_or_else(|| agent_id.as_str().to_string());
             (feature, resume_id)
         };
-        let stdin = self.policy.inject(agent_id, &feature, prompt);
+        let stdin = send_invocation_stdin(&self.policy, agent_id, &feature, prompt);
         self.resume_invocation(&resume_id, stdin)
     }
 
@@ -456,6 +456,20 @@ fn append_agent_reply(reply: &mut Option<String>, text: String) {
         }
         Some(existing) => existing.push_str(&text),
         None => *reply = Some(text),
+    }
+}
+
+fn send_invocation_stdin(
+    policy: &PromptPolicy,
+    agent_id: &AgentId,
+    feature: &str,
+    prompt: &str,
+) -> String {
+    let command = prompt.trim();
+    if command.starts_with('/') && !command.contains('\n') && !command.contains('\r') {
+        command.to_string()
+    } else {
+        policy.inject(agent_id, feature, prompt)
     }
 }
 
