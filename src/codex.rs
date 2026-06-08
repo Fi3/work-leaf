@@ -575,4 +575,31 @@ mod tests {
             Some(AgentStreamEvent::Status("Codex is working".to_string()))
         );
     }
+
+    #[test]
+    fn slash_command_resume_invocation_uses_raw_command_stdin() {
+        let mut backend = CodexBackend::new(
+            CodexCommandConfig::new(PathBuf::from("/repo")),
+            PromptPolicy::for_restricted_agents(),
+        );
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        backend
+            .record_launch_output(
+                AgentLaunch::new(
+                    agent_id.clone(),
+                    AgentKind::Codex,
+                    "user-agent",
+                    "start",
+                ),
+                r#"{"type":"thread.started","thread_id":"thread-user-1"}"#.to_string(),
+            )
+            .expect("test launch output records the thread id");
+
+        let invocation = backend
+            .build_send_invocation(&agent_id, "/status")
+            .expect("slash command invocation is built");
+
+        assert_eq!(invocation.stdin, "/status");
+        assert!(invocation.args.iter().any(|arg| arg == "thread-user-1"));
+    }
 }

@@ -67,6 +67,59 @@ fn terminal_app_slash_command_from_chat_view_sends_agent_command() {
 }
 
 #[test]
+fn terminal_app_sends_spawned_codex_slash_command_as_raw_command() {
+    let root = temp_dir("terminal-app-codex-slash-command");
+    let fake_bin = root.join("bin");
+    fs::create_dir_all(&fake_bin).unwrap();
+    let codex = fake_bin.join("codex");
+    fs::write(
+        &codex,
+        "\
+#!/bin/sh
+seen_resume=0
+for arg in \"$@\"; do
+  if [ \"$arg\" = \"resume\" ]; then
+    seen_resume=1
+  fi
+done
+input=$(cat)
+if [ \"$seen_resume\" = \"1\" ]; then
+  if [ \"$input\" = \"/status\" ]; then
+    printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"status\",\"type\":\"agent_message\",\"text\":\"status command output\"}}'
+  else
+    printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"wrapped\",\"type\":\"agent_message\",\"text\":\"slash command was wrapped as prompt\"}}'
+  fi
+else
+  printf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-slash-command\"}'
+  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"launch\",\"type\":\"agent_message\",\"text\":\"launch reply from fake codex\"}}'
+fi
+",
+    )
+    .unwrap();
+    make_executable(&codex);
+    let backend = CodexBackend::new(
+        CodexCommandConfig::new(root.clone()).with_binary(&codex),
+        PromptPolicy::for_restricted_agents(),
+    );
+    let chat = CommandChat::new(root, backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new status command\n");
+    assert!(app.wait_for_idle(Duration::from_secs(1)));
+
+    app.handle_bytes(b"\x1b/status\n");
+    assert!(app.wait_for_idle(Duration::from_secs(1)));
+
+    let frame = app.render_frame();
+    assert!(frame.contains("user: /status"));
+    assert!(frame.contains("status command output"));
+    assert!(
+        !frame.contains("slash command was wrapped as prompt"),
+        "{frame}"
+    );
+}
+
+#[test]
 fn terminal_app_does_not_run_project_required_checks_outside_agent() {
     let root = temp_dir("terminal-app-no-required-check-run");
     fs::write(
