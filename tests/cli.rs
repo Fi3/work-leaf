@@ -409,6 +409,48 @@ fn command_chat_reuses_reviewer_for_later_commit_from_same_patch_agent() {
 }
 
 #[test]
+fn command_chat_processes_reviewer_orchestrator_directives_before_findings() {
+    let root = temp_git_repo("command-chat-reviewer-directives");
+    fs::write(root.join("README.md"), "review target\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(
+        &root,
+        [
+            "commit",
+            "-m",
+            "UPDATE apply docs patch from user-1",
+            "-m",
+            "Agent-ID: user-1\nFeature: docs\nReason: review docs\nContext: docs context",
+        ],
+    );
+    let backend = FakeBackend::new([
+        "summary: docs changed",
+        "@work-leaf read README.md",
+        "NO_FINDINGS",
+        "NO_FINDINGS",
+    ]);
+    let mut chat = CommandChat::new(root, backend);
+
+    let result = chat.handle_line("review").unwrap();
+
+    let CommandChatResult::ReviewComplete(results) = result else {
+        panic!("expected review results");
+    };
+    assert_eq!(results.len(), 1);
+    assert!(results[0].findings_resolved);
+
+    let backend = chat.into_backend();
+    assert!(backend.sends.iter().any(|(target, prompt)| {
+        target.as_str() == "review-user-1"
+            && prompt.contains("work-leaf file text")
+            && prompt.contains("review target")
+    }));
+    assert!(!backend.sends.iter().any(|(target, prompt)| {
+        target.as_str() == "user-1" && prompt.contains("The reviewer found issues")
+    }));
+}
+
+#[test]
 fn command_chat_proactively_updates_agents_with_stale_file_reads() {
     let root = temp_git_repo("command-chat-stale-file-update");
     fs::write(root.join("README.md"), "before\n").unwrap();

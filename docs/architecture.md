@@ -253,10 +253,11 @@ and `PatchError` are the public patch workflow types.
 
 `src/review.rs::GitHistory` reads latest agent commits from repository history.
 `ReviewCoordinator<B>` launches reviewer agents against those commits and loops until the reviewer
-reports no findings or the configured maximum round count is reached. `CommandChat` and
-`WorkLeafController` keep a stable `review-<agent-id>` reviewer identity for each patch agent and
-skip latest agent commits that have already completed review. `AgentCommit`, `ReviewResult`, and
-`ReviewError` are the public review workflow types.
+reports no findings or the configured maximum round count is reached. `CommandChat` resolves
+reviewer `@work-leaf` directives, such as file reads, before interpreting reviewer output as
+findings. `CommandChat` and `WorkLeafController` keep a stable `review-<agent-id>` reviewer identity
+for each patch agent and skip latest agent commits that have already completed review. `AgentCommit`,
+`ReviewResult`, and `ReviewError` are the public review workflow types.
 `WorkLeafController` scopes automatic review after patch validation to the patch agent that produced
 the validated commit; explicit review commands use the history-wide latest-commit lookup.
 

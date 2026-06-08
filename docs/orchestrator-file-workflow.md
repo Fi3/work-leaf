@@ -72,18 +72,21 @@ The intended lifecycle is:
 1. A patch agent submits a patch.
 2. The orchestrator records the patch as a provisional agent commit.
 3. The orchestrator runs a review agent for that patch.
-4. If there are no findings, the user can mark the review-agent chat as done.
-5. If there are findings, the orchestrator sends those findings to the corresponding patch agent.
-6. The patch agent keeps patching through the orchestrator until the review agent reports no
+4. If the review agent emits `@work-leaf` directives, the orchestrator resolves those directives for
+   the review agent before treating reviewer output as findings.
+5. If there are no findings, the user can mark the review-agent chat as done.
+6. If there are findings, the orchestrator sends those findings to the corresponding patch agent.
+7. The patch agent keeps patching through the orchestrator until the review agent reports no
    findings.
 
 The current implementation path for this review loop finds latest agent commits through
 `src/review.rs::GitHistory`, asks the original agent for a summary, launches or resumes the patch
-agent's `review-<agent-id>` reviewer, sends findings back to the original agent, and asks the
-reviewer to recheck until `NO_FINDINGS` or the round limit. Command-chat and controller review
-startup keep one reviewer identity per patch agent and skip latest commits that already completed a
-review pass. Automatic review after a patch-agent validation pass is scoped to that patch agent's
-latest commit; an explicit `review` command is the history-wide review entry point.
+agent's `review-<agent-id>` reviewer, resolves reviewer orchestrator directives such as file reads,
+sends findings back to the original agent, and asks the reviewer to recheck until `NO_FINDINGS` or
+the round limit. Command-chat and controller review startup keep one reviewer identity per patch
+agent and skip latest commits that already completed a review pass. Automatic review after a
+patch-agent validation pass is scoped to that patch agent's latest commit; an explicit `review`
+command is the history-wide review entry point.
 
 ### Inspection Agent
 
@@ -326,9 +329,11 @@ reads git history and parses latest commits per patch agent.
 
 The review flow uses that metadata to connect review findings back to the patch agent that produced
 the patch. Each patch agent uses a stable `review-<agent-id>` reviewer identity. The review agent
-must focus only on the reviewed patch. If it finds issues, the orchestrator sends those findings to
-the patch agent. The patch agent then continues through the configured read path and patch protocol.
-When the reviewer reports no findings, the review chat can be marked done by the user.
+must focus only on the reviewed patch. Reviewer `@work-leaf` directives are resolved in the reviewer
+conversation before output is interpreted as findings. If the reviewer finds issues, the orchestrator
+sends those findings to the patch agent. The patch agent then continues through the configured read
+path and patch protocol. When the reviewer reports no findings, the review chat can be marked done by
+the user.
 
 ## Developer Path
 
@@ -348,10 +353,11 @@ A normal development session in default read-permission mode follows this shape:
    that agent a proactive `work-leaf file update` with fresh file text.
 9. The orchestrator runs or schedules that patch agent's review agent for the patch.
 10. The review agent reviews only behavior introduced or modified by the patch.
-11. If the review agent reports findings, the orchestrator sends them to the patch agent and the patch
+11. The review agent can request file text through the orchestrator before reporting findings.
+12. If the review agent reports findings, the orchestrator sends them to the patch agent and the patch
     agent keeps patching.
-12. If the review agent reports no findings, the user can mark the review chat as done.
-13. Reviewed work can then be linearized into the final history.
+13. If the review agent reports no findings, the user can mark the review chat as done.
+14. Reviewed work can then be linearized into the final history.
 
 In direct-read mode, steps 4 and 5 are replaced by direct filesystem inspection from the agent. The
 write, validation, review, and linearization steps remain orchestrator-controlled.

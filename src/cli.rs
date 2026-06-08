@@ -141,6 +141,12 @@ pub struct CommandChat<B> {
     next_user_agent: usize,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct ProcessedAgentReply {
+    transcript: String,
+    final_reply: String,
+}
+
 impl<B> Clone for CommandChat<B>
 where
     B: AgentBackend + Clone,
@@ -369,7 +375,20 @@ where
         reply: String,
         stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
     ) -> Result<String, CliError> {
+        Ok(self
+            .process_agent_reply_streaming_result(agent_id, feature, reply, stream)?
+            .transcript)
+    }
+
+    fn process_agent_reply_streaming_result(
+        &mut self,
+        agent_id: &AgentId,
+        feature: &str,
+        reply: String,
+        stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+    ) -> Result<ProcessedAgentReply, CliError> {
         let mut text = reply.clone();
+        let mut final_reply = reply.clone();
         let mut pending = VecDeque::from([AgentFollowUp {
             agent_id: agent_id.clone(),
             text: reply,
@@ -377,12 +396,17 @@ where
         let mut rounds = 0;
 
         while let Some(current) = pending.pop_front() {
+            if current.agent_id == *agent_id {
+                final_reply = current.text.clone();
+            }
             if rounds >= self.max_review_rounds {
-                text.push_str("\n\norchestrator:\n");
-                text.push_str(&format!(
+                let message = format!(
                     "agent did not converge after {} orchestrator rounds",
                     self.max_review_rounds
-                ));
+                );
+                text.push_str("\n\norchestrator:\n");
+                text.push_str(&message);
+                final_reply = message;
                 break;
             }
             rounds += 1;
@@ -431,7 +455,10 @@ where
             }
         }
 
-        Ok(text)
+        Ok(ProcessedAgentReply {
+            transcript: text,
+            final_reply,
+        })
     }
 
     fn review(&mut self) -> Result<CommandChatResult, CliError> {
@@ -479,6 +506,7 @@ where
             .map_err(CliError::Agent)?
             .text;
 
+        let review_feature = format!("review {}", commit.feature);
         let review_prompt = format!(
             "Review the final patch for Agent-ID {}.\nCommit: {}\nFeature: {}\nReason: {}\nContext: {}\nSummary from original agent:\n{}\n\nReply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.",
             commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context, summary
@@ -500,7 +528,7 @@ where
                     AgentLaunch::new(
                         reviewer_id.clone(),
                         self.agent_profile.kind.clone(),
-                        format!("review {}", commit.feature),
+                        review_feature.clone(),
                         review_prompt,
                     ),
                     &mut review_stream,
@@ -512,6 +540,14 @@ where
                 .map(|message| message.text.clone())
                 .unwrap_or_default()
         };
+        review_text = self
+            .process_agent_reply_streaming_result(
+                &reviewer_id,
+                &review_feature,
+                review_text,
+                stream,
+            )?
+            .final_reply;
         self.reviewers.insert(reviewer_id.clone());
         let mut rounds = 1;
 
@@ -548,13 +584,21 @@ where
                 commit.hash, fix_reply
             );
             let mut recheck_stream = |event| stream(&reviewer_id, event);
-            review_text = self
+            let recheck_reply = self
                 .backend
                 .as_mut()
                 .expect("command chat backend is present")
                 .send_streaming(&reviewer_id, &recheck_prompt, &mut recheck_stream)
                 .map_err(CliError::Agent)?
                 .text;
+            review_text = self
+                .process_agent_reply_streaming_result(
+                    &reviewer_id,
+                    &review_feature,
+                    recheck_reply,
+                    stream,
+                )?
+                .final_reply;
             rounds += 1;
         }
 
