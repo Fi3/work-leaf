@@ -283,6 +283,7 @@ fn scripted_harness_mouse_wheel_scrolls_chat_history() {
     let mut harness = UiHarness::new(80, 10);
 
     harness.handle_bytes(&[23, b'l']);
+    harness.handle_byte(b'i');
     for index in 0..12 {
         harness.handle_bytes(format!("message-{index:02}\n").as_bytes());
     }
