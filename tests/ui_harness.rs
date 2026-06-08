@@ -279,6 +279,36 @@ fn scripted_harness_insert_mode_records_chat_text_and_literal_colons() {
 }
 
 #[test]
+fn scripted_harness_mouse_wheel_scrolls_chat_history() {
+    let mut harness = UiHarness::new(80, 10);
+
+    harness.handle_bytes(&[23, b'l']);
+    for index in 0..12 {
+        harness.handle_bytes(format!("message-{index:02}\n").as_bytes());
+    }
+
+    let bottom_frame = harness.render_frame();
+    assert!(!bottom_frame.contains("UI harness"));
+    assert!(bottom_frame.contains("message-11"));
+
+    for _ in 0..8 {
+        harness.handle_bytes(b"\x1b[<64;20;3M");
+    }
+
+    let scrolled_frame = harness.render_frame();
+    assert!(scrolled_frame.contains("UI harness"));
+    assert!(scrolled_frame.contains("chat> "));
+
+    for _ in 0..8 {
+        harness.handle_bytes(b"\x1b[<65;20;3M");
+    }
+
+    let bottom_again = harness.render_frame();
+    assert!(!bottom_again.contains("UI harness"));
+    assert!(bottom_again.contains("message-11"));
+}
+
+#[test]
 fn scripted_harness_arrow_keys_edit_focused_chat_without_switching_to_command() {
     let mut harness = UiHarness::new(80, 24);
 
