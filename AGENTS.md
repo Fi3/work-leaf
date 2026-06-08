@@ -96,6 +96,22 @@ Run these before submitting changes. A patch is not ready until all required che
 Adding a test do not require human permission, removing or changing one (that is committed in main) does.
 Every UI change MUST add an ui_harness automatic test.
 
+## Real Agent Verification
+Every patch must include a real-agent verification step before it is marked ready. Automated tests
+with fake backends, deterministic fake `codex` binaries, UI harnesses, or mocked providers are useful
+but are not enough when the changed behavior is supposed to work with an actual agent.
+
+For any change that affects agent launch, agent send/resume, slash commands, terminal chat behavior,
+orchestrator protocol, patch/review/linearize flow, locked command execution, or provider
+integration, the implementing agent must verify the behavior with the real configured agent backend
+during implementation. The ready report must state the exact real-agent scenario that was run and the
+user-visible result. If the patch does not affect any agent-facing behavior, the ready report must
+state that no real-agent workflow is affected and explain why.
+
+Review agents must treat missing real-agent verification as a finding for agent-facing changes.
+Do not accept fake-backend or harness-only coverage as proof that an agent-facing workflow works in
+the real orchestrator.
+
 ## Architecture and API Governance
 Before making code changes, inspect `docs/architecture.md` and preserve the documented ownership,
 dependency direction, extension boundaries, and public interfaces.
