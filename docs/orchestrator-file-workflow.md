@@ -124,8 +124,8 @@ The current source already has system-style internal behavior:
 
 ## File Access Contract
 
-Every agent prompt includes a file-access policy. `src/agent.rs::PromptPolicy` injects rules selected
-by `src/agent.rs::ReadPermission`.
+Agent launch prompts and normal resumed prompts include a file-access policy.
+`src/agent.rs::PromptPolicy` injects rules selected by `src/agent.rs::ReadPermission`.
 
 With `ReadPermission::Orchestrator`, prompts tell agents:
 
@@ -155,12 +155,16 @@ With `ReadPermission::DirectFilesystem`, prompts tell agents:
   command;
 - use `@work-leaf done` when no more orchestrator work is required.
 
-The Codex backend applies this policy when launching and resuming sessions. The source chain is:
+The Codex backend applies this policy when launching sessions and when resuming sessions with normal
+user prompts. Single-line resumed prompts whose trimmed text starts with `/` are sent as raw Codex
+resume stdin so Codex slash commands use the CLI command path. The source chain is:
 
 1. `src/cli.rs::codex_backend` builds a `src/codex.rs::CodexBackend` with
    `PromptPolicy::for_project_with_read_permission`.
 2. `src/codex.rs::CodexBackend::build_launch_invocation` injects the policy into a launch prompt.
-3. `src/codex.rs::CodexBackend::build_send_invocation` injects the policy into a resumed prompt.
+3. `src/codex.rs::CodexBackend::build_send_invocation` delegates resumed stdin selection to
+   `send_invocation_stdin`, which injects the policy for normal prompts and passes single-line slash
+   commands through as raw resume stdin.
 4. Agent replies are processed by `src/cli.rs::CommandChat::process_agent_reply_streaming`.
 5. Directive handling enters `src/orchestrator.rs::handle_agent_directives_streaming`.
 
@@ -515,7 +519,8 @@ The important source symbols for this workflow are:
 
 - `src/agent.rs::PromptPolicy`: injects file-access rules into agent prompts.
 - `src/agent.rs::ReadPermission`: selects orchestrator-mediated or direct filesystem read prompts.
-- `src/codex.rs::CodexBackend`: launches and resumes Codex sessions with injected policy.
+- `src/codex.rs::CodexBackend`: launches Codex sessions with injected policy and selects policy
+  injection or raw slash-command stdin for resumed sessions.
 - `src/cli.rs::CommandChat`: owns the command surface, backend, file locks, read tracker, and
   directive loop.
 - `src/orchestrator.rs::parse_agent_directives`: parses `@work-leaf` protocol directives.
