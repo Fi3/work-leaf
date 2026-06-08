@@ -224,6 +224,10 @@ through the latest patch-agent commit. `CommandChat` also keeps the ordered exac
 completed review during the active instance, and those targets form the linearizer handoff. This lets
 one patch-agent session complete more than one reviewed patch without a later hash replacing earlier
 reviewed work in the linearizer prompt.
+When review resolves with no findings, the controller marks the patch-agent session as needing a
+user completion decision and appends a yes/no question to that session. `yes` closes the feature,
+`no` keeps it open, and a later message in a closed chat clears the closed state before sending the
+message to the agent backend.
 
 The command transcript is also the conversation history for the persistent `command-agent`. That
 system agent interprets chat sent to the Work Leaf command surface. It recognizes literal command
@@ -300,29 +304,33 @@ direct `WorkLeafController<B>` calls for in-process use. `src/terminal_app.rs::R
 uses the same terminal state machine with `HttpControllerClient` for the CLI/daemon process split.
 Both adapters keep a local render snapshot, apply `WorkLeafEvent` values to that cache and to
 `TerminalUi`, and render from the cache rather than fetching a full controller snapshot for every
-frame. They own terminal event-loop concerns such as insert mode, prompt mode, `Ctrl-W` navigation,
-SGR mouse clicks, SGR mouse wheel scrolling of the right pane, chunked terminal input parsing,
-rendering invalidation, and polling background workers. Insert mode sends chat text to the selected
-agent session, or to `command-agent` when the Work Leaf command surface is selected. Bracketed-paste
-newlines and Shift+Enter are chat prompt line breaks. A plain Enter submits the buffered chat text.
+frame. They own terminal event-loop concerns such as insert mode, prompt mode, visual text
+selection, `Ctrl-W` navigation, SGR mouse clicks, SGR mouse wheel scrolling of the right pane,
+chunked terminal input parsing, rendering invalidation, and polling background workers. Insert mode
+sends chat text to the selected agent session, or to `command-agent` when the Work Leaf command
+surface is selected. Bracketed-paste newlines and Shift+Enter are chat prompt line breaks. A plain
+Enter submits the buffered chat text.
 When an agent chat is selected in command mode, `/` focuses the chat, seeds the chat buffer with
 `/`, and enters insert mode so `/status`-style input submits through the same selected-agent chat
 path. Selected-agent chat messages whose first token is a slash command are resolved by the
 controller and return a Work Leaf response in the chat transcript without sending a provider request.
 
 The terminal app maps a session to a left-pane `READY` marker when the controller exposes no loading
-state for that session. `TerminalUi` queues one terminal bell when a chat transitions into the ready
-state and renders ready rows in reverse video so they remain highlighted until the chat becomes busy
-again.
+state for that session. Sessions waiting for a completion answer show `DONE?` in the row title, and
+closed sessions show `CLOSED`. `TerminalUi` queues one terminal bell when a chat transitions into
+the ready state and renders ready rows in reverse video so they remain highlighted until the chat
+becomes busy again.
 
 `src/ui.rs::TerminalUi` owns terminal-specific presentation state:
 
 - `UiMode`, `PaneFocus`, `UiSurface`, `UiKey`, and `UiAction` model terminal interactions.
 - `AgentListEntry` is the terminal left-pane representation of an agent row.
 - `TerminalLayout` computes pane geometry.
-- `TerminalUi` renders left/right panes, prompts, cursor placement, command-interface selection, and
-  terminal navigation actions. The right pane keeps the chat prompt visible while scroll offsets
-  reveal earlier transcript rows.
+- `TerminalUi` renders left/right panes, prompts, cursor placement, command-interface selection,
+  visual selections, and terminal navigation actions. The right pane keeps the chat prompt visible
+  while scroll offsets reveal earlier transcript rows. Command-mode `v`, `V`, and `Ctrl-V` start
+  character, line, and block selection in the focused pane; `y` and `Y` yank selected text through
+  the terminal OSC 52 clipboard sequence.
 
 `src/ui_harness.rs::UiHarness` is the test harness for terminal behavior. It exercises the same
 `TerminalUi` frame path used by the interactive example. UI tests should drive
@@ -346,11 +354,13 @@ lock paths supplied by the agent. File paths are normalized relative to the proj
 escape that root.
 
 `src/patch.rs::GitPatcher` validates and applies unified diffs under write locks and creates
-metadata commits for accepted patches. It also accepts a matching already-applied diff when a locked
-command has produced the tracked working-tree change, so the command output can be saved as the
-agent's provisional patch. `PatchCoordinator<B>` connects patch conflicts and malformed patch
-diagnostics back to the active agent backend. `PatchRequest`, `PatchOutcome`, and `PatchError` are
-the public patch workflow types.
+metadata commits for accepted patches. Patch application locks the touched files and the repository
+root path in `FileLockTable`; the root lock serializes git index operations such as `git add` and
+`git commit` while agents can still reason and produce patches concurrently. It also accepts a
+matching already-applied diff when a locked command has produced the tracked working-tree change, so
+the command output can be saved as the agent's provisional patch. `PatchCoordinator<B>` connects
+patch conflicts and malformed patch diagnostics back to the active agent backend. `PatchRequest`,
+`PatchOutcome`, and `PatchError` are the public patch workflow types.
 
 `src/review.rs::GitHistory` reads latest agent commits from repository history, builds cumulative
 review targets for a patch agent since a launch or reviewed baseline, and resolves agent metadata

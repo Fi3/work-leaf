@@ -330,9 +330,11 @@ Patch agents request writes with a unified diff. The patch path is:
    `@work-leaf end`.
 2. `src/orchestrator.rs::handle_agent_directives_streaming` creates a `src/patch.rs::GitPatcher`.
 3. `GitPatcher::apply` extracts the unified diff and parses all touched files.
-4. All touched files are normalized, sorted, and deduplicated.
+4. All touched files are normalized, sorted, and deduplicated, and the repository root lock is added
+   to the lock set.
 5. `src/locks.rs::FileLockTable::with_write_locks` acquires exclusive write locks for all touched
-   files.
+   files and the repository root path. The root lock serializes git index operations across
+   concurrent patch agents.
 6. `GitPatcher::apply_with_locks` runs `git apply --check -` for the entire diff.
 7. If the check passes, it runs `git apply -` for the entire diff.
 8. Passing patches are staged with `git add -- <files>` and committed as provisional agent commits.
@@ -415,7 +417,9 @@ stable `review-<agent-id>` reviewer identity. The review agent must focus only o
 Reviewer `@work-leaf` directives are resolved in the reviewer conversation before output is
 interpreted as findings. If the reviewer finds issues, the orchestrator sends those findings to the
 patch agent. The patch agent then continues through the configured read path and patch protocol. When
-the reviewer reports no findings, the review chat can be marked done by the user.
+the reviewer reports no findings, the patch-agent chat asks whether the feature is done. `yes` marks
+that patch-agent chat closed, `no` keeps it open, and a later user message in a closed chat reopens
+it before the message is sent to the agent.
 
 ## Developer Path
 
@@ -429,8 +433,9 @@ A normal development session in default read-permission mode follows this shape:
 5. The orchestrator normalizes paths, takes shared read locks, snapshots file text, records the read
    context, and sends the text back to the patch agent.
 6. The patch agent reasons over the snapshot and sends one unified diff through `@work-leaf patch`.
-7. The orchestrator parses all touched files, takes exclusive write locks for the whole touched set,
-   checks the entire diff, applies the entire diff, stages, and commits the provisional patch.
+7. The orchestrator parses all touched files, takes exclusive write locks for the touched set and the
+   repository root path, checks the entire diff, applies the entire diff, stages, and commits the
+   provisional patch.
 8. If another agent read any touched file and has not cleared that context, the orchestrator sends
    that agent a proactive `work-leaf file update` with fresh file text.
 9. The orchestrator returns a patch-applied continuation prompt when the patch agent has not reported

@@ -43,5 +43,6 @@ pub use ui::{
 };
 pub use ui_harness::UiHarness;
 pub use workspace::{
-    WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession, WorkLeafSnapshot,
+    WorkLeafCompletion, WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession,
+    WorkLeafSnapshot,
 };

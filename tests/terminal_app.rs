@@ -582,6 +582,32 @@ fn terminal_app_mouse_wheel_scrolls_chat_history() {
 }
 
 #[test]
+fn terminal_app_visual_mode_yanks_right_pane_without_resuming_backend() {
+    let backend = FakeBackend::new(["launch reply", "backend should not receive visual yank"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new copy from chat\n");
+    assert!(app.wait_for_idle(Duration::from_secs(1)));
+    app.handle_bytes(&[27]);
+    assert_eq!(app.ui().mode(), UiMode::Command);
+    assert_eq!(app.ui().focus(), PaneFocus::Right);
+
+    app.handle_byte(b'V');
+    assert!(app.ui().visual_selection_active());
+    assert!(app.render_frame().contains("mode=visual-line focus=right"));
+    app.handle_byte(b'Y');
+
+    assert_eq!(app.ui().copied_text(), Some("chat> "));
+    assert!(
+        app.render_frame()
+            .starts_with("\u{1b}]52;c;Y2hhdD4g\u{7}\u{1b}[H")
+    );
+    let backend = app.into_chat().into_backend();
+    assert!(backend.sends().is_empty());
+}
+
+#[test]
 fn terminal_app_new_adds_agent_immediately_while_backend_is_loading() {
     let backend = SlowBackend;
     let chat = CommandChat::new(PathBuf::from("/repo"), backend);
@@ -941,6 +967,63 @@ fn terminal_app_review_adds_reviewer_chat_and_streams_output_immediately() {
         "reviewer streamed before finishing",
         Duration::from_millis(150)
     ));
+}
+
+#[test]
+fn terminal_app_marks_reviewed_patch_agent_done_and_closed_visibly() {
+    let root = git_repo("terminal-app-review-feature-done");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    Command::new("git")
+        .current_dir(&root)
+        .args(["add", "README.md"])
+        .status()
+        .unwrap();
+    Command::new("git")
+        .current_dir(&root)
+        .args(["commit", "-m", "ADD initial readme fixture"])
+        .status()
+        .unwrap();
+    let backend = FakeBackend::new([
+        "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+        "summary: README changes from before to after",
+        "NO_FINDINGS",
+        "follow reply",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new update readme\n");
+    assert!(app.wait_for_idle(Duration::from_secs(2)));
+
+    let left_pane = app.ui().render_left_pane();
+    assert!(left_pane.contains("DONE?"));
+    assert!(left_pane.contains("READY"));
+    app.handle_bytes(&[27, 23, b'h', b'k', b'l']);
+    let frame = app.render_frame();
+    assert!(frame.contains("work-leaf: is this feature done? [yes/no]"));
+    let sends_after_review = backend.sends().len();
+
+    app.handle_bytes(b"imaybe\n");
+    assert!(app.render_frame().contains("work-leaf: answer yes or no"));
+    assert_eq!(backend.sends().len(), sends_after_review);
+
+    app.handle_bytes(b"yes\n");
+    let frame = app.render_frame();
+    assert!(frame.contains("work-leaf: feature marked closed"));
+    assert!(app.ui().render_left_pane().contains("CLOSED"));
+    assert_eq!(backend.sends().len(), sends_after_review);
+
+    app.handle_bytes(b"add another tweak\n");
+    assert!(app.wait_for_idle(Duration::from_secs(1)));
+    let frame = app.render_frame();
+    assert!(frame.contains("user: add another tweak"));
+    assert!(frame.contains("follow reply"));
+    assert!(!app.ui().render_left_pane().contains("CLOSED"));
+    assert!(
+        backend.sends().iter().any(|(target, prompt)| {
+            target.as_str() == "user-1" && prompt == "add another tweak"
+        })
+    );
 }
 
 #[test]

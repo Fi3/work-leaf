@@ -15,6 +15,11 @@ use crate::cli::{
 };
 use crate::review::{AgentCommit, GitHistory, ReviewResult};
 
+const FEATURE_DONE_QUESTION: &str = "work-leaf: is this feature done? [yes/no]";
+const FEATURE_CLOSED_MESSAGE: &str = "work-leaf: feature marked closed";
+const FEATURE_OPEN_MESSAGE: &str = "work-leaf: feature remains open";
+const FEATURE_DONE_ANSWER_MESSAGE: &str = "work-leaf: answer yes or no to close this feature";
+
 #[derive(Debug)]
 pub struct WorkLeafController<B>
 where
@@ -233,6 +238,7 @@ where
             feature: launch.feature.clone(),
             lines: Vec::new(),
             loading: Some(WorkLeafLoading::Launching),
+            completion: None,
         });
         self.pending_events.push(WorkLeafEvent::AgentSelected {
             agent_id: agent_id.clone(),
@@ -247,6 +253,10 @@ where
     pub fn send_message(&mut self, agent_id: &AgentId, message: &str) -> Result<(), CliError> {
         let message = message.trim();
         if message.is_empty() {
+            return Ok(());
+        }
+        if self.session_completion(agent_id) == Some(WorkLeafCompletion::NeedsDecision) {
+            self.handle_completion_answer(agent_id, message);
             return Ok(());
         }
         if let Some(command) = AgentSlashCommand::parse(message) {
@@ -265,6 +275,10 @@ where
                 format!("work-leaf: {} is still working", self.agent_display_name()),
             );
             return Ok(());
+        }
+
+        if self.session_completion(agent_id) == Some(WorkLeafCompletion::Closed) {
+            self.set_session_completion(agent_id, None);
         }
 
         let title_prompt = self.reserve_first_chat_title_prompt(agent_id, message);
@@ -378,6 +392,7 @@ where
                     feature: format!("review {}", commit.feature),
                     lines: Vec::new(),
                     loading: Some(WorkLeafLoading::WaitingForReply),
+                    completion: None,
                 });
             }
             if reviewer_ids.is_empty() {
@@ -416,6 +431,7 @@ where
             feature: title,
             lines: Vec::new(),
             loading: Some(WorkLeafLoading::Launching),
+            completion: None,
         });
         self.pending_events.push(WorkLeafEvent::AgentSelected {
             agent_id: agent_id.clone(),
@@ -741,16 +757,35 @@ where
         let Some(session) = self.sessions.get(agent_id) else {
             return format!("work-leaf: {agent_id} status: unknown session");
         };
-        let state = match session.loading {
-            Some(WorkLeafLoading::Launching) => "launching",
-            Some(WorkLeafLoading::WaitingForReply) => "waiting",
-            None => "ready",
+        let state = match (session.loading, session.completion) {
+            (_, Some(WorkLeafCompletion::Closed)) => "closed",
+            (_, Some(WorkLeafCompletion::NeedsDecision)) => "needs user decision",
+            (Some(WorkLeafLoading::Launching), _) => "launching",
+            (Some(WorkLeafLoading::WaitingForReply), _) => "waiting",
+            (None, None) => "ready",
         };
         format!(
             "work-leaf: {agent_id} status: {state}; title: {}; lines: {}",
             session.title,
             session.lines.len()
         )
+    }
+
+    fn handle_completion_answer(&mut self, agent_id: &AgentId, message: &str) {
+        self.append_agent_line(agent_id, format!("user: {message}"));
+        match message.to_ascii_lowercase().as_str() {
+            "yes" => {
+                self.set_session_completion(agent_id, Some(WorkLeafCompletion::Closed));
+                self.append_agent_line(agent_id, FEATURE_CLOSED_MESSAGE.to_string());
+            }
+            "no" => {
+                self.set_session_completion(agent_id, None);
+                self.append_agent_line(agent_id, FEATURE_OPEN_MESSAGE.to_string());
+            }
+            _ => {
+                self.append_agent_line(agent_id, FEATURE_DONE_ANSWER_MESSAGE.to_string());
+            }
+        }
     }
 
     fn apply_agent_result(&mut self, agent_id: &AgentId, result: &CommandChatResult) {
@@ -767,6 +802,9 @@ where
                 for review in results {
                     self.record_review_result(review);
                     self.append_agent_line(&review.commit.agent_id, format!("review: {text}"));
+                    if review.findings_resolved {
+                        self.ask_feature_done(&review.commit.agent_id);
+                    }
                 }
             }
             other => {
@@ -785,12 +823,21 @@ where
                 title: session.title.clone(),
                 feature: session.feature.clone(),
                 loading: session.loading,
+                completion: session.completion,
             });
         }
         self.register_agent_feature(agent_id.clone(), title);
     }
 
     fn append_agent_line(&mut self, agent_id: &AgentId, line: String) {
+        self.append_agent_line_with_dedupe(agent_id, line, true);
+    }
+
+    fn append_agent_line_allow_duplicate(&mut self, agent_id: &AgentId, line: String) {
+        self.append_agent_line_with_dedupe(agent_id, line, false);
+    }
+
+    fn append_agent_line_with_dedupe(&mut self, agent_id: &AgentId, line: String, dedupe: bool) {
         if line.is_empty() {
             return;
         }
@@ -805,7 +852,7 @@ where
             .sessions
             .get_mut(agent_id)
             .expect("session was inserted before appending a line");
-        if session.lines.iter().any(|existing| existing == &line) {
+        if dedupe && session.lines.iter().any(|existing| existing == &line) {
             return;
         }
         session.lines.push(line.clone());
@@ -813,6 +860,11 @@ where
             agent_id: agent_id.clone(),
             line,
         });
+    }
+
+    fn ask_feature_done(&mut self, agent_id: &AgentId) {
+        self.set_session_completion(agent_id, Some(WorkLeafCompletion::NeedsDecision));
+        self.append_agent_line_allow_duplicate(agent_id, FEATURE_DONE_QUESTION.to_string());
     }
 
     fn record_review_result(&mut self, review: &ReviewResult) {
@@ -888,7 +940,44 @@ where
             title: session.title.clone(),
             feature: session.feature.clone(),
             loading: session.loading,
+            completion: session.completion,
         });
+    }
+
+    fn set_session_completion(
+        &mut self,
+        agent_id: &AgentId,
+        completion: Option<WorkLeafCompletion>,
+    ) {
+        let fallback_kind = self.agent_kind();
+        if !self.sessions.contains_key(agent_id) {
+            let session = WorkLeafSession::unknown(agent_id.clone(), fallback_kind);
+            self.sessions.insert(agent_id.clone(), session.clone());
+            self.pending_events
+                .push(WorkLeafEvent::AgentAdded { session });
+        }
+        let session = self
+            .sessions
+            .get_mut(agent_id)
+            .expect("session was inserted before updating completion");
+        if session.completion == completion {
+            return;
+        }
+        session.completion = completion;
+        self.pending_events.push(WorkLeafEvent::AgentStatusUpdated {
+            agent_id: session.id.clone(),
+            kind: session.kind.clone(),
+            title: session.title.clone(),
+            feature: session.feature.clone(),
+            loading: session.loading,
+            completion: session.completion,
+        });
+    }
+
+    fn session_completion(&self, agent_id: &AgentId) -> Option<WorkLeafCompletion> {
+        self.sessions
+            .get(agent_id)
+            .and_then(|session| session.completion)
     }
 
     fn push_command_line(&mut self, line: String) {
@@ -956,6 +1045,7 @@ pub struct WorkLeafSession {
     pub feature: String,
     pub lines: Vec<String>,
     pub loading: Option<WorkLeafLoading>,
+    pub completion: Option<WorkLeafCompletion>,
 }
 
 impl WorkLeafSession {
@@ -967,6 +1057,7 @@ impl WorkLeafSession {
             feature: "agent".to_string(),
             lines: Vec::new(),
             loading: None,
+            completion: None,
         }
     }
 }
@@ -975,6 +1066,12 @@ impl WorkLeafSession {
 pub enum WorkLeafLoading {
     Launching,
     WaitingForReply,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum WorkLeafCompletion {
+    NeedsDecision,
+    Closed,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -991,6 +1088,7 @@ pub enum WorkLeafEvent {
         title: String,
         feature: String,
         loading: Option<WorkLeafLoading>,
+        completion: Option<WorkLeafCompletion>,
     },
     AgentLineAppended {
         agent_id: AgentId,

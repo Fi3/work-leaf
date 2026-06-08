@@ -150,7 +150,7 @@ impl UiHarness {
                 self.prompt_cursor = 0;
                 self.prompt_history_index = None;
                 self.prompt_history_draft = None;
-                self.ui.handle_key(UiKey::Esc);
+                self.handle_ui_key(UiKey::Esc);
                 if !line.is_empty() {
                     self.prompt_history.push(line.clone());
                     self.transcript.push(format!("work-leaf> {line}"));
@@ -216,15 +216,15 @@ impl UiHarness {
                 self.prompt_cursor = 0;
                 self.prompt_history_index = None;
                 self.prompt_history_draft = None;
-                let actions = self.ui.handle_key(UiKey::Esc);
+                let actions = self.handle_ui_key(UiKey::Esc);
                 self.record_actions(actions);
             }
             HarnessInput::Key(key) => {
-                let actions = self.ui.handle_key(key);
+                let actions = self.handle_ui_key(key);
                 self.record_actions(actions);
             }
             HarnessInput::Char(ch) => {
-                let actions = self.ui.handle_key(UiKey::Char(ch));
+                let actions = self.handle_ui_key(UiKey::Char(ch));
                 self.record_actions(actions);
             }
             HarnessInput::Backspace | HarnessInput::Enter => {}
@@ -410,6 +410,13 @@ impl UiHarness {
     fn chat_cursor_column(&self) -> usize {
         CHAT_PROMPT.chars().count() + cursor_char_count(&self.chat_buffer, self.chat_cursor)
     }
+
+    fn handle_ui_key(&mut self, key: UiKey) -> Vec<crate::UiAction> {
+        let right_content = self.right_content();
+        self.ui
+            .handle_key_with_context(key, &right_content, Some(self.chat_cursor_column()))
+    }
+
     fn record_actions(&mut self, actions: Vec<crate::UiAction>) {
         self.transcript
             .extend(actions.into_iter().map(|action| format!("{action:?}")));
@@ -429,8 +436,9 @@ impl UiHarness {
     }
 
     fn should_route_chat_arrow(&self) -> bool {
-        self.ui.mode() == UiMode::Insert
-            || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right)
+        !self.ui.visual_selection_active()
+            && (self.ui.mode() == UiMode::Insert
+                || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right))
     }
 
     fn defer_escape_key(&self) -> bool {
@@ -483,7 +491,7 @@ impl UiHarness {
                     && sequence.mode_before == UiMode::Insert
                     && self.ui.mode() != UiMode::Insert
                 {
-                    let actions = self.ui.handle_key(UiKey::Char('i'));
+                    let actions = self.handle_ui_key(UiKey::Char('i'));
                     self.record_actions(actions);
                 }
                 self.handle_input(HarnessInput::Key(key));
@@ -575,6 +583,7 @@ impl HarnessInput {
             4 => Some(Self::Quit),
             13 | 10 => Some(Self::Enter),
             27 => Some(Self::Key(UiKey::Esc)),
+            22 => Some(Self::Char('\u{16}')),
             23 => Some(Self::Key(UiKey::CtrlW)),
             8 | 127 => Some(Self::Backspace),
             byte if byte.is_ascii_graphic() || byte == b' ' => Some(Self::Char(byte as char)),

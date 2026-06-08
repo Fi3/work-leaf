@@ -162,6 +162,28 @@ fn scripted_harness_drives_ctrl_w_navigation_and_left_toggle() {
 }
 
 #[test]
+fn scripted_harness_visual_mode_yanks_right_pane_line_to_clipboard() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(&[23, b'l']);
+    harness.handle_byte(b'V');
+
+    assert!(harness.ui().visual_selection_active());
+    assert!(
+        harness
+            .render_frame()
+            .contains("mode=visual-line focus=right")
+    );
+
+    harness.handle_byte(b'Y');
+
+    assert_eq!(harness.ui().copied_text(), Some("chat> "));
+    let frame = harness.render_frame();
+    assert!(frame.starts_with("\u{1b}]52;c;Y2hhdD4g\u{7}\u{1b}[H"));
+    assert!(frame.contains("copied 6 chars"));
+}
+
+#[test]
 fn scripted_harness_ctrl_c_never_quits_and_only_right_focus_interrupts_agent() {
     let mut harness = UiHarness::new(80, 24);
 

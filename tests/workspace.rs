@@ -8,7 +8,8 @@ use std::time::Duration;
 
 use work_leaf::{
     AgentBackend, AgentError, AgentId, AgentKind, AgentLaunch, AgentProfile, AgentSession,
-    ChatMessage, CommandChat, MessageRole, WorkLeafController, WorkLeafEvent, WorkLeafLoading,
+    ChatMessage, CommandChat, MessageRole, WorkLeafCompletion, WorkLeafController, WorkLeafEvent,
+    WorkLeafLoading,
 };
 
 #[test]
@@ -268,6 +269,82 @@ fn controller_starts_review_after_patch_agent_done_and_loops_until_clean() {
 }
 
 #[test]
+fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
+    let root = git_repo("workspace-review-feature-done-question");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+        "summary: README changes from before to after",
+        "NO_FINDINGS",
+        "follow reply",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("update readme").unwrap();
+
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    let snapshot = controller.snapshot();
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert_eq!(
+        patch_agent.completion,
+        Some(WorkLeafCompletion::NeedsDecision)
+    );
+    assert!(
+        patch_agent
+            .lines
+            .iter()
+            .any(|line| line == "work-leaf: is this feature done? [yes/no]"),
+        "{patch_agent:?}"
+    );
+    let sends_after_review = backend.sends().len();
+
+    controller.send_message(&agent_id, "maybe").unwrap();
+    let snapshot = controller.snapshot();
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert_eq!(
+        patch_agent.completion,
+        Some(WorkLeafCompletion::NeedsDecision)
+    );
+    assert!(
+        patch_agent
+            .lines
+            .iter()
+            .any(|line| line == "work-leaf: answer yes or no to close this feature")
+    );
+    assert_eq!(backend.sends().len(), sends_after_review);
+
+    controller.send_message(&agent_id, "yes").unwrap();
+    let snapshot = controller.snapshot();
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert_eq!(patch_agent.completion, Some(WorkLeafCompletion::Closed));
+    assert!(
+        patch_agent
+            .lines
+            .iter()
+            .any(|line| line == "work-leaf: feature marked closed")
+    );
+    assert_eq!(backend.sends().len(), sends_after_review);
+
+    controller
+        .send_message(&agent_id, "add another tweak")
+        .unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    let snapshot = controller.snapshot();
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert_eq!(patch_agent.completion, None);
+    assert!(patch_agent.lines.iter().any(|line| line == "follow reply"));
+    assert!(
+        backend
+            .sends()
+            .iter()
+            .any(|(target, prompt)| { target == &agent_id && prompt == "add another tweak" })
+    );
+}
+
+#[test]
 fn controller_does_not_start_review_until_patch_agent_reports_done() {
     let root = git_repo("workspace-review-waits-for-done");
     fs::write(root.join("README.md"), "before\n").unwrap();
@@ -483,6 +560,7 @@ fn controller_reuses_one_reviewer_for_repeated_patch_agent_iterations() {
     let agent_id = controller.create_agent("update readme").unwrap();
     assert!(controller.wait_for_idle(Duration::from_secs(2)));
 
+    controller.send_message(&agent_id, "no").unwrap();
     controller
         .send_message(&agent_id, "make the second update")
         .unwrap();
@@ -670,6 +748,7 @@ fn controller_linearize_keeps_multiple_reviewed_commits_from_same_agent() {
     let agent_id = controller.create_agent("update readme").unwrap();
     assert_eq!(agent_id.as_str(), "user-1");
     assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    controller.send_message(&agent_id, "no").unwrap();
     controller
         .send_message(&agent_id, "make a second reviewed update")
         .unwrap();
@@ -700,6 +779,94 @@ fn controller_linearize_keeps_multiple_reviewed_commits_from_same_agent() {
         linearize_launch.prompt.matches("Agent-ID: user-1").count(),
         2
     );
+}
+
+#[test]
+fn controller_can_create_review_and_linearize_three_features_from_missing_feature_commit() {
+    let root = git_repo("workspace-three-feature-orchestration");
+    fs::create_dir_all(root.join("features")).unwrap();
+    fs::write(root.join("features/visual_mode.txt"), "missing\n").unwrap();
+    fs::write(root.join("features/slash_commands.txt"), "missing\n").unwrap();
+    fs::write(root.join("features/review_completion.txt"), "missing\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD missing feature fixtures"]);
+    assert_eq!(
+        fs::read_to_string(root.join("features/visual_mode.txt")).unwrap(),
+        "missing\n"
+    );
+    assert_eq!(
+        fs::read_to_string(root.join("features/slash_commands.txt")).unwrap(),
+        "missing\n"
+    );
+    assert_eq!(
+        fs::read_to_string(root.join("features/review_completion.txt")).unwrap(),
+        "missing\n"
+    );
+
+    let backend = ThreeFeatureBackend::default();
+    let chat = CommandChat::new(root.clone(), backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let visual_id = controller
+        .create_agent("add vim like visual mode for both panes")
+        .unwrap();
+    let slash_id = controller
+        .create_agent("execute slash commands locally when a prompt starts with slash")
+        .unwrap();
+    let completion_id = controller
+        .create_agent("ask yes or no when reviewed patch work is done")
+        .unwrap();
+
+    assert!(controller.wait_for_idle(Duration::from_secs(4)));
+    let snapshot = controller.snapshot();
+    for agent_id in [&visual_id, &slash_id, &completion_id] {
+        let session = snapshot.session(agent_id).expect("patch session exists");
+        assert_eq!(
+            session.completion,
+            Some(WorkLeafCompletion::NeedsDecision),
+            "{session:?}"
+        );
+        assert!(
+            session
+                .lines
+                .iter()
+                .any(|line| { line == "work-leaf: is this feature done? [yes/no]" })
+        );
+    }
+    assert_eq!(
+        fs::read_to_string(root.join("features/visual_mode.txt")).unwrap(),
+        "implemented visual mode\n"
+    );
+    assert_eq!(
+        fs::read_to_string(root.join("features/slash_commands.txt")).unwrap(),
+        "implemented slash commands\n"
+    );
+    assert_eq!(
+        fs::read_to_string(root.join("features/review_completion.txt")).unwrap(),
+        "implemented review completion\n"
+    );
+
+    assert!(controller.start_linearize().unwrap().is_some());
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    let launches = backend.launches();
+    let patch_launches = launches
+        .iter()
+        .filter(|launch| launch.id.as_str().starts_with("user-"))
+        .count();
+    let review_launches = launches
+        .iter()
+        .filter(|launch| launch.id.as_str().starts_with("review-user-"))
+        .count();
+    assert_eq!(patch_launches, 3, "{launches:?}");
+    assert_eq!(review_launches, 3, "{launches:?}");
+    let linearize_launch = launches
+        .iter()
+        .find(|launch| launch.id.as_str() == "linearize")
+        .expect("linearize agent launched");
+    assert!(linearize_launch.prompt.contains("Agent-ID: user-1"));
+    assert!(linearize_launch.prompt.contains("Agent-ID: user-2"));
+    assert!(linearize_launch.prompt.contains("Agent-ID: user-3"));
 }
 
 #[test]
@@ -825,6 +992,17 @@ struct InterruptibleBackend {
     interrupted: Arc<Mutex<bool>>,
 }
 
+#[derive(Clone, Debug, Default)]
+struct ThreeFeatureBackend {
+    state: Arc<Mutex<ThreeFeatureState>>,
+}
+
+#[derive(Debug, Default)]
+struct ThreeFeatureState {
+    launches: Vec<AgentLaunch>,
+    sends: Vec<(AgentId, String)>,
+}
+
 impl FakeBackend {
     fn new<const N: usize>(replies: [&str; N]) -> Self {
         Self {
@@ -858,6 +1036,46 @@ impl FakeBackend {
     }
 }
 
+impl ThreeFeatureBackend {
+    fn launches(&self) -> Vec<AgentLaunch> {
+        self.state.lock().unwrap().launches.clone()
+    }
+
+    fn launch_reply(request: &AgentLaunch) -> String {
+        if request.id.as_str().starts_with("title-") {
+            return fake_title_from_title_prompt(&request.prompt);
+        }
+        if request.id.as_str().starts_with("review-") {
+            return "NO_FINDINGS".to_string();
+        }
+        if request.id.as_str() == "linearize" {
+            return "linearizer ready".to_string();
+        }
+        if request.prompt.contains("visual mode") {
+            return feature_patch(
+                "vim visual mode",
+                "features/visual_mode.txt",
+                "implemented visual mode",
+            );
+        }
+        if request.prompt.contains("slash") {
+            return feature_patch(
+                "local slash commands",
+                "features/slash_commands.txt",
+                "implemented slash commands",
+            );
+        }
+        if request.prompt.contains("yes or no") {
+            return feature_patch(
+                "review completion question",
+                "features/review_completion.txt",
+                "implemented review completion",
+            );
+        }
+        panic!("unexpected launch prompt: {}", request.prompt);
+    }
+}
+
 impl AgentBackend for FakeBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
         self.state.lock().unwrap().launches.push(request.clone());
@@ -878,6 +1096,28 @@ impl AgentBackend for FakeBackend {
             .sends
             .push((agent_id.clone(), prompt.to_string()));
         Ok(ChatMessage::new(MessageRole::Agent, self.next_reply()))
+    }
+}
+
+impl AgentBackend for ThreeFeatureBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        let reply = Self::launch_reply(&request);
+        self.state.lock().unwrap().launches.push(request.clone());
+        let mut session = AgentSession::new(request);
+        session.push_message(MessageRole::Agent, reply);
+        Ok(session)
+    }
+
+    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        self.state
+            .lock()
+            .unwrap()
+            .sends
+            .push((agent_id.clone(), prompt.to_string()));
+        Ok(ChatMessage::new(
+            MessageRole::Agent,
+            "summary: implemented the requested fixture feature",
+        ))
     }
 }
 
@@ -917,6 +1157,12 @@ impl AgentBackend for InterruptibleBackend {
         *self.interrupted.lock().unwrap() = true;
         Ok(())
     }
+}
+
+fn feature_patch(feature: &str, path: &str, implemented: &str) -> String {
+    format!(
+        "implemented {feature}\n@work-leaf patch {feature}\n--- a/{path}\n+++ b/{path}\n@@ -1 +1 @@\n-missing\n+{implemented}\n@work-leaf end\n@work-leaf done"
+    )
 }
 
 fn git_repo(name: &str) -> PathBuf {

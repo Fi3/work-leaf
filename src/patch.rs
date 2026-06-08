@@ -56,8 +56,9 @@ impl GitPatcher {
         let diff = extract_unified_diff(&request.diff);
         let request = request.with_diff(diff);
         let files = self.parse_patch_files(&request.diff)?;
+        let lock_paths = patch_lock_paths(&files);
         let mut outcome = None;
-        self.locks.with_write_locks(&files, || {
+        self.locks.with_write_locks(&lock_paths, || {
             outcome = Some(self.apply_with_locks(request, files.clone()));
             Ok(())
         })?;
@@ -216,6 +217,14 @@ impl GitPatcher {
             )))
         }
     }
+}
+
+fn patch_lock_paths(files: &[PathBuf]) -> Vec<PathBuf> {
+    let mut paths = files.to_vec();
+    paths.push(PathBuf::from("."));
+    paths.sort();
+    paths.dedup();
+    paths
 }
 
 fn extract_unified_diff(raw: &str) -> String {

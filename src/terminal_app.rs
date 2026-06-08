@@ -8,7 +8,8 @@ use crate::cli::{CommandChat, terminal_right_content, ui_action_text};
 use crate::http_controller::HttpControllerClient;
 use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode};
 use crate::workspace::{
-    WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession, WorkLeafSnapshot,
+    WorkLeafCompletion, WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession,
+    WorkLeafSnapshot,
 };
 
 #[derive(Debug)]
@@ -396,14 +397,16 @@ where
     fn wait_for_idle(&mut self, timeout: Duration) -> bool {
         let start = Instant::now();
         while start.elapsed() < timeout {
+            let busy = self.controller.is_busy();
             self.apply_controller_events();
-            if !self.controller.is_busy() {
+            if !busy {
                 return true;
             }
             thread::sleep(Duration::from_millis(10));
         }
+        let busy = self.controller.is_busy();
         self.apply_controller_events();
-        !self.controller.is_busy()
+        !busy
     }
 
     fn wait_for_frame_contains(&mut self, needle: &str, timeout: Duration) -> bool {
@@ -527,7 +530,7 @@ where
             TerminalAppInput::Enter if self.ui.mode() == UiMode::Prompt => {
                 let line = self.prompt_buffer.trimmed_string();
                 self.prompt_buffer.clear();
-                self.ui.handle_key(UiKey::Esc);
+                self.handle_ui_key(UiKey::Esc);
                 if !line.is_empty() {
                     self.prompt_history.push(line.clone());
                     self.prompt_history_index = None;
@@ -606,17 +609,17 @@ where
             }
             TerminalAppInput::Key(UiKey::Esc) => {
                 self.prompt_buffer.clear();
-                let actions = self.ui.handle_key(UiKey::Esc);
+                let actions = self.handle_ui_key(UiKey::Esc);
                 self.record_actions(actions);
                 self.dirty = true;
             }
             TerminalAppInput::Key(key) => {
-                let actions = self.ui.handle_key(key);
+                let actions = self.handle_ui_key(key);
                 self.record_actions(actions);
                 self.dirty = true;
             }
             TerminalAppInput::Char(ch) => {
-                let actions = self.ui.handle_key(UiKey::Char(ch));
+                let actions = self.handle_ui_key(UiKey::Char(ch));
                 self.record_actions(actions);
                 self.dirty = true;
             }
@@ -628,6 +631,15 @@ where
     fn handle_command_line(&mut self, line: &str) {
         self.controller.execute_command_line(line);
         self.apply_controller_events();
+    }
+
+    fn handle_ui_key(&mut self, key: UiKey) -> Vec<crate::UiAction> {
+        let right_content = self.right_content();
+        let right_cursor_column = (self.ui.focus() == PaneFocus::Right
+            && self.ui.mode() != UiMode::Prompt)
+            .then_some(6 + self.chat_buffer.cursor_char_count());
+        self.ui
+            .handle_key_with_context(key, &right_content, right_cursor_column)
     }
 
     fn send_chat_buffer(&mut self) {
@@ -684,9 +696,11 @@ where
                     title,
                     feature,
                     loading,
+                    completion,
                 } => {
-                    let session =
-                        self.upsert_cached_session_status(agent_id, kind, title, feature, loading);
+                    let session = self.upsert_cached_session_status(
+                        agent_id, kind, title, feature, loading, completion,
+                    );
                     self.apply_session_to_ui(&session);
                 }
                 WorkLeafEvent::AgentLineAppended { agent_id, line } => {
@@ -729,6 +743,7 @@ where
         title: String,
         feature: String,
         loading: Option<WorkLeafLoading>,
+        completion: Option<WorkLeafCompletion>,
     ) -> WorkLeafSession {
         if let Some(session) = self
             .snapshot
@@ -740,6 +755,7 @@ where
             session.title = title;
             session.feature = feature;
             session.loading = loading;
+            session.completion = completion;
             return session.clone();
         }
 
@@ -750,6 +766,7 @@ where
             feature,
             lines: Vec::new(),
             loading,
+            completion,
         };
         self.snapshot.sessions.push(session.clone());
         self.snapshot
@@ -776,15 +793,14 @@ where
     }
 
     fn apply_session_to_ui(&mut self, session: &WorkLeafSession) {
+        let display_title = session_display_title(session);
         if self
             .ui
-            .set_agent_feature(&session.id, session.title.clone())
+            .set_agent_feature(&session.id, display_title.clone())
             .is_err()
         {
-            self.ui.add_agent(AgentListEntry::new(
-                session.id.clone(),
-                session.title.clone(),
-            ));
+            self.ui
+                .add_agent(AgentListEntry::new(session.id.clone(), display_title));
         }
         let _ = self
             .ui
@@ -807,8 +823,9 @@ where
     }
 
     fn should_route_chat_arrow(&self) -> bool {
-        self.ui.mode() == UiMode::Insert
-            || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right)
+        !self.ui.visual_selection_active()
+            && (self.ui.mode() == UiMode::Insert
+                || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right))
     }
 
     fn defer_escape_key(&self) -> bool {
@@ -964,7 +981,7 @@ where
                 && sequence.mode_before == UiMode::Insert
                 && self.ui.mode() != UiMode::Insert
             {
-                let actions = self.ui.handle_key(UiKey::Char('i'));
+                let actions = self.handle_ui_key(UiKey::Char('i'));
                 self.record_actions(actions);
             }
             if let Some(input) = parse_control_sequence(&sequence.bytes) {
@@ -979,6 +996,14 @@ where
         }
 
         true
+    }
+}
+
+fn session_display_title(session: &WorkLeafSession) -> String {
+    match session.completion {
+        Some(WorkLeafCompletion::NeedsDecision) => format!("{} DONE?", session.title),
+        Some(WorkLeafCompletion::Closed) => format!("{} CLOSED", session.title),
+        None => session.title.clone(),
     }
 }
 
@@ -1066,6 +1091,7 @@ impl TerminalAppInput {
             4 => Some(Self::Quit),
             13 | 10 => Some(Self::Enter),
             27 => Some(Self::Key(UiKey::Esc)),
+            22 => Some(Self::Char('\u{16}')),
             23 => Some(Self::Key(UiKey::CtrlW)),
             8 | 127 => Some(Self::Backspace),
             byte if byte.is_ascii_graphic() || byte == b' ' => Some(Self::Char(byte as char)),
@@ -1271,6 +1297,7 @@ mod tests {
                     feature: "feature".to_string(),
                     lines: vec!["large transcript line".repeat(256)],
                     loading: None,
+                    completion: None,
                 }],
             },
             Arc::clone(&snapshot_calls),

@@ -294,6 +294,44 @@ fn left_pane_can_hide_selected_agents_from_control_list() {
 }
 
 #[test]
+fn visual_mode_yanks_left_pane_line_and_block_selections() {
+    let mut ui = TerminalUi::new(120, 20);
+    let chat_a = AgentId::new("chat-a").unwrap();
+    let chat_b = AgentId::new("chat-b").unwrap();
+    ui.add_agent(AgentListEntry::new(chat_a, "parser"));
+    ui.add_agent(AgentListEntry::new(chat_b, "docs"));
+
+    ui.handle_key(UiKey::Char('V'));
+    assert!(ui.visual_selection_active());
+    ui.handle_key(UiKey::Char('j'));
+
+    let selected = ui.render_screen("right pane");
+    assert!(selected.contains("mode=visual-line focus=left"));
+    assert!(selected.contains("\u{1b}[7m> work-leaf  command"));
+
+    ui.handle_key(UiKey::Char('y'));
+
+    assert_eq!(
+        ui.copied_text(),
+        Some("> work-leaf  command\n parser chat-a")
+    );
+    assert!(!ui.visual_selection_active());
+    assert!(ui.render_screen("right pane").starts_with("\u{1b}]52;c;"));
+
+    ui.handle_key(UiKey::Char('\u{16}'));
+    ui.handle_key(UiKey::Char('j'));
+    ui.handle_key(UiKey::Char('l'));
+    ui.handle_key(UiKey::Char('l'));
+    assert!(
+        ui.render_screen("right pane")
+            .contains("mode=visual-block focus=left")
+    );
+    ui.handle_key(UiKey::Char('y'));
+
+    assert_eq!(ui.copied_text(), Some("> w\n pa"));
+}
+
+#[test]
 fn raw_mode_screen_uses_crlf_so_frame_fills_terminal_width() {
     let ui = TerminalUi::new(80, 8);
     let rendered = ui.render_screen("command chat");
