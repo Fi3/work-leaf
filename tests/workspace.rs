@@ -397,6 +397,59 @@ fn controller_linearize_uses_only_commits_reviewed_in_this_session() {
 }
 
 #[test]
+fn controller_linearize_keeps_multiple_reviewed_commits_from_same_agent() {
+    let root = git_repo("workspace-linearize-same-agent-multiple-reviewed");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "first patch\n@work-leaf patch update readme once\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after first\n@work-leaf end\n@work-leaf done",
+        "summary: first reviewed change",
+        "NO_FINDINGS",
+        "second patch\n@work-leaf patch update readme twice\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-after first\n+after second\n@work-leaf end\n@work-leaf done",
+        "summary: second reviewed change",
+        "NO_FINDINGS",
+        "linearizer ready",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("update readme").unwrap();
+    assert_eq!(agent_id.as_str(), "user-1");
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    controller
+        .send_message(&agent_id, "make a second reviewed update")
+        .unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    assert!(controller.start_linearize().unwrap().is_some());
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    let launches = backend.launches();
+    let linearize_launch = launches
+        .iter()
+        .find(|launch| launch.id.as_str() == "linearize")
+        .expect("linearize agent launched");
+    assert!(
+        linearize_launch
+            .prompt
+            .contains("Reason: update readme once"),
+        "{}",
+        linearize_launch.prompt
+    );
+    assert!(
+        linearize_launch
+            .prompt
+            .contains("Reason: update readme twice"),
+        "{}",
+        linearize_launch.prompt
+    );
+    assert_eq!(
+        linearize_launch.prompt.matches("Agent-ID: user-1").count(),
+        2
+    );
+}
+
+#[test]
 fn controller_does_not_run_project_required_checks_after_agent_reply() {
     let root = git_repo("workspace-no-required-check-run");
     fs::write(

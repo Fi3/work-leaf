@@ -138,6 +138,7 @@ pub struct CommandChat<B> {
     agents: BTreeMap<AgentId, String>,
     reviewers: BTreeSet<AgentId>,
     reviewed_agent_commits: BTreeMap<AgentId, String>,
+    linearize_reviewed_commits: Vec<AgentCommit>,
     agent_profile: AgentProfile,
     max_review_rounds: usize,
     locked_command_timeout: Duration,
@@ -166,6 +167,7 @@ where
             agents: self.agents.clone(),
             reviewers: self.reviewers.clone(),
             reviewed_agent_commits: self.reviewed_agent_commits.clone(),
+            linearize_reviewed_commits: self.linearize_reviewed_commits.clone(),
             agent_profile: self.agent_profile.clone(),
             max_review_rounds: self.max_review_rounds,
             locked_command_timeout: self.locked_command_timeout,
@@ -191,6 +193,7 @@ where
             agents: BTreeMap::new(),
             reviewers: BTreeSet::new(),
             reviewed_agent_commits: BTreeMap::new(),
+            linearize_reviewed_commits: Vec::new(),
             agent_profile: AgentProfile::codex(),
             max_review_rounds: 80_000_000,
             locked_command_timeout: Duration::from_secs(5 * 60),
@@ -237,8 +240,19 @@ where
         self.agents.insert(agent_id, feature);
     }
 
-    pub(crate) fn mark_reviewed_agent_commit(&mut self, agent_id: AgentId, hash: String) {
-        self.reviewed_agent_commits.insert(agent_id, hash);
+    pub(crate) fn mark_reviewed_agent_commit(&mut self, commit: AgentCommit) {
+        let agent_id = commit.agent_id.clone();
+        let hash = commit.hash.clone();
+        self.reviewed_agent_commits
+            .insert(agent_id.clone(), hash.clone());
+        if self
+            .linearize_reviewed_commits
+            .iter()
+            .any(|commit| commit.hash == hash)
+        {
+            return;
+        }
+        self.linearize_reviewed_commits.push(commit);
     }
 
     pub(crate) fn interrupt_agent(&mut self, agent_id: &AgentId) -> Result<(), CliError> {
@@ -664,21 +678,19 @@ where
     }
 
     fn record_review_result(&mut self, result: &ReviewResult) {
-        let latest_hash = self
-            .latest_agent_commit_hash(&result.agent_id)
-            .unwrap_or_else(|| result.commit.hash.clone());
-        self.reviewed_agent_commits
-            .insert(result.agent_id.clone(), latest_hash);
+        let latest_commit = self
+            .latest_agent_commit(&result.agent_id)
+            .unwrap_or_else(|| result.commit.clone());
+        self.mark_reviewed_agent_commit(latest_commit);
         self.reviewers.insert(result.reviewer_id.clone());
     }
 
-    fn latest_agent_commit_hash(&self, agent_id: &AgentId) -> Option<String> {
+    fn latest_agent_commit(&self, agent_id: &AgentId) -> Option<AgentCommit> {
         GitHistory::new(self.project_dir.clone())
             .latest_agent_commits()
             .ok()?
             .into_iter()
             .find(|commit| &commit.agent_id == agent_id)
-            .map(|commit| commit.hash)
     }
 
     fn linearize(&mut self) -> Result<CommandChatResult, CliError> {
@@ -696,22 +708,17 @@ where
     }
 
     fn linearize_commits(&self) -> Result<Vec<AgentCommit>, CliError> {
-        if self.reviewed_agent_commits.is_empty() {
+        if self.linearize_reviewed_commits.is_empty() {
             return Ok(Vec::new());
         }
-        let latest = GitHistory::new(self.project_dir.clone()).latest_agent_commits()?;
-        let mut by_agent = latest
-            .into_iter()
-            .map(|commit| (commit.agent_id.clone(), commit))
-            .collect::<BTreeMap<_, _>>();
+        let history = GitHistory::new(self.project_dir.clone());
         let commits = self
-            .reviewed_agent_commits
+            .linearize_reviewed_commits
             .iter()
-            .filter_map(|(agent_id, reviewed_hash)| {
-                by_agent
-                    .remove(agent_id)
-                    .filter(|commit| &commit.hash == reviewed_hash)
-            })
+            .map(|commit| history.agent_commit(&commit.hash))
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .flatten()
             .collect();
         Ok(commits)
     }

@@ -52,6 +52,21 @@ impl GitHistory {
 
         Ok(latest.into_values().collect())
     }
+
+    pub fn agent_commit(&self, hash: &str) -> Result<Option<AgentCommit>, ReviewError> {
+        let output = Command::new("git")
+            .current_dir(&self.root)
+            .args(["show", "--no-patch", "--pretty=format:%H%x1f%B%x1e", hash])
+            .output()
+            .map_err(ReviewError::Io)?;
+        if !output.status.success() {
+            return Err(ReviewError::History(
+                String::from_utf8_lossy(&output.stderr).trim().to_string(),
+            ));
+        }
+
+        parse_agent_commit(String::from_utf8_lossy(&output.stdout).trim())
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

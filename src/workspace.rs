@@ -11,7 +11,7 @@ use crate::cli::{
     CliError, CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
     render_command_chat_help,
 };
-use crate::review::{GitHistory, ReviewResult};
+use crate::review::{AgentCommit, GitHistory, ReviewResult};
 
 #[derive(Debug)]
 pub struct WorkLeafController<B>
@@ -699,18 +699,18 @@ where
 
     fn record_review_result(&mut self, review: &ReviewResult) {
         self.review_commits_in_progress.remove(&review.agent_id);
-        let latest_hash = self
-            .latest_agent_commit_hash(&review.agent_id)
-            .unwrap_or_else(|| review.commit.hash.clone());
+        let latest_commit = self
+            .latest_agent_commit(&review.agent_id)
+            .unwrap_or_else(|| review.commit.clone());
         self.reviewed_agent_commits
-            .insert(review.agent_id.clone(), latest_hash.clone());
+            .insert(review.agent_id.clone(), latest_commit.hash.clone());
         if let Some(chat) = self.chat.as_mut() {
-            chat.mark_reviewed_agent_commit(review.agent_id.clone(), latest_hash);
+            chat.mark_reviewed_agent_commit(latest_commit);
         }
         self.reviewers.insert(review.reviewer_id.clone());
     }
 
-    fn latest_agent_commit_hash(&self, agent_id: &AgentId) -> Option<String> {
+    fn latest_agent_commit(&self, agent_id: &AgentId) -> Option<AgentCommit> {
         let root = self
             .chat
             .as_ref()
@@ -720,7 +720,6 @@ where
             .ok()?
             .into_iter()
             .find(|commit| &commit.agent_id == agent_id)
-            .map(|commit| commit.hash)
     }
 
     fn set_session_loading(&mut self, agent_id: &AgentId, loading: Option<WorkLeafLoading>) {

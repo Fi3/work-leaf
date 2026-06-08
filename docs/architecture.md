@@ -179,6 +179,12 @@ commits them through the patch protocol or reverts them. Pending command changes
 `@work-leaf done`, and the orchestrator returns the tracked diff so the agent can submit the command
 output as a provisional patch when it belongs in the final work.
 
+Review bookkeeping has two scopes. The controller tracks the latest reviewed hash for each patch
+agent so the same agent head is not reviewed twice. `CommandChat` also keeps the ordered exact commit
+hashes that completed review during the active instance, and those exact commits form the linearizer
+handoff. This lets one patch-agent session complete more than one reviewed patch without a later hash
+replacing earlier reviewed work in the linearizer prompt.
+
 The command transcript is also the conversation history for the persistent `command-agent`. That
 system agent interprets chat sent to the Work Leaf command surface. It recognizes literal command
 lines and common natural-language requests for help, review, linearization, quitting, and launching
@@ -269,7 +275,8 @@ agent's provisional patch. `PatchCoordinator<B>` connects patch conflicts and ma
 diagnostics back to the active agent backend. `PatchRequest`, `PatchOutcome`, and `PatchError` are
 the public patch workflow types.
 
-`src/review.rs::GitHistory` reads latest agent commits from repository history.
+`src/review.rs::GitHistory` reads latest agent commits from repository history and resolves agent
+metadata commits by exact hash.
 `ReviewCoordinator<B>` launches reviewer agents against those commits and loops until the reviewer
 reports no findings or the configured maximum round count is reached. `CommandChat` resolves
 reviewer `@work-leaf` directives, such as file reads, before interpreting reviewer output as
@@ -283,9 +290,10 @@ produced the provisional commit; explicit review commands use the history-wide l
 agent with decisions, groups, and required tests. `LinearizeAction`, `LinearizeGroup`,
 `LinearizePlan`, `LinearizeQuestion`, `LinearizeHandoff`, and `LinearizeError` are the public
 linearization workflow types. `CommandChat` and `WorkLeafController` launch linearization from the
-commits recorded as reviewed in the current command-chat or controller instance; unrelated historical
-agent metadata commits are outside the linearizer scope unless the user explicitly reviews or adds
-them in that session.
+exact commits recorded as reviewed in the current command-chat or controller instance; unrelated
+historical agent metadata commits are outside the linearizer scope unless the user explicitly reviews
+or adds them in that session. When one patch-agent id completes multiple reviewed commits in one
+active instance, each reviewed hash is listed independently for the linearizer.
 
 `src/instructions.rs` is crate-private. It loads project instruction files used by `PromptPolicy`
 for agent launch prompts.
