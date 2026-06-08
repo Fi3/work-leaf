@@ -229,6 +229,10 @@ where
             TerminalAppInput::Enter if self.ui.mode() == UiMode::Insert => {
                 self.send_chat_buffer();
             }
+            TerminalAppInput::Char('/') if self.should_start_agent_slash_command() => {
+                self.start_agent_slash_command();
+                self.dirty = true;
+            }
             TerminalAppInput::LineBreak if self.ui.mode() == UiMode::Insert => {
                 self.chat_buffer.push('\n');
                 self.chat_history_index = None;
@@ -387,6 +391,21 @@ where
         let _ = self
             .ui
             .set_agent_ready_state(&session.id, session.loading.is_none());
+    }
+
+    fn should_start_agent_slash_command(&self) -> bool {
+        self.ui.mode() == UiMode::Command && self.ui.selected_agent().is_some()
+    }
+
+    fn start_agent_slash_command(&mut self) {
+        let Some(agent_id) = self.ui.selected_agent().cloned() else {
+            return;
+        };
+        if self.ui.activate_agent_chat(&agent_id).is_ok() {
+            self.chat_buffer.push('/');
+            self.chat_history_index = None;
+            self.chat_history_draft = None;
+        }
     }
 
     fn should_route_chat_arrow(&self) -> bool {
