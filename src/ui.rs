@@ -134,8 +134,7 @@ struct StatusNotice {
 
 const STATUS_NOTICE_SECONDS: u64 = 5;
 const COMMAND_MODE_TYPING_NOTICE_THRESHOLD: usize = 5;
-const COMMAND_MODE_TYPING_NOTICE: &str =
-    "command mode: press i for insert mode before typing";
+const COMMAND_MODE_TYPING_NOTICE: &str = "command mode: press i for insert mode before typing";
 const CTRL_C_EXIT_NOTICE: &str = "to exit, press Esc then :q then Enter";
 
 #[derive(Clone, Debug, Eq, PartialEq)]
