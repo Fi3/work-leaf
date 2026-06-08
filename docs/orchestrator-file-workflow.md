@@ -84,9 +84,9 @@ The current implementation path for this review loop finds latest agent commits 
 agent's `review-<agent-id>` reviewer, resolves reviewer orchestrator directives such as file reads,
 sends findings back to the original agent, and asks the reviewer to recheck until `NO_FINDINGS` or
 the round limit. Command-chat and controller review startup keep one reviewer identity per patch
-agent and skip latest commits that already completed a review pass. Automatic review after a
-patch-agent validation pass is scoped to that patch agent's latest commit; an explicit `review`
-command is the history-wide review entry point.
+agent and skip latest commits that already completed a review pass. Automatic review after patch
+application is scoped to that patch agent's latest commit; an explicit `review` command is the
+history-wide review entry point.
 
 ### Inspection Agent
 
@@ -111,7 +111,8 @@ what the orchestrator is doing.
 
 The current source already has system-style internal behavior:
 
-- `src/chat_title.rs::ChatTitleAgent` derives chat titles.
+- hidden `title-<agent-id>` backend launches generate chat titles from the first prompt;
+  `src/chat_title.rs::ChatTitleAgent` tracks which chats have requested title generation.
 - `src/workspace.rs::WorkLeafController` tracks sessions, loading state, pending events, and
   transcript output.
 - `src/ui.rs::AgentListEntry` carries visible agent metadata such as readiness, modified files,
@@ -236,14 +237,13 @@ agent id -> set of files read by that agent
 This map is used to detect stale context for orchestrator-mediated reads. If an agent has read a file
 through `@work-leaf read` and another patch changes that file before the reader submits a patch or
 reports done, the reader may be about to produce a stale diff. Direct filesystem reads are not present
-in this map, so direct-read mode relies on patch validation, conflict diagnostics, and agent rereads
-instead of proactive stale-reader updates for those reads.
+in this map, so direct-read mode relies on `git apply --check`, conflict diagnostics, and agent
+rereads instead of proactive stale-reader updates for those reads.
 
 The tracker updates as follows:
 
 - successful `@work-leaf read` responses add files to the agent's read set;
-- patch conflict and validation-failure responses that include fresh file text also refresh the
-  patching agent's read set;
+- patch conflict responses that include fresh file text also refresh the patching agent's read set;
 - a successful patch clears the patching agent's pending read entries for the touched files;
 - `@work-leaf done` clears all pending read entries for that agent.
 
@@ -278,13 +278,11 @@ Patch agents request writes with a unified diff. The patch path is:
    files.
 6. `GitPatcher::apply_with_locks` runs `git apply --check -` for the entire diff.
 7. If the check passes, it runs `git apply -` for the entire diff.
-8. Required checks declared in project instructions run through
-   `src/instructions.rs::required_checks`.
-9. Passing patches are staged with `git add -- <files>` and committed as provisional agent commits.
+8. Passing patches are staged with `git add -- <files>` and committed as provisional agent commits.
 
-The atomicity rule is strict: validation and application happen for the patch as one unit. The
-orchestrator does not apply one file, then another file, then ask the agent to repair the rest. A
-patch either applies as a coherent diff or is rejected as a coherent diff.
+The atomicity rule is strict: `git apply --check` and `git apply` happen for the patch as one unit.
+The orchestrator does not apply one file, then another file, then ask the agent to repair the rest.
+A patch either applies as a coherent diff or is rejected as a coherent diff.
 
 If `git apply --check` fails, no part of the diff is applied. The orchestrator sends the patch agent:
 
@@ -292,9 +290,6 @@ If `git apply --check` fails, no part of the diff is applied. The orchestrator s
 - the git diagnostic;
 - fresh file text for the touched files;
 - instructions to rebase the patch against that fresh text.
-
-If repository validation fails after the diff applies, `GitPatcher` attempts to reverse the patch and
-reports the validation diagnostic plus fresh file text back to the patch agent.
 
 Malformed patch bodies that do not contain recognizable unified diff file headers are rejected with a
 protocol prompt asking the agent to resend a complete unified diff.
@@ -347,8 +342,7 @@ A normal development session in default read-permission mode follows this shape:
    context, and sends the text back to the patch agent.
 6. The patch agent reasons over the snapshot and sends one unified diff through `@work-leaf patch`.
 7. The orchestrator parses all touched files, takes exclusive write locks for the whole touched set,
-   checks the entire diff, applies the entire diff, validates, stages, and commits the provisional
-   patch.
+   checks the entire diff, applies the entire diff, stages, and commits the provisional patch.
 8. If another agent read any touched file and has not cleared that context, the orchestrator sends
    that agent a proactive `work-leaf file update` with fresh file text.
 9. The orchestrator runs or schedules that patch agent's review agent for the patch.
@@ -360,7 +354,7 @@ A normal development session in default read-permission mode follows this shape:
 14. Reviewed work can then be linearized into the final history.
 
 In direct-read mode, steps 4 and 5 are replaced by direct filesystem inspection from the agent. The
-write, validation, review, and linearization steps remain orchestrator-controlled.
+write, review, and linearization steps remain orchestrator-controlled.
 
 ## Example Session
 
@@ -472,8 +466,6 @@ The important source symbols for this workflow are:
 - `src/locks.rs::CommandWritePolicy`: classifies commands that write project files.
 - `src/patch.rs::GitPatcher`: applies whole unified diffs under write locks and creates provisional
   metadata commits.
-- `src/instructions.rs::required_checks`: derives repository validation commands from project
-  instruction files.
 - `src/review.rs::ReviewCoordinator`: runs reviewer conversations over agent patch commits.
 - `src/review.rs::GitHistory`: finds latest agent commits from git history.
 - `src/workspace.rs::WorkLeafController`: exposes UI-neutral orchestration state and events.

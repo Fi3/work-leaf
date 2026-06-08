@@ -206,19 +206,18 @@ fn scripted_harness_names_new_chat_from_first_inserted_prompt() {
     harness.handle_bytes(b"please fix the OAuth redirect handler\n");
 
     let named_left_pane = harness.ui().render_left_pane();
-    assert!(
-        named_left_pane.contains(">oauth redirect handler user-3  working: oauth redirect handler")
-    );
+    assert!(named_left_pane.contains(
+        ">please-fix-the-oauth-redirect-handler user-3  working: please-fix-the-oauth-redirect-handler"
+    ));
     assert!(!named_left_pane.contains("harness-agent user-3"));
 
     harness.handle_bytes(b"add cookie coverage\n");
 
     let unchanged_left_pane = harness.ui().render_left_pane();
-    assert!(
-        unchanged_left_pane
-            .contains(">oauth redirect handler user-3  working: oauth redirect handler")
-    );
-    assert!(!unchanged_left_pane.contains("cookie coverage user-3"));
+    assert!(unchanged_left_pane.contains(
+        ">please-fix-the-oauth-redirect-handler user-3  working: please-fix-the-oauth-redirect-handler"
+    ));
+    assert!(!unchanged_left_pane.contains("add-cookie-coverage user-3"));
 }
 
 #[test]

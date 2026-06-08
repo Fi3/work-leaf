@@ -1,5 +1,6 @@
 use crate::{
-    AgentId, AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode, chat_title::ChatTitleAgent,
+    AgentId, AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode,
+    chat_title::{ChatTitleAgent, fallback_chat_title_from_prompt},
 };
 
 #[derive(Debug)]
@@ -263,12 +264,10 @@ impl UiHarness {
     }
 
     fn name_chat_from_first_prompt(&mut self, agent_id: &AgentId, prompt: &str) {
-        let Some(title) = self
-            .chat_title_agent
-            .title_for_first_prompt(agent_id, prompt)
-        else {
+        if !self.chat_title_agent.reserve_first_prompt_title(agent_id) {
             return;
-        };
+        }
+        let title = fallback_chat_title_from_prompt(prompt);
         let _ = self.ui.set_agent_feature(agent_id, title);
     }
 

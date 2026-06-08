@@ -11,6 +11,7 @@ use crate::agent::{
     AgentBackend, AgentId, AgentLaunch, AgentProfile, AgentShutdownHandle, AgentStreamEvent,
     PromptPolicy, ReadPermission,
 };
+use crate::chat_title::{chat_title_from_llm_reply, chat_title_prompt};
 use crate::codex::{CodexBackend, CodexCommandConfig};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::locks::{CommandWritePolicy, FileLockTable};
@@ -223,6 +224,32 @@ where
 
     pub(crate) fn register_agent_feature(&mut self, agent_id: AgentId, feature: String) {
         self.agents.insert(agent_id, feature);
+    }
+
+    pub(crate) fn generate_chat_title(
+        &mut self,
+        source_agent_id: &AgentId,
+        first_prompt: &str,
+    ) -> Result<String, CliError> {
+        let title_agent_id =
+            AgentId::new(format!("title-{}", source_agent_id.as_str())).map_err(CliError::Agent)?;
+        let session = self
+            .backend
+            .as_mut()
+            .expect("command chat backend is present")
+            .launch(AgentLaunch::new(
+                title_agent_id,
+                self.agent_profile.kind.clone(),
+                "chat-title",
+                chat_title_prompt(first_prompt),
+            ))
+            .map_err(CliError::Agent)?;
+        let reply = session
+            .messages
+            .last()
+            .map(|message| message.text.as_str())
+            .unwrap_or_default();
+        Ok(chat_title_from_llm_reply(reply, first_prompt))
     }
 
     pub fn handle_line(&mut self, line: &str) -> Result<CommandChatResult, CliError> {

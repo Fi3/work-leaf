@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 
 use crate::agent::{AgentBackend, AgentError, AgentId};
-use crate::instructions::{load_project_instructions, required_checks};
 use crate::locks::{FileAccessError, FileLockTable};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -84,11 +83,6 @@ impl GitPatcher {
             .and_then(|output| self.require_success(output, "git apply"))
             .map_err(PatchError::Git)?;
 
-        if let Err(error) = self.run_required_checks(&files) {
-            let _ = self.reverse_patch(&request.diff);
-            return Err(error);
-        }
-
         self.git_add(&files).map_err(PatchError::Git)?;
         self.git_commit(&request, &files).map_err(PatchError::Git)?;
         let commit = self
@@ -136,35 +130,6 @@ impl GitPatcher {
             command.arg(file);
         }
         self.require_success(command.output()?, "git add")
-            .map(|_| ())
-    }
-
-    fn run_required_checks(&self, files: &[PathBuf]) -> Result<(), PatchError> {
-        let instructions = load_project_instructions(&self.root).map_err(PatchError::Git)?;
-        for check in required_checks(&instructions) {
-            let output = Command::new(check.program())
-                .current_dir(&self.root)
-                .args(check.args())
-                .output()
-                .map_err(PatchError::Git)?;
-            if !output.status.success() {
-                return Err(PatchError::ValidationFailed {
-                    files: files.to_vec(),
-                    command: check.command_line().to_string(),
-                    diagnostic: output_text(&output),
-                });
-            }
-        }
-        Ok(())
-    }
-
-    fn reverse_patch(&self, diff: &str) -> Result<(), std::io::Error> {
-        let check = self.git_with_stdin(["apply", "--reverse", "--check", "-"], diff)?;
-        if !check.status.success() {
-            return Ok(());
-        }
-        self.git_with_stdin(["apply", "--reverse", "-"], diff)
-            .and_then(|output| self.require_success(output, "git apply --reverse"))
             .map(|_| ())
     }
 
@@ -344,30 +309,6 @@ where
                     .map_err(PatchError::Agent)?;
                 Err(PatchError::Conflict { files, diagnostic })
             }
-            Err(PatchError::ValidationFailed {
-                files,
-                command,
-                diagnostic,
-            }) => {
-                let prompt = format!(
-                    "The orchestrator rejected your patch because repository validation failed.\nFiles: {}\nCommand: {}\n\nDiagnostic:\n{}\n\nPlease provide a corrected unified diff patch.",
-                    files
-                        .iter()
-                        .map(|path| path.display().to_string())
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                    command,
-                    diagnostic
-                );
-                self.backend
-                    .send(&agent_id, &prompt)
-                    .map_err(PatchError::Agent)?;
-                Err(PatchError::ValidationFailed {
-                    files,
-                    command,
-                    diagnostic,
-                })
-            }
             Err(PatchError::NoFiles) => {
                 let prompt = render_no_files_prompt();
                 self.backend
@@ -410,11 +351,6 @@ pub enum PatchError {
         files: Vec<PathBuf>,
         diagnostic: String,
     },
-    ValidationFailed {
-        files: Vec<PathBuf>,
-        command: String,
-        diagnostic: String,
-    },
     Agent(AgentError),
     FileAccess(FileAccessError),
     Git(std::io::Error),
@@ -425,14 +361,6 @@ impl fmt::Display for PatchError {
         match self {
             Self::NoFiles => formatter.write_str("patch does not touch any files"),
             Self::Conflict { diagnostic, .. } => write!(formatter, "patch conflict: {diagnostic}"),
-            Self::ValidationFailed {
-                command,
-                diagnostic,
-                ..
-            } => write!(
-                formatter,
-                "patch validation `{command}` failed: {diagnostic}"
-            ),
             Self::Agent(error) => write!(formatter, "{error}"),
             Self::FileAccess(error) => write!(formatter, "{error}"),
             Self::Git(error) => write!(formatter, "{error}"),

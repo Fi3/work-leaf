@@ -44,22 +44,19 @@ fn terminal_app_new_and_chat_message_use_real_command_chat_backend() {
 }
 
 #[test]
-fn terminal_app_does_not_mark_agent_ready_when_required_checks_fail() {
-    let root = temp_dir("terminal-app-required-check-fails");
+fn terminal_app_does_not_run_project_required_checks_outside_agent() {
+    let root = temp_dir("terminal-app-no-required-check-run");
     fs::write(
         root.join("AGENTS.md"),
         "## Required Checks\n- `./check.sh`\n",
     )
     .unwrap();
-    let check = root.join("check.sh");
-    fs::write(&check, "#!/bin/sh\necho compile failed\nexit 1\n").unwrap();
-    make_executable(&check);
-    let backend = FakeBackend::new([
-        "launch reply",
-        "still broken",
-        "still broken",
-        "still broken",
-    ]);
+    fs::write(
+        root.join("check.sh"),
+        "#!/bin/sh\necho compile failed\nexit 1\n",
+    )
+    .unwrap();
+    let backend = FakeBackend::new(["launch reply"]);
     let chat = CommandChat::new(root, backend);
     let mut app = TerminalApp::new(chat, 100, 24);
 
@@ -67,9 +64,10 @@ fn terminal_app_does_not_mark_agent_ready_when_required_checks_fail() {
     assert!(app.wait_for_idle(Duration::from_secs(1)));
 
     let frame = app.render_frame();
-    assert!(frame.contains("required check failed"));
-    assert!(frame.contains("compile failed"));
-    assert!(!frame.contains("READY"));
+    assert!(frame.contains("launch reply"));
+    assert!(frame.contains("READY"));
+    assert!(!frame.contains("required check failed"));
+    assert!(!frame.contains("compile failed"));
 }
 
 #[test]
@@ -734,8 +732,9 @@ fn terminal_app_names_user_session_from_first_prompt_immediately() {
 
     app.handle_bytes(b":new implement parser combinator for config files\n");
 
+    assert!(app.wait_for_idle(Duration::from_secs(1)));
+    assert!(app.ui().render_left_pane().contains("parser-combinator"));
     let frame = app.render_frame();
-    assert!(frame.contains("parser"));
     assert!(!frame.contains("working: user-agent"));
 }
 
@@ -753,10 +752,10 @@ fn terminal_app_names_interactive_chat_from_first_inserted_prompt_immediately() 
 
     app.handle_bytes(b"please fix the OAuth redirect handler\n");
 
+    assert!(app.wait_for_idle(Duration::from_secs(1)));
     let named_left_pane = app.ui().render_left_pane();
-    assert!(
-        named_left_pane.contains(">oauth redirect handler user-1  working: oauth redirect handler")
-    );
+    assert!(named_left_pane.contains(">oauth-redirect-handler"));
+    assert!(!named_left_pane.contains("oauth redirect handler"));
     assert!(!named_left_pane.contains("working: user-agent"));
 
     app.wait_for_idle(Duration::from_secs(1));
@@ -817,6 +816,26 @@ fn make_executable(path: &std::path::Path) {
 #[cfg(not(unix))]
 fn make_executable(_path: &std::path::Path) {}
 
+fn fake_title_from_title_prompt(prompt: &str) -> String {
+    let first_prompt = prompt
+        .rsplit_once("First prompt:\n")
+        .map(|(_, first_prompt)| first_prompt)
+        .unwrap_or(prompt);
+    if first_prompt.contains("parser combinator") {
+        "parser-combinator".to_string()
+    } else if first_prompt.contains("OAuth redirect handler") {
+        "oauth-redirect-handler".to_string()
+    } else if first_prompt.contains("patch") {
+        "patch".to_string()
+    } else if first_prompt.contains("cursor render") {
+        "cursor-render".to_string()
+    } else if first_prompt.contains("chat history") {
+        "chat-history".to_string()
+    } else {
+        "chat-title".to_string()
+    }
+}
+
 impl FakeBackend {
     fn new<const N: usize>(replies: [&str; N]) -> Self {
         Self::from_replies(replies.into_iter().map(String::from).collect())
@@ -843,6 +862,13 @@ impl FakeBackend {
 
 impl AgentBackend for FakeBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        if request.id.as_str().starts_with("title-") {
+            let mut session = AgentSession::new(request);
+            let title = fake_title_from_title_prompt(&session.messages[0].text);
+            session.push_message(MessageRole::Agent, title);
+            return Ok(session);
+        }
+
         let mut state = self.state.lock().unwrap();
         state.launches.push(request.clone());
         let mut session = AgentSession::new(request);
@@ -865,6 +891,13 @@ impl AgentBackend for FakeBackend {
 
 impl AgentBackend for SlowBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        if request.id.as_str().starts_with("title-") {
+            let mut session = AgentSession::new(request);
+            let title = fake_title_from_title_prompt(&session.messages[0].text);
+            session.push_message(MessageRole::Agent, title);
+            return Ok(session);
+        }
+
         thread::sleep(Duration::from_millis(250));
         let mut session = AgentSession::new(request);
         session.push_message(MessageRole::Agent, "slow launch reply");
@@ -879,6 +912,13 @@ impl AgentBackend for SlowBackend {
 
 impl AgentBackend for StreamingDirectiveBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        if request.id.as_str().starts_with("title-") {
+            let mut session = AgentSession::new(request);
+            let title = fake_title_from_title_prompt(&session.messages[0].text);
+            session.push_message(MessageRole::Agent, title);
+            return Ok(session);
+        }
+
         let mut session = AgentSession::new(request);
         session.push_message(MessageRole::Agent, "@work-leaf read src/lib.rs");
         Ok(session)
@@ -910,6 +950,13 @@ impl AgentBackend for StreamingDirectiveBackend {
 
 impl AgentBackend for ConcurrentChatBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        if request.id.as_str().starts_with("title-") {
+            let mut session = AgentSession::new(request);
+            let title = fake_title_from_title_prompt(&session.messages[0].text);
+            session.push_message(MessageRole::Agent, title);
+            return Ok(session);
+        }
+
         self.state.lock().unwrap().launches += 1;
         let mut session = AgentSession::new(request);
         session.push_message(MessageRole::Agent, "ready");
@@ -933,6 +980,13 @@ impl AgentBackend for ConcurrentChatBackend {
 
 impl AgentBackend for ReviewStreamingBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        if request.id.as_str().starts_with("title-") {
+            let mut session = AgentSession::new(request);
+            let title = fake_title_from_title_prompt(&session.messages[0].text);
+            session.push_message(MessageRole::Agent, title);
+            return Ok(session);
+        }
+
         let mut session = AgentSession::new(request);
         session.push_message(MessageRole::Agent, "NO_FINDINGS");
         Ok(session)

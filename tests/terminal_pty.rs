@@ -44,7 +44,7 @@ fn real_terminal_pty_handles_file_read_left_toggle_and_chat_switching() {
 
     app.send(&[27, 23, b'h', b'k']);
     app.wait_for_frame(Duration::from_secs(2), |frame| {
-        frame.contains(">patch ui user-1")
+        frame.contains(">patch-ui user-1")
             && frame.contains("first follow-up answer after file text")
             && !frame.contains("second launch ready")
     });
@@ -56,7 +56,7 @@ fn real_terminal_pty_handles_file_read_left_toggle_and_chat_switching() {
 
     app.send(b"\x1b[<0;4;3M");
     app.wait_for_frame(Duration::from_secs(2), |frame| {
-        frame.contains(">patch ui user-1")
+        frame.contains(">patch-ui user-1")
             && frame.contains("first follow-up answer after file text")
             && !frame.contains("second launch ready")
     });
@@ -320,6 +320,14 @@ if [ "$seen_resume" = "1" ]; then
   esac
 else
   case "$input" in
+    *"Name this work-leaf chat"*"second"*)
+      printf '%s\n' '{"type":"thread.started","thread_id":"thread-title-second"}'
+      printf '%s\n' '{"type":"item.completed","item":{"id":"title-second","type":"agent_message","text":"second"}}'
+      ;;
+    *"Name this work-leaf chat"*)
+      printf '%s\n' '{"type":"thread.started","thread_id":"thread-title-first"}'
+      printf '%s\n' '{"type":"item.completed","item":{"id":"title-first","type":"agent_message","text":"patch-ui"}}'
+      ;;
     *"second"*)
       printf '%s\n' '{"type":"thread.started","thread_id":"thread-second"}'
       printf '%s\n' '{"type":"item.completed","item":{"id":"second","type":"agent_message","text":"second launch ready"}}'

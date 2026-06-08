@@ -220,7 +220,7 @@ impl PromptPolicy {
             "Use `@work-leaf patch <reason>` followed by a unified diff and `@work-leaf end` to request a write.",
             "Use `@work-leaf locks classify <command>` to ask whether a command writes project files.",
             "Use `@work-leaf send <agent-id> <message>` to route context to another agent.",
-            "The orchestrator validates patches before committing, including repository checks and tests; keep fixing validation diagnostics until the patch validates.",
+            "You are responsible for following the project instructions, including running the repository's required checks before you submit a patch or report work done.",
             "Use `@work-leaf done` when no more orchestrator work is required.",
         ]);
         Self {

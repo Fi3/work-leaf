@@ -347,36 +347,6 @@ where
                             diagnostic,
                         });
                     }
-                    Err(PatchError::ValidationFailed {
-                        files,
-                        command,
-                        diagnostic,
-                    }) => {
-                        let diagnostic =
-                            format!("Validation command `{command}` failed:\n{diagnostic}");
-                        let response = read_requested_files(services.locks, &files)?;
-                        let mut sink = |event| stream(agent_id, event);
-                        let reply = backend.send_streaming(
-                            agent_id,
-                            &render_patch_validation_prompt(
-                                &files,
-                                &command,
-                                &diagnostic,
-                                &response,
-                            ),
-                            &mut sink,
-                        )?;
-                        services
-                            .file_reads
-                            .record_snapshots(agent_id, &response.snapshots);
-                        run.follow_up_replies
-                            .push(follow_up(agent_id.clone(), reply));
-                        run.events.push(OrchestratorEvent::PatchRejected {
-                            agent_id: agent_id.clone(),
-                            files,
-                            diagnostic,
-                        });
-                    }
                     Err(PatchError::NoFiles) => {
                         let mut sink = |event| stream(agent_id, event);
                         let reply = backend.send_streaming(
@@ -754,22 +724,6 @@ fn render_patch_conflict_prompt(
     let mut text = format!(
         "The orchestrator could not apply your patch.\nFiles: {}\n\nGit diagnostic:\n{}\n\nRebase your patch against the fresh file text below and provide a corrected unified diff patch.",
         display_paths(files),
-        diagnostic
-    );
-    append_file_response(&mut text, response);
-    text
-}
-
-fn render_patch_validation_prompt(
-    files: &[PathBuf],
-    command: &str,
-    diagnostic: &str,
-    response: &FileReadResponse,
-) -> String {
-    let mut text = format!(
-        "The orchestrator rejected your patch because repository validation failed.\nFiles: {}\nCommand: {}\n\nDiagnostic:\n{}\n\nRebase your patch against the fresh file text below and provide a corrected unified diff patch.",
-        display_paths(files),
-        command,
         diagnostic
     );
     append_file_response(&mut text, response);

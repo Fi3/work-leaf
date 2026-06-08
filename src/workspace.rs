@@ -1,6 +1,4 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::Path;
-use std::process::{Command, Output};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
@@ -8,15 +6,12 @@ use std::time::{Duration, Instant};
 use crate::agent::{
     AgentBackend, AgentId, AgentKind, AgentLaunch, AgentShutdownHandle, AgentStreamEvent,
 };
-use crate::chat_title::{ChatTitleAgent, chat_title_from_prompt};
+use crate::chat_title::{ChatTitleAgent, fallback_chat_title_from_prompt};
 use crate::cli::{
     CliError, CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
     render_command_chat_help,
 };
-use crate::instructions::{RequiredCheck, load_project_instructions, required_checks};
 use crate::review::{GitHistory, ReviewResult};
-
-const MAX_VALIDATION_FIX_ATTEMPTS: usize = 3;
 
 #[derive(Debug)]
 pub struct WorkLeafController<B>
@@ -31,9 +26,6 @@ where
     sessions: BTreeMap<AgentId, WorkLeafSession>,
     title_agent: ChatTitleAgent,
     pending_events: Vec<WorkLeafEvent>,
-    validation_generation: u64,
-    validation_fix_attempts: BTreeMap<AgentId, usize>,
-    pending_validation_reviews: BTreeSet<AgentId>,
     reviewers: BTreeSet<AgentId>,
     review_commits_in_progress: BTreeMap<AgentId, String>,
     reviewed_agent_commits: BTreeMap<AgentId, String>,
@@ -54,9 +46,6 @@ where
             sessions: BTreeMap::new(),
             title_agent: ChatTitleAgent::new(),
             pending_events: Vec::new(),
-            validation_generation: 0,
-            validation_fix_attempts: BTreeMap::new(),
-            pending_validation_reviews: BTreeSet::new(),
             reviewers: BTreeSet::new(),
             review_commits_in_progress: BTreeMap::new(),
             reviewed_agent_commits: BTreeMap::new(),
@@ -208,7 +197,8 @@ where
             chat.prepare_agent_launch(&args)?
         };
         let agent_id = launch.id.clone();
-        let title = self.launch_title(&launch, title_pending);
+        let title_prompt = self.reserve_launch_title_prompt(&launch, title_pending);
+        let title = launch.feature.clone();
         self.register_agent_feature(agent_id.clone(), title.clone());
         self.add_session(WorkLeafSession {
             id: agent_id.clone(),
@@ -221,6 +211,9 @@ where
         self.pending_events.push(WorkLeafEvent::AgentSelected {
             agent_id: agent_id.clone(),
         });
+        if let Some(first_prompt) = title_prompt {
+            self.start_title_worker(agent_id.clone(), first_prompt);
+        }
         self.start_launch_worker(launch);
         Ok(agent_id)
     }
@@ -230,11 +223,11 @@ where
         if message.is_empty() {
             return Ok(());
         }
-        if let Some(loading) = self
+        if self
             .sessions
             .get(agent_id)
             .and_then(|session| session.loading)
-            && loading != WorkLeafLoading::ValidationFailed
+            .is_some()
         {
             self.append_agent_line(
                 agent_id,
@@ -243,11 +236,14 @@ where
             return Ok(());
         }
 
-        self.name_chat_from_first_prompt(agent_id, message);
+        let title_prompt = self.reserve_first_chat_title_prompt(agent_id, message);
         self.append_agent_line(agent_id, format!("user: {message}"));
         self.set_session_loading(agent_id, Some(WorkLeafLoading::WaitingForReply));
         let agent_id = agent_id.clone();
         let message = message.to_string();
+        if let Some(first_prompt) = title_prompt {
+            self.start_title_worker(agent_id.clone(), first_prompt);
+        }
         self.start_worker(move |mut chat, sender| {
             let stream_sender = sender.clone();
             let display_name = chat.agent_profile().display_name.clone();
@@ -398,8 +394,6 @@ where
             WorkLeafLoading::WaitingForReply => {
                 format!("Waiting for {}", self.agent_display_name())
             }
-            WorkLeafLoading::Validating => "Running required checks".to_string(),
-            WorkLeafLoading::ValidationFailed => "Required checks failed".to_string(),
         }
     }
 
@@ -441,12 +435,16 @@ where
             .is_some_and(|session| session.lines.iter().any(|line| line.contains(needle)))
     }
 
-    fn launch_title(&mut self, launch: &AgentLaunch, title_pending: bool) -> String {
+    fn reserve_launch_title_prompt(
+        &mut self,
+        launch: &AgentLaunch,
+        title_pending: bool,
+    ) -> Option<String> {
         if title_pending {
-            launch.feature.clone()
+            None
         } else {
             self.title_agent.mark_named(&launch.id);
-            chat_title_from_prompt(&launch.prompt)
+            Some(launch.prompt.clone())
         }
     }
 
@@ -456,20 +454,18 @@ where
         }
     }
 
-    fn name_chat_from_first_prompt(&mut self, agent_id: &AgentId, prompt: &str) {
+    fn reserve_first_chat_title_prompt(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+    ) -> Option<String> {
         if !agent_id.as_str().starts_with("user-") {
-            return;
+            return None;
         }
-        let Some(title) = self.title_agent.title_for_first_prompt(agent_id, prompt) else {
-            return;
-        };
-        if let Some(session) = self.sessions.get_mut(agent_id) {
-            session.title = title.clone();
-            self.pending_events.push(WorkLeafEvent::AgentUpdated {
-                session: session.clone(),
-            });
+        if !self.title_agent.reserve_first_prompt_title(agent_id) {
+            return None;
         }
-        self.register_agent_feature(agent_id.clone(), title);
+        Some(prompt.to_string())
     }
 
     fn add_session(&mut self, session: WorkLeafSession) {
@@ -504,6 +500,15 @@ where
                     });
                 }
             }
+        });
+    }
+
+    fn start_title_worker(&mut self, agent_id: AgentId, first_prompt: String) {
+        self.start_worker(move |mut chat, sender| {
+            let title = chat
+                .generate_chat_title(&agent_id, &first_prompt)
+                .unwrap_or_else(|_| fallback_chat_title_from_prompt(&first_prompt));
+            let _ = sender.send(WorkerEvent::TitleGenerated { agent_id, title });
         });
     }
 
@@ -563,78 +568,6 @@ where
         });
     }
 
-    fn start_validation_or_finish(&mut self, agent_id: AgentId, start_review: bool) {
-        if start_review {
-            self.pending_validation_reviews.insert(agent_id.clone());
-        }
-
-        let Some(root) = self
-            .chat
-            .as_ref()
-            .map(|chat| chat.project_dir().to_path_buf())
-        else {
-            self.apply_validation_success(&agent_id, start_review);
-            return;
-        };
-
-        let checks = match project_required_checks(&root) {
-            Ok(checks) if checks.is_empty() => {
-                self.apply_validation_success(&agent_id, start_review);
-                return;
-            }
-            Ok(checks) => checks,
-            Err(message) => {
-                self.apply_validation_failure(&agent_id, message);
-                return;
-            }
-        };
-
-        self.validation_generation = self.validation_generation.saturating_add(1);
-        let generation = self.validation_generation;
-        self.set_session_loading(&agent_id, Some(WorkLeafLoading::Validating));
-        let (sender, receiver) = mpsc::channel();
-        let validation_agent_id = agent_id.clone();
-        let handle = thread::spawn(move || {
-            let result = run_required_checks(&root, &checks);
-            let _ = sender.send(WorkerEvent::ValidationComplete {
-                agent_id: validation_agent_id,
-                generation,
-                start_review,
-                result,
-            });
-        });
-        self.workers.push(Worker { receiver, handle });
-    }
-
-    fn start_validation_fix_worker(&mut self, agent_id: AgentId, message: String) {
-        self.set_session_loading(&agent_id, Some(WorkLeafLoading::WaitingForReply));
-        let prompt = render_required_check_failure_prompt(&message);
-        self.start_worker(move |mut chat, sender| {
-            let stream_sender = sender.clone();
-            let display_name = chat.agent_profile().display_name.clone();
-            let mut stream = move |event_agent_id: &AgentId, event| {
-                let _ = stream_sender.send(WorkerEvent::Stream {
-                    agent_id: event_agent_id.clone(),
-                    text: stream_event_text(event, &display_name),
-                });
-            };
-            match chat.send_to_agent_streaming_with_ids(&agent_id, &prompt, &mut stream) {
-                Ok(result) => {
-                    let _ = sender.send(WorkerEvent::Complete {
-                        agent_id: Some(agent_id),
-                        result,
-                    });
-                }
-                Err(error) => {
-                    let _ = sender.send(WorkerEvent::Error {
-                        agent_id: Some(agent_id),
-                        message: command_chat_error_text(&error),
-                    });
-                }
-            }
-        });
-    }
-
     fn start_worker<F>(&mut self, operation: F)
     where
         F: FnOnce(CommandChat<B>, Sender<WorkerEvent>) + Send + 'static,
@@ -652,11 +585,18 @@ where
             WorkerEvent::Stream { agent_id, text } => {
                 self.append_agent_line(&agent_id, text);
             }
+            WorkerEvent::TitleGenerated { agent_id, title } => {
+                self.apply_agent_title(&agent_id, title);
+            }
             WorkerEvent::Complete { agent_id, result } => {
                 if let Some(agent_id) = agent_id {
                     self.apply_agent_result(&agent_id, &result);
                     let start_review = should_start_review(&agent_id, &result);
-                    self.start_validation_or_finish(agent_id, start_review);
+                    self.set_session_loading(&agent_id, None);
+                    if start_review && let Err(error) = self.start_review_for_patch_agent(&agent_id)
+                    {
+                        self.push_command_line(command_chat_error_text(&error));
+                    }
                 } else {
                     self.push_command_line(command_result_text(&result));
                     if matches!(result, CommandChatResult::Quit) {
@@ -667,7 +607,7 @@ where
             WorkerEvent::Error { agent_id, message } => {
                 if let Some(agent_id) = agent_id {
                     self.append_agent_line(&agent_id, message);
-                    self.start_validation_or_finish(agent_id, false);
+                    self.set_session_loading(&agent_id, None);
                 } else {
                     self.push_command_line(message);
                 }
@@ -679,82 +619,8 @@ where
             } => {
                 self.review_commits_in_progress.remove(&reviewed_agent_id);
                 self.append_agent_line(&reviewer_id, message);
-                self.start_validation_or_finish(reviewer_id, false);
+                self.set_session_loading(&reviewer_id, None);
             }
-            WorkerEvent::ValidationComplete {
-                agent_id,
-                generation,
-                start_review,
-                result,
-            } => {
-                if generation != self.validation_generation {
-                    return;
-                }
-                match result {
-                    Ok(()) => self.apply_validation_success(&agent_id, start_review),
-                    Err(message) => self.apply_validation_failure(&agent_id, message),
-                }
-            }
-        }
-    }
-
-    fn apply_validation_success(&mut self, agent_id: &AgentId, start_review: bool) {
-        self.validation_fix_attempts.remove(agent_id);
-        let start_review = start_review || self.pending_validation_reviews.remove(agent_id);
-        self.set_session_loading(agent_id, None);
-        self.clear_workspace_validation_status();
-        if start_review && let Err(error) = self.start_review_for_patch_agent(agent_id) {
-            self.push_command_line(command_chat_error_text(&error));
-        }
-    }
-
-    fn apply_validation_failure(&mut self, agent_id: &AgentId, message: String) {
-        self.append_agent_line(
-            agent_id,
-            format!("work-leaf: required check failed\n{message}"),
-        );
-        self.mark_workspace_validation_failed();
-        let attempts = self
-            .validation_fix_attempts
-            .entry(agent_id.clone())
-            .and_modify(|attempts| *attempts += 1)
-            .or_insert(1);
-        if *attempts <= MAX_VALIDATION_FIX_ATTEMPTS {
-            self.start_validation_fix_worker(agent_id.clone(), message);
-        }
-    }
-
-    fn clear_workspace_validation_status(&mut self) {
-        let mut updated = Vec::new();
-        for session in self.sessions.values_mut() {
-            if matches!(
-                session.loading,
-                Some(WorkLeafLoading::Validating | WorkLeafLoading::ValidationFailed)
-            ) {
-                session.loading = None;
-                updated.push(session.clone());
-            }
-        }
-        for session in updated {
-            self.pending_events
-                .push(WorkLeafEvent::AgentUpdated { session });
-        }
-    }
-
-    fn mark_workspace_validation_failed(&mut self) {
-        let mut updated = Vec::new();
-        for session in self.sessions.values_mut() {
-            if matches!(
-                session.loading,
-                None | Some(WorkLeafLoading::Validating) | Some(WorkLeafLoading::ValidationFailed)
-            ) {
-                session.loading = Some(WorkLeafLoading::ValidationFailed);
-                updated.push(session.clone());
-            }
-        }
-        for session in updated {
-            self.pending_events
-                .push(WorkLeafEvent::AgentUpdated { session });
         }
     }
 
@@ -778,6 +644,17 @@ where
                 self.push_command_line(command_result_text(other));
             }
         }
+    }
+
+    fn apply_agent_title(&mut self, agent_id: &AgentId, title: String) {
+        if let Some(session) = self.sessions.get_mut(agent_id) {
+            session.title = title.clone();
+            session.feature = title.clone();
+            self.pending_events.push(WorkLeafEvent::AgentUpdated {
+                session: session.clone(),
+            });
+        }
+        self.register_agent_feature(agent_id.clone(), title);
     }
 
     fn append_agent_line(&mut self, agent_id: &AgentId, line: String) {
@@ -891,47 +768,6 @@ fn contains_patch_directive(text: &str) -> bool {
         .any(|line| line.trim_start().starts_with("@work-leaf patch "))
 }
 
-fn project_required_checks(root: &Path) -> Result<Vec<RequiredCheck>, String> {
-    let instructions = load_project_instructions(root).map_err(|error| error.to_string())?;
-    Ok(required_checks(&instructions))
-}
-
-fn run_required_checks(root: &Path, checks: &[RequiredCheck]) -> Result<(), String> {
-    for check in checks {
-        let output = Command::new(check.program())
-            .current_dir(root)
-            .args(check.args())
-            .output()
-            .map_err(|error| {
-                format!(
-                    "Validation command `{}` failed to start: {error}",
-                    check.command_line()
-                )
-            })?;
-        if !output.status.success() {
-            return Err(format!(
-                "Validation command `{}` failed:\n{}",
-                check.command_line(),
-                command_output_text(&output)
-            ));
-        }
-    }
-    Ok(())
-}
-
-fn render_required_check_failure_prompt(message: &str) -> String {
-    format!(
-        "The project required checks failed after your last response.\n\n{message}\n\nFix the repository through the @work-leaf patch flow. Do not report the work complete until the required checks pass."
-    )
-}
-
-fn command_output_text(output: &Output) -> String {
-    let mut text = String::new();
-    text.push_str(&String::from_utf8_lossy(&output.stdout));
-    text.push_str(&String::from_utf8_lossy(&output.stderr));
-    text.trim().to_string()
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct WorkLeafSnapshot {
     pub command_transcript: Vec<String>,
@@ -971,8 +807,6 @@ impl WorkLeafSession {
 pub enum WorkLeafLoading {
     Launching,
     WaitingForReply,
-    Validating,
-    ValidationFailed,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -997,6 +831,10 @@ enum WorkerEvent {
         agent_id: AgentId,
         text: String,
     },
+    TitleGenerated {
+        agent_id: AgentId,
+        title: String,
+    },
     Complete {
         agent_id: Option<AgentId>,
         result: CommandChatResult,
@@ -1009,12 +847,6 @@ enum WorkerEvent {
         reviewer_id: AgentId,
         reviewed_agent_id: AgentId,
         message: String,
-    },
-    ValidationComplete {
-        agent_id: AgentId,
-        generation: u64,
-        start_review: bool,
-        result: Result<(), String>,
     },
 }
 

@@ -63,7 +63,7 @@ frontend wraps that same command-chat state in `WorkLeafController<B>` through
 - `PromptPolicy` injects project instructions and worktree access rules into agent prompts.
 - `ReadPermission` selects whether prompts require orchestrator-mediated reads or allow direct
   filesystem reads while keeping writes mediated by patches.
-- `AgentError` is the shared error type for launch, send, prompt policy, and validation failures.
+- `AgentError` is the shared error type for launch, send, and prompt policy failures.
 
 `src/agent.rs` also re-exports `AgentBackend`, `AgentStreamEvent`, and `AgentShutdownHandle` from
 `src/agent_runtime.rs`, so callers can import all provider-neutral agent interfaces from
@@ -153,23 +153,22 @@ application state and hides worker management from frontend adapters.
 The controller owns:
 
 - session selection and session snapshots,
-- per-session loading and required-check validation state,
-- prompt-derived chat titles through `src/chat_title.rs::ChatTitleAgent`,
+- per-session loading state,
+- LLM-generated chat titles through hidden `title-<agent-id>` backend launches, with
+  `src/chat_title.rs::ChatTitleAgent` tracking first-prompt naming state,
 - command transcripts,
 - background launch/send/review workers,
-- background required-check validation workers,
 - stream routing from `AgentStreamEvent` into the selected session,
 - review startup, automatic per-patch-agent review routing, reviewer-session creation, and
   reviewed-commit bookkeeping,
 - shutdown propagation to running agents.
 
-When an agent worker finishes, the controller runs the commands listed in the project instruction
-files' `Required Checks` sections before clearing the session loading state. A session is renderable
-as ready only after those checks pass. Failed required checks keep idle sessions in a validation
-failed state, append the failing command output to the agent chat, and send the failure back to the
-agent as a repair prompt through the normal patch flow. The controller does not infer validation
-commands from repository language or build files; repositories define their own required checks in
-their instruction files.
+When an agent worker finishes, the controller records the agent output and clears that session's
+loading state. If a user-agent response contains a patch directive, the controller starts review for
+the patch agent after the patch workflow records the provisional commit. The controller does not run
+repository build, test, or required-check commands. `PromptPolicy` injects project instruction files
+into agent prompts, and the active backend agent is responsible for following those instructions
+before submitting patches or reporting work done.
 
 The command transcript is also the conversation history for the persistent `command-agent`. That
 system agent interprets chat sent to the Work Leaf command surface. It recognizes literal command
@@ -193,13 +192,12 @@ Frontend code should use these methods:
 
 The controller exposes renderable state through:
 
-- `WorkLeafSnapshot`, which contains selected session id, sessions, transcript, and global loading.
-- `WorkLeafSession`, which contains agent id, kind, feature/title, messages, loading state, ready
-  state, and modified files.
-- `WorkLeafEvent`, which reports session creation, selection, title changes, streamed lines,
-  transcript lines, readiness, and errors.
-- `WorkLeafLoading`, which distinguishes launch, send, required-check validation, and validation
-  failure states.
+- `WorkLeafSnapshot`, which contains the command transcript and sessions.
+- `WorkLeafSession`, which contains agent id, kind, feature/title, transcript lines, and loading
+  state.
+- `WorkLeafEvent`, which reports session creation, session updates, streamed lines, selection
+  changes, transcript lines, and quit requests.
+- `WorkLeafLoading`, which distinguishes launch and waiting-for-reply states.
 
 New UIs should consume `WorkLeafController` and these DTOs. They should not duplicate worker
 spawning, session naming, review lookup, loading bookkeeping, or orchestrator event routing.
@@ -216,8 +214,8 @@ mode sends chat text to the selected agent session, or to `command-agent` when t
 surface is selected. Bracketed-paste newlines and Shift+Enter are chat prompt line breaks. A plain
 Enter submits the buffered chat text.
 
-The terminal app maps a session to a left-pane `READY` marker only when the controller exposes no
-loading or validation-failure state for that session.
+The terminal app maps a session to a left-pane `READY` marker when the controller exposes no loading
+state for that session.
 
 `src/ui.rs::TerminalUi` owns terminal-specific presentation state:
 
@@ -246,10 +244,10 @@ Its public output is `OrchestratorEvent`.
 shell commands as read-only or write-intent operations. File paths are normalized relative to the
 project root and cannot escape that root.
 
-`src/patch.rs::GitPatcher` validates and applies unified diffs under write locks, runs required
-checks, and creates metadata commits for accepted patches. `PatchCoordinator<B>` connects patch
-validation failures and outcomes back to the active agent backend. `PatchRequest`, `PatchOutcome`,
-and `PatchError` are the public patch workflow types.
+`src/patch.rs::GitPatcher` validates and applies unified diffs under write locks and creates
+metadata commits for accepted patches. `PatchCoordinator<B>` connects patch conflicts and malformed
+patch diagnostics back to the active agent backend. `PatchRequest`, `PatchOutcome`, and `PatchError`
+are the public patch workflow types.
 
 `src/review.rs::GitHistory` reads latest agent commits from repository history.
 `ReviewCoordinator<B>` launches reviewer agents against those commits and loops until the reviewer
@@ -258,19 +256,20 @@ reviewer `@work-leaf` directives, such as file reads, before interpreting review
 findings. `CommandChat` and `WorkLeafController` keep a stable `review-<agent-id>` reviewer identity
 for each patch agent and skip latest agent commits that have already completed review. `AgentCommit`,
 `ReviewResult`, and `ReviewError` are the public review workflow types.
-`WorkLeafController` scopes automatic review after patch validation to the patch agent that produced
-the validated commit; explicit review commands use the history-wide latest-commit lookup.
+`WorkLeafController` scopes automatic review after patch application to the patch agent that
+produced the provisional commit; explicit review commands use the history-wide latest-commit lookup.
 
 `src/linearize.rs::LinearizePlanner<B>` prepares linearization questions and launches a linearizer
 agent with decisions, groups, and required tests. `LinearizeAction`, `LinearizeGroup`,
 `LinearizePlan`, `LinearizeQuestion`, `LinearizeHandoff`, and `LinearizeError` are the public
 linearization workflow types.
 
-`src/instructions.rs` is crate-private. It loads project instruction files, extracts required checks
-from `AGENTS.md`-style files, and supplies validation checks used by patching.
+`src/instructions.rs` is crate-private. It loads project instruction files used by `PromptPolicy`
+for agent launch prompts.
 
-`src/chat_title.rs` is crate-private. It derives stable session titles from the first prompt and
-tracks which sessions have already been named.
+`src/chat_title.rs` is crate-private. It builds the prompt used for hidden chat-title backend
+launches, sanitizes title replies to lowercase hyphenated names capped at 80 characters, provides a
+first-prompt fallback, and tracks which sessions have already requested a generated title.
 
 ## Extension Rules
 

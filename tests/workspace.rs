@@ -27,12 +27,13 @@ fn controller_exposes_ui_neutral_events_and_snapshot_without_terminal_ui() {
     }));
     let starting = controller.snapshot();
     let session = starting.session(&agent_id).expect("session exists");
-    assert_eq!(session.title, "parser combinator");
+    assert_eq!(session.title, "user-agent");
     assert_eq!(session.loading, Some(WorkLeafLoading::Launching));
 
     assert!(controller.wait_for_idle(Duration::from_secs(1)));
     let ready = controller.snapshot();
     let session = ready.session(&agent_id).expect("session exists");
+    assert_eq!(session.title, "parser-combinator");
     assert_eq!(session.loading, None);
     assert!(session.lines.iter().any(|line| line == "launch reply"));
 
@@ -42,6 +43,30 @@ fn controller_exposes_ui_neutral_events_and_snapshot_without_terminal_ui() {
     let session = replied.session(&agent_id).expect("session exists");
     assert!(session.lines.iter().any(|line| line == "user: continue"));
     assert!(session.lines.iter().any(|line| line == "follow reply"));
+}
+
+#[test]
+fn controller_uses_backend_agent_to_name_chat_from_first_prompt() {
+    let backend = FakeBackend::new(["launch reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller
+        .create_agent("please fix login callback")
+        .unwrap();
+
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    let snapshot = controller.snapshot();
+    let session = snapshot.session(&agent_id).expect("session exists");
+    assert_eq!(session.title, "oauth-redirect-handler");
+    assert!(session.lines.iter().any(|line| line == "launch reply"));
+
+    let launches = backend.launches();
+    assert!(launches.iter().any(|launch| {
+        launch.id.as_str() == "title-user-1"
+            && launch.feature == "chat-title"
+            && launch.prompt.contains("please fix login callback")
+    }));
 }
 
 #[test]
@@ -287,8 +312,8 @@ fn controller_auto_review_ignores_historical_agents_outside_current_patch_agent(
 }
 
 #[test]
-fn controller_sends_required_check_failures_back_to_agent_until_checks_pass() {
-    let root = git_repo("workspace-validation-failure-feedback");
+fn controller_does_not_run_project_required_checks_after_agent_reply() {
+    let root = git_repo("workspace-no-required-check-run");
     fs::write(
         root.join("AGENTS.md"),
         "## Required Checks\n- `sh check.sh`\n",
@@ -296,45 +321,30 @@ fn controller_sends_required_check_failures_back_to_agent_until_checks_pass() {
     .unwrap();
     fs::write(
         root.join("check.sh"),
-        "#!/bin/sh\nif grep -q '^good$' state.txt; then exit 0; fi\necho state is bad\nexit 1\n",
+        "#!/bin/sh\necho state is bad\nexit 1\n",
     )
     .unwrap();
     fs::write(root.join("state.txt"), "bad\n").unwrap();
     git(&root, ["add", "."]);
-    git(&root, ["commit", "-m", "ADD validation fixture"]);
-    let backend = FakeBackend::new([
-        "launch reply",
-        "fixed required check\n@work-leaf patch fix state\n--- a/state.txt\n+++ b/state.txt\n@@ -1 +1 @@\n-bad\n+good\n@work-leaf end\n@work-leaf done",
-        "summary: state changes from bad to good",
-        "NO_FINDINGS",
-    ]);
+    git(&root, ["commit", "-m", "ADD project instruction fixture"]);
+    let backend = FakeBackend::new(["launch reply"]);
     let chat = CommandChat::new(root.clone(), backend.clone());
     let mut controller = WorkLeafController::new(chat);
 
-    let agent_id = controller.create_agent("fix required checks").unwrap();
+    let agent_id = controller.create_agent("inspect required checks").unwrap();
 
     assert!(controller.wait_for_idle(Duration::from_secs(2)));
-    assert_eq!(
-        fs::read_to_string(root.join("state.txt")).unwrap(),
-        "good\n"
-    );
+    assert_eq!(fs::read_to_string(root.join("state.txt")).unwrap(), "bad\n");
     let snapshot = controller.snapshot();
     let session = snapshot.session(&agent_id).expect("session exists");
     assert_eq!(session.loading, None);
     assert!(
-        session
+        !session
             .lines
             .iter()
             .any(|line| line.contains("required check failed"))
     );
-
-    let sends = backend.sends();
-    assert!(sends.iter().any(|(target, prompt)| {
-        target == &agent_id
-            && prompt.contains("project required checks failed")
-            && prompt.contains("state is bad")
-            && prompt.contains("@work-leaf patch flow")
-    }));
+    assert!(backend.sends().is_empty());
 }
 
 #[test]
@@ -413,13 +423,22 @@ impl FakeBackend {
             .pop_front()
             .expect("missing fake reply")
     }
+
+    fn title_reply(&self, prompt: &str) -> String {
+        fake_title_from_title_prompt(prompt)
+    }
 }
 
 impl AgentBackend for FakeBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
         self.state.lock().unwrap().launches.push(request.clone());
         let mut session = AgentSession::new(request);
-        session.push_message(MessageRole::Agent, self.next_reply());
+        let reply = if session.id.as_str().starts_with("title-") {
+            self.title_reply(&session.messages[0].text)
+        } else {
+            self.next_reply()
+        };
+        session.push_message(MessageRole::Agent, reply);
         Ok(session)
     }
 
@@ -471,4 +490,20 @@ fn git<const N: usize>(root: &Path, args: [&str; N]) {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+}
+
+fn fake_title_from_title_prompt(prompt: &str) -> String {
+    let first_prompt = prompt
+        .rsplit_once("First prompt:\n")
+        .map(|(_, first_prompt)| first_prompt)
+        .unwrap_or(prompt);
+    if first_prompt.contains("parser combinator") {
+        "parser-combinator".to_string()
+    } else if first_prompt.contains("login callback")
+        || first_prompt.contains("OAuth redirect handler")
+    {
+        "oauth-redirect-handler".to_string()
+    } else {
+        "chat-title".to_string()
+    }
 }

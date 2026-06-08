@@ -167,96 +167,58 @@ Here is the patch:
 }
 
 #[test]
-fn patcher_rejects_patch_when_required_check_fails_and_does_not_commit() {
-    let root = git_repo("patch-validation-fails");
-    fs::create_dir_all(root.join("src")).unwrap();
-    fs::write(
-        root.join("Cargo.toml"),
-        "[package]\nname = \"patch-validation-fails\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
-    )
-    .unwrap();
-    let target_dir = std::env::temp_dir().join(format!(
-        "work-leaf-patch-validation-target-{}",
-        std::process::id()
-    ));
+fn patcher_applies_patch_without_running_project_required_checks() {
+    let root = git_repo("patch-no-required-check-run");
+    fs::write(root.join("README.md"), "actual\n").unwrap();
     fs::write(
         root.join("AGENTS.md"),
-        format!(
-            "## Required Checks\n1. `cargo check --locked --target-dir {}`\n",
-            target_dir.display()
-        ),
+        "## Required Checks\n1. `sh validate.sh`\n",
     )
     .unwrap();
-    fs::write(root.join("src/lib.rs"), "pub fn value() -> u8 { 1 }\n").unwrap();
-    let lockfile = Command::new("cargo")
-        .current_dir(&root)
-        .args(["generate-lockfile"])
-        .output()
-        .unwrap();
-    assert!(
-        lockfile.status.success(),
-        "cargo generate-lockfile failed: {}\n{}",
-        String::from_utf8_lossy(&lockfile.stdout),
-        String::from_utf8_lossy(&lockfile.stderr)
-    );
+    fs::write(
+        root.join("validate.sh"),
+        "echo validation failed from fixture >&2\nexit 1\n",
+    )
+    .unwrap();
     git(&root, ["add", "."]);
-    git(&root, ["commit", "-m", "ADD initial rust fixture"]);
+    git(&root, ["commit", "-m", "ADD initial validation fixture"]);
 
     let patcher = GitPatcher::new(root.clone(), FileLockTable::new(root.clone()));
-    let error = patcher
+    let outcome = patcher
         .apply(PatchRequest::new(
             AgentId::new("chat-3").unwrap(),
-            "parser",
-            "add a broken function",
+            "docs",
+            "update readme after the agent handled checks",
             "\
-diff --git a/src/lib.rs b/src/lib.rs
---- a/src/lib.rs
-+++ b/src/lib.rs
-@@ -1 +1,2 @@
- pub fn value() -> u8 { 1 }
-+pub fn broken(
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-actual
++changed
 ",
         ))
-        .unwrap_err();
+        .unwrap();
 
-    match error {
-        PatchError::ValidationFailed {
-            files,
-            command,
-            diagnostic,
-        } => {
-            assert_eq!(files, vec![PathBuf::from("src/lib.rs")]);
-            assert!(command.starts_with("cargo check --locked --target-dir "));
-            assert!(diagnostic.contains("error"));
-        }
-        other => panic!("unexpected error: {other:?}"),
-    }
+    assert_eq!(outcome.files, vec![PathBuf::from("README.md")]);
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "changed\n"
+    );
     assert_eq!(
         git_output(&root, ["log", "-1", "--pretty=%s"]),
-        "ADD initial rust fixture"
+        "UPDATE apply docs patch from chat-3"
     );
     assert!(git_output(&root, ["status", "--short", "--untracked-files=no"]).is_empty());
 }
 
 #[test]
-fn patcher_does_not_run_undeclared_cargo_test_for_rust_projects() {
-    let root = git_repo("patch-no-undeclared-cargo-test");
+fn patcher_does_not_run_language_specific_fallback_checks() {
+    let root = git_repo("patch-no-language-fallback-check");
     fs::create_dir_all(root.join("src")).unwrap();
     fs::write(
         root.join("Cargo.toml"),
-        "[package]\nname = \"patch-no-undeclared-cargo-test\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
-    )
-    .unwrap();
-    let target_dir = std::env::temp_dir().join(format!(
-        "work-leaf-patch-forced-check-target-{}",
-        std::process::id()
-    ));
-    fs::write(
-        root.join("AGENTS.md"),
-        format!(
-            "## Required Checks\n1. `cargo check --locked --target-dir {}`\n",
-            target_dir.display()
-        ),
+        "[package]\nname = \"patch-no-language-fallback-check\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
     )
     .unwrap();
     fs::write(
@@ -274,17 +236,6 @@ mod tests {
 ",
     )
     .unwrap();
-    let lockfile = Command::new("cargo")
-        .current_dir(&root)
-        .args(["generate-lockfile"])
-        .output()
-        .unwrap();
-    assert!(
-        lockfile.status.success(),
-        "cargo generate-lockfile failed: {}\n{}",
-        String::from_utf8_lossy(&lockfile.stdout),
-        String::from_utf8_lossy(&lockfile.stderr)
-    );
     git(&root, ["add", "."]);
     git(&root, ["commit", "-m", "ADD initial rust test fixture"]);
 
@@ -365,8 +316,8 @@ diff --git a/README.md b/README.md
 }
 
 #[test]
-fn patch_coordinator_sends_validation_diagnostics_back_to_agent() {
-    let root = git_repo("patch-validation-feedback");
+fn patch_coordinator_applies_patch_without_running_project_required_checks() {
+    let root = git_repo("patch-coordinator-no-required-check-run");
     fs::write(root.join("README.md"), "actual\n").unwrap();
     fs::write(
         root.join("AGENTS.md"),
@@ -384,7 +335,7 @@ fn patch_coordinator_sends_validation_diagnostics_back_to_agent() {
     let patcher = GitPatcher::new(root.clone(), FileLockTable::new(root.clone()));
     let backend = FakeBackend::default();
     let mut coordinator = PatchCoordinator::new(patcher, backend);
-    let error = coordinator
+    let outcome = coordinator
         .submit(PatchRequest::new(
             AgentId::new("chat-4").unwrap(),
             "docs",
@@ -398,22 +349,18 @@ diff --git a/README.md b/README.md
 +changed
 ",
         ))
-        .unwrap_err();
+        .unwrap();
     let backend = coordinator.into_backend();
 
-    assert!(matches!(error, PatchError::ValidationFailed { .. }));
-    assert_eq!(backend.sends.len(), 1);
-    assert_eq!(backend.sends[0].0.as_str(), "chat-4");
-    assert!(backend.sends[0].1.contains("repository validation failed"));
-    assert!(backend.sends[0].1.contains("sh validate.sh"));
-    assert!(
-        backend.sends[0]
-            .1
-            .contains("validation failed from fixture")
+    assert_eq!(outcome.files, vec![PathBuf::from("README.md")]);
+    assert!(backend.sends.is_empty());
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "changed\n"
     );
     assert_eq!(
         git_output(&root, ["log", "-1", "--pretty=%s"]),
-        "ADD initial validation fixture"
+        "UPDATE apply docs patch from chat-4"
     );
     assert!(git_output(&root, ["status", "--short", "--untracked-files=no"]).is_empty());
 }

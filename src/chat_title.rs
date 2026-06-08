@@ -16,89 +16,99 @@ impl ChatTitleAgent {
         self.named_agents.insert(agent_id.clone());
     }
 
-    pub(crate) fn title_for_first_prompt(
-        &mut self,
-        agent_id: &AgentId,
-        prompt: &str,
-    ) -> Option<String> {
+    pub(crate) fn reserve_first_prompt_title(&mut self, agent_id: &AgentId) -> bool {
         if self.named_agents.contains(agent_id) {
-            return None;
+            return false;
         }
         self.named_agents.insert(agent_id.clone());
-        Some(chat_title_from_prompt(prompt))
+        true
     }
 }
 
-pub(crate) fn chat_title_from_prompt(prompt: &str) -> String {
-    const STOP_WORDS: &[&str] = &[
-        "a",
-        "an",
-        "and",
-        "as",
-        "build",
-        "create",
-        "fix",
-        "for",
-        "implement",
-        "please",
-        "the",
-        "to",
-        "update",
-        "with",
-    ];
-
-    let meaningful = collect_title_words(
-        normalized_prompt_words(prompt).filter(|word| !STOP_WORDS.contains(&word.as_str())),
-    );
-    if !meaningful.is_empty() {
-        return meaningful.join(" ");
-    }
-
-    let fallback = collect_title_words(normalized_prompt_words(prompt));
-    if fallback.is_empty() {
-        "chat".to_string()
-    } else {
-        fallback.join(" ")
-    }
+pub(crate) fn chat_title_prompt(first_prompt: &str) -> String {
+    format!(
+        "Name this work-leaf chat from the user's first prompt.\n\
+Rules:\n\
+- Return only the chat name, no prose and no quotes.\n\
+- Derive the name from the first prompt only.\n\
+- Use at most 80 characters.\n\
+- Use lowercase words separated by hyphens.\n\
+- Do not use spaces.\n\n\
+First prompt:\n{first_prompt}"
+    )
 }
 
-fn normalized_prompt_words(prompt: &str) -> impl Iterator<Item = String> + '_ {
-    prompt
-        .split_whitespace()
-        .map(|word| {
-            word.trim_matches(|ch: char| !ch.is_ascii_alphanumeric() && ch != '-' && ch != '_')
-                .to_ascii_lowercase()
-        })
-        .filter(|word| !word.is_empty())
+pub(crate) fn chat_title_from_llm_reply(reply: &str, first_prompt: &str) -> String {
+    sanitized_chat_title(reply).unwrap_or_else(|| fallback_chat_title_from_prompt(first_prompt))
 }
 
-fn collect_title_words(words: impl Iterator<Item = String>) -> Vec<String> {
-    const MAX_TITLE_CHARS: usize = 32;
-    const MAX_TITLE_WORDS: usize = 4;
+pub(crate) fn fallback_chat_title_from_prompt(first_prompt: &str) -> String {
+    sanitized_chat_title(first_prompt).unwrap_or_else(|| "chat".to_string())
+}
 
-    let mut title_words = Vec::new();
-    let mut title_len = 0;
+fn sanitized_chat_title(raw: &str) -> Option<String> {
+    const MAX_TITLE_CHARS: usize = 80;
 
-    for word in words {
-        let next_len = if title_words.is_empty() {
-            word.len()
-        } else {
-            title_len + 1 + word.len()
-        };
+    let mut title = String::new();
+    let mut pending_separator = false;
 
-        if next_len > MAX_TITLE_CHARS {
-            if title_words.is_empty() {
-                title_words.push(word.chars().take(MAX_TITLE_CHARS).collect());
+    for ch in raw.chars() {
+        if ch.is_ascii_alphanumeric() {
+            if pending_separator && !title.is_empty() && title.len() < MAX_TITLE_CHARS {
+                title.push('-');
             }
-            continue;
-        }
-
-        title_len = next_len;
-        title_words.push(word);
-        if title_words.len() == MAX_TITLE_WORDS {
-            break;
+            pending_separator = false;
+            if title.len() == MAX_TITLE_CHARS {
+                break;
+            }
+            title.push(ch.to_ascii_lowercase());
+        } else {
+            pending_separator = true;
         }
     }
 
-    title_words
+    while title.ends_with('-') {
+        title.pop();
+    }
+
+    if title.is_empty() { None } else { Some(title) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{chat_title_from_llm_reply, fallback_chat_title_from_prompt};
+
+    #[test]
+    fn llm_title_reply_is_sanitized_to_kebab_case_with_eighty_character_limit() {
+        let title = chat_title_from_llm_reply(
+            "OAuth Redirect Handler With Cookie Coverage And Callback Retry Audit Trail",
+            "fallback prompt",
+        );
+
+        assert_eq!(
+            title,
+            "oauth-redirect-handler-with-cookie-coverage-and-callback-retry-audit-trail"
+        );
+        assert!(title.len() <= 80);
+        assert!(!title.contains(' '));
+    }
+
+    #[test]
+    fn empty_llm_title_falls_back_to_first_prompt() {
+        assert_eq!(
+            chat_title_from_llm_reply("!!!", "Please fix the OAuth redirect handler"),
+            "please-fix-the-oauth-redirect-handler"
+        );
+    }
+
+    #[test]
+    fn fallback_title_uses_first_prompt_and_caps_long_names() {
+        let title = fallback_chat_title_from_prompt(
+            "implement a very long migration workflow with retries telemetry audit trail and rollback support",
+        );
+
+        assert!(title.len() <= 80);
+        assert!(!title.contains(' '));
+        assert!(title.starts_with("implement-a-very-long"));
+    }
 }
