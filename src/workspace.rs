@@ -29,6 +29,7 @@ where
     reviewers: BTreeSet<AgentId>,
     review_commits_in_progress: BTreeMap<AgentId, String>,
     reviewed_agent_commits: BTreeMap<AgentId, String>,
+    agent_review_baselines: BTreeMap<AgentId, String>,
 }
 
 impl<B> WorkLeafController<B>
@@ -49,6 +50,7 @@ where
             reviewers: BTreeSet::new(),
             review_commits_in_progress: BTreeMap::new(),
             reviewed_agent_commits: BTreeMap::new(),
+            agent_review_baselines: BTreeMap::new(),
         }
     }
 
@@ -215,6 +217,7 @@ where
             chat.prepare_agent_launch(&args)?
         };
         let agent_id = launch.id.clone();
+        self.remember_agent_review_baseline(&agent_id);
         let title_prompt = self.reserve_launch_title_prompt(&launch, title_pending);
         let title = launch.feature.clone();
         self.register_agent_feature(agent_id.clone(), title.clone());
@@ -314,7 +317,14 @@ where
                 chat.agent_profile().clone(),
             )
         };
-        let commits = GitHistory::new(project_dir).latest_agent_commits()?;
+        let empty_baselines = BTreeMap::new();
+        let agent_baselines = if target_agent_id.is_some() {
+            &self.agent_review_baselines
+        } else {
+            &empty_baselines
+        };
+        let commits = GitHistory::new(project_dir)
+            .latest_agent_review_commits(&self.reviewed_agent_commits, agent_baselines)?;
         if commits.is_empty() {
             self.push_command_line("no agent commits found".to_string());
             return Ok(Vec::new());
@@ -484,6 +494,24 @@ where
             return None;
         }
         Some(prompt.to_string())
+    }
+
+    fn remember_agent_review_baseline(&mut self, agent_id: &AgentId) {
+        if !agent_id.as_str().starts_with("user-")
+            || self.agent_review_baselines.contains_key(agent_id)
+        {
+            return;
+        }
+        let Some(root) = self
+            .chat
+            .as_ref()
+            .map(|chat| chat.project_dir().to_path_buf())
+        else {
+            return;
+        };
+        if let Ok(Some(hash)) = GitHistory::new(root).head_hash() {
+            self.agent_review_baselines.insert(agent_id.clone(), hash);
+        }
     }
 
     fn add_session(&mut self, session: WorkLeafSession) {
@@ -700,9 +728,11 @@ where
     fn record_review_result(&mut self, review: &ReviewResult) {
         self.review_commits_in_progress.remove(&review.agent_id);
         let latest_commit = self
-            .latest_agent_commit(&review.agent_id)
+            .latest_agent_review_commit(&review.agent_id)
             .unwrap_or_else(|| review.commit.clone());
         self.reviewed_agent_commits
+            .insert(review.agent_id.clone(), latest_commit.hash.clone());
+        self.agent_review_baselines
             .insert(review.agent_id.clone(), latest_commit.hash.clone());
         if let Some(chat) = self.chat.as_mut() {
             chat.mark_reviewed_agent_commit(latest_commit);
@@ -710,16 +740,19 @@ where
         self.reviewers.insert(review.reviewer_id.clone());
     }
 
-    fn latest_agent_commit(&self, agent_id: &AgentId) -> Option<AgentCommit> {
+    fn latest_agent_review_commit(&self, agent_id: &AgentId) -> Option<AgentCommit> {
         let root = self
             .chat
             .as_ref()
             .map(|chat| chat.project_dir().to_path_buf())?;
+        let boundary = self
+            .reviewed_agent_commits
+            .get(agent_id)
+            .or_else(|| self.agent_review_baselines.get(agent_id))
+            .map(String::as_str);
         GitHistory::new(root)
-            .latest_agent_commits()
+            .agent_review_commit(agent_id, boundary)
             .ok()?
-            .into_iter()
-            .find(|commit| &commit.agent_id == agent_id)
     }
 
     fn set_session_loading(&mut self, agent_id: &AgentId, loading: Option<WorkLeafLoading>) {

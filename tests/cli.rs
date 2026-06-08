@@ -444,7 +444,7 @@ fn command_chat_reuses_reviewer_for_later_commit_from_same_patch_agent() {
     );
     assert!(backend.sends.iter().any(|(target, prompt)| {
         target.as_str() == "review-user-1"
-            && prompt.contains("Review the final patch")
+            && prompt.contains("Review the full patch scope")
             && prompt.contains("second pass")
     }));
 }

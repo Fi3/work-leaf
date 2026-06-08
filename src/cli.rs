@@ -139,6 +139,7 @@ pub struct CommandChat<B> {
     reviewers: BTreeSet<AgentId>,
     reviewed_agent_commits: BTreeMap<AgentId, String>,
     linearize_reviewed_commits: Vec<AgentCommit>,
+    agent_review_baselines: BTreeMap<AgentId, String>,
     agent_profile: AgentProfile,
     max_review_rounds: usize,
     locked_command_timeout: Duration,
@@ -168,6 +169,7 @@ where
             reviewers: self.reviewers.clone(),
             reviewed_agent_commits: self.reviewed_agent_commits.clone(),
             linearize_reviewed_commits: self.linearize_reviewed_commits.clone(),
+            agent_review_baselines: self.agent_review_baselines.clone(),
             agent_profile: self.agent_profile.clone(),
             max_review_rounds: self.max_review_rounds,
             locked_command_timeout: self.locked_command_timeout,
@@ -194,6 +196,7 @@ where
             reviewers: BTreeSet::new(),
             reviewed_agent_commits: BTreeMap::new(),
             linearize_reviewed_commits: Vec::new(),
+            agent_review_baselines: BTreeMap::new(),
             agent_profile: AgentProfile::codex(),
             max_review_rounds: 80_000_000,
             locked_command_timeout: Duration::from_secs(5 * 60),
@@ -244,6 +247,8 @@ where
         let agent_id = commit.agent_id.clone();
         let hash = commit.hash.clone();
         self.reviewed_agent_commits
+            .insert(agent_id.clone(), hash.clone());
+        self.agent_review_baselines
             .insert(agent_id.clone(), hash.clone());
         if self
             .linearize_reviewed_commits
@@ -404,6 +409,7 @@ where
     ) -> Result<CommandChatResult, CliError> {
         let agent_id = launch.id.clone();
         let feature = launch.feature.clone();
+        self.remember_agent_review_baseline(&agent_id);
         self.reserve_prepared_agent_id(&agent_id);
         let mut launch_stream = |event| stream(&agent_id, event);
         let session = self
@@ -429,6 +435,17 @@ where
     fn reserve_prepared_agent_id(&mut self, agent_id: &AgentId) {
         if let Some(number) = user_agent_number(agent_id) {
             self.next_user_agent = self.next_user_agent.max(number.saturating_add(1));
+        }
+    }
+
+    fn remember_agent_review_baseline(&mut self, agent_id: &AgentId) {
+        if user_agent_number(agent_id).is_none()
+            || self.agent_review_baselines.contains_key(agent_id)
+        {
+            return;
+        }
+        if let Ok(Some(hash)) = GitHistory::new(self.project_dir.clone()).head_hash() {
+            self.agent_review_baselines.insert(agent_id.clone(), hash);
         }
     }
 
@@ -528,7 +545,7 @@ where
     }
 
     fn review(&mut self) -> Result<CommandChatResult, CliError> {
-        let commits = GitHistory::new(self.project_dir.clone()).latest_agent_commits()?;
+        let commits = self.review_commits()?;
         let mut results = Vec::new();
         for commit in commits {
             if self
@@ -552,6 +569,15 @@ where
         Ok(CommandChatResult::ReviewComplete(results))
     }
 
+    fn review_commits(&self) -> Result<Vec<AgentCommit>, CliError> {
+        Ok(
+            GitHistory::new(self.project_dir.clone()).latest_agent_review_commits(
+                &self.reviewed_agent_commits,
+                &self.agent_review_baselines,
+            )?,
+        )
+    }
+
     pub(crate) fn review_commit_streaming_with_ids(
         &mut self,
         commit: AgentCommit,
@@ -560,7 +586,7 @@ where
         stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
     ) -> Result<ReviewResult, CliError> {
         let summary_prompt = format!(
-            "Please summarize the final patch for Agent-ID {}.\nCommit: {}\nFeature: {}\nReason: {}\nContext: {}\n\nFocus on what behavior the patch changes.",
+            "Please summarize the full reviewed patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\n\nFocus on what behavior the cumulative patch changes.",
             commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context
         );
         let mut summary_stream = |event| stream(&commit.agent_id, event);
@@ -574,7 +600,7 @@ where
 
         let review_feature = format!("review {}", commit.feature);
         let review_prompt = format!(
-            "Review the final patch for Agent-ID {}.\nCommit: {}\nFeature: {}\nReason: {}\nContext: {}\nSummary from original agent:\n{}\n\nReply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.",
+            "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\nSummary from original agent:\n{}\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.",
             commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context, summary
         );
         let mut review_stream = |event| stream(&reviewer_id, event);
@@ -679,18 +705,21 @@ where
 
     fn record_review_result(&mut self, result: &ReviewResult) {
         let latest_commit = self
-            .latest_agent_commit(&result.agent_id)
+            .latest_agent_review_commit(&result.agent_id)
             .unwrap_or_else(|| result.commit.clone());
         self.mark_reviewed_agent_commit(latest_commit);
         self.reviewers.insert(result.reviewer_id.clone());
     }
 
-    fn latest_agent_commit(&self, agent_id: &AgentId) -> Option<AgentCommit> {
+    fn latest_agent_review_commit(&self, agent_id: &AgentId) -> Option<AgentCommit> {
+        let boundary = self
+            .reviewed_agent_commits
+            .get(agent_id)
+            .or_else(|| self.agent_review_baselines.get(agent_id))
+            .map(String::as_str);
         GitHistory::new(self.project_dir.clone())
-            .latest_agent_commits()
+            .agent_review_commit(agent_id, boundary)
             .ok()?
-            .into_iter()
-            .find(|commit| &commit.agent_id == agent_id)
     }
 
     fn linearize(&mut self) -> Result<CommandChatResult, CliError> {

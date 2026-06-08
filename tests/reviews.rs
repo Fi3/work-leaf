@@ -109,6 +109,49 @@ fn review_coordinator_loops_until_reviewer_reports_no_findings() {
     assert!(backend.sends[2].1.contains("check the patch again"));
 }
 
+#[test]
+fn git_history_builds_agent_review_scope_since_baseline() {
+    let root = git_repo("review-history-scope");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial review scope fixture"]);
+    let baseline = GitHistory::new(root.clone()).head_hash().unwrap().unwrap();
+    fs::write(root.join("README.md"), "after first\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(
+        &root,
+        [
+            "commit",
+            "-m",
+            "UPDATE apply first patch from user-1",
+            "-m",
+            "Agent-ID: user-1\nFeature: readme\nReason: first step\nContext: first context",
+        ],
+    );
+    fs::write(root.join("README.md"), "after second\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(
+        &root,
+        [
+            "commit",
+            "-m",
+            "UPDATE apply second patch from user-1",
+            "-m",
+            "Agent-ID: user-1\nFeature: readme\nReason: second step\nContext: second context",
+        ],
+    );
+
+    let target = GitHistory::new(root)
+        .agent_review_commit(&AgentId::new("user-1").unwrap(), Some(&baseline))
+        .unwrap()
+        .expect("review target");
+
+    assert!(target.reason.contains("2 provisional commits"));
+    assert!(target.context.contains("first step"));
+    assert!(target.context.contains("second step"));
+    assert_eq!(target.feature, "readme");
+}
+
 #[derive(Debug)]
 struct FakeBackend {
     replies: VecDeque<String>,

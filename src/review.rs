@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::fmt;
+use std::fmt::{self, Write};
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -53,6 +53,31 @@ impl GitHistory {
         Ok(latest.into_values().collect())
     }
 
+    pub fn latest_agent_review_commits(
+        &self,
+        reviewed_agent_commits: &BTreeMap<AgentId, String>,
+        agent_baselines: &BTreeMap<AgentId, String>,
+    ) -> Result<Vec<AgentCommit>, ReviewError> {
+        let latest = self.latest_agent_commits()?;
+        let mut targets = Vec::new();
+        for commit in latest {
+            if reviewed_agent_commits
+                .get(&commit.agent_id)
+                .is_some_and(|hash| hash == &commit.hash)
+            {
+                continue;
+            }
+            let boundary = reviewed_agent_commits
+                .get(&commit.agent_id)
+                .or_else(|| agent_baselines.get(&commit.agent_id))
+                .map(String::as_str);
+            if let Some(target) = self.agent_review_commit(&commit.agent_id, boundary)? {
+                targets.push(target);
+            }
+        }
+        Ok(targets)
+    }
+
     pub fn agent_commit(&self, hash: &str) -> Result<Option<AgentCommit>, ReviewError> {
         let output = Command::new("git")
             .current_dir(&self.root)
@@ -66,6 +91,75 @@ impl GitHistory {
         }
 
         parse_agent_commit(String::from_utf8_lossy(&output.stdout).trim())
+    }
+
+    pub fn agent_review_commit(
+        &self,
+        agent_id: &AgentId,
+        boundary: Option<&str>,
+    ) -> Result<Option<AgentCommit>, ReviewError> {
+        let records = self.agent_commits_in_range(boundary)?;
+        let commits = if boundary.is_some() {
+            records
+                .into_iter()
+                .filter(|commit| &commit.agent_id == agent_id)
+                .collect()
+        } else {
+            latest_contiguous_agent_commits(records, agent_id)
+        };
+        Ok(combine_agent_review_commits(commits))
+    }
+
+    pub fn head_hash(&self) -> Result<Option<String>, ReviewError> {
+        let output = Command::new("git")
+            .current_dir(&self.root)
+            .args(["rev-parse", "--verify", "HEAD"])
+            .output()
+            .map_err(ReviewError::Io)?;
+        if !output.status.success() {
+            return Ok(None);
+        }
+        Ok(Some(
+            String::from_utf8_lossy(&output.stdout).trim().to_string(),
+        ))
+    }
+
+    fn agent_commits_in_range(
+        &self,
+        boundary: Option<&str>,
+    ) -> Result<Vec<AgentCommit>, ReviewError> {
+        let mut args = vec![
+            "log".to_string(),
+            "--pretty=format:%H%x1f%B%x1e".to_string(),
+        ];
+        let range;
+        if let Some(boundary) = boundary {
+            range = format!("{boundary}..HEAD");
+            args.push(range);
+        }
+        let output = Command::new("git")
+            .current_dir(&self.root)
+            .args(args)
+            .output()
+            .map_err(ReviewError::Io)?;
+        if !output.status.success() {
+            return Err(ReviewError::History(
+                String::from_utf8_lossy(&output.stderr).trim().to_string(),
+            ));
+        }
+
+        let mut commits = Vec::new();
+        for record in String::from_utf8_lossy(&output.stdout).split('\x1e') {
+            let record = record.trim();
+            if record.is_empty() {
+                continue;
+            }
+            let Some(commit) = parse_agent_commit(record)? else {
+                continue;
+            };
+            commits.push(commit);
+        }
+        Ok(commits)
     }
 }
 
@@ -114,7 +208,8 @@ where
     }
 
     pub fn review_latest_agent_commits(&mut self) -> Result<Vec<ReviewResult>, ReviewError> {
-        let commits = GitHistory::new(self.root.clone()).latest_agent_commits()?;
+        let commits = GitHistory::new(self.root.clone())
+            .latest_agent_review_commits(&BTreeMap::new(), &BTreeMap::new())?;
         commits
             .into_iter()
             .map(|commit| self.review_commit(commit))
@@ -123,7 +218,7 @@ where
 
     fn review_commit(&mut self, commit: AgentCommit) -> Result<ReviewResult, ReviewError> {
         let summary_prompt = format!(
-            "Please summarize the final patch for Agent-ID {}.\nCommit: {}\nFeature: {}\nReason: {}\nContext: {}\n\nFocus on what behavior the patch changes.",
+            "Please summarize the full reviewed patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\n\nFocus on what behavior the cumulative patch changes.",
             commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context
         );
         let summary = self
@@ -135,7 +230,7 @@ where
         let reviewer_id = AgentId::new(format!("review-{}", commit.agent_id.as_str()))
             .map_err(ReviewError::Agent)?;
         let review_prompt = format!(
-            "Review the final patch for Agent-ID {}.\nCommit: {}\nFeature: {}\nReason: {}\nContext: {}\nSummary from original agent:\n{}\n\nReply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.",
+            "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\nSummary from original agent:\n{}\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.",
             commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context, summary
         );
         let reviewer_session = self
@@ -205,6 +300,67 @@ fn parse_agent_commit(record: &str) -> Result<Option<AgentCommit>, ReviewError> 
         subject,
         body: body.trim().to_string(),
     }))
+}
+
+fn latest_contiguous_agent_commits(
+    commits: Vec<AgentCommit>,
+    agent_id: &AgentId,
+) -> Vec<AgentCommit> {
+    let mut selected = Vec::new();
+    let mut found_latest = false;
+    for commit in commits {
+        if &commit.agent_id == agent_id {
+            found_latest = true;
+            selected.push(commit);
+        } else if found_latest {
+            break;
+        }
+    }
+    selected
+}
+
+fn combine_agent_review_commits(mut commits: Vec<AgentCommit>) -> Option<AgentCommit> {
+    if commits.len() <= 1 {
+        return commits.pop();
+    }
+
+    let latest = commits[0].clone();
+    let mut context = format!(
+        "Review scope includes {} provisional commits for Agent-ID {} from oldest to newest. Review the cumulative behavior and diff across all listed commits, not only the latest commit.",
+        commits.len(),
+        latest.agent_id
+    );
+    for commit in commits.iter().rev() {
+        let _ = write!(
+            context,
+            "\n\nCommit: {}\nSubject: {}\nFeature: {}\nReason: {}\nContext: {}",
+            commit.hash, commit.subject, commit.feature, commit.reason, commit.context
+        );
+    }
+
+    let mut body = String::new();
+    for commit in commits.iter().rev() {
+        let _ = write!(body, "\n\n--- commit {} ---\n{}", commit.hash, commit.body);
+    }
+
+    let latest_hash = latest.hash.clone();
+    Some(AgentCommit {
+        hash: latest_hash.clone(),
+        agent_id: latest.agent_id,
+        feature: latest.feature,
+        reason: format!(
+            "Review {} provisional commits through {}",
+            commits.len(),
+            short_hash(&latest_hash)
+        ),
+        context,
+        subject: latest.subject,
+        body: body.trim().to_string(),
+    })
+}
+
+fn short_hash(hash: &str) -> &str {
+    hash.get(..12).unwrap_or(hash)
 }
 
 fn metadata_value(body: &str, prefix: &str) -> Option<String> {

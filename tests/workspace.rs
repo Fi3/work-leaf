@@ -211,6 +211,44 @@ fn controller_does_not_start_review_until_patch_agent_reports_done() {
 }
 
 #[test]
+fn controller_review_prompt_covers_all_agent_commits_since_launch() {
+    let root = git_repo("workspace-review-full-agent-scope");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "first patch\n@work-leaf patch first step\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after first\n@work-leaf end",
+        "second patch\n@work-leaf patch second step\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-after first\n+after second\n@work-leaf end\n@work-leaf done",
+        "summary: full change",
+        "NO_FINDINGS",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller
+        .create_agent("update readme in two steps")
+        .unwrap();
+
+    assert_eq!(agent_id.as_str(), "user-1");
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    let launches = backend.launches();
+    let review_launch = launches
+        .iter()
+        .find(|launch| launch.id.as_str() == "review-user-1")
+        .expect("reviewer launched");
+    assert!(
+        review_launch.prompt.contains("first step"),
+        "{}",
+        review_launch.prompt
+    );
+    assert!(
+        review_launch.prompt.contains("second step"),
+        "{}",
+        review_launch.prompt
+    );
+}
+
+#[test]
 fn controller_reuses_one_reviewer_for_repeated_patch_agent_iterations() {
     let root = git_repo("workspace-reuses-reviewer");
     fs::write(root.join("README.md"), "before\n").unwrap();
@@ -251,7 +289,7 @@ fn controller_reuses_one_reviewer_for_repeated_patch_agent_iterations() {
     let sends = backend.sends();
     assert!(sends.iter().any(|(target, prompt)| {
         target == &reviewer_id
-            && prompt.contains("Review the final patch")
+            && prompt.contains("Review the full patch scope")
             && prompt.contains("after second")
     }));
 }

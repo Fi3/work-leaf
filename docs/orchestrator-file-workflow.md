@@ -83,14 +83,15 @@ The intended lifecycle is:
 9. The patch agent keeps patching through the orchestrator until the review agent reports no
    findings.
 
-The current implementation path for this review loop finds latest agent commits through
+The current implementation path for this review loop builds patch-agent review targets through
 `src/review.rs::GitHistory`, asks the original agent for a summary, launches or resumes the patch
 agent's `review-<agent-id>` reviewer, resolves reviewer orchestrator directives such as file reads,
 sends findings back to the original agent, and asks the reviewer to recheck until `NO_FINDINGS` or
 the round limit. Command-chat and controller review startup keep one reviewer identity per patch
-agent and skip latest commits that already completed a review pass. Automatic review requires an
-applied patch from the patch agent and that agent's `@work-leaf done` directive, and is scoped to that
-patch agent's latest commit. An explicit `review` command is the history-wide review entry point.
+agent and skip latest agent heads that already completed a review pass. Automatic review requires an
+applied patch from the patch agent and that agent's `@work-leaf done` directive, and is scoped to all
+provisional commits from that patch agent since the launch or latest reviewed baseline. An explicit
+`review` command is the history-wide review entry point.
 
 ### Inspection Agent
 
@@ -533,5 +534,6 @@ The important source symbols for this workflow are:
 - `src/patch.rs::GitPatcher`: applies whole unified diffs under write locks and creates provisional
   metadata commits.
 - `src/review.rs::ReviewCoordinator`: runs reviewer conversations over agent patch commits.
-- `src/review.rs::GitHistory`: finds latest agent commits from git history.
+- `src/review.rs::GitHistory`: finds latest agent commits from git history and builds cumulative
+  review targets since launch or latest reviewed baselines.
 - `src/workspace.rs::WorkLeafController`: exposes UI-neutral orchestration state and events.

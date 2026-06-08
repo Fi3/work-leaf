@@ -180,11 +180,13 @@ commits them through the patch protocol or reverts them. Pending command changes
 `@work-leaf done`, and the orchestrator returns the tracked diff so the agent can submit the command
 output as a provisional patch when it belongs in the final work.
 
-Review bookkeeping has two scopes. The controller tracks the latest reviewed hash for each patch
-agent so the same agent head is not reviewed twice. `CommandChat` also keeps the ordered exact commit
-hashes that completed review during the active instance, and those exact commits form the linearizer
-handoff. This lets one patch-agent session complete more than one reviewed patch without a later hash
-replacing earlier reviewed work in the linearizer prompt.
+Review bookkeeping has three scopes. The controller records a launch-time review baseline for each
+patch agent, tracks the latest reviewed hash for that patch agent so the same agent head is not
+reviewed twice, and asks reviewers to inspect every provisional commit from the active baseline
+through the latest patch-agent commit. `CommandChat` also keeps the ordered exact review targets that
+completed review during the active instance, and those targets form the linearizer handoff. This lets
+one patch-agent session complete more than one reviewed patch without a later hash replacing earlier
+reviewed work in the linearizer prompt.
 
 The command transcript is also the conversation history for the persistent `command-agent`. That
 system agent interprets chat sent to the Work Leaf command surface. It recognizes literal command
@@ -276,16 +278,17 @@ agent's provisional patch. `PatchCoordinator<B>` connects patch conflicts and ma
 diagnostics back to the active agent backend. `PatchRequest`, `PatchOutcome`, and `PatchError` are
 the public patch workflow types.
 
-`src/review.rs::GitHistory` reads latest agent commits from repository history and resolves agent
-metadata commits by exact hash.
-`ReviewCoordinator<B>` launches reviewer agents against those commits and loops until the reviewer
-reports no findings or the configured maximum round count is reached. `CommandChat` resolves
-reviewer `@work-leaf` directives, such as file reads, before interpreting reviewer output as
-findings. `CommandChat` and `WorkLeafController` keep a stable `review-<agent-id>` reviewer identity
-for each patch agent and skip latest agent commits that have already completed review. `AgentCommit`,
-`ReviewResult`, and `ReviewError` are the public review workflow types.
-`WorkLeafController` scopes automatic review after a patch agent reports done to the patch agent that
-produced the provisional commit; explicit review commands use the history-wide latest-commit lookup.
+`src/review.rs::GitHistory` reads latest agent commits from repository history, builds cumulative
+review targets for a patch agent since a launch or reviewed baseline, and resolves agent metadata
+commits by exact hash. `ReviewCoordinator<B>` launches reviewer agents against those review targets
+and loops until the reviewer reports no findings or the configured maximum round count is reached.
+`CommandChat` resolves reviewer `@work-leaf` directives, such as file reads, before interpreting
+reviewer output as findings. `CommandChat` and `WorkLeafController` keep a stable
+`review-<agent-id>` reviewer identity for each patch agent and skip latest agent heads that have
+already completed review. `AgentCommit`, `ReviewResult`, and `ReviewError` are the public review
+workflow types. `WorkLeafController` scopes automatic review after a patch agent reports done to the
+patch agent that produced the provisional commit; explicit review commands use the history-wide
+review target lookup.
 
 `src/linearize.rs::LinearizePlanner<B>` prepares linearization questions and launches a linearizer
 agent with decisions, groups, and required tests. `LinearizeAction`, `LinearizeGroup`,
