@@ -279,6 +279,28 @@ fn scripted_harness_insert_mode_records_chat_text_and_literal_colons() {
 }
 
 #[test]
+fn scripted_harness_slash_command_starts_agent_chat_command_from_chat_view() {
+    let mut harness = UiHarness::new(80, 24);
+
+    assert_eq!(harness.ui().mode(), UiMode::Command);
+    assert_eq!(
+        harness.ui().selected_agent().map(|id| id.as_str()),
+        Some("user-1")
+    );
+
+    harness.handle_bytes(b"/status\n");
+
+    assert_eq!(harness.ui().mode(), UiMode::Insert);
+    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| line == "user-1> /status")
+    );
+}
+
+#[test]
 fn scripted_harness_mouse_wheel_scrolls_chat_history() {
     let mut harness = UiHarness::new(80, 10);
 

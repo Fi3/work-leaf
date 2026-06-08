@@ -44,6 +44,29 @@ fn terminal_app_new_and_chat_message_use_real_command_chat_backend() {
 }
 
 #[test]
+fn terminal_app_slash_command_from_chat_view_sends_agent_command() {
+    let backend = FakeBackend::new(["launch reply", "status reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new status command\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"\x1b/status\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    assert_eq!(app.ui().mode(), UiMode::Insert);
+    assert_eq!(app.ui().focus(), PaneFocus::Right);
+    assert!(app.render_frame().contains("user: /status"));
+    assert!(app.render_frame().contains("status reply"));
+
+    let backend = app.into_chat().into_backend();
+    let sends = backend.sends();
+    assert_eq!(sends.len(), 1);
+    assert_eq!(sends[0].0.as_str(), "user-1");
+    assert_eq!(sends[0].1, "/status");
+}
+
+#[test]
 fn terminal_app_does_not_run_project_required_checks_outside_agent() {
     let root = temp_dir("terminal-app-no-required-check-run");
     fs::write(
