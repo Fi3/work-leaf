@@ -1,8 +1,11 @@
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque, hash_map::DefaultHasher};
 use std::env;
+use std::ffi::OsStr;
 use std::fmt;
+use std::fs;
+use std::hash::{Hash, Hasher};
 use std::io::{self, BufRead, BufReader, IsTerminal, Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{self, Child, Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -1450,7 +1453,9 @@ pub(crate) fn codex_backend(
     model: Option<String>,
     read_permission: ReadPermission,
 ) -> Result<CodexBackend, CliError> {
-    let mut config = CodexCommandConfig::new(project_dir.clone());
+    let binary = resolve_codex_binary();
+    prepend_process_path(binary.parent());
+    let mut config = CodexCommandConfig::new(project_dir.clone()).with_binary(binary);
     if let Some(model) = model {
         config = config.with_model(model);
     }
@@ -1458,6 +1463,95 @@ pub(crate) fn codex_backend(
         config,
         PromptPolicy::for_project_with_read_permission(&project_dir, read_permission)
             .map_err(CliError::Agent)?,
+    ))
+}
+
+fn resolve_codex_binary() -> PathBuf {
+    let path = env::var_os("PATH");
+    resolve_codex_process_binary_from_path(path.as_deref())
+}
+
+fn resolve_codex_process_binary_from_path(path: Option<&OsStr>) -> PathBuf {
+    let binary = resolve_codex_binary_from_path(path);
+    codex_exec_trampoline(&binary).unwrap_or(binary)
+}
+
+fn prepend_process_path(dir: Option<&Path>) {
+    let Some(dir) = dir else {
+        return;
+    };
+    let current = env::var_os("PATH");
+    let mut entries = vec![dir.to_path_buf()];
+    if let Some(current) = current.as_deref() {
+        entries.extend(env::split_paths(current).filter(|entry| entry.as_path() != dir));
+    }
+    if let Ok(path) = env::join_paths(entries) {
+        // SAFETY: this runs while constructing the CLI/daemon backend, before Work Leaf starts
+        // worker threads that read the process environment.
+        unsafe { env::set_var("PATH", path) };
+    }
+}
+
+fn resolve_codex_binary_from_path(path: Option<&OsStr>) -> PathBuf {
+    let Some(path) = path else {
+        return PathBuf::from("codex");
+    };
+    let mut fallback = None;
+    for dir in env::split_paths(path) {
+        let candidate = dir.join("codex");
+        if !candidate.is_file() {
+            continue;
+        }
+        if is_codex_arg0_shim(&candidate) {
+            fallback.get_or_insert(candidate);
+            continue;
+        }
+        return candidate;
+    }
+    fallback.unwrap_or_else(|| PathBuf::from("codex"))
+}
+
+fn is_codex_arg0_shim(path: &Path) -> bool {
+    let path = path.to_string_lossy();
+    path.contains("/.codex/tmp/arg0/") || path.contains("\\.codex\\tmp\\arg0\\")
+}
+
+#[cfg(unix)]
+fn codex_exec_trampoline(binary: &Path) -> io::Result<PathBuf> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = env::temp_dir()
+        .join("work-leaf-codex-wrapper")
+        .join(codex_trampoline_key(binary));
+    fs::create_dir_all(&dir)?;
+    let trampoline = dir.join("codex");
+    let script = format!(
+        "#!/bin/sh\nCODEX_REAL={}\nexec \"$CODEX_REAL\" \"$@\"\n",
+        shell_single_quote(&binary.to_string_lossy())
+    );
+    fs::write(&trampoline, script)?;
+    let mut permissions = fs::metadata(&trampoline)?.permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&trampoline, permissions)?;
+    Ok(trampoline)
+}
+
+#[cfg(unix)]
+fn codex_trampoline_key(binary: &Path) -> String {
+    let mut hasher = DefaultHasher::new();
+    binary.hash(&mut hasher);
+    format!("{:016x}", hasher.finish())
+}
+
+#[cfg(unix)]
+fn shell_single_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\"'\"'"))
+}
+
+#[cfg(not(unix))]
+fn codex_exec_trampoline(_binary: &Path) -> io::Result<PathBuf> {
+    Err(io::Error::other(
+        "codex exec trampoline is only used on Unix",
     ))
 }
 
@@ -1520,6 +1614,7 @@ impl From<crate::review::ReviewError> for CliError {
 mod tests {
     use super::*;
     use crate::ui::{PaneFocus, TerminalUi, UiMode};
+    use std::fs;
 
     #[test]
     fn launched_agent_result_selects_chat_and_enters_insert_mode() {
@@ -1536,5 +1631,100 @@ mod tests {
         assert_eq!(ui.selected_agent(), Some(&agent_id));
         assert_eq!(ui.focus(), PaneFocus::Right);
         assert_eq!(ui.mode(), UiMode::Insert);
+    }
+
+    #[test]
+    fn codex_binary_resolver_skips_temporary_arg0_shim_when_stable_binary_exists() {
+        let root = test_temp_dir("codex-arg0-shim");
+        let shim_dir = root.join(".codex/tmp/arg0/codex-arg0test");
+        let stable_dir = root.join("bin");
+        fs::create_dir_all(&shim_dir).unwrap();
+        fs::create_dir_all(&stable_dir).unwrap();
+        fs::write(shim_dir.join("codex"), "").unwrap();
+        fs::write(stable_dir.join("codex"), "").unwrap();
+        let path = env::join_paths([shim_dir, stable_dir.clone()]).unwrap();
+
+        let binary = resolve_codex_binary_from_path(Some(path.as_os_str()));
+
+        assert_eq!(binary, stable_dir.join("codex"));
+    }
+
+    #[test]
+    fn codex_binary_resolver_respects_non_shim_path_entries() {
+        let root = test_temp_dir("codex-normal-path");
+        let first_dir = root.join("first");
+        let second_dir = root.join("second");
+        fs::create_dir_all(&first_dir).unwrap();
+        fs::create_dir_all(&second_dir).unwrap();
+        fs::write(first_dir.join("codex"), "").unwrap();
+        fs::write(second_dir.join("codex"), "").unwrap();
+        let path = env::join_paths([first_dir.clone(), second_dir]).unwrap();
+
+        let binary = resolve_codex_binary_from_path(Some(path.as_os_str()));
+
+        assert_eq!(binary, first_dir.join("codex"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn codex_process_binary_resolver_uses_file_backed_exec_trampoline() {
+        let root = test_temp_dir("codex-exec-trampoline");
+        let bin_dir = root.join("bin with space");
+        fs::create_dir_all(&bin_dir).unwrap();
+        let codex = bin_dir.join("codex");
+        fs::write(&codex, "").unwrap();
+        let path = env::join_paths([bin_dir]).unwrap();
+
+        let binary = resolve_codex_process_binary_from_path(Some(path.as_os_str()));
+        let script = fs::read_to_string(&binary).unwrap();
+
+        assert_ne!(binary, codex);
+        assert_eq!(binary.file_name(), Some(OsStr::new("codex")));
+        assert_eq!(
+            binary.parent().and_then(Path::parent),
+            Some(env::temp_dir().join("work-leaf-codex-wrapper").as_path())
+        );
+        assert!(script.contains(&format!(
+            "CODEX_REAL={}",
+            shell_single_quote(&codex.to_string_lossy())
+        )));
+        assert!(script.contains("\"$@\""));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn codex_process_binary_resolver_keeps_distinct_trampolines_per_target_binary() {
+        let root = test_temp_dir("codex-distinct-exec-trampolines");
+        let first_dir = root.join("first");
+        let second_dir = root.join("second");
+        fs::create_dir_all(&first_dir).unwrap();
+        fs::create_dir_all(&second_dir).unwrap();
+        let first_codex = first_dir.join("codex");
+        let second_codex = second_dir.join("codex");
+        fs::write(&first_codex, "").unwrap();
+        fs::write(&second_codex, "").unwrap();
+        let first_path = env::join_paths([first_dir]).unwrap();
+        let second_path = env::join_paths([second_dir]).unwrap();
+
+        let first_trampoline = resolve_codex_process_binary_from_path(Some(first_path.as_os_str()));
+        let first_script = fs::read_to_string(&first_trampoline).unwrap();
+        let second_trampoline =
+            resolve_codex_process_binary_from_path(Some(second_path.as_os_str()));
+
+        assert_ne!(first_trampoline, second_trampoline);
+        assert_eq!(fs::read_to_string(&first_trampoline).unwrap(), first_script);
+        assert!(first_script.contains(&first_codex.display().to_string()));
+        assert!(
+            fs::read_to_string(&second_trampoline)
+                .unwrap()
+                .contains(&second_codex.display().to_string())
+        );
+    }
+
+    fn test_temp_dir(name: &str) -> PathBuf {
+        let root = env::temp_dir().join(format!("work-leaf-{name}-{}", process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        root
     }
 }

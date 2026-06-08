@@ -1,8 +1,10 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
+use std::env;
+use std::ffi::{OsStr, OsString};
 use std::io::{BufRead, BufReader, Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 
 use crate::agent::{
@@ -74,6 +76,7 @@ pub struct CodexBackend {
     config: CodexCommandConfig,
     policy: PromptPolicy,
     state: Arc<Mutex<CodexBackendState>>,
+    operation_condvar: Arc<Condvar>,
     shutdown: AgentShutdownHandle,
     lifecycle: Arc<()>,
 }
@@ -84,6 +87,7 @@ impl Clone for CodexBackend {
             config: self.config.clone(),
             policy: self.policy.clone(),
             state: self.state.clone(),
+            operation_condvar: self.operation_condvar.clone(),
             shutdown: self.shutdown.clone(),
             lifecycle: self.lifecycle.clone(),
         }
@@ -95,6 +99,7 @@ struct CodexBackendState {
     sessions: BTreeMap<AgentId, AgentSession>,
     thread_ids: BTreeMap<AgentId, String>,
     active_processes: BTreeMap<AgentId, u32>,
+    active_agent_operations: BTreeSet<AgentId>,
 }
 
 impl CodexBackend {
@@ -103,6 +108,7 @@ impl CodexBackend {
             config,
             policy,
             state: Arc::new(Mutex::new(CodexBackendState::default())),
+            operation_condvar: Arc::new(Condvar::new()),
             shutdown: AgentShutdownHandle::default(),
             lifecycle: Arc::new(()),
         }
@@ -188,6 +194,8 @@ impl CodexBackend {
 
     fn exec_invocation(&self, stdin: String) -> CodexInvocation {
         let mut args = vec![
+            "--disable".to_string(),
+            "apps".to_string(),
             "--cd".to_string(),
             self.config.project_dir.display().to_string(),
             "--sandbox".to_string(),
@@ -217,6 +225,8 @@ impl CodexBackend {
         stdin: String,
     ) -> Result<CodexInvocation, AgentError> {
         let mut args = vec![
+            "--disable".to_string(),
+            "apps".to_string(),
             "--cd".to_string(),
             self.config.project_dir.display().to_string(),
             "--sandbox".to_string(),
@@ -248,9 +258,13 @@ impl CodexBackend {
         agent_id: Option<&AgentId>,
         sink: &mut dyn FnMut(AgentStreamEvent),
     ) -> Result<String, AgentError> {
-        let mut command = Command::new(&invocation.program);
+        let mut command = codex_process_command(invocation);
+        if let Some(path) =
+            codex_child_path(env::var_os("PATH").as_deref(), invocation.program.parent())
+        {
+            command.env("PATH", path);
+        }
         command
-            .args(&invocation.args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
@@ -319,6 +333,43 @@ impl CodexBackend {
             })
         }
     }
+
+    fn acquire_agent_operation(&self, agent_id: &AgentId) -> AgentOperationGuard {
+        let mut state = self
+            .state
+            .lock()
+            .expect("codex backend state mutex poisoned");
+        while state.active_agent_operations.contains(agent_id) {
+            state = self
+                .operation_condvar
+                .wait(state)
+                .expect("codex backend state mutex poisoned");
+        }
+        state.active_agent_operations.insert(agent_id.clone());
+        AgentOperationGuard {
+            state: self.state.clone(),
+            operation_condvar: self.operation_condvar.clone(),
+            agent_id: agent_id.clone(),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct AgentOperationGuard {
+    state: Arc<Mutex<CodexBackendState>>,
+    operation_condvar: Arc<Condvar>,
+    agent_id: AgentId,
+}
+
+impl Drop for AgentOperationGuard {
+    fn drop(&mut self) {
+        let mut state = self
+            .state
+            .lock()
+            .expect("codex backend state mutex poisoned");
+        state.active_agent_operations.remove(&self.agent_id);
+        self.operation_condvar.notify_all();
+    }
 }
 
 impl Drop for CodexBackend {
@@ -331,12 +382,14 @@ impl Drop for CodexBackend {
 
 impl AgentBackend for CodexBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        let _operation_guard = self.acquire_agent_operation(&request.id);
         let invocation = self.build_launch_invocation(&request);
         let output = self.run_invocation_streaming(&invocation, Some(&request.id), &mut |_| {})?;
         self.record_launch_output(request, output)
     }
 
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        let _operation_guard = self.acquire_agent_operation(agent_id);
         let invocation = self.build_send_invocation(agent_id, prompt)?;
         let output = self.run_invocation_streaming(&invocation, Some(agent_id), &mut |_| {})?;
         let reply = parse_codex_output(&output).agent_reply.unwrap_or(output);
@@ -389,6 +442,7 @@ impl AgentBackend for CodexBackend {
         request: AgentLaunch,
         sink: &mut dyn FnMut(AgentStreamEvent),
     ) -> Result<AgentSession, AgentError> {
+        let _operation_guard = self.acquire_agent_operation(&request.id);
         let invocation = self.build_launch_invocation(&request);
         let output = self.run_invocation_streaming(&invocation, Some(&request.id), sink)?;
         self.record_launch_output(request, output)
@@ -400,6 +454,7 @@ impl AgentBackend for CodexBackend {
         prompt: &str,
         sink: &mut dyn FnMut(AgentStreamEvent),
     ) -> Result<ChatMessage, AgentError> {
+        let _operation_guard = self.acquire_agent_operation(agent_id);
         let invocation = self.build_send_invocation(agent_id, prompt)?;
         let output = self.run_invocation_streaming(&invocation, Some(agent_id), sink)?;
         let reply = parse_codex_output(&output).agent_reply.unwrap_or(output);
@@ -494,6 +549,24 @@ fn process_failure_output(stderr: String, stdout: &str) -> String {
     } else {
         format!("stdout:\n{stdout}")
     }
+}
+
+fn codex_child_path(path: Option<&OsStr>, program_dir: Option<&Path>) -> Option<OsString> {
+    let path = path?;
+    let Some(program_dir) = program_dir else {
+        return Some(path.to_os_string());
+    };
+    let mut entries = vec![program_dir.to_path_buf()];
+    entries.extend(env::split_paths(path).filter(|entry| entry.as_path() != program_dir));
+    env::join_paths(entries)
+        .ok()
+        .or_else(|| Some(path.to_os_string()))
+}
+
+fn codex_process_command(invocation: &CodexInvocation) -> Command {
+    let mut command = Command::new(&invocation.program);
+    command.args(&invocation.args);
+    command
 }
 
 fn compact_json_line(line: &str) -> String {
@@ -594,7 +667,74 @@ mod tests {
     }
 
     #[test]
-    fn slash_command_resume_invocation_uses_raw_command_stdin() {
+    fn codex_child_path_prepends_invoked_program_directory() {
+        let path = env::join_paths([
+            PathBuf::from("/home/user/.codex/tmp/arg0/codex-arg0abc"),
+            PathBuf::from("/usr/bin"),
+        ])
+        .unwrap();
+
+        let child_path = codex_child_path(
+            Some(path.as_os_str()),
+            Some(Path::new("/tmp/work-leaf-codex-wrapper")),
+        )
+        .unwrap();
+        let entries = env::split_paths(&child_path).collect::<Vec<_>>();
+
+        assert_eq!(
+            entries,
+            vec![
+                PathBuf::from("/tmp/work-leaf-codex-wrapper"),
+                PathBuf::from("/home/user/.codex/tmp/arg0/codex-arg0abc"),
+                PathBuf::from("/usr/bin"),
+            ]
+        );
+    }
+
+    #[test]
+    fn codex_child_path_does_not_duplicate_invoked_program_directory() {
+        let path = env::join_paths([
+            PathBuf::from("/tmp/work-leaf-codex-wrapper"),
+            PathBuf::from("/usr/bin"),
+        ])
+        .unwrap();
+
+        let child_path = codex_child_path(
+            Some(path.as_os_str()),
+            Some(Path::new("/tmp/work-leaf-codex-wrapper")),
+        )
+        .unwrap();
+        let entries = env::split_paths(&child_path).collect::<Vec<_>>();
+
+        assert_eq!(
+            entries,
+            vec![
+                PathBuf::from("/tmp/work-leaf-codex-wrapper"),
+                PathBuf::from("/usr/bin")
+            ]
+        );
+    }
+
+    #[test]
+    fn codex_process_command_uses_configured_program_directly() {
+        let invocation = CodexInvocation {
+            program: PathBuf::from("/usr/bin/codex"),
+            args: vec!["exec".to_string(), "--json".to_string(), "-".to_string()],
+            stdin: String::new(),
+        };
+
+        let command = codex_process_command(&invocation);
+        let args = command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(command.get_program(), OsStr::new("/usr/bin/codex"));
+        assert_eq!(args, vec!["exec", "--json", "-"]);
+    }
+
+    #[test]
+    fn known_session_resume_invocation_uses_raw_follow_up_stdin() {
         let mut backend = CodexBackend::new(
             CodexCommandConfig::new(PathBuf::from("/repo")),
             PromptPolicy::for_restricted_agents(),
@@ -608,10 +748,10 @@ mod tests {
             .expect("test launch output records the thread id");
 
         let invocation = backend
-            .build_send_invocation(&agent_id, "/status")
-            .expect("slash command invocation is built");
+            .build_send_invocation(&agent_id, "continue")
+            .expect("resume invocation is built");
 
-        assert_eq!(invocation.stdin, "/status");
+        assert_eq!(invocation.stdin, "continue");
         assert!(invocation.args.iter().any(|arg| arg == "thread-user-1"));
     }
 }

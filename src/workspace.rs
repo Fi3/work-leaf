@@ -199,10 +199,13 @@ where
             .expect("work-leaf controller command chat is present")
             .interrupt_agent(agent_id);
         match result {
-            Ok(()) => self.append_agent_line(
-                agent_id,
-                format!("work-leaf: sent Ctrl-C to {display_name}"),
-            ),
+            Ok(()) => {
+                self.set_session_loading(agent_id, None);
+                self.append_agent_line(
+                    agent_id,
+                    format!("work-leaf: sent Ctrl-C to {display_name}"),
+                );
+            }
             Err(error) => self.append_agent_line(agent_id, command_chat_error_text(&error)),
         }
     }
@@ -244,6 +247,11 @@ where
     pub fn send_message(&mut self, agent_id: &AgentId, message: &str) -> Result<(), CliError> {
         let message = message.trim();
         if message.is_empty() {
+            return Ok(());
+        }
+        if let Some(command) = AgentSlashCommand::parse(message) {
+            self.append_agent_line(agent_id, format!("user: {message}"));
+            self.handle_agent_slash_command(agent_id, command);
             return Ok(());
         }
         if self
@@ -638,7 +646,7 @@ where
             }
             WorkerEvent::Complete { agent_id, result } => {
                 if let Some(agent_id) = agent_id {
-                    let start_review = should_start_review(&agent_id, &result);
+                    let start_review = self.should_start_review(&agent_id, &result);
                     self.set_session_loading(&agent_id, None);
                     self.apply_agent_result(&agent_id, &result);
                     if start_review && let Err(error) = self.start_review_for_patch_agent(&agent_id)
@@ -670,6 +678,79 @@ where
                 self.append_agent_line(&reviewer_id, message);
             }
         }
+    }
+
+    fn handle_agent_slash_command(&mut self, agent_id: &AgentId, command: AgentSlashCommand<'_>) {
+        match command {
+            AgentSlashCommand::Help => {
+                self.append_agent_line(
+                    agent_id,
+                    "work-leaf: available agent commands: /status, /fork [prompt], /review, /help"
+                        .to_string(),
+                );
+            }
+            AgentSlashCommand::Status => {
+                let status = self.agent_status_text(agent_id);
+                self.append_agent_line(agent_id, status);
+            }
+            AgentSlashCommand::Fork(prompt) => {
+                let source = self
+                    .sessions
+                    .get(agent_id)
+                    .map(|session| format!("{} ({})", session.id, session.title))
+                    .unwrap_or_else(|| agent_id.to_string());
+                let prompt = if prompt.trim().is_empty() {
+                    format!("Fork {source}. Continue the same task from this chat.")
+                } else {
+                    format!("Fork {source}. {}", prompt.trim())
+                };
+                match self.create_agent(prompt) {
+                    Ok(new_agent_id) => self.append_agent_line(
+                        agent_id,
+                        format!("work-leaf: forked {agent_id} into {new_agent_id}"),
+                    ),
+                    Err(error) => self.append_agent_line(agent_id, command_chat_error_text(&error)),
+                }
+            }
+            AgentSlashCommand::Review => match self.start_review_for_patch_agent(agent_id) {
+                Ok(reviewers) if reviewers.is_empty() => self.append_agent_line(
+                    agent_id,
+                    "work-leaf: no reviewable patch commit is ready for this agent".to_string(),
+                ),
+                Ok(reviewers) => self.append_agent_line(
+                    agent_id,
+                    format!(
+                        "work-leaf: started review {}",
+                        display_agent_ids(&reviewers)
+                    ),
+                ),
+                Err(error) => self.append_agent_line(agent_id, command_chat_error_text(&error)),
+            },
+            AgentSlashCommand::Unknown(name) => {
+                self.append_agent_line(
+                    agent_id,
+                    format!(
+                        "work-leaf: unknown agent command `/{name}`; available: /status, /fork, /review, /help"
+                    ),
+                );
+            }
+        }
+    }
+
+    fn agent_status_text(&self, agent_id: &AgentId) -> String {
+        let Some(session) = self.sessions.get(agent_id) else {
+            return format!("work-leaf: {agent_id} status: unknown session");
+        };
+        let state = match session.loading {
+            Some(WorkLeafLoading::Launching) => "launching",
+            Some(WorkLeafLoading::WaitingForReply) => "waiting",
+            None => "ready",
+        };
+        format!(
+            "work-leaf: {agent_id} status: {state}; title: {}; lines: {}",
+            session.title,
+            session.lines.len()
+        )
     }
 
     fn apply_agent_result(&mut self, agent_id: &AgentId, result: &CommandChatResult) {
@@ -764,6 +845,30 @@ where
             .ok()?
     }
 
+    fn should_start_review(&self, agent_id: &AgentId, result: &CommandChatResult) -> bool {
+        agent_id.as_str().starts_with("user-")
+            && match result {
+                CommandChatResult::AgentLaunched { reply, .. }
+                | CommandChatResult::AgentMessage { reply, .. } => {
+                    contains_done_directive(reply) && self.has_unreviewed_agent_commit(agent_id)
+                }
+                _ => false,
+            }
+    }
+
+    fn has_unreviewed_agent_commit(&self, agent_id: &AgentId) -> bool {
+        let Some(commit) = self.latest_agent_review_commit(agent_id) else {
+            return false;
+        };
+        self.reviewed_agent_commits
+            .get(agent_id)
+            .is_none_or(|hash| hash != &commit.hash)
+            && self
+                .review_commits_in_progress
+                .get(agent_id)
+                .is_none_or(|hash| hash != &commit.hash)
+    }
+
     fn set_session_loading(&mut self, agent_id: &AgentId, loading: Option<WorkLeafLoading>) {
         let fallback_kind = self.agent_kind();
         if !self.sessions.contains_key(agent_id) {
@@ -824,23 +929,6 @@ where
             self.shutdown.shutdown();
         }
     }
-}
-
-fn should_start_review(agent_id: &AgentId, result: &CommandChatResult) -> bool {
-    agent_id.as_str().starts_with("user-")
-        && match result {
-            CommandChatResult::AgentLaunched { reply, .. }
-            | CommandChatResult::AgentMessage { reply, .. } => {
-                contains_applied_patch(agent_id, reply) && contains_done_directive(reply)
-            }
-            _ => false,
-        }
-}
-
-fn contains_applied_patch(agent_id: &AgentId, text: &str) -> bool {
-    let prefix = format!("applied patch from {agent_id}:");
-    text.lines()
-        .any(|line| line.trim_start().starts_with(&prefix))
 }
 
 fn contains_done_directive(text: &str) -> bool {
@@ -961,6 +1049,45 @@ fn stream_event_text(event: AgentStreamEvent, agent_display_name: &str) -> Strin
 enum CommandAgentResponse {
     Execute { command_line: String, reply: String },
     Reply(String),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum AgentSlashCommand<'a> {
+    Help,
+    Status,
+    Fork(&'a str),
+    Review,
+    Unknown(&'a str),
+}
+
+impl<'a> AgentSlashCommand<'a> {
+    fn parse(message: &'a str) -> Option<Self> {
+        let message = message.strip_prefix('/')?;
+        let command_len = message
+            .char_indices()
+            .find_map(|(index, ch)| ch.is_whitespace().then_some(index))
+            .unwrap_or(message.len());
+        if command_len == 0 {
+            return None;
+        }
+        let command = &message[..command_len];
+        let rest = message[command_len..].trim_start();
+        Some(match command {
+            "help" | "?" => Self::Help,
+            "status" => Self::Status,
+            "fork" => Self::Fork(rest),
+            "review" => Self::Review,
+            other => Self::Unknown(other),
+        })
+    }
+}
+
+fn display_agent_ids(agent_ids: &[AgentId]) -> String {
+    agent_ids
+        .iter()
+        .map(AgentId::as_str)
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

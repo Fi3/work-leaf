@@ -1,5 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
+use std::sync::{Arc, Barrier};
+use std::thread;
 
 use work_leaf::{
     AgentBackend, AgentId, AgentKind, AgentLaunch, CodexBackend, CodexCommandConfig, MessageRole,
@@ -95,6 +97,8 @@ fn codex_backend_builds_exec_invocation_for_project_directory() {
     assert_eq!(
         invocation.args,
         vec![
+            "--disable",
+            "apps",
             "--cd",
             "/repo",
             "--sandbox",
@@ -112,6 +116,40 @@ fn codex_backend_builds_exec_invocation_for_project_directory() {
     );
     assert!(invocation.stdin.contains("Agent-ID: chat-a"));
     assert!(invocation.stdin.contains("add ripgrep support"));
+}
+
+#[test]
+fn codex_backend_disables_codex_apps_for_daemon_exec_invocations() {
+    let config = CodexCommandConfig::new(PathBuf::from("/repo")).with_binary("codex");
+    let mut backend = CodexBackend::new(config, PromptPolicy::for_restricted_agents());
+    let agent_id = AgentId::new("chat-a").unwrap();
+
+    let launch = backend.build_launch_invocation(&AgentLaunch::new(
+        agent_id.clone(),
+        AgentKind::Codex,
+        "search",
+        "add ripgrep support",
+    ));
+    backend
+        .record_launch_output(
+            AgentLaunch::new(agent_id.clone(), AgentKind::Codex, "search", "launch"),
+            r#"{"type":"thread.started","thread_id":"thread-123"}"#.to_string(),
+        )
+        .unwrap();
+    let resume = backend
+        .build_send_invocation(&agent_id, "continue")
+        .unwrap();
+
+    for invocation in [launch, resume] {
+        assert!(
+            invocation
+                .args
+                .windows(2)
+                .any(|args| args == ["--disable", "apps"]),
+            "daemon Codex invocations should not depend on the Codex apps/app-server path: {:?}",
+            invocation.args
+        );
+    }
 }
 
 fn temp_dir(name: &str) -> PathBuf {
@@ -184,6 +222,8 @@ fn codex_backend_records_json_thread_id_for_follow_up_messages() {
     assert_eq!(
         invocation.args,
         vec![
+            "--disable",
+            "apps",
             "--cd",
             "/repo",
             "--sandbox",
@@ -262,6 +302,72 @@ fn codex_backend_process_failure_reports_stdout_when_stderr_is_empty() {
 }
 
 #[test]
+fn codex_backend_serializes_concurrent_sends_to_the_same_agent() {
+    let root = temp_dir("codex-same-agent-single-flight");
+    let codex = root.join("codex");
+    fs::write(
+        &codex,
+        r#"#!/bin/sh
+seen_resume=0
+for arg in "$@"; do
+  if [ "$arg" = "resume" ]; then
+    seen_resume=1
+  fi
+done
+dir=$(dirname "$0")
+if [ "$seen_resume" = "1" ]; then
+  if ! mkdir "$dir/inflight" 2>/dev/null; then
+    printf 'overlap\n' >> "$dir/overlap.log"
+  fi
+  sleep 0.3
+  rmdir "$dir/inflight" 2>/dev/null
+  printf '%s\n' '{"type":"item.completed","item":{"id":"resume","type":"agent_message","text":"resume reply"}}'
+else
+  printf '%s\n' '{"type":"thread.started","thread_id":"thread-123"}'
+  printf '%s\n' '{"type":"item.completed","item":{"id":"launch","type":"agent_message","text":"launch reply"}}'
+fi
+"#,
+    )
+    .unwrap();
+    make_executable(&codex);
+    let mut backend = CodexBackend::new(
+        CodexCommandConfig::new(root.clone()).with_binary(&codex),
+        PromptPolicy::for_restricted_agents(),
+    );
+    let agent_id = AgentId::new("user-1").unwrap();
+    backend
+        .record_launch_output(
+            AgentLaunch::new(agent_id.clone(), AgentKind::Codex, "feature", "launch"),
+            r#"{"type":"thread.started","thread_id":"thread-123"}"#.to_string(),
+        )
+        .unwrap();
+
+    let barrier = Arc::new(Barrier::new(3));
+    let mut first_backend = backend.clone();
+    let mut second_backend = backend.clone();
+    let first_id = agent_id.clone();
+    let second_id = agent_id.clone();
+    let first_barrier = Arc::clone(&barrier);
+    let second_barrier = Arc::clone(&barrier);
+    let first = thread::spawn(move || {
+        first_barrier.wait();
+        first_backend.send(&first_id, "first").unwrap();
+    });
+    let second = thread::spawn(move || {
+        second_barrier.wait();
+        second_backend.send(&second_id, "second").unwrap();
+    });
+    barrier.wait();
+    first.join().unwrap();
+    second.join().unwrap();
+
+    assert!(
+        !root.join("overlap.log").exists(),
+        "same-agent resumes must not overlap"
+    );
+}
+
+#[test]
 fn codex_backend_preserves_multiple_agent_messages_from_one_jsonl_turn() {
     let config = CodexCommandConfig::new(PathBuf::from("/repo")).with_binary("codex");
     let mut backend = CodexBackend::new(config, PromptPolicy::for_restricted_agents());
@@ -298,6 +404,8 @@ fn codex_backend_can_build_resume_invocation_without_in_memory_session() {
     assert_eq!(
         invocation.args,
         vec![
+            "--disable",
+            "apps",
             "--cd",
             "/repo",
             "--sandbox",

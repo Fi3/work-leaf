@@ -308,6 +308,124 @@ fn controller_does_not_start_review_until_patch_agent_reports_done() {
 }
 
 #[test]
+fn controller_starts_review_when_agent_reports_done_after_prior_patch_turn() {
+    let root = git_repo("workspace-review-later-done");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end",
+        "waiting for review signal",
+        "@work-leaf done",
+        "summary: README changes from before to after",
+        "NO_FINDINGS",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("update readme").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    assert!(
+        controller
+            .snapshot()
+            .session(&AgentId::new("review-user-1").unwrap())
+            .is_none(),
+        "review should wait until a later done message"
+    );
+
+    controller
+        .send_message(&agent_id, "finish when ready")
+        .unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    let reviewer_id = AgentId::new("review-user-1").unwrap();
+    let snapshot = controller.snapshot();
+    let reviewer = snapshot
+        .session(&reviewer_id)
+        .expect("reviewer session starts after later done");
+    assert_eq!(reviewer.loading, None);
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert!(
+        patch_agent.lines.iter().any(|line| {
+            line.contains("user-1 reviewed by review-user-1: rounds=1 resolved=yes")
+        }),
+        "{patch_agent:?}"
+    );
+}
+
+#[test]
+fn controller_handles_agent_slash_commands_without_resuming_agent() {
+    let backend = FakeBackend::new(["launch reply", "backend should not receive slash command"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("status command").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    controller.drain_events();
+
+    controller.send_message(&agent_id, "/status").unwrap();
+
+    let snapshot = controller.snapshot();
+    let session = snapshot.session(&agent_id).expect("session exists");
+    assert_eq!(session.loading, None);
+    assert!(session.lines.iter().any(|line| line == "user: /status"));
+    assert!(
+        session
+            .lines
+            .iter()
+            .any(|line| line.contains("work-leaf: user-1 status"))
+    );
+    assert!(
+        backend.sends().is_empty(),
+        "slash commands should execute locally without an agent resume"
+    );
+}
+
+#[test]
+fn controller_fork_slash_command_creates_new_agent_without_resuming_source_agent() {
+    let backend = FakeBackend::new(["launch reply", "fork launch reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    let source_agent = controller.create_agent("original task").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    controller.drain_events();
+
+    controller
+        .send_message(&source_agent, "/fork try an alternate implementation")
+        .unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+
+    let fork_agent = AgentId::new("user-2").unwrap();
+    let snapshot = controller.snapshot();
+    let source = snapshot
+        .session(&source_agent)
+        .expect("source agent exists");
+    assert!(
+        source
+            .lines
+            .iter()
+            .any(|line| line == "user: /fork try an alternate implementation")
+    );
+    assert!(
+        source
+            .lines
+            .iter()
+            .any(|line| line == "work-leaf: forked user-1 into user-2")
+    );
+    let fork = snapshot.session(&fork_agent).expect("fork agent exists");
+    assert_eq!(fork.loading, None);
+    assert!(
+        fork.lines.iter().any(|line| line == "fork launch reply"),
+        "{fork:?}"
+    );
+    assert!(
+        backend.sends().is_empty(),
+        "fork slash commands should launch a new agent without resuming the source agent"
+    );
+}
+
+#[test]
 fn controller_review_prompt_covers_all_agent_commits_since_launch() {
     let root = git_repo("workspace-review-full-agent-scope");
     fs::write(root.join("README.md"), "before\n").unwrap();
@@ -654,6 +772,39 @@ fn controller_keeps_agent_loading_scoped_to_the_active_session() {
     );
 }
 
+#[test]
+fn controller_interrupt_clears_visible_agent_loading_immediately() {
+    let backend = InterruptibleBackend::default();
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("interruptible task").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+
+    controller.send_message(&agent_id, "keep working").unwrap();
+    assert_eq!(
+        controller
+            .snapshot()
+            .session(&agent_id)
+            .expect("session exists")
+            .loading,
+        Some(WorkLeafLoading::WaitingForReply)
+    );
+
+    controller.interrupt_agent(&agent_id);
+
+    let snapshot = controller.snapshot();
+    let session = snapshot.session(&agent_id).expect("session exists");
+    assert_eq!(session.loading, None);
+    assert!(
+        session
+            .lines
+            .iter()
+            .any(|line| line.contains("work-leaf: sent Ctrl-C to "))
+    );
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+}
+
 #[derive(Clone, Debug)]
 struct FakeBackend {
     state: Arc<Mutex<FakeBackendState>>,
@@ -668,6 +819,11 @@ struct FakeBackendState {
 
 #[derive(Clone, Debug)]
 struct ConcurrentBackend;
+
+#[derive(Clone, Debug, Default)]
+struct InterruptibleBackend {
+    interrupted: Arc<Mutex<bool>>,
+}
 
 impl FakeBackend {
     fn new<const N: usize>(replies: [&str; N]) -> Self {
@@ -738,6 +894,28 @@ impl AgentBackend for ConcurrentBackend {
             return Ok(ChatMessage::new(MessageRole::Agent, "slow reply"));
         }
         Ok(ChatMessage::new(MessageRole::Agent, "quick reply"))
+    }
+}
+
+impl AgentBackend for InterruptibleBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        let mut session = AgentSession::new(request);
+        session.push_message(MessageRole::Agent, "ready");
+        Ok(session)
+    }
+
+    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+        loop {
+            if *self.interrupted.lock().unwrap() {
+                return Ok(ChatMessage::new(MessageRole::Agent, "interrupted"));
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+    }
+
+    fn interrupt(&mut self, _agent_id: &AgentId) -> Result<(), AgentError> {
+        *self.interrupted.lock().unwrap() = true;
+        Ok(())
     }
 }
 

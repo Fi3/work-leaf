@@ -95,9 +95,10 @@ agent's `review-<agent-id>` reviewer, resolves reviewer orchestrator directives 
 sends findings back to the original agent, and asks the reviewer to recheck until `NO_FINDINGS` or
 the round limit. Command-chat and controller review startup keep one reviewer identity per patch
 agent and skip latest agent heads that already completed a review pass. Automatic review requires an
-applied patch from the patch agent and that agent's `@work-leaf done` directive, and is scoped to all
-provisional commits from that patch agent since the launch or latest reviewed baseline. An explicit
-`review` command is the history-wide review entry point.
+unreviewed provisional commit from the patch agent and that agent's `@work-leaf done` directive; the
+done directive may arrive in the same turn as the patch or in a later turn from the same agent
+session. Review is scoped to all provisional commits from that patch agent since the launch or latest
+reviewed baseline. An explicit `review` command is the history-wide review entry point.
 
 ### Inspection Agent
 
@@ -167,11 +168,19 @@ the follow-up message as Codex resume stdin, because the Codex thread already co
 launch-time policy and repository instructions. The source chain is:
 
 1. `src/cli.rs::codex_backend` builds a `src/codex.rs::CodexBackend` with
-   `PromptPolicy::for_project_with_read_permission`.
+   `PromptPolicy::for_project_with_read_permission` and resolves the Codex executable from `PATH`
+   while skipping Codex's temporary `~/.codex/tmp/arg0` shim when a stable binary is available.
+   On Unix, it writes an executable trampoline under
+   `/tmp/work-leaf-codex-wrapper/<binary-key>/codex` that immediately `exec`s the selected Codex
+   binary. The key is derived from the selected binary path so other running Work Leaf checks or
+   daemons that resolve different Codex binaries do not overwrite the same wrapper. The trampoline
+   directory is prepended to the daemon process `PATH` before workers start, and Codex child
+   processes receive a `PATH` with that directory prepended and all existing entries preserved.
 2. `src/codex.rs::CodexBackend::build_launch_invocation` injects the policy into a launch prompt.
 3. `src/codex.rs::CodexBackend::build_send_invocation` passes known-session follow-up messages as
    raw resume stdin and uses policy injection only for fallback resume invocations without in-memory
-   session context.
+   session context. Codex launch and resume invocations disable Codex apps so noninteractive daemon
+   sessions do not require app-server state initialization inside the Codex sandbox.
 4. Agent replies are processed by `src/cli.rs::CommandChat::process_agent_reply_streaming`.
 5. Directive handling enters `src/orchestrator.rs::handle_agent_directives_streaming`.
 
@@ -429,7 +438,9 @@ A normal development session in default read-permission mode follows this shape:
 10. The patch agent runs required checks through locked command directives, commits or reverts any
     tracked command output through the patch protocol, and reports `@work-leaf done` when the patch is
     ready for review.
-11. The orchestrator runs or schedules that patch agent's review agent for the patch.
+11. The orchestrator runs or schedules that patch agent's review agent when the patch agent reports
+    `@work-leaf done`; the reviewed scope covers the unreviewed provisional commits from that patch
+    agent.
 12. The review agent reviews only behavior introduced or modified by the patch.
 13. The review agent can request file text through the orchestrator before reporting findings.
 14. If the review agent reports findings, the orchestrator sends them to the patch agent and the patch

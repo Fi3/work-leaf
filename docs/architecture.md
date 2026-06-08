@@ -126,13 +126,27 @@ public lifecycle extension is required before external child processes can parti
 - `CodexBackend::build_launch_invocation` and `CodexBackend::build_send_invocation` construct
   `codex exec` and `codex exec resume` calls. Launch invocations include the injected
   `PromptPolicy`; resumed invocations for known sessions pass only the follow-up message because the
-  Codex thread already contains the launch-time policy and repository instructions.
+  Codex thread already contains the launch-time policy and repository instructions. These
+  noninteractive calls disable Codex apps so the daemon does not depend on local app-server state
+  initialization inside the provider sandbox.
+- `src/cli.rs::codex_backend` resolves the Codex binary from `PATH` for real process launches and
+  skips Codex's temporary `~/.codex/tmp/arg0` shim when a stable `codex` executable is available
+  later in `PATH`. On Unix, `codex_backend` writes a small executable trampoline under
+  `/tmp/work-leaf-codex-wrapper/<binary-key>/codex` that immediately `exec`s the selected Codex
+  binary. The key is derived from the target binary path so concurrently running checks or daemons
+  that resolve different Codex binaries do not overwrite each other's trampoline. `codex_backend`
+  prepends that trampoline directory to the daemon process `PATH` before worker threads start, and
+  `CodexBackend` also prepends it to each child `PATH` while preserving the rest of the caller's
+  environment.
 - `CodexBackend::record_launch_reply`, `record_launch_output`, and `session` maintain in-memory
   session state.
 - `CodexBackend` parses Codex `--json` event lines from stdout to capture `thread.started`
   identifiers for resume and to convert agent message, error, and status events into
   `AgentStreamEvent` values. The parser accepts standard JSON whitespace around field separators
   while preserving string contents.
+- `CodexBackend` serializes launch and send operations per `AgentId` across cloned backend handles.
+  This keeps a single Codex thread from receiving overlapping `resume` processes while allowing
+  different agent sessions to work concurrently.
 
 `CodexBackend` is a provider implementation, not the owner of the generic agent contract. Callers
 that need provider-neutral behavior import `AgentBackend` from `work_leaf::agent` or from the
@@ -186,16 +200,18 @@ The controller owns:
 - shutdown propagation to running agents.
 
 When an agent worker finishes, the controller records the agent output and clears that session's
-loading state. A user-agent response becomes review-ready only when the orchestrator transcript shows
-an applied patch from that agent and the agent emits `@work-leaf done`. Successful patch application
-returns a continuation prompt to the patch agent when the agent has not reported done, so the agent can
-run repository-required checks through locked command directives, provide follow-up patches, or signal
-review readiness. Repository build, test, format, and required-check commands run only through
-agent-emitted orchestrator directives that name the command and the write-lock paths the command may
-touch. Locked command runs have a five-minute default timeout, after which the command is terminated,
-locks are released, and a longer run requires user authorization. `PromptPolicy` injects project
-instruction files into agent prompts, and the active backend agent is responsible for choosing and
-requesting the repository checks required by those instructions before reporting work done.
+loading state. A user-agent session becomes review-ready when that agent has an unreviewed
+provisional commit in git history and the agent emits `@work-leaf done`; the patch commit and the
+done directive may come from different turns in the same session. Successful patch application
+returns a continuation prompt to the patch agent when the agent has not reported done, so the agent
+can run repository-required checks through locked command directives, provide follow-up patches, or
+signal review readiness. Repository build, test, format, and required-check commands run only
+through agent-emitted orchestrator directives that name the command and the write-lock paths the
+command may touch. Locked command runs have a five-minute default timeout, after which the command is
+terminated, locks are released, and a longer run requires user authorization. `PromptPolicy` injects
+project instruction files into agent prompts, and the active backend agent is responsible for
+choosing and requesting the repository checks required by those instructions before reporting work
+done.
 Tracked file changes produced by locked commands remain pending for that patch agent until the agent
 commits them through the patch protocol or reverts them. Pending command changes block
 `@work-leaf done`, and the orchestrator returns the tracked diff so the agent can submit the command
@@ -224,6 +240,9 @@ Frontend code should use these methods:
 - `create_agent` to reserve, select, and launch an agent session from a prompt.
 - `send_command_agent_message` to route chat from the Work Leaf command surface to `command-agent`.
 - `send_message` to send a prompt to one session while other sessions may still be busy.
+  Messages that start with `/` followed by a non-empty command token are local agent-chat commands;
+  the controller handles `/status`, `/fork [prompt]`, `/review`, and `/help` immediately without
+  resuming the backend agent session.
 - `start_review` to create or resume reviewer sessions for explicit history-wide review and stream
   reviewer output.
 - `is_busy`, `wait_for_idle`, and `wait_for_session_line` for tests and event loops.
@@ -260,7 +279,9 @@ owns no workflow behavior; each HTTP route delegates to the corresponding contro
 - `POST /command` calls `WorkLeafController::execute_command_line`.
 - `POST /command-agent` calls `WorkLeafController::send_command_agent_message`.
 - `POST /agent/message` calls `WorkLeafController::send_message`.
-- `POST /agent/interrupt` calls `WorkLeafController::interrupt_agent`.
+- `POST /agent/interrupt` calls `WorkLeafController::interrupt_agent`; when the backend accepts the
+  interrupt, the selected session loading state is cleared immediately so frontends stop presenting
+  the chat as actively waiting.
 - `POST /transcript` calls `WorkLeafController::push_transcript_line`.
 - `POST /loading-text` calls `WorkLeafController::loading_text`.
 - `POST /shutdown` calls `WorkLeafController::shutdown` and stops the daemon loop.
@@ -286,7 +307,8 @@ agent session, or to `command-agent` when the Work Leaf command surface is selec
 newlines and Shift+Enter are chat prompt line breaks. A plain Enter submits the buffered chat text.
 When an agent chat is selected in command mode, `/` focuses the chat, seeds the chat buffer with
 `/`, and enters insert mode so `/status`-style input submits through the same selected-agent chat
-path.
+path. Selected-agent chat messages whose first token is a slash command are resolved by the
+controller and return a Work Leaf response in the chat transcript without sending a provider request.
 
 The terminal app maps a session to a left-pane `READY` marker when the controller exposes no loading
 state for that session. `TerminalUi` queues one terminal bell when a chat transitions into the ready

@@ -7,12 +7,13 @@ use std::os::raw::{c_char, c_int, c_void};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 #[test]
 fn real_terminal_pty_handles_file_read_left_toggle_and_chat_switching() {
+    let _guard = pty_test_lock();
     let root = temp_dir("workflow");
     fs::write(root.path().join("Readme.md"), "pty workflow fixture\n").unwrap();
     let fake_bin = write_fake_codex(root.path(), WORKFLOW_CODEX);
@@ -64,6 +65,7 @@ fn real_terminal_pty_handles_file_read_left_toggle_and_chat_switching() {
 
 #[test]
 fn real_terminal_pty_keeps_chat_prompt_visible_after_large_agent_output() {
+    let _guard = pty_test_lock();
     let root = temp_dir("large-output");
     let fake_bin = write_fake_codex(root.path(), LARGE_OUTPUT_CODEX);
     let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 80, 12);
@@ -87,6 +89,7 @@ fn real_terminal_pty_keeps_chat_prompt_visible_after_large_agent_output() {
 
 #[test]
 fn real_terminal_pty_ignores_ctrl_c_and_exits_on_colon_q() {
+    let _guard = pty_test_lock();
     let root = temp_dir("quit");
     let fake_bin = write_fake_codex(root.path(), LARGE_OUTPUT_CODEX);
     let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 80, 12);
@@ -98,6 +101,11 @@ fn real_terminal_pty_ignores_ctrl_c_and_exits_on_colon_q() {
 
     app.send(b":q\n");
     wait_for_pty_exit(&mut app, Duration::from_secs(2));
+}
+
+fn pty_test_lock() -> MutexGuard<'static, ()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(())).lock().unwrap()
 }
 
 fn assert_pty_running(app: &mut PtyWorkLeaf) {

@@ -44,8 +44,8 @@ fn terminal_app_new_and_chat_message_use_real_command_chat_backend() {
 }
 
 #[test]
-fn terminal_app_slash_command_from_chat_view_sends_agent_command() {
-    let backend = FakeBackend::new(["launch reply", "status reply"]);
+fn terminal_app_slash_command_from_chat_view_executes_locally() {
+    let backend = FakeBackend::new(["launch reply", "backend should not receive /status"]);
     let chat = CommandChat::new(PathBuf::from("/repo"), backend);
     let mut app = TerminalApp::new(chat, 100, 24);
 
@@ -57,17 +57,18 @@ fn terminal_app_slash_command_from_chat_view_sends_agent_command() {
     assert_eq!(app.ui().mode(), UiMode::Insert);
     assert_eq!(app.ui().focus(), PaneFocus::Right);
     assert!(app.render_frame().contains("user: /status"));
-    assert!(app.render_frame().contains("status reply"));
+    assert!(app.render_frame().contains("work-leaf: user-1 status"));
 
     let backend = app.into_chat().into_backend();
     let sends = backend.sends();
-    assert_eq!(sends.len(), 1);
-    assert_eq!(sends[0].0.as_str(), "user-1");
-    assert_eq!(sends[0].1, "/status");
+    assert!(
+        sends.is_empty(),
+        "slash commands must execute locally without resuming the backend"
+    );
 }
 
 #[test]
-fn terminal_app_sends_spawned_codex_slash_command_as_raw_command() {
+fn terminal_app_codex_slash_command_does_not_resume_agent() {
     let root = temp_dir("terminal-app-codex-slash-command");
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
@@ -84,11 +85,8 @@ for arg in \"$@\"; do
 done
 input=$(cat)
 if [ \"$seen_resume\" = \"1\" ]; then
-  if [ \"$input\" = \"/status\" ]; then
-    printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"status\",\"type\":\"agent_message\",\"text\":\"status command output\"}}'
-  else
-    printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"wrapped\",\"type\":\"agent_message\",\"text\":\"slash command was wrapped as prompt\"}}'
-  fi
+  printf '%s\\n' \"$input\" >> \"$(dirname \"$0\")/resume.log\"
+  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"resume\",\"type\":\"agent_message\",\"text\":\"backend resume should not run\"}}'
 else
   printf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-slash-command\"}'
   printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"launch\",\"type\":\"agent_message\",\"text\":\"launch reply from fake codex\"}}'
@@ -112,11 +110,9 @@ fi
 
     let frame = app.render_frame();
     assert!(frame.contains("user: /status"));
-    assert!(frame.contains("status command output"));
-    assert!(
-        !frame.contains("slash command was wrapped as prompt"),
-        "{frame}"
-    );
+    assert!(frame.contains("work-leaf: user-1 status"));
+    assert!(!frame.contains("backend resume should not run"), "{frame}");
+    assert!(!fake_bin.join("resume.log").exists());
 }
 
 #[test]
