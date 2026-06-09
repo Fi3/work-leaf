@@ -428,6 +428,18 @@ where
         .next()
         .unwrap_or(request.path.as_str());
     match (request.method.as_str(), path) {
+        ("GET", "/") | ("GET", "/web-ui") | ("GET", "/web-ui/") => static_reply(
+            "text/html; charset=utf-8",
+            include_bytes!("../web-ui/index.html"),
+        ),
+        ("GET", "/styles.css") | ("GET", "/web-ui/styles.css") => static_reply(
+            "text/css; charset=utf-8",
+            include_bytes!("../web-ui/styles.css"),
+        ),
+        ("GET", "/app.js") | ("GET", "/web-ui/app.js") => static_reply(
+            "text/javascript; charset=utf-8",
+            include_bytes!("../web-ui/app.js"),
+        ),
         ("GET", "/health") => json_reply(200, &OkResponse { ok: true }),
         ("GET", "/snapshot") => with_controller(&controller, |controller| controller.snapshot()),
         ("GET", "/state") => with_controller(&controller, |controller| {
@@ -553,6 +565,7 @@ struct HttpRequest {
 #[derive(Debug)]
 struct HttpReply {
     status: u16,
+    content_type: &'static str,
     body: Vec<u8>,
 }
 
@@ -664,9 +677,10 @@ fn write_http_reply(stream: &mut TcpStream, reply: HttpReply) -> Result<(), Orch
     let status_text = status_text(reply.status);
     write!(
         stream,
-        "HTTP/1.1 {} {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
         reply.status,
         status_text,
+        reply.content_type,
         reply.body.len()
     )?;
     stream.write_all(&reply.body)?;
@@ -679,8 +693,20 @@ where
     T: Serialize,
 {
     match serde_json::to_vec(body) {
-        Ok(body) => HttpReply { status, body },
+        Ok(body) => HttpReply {
+            status,
+            content_type: "application/json",
+            body,
+        },
         Err(error) => error_reply(500, &error.to_string()),
+    }
+}
+
+fn static_reply(content_type: &'static str, body: &'static [u8]) -> HttpReply {
+    HttpReply {
+        status: 200,
+        content_type,
+        body: body.to_vec(),
     }
 }
 

@@ -1,7 +1,8 @@
 #![cfg(unix)]
 
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read, Write};
+use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -51,6 +52,45 @@ fn localhost_http_controller_preserves_terminal_workflow_state() {
 
     client.shutdown().unwrap();
     daemon.wait_for_exit(Duration::from_secs(2));
+}
+
+#[test]
+fn localhost_http_controller_serves_static_web_ui_assets() {
+    let root = temp_dir("http-web-ui");
+    let fake_bin = write_fake_codex(root.path(), HTTP_CODEX);
+    let mut daemon = Daemon::spawn(root.path(), &fake_bin);
+
+    let html = http_get(daemon.url(), "/web-ui/");
+    assert!(html.starts_with("HTTP/1.1 200 OK"));
+    assert!(html.contains("Content-Type: text/html; charset=utf-8"));
+    assert!(html.contains(r#"<main"#));
+    assert!(html.contains(r#"href="./styles.css""#));
+    assert!(html.contains(r#"src="./app.js""#));
+
+    let css = http_get(daemon.url(), "/web-ui/styles.css");
+    assert!(css.starts_with("HTTP/1.1 200 OK"));
+    assert!(css.contains("Content-Type: text/css; charset=utf-8"));
+    assert!(css.contains("@media"));
+
+    let js = http_get(daemon.url(), "/web-ui/app.js");
+    assert!(js.starts_with("HTTP/1.1 200 OK"));
+    assert!(js.contains("Content-Type: text/javascript; charset=utf-8"));
+    assert!(js.contains("/state"));
+    assert!(js.contains("/events/drain"));
+    assert!(js.contains("/agent/message"));
+
+    let mut client = HttpControllerClient::connect(daemon.url()).unwrap();
+    client.shutdown().unwrap();
+    daemon.wait_for_exit(Duration::from_secs(2));
+}
+
+fn http_get(base_url: &str, path: &str) -> String {
+    let address = base_url.strip_prefix("http://").unwrap();
+    let mut stream = TcpStream::connect(address).unwrap();
+    write!(stream, "GET {path} HTTP/1.1\r\nHost: {address}\r\nConnection: close\r\n\r\n").unwrap();
+    let mut response = String::new();
+    stream.read_to_string(&mut response).unwrap();
+    response
 }
 
 struct Daemon {
