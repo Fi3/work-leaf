@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: smoke-three-features [--dry-run] [-- START_ARGS...]
+
+Launch the current Work Leaf binaries against a temporary checkout at
+the historical three-feature smoke-test base commit. The temporary checkout is
+removed when the smoke exits, fails, or is interrupted.
+
+Options:
+  --dry-run       create and remove the temp checkout without launching Work Leaf
+  -h, --help      show this help
+
+Environment:
+  WORK_LEAF_SMOKE_BASE        base commit for the temp checkout
+  WORK_LEAF_SMOKE_TMPDIR      parent directory for the temporary root
+  WORK_LEAF_SMOKE_SKIP_BUILD  set to 1 to skip cargo build --release --bins
+  WORK_LEAF_SMOKE_BIN_DIR     directory containing work-leaf binaries
+  WORK_LEAF_SMOKE_LISTEN      daemon listen address, default 127.0.0.1:0
+
+Pass daemon options after --, for example:
+  ./smoke-three-features -- --model gpt-5.5
+USAGE
+}
+
+dry_run=0
+start_args=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run)
+      dry_run=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      start_args=("$@")
+      break
+      ;;
+    *)
+      echo "unknown smoke-three-features option: $1" >&2
+      echo "Use -- to pass options to work-leaf-orchestrator." >&2
+      exit 2
+      ;;
+  esac
+done
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+base_commit="${WORK_LEAF_SMOKE_BASE:-c92a0b7060a36eac6db2d869b85e589a7a9480f9}"
+tmp_parent="${WORK_LEAF_SMOKE_TMPDIR:-${TMPDIR:-/tmp}}"
+mkdir -p "$tmp_parent"
+tmp_root="$(mktemp -d "$tmp_parent/work-leaf-3feature-smoke.XXXXXX")"
+checkout_dir="$tmp_root/repo"
+
+cleanup() {
+  local status=$?
+  rm -rf "$tmp_root"
+  exit "$status"
+}
+trap cleanup EXIT INT TERM
+
+echo "WORK_LEAF_SMOKE_TEMP=$tmp_root"
+echo "WORK_LEAF_SMOKE_BASE=$base_commit"
+
+if [[ "${WORK_LEAF_SMOKE_SKIP_BUILD:-}" != "1" ]]; then
+  (cd "$repo_root" && cargo build --release --bins)
+fi
+
+bin_dir="${WORK_LEAF_SMOKE_BIN_DIR:-$repo_root/target/release}"
+listen_addr="${WORK_LEAF_SMOKE_LISTEN:-127.0.0.1:0}"
+
+git -C "$repo_root" clone --no-checkout --no-hardlinks "$repo_root" "$checkout_dir"
+git -C "$checkout_dir" checkout --detach "$base_commit"
+
+cat <<'TASKS'
+
+Temporary smoke checkout is ready. Work Leaf will run the current HEAD binaries
+against that old-base checkout.
+
+Paste these commands into Work Leaf:
+
+:new add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select
+:new when an user prompt start with / and is followed by something without whitespace that is a command for the agent; the orchestrator must send it to the selected backend agent and show that backend response
+:new when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it
+
+After all three reviewed features are clean, run:
+
+:linearize
+
+When you quit Work Leaf, this script removes the temporary checkout.
+
+TASKS
+
+if [[ "$dry_run" == "1" ]]; then
+  echo "Dry run complete; leaving through cleanup."
+  exit 0
+fi
+
+(
+  cd "$checkout_dir"
+  WORK_LEAF_START_SKIP_BUILD=1 \
+    WORK_LEAF_START_BIN_DIR="$bin_dir" \
+    WORK_LEAF_START_LISTEN="$listen_addr" \
+    "$repo_root/start" "${start_args[@]}"
+)

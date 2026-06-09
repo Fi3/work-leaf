@@ -69,6 +69,12 @@ and terminates the daemon when the CLI process exits. `WORK_LEAF_START_LISTEN` s
 listen address when a caller needs an explicit override; the script does not fall back to another
 port when the requested address is unavailable.
 
+The project-root `smoke-three-features` script runs the current Work Leaf binaries against a
+temporary Git checkout at the three-feature smoke-test base commit. It builds release binaries from
+the current checkout unless `WORK_LEAF_SMOKE_SKIP_BUILD=1`, passes those binaries to `start` through
+`WORK_LEAF_START_BIN_DIR`, prints the three real-agent `:new` prompts, and removes the temporary
+checkout on normal exit, launch failure, or interruption.
+
 ## Agent Domain
 
 `src/agent.rs` owns provider-neutral agent data:

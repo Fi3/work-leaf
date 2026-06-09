@@ -5,6 +5,7 @@ use std::io::{ErrorKind, Read, Write};
 use std::net::TcpListener;
 use std::os::fd::FromRawFd;
 use std::os::raw::{c_char, c_int, c_void};
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -175,6 +176,85 @@ fn start_script_uses_default_daemon_port_and_fails_when_unavailable() {
     );
 }
 
+#[test]
+fn three_feature_smoke_script_describes_head_binary_old_base_workflow() {
+    let script =
+        fs::read_to_string("smoke-three-features").expect("three-feature smoke script exists");
+    let mode = fs::metadata("smoke-three-features")
+        .expect("three-feature smoke script is statable")
+        .permissions()
+        .mode();
+
+    assert_ne!(mode & 0o111, 0, "smoke script should be executable");
+    assert!(script.contains("WORK_LEAF_SMOKE_BASE:-c92a0b7060a36eac6db2d869b85e589a7a9480f9"));
+    assert!(script.contains(
+        "git -C \"$repo_root\" clone --no-checkout --no-hardlinks \"$repo_root\" \"$checkout_dir\""
+    ));
+    assert!(script.contains("git -C \"$checkout_dir\" checkout --detach \"$base_commit\""));
+    assert!(script.contains("rm -rf \"$tmp_root\""));
+    assert!(script.contains("trap cleanup EXIT INT TERM"));
+    assert!(script.contains("WORK_LEAF_START_BIN_DIR=\"$bin_dir\""));
+    assert!(script.contains("\"$repo_root/start\""));
+    assert!(script.contains(":new add vim like visual mode"));
+    assert!(script.contains(":new when an user prompt start with /"));
+    assert!(script.contains(":new when review process is done"));
+}
+
+#[test]
+fn three_feature_smoke_script_cleans_temp_checkout_after_dry_run() {
+    let root = temp_dir("three-feature-smoke-dry-run");
+    let output = Command::new(Path::new(env!("CARGO_MANIFEST_DIR")).join("smoke-three-features"))
+        .arg("--dry-run")
+        .env("WORK_LEAF_SMOKE_SKIP_BUILD", "1")
+        .env("WORK_LEAF_SMOKE_BASE", "HEAD")
+        .env("WORK_LEAF_SMOKE_TMPDIR", root.path())
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "dry run should succeed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let temp_root = smoke_temp_root(&output.stdout);
+    assert!(
+        !temp_root.exists(),
+        "smoke script should remove dry-run temp root {temp_root:?}"
+    );
+}
+
+#[test]
+fn three_feature_smoke_script_cleans_temp_checkout_after_launch_failure() {
+    let root = temp_dir("three-feature-smoke-failure");
+    let output = Command::new(Path::new(env!("CARGO_MANIFEST_DIR")).join("smoke-three-features"))
+        .env("WORK_LEAF_SMOKE_SKIP_BUILD", "1")
+        .env("WORK_LEAF_SMOKE_BASE", "HEAD")
+        .env("WORK_LEAF_SMOKE_TMPDIR", root.path())
+        .env("WORK_LEAF_SMOKE_BIN_DIR", root.path().join("missing-bin"))
+        .env("WORK_LEAF_SMOKE_LISTEN", "127.0.0.1:0")
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .unwrap();
+
+    assert!(
+        !output.status.success(),
+        "launch should fail with missing binaries\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let temp_root = smoke_temp_root(&output.stdout);
+    assert!(
+        !temp_root.exists(),
+        "smoke script should remove failed-launch temp root {temp_root:?}"
+    );
+}
+
 struct TempProject {
     root: PathBuf,
 }
@@ -201,6 +281,15 @@ fn temp_dir(name: &str) -> TempProject {
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
     TempProject { root }
+}
+
+fn smoke_temp_root(stdout: &[u8]) -> PathBuf {
+    let stdout = String::from_utf8_lossy(stdout);
+    stdout
+        .lines()
+        .find_map(|line| line.strip_prefix("WORK_LEAF_SMOKE_TEMP="))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| panic!("smoke output did not include temp root:\n{stdout}"))
 }
 
 #[repr(C)]
