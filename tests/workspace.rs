@@ -547,9 +547,10 @@ fn controller_delays_dependent_agent_launch_until_dependency_closes() {
     assert_eq!(child_session.depends_on, vec![parent.clone()]);
     assert_eq!(parent_session.depended_on_by, vec![child.clone()]);
     assert!(
-        child_session.lines.iter().any(|line| {
-            line == &format!("work-leaf: waiting for {parent} to be marked done")
-        }),
+        child_session
+            .lines
+            .iter()
+            .any(|line| { line == &format!("work-leaf: waiting for {parent} to be marked done") }),
         "{child_session:?}"
     );
     assert!(
@@ -826,11 +827,19 @@ fn controller_forks_patch_agent_with_copied_history_and_independent_backend_sess
     let launches = backend.launches();
     assert_eq!(launches.len(), 2);
     assert_eq!(launches[1].id, fork_id);
-    assert!(launches[1].prompt.contains("Conversation history from user-1"));
+    assert!(
+        launches[1]
+            .prompt
+            .contains("Conversation history from user-1")
+    );
     assert!(launches[1].prompt.contains("original task"));
     assert!(launches[1].prompt.contains("capture this context"));
     assert!(launches[1].prompt.contains("source follow-up"));
-    assert!(launches[1].prompt.contains("try an alternate implementation"));
+    assert!(
+        launches[1]
+            .prompt
+            .contains("try an alternate implementation")
+    );
 }
 
 #[test]
@@ -1475,12 +1484,7 @@ impl AgentBackend for FakeBackend {
     }
 
     fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
-        self.state
-            .lock()
-            .unwrap()
-            .sessions
-            .get(agent_id)
-            .cloned()
+        self.state.lock().unwrap().sessions.get(agent_id).cloned()
     }
 }
 
