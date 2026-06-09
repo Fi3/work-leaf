@@ -723,7 +723,9 @@ where
     ) -> Result<(), CliError> {
         if let Some(dependency) = dependency {
             if agent_id == dependency {
-                return Err(CliError::Usage("an agent cannot depend on itself".to_string()));
+                return Err(CliError::Usage(
+                    "an agent cannot depend on itself".to_string(),
+                ));
             }
             self.ensure_session_exists(dependency)?;
         }
@@ -776,9 +778,7 @@ where
 
     fn detach_dependency(&mut self, agent_id: &AgentId, dependency: &AgentId) {
         if let Some(session) = self.sessions.get_mut(agent_id) {
-            session
-                .depends_on
-                .retain(|existing| existing != dependency);
+            session.depends_on.retain(|existing| existing != dependency);
         }
         if let Some(session) = self.sessions.get_mut(dependency) {
             session
