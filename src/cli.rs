@@ -792,14 +792,16 @@ where
             return Ok(Vec::new());
         }
         let history = GitHistory::new(self.project_dir.clone());
-        let commits = self
-            .linearize_reviewed_commits
-            .iter()
-            .map(|commit| history.agent_commit(&commit.hash))
-            .collect::<Result<Vec<_>, _>>()?
-            .into_iter()
-            .flatten()
-            .collect();
+        let mut commits = Vec::new();
+        for reviewed_commit in &self.linearize_reviewed_commits {
+            if history.agent_commit(&reviewed_commit.hash)?.is_some() {
+                commits.push(reviewed_commit.clone());
+            } else if let Some(current_commit) =
+                history.agent_review_commit(&reviewed_commit.agent_id, None)?
+            {
+                commits.push(current_commit);
+            }
+        }
         Ok(commits)
     }
 

@@ -763,6 +763,89 @@ fn controller_starts_review_when_agent_reports_done_after_prior_patch_turn() {
 }
 
 #[test]
+fn controller_starts_review_when_done_directive_has_trailing_whitespace() {
+    let root = git_repo("workspace-review-done-trailing-whitespace");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end \t\n@work-leaf done \t",
+        "summary: README changes from before to after",
+        "NO_FINDINGS",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("update readme").unwrap();
+
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    let reviewer_id = AgentId::new("review-user-1").unwrap();
+    let snapshot = controller.snapshot();
+    let reviewer = snapshot
+        .session(&reviewer_id)
+        .expect("reviewer session starts from whitespace-tolerant done");
+    assert_eq!(reviewer.loading, None);
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert_eq!(
+        patch_agent.completion,
+        Some(WorkLeafCompletion::NeedsDecision)
+    );
+    assert!(
+        patch_agent
+            .lines
+            .iter()
+            .any(|line| line.contains("user-1 reviewed by review-user-1: rounds=1 resolved=yes")),
+        "{patch_agent:?}"
+    );
+    assert!(
+        !patch_agent
+            .lines
+            .iter()
+            .any(|line| line.contains("unknown work-leaf directive `done"))
+    );
+}
+
+#[test]
+fn controller_linearize_preserves_cumulative_review_scope_for_one_done() {
+    let root = git_repo("workspace-linearize-cumulative-review-scope");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "first patch\n@work-leaf patch first step\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after first\n@work-leaf end",
+        "second patch\n@work-leaf patch second step\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-after first\n+after second\n@work-leaf end\n@work-leaf done",
+        "summary: full change",
+        "NO_FINDINGS",
+        "linearizer ready",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller
+        .create_agent("update readme in two steps")
+        .unwrap();
+    assert_eq!(agent_id.as_str(), "user-1");
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    assert!(controller.start_linearize().unwrap().is_some());
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    let launches = backend.launches();
+    let linearize_launch = launches
+        .iter()
+        .find(|launch| launch.id.as_str() == "linearize")
+        .expect("linearize agent launched");
+    assert!(
+        linearize_launch
+            .prompt
+            .contains("Review scope includes 2 provisional commits"),
+        "{}",
+        linearize_launch.prompt
+    );
+    assert!(linearize_launch.prompt.contains("first step"));
+    assert!(linearize_launch.prompt.contains("second step"));
+}
+
+#[test]
 fn controller_sends_agent_slash_commands_to_the_backend_unchanged() {
     let backend = FakeBackend::new(["launch reply", "backend status output"]);
     let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());

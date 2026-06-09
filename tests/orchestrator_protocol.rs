@@ -442,6 +442,50 @@ diff --git a/README.md b/README.md
 }
 
 #[test]
+fn orchestrator_protocol_accepts_trailing_whitespace_on_done_and_end_directives() {
+    let root = temp_git_repo("protocol-trailing-whitespace-done");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "\
+@work-leaf patch update readme
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-before
++after
+@work-leaf end \t
+@work-leaf done \t",
+        )
+        .unwrap();
+
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "after\n"
+    );
+    assert!(events.iter().any(|event| matches!(
+        event,
+        OrchestratorEvent::PatchApplied {
+            agent_id: id,
+            files,
+            ..
+        } if id == &agent_id && files == &vec![PathBuf::from("README.md")]
+    )));
+    assert!(events.iter().any(
+        |event| matches!(event, OrchestratorEvent::AgentDone { agent_id: id } if id == &agent_id)
+    ));
+}
+
+#[test]
 fn orchestrator_protocol_times_out_long_locked_command_runs() {
     let root = temp_git_repo("protocol-locked-command-timeout");
     fs::write(root.join("README.md"), "before\n").unwrap();

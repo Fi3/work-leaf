@@ -1292,7 +1292,8 @@ where
             && match result {
                 CommandChatResult::AgentLaunched { reply, .. }
                 | CommandChatResult::AgentMessage { reply, .. } => {
-                    contains_done_directive(reply) && self.has_unreviewed_agent_commit(agent_id)
+                    (contains_done_directive(reply) || contains_done_summary(reply, agent_id))
+                        && self.has_unreviewed_agent_commit(agent_id)
                 }
                 _ => false,
             }
@@ -1426,8 +1427,12 @@ where
 }
 
 fn contains_done_directive(text: &str) -> bool {
-    text.lines()
-        .any(|line| line.trim_start() == "@work-leaf done")
+    text.lines().any(|line| line.trim() == "@work-leaf done")
+}
+
+fn contains_done_summary(text: &str, agent_id: &AgentId) -> bool {
+    let summary = format!("agent {agent_id} reported done");
+    text.lines().any(|line| line.trim() == summary)
 }
 
 fn trim_streamed_reply_blocks<'a>(reply: &'a str, streamed_lines: &[String]) -> &'a str {

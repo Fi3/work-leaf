@@ -1171,7 +1171,7 @@ fn directive_body(line: &str) -> Option<&str> {
     if !chars.next()?.is_whitespace() {
         return None;
     }
-    Some(chars.as_str().trim_start())
+    Some(chars.as_str().trim())
 }
 
 fn directive_rest<'a>(body: &'a str, command: &str) -> Option<&'a str> {

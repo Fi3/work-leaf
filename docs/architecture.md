@@ -273,9 +273,10 @@ Review bookkeeping has three scopes. The controller records a launch-time review
 patch agent, tracks the latest reviewed hash for that patch agent so the same agent head is not
 reviewed twice, and asks reviewers to inspect every provisional commit from the active baseline
 through the latest patch-agent commit. `CommandChat` also keeps the ordered exact review targets that
-completed review during the active instance, and those targets form the linearizer handoff. This lets
-one patch-agent session complete more than one reviewed patch without a later hash replacing earlier
-reviewed work in the linearizer prompt.
+completed review during the active instance, including their cumulative review scope text, and those
+targets form the linearizer handoff. This lets one patch-agent session complete more than one
+reviewed patch without a later hash replacing earlier reviewed work or dropping earlier commits from
+the linearizer prompt.
 When review resolves with no findings, the controller marks the patch-agent session as needing a
 user completion decision and appends a yes/no question to that session. `yes` closes the feature,
 `no` keeps it open, and a later message in a closed chat clears the closed state before sending the
