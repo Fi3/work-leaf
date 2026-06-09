@@ -404,8 +404,12 @@ where
             .chat
             .as_ref()
             .and_then(|chat| chat.agent_session(source_agent_id));
-        let launch_prompt =
-            fork_launch_prompt(source_agent_id, backend_session.as_ref(), &source, &fork_prompt);
+        let launch_prompt = fork_launch_prompt(
+            source_agent_id,
+            backend_session.as_ref(),
+            &source,
+            &fork_prompt,
+        );
         let launch = self.prepare_agent_launch(&[launch_prompt])?;
         let agent_id = launch.id.clone();
         self.remember_agent_review_baseline(&agent_id);
