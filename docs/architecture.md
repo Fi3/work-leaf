@@ -281,10 +281,19 @@ user completion decision and appends a yes/no question to that session. `yes` cl
 `no` keeps it open, and a later message in a closed chat clears the closed state before sending the
 message to the agent backend.
 
+Agent dependency options are validated before dependent work is registered. A dependency target from
+`--depends-on <agent-id>` must name an existing, different session. When the dependency is still
+open, the controller records `WorkLeafSession.depends_on` and `depended_on_by`, exposes
+`WorkLeafLoading::WaitingForDependency`, and stores the pending launch or patch-promotion send until
+the dependency is closed. When the dependency is already closed, the controller proceeds immediately
+and records a visible dependency-release line in the dependent transcript.
+
 When linearization starts, the controller interrupts all visible non-linearizer sessions, clears their
-loading state, leaves their chat transcripts visible, and ignores late worker events from those
-stopped sessions. This keeps stale patch or review workers from appending findings or starting new
-reviews after the linearizer has taken ownership of the reviewed work.
+loading state, cancels pending dependent launches and patch-promotion sends, detaches dependency
+links for those cancelled waits, leaves chat transcripts visible, and ignores late worker events from
+stopped sessions. This keeps stale patch or review workers from appending findings, releasing
+dependent work, or starting new reviews after the linearizer has taken ownership of the reviewed
+work.
 
 The command transcript is also the conversation history for the persistent `command-agent`. That
 system agent interprets chat sent to the Work Leaf command surface. It recognizes literal command
@@ -316,7 +325,8 @@ The controller exposes renderable state through:
   completion state, and optional provider token usage.
 - `WorkLeafEvent`, which reports session creation, session updates, streamed lines, selection
   changes, token-usage updates, transcript lines, and quit requests.
-- `WorkLeafLoading`, which distinguishes launch and waiting-for-reply states.
+- `WorkLeafLoading`, which distinguishes launch, waiting-for-reply, and waiting-for-dependency
+  states.
 
 `WorkLeafEvent` uses append-oriented transcript events for efficient remote frontends. `AgentAdded`
 provides the initial session snapshot, `AgentLineAppended` carries one new session line, and

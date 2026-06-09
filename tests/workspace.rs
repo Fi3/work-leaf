@@ -592,6 +592,89 @@ fn controller_delays_dependent_agent_launch_until_dependency_closes() {
 }
 
 #[test]
+fn controller_rejects_unknown_dependency_without_creating_agent() {
+    let backend = FakeBackend::new(["parent launch"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    let parent = controller.create_agent("parent task").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    assert_eq!(parent, AgentId::new("user-1").unwrap());
+
+    let result = controller.create_agent("--depends-on user-99 follow-up");
+
+    assert!(result.is_err());
+    let snapshot = controller.snapshot();
+    assert!(snapshot.session(&AgentId::new("user-2").unwrap()).is_none());
+    let launches = backend.launches();
+    assert_eq!(launches.len(), 1);
+    assert!(launches.iter().all(|launch| launch.id != AgentId::new("user-2").unwrap()));
+}
+
+#[test]
+fn controller_linearize_cancels_pending_dependent_launches_visibly() {
+    let root = git_repo("workspace-linearize-cancels-dependent-launch");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "parent patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after parent\n@work-leaf end\n@work-leaf done",
+        "summary: README changes from before to after parent",
+        "NO_FINDINGS",
+        "linearizer ready",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let parent = controller.create_agent("update readme").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    let child = controller
+        .create_agent(format!("--depends-on {parent} update follow-up"))
+        .unwrap();
+
+    let snapshot = controller.snapshot();
+    let child_session = snapshot.session(&child).expect("child session exists");
+    assert_eq!(
+        child_session.loading,
+        Some(WorkLeafLoading::WaitingForDependency)
+    );
+    assert_eq!(child_session.depends_on, vec![parent.clone()]);
+
+    assert!(controller.start_linearize().unwrap().is_some());
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    let snapshot = controller.snapshot();
+    let parent_session = snapshot.session(&parent).expect("parent session exists");
+    let child_session = snapshot.session(&child).expect("child session exists");
+    assert_eq!(child_session.loading, None);
+    assert!(child_session.depends_on.is_empty(), "{child_session:?}");
+    assert!(
+        parent_session.depended_on_by.is_empty(),
+        "{parent_session:?}"
+    );
+    assert!(
+        child_session.lines.iter().any(|line| {
+            line == &format!(
+                "work-leaf: cancelled dependency wait for {parent} before linearize"
+            )
+        }),
+        "{child_session:?}"
+    );
+    assert!(
+        !backend.launches().iter().any(|launch| launch.id == child),
+        "dependent launch must be cancelled rather than left queued"
+    );
+
+    controller.send_message(&parent, "yes").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+
+    assert!(
+        !backend.launches().iter().any(|launch| launch.id == child),
+        "closing the former dependency after linearize must not launch cancelled work"
+    );
+}
+
+#[test]
 fn controller_does_not_start_review_until_patch_agent_reports_done() {
     let root = git_repo("workspace-review-waits-for-done");
     fs::write(root.join("README.md"), "before\n").unwrap();

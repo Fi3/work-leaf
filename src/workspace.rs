@@ -237,10 +237,14 @@ where
                 request.depends_on,
             );
         }
+        if let Some(dependency) = &request.depends_on {
+            self.ensure_session_exists(dependency)?;
+        }
 
         let title_pending = request.args.is_empty();
         let launch = self.prepare_agent_launch(&request.args)?;
         let agent_id = launch.id.clone();
+        self.validate_dependency_target(&agent_id, request.depends_on.as_ref())?;
         self.remember_agent_review_baseline(&agent_id);
         let title = self
             .reserve_launch_title(&launch, title_pending)
@@ -346,6 +350,7 @@ where
     ) -> Result<(), CliError> {
         self.ensure_session_exists(agent_id)?;
         let request = parse_agent_creation_request(split_command_line(prompt))?;
+        self.validate_dependency_target(agent_id, request.depends_on.as_ref())?;
         let prompt = request.args.join(" ");
         let promotion_prompt = if prompt.is_empty() {
             "Continue this existing Work Leaf session as a patch agent. Report the broad feature before proposing patches, follow the patch-agent instructions, and use the orchestrator patch flow for file changes.".to_string()
@@ -400,6 +405,9 @@ where
                 source_agent_id.clone(),
             ))
         })?;
+        if let Some(dependency) = &depends_on {
+            self.ensure_session_exists(dependency)?;
+        }
         let backend_session = self
             .chat
             .as_ref()
@@ -412,6 +420,7 @@ where
         );
         let launch = self.prepare_agent_launch(&[launch_prompt])?;
         let agent_id = launch.id.clone();
+        self.validate_dependency_target(&agent_id, depends_on.as_ref())?;
         self.remember_agent_review_baseline(&agent_id);
         let title = if fork_prompt.is_empty() {
             format!("{} fork", source.title)
@@ -707,6 +716,20 @@ where
         }
     }
 
+    fn validate_dependency_target(
+        &self,
+        agent_id: &AgentId,
+        dependency: Option<&AgentId>,
+    ) -> Result<(), CliError> {
+        if let Some(dependency) = dependency {
+            if agent_id == dependency {
+                return Err(CliError::Usage("an agent cannot depend on itself".to_string()));
+            }
+            self.ensure_session_exists(dependency)?;
+        }
+        Ok(())
+    }
+
     fn attach_dependency(
         &mut self,
         agent_id: &AgentId,
@@ -751,6 +774,21 @@ where
         self.session_completion(dependency) == Some(WorkLeafCompletion::Closed)
     }
 
+    fn detach_dependency(&mut self, agent_id: &AgentId, dependency: &AgentId) {
+        if let Some(session) = self.sessions.get_mut(agent_id) {
+            session
+                .depends_on
+                .retain(|existing| existing != dependency);
+        }
+        if let Some(session) = self.sessions.get_mut(dependency) {
+            session
+                .depended_on_by
+                .retain(|existing| existing != agent_id);
+        }
+        self.publish_full_session(agent_id);
+        self.publish_full_session(dependency);
+    }
+
     fn defer_launch_until_dependency(&mut self, launch: AgentLaunch, dependency: AgentId) {
         let agent_id = launch.id.clone();
         self.set_session_loading(&agent_id, Some(WorkLeafLoading::WaitingForDependency));
@@ -779,6 +817,31 @@ where
             .push(PendingDependentSend { agent_id, message });
     }
 
+    fn cancel_pending_dependents_for_linearize(&mut self) {
+        let mut pending = self
+            .pending_dependent_launches
+            .values()
+            .map(|pending| (pending.launch.id.clone(), pending.dependency.clone()))
+            .collect::<Vec<_>>();
+        for (dependency, sends) in &self.pending_dependent_sends {
+            pending.extend(
+                sends
+                    .iter()
+                    .map(|send| (send.agent_id.clone(), dependency.clone())),
+            );
+        }
+        self.pending_dependent_launches.clear();
+        self.pending_dependent_sends.clear();
+        for (agent_id, dependency) in pending {
+            self.detach_dependency(&agent_id, &dependency);
+            self.set_session_loading(&agent_id, None);
+            self.append_agent_line(
+                &agent_id,
+                format!("work-leaf: cancelled dependency wait for {dependency} before linearize"),
+            );
+        }
+    }
+
     fn stop_non_linearize_agents_for_linearize(&mut self) {
         let display_name = self.agent_display_name();
         let agent_ids = self
@@ -792,8 +855,7 @@ where
             .retain(|launch| is_linearize_agent_id(&launch.id));
         self.launch_starting.retain(is_linearize_agent_id);
         self.review_commits_in_progress.clear();
-        self.pending_dependent_launches.clear();
-        self.pending_dependent_sends.clear();
+        self.cancel_pending_dependents_for_linearize();
 
         for agent_id in agent_ids {
             let _ = self
