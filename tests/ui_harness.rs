@@ -66,9 +66,12 @@ fn scripted_harness_empty_chat_escape_enters_command_mode_and_forks_selected_age
     assert_eq!(harness.ui().mode(), UiMode::Command);
     harness.handle_byte(b'f');
 
-    assert!(harness.transcript().iter().any(|line| {
-        line.contains("ForkAgent") && line.contains("user-1")
-    }));
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| { line.contains("ForkAgent") && line.contains("user-1") })
+    );
 }
 
 #[test]

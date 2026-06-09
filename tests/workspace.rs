@@ -895,10 +895,12 @@ fn controller_command_promotes_existing_agent_to_patch_agent() {
             .iter()
             .any(|line| line == "work-leaf: escalated this chat to a patch agent")
     );
-    assert!(session
-        .lines
-        .iter()
-        .any(|line| line.contains("Patch task:") && line.contains("implement the fix")));
+    assert!(
+        session
+            .lines
+            .iter()
+            .any(|line| line.contains("Patch task:") && line.contains("implement the fix"))
+    );
     assert!(session.lines.iter().any(|line| line == "promotion reply"));
     assert!(snapshot.session(&AgentId::new("user-2").unwrap()).is_none());
 
@@ -906,7 +908,11 @@ fn controller_command_promotes_existing_agent_to_patch_agent() {
     let sends = backend.sends();
     assert_eq!(sends.len(), 1);
     assert_eq!(sends[0].0, agent_id);
-    assert!(sends[0].1.contains("Continue this existing Work Leaf session as a patch agent"));
+    assert!(
+        sends[0]
+            .1
+            .contains("Continue this existing Work Leaf session as a patch agent")
+    );
     assert!(sends[0].1.contains("implement the fix"));
 }
 
