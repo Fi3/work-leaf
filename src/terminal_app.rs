@@ -314,7 +314,7 @@ where
     skip_next_paste_lf: bool,
     spinner: usize,
     snapshot: WorkLeafSnapshot,
-    loading_text: [(WorkLeafLoading, String); 2],
+    loading_text: [(WorkLeafLoading, String); 3],
     dirty: bool,
     quit: bool,
 }
@@ -333,6 +333,10 @@ where
             (
                 WorkLeafLoading::WaitingForReply,
                 controller.loading_text(WorkLeafLoading::WaitingForReply),
+            ),
+            (
+                WorkLeafLoading::WaitingForDependency,
+                controller.loading_text(WorkLeafLoading::WaitingForDependency),
             ),
         ];
         let mut app = Self {
@@ -680,7 +684,16 @@ where
 
     fn record_actions(&mut self, actions: Vec<crate::UiAction>) {
         for action in actions {
-            self.controller.push_transcript_line(ui_action_text(action));
+            match action {
+                crate::UiAction::ForkAgent(agent_id) => {
+                    self.controller.push_transcript_line(ui_action_text(
+                        crate::UiAction::ForkAgent(agent_id.clone()),
+                    ));
+                    self.controller
+                        .execute_command_line(&format!("new --fork-from {agent_id}"));
+                }
+                other => self.controller.push_transcript_line(ui_action_text(other)),
+            }
         }
         self.apply_controller_events();
     }
@@ -787,6 +800,8 @@ where
             loading,
             completion,
             token_usage: None,
+            depends_on: Vec::new(),
+            depended_on_by: Vec::new(),
         };
         self.snapshot.sessions.push(session.clone());
         self.snapshot
@@ -819,8 +834,16 @@ where
             .set_agent_feature(&session.id, display_title.clone())
             .is_err()
         {
-            self.ui
-                .add_agent(AgentListEntry::new(session.id.clone(), display_title));
+            let mut entry = AgentListEntry::new(session.id.clone(), display_title);
+            entry.depends_on = session.depends_on.clone();
+            entry.depended_on_by = session.depended_on_by.clone();
+            self.ui.add_agent(entry);
+        } else {
+            let _ = self.ui.set_agent_relationships(
+                &session.id,
+                session.depends_on.clone(),
+                session.depended_on_by.clone(),
+            );
         }
         let _ = self
             .ui
@@ -1328,6 +1351,8 @@ mod tests {
                     loading: None,
                     completion: None,
                     token_usage: None,
+                    depends_on: Vec::new(),
+                    depended_on_by: Vec::new(),
                 }],
             },
             Arc::clone(&snapshot_calls),

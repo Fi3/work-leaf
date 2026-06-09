@@ -12,6 +12,9 @@ use crate::agent::{AgentError, AgentId, AgentLaunch, AgentSession, ChatMessage};
 pub trait AgentBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError>;
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError>;
+    fn session(&self, _agent_id: &AgentId) -> Option<AgentSession> {
+        None
+    }
     fn interrupt(&mut self, _agent_id: &AgentId) -> Result<(), AgentError> {
         Ok(())
     }

@@ -335,6 +335,20 @@ impl TerminalUi {
         Ok(())
     }
 
+    pub(crate) fn set_agent_relationships(
+        &mut self,
+        agent_id: &AgentId,
+        depends_on: Vec<AgentId>,
+        depended_on_by: Vec<AgentId>,
+    ) -> Result<(), String> {
+        let Some(agent) = self.agents.iter_mut().find(|agent| &agent.id == agent_id) else {
+            return Err(format!("unknown agent `{agent_id}`"));
+        };
+        agent.depends_on = depends_on;
+        agent.depended_on_by = depended_on_by;
+        Ok(())
+    }
+
     pub(crate) fn set_agent_ready_state(
         &mut self,
         agent_id: &AgentId,

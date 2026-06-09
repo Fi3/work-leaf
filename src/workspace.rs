@@ -32,6 +32,8 @@ where
     shutdown_on_drop: bool,
     workers: Vec<Worker>,
     pending_launches: VecDeque<AgentLaunch>,
+    pending_dependent_launches: BTreeMap<AgentId, PendingDependentLaunch>,
+    pending_dependent_sends: BTreeMap<AgentId, Vec<PendingDependentSend>>,
     launch_starting: BTreeSet<AgentId>,
     command_transcript: Vec<String>,
     sessions: BTreeMap<AgentId, WorkLeafSession>,
@@ -56,6 +58,8 @@ where
             shutdown_on_drop: true,
             workers: Vec::new(),
             pending_launches: VecDeque::new(),
+            pending_dependent_launches: BTreeMap::new(),
+            pending_dependent_sends: BTreeMap::new(),
             launch_starting: BTreeSet::new(),
             command_transcript: vec![render_command_chat_help()],
             sessions: BTreeMap::new(),
@@ -225,15 +229,17 @@ where
 
     pub fn create_agent(&mut self, prompt: impl Into<String>) -> Result<AgentId, CliError> {
         let prompt = prompt.into();
-        let args = split_command_line(&prompt);
-        let title_pending = args.is_empty();
-        let launch = {
-            let chat = self
-                .chat
-                .as_mut()
-                .expect("work-leaf controller command chat is present");
-            chat.prepare_agent_launch(&args)?
-        };
+        let request = parse_agent_creation_request(split_command_line(&prompt))?;
+        if let Some(source_agent_id) = request.fork_from {
+            return self.fork_agent_with_options(
+                &source_agent_id,
+                &request.args.join(" "),
+                request.depends_on,
+            );
+        }
+
+        let title_pending = request.args.is_empty();
+        let launch = self.prepare_agent_launch(&request.args)?;
         let agent_id = launch.id.clone();
         self.remember_agent_review_baseline(&agent_id);
         let title = self
@@ -249,11 +255,26 @@ where
             loading: Some(WorkLeafLoading::Launching),
             completion: None,
             token_usage: None,
+            depends_on: Vec::new(),
+            depended_on_by: Vec::new(),
         });
         self.pending_events.push(WorkLeafEvent::AgentSelected {
             agent_id: agent_id.clone(),
         });
-        self.queue_or_start_launch_worker(launch);
+        if let Some(dependency) = request.depends_on {
+            self.attach_dependency(&agent_id, &dependency)?;
+            if self.dependency_is_closed(&dependency) {
+                self.append_agent_line(
+                    &agent_id,
+                    format!("work-leaf: dependency {dependency} marked done; launching"),
+                );
+                self.queue_or_start_launch_worker(launch);
+            } else {
+                self.defer_launch_until_dependency(launch, dependency);
+            }
+        } else {
+            self.queue_or_start_launch_worker(launch);
+        }
         Ok(agent_id)
     }
 
@@ -316,6 +337,116 @@ where
             }
         });
         Ok(())
+    }
+
+    pub fn promote_agent_to_patch(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+    ) -> Result<(), CliError> {
+        self.ensure_session_exists(agent_id)?;
+        let request = parse_agent_creation_request(split_command_line(prompt))?;
+        let prompt = request.args.join(" ");
+        let promotion_prompt = if prompt.is_empty() {
+            "Continue this existing Work Leaf session as a patch agent. Report the broad feature before proposing patches, follow the patch-agent instructions, and use the orchestrator patch flow for file changes.".to_string()
+        } else {
+            format!(
+                "Continue this existing Work Leaf session as a patch agent.\n\nPatch task:\n{prompt}\n\nReport the broad feature before proposing patches, follow the patch-agent instructions, and use the orchestrator patch flow for file changes."
+            )
+        };
+        self.append_agent_line(
+            agent_id,
+            "work-leaf: escalated this chat to a patch agent".to_string(),
+        );
+        if let Some(title) = self.reserve_first_chat_title(agent_id, &prompt) {
+            self.apply_agent_title(agent_id, title);
+        }
+        if let Some(dependency) = request.depends_on {
+            self.attach_dependency(agent_id, &dependency)?;
+            if self.dependency_is_closed(&dependency) {
+                self.append_agent_line(
+                    agent_id,
+                    format!("work-leaf: dependency {dependency} marked done; sending patch task"),
+                );
+                self.start_send_worker(agent_id.clone(), promotion_prompt);
+            } else {
+                self.defer_send_until_dependency(agent_id.clone(), promotion_prompt, dependency);
+            }
+        } else {
+            self.start_send_worker(agent_id.clone(), promotion_prompt);
+        }
+        Ok(())
+    }
+
+    pub fn fork_agent(
+        &mut self,
+        source_agent_id: &AgentId,
+        prompt: &str,
+    ) -> Result<AgentId, CliError> {
+        self.fork_agent_with_options(source_agent_id, prompt, None)
+    }
+
+    fn fork_agent_with_options(
+        &mut self,
+        source_agent_id: &AgentId,
+        prompt: &str,
+        inherited_dependency: Option<AgentId>,
+    ) -> Result<AgentId, CliError> {
+        let request = parse_agent_creation_request(split_command_line(prompt))?;
+        let depends_on = request.depends_on.or(inherited_dependency);
+        let fork_prompt = request.args.join(" ");
+        let source = self
+            .sessions
+            .get(source_agent_id)
+            .cloned()
+            .ok_or_else(|| {
+                CliError::Agent(crate::agent::AgentError::UnknownSession(
+                    source_agent_id.clone(),
+                ))
+            })?;
+        let launch_prompt = fork_launch_prompt(&source, &fork_prompt);
+        let launch = self.prepare_agent_launch(&[launch_prompt])?;
+        let agent_id = launch.id.clone();
+        self.remember_agent_review_baseline(&agent_id);
+        let title = if fork_prompt.is_empty() {
+            format!("{} fork", source.title)
+        } else {
+            fallback_chat_title_from_prompt(&fork_prompt)
+        };
+        self.title_agent.mark_named(&agent_id);
+        self.register_agent_feature(agent_id.clone(), title.clone());
+        let mut lines = source.lines.clone();
+        lines.push(format!("work-leaf: forked from {source_agent_id}"));
+        self.add_session(WorkLeafSession {
+            id: agent_id.clone(),
+            kind: launch.kind.clone(),
+            title: title.clone(),
+            feature: title,
+            lines,
+            loading: Some(WorkLeafLoading::Launching),
+            completion: None,
+            token_usage: None,
+            depends_on: Vec::new(),
+            depended_on_by: Vec::new(),
+        });
+        self.pending_events.push(WorkLeafEvent::AgentSelected {
+            agent_id: agent_id.clone(),
+        });
+        if let Some(dependency) = depends_on {
+            self.attach_dependency(&agent_id, &dependency)?;
+            if self.dependency_is_closed(&dependency) {
+                self.append_agent_line(
+                    &agent_id,
+                    format!("work-leaf: dependency {dependency} marked done; launching"),
+                );
+                self.queue_or_start_launch_worker(launch);
+            } else {
+                self.defer_launch_until_dependency(launch, dependency);
+            }
+        } else {
+            self.queue_or_start_launch_worker(launch);
+        }
+        Ok(agent_id)
     }
 
     pub fn start_review(&mut self) -> Result<Vec<AgentId>, CliError> {
@@ -396,6 +527,8 @@ where
                     loading: Some(WorkLeafLoading::WaitingForReply),
                     completion: None,
                     token_usage: None,
+                    depends_on: Vec::new(),
+                    depended_on_by: Vec::new(),
                 });
             }
             if reviewer_ids.is_empty() {
@@ -437,6 +570,8 @@ where
             loading: Some(WorkLeafLoading::Launching),
             completion: None,
             token_usage: None,
+            depends_on: Vec::new(),
+            depended_on_by: Vec::new(),
         });
         self.pending_events.push(WorkLeafEvent::AgentSelected {
             agent_id: agent_id.clone(),
@@ -453,6 +588,7 @@ where
             WorkLeafLoading::WaitingForReply => {
                 format!("Waiting for {}", self.agent_display_name())
             }
+            WorkLeafLoading::WaitingForDependency => "Waiting for dependency".to_string(),
         }
     }
 
@@ -514,6 +650,14 @@ where
         }
     }
 
+    fn prepare_agent_launch(&mut self, args: &[String]) -> Result<AgentLaunch, CliError> {
+        let chat = self
+            .chat
+            .as_mut()
+            .expect("work-leaf controller command chat is present");
+        chat.prepare_agent_launch(args)
+    }
+
     fn reserve_first_chat_title(&mut self, agent_id: &AgentId, prompt: &str) -> Option<String> {
         if !agent_id.as_str().starts_with("user-") {
             return None;
@@ -548,6 +692,85 @@ where
             .push(WorkLeafEvent::AgentAdded { session });
     }
 
+    fn ensure_session_exists(&self, agent_id: &AgentId) -> Result<(), CliError> {
+        if self.sessions.contains_key(agent_id) {
+            Ok(())
+        } else {
+            Err(CliError::Agent(crate::agent::AgentError::UnknownSession(
+                agent_id.clone(),
+            )))
+        }
+    }
+
+    fn attach_dependency(
+        &mut self,
+        agent_id: &AgentId,
+        dependency: &AgentId,
+    ) -> Result<(), CliError> {
+        if agent_id == dependency {
+            return Err(CliError::Usage("an agent cannot depend on itself".to_string()));
+        }
+        self.ensure_session_exists(agent_id)?;
+        self.ensure_session_exists(dependency)?;
+        if let Some(session) = self.sessions.get_mut(agent_id) {
+            if !session.depends_on.iter().any(|existing| existing == dependency) {
+                session.depends_on.push(dependency.clone());
+            }
+        }
+        if let Some(session) = self.sessions.get_mut(dependency) {
+            if !session.depended_on_by.iter().any(|existing| existing == agent_id) {
+                session.depended_on_by.push(agent_id.clone());
+            }
+        }
+        self.publish_full_session(agent_id);
+        self.publish_full_session(dependency);
+        Ok(())
+    }
+
+    fn publish_full_session(&mut self, agent_id: &AgentId) {
+        if let Some(session) = self.sessions.get(agent_id).cloned() {
+            self.pending_events
+                .push(WorkLeafEvent::AgentUpdated { session });
+        }
+    }
+
+    fn dependency_is_closed(&self, dependency: &AgentId) -> bool {
+        self.session_completion(dependency) == Some(WorkLeafCompletion::Closed)
+    }
+
+    fn defer_launch_until_dependency(&mut self, launch: AgentLaunch, dependency: AgentId) {
+        let agent_id = launch.id.clone();
+        self.set_session_loading(&agent_id, Some(WorkLeafLoading::WaitingForDependency));
+        self.append_agent_line(
+            &agent_id,
+            format!("work-leaf: waiting for {dependency} to be marked done"),
+        );
+        self.pending_dependent_launches.insert(
+            agent_id,
+            PendingDependentLaunch {
+                launch,
+                dependency,
+            },
+        );
+    }
+
+    fn defer_send_until_dependency(
+        &mut self,
+        agent_id: AgentId,
+        message: String,
+        dependency: AgentId,
+    ) {
+        self.set_session_loading(&agent_id, Some(WorkLeafLoading::WaitingForDependency));
+        self.append_agent_line(
+            &agent_id,
+            format!("work-leaf: waiting for {dependency} to be marked done"),
+        );
+        self.pending_dependent_sends
+            .entry(dependency)
+            .or_default()
+            .push(PendingDependentSend { agent_id, message });
+    }
+
     fn stop_non_linearize_agents_for_linearize(&mut self) {
         let display_name = self.agent_display_name();
         let agent_ids = self
@@ -561,6 +784,8 @@ where
             .retain(|launch| is_linearize_agent_id(&launch.id));
         self.launch_starting.retain(is_linearize_agent_id);
         self.review_commits_in_progress.clear();
+        self.pending_dependent_launches.clear();
+        self.pending_dependent_sends.clear();
 
         for agent_id in agent_ids {
             let _ = self
@@ -601,6 +826,32 @@ where
                 send_worker_stream_event(&stream_sender, event_agent_id, event, &display_name);
             };
             match chat.launch_prepared_agent_streaming_with_ids(launch, &mut stream) {
+                Ok(result) => {
+                    let _ = sender.send(WorkerEvent::Complete {
+                        agent_id: Some(agent_id),
+                        result,
+                    });
+                }
+                Err(error) => {
+                    let _ = sender.send(WorkerEvent::Error {
+                        agent_id: Some(agent_id),
+                        message: command_chat_error_text(&error),
+                    });
+                }
+            }
+        });
+    }
+
+    fn start_send_worker(&mut self, agent_id: AgentId, message: String) {
+        self.set_session_loading(&agent_id, Some(WorkLeafLoading::WaitingForReply));
+        self.append_agent_line(&agent_id, format!("user: {message}"));
+        self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
+            let stream_sender = sender.clone();
+            let display_name = chat.agent_profile().display_name.clone();
+            let mut stream = move |event_agent_id: &AgentId, event| {
+                send_worker_stream_event(&stream_sender, event_agent_id, event, &display_name);
+            };
+            match chat.send_to_agent_streaming_with_ids(&agent_id, &message, &mut stream) {
                 Ok(result) => {
                     let _ = sender.send(WorkerEvent::Complete {
                         agent_id: Some(agent_id),
@@ -783,6 +1034,7 @@ where
             "yes" => {
                 self.set_session_completion(agent_id, Some(WorkLeafCompletion::Closed));
                 self.append_agent_line(agent_id, FEATURE_CLOSED_MESSAGE.to_string());
+                self.release_dependents(agent_id);
             }
             "no" => {
                 self.set_session_completion(agent_id, None);
@@ -791,6 +1043,36 @@ where
             _ => {
                 self.append_agent_line(agent_id, FEATURE_DONE_ANSWER_MESSAGE.to_string());
             }
+        }
+    }
+
+    fn release_dependents(&mut self, dependency: &AgentId) {
+        let ready_launches = self
+            .pending_dependent_launches
+            .iter()
+            .filter(|(_, pending)| &pending.dependency == dependency)
+            .map(|(agent_id, _)| agent_id.clone())
+            .collect::<Vec<_>>();
+        for agent_id in ready_launches {
+            if let Some(pending) = self.pending_dependent_launches.remove(&agent_id) {
+                self.append_agent_line(
+                    &agent_id,
+                    format!("work-leaf: dependency {dependency} marked done; launching"),
+                );
+                self.queue_or_start_launch_worker(pending.launch);
+            }
+        }
+
+        for pending in self
+            .pending_dependent_sends
+            .remove(dependency)
+            .unwrap_or_default()
+        {
+            self.append_agent_line(
+                &pending.agent_id,
+                format!("work-leaf: dependency {dependency} marked done; sending patch task"),
+            );
+            self.start_send_worker(pending.agent_id, pending.message);
         }
     }
 
@@ -1107,6 +1389,8 @@ pub struct WorkLeafSession {
     pub loading: Option<WorkLeafLoading>,
     pub completion: Option<WorkLeafCompletion>,
     pub token_usage: Option<AgentTokenUsage>,
+    pub depends_on: Vec<AgentId>,
+    pub depended_on_by: Vec<AgentId>,
 }
 
 impl WorkLeafSession {
@@ -1120,6 +1404,8 @@ impl WorkLeafSession {
             loading: None,
             completion: None,
             token_usage: None,
+            depends_on: Vec::new(),
+            depended_on_by: Vec::new(),
         }
     }
 }
@@ -1128,6 +1414,7 @@ impl WorkLeafSession {
 pub enum WorkLeafLoading {
     Launching,
     WaitingForReply,
+    WaitingForDependency,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -1173,6 +1460,18 @@ pub enum WorkLeafEvent {
 struct Worker {
     receiver: Receiver<WorkerEvent>,
     handle: JoinHandle<()>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct PendingDependentLaunch {
+    launch: AgentLaunch,
+    dependency: AgentId,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct PendingDependentSend {
+    agent_id: AgentId,
+    message: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -1247,6 +1546,71 @@ fn is_agent_slash_command_message(message: &str) -> bool {
             .next()
             .is_some_and(|first| !first.is_whitespace())
     })
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct AgentCreationRequest {
+    args: Vec<String>,
+    depends_on: Option<AgentId>,
+    fork_from: Option<AgentId>,
+}
+
+fn parse_agent_creation_request(args: Vec<String>) -> Result<AgentCreationRequest, CliError> {
+    let mut launch_args = Vec::new();
+    let mut depends_on = None;
+    let mut fork_from = None;
+    let mut index = 0;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--depends-on" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err(CliError::Usage("--depends-on requires an agent id".to_string()));
+                };
+                depends_on = Some(AgentId::new(value.clone()).map_err(CliError::Agent)?);
+                index += 2;
+            }
+            "--fork-from" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err(CliError::Usage("--fork-from requires an agent id".to_string()));
+                };
+                fork_from = Some(AgentId::new(value.clone()).map_err(CliError::Agent)?);
+                index += 2;
+            }
+            other => {
+                launch_args.push(other.to_string());
+                index += 1;
+            }
+        }
+    }
+
+    Ok(AgentCreationRequest {
+        args: launch_args,
+        depends_on,
+        fork_from,
+    })
+}
+
+fn fork_launch_prompt(source: &WorkLeafSession, prompt: &str) -> String {
+    let source_title_words = source.title.replace('-', " ");
+    let mut text = format!(
+        "Fork this Work Leaf patch-agent session from {}.\n\nSource feature: {}\nConversation history from {} [{}]:",
+        source.id, source_title_words, source.id, source.title
+    );
+    if source.lines.is_empty() {
+        text.push_str("\n(no visible transcript)");
+    } else {
+        for line in &source.lines {
+            text.push('\n');
+            text.push_str(line);
+        }
+    }
+    if prompt.is_empty() {
+        text.push_str("\n\nContinue with an alternate implementation path.");
+    } else {
+        text.push_str("\n\nFork task:\n");
+        text.push_str(prompt);
+    }
+    text
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
