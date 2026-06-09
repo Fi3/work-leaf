@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -192,6 +192,41 @@ fn terminal_app_command_agent_opens_multiple_patch_agents_from_chat_request() {
     let launches = backend.launches();
     assert_eq!(launches.len(), 4);
     assert!(launches.iter().all(|launch| launch.prompt == "patch"));
+}
+
+#[test]
+fn terminal_app_command_mode_f_forks_selected_agent_chat() {
+    let backend = FakeBackend::new(["source launch", "fork launch"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new original context\n");
+    assert!(app.wait_for_idle(Duration::from_secs(1)));
+    app.handle_byte(27);
+
+    assert_eq!(app.ui().mode(), UiMode::Command);
+    assert_eq!(
+        app.ui().selected_agent().map(AgentId::as_str),
+        Some("user-1")
+    );
+
+    app.handle_byte(b'f');
+    assert!(app.wait_for_idle(Duration::from_secs(1)));
+
+    assert_eq!(
+        app.ui().selected_agent().map(AgentId::as_str),
+        Some("user-2")
+    );
+    let frame = app.render_frame();
+    assert!(frame.contains("source launch"));
+    assert!(frame.contains("work-leaf: forked from user-1"));
+    assert!(frame.contains("fork launch"));
+
+    let backend = app.into_chat().into_backend();
+    let launches = backend.launches();
+    assert_eq!(launches.len(), 2);
+    assert!(launches[1].prompt.contains("original context"));
+    assert!(launches[1].prompt.contains("source launch"));
 }
 
 #[test]
@@ -1111,6 +1146,7 @@ struct FakeBackendState {
     replies: VecDeque<String>,
     launches: Vec<AgentLaunch>,
     sends: Vec<(AgentId, String)>,
+    sessions: BTreeMap<AgentId, AgentSession>,
 }
 
 #[derive(Clone, Debug)]
@@ -1183,6 +1219,7 @@ impl FakeBackend {
                 replies,
                 launches: Vec::new(),
                 sends: Vec::new(),
+                sessions: BTreeMap::new(),
             })),
         }
     }
@@ -1207,21 +1244,37 @@ impl AgentBackend for FakeBackend {
 
         let mut state = self.state.lock().unwrap();
         state.launches.push(request.clone());
+        let agent_id = request.id.clone();
         let mut session = AgentSession::new(request);
         session.push_message(
             MessageRole::Agent,
             state.replies.pop_front().expect("missing fake reply"),
         );
+        state.sessions.insert(agent_id, session.clone());
         Ok(session)
     }
 
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
         let mut state = self.state.lock().unwrap();
         state.sends.push((agent_id.clone(), prompt.to_string()));
+        let reply = state.replies.pop_front().expect("missing fake reply");
+        if let Some(session) = state.sessions.get_mut(agent_id) {
+            session.push_message(MessageRole::User, prompt);
+            session.push_message(MessageRole::Agent, reply.clone());
+        }
         Ok(ChatMessage::new(
             MessageRole::Agent,
-            state.replies.pop_front().expect("missing fake reply"),
+            reply,
         ))
+    }
+
+    fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
+        self.state
+            .lock()
+            .unwrap()
+            .sessions
+            .get(agent_id)
+            .cloned()
     }
 }
 

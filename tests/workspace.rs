@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -670,6 +670,91 @@ fn controller_sends_fork_slash_command_to_the_same_agent_unchanged() {
 }
 
 #[test]
+fn controller_promotes_existing_agent_to_patch_agent_without_relaunching() {
+    let backend = FakeBackend::new(["reader ready", "patch ready"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("read the code first").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    controller.drain_events();
+
+    controller
+        .promote_agent_to_patch(&agent_id, "implement the selected fix")
+        .unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+
+    let launches = backend.launches();
+    assert_eq!(
+        launches.len(),
+        1,
+        "promotion must reuse the existing backend session instead of launching a replacement"
+    );
+    let sends = backend.sends();
+    assert_eq!(sends.len(), 1);
+    assert_eq!(sends[0].0, agent_id);
+    assert!(sends[0].1.contains("patch agent"));
+    assert!(sends[0].1.contains("implement the selected fix"));
+
+    let snapshot = controller.snapshot();
+    let session = snapshot.session(&agent_id).expect("session exists");
+    assert!(session.lines.iter().any(|line| line == "reader ready"));
+    assert!(
+        session
+            .lines
+            .iter()
+            .any(|line| line == "work-leaf: escalated this chat to a patch agent")
+    );
+    assert!(session.lines.iter().any(|line| line == "patch ready"));
+}
+
+#[test]
+fn controller_forks_patch_agent_with_copied_history_and_independent_backend_session() {
+    let backend = FakeBackend::new(["source launch", "source follow-up", "fork launch"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    let source_id = controller.create_agent("original task").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    controller
+        .send_message(&source_id, "capture this context")
+        .unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    controller.drain_events();
+
+    let fork_id = controller
+        .fork_agent(&source_id, "try an alternate implementation")
+        .unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+
+    assert_eq!(fork_id, AgentId::new("user-2").unwrap());
+    let snapshot = controller.snapshot();
+    let fork = snapshot.session(&fork_id).expect("fork session exists");
+    assert!(fork.lines.iter().any(|line| line == "source launch"));
+    assert!(
+        fork.lines
+            .iter()
+            .any(|line| line == "user: capture this context")
+    );
+    assert!(fork.lines.iter().any(|line| line == "source follow-up"));
+    assert!(
+        fork.lines
+            .iter()
+            .any(|line| line == "work-leaf: forked from user-1")
+    );
+    assert!(fork.lines.iter().any(|line| line == "fork launch"));
+
+    let launches = backend.launches();
+    assert_eq!(launches.len(), 2);
+    assert_eq!(launches[1].id, fork_id);
+    assert!(launches[1].prompt.contains("Conversation history from user-1"));
+    assert!(launches[1].prompt.contains("original task"));
+    assert!(launches[1].prompt.contains("capture this context"));
+    assert!(launches[1].prompt.contains("source follow-up"));
+    assert!(launches[1].prompt.contains("try an alternate implementation"));
+}
+
+#[test]
 fn controller_review_prompt_covers_all_agent_commits_since_launch() {
     let root = git_repo("workspace-review-full-agent-scope");
     fs::write(root.join("README.md"), "before\n").unwrap();
@@ -1176,6 +1261,7 @@ struct FakeBackendState {
     replies: VecDeque<String>,
     launches: Vec<AgentLaunch>,
     sends: Vec<(AgentId, String)>,
+    sessions: BTreeMap<AgentId, AgentSession>,
 }
 
 #[derive(Clone, Debug)]
@@ -1208,6 +1294,7 @@ impl FakeBackend {
                 replies: replies.into_iter().map(String::from).collect(),
                 launches: Vec::new(),
                 sends: Vec::new(),
+                sessions: BTreeMap::new(),
             })),
         }
     }
@@ -1282,26 +1369,47 @@ impl AgentBackend for FakeBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
         self.state.lock().unwrap().launches.push(request.clone());
         let mut session = AgentSession::new(request);
+        let agent_id = session.id.clone();
         let reply = if session.id.as_str().starts_with("title-") {
             self.title_reply(&session.messages[0].text)
         } else {
             self.next_reply()
         };
         session.push_message(MessageRole::Agent, reply);
+        self.state
+            .lock()
+            .unwrap()
+            .sessions
+            .insert(agent_id, session.clone());
         Ok(session)
     }
 
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        let mut state = self.state.lock().unwrap();
+        state.sends.push((agent_id.clone(), prompt.to_string()));
+        let reply = state.replies.pop_front().expect("missing fake reply");
+        if let Some(session) = state.sessions.get_mut(agent_id) {
+            session.push_message(MessageRole::User, prompt);
+            session.push_message(MessageRole::Agent, reply.clone());
+        }
+        Ok(ChatMessage::new(MessageRole::Agent, reply))
+    }
+
+    fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
         self.state
             .lock()
             .unwrap()
-            .sends
-            .push((agent_id.clone(), prompt.to_string()));
-        Ok(ChatMessage::new(MessageRole::Agent, self.next_reply()))
+            .sessions
+            .get(agent_id)
+            .cloned()
     }
 }
 
 impl AgentBackend for StreamingTranscriptBackend {
+    fn session(&self, _agent_id: &AgentId) -> Option<AgentSession> {
+        None
+    }
+
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
         let mut session = AgentSession::new(request);
         session.push_message(
