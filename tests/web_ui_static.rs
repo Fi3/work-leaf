@@ -33,6 +33,8 @@ fn static_web_ui_assets_are_present_and_wired_to_http_controller() {
         "/agent/message",
         "/agent/interrupt",
         "/shutdown",
+        "/transcript",
+        "/loading-text",
     ] {
         assert!(js.contains(endpoint), "app.js uses {endpoint}");
     }

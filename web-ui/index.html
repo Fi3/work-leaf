@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Work Leaf</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">WL</span>
+          <span class="brand-name">Work Leaf</span>
+        </div>
+        <label class="api-field">
+          <span>API URL</span>
+          <input id="apiBase" name="apiBase" type="url" spellcheck="false" autocomplete="off">
+        </label>
+        <div class="topbar-actions">
+          <button id="connectButton" type="button">Connect</button>
+          <button id="refreshButton" type="button">Refresh</button>
+          <button id="shutdownButton" type="button" class="danger">Shutdown</button>
+        </div>
+        <div class="status-strip" aria-live="polite">
+          <span id="connectionStatus" class="status-pill muted">Offline</span>
+          <span id="busyStatus" class="status-pill muted">Idle</span>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="sidebar" aria-label="Sessions">
+          <section class="launch-panel" aria-label="New agent">
+            <label>
+              <span>New agent</span>
+              <input id="launchPrompt" type="text" autocomplete="off" spellcheck="true">
+            </label>
+            <button id="launchButton" type="button">Start</button>
+          </section>
+
+          <section class="command-panel" aria-label="Command line">
+            <label>
+              <span>Command</span>
+              <input id="commandLine" type="text" autocomplete="off" spellcheck="false">
+            </label>
+            <div class="command-actions">
+              <button id="commandButton" type="button">Run</button>
+              <button id="reviewButton" type="button">Review</button>
+              <button id="linearizeButton" type="button">Linearize</button>
+            </div>
+          </section>
+
+          <nav class="surface-list" aria-label="Conversation targets">
+            <button id="commandSurface" type="button" class="surface-row selected">
+              <span class="session-title">Command</span>
+              <span class="session-meta">command-agent</span>
+            </button>
+            <div id="sessionList" class="session-list"></div>
+          </nav>
+        </aside>
+
+        <section class="thread" aria-label="Transcript">
+          <header class="thread-header">
+            <div class="thread-heading">
+              <h1 id="threadTitle">Command</h1>
+              <p id="threadMeta">work-leaf command surface</p>
+            </div>
+            <div class="thread-actions">
+              <span id="threadStatus" class="thread-status">0 sessions</span>
+              <button id="interruptButton" type="button">Interrupt</button>
+            </div>
+          </header>
+
+          <div id="notice" class="notice" role="status" aria-live="polite"></div>
+
+          <div id="decisionBar" class="decision-bar" hidden>
+            <span>Feature done?</span>
+            <button id="acceptDoneButton" type="button">Yes</button>
+            <button id="keepOpenButton" type="button">No</button>
+          </div>
+
+          <div id="transcript" class="transcript" aria-live="polite"></div>
+
+          <footer class="composer">
+            <label for="messageInput">Message</label>
+            <textarea
+              id="messageInput"
+              rows="3"
+              autocomplete="off"
+              spellcheck="true"
+            ></textarea>
+            <button id="sendButton" type="button">Send</button>
+          </footer>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
