@@ -512,6 +512,85 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
 }
 
 #[test]
+fn controller_delays_dependent_agent_launch_until_dependency_closes() {
+    let root = git_repo("workspace-dependent-agent-launch");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "parent patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after parent\n@work-leaf end\n@work-leaf done",
+        "summary: README changes from before to after parent",
+        "NO_FINDINGS",
+        "child launch reply",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let parent = controller.create_agent("update readme").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    let child = controller
+        .create_agent(format!("--depends-on {parent} update follow-up"))
+        .unwrap();
+
+    let snapshot = controller.snapshot();
+    let parent_session = snapshot.session(&parent).expect("parent session exists");
+    let child_session = snapshot.session(&child).expect("child session exists");
+    assert_eq!(
+        parent_session.completion,
+        Some(WorkLeafCompletion::NeedsDecision)
+    );
+    assert_eq!(
+        child_session.loading,
+        Some(WorkLeafLoading::WaitingForDependency)
+    );
+    assert_eq!(child_session.title, "update-follow-up");
+    assert_eq!(child_session.depends_on, vec![parent.clone()]);
+    assert_eq!(parent_session.depended_on_by, vec![child.clone()]);
+    assert!(
+        child_session.lines.iter().any(|line| {
+            line == &format!("work-leaf: waiting for {parent} to be marked done")
+        }),
+        "{child_session:?}"
+    );
+    assert!(
+        !backend
+            .launches()
+            .iter()
+            .any(|launch| launch.id == child || launch.prompt == "update follow-up"),
+        "dependent agent prompt must not be sent before the dependency closes"
+    );
+
+    controller.send_message(&parent, "yes").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    let launches = backend.launches();
+    assert!(
+        launches
+            .iter()
+            .any(|launch| launch.id == child && launch.prompt == "update follow-up"),
+        "{launches:?}"
+    );
+    let snapshot = controller.snapshot();
+    let parent_session = snapshot.session(&parent).expect("parent session exists");
+    let child_session = snapshot.session(&child).expect("child session exists");
+    assert_eq!(parent_session.completion, Some(WorkLeafCompletion::Closed));
+    assert_eq!(child_session.loading, None);
+    assert!(
+        child_session
+            .lines
+            .iter()
+            .any(|line| line == "child launch reply"),
+        "{child_session:?}"
+    );
+    assert!(
+        child_session.lines.iter().any(|line| {
+            line == &format!("work-leaf: dependency {parent} marked done; launching")
+        }),
+        "{child_session:?}"
+    );
+}
+
+#[test]
 fn controller_does_not_start_review_until_patch_agent_reports_done() {
     let root = git_repo("workspace-review-waits-for-done");
     fs::write(root.join("README.md"), "before\n").unwrap();

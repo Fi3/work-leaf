@@ -1095,6 +1095,71 @@ fn terminal_app_marks_reviewed_patch_agent_done_and_closed_visibly() {
 }
 
 #[test]
+fn terminal_app_delays_dependent_new_until_dependency_closes() {
+    let root = git_repo("terminal-app-dependent-new");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    Command::new("git")
+        .current_dir(&root)
+        .args(["add", "README.md"])
+        .status()
+        .unwrap();
+    Command::new("git")
+        .current_dir(&root)
+        .args(["commit", "-m", "ADD initial readme fixture"])
+        .status()
+        .unwrap();
+    let backend = FakeBackend::new([
+        "parent patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after parent\n@work-leaf end\n@work-leaf done",
+        "summary: README changes from before to after parent",
+        "NO_FINDINGS",
+        "child launch reply",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new update readme\n");
+    assert!(app.wait_for_idle(Duration::from_secs(2)));
+    app.handle_bytes(b"\x1b:new --depends-on user-1 update follow-up\n");
+    assert!(app.wait_for_idle(Duration::from_secs(1)));
+
+    let left_pane = app.ui().render_left_pane();
+    assert!(left_pane.contains("depends-on: user-1"), "{left_pane}");
+    assert!(left_pane.contains("depended-on-by: user-2"), "{left_pane}");
+    let frame = app.render_frame();
+    assert!(
+        frame.contains("work-leaf: waiting for user-1 to be marked done"),
+        "{frame}"
+    );
+    assert!(
+        frame.contains("work-leaf: Waiting for dependency"),
+        "{frame}"
+    );
+    assert!(
+        !backend
+            .launches()
+            .iter()
+            .any(|launch| launch.id.as_str() == "user-2"),
+        "dependent launch must not reach the backend before the parent closes"
+    );
+
+    app.handle_bytes(&[27, 23, b'h', b'k', b'l']);
+    app.handle_bytes(b"iyes\n");
+    assert!(app.wait_for_idle(Duration::from_secs(2)));
+
+    let launches = backend.launches();
+    assert!(
+        launches
+            .iter()
+            .any(|launch| launch.id.as_str() == "user-2"
+                && launch.prompt == "update follow-up"),
+        "{launches:?}"
+    );
+    let frame = app.render_frame();
+    assert!(frame.contains("work-leaf: feature marked closed"), "{frame}");
+    assert!(app.ui().render_left_pane().contains("CLOSED"));
+}
+
+#[test]
 fn terminal_app_names_user_session_from_first_prompt_immediately() {
     let backend = FakeBackend::new(["launch reply"]);
     let chat = CommandChat::new(PathBuf::from("/repo"), backend);
