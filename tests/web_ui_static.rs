@@ -53,6 +53,15 @@ fn static_web_ui_assets_are_present_and_wired_to_http_controller() {
     }
 
     assert!(
+        js.contains("const COMMAND_SURFACE_ID"),
+        "app.js keeps command surface selection distinct from no selection"
+    );
+    assert!(
+        !js.contains("state.selectedAgentId = null;"),
+        "app.js must not use null for the command surface because refresh auto-selects agents"
+    );
+
+    assert!(
         css.contains("@media"),
         "styles.css includes responsive layout rules"
     );
