@@ -709,6 +709,19 @@ where
                     );
                     self.apply_session_to_ui(&session);
                 }
+                WorkLeafEvent::AgentUsageUpdated {
+                    agent_id,
+                    token_usage,
+                } => {
+                    if let Some(session) = self
+                        .snapshot
+                        .sessions
+                        .iter_mut()
+                        .find(|session| session.id == agent_id)
+                    {
+                        session.token_usage = Some(token_usage);
+                    }
+                }
                 WorkLeafEvent::AgentLineAppended { agent_id, line } => {
                     self.append_cached_agent_line(&agent_id, line);
                 }
@@ -773,6 +786,7 @@ where
             lines: Vec::new(),
             loading,
             completion,
+            token_usage: None,
         };
         self.snapshot.sessions.push(session.clone());
         self.snapshot
@@ -1313,6 +1327,7 @@ mod tests {
                     lines: vec!["large transcript line".repeat(256)],
                     loading: None,
                     completion: None,
+                    token_usage: None,
                 }],
             },
             Arc::clone(&snapshot_calls),
@@ -1376,6 +1391,7 @@ mod tests {
             std::env::temp_dir().join(format!("work-leaf-command-surface-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(&root).unwrap();
+        let cleanup_root = root.clone();
         let chat = CommandChat::new(root, NoopBackend);
         let mut app = TerminalApp::new(chat, 80, 24);
 
@@ -1393,5 +1409,7 @@ mod tests {
                 .iter()
                 .any(|line| line == "work-leaf> new patch agent that uses codex")
         );
+        drop(app);
+        let _ = std::fs::remove_dir_all(cleanup_root);
     }
 }

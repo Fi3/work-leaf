@@ -1,12 +1,43 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use work_leaf::{
     AgentBackend, AgentError, AgentId, AgentOrchestrator, AgentSession, ChatMessage, MessageRole,
     OrchestratorEvent,
 };
+
+mod temp_cleanup;
+
+static PROCESS_ENV_LOCK: Mutex<()> = Mutex::new(());
+
+struct EnvVarGuard {
+    key: &'static str,
+    previous: Option<std::ffi::OsString>,
+}
+
+impl EnvVarGuard {
+    fn set(key: &'static str, value: &Path) -> Self {
+        let previous = std::env::var_os(key);
+        unsafe {
+            std::env::set_var(key, value);
+        }
+        Self { key, previous }
+    }
+}
+
+impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+        unsafe {
+            match self.previous.take() {
+                Some(value) => std::env::set_var(self.key, value),
+                None => std::env::remove_var(self.key),
+            }
+        }
+    }
+}
 
 #[test]
 fn orchestrator_protocol_reads_files_and_classifies_commands_for_agents() {
@@ -83,6 +114,156 @@ fn orchestrator_protocol_batches_consecutive_file_reads_into_one_agent_follow_up
 }
 
 #[test]
+fn orchestrator_protocol_skips_unchanged_repeat_file_reads_by_digest() {
+    let root = temp_git_repo("protocol-repeat-read-unchanged");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root, backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    orchestrator
+        .handle_agent_message(&agent_id, "docs", "@work-leaf read README.md")
+        .unwrap();
+    orchestrator
+        .handle_agent_message(&agent_id, "docs", "@work-leaf read README.md")
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert_eq!(backend.sends.len(), 2);
+    assert!(backend.sends[0].1.contains("--- README.md ---"));
+    let repeat_prompt = &backend.sends[1].1;
+    assert!(repeat_prompt.contains("Repeated file reads unchanged"));
+    assert!(repeat_prompt.contains("README.md (fnv64:"));
+    assert!(
+        !repeat_prompt.contains("--- README.md ---\nbefore"),
+        "unchanged repeat reads should not resend exact file text: {repeat_prompt}"
+    );
+}
+
+#[test]
+fn orchestrator_protocol_sends_diff_for_changed_repeat_file_reads() {
+    let root = temp_git_repo("protocol-repeat-read-changed");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    orchestrator
+        .handle_agent_message(&agent_id, "docs", "@work-leaf read README.md")
+        .unwrap();
+    fs::write(root.join("README.md"), "after\n").unwrap();
+    orchestrator
+        .handle_agent_message(&agent_id, "docs", "@work-leaf read README.md")
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert_eq!(backend.sends.len(), 2);
+    let repeat_prompt = &backend.sends[1].1;
+    assert!(repeat_prompt.contains("Repeated file reads with changes"));
+    assert!(repeat_prompt.contains("current digest: fnv64:"));
+    assert!(repeat_prompt.contains("previous digest: fnv64:"));
+    assert!(repeat_prompt.contains("-before"));
+    assert!(repeat_prompt.contains("+after"));
+    assert!(
+        !repeat_prompt.contains("--- README.md ---\nafter"),
+        "changed repeat reads should send a diff instead of full file text: {repeat_prompt}"
+    );
+}
+
+#[test]
+fn orchestrator_protocol_force_repeat_read_still_sends_diff() {
+    let root = temp_git_repo("protocol-repeat-read-force");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    orchestrator
+        .handle_agent_message(&agent_id, "docs", "@work-leaf read README.md")
+        .unwrap();
+    fs::write(root.join("README.md"), "after\n").unwrap();
+    orchestrator
+        .handle_agent_message(&agent_id, "docs", "@work-leaf read --force README.md")
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert_eq!(backend.sends.len(), 2);
+    let force_prompt = &backend.sends[1].1;
+    assert!(force_prompt.contains("Repeated file reads with changes"));
+    assert!(force_prompt.contains("-before"));
+    assert!(force_prompt.contains("+after"));
+    assert!(
+        !force_prompt.contains("--- README.md ---\nafter"),
+        "forced repeat reads should still send a diff instead of full file text: {force_prompt}"
+    );
+}
+
+#[test]
+fn orchestrator_protocol_spills_large_file_reads_to_context_bundle() {
+    let _env_guard = PROCESS_ENV_LOCK.lock().unwrap();
+    let root = temp_git_repo("protocol-large-read-bundle");
+    let bundle_root = temp_dir("protocol-context-bundle-root");
+    let _bundle_env = EnvVarGuard::set("WORK_LEAF_CONTEXT_BUNDLE_DIR", &bundle_root);
+    fs::write(
+        root.join("large.txt"),
+        numbered_lines("large-context", 3000),
+    )
+    .unwrap();
+    let backend = SharedRecordingBackend::default();
+    let sends = backend.sends.clone();
+    let mut orchestrator = AgentOrchestrator::new(root, backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(&agent_id, "parser", "@work-leaf read large.txt")
+        .unwrap();
+
+    assert_eq!(
+        events,
+        vec![OrchestratorEvent::FileTextSent {
+            agent_id: agent_id.clone(),
+            paths: vec![PathBuf::from("large.txt")]
+        }]
+    );
+    let sends = sends.lock().unwrap();
+    assert_eq!(sends.len(), 1);
+    let prompt = &sends[0].1;
+    assert!(prompt.contains("orchestrator context bundle"), "{prompt}");
+    assert!(prompt.contains("large.txt"));
+    assert!(prompt.contains("fnv64:"));
+    assert!(
+        !prompt.contains("large-context-2999"),
+        "large file text should not be copied into the chat prompt"
+    );
+
+    let bundle_path = PathBuf::from(
+        prompt
+            .lines()
+            .find_map(|line| line.strip_prefix("Context bundle: "))
+            .expect("bundle path should be present"),
+    );
+    assert!(
+        bundle_path.starts_with(&bundle_root),
+        "bundle should be written under the configured bench-owned temp root: {bundle_path:?}"
+    );
+    let bundle = fs::read_to_string(&bundle_path).unwrap();
+    assert!(bundle.contains("----- BEGIN FILE large.txt -----"));
+    assert!(bundle.contains("large-context-2999"));
+    assert!(bundle.contains("----- END FILE large.txt -----"));
+    drop(sends);
+    drop(orchestrator);
+    let bundle_dir = bundle_path.parent().unwrap().to_path_buf();
+    assert!(
+        !bundle_path.exists(),
+        "context bundle should be removed when the orchestrator is dropped"
+    );
+    assert!(
+        !bundle_dir.exists(),
+        "context bundle directory should be removed when the orchestrator is dropped"
+    );
+}
+
+#[test]
 fn orchestrator_protocol_runs_command_under_requested_write_locks() {
     let root = temp_git_repo("protocol-locked-command-run");
     fs::write(root.join("README.md"), "before\n").unwrap();
@@ -130,6 +311,34 @@ fn orchestrator_protocol_runs_command_under_requested_write_locks() {
     assert!(backend.sends[0].1.contains("status: 0"));
     assert!(backend.sends[0].1.contains("locked paths: README.md"));
     assert!(backend.sends[0].1.contains("format stdout"));
+}
+
+#[test]
+fn orchestrator_protocol_scopes_locked_command_tmpdir_without_daemon_tmpdir() {
+    let _env_guard = PROCESS_ENV_LOCK.lock().unwrap();
+    let root = temp_git_repo("protocol-command-tmpdir");
+    let command_tmp = root.join("agent-tmp");
+    fs::create_dir_all(&command_tmp).unwrap();
+    fs::write(root.join("README.md"), "tmpdir fixture\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial command tmp fixture"]);
+    let _tmp_env = EnvVarGuard::set("WORK_LEAF_COMMAND_TMPDIR", &command_tmp);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let result = orchestrator.handle_agent_message(
+        &agent_id,
+        "tmp",
+        "@work-leaf locks run tmpdir.txt -- sh -c 'printf \"%s\" \"$TMPDIR\" > tmpdir.txt'",
+    );
+
+    result.unwrap();
+
+    assert_eq!(
+        fs::read_to_string(root.join("tmpdir.txt")).unwrap(),
+        command_tmp.to_string_lossy()
+    );
 }
 
 #[test]
@@ -797,13 +1006,41 @@ impl AgentBackend for RecordingBackend {
     }
 }
 
+#[derive(Clone, Default)]
+struct SharedRecordingBackend {
+    sends: Arc<Mutex<Vec<(AgentId, String)>>>,
+}
+
+impl AgentBackend for SharedRecordingBackend {
+    fn launch(&mut self, _request: work_leaf::AgentLaunch) -> Result<AgentSession, AgentError> {
+        unreachable!("protocol tests route through existing agents")
+    }
+
+    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        self.sends
+            .lock()
+            .unwrap()
+            .push((agent_id.clone(), prompt.to_string()));
+        Ok(ChatMessage::new(MessageRole::Agent, "ok"))
+    }
+}
+
 fn temp_git_repo(name: &str) -> PathBuf {
     let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
+    temp_cleanup::register(&root);
     git(&root, ["init"]);
     git(&root, ["config", "user.name", "Work Leaf Test"]);
     git(&root, ["config", "user.email", "work-leaf@example.test"]);
+    root
+}
+
+fn temp_dir(name: &str) -> PathBuf {
+    let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(&root).unwrap();
+    temp_cleanup::register(&root);
     root
 }
 

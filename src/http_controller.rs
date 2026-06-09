@@ -47,6 +47,10 @@ impl HttpControllerClient {
         self.get("/snapshot")
     }
 
+    pub fn state(&self) -> Result<WorkLeafControllerState, OrchestratorHttpError> {
+        self.get("/state")
+    }
+
     pub fn drain_events(&self) -> Result<Vec<WorkLeafEvent>, OrchestratorHttpError> {
         self.post("/events/drain", &EmptyRequest)
     }
@@ -426,6 +430,13 @@ where
     match (request.method.as_str(), path) {
         ("GET", "/health") => json_reply(200, &OkResponse { ok: true }),
         ("GET", "/snapshot") => with_controller(&controller, |controller| controller.snapshot()),
+        ("GET", "/state") => with_controller(&controller, |controller| {
+            let busy = controller.is_busy();
+            WorkLeafControllerState {
+                busy,
+                snapshot: controller.snapshot(),
+            }
+        }),
         ("POST", "/events/drain") => with_controller(&controller, WorkLeafController::drain_events),
         ("GET", "/busy") => with_controller(&controller, |controller| BusyResponse {
             busy: controller.is_busy(),
@@ -547,6 +558,12 @@ struct HttpReply {
 
 #[derive(Deserialize, Serialize)]
 struct EmptyRequest;
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct WorkLeafControllerState {
+    pub busy: bool,
+    pub snapshot: WorkLeafSnapshot,
+}
 
 #[derive(Deserialize, Serialize)]
 struct OkResponse {

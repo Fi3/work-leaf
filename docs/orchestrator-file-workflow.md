@@ -116,15 +116,15 @@ shared read path it depends on is the same orchestrator read protocol implemente
 
 ### System Agents
 
-System agents are run by the orchestrator in the background for internal work such as chat naming,
-coordination, linearization preparation, or other non-user-facing functionality. Users do not need to
-interact with system agents directly, but the UI should expose enough introspection to understand
-what the orchestrator is doing.
+System agents are run by the orchestrator in the background for internal work such as coordination,
+linearization preparation, or other non-user-facing functionality. Users do not need to interact
+with system agents directly, but the UI should expose enough introspection to understand what the
+orchestrator is doing.
 
 The current source already has system-style internal behavior:
 
-- hidden `title-<agent-id>` backend launches generate chat titles from the first prompt;
-  `src/chat_title.rs::ChatTitleAgent` tracks which chats have requested title generation.
+- `src/chat_title.rs::ChatTitleAgent` tracks which chats have been named from their first prompt so
+  chat titles are derived locally without a backend launch.
 - `src/workspace.rs::WorkLeafController` tracks sessions, loading state, pending events, and
   transcript output.
 - `src/ui.rs::AgentListEntry` carries visible agent metadata such as readiness, modified files,
@@ -170,17 +170,14 @@ launch-time policy and repository instructions. The source chain is:
 1. `src/cli.rs::codex_backend` builds a `src/codex.rs::CodexBackend` with
    `PromptPolicy::for_project_with_read_permission` and resolves the Codex executable from `PATH`
    while skipping Codex's temporary `~/.codex/tmp/arg0` shim when a stable binary is available.
-   On Unix, it writes an executable trampoline under
-   `/tmp/work-leaf-codex-wrapper/<binary-key>/codex` that immediately `exec`s the selected Codex
-   binary. The key is derived from the selected binary path so other running Work Leaf checks or
-   daemons that resolve different Codex binaries do not overwrite the same wrapper. The trampoline
-   directory is prepended to the daemon process `PATH` before workers start, and Codex child
-   processes receive a `PATH` with that directory prepended and all existing entries preserved.
-2. `src/codex.rs::CodexBackend::build_launch_invocation` injects the policy into a launch prompt.
-3. `src/codex.rs::CodexBackend::build_send_invocation` passes known-session follow-up messages as
-   raw resume stdin and uses policy injection only for fallback resume invocations without in-memory
-   session context. Codex launch and resume invocations disable Codex apps so noninteractive daemon
-   sessions do not require app-server state initialization inside the Codex sandbox.
+   The selected executable is passed to the Codex Python SDK sidecar through
+   `CodexConfig.codex_bin` when SDK mode is active. Its parent directory is prepended to the daemon
+   process `PATH` before workers start.
+2. `src/codex.rs::CodexBackend` injects the policy into a launch prompt, sends it to the SDK
+   sidecar, and records the returned app-server thread id for follow-up turns.
+3. Known-session follow-up messages are sent raw to the same SDK/app-server thread. The fallback
+   `codex exec resume` path uses policy injection only for resume invocations without in-memory
+   session context.
 4. Agent replies are processed by `src/cli.rs::CommandChat::process_agent_reply_streaming`.
 5. Directive handling enters `src/orchestrator.rs::handle_agent_directives_streaming`.
 
@@ -233,6 +230,19 @@ A single read directive can name multiple paths. When one agent reply contains c
 directives, `src/orchestrator.rs::handle_agent_directives_streaming` handles them as one grouped
 read response to the same agent session.
 
+Repeated reads use the agent's tracked snapshot. If the current digest matches the last snapshot
+sent to that agent, the response reports the unchanged digest and does not resend file text. If the
+current digest differs, the response sends a unified diff from the agent's last snapshot to the
+current file text. The force form is accepted for compatibility:
+
+```text
+@work-leaf read --force src/lib.rs
+```
+
+For paths that already have a tracked snapshot in the same agent session, the force form still uses
+the repeated-read digest/diff response. This keeps large files from being copied into the same chat
+session more than once.
+
 The read path is:
 
 1. `src/orchestrator.rs::parse_agent_directives` parses the directive into `AgentDirective::Read`.
@@ -241,7 +251,8 @@ The read path is:
 3. `read_requested_files` normalizes all valid paths.
 4. The orchestrator acquires shared read locks for the full valid path set.
 5. The orchestrator reads file contents while those read locks are held.
-6. The orchestrator sends a `work-leaf file text` response to the same agent session.
+6. The orchestrator sends a `work-leaf file text` response, an unchanged digest, or a repeat-read
+   diff to the same agent session.
 7. Successful snapshots are recorded in `src/orchestrator.rs::FileReadTracker`.
 
 Read locks are shared. Many agents can read the same file at the same time. A write lock for the same
@@ -265,15 +276,16 @@ The orchestrator treats successful orchestrator-provided file snapshots as agent
 `FileReadTracker` stores:
 
 ```text
-agent id -> path -> last file text snapshot sent to that agent
+agent id -> path -> last file text snapshot and digest sent to that agent
 ```
 
 This map is used to detect stale context for orchestrator-mediated reads and to compute compact
-refreshes. If an agent has read a file through `@work-leaf read` and another patch changes that file
-before the reader submits a patch or reports done, the reader may be about to produce a stale diff.
-Direct filesystem reads are not present in this map, so direct-read mode relies on
-`git apply --check`, conflict diagnostics, and agent rereads instead of proactive stale-reader
-updates for those reads.
+refreshes. It also lets repeat reads avoid copying full file text into the same agent thread when
+the digest is unchanged or a snapshot-to-current diff is enough. If an agent has read a file through
+`@work-leaf read` and another patch changes that file before the reader submits a patch or reports
+done, the reader may be about to produce a stale diff. Direct filesystem reads are not present in
+this map, so direct-read mode relies on `git apply --check`, conflict diagnostics, and agent rereads
+instead of proactive stale-reader updates for those reads.
 
 The tracker updates as follows:
 
@@ -304,7 +316,7 @@ Another agent changed files you previously read before you submitted a patch.
 Rebase any pending patch against the compact file refresh below.
 
 work-leaf file refresh
-This is a compact refresh, not a patch to submit. It shows changes from the last file text this agent received. Request full text with `@work-leaf read <path>` only if the compact refresh is insufficient.
+This is a compact refresh, not a patch to submit. It shows changes from the last file text this agent received. Repeated full-text refreshes are intentionally avoided to keep the session compact.
 
 --- path ---
 current digest: fnv64:<hash>; bytes:<n>
@@ -318,9 +330,9 @@ diff --git a/path b/path
 ```
 
 That update is grouped per stale agent and contains a bounded unified diff from the stale snapshot to
-the current file. Large refresh diffs are omitted with the current digest, byte count, and an explicit
-`@work-leaf read <path>` instruction. The point is to make the next patch more likely to apply while
-keeping multi-agent stale-context updates small enough for long-running agent sessions.
+the current file. Large refresh diffs are omitted with the current digest and byte count. The point
+is to make the next patch more likely to apply while keeping multi-agent stale-context updates small
+enough for long-running agent sessions.
 
 ## Writes And Atomic Patches
 

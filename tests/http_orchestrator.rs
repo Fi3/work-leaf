@@ -18,7 +18,15 @@ fn localhost_http_controller_preserves_terminal_workflow_state() {
     let mut client = HttpControllerClient::connect(daemon.url()).unwrap();
 
     client.execute_command_line("new http boundary").unwrap();
+    let launching_state = client.state().unwrap();
+    assert!(
+        launching_state
+            .snapshot
+            .session(&AgentId::new("user-1").unwrap())
+            .is_some()
+    );
     assert!(client.wait_for_idle(Duration::from_secs(5)).unwrap());
+    assert!(!client.state().unwrap().busy);
 
     let agent_id = AgentId::new("user-1").unwrap();
     let snapshot = client.snapshot().unwrap();
@@ -163,16 +171,8 @@ done
 if [ "$seen_resume" = "1" ]; then
   printf '%s\n' '{"type":"item.completed","item":{"id":"resume","type":"agent_message","text":"resume over http"}}'
 else
-  input=$(cat)
-  case "$input" in
-    *"Name this work-leaf chat"*)
-      printf '%s\n' '{"type":"thread.started","thread_id":"thread-title"}'
-      printf '%s\n' '{"type":"item.completed","item":{"id":"title","type":"agent_message","text":"http-boundary"}}'
-      ;;
-    *)
-      printf '%s\n' '{"type":"thread.started","thread_id":"thread-http"}'
-      printf '%s\n' '{"type":"item.completed","item":{"id":"launch","type":"agent_message","text":"launch over http"}}'
-      ;;
-  esac
+  cat >/dev/null
+  printf '%s\n' '{"type":"thread.started","thread_id":"thread-http"}'
+  printf '%s\n' '{"type":"item.completed","item":{"id":"launch","type":"agent_message","text":"launch over http"}}'
 fi
 "#;

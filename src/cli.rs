@@ -1,9 +1,7 @@
-use std::collections::{BTreeMap, BTreeSet, VecDeque, hash_map::DefaultHasher};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::env;
 use std::ffi::OsStr;
 use std::fmt;
-use std::fs;
-use std::hash::{Hash, Hasher};
 use std::io::{self, BufRead, BufReader, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{self, Child, Command, Stdio};
@@ -14,13 +12,12 @@ use crate::agent::{
     AgentBackend, AgentId, AgentLaunch, AgentProfile, AgentShutdownHandle, AgentStreamEvent,
     PromptPolicy, ReadPermission,
 };
-use crate::chat_title::{chat_title_from_llm_reply, chat_title_prompt};
 use crate::codex::{CodexBackend, CodexCommandConfig};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::locks::{CommandWritePolicy, FileLockTable};
 use crate::orchestrator::{
-    AgentFollowUp, CommandChangeTracker, DirectiveServices, FileReadTracker, OrchestratorEvent,
-    handle_agent_directives_streaming,
+    AgentFollowUp, CommandChangeTracker, ContextBundleStore, DirectiveServices, FileReadTracker,
+    OrchestratorEvent, handle_agent_directives_streaming,
 };
 use crate::review::{AgentCommit, has_no_findings};
 use crate::review::{GitHistory, ReviewResult};
@@ -241,6 +238,7 @@ pub struct CommandChat<B> {
     shutdown: AgentShutdownHandle,
     locks: FileLockTable,
     file_reads: FileReadTracker,
+    context_bundles: ContextBundleStore,
     command_changes: CommandChangeTracker,
     command_policy: CommandWritePolicy,
     agents: BTreeMap<AgentId, String>,
@@ -271,6 +269,7 @@ where
             shutdown: self.shutdown.clone(),
             locks: self.locks.clone(),
             file_reads: self.file_reads.clone(),
+            context_bundles: self.context_bundles.clone(),
             command_changes: self.command_changes.clone(),
             command_policy: self.command_policy.clone(),
             agents: self.agents.clone(),
@@ -295,6 +294,7 @@ where
         Self {
             locks: FileLockTable::new(project_dir.clone()),
             file_reads: FileReadTracker::default(),
+            context_bundles: ContextBundleStore::new(),
             command_changes: CommandChangeTracker::default(),
             project_dir,
             backend: Some(backend),
@@ -339,8 +339,12 @@ where
         self.shutdown.clone()
     }
 
-    pub fn shutdown_agents(&self) {
-        self.shutdown.shutdown();
+    pub fn shutdown_agents(&mut self) {
+        if let Some(backend) = self.backend.as_mut() {
+            backend.shutdown();
+        } else {
+            self.shutdown.shutdown();
+        }
     }
 
     pub(crate) fn project_dir(&self) -> &std::path::Path {
@@ -374,32 +378,6 @@ where
             .expect("command chat backend is present")
             .interrupt(agent_id)
             .map_err(CliError::Agent)
-    }
-
-    pub(crate) fn generate_chat_title(
-        &mut self,
-        source_agent_id: &AgentId,
-        first_prompt: &str,
-    ) -> Result<String, CliError> {
-        let title_agent_id =
-            AgentId::new(format!("title-{}", source_agent_id.as_str())).map_err(CliError::Agent)?;
-        let session = self
-            .backend
-            .as_mut()
-            .expect("command chat backend is present")
-            .launch(AgentLaunch::new(
-                title_agent_id,
-                self.agent_profile.kind.clone(),
-                "chat-title",
-                chat_title_prompt(first_prompt),
-            ))
-            .map_err(CliError::Agent)?;
-        let reply = session
-            .messages
-            .last()
-            .map(|message| message.text.as_str())
-            .unwrap_or_default();
-        Ok(chat_title_from_llm_reply(reply, first_prompt))
     }
 
     pub fn handle_line(&mut self, line: &str) -> Result<CommandChatResult, CliError> {
@@ -621,6 +599,7 @@ where
                     DirectiveServices {
                         locks: &self.locks,
                         file_reads: &self.file_reads,
+                        context_bundles: &self.context_bundles,
                         command_changes: &self.command_changes,
                         command_policy: &self.command_policy,
                         locked_command_timeout: self.locked_command_timeout,
@@ -1459,6 +1438,12 @@ pub(crate) fn codex_backend(
     if let Some(model) = model {
         config = config.with_model(model);
     }
+    if use_codex_sdk_backend() {
+        config = config.with_sdk_transport();
+        if let Some(python) = env::var_os("WORK_LEAF_CODEX_SDK_PYTHON") {
+            config = config.with_sdk_python(PathBuf::from(python));
+        }
+    }
     Ok(CodexBackend::new(
         config,
         PromptPolicy::for_project_with_read_permission(&project_dir, read_permission)
@@ -1466,14 +1451,18 @@ pub(crate) fn codex_backend(
     ))
 }
 
-fn resolve_codex_binary() -> PathBuf {
-    let path = env::var_os("PATH");
-    resolve_codex_process_binary_from_path(path.as_deref())
+fn use_codex_sdk_backend() -> bool {
+    match env::var("WORK_LEAF_CODEX_BACKEND") {
+        Ok(value) if value == "exec" => false,
+        Ok(value) if value == "sdk" => true,
+        Ok(_) => false,
+        Err(_) => env::var_os("WORK_LEAF_CODEX_SDK_PYTHON").is_some(),
+    }
 }
 
-fn resolve_codex_process_binary_from_path(path: Option<&OsStr>) -> PathBuf {
-    let binary = resolve_codex_binary_from_path(path);
-    codex_exec_trampoline(&binary).unwrap_or(binary)
+fn resolve_codex_binary() -> PathBuf {
+    let path = env::var_os("PATH");
+    resolve_codex_binary_from_path(path.as_deref())
 }
 
 fn prepend_process_path(dir: Option<&Path>) {
@@ -1514,45 +1503,6 @@ fn resolve_codex_binary_from_path(path: Option<&OsStr>) -> PathBuf {
 fn is_codex_arg0_shim(path: &Path) -> bool {
     let path = path.to_string_lossy();
     path.contains("/.codex/tmp/arg0/") || path.contains("\\.codex\\tmp\\arg0\\")
-}
-
-#[cfg(unix)]
-fn codex_exec_trampoline(binary: &Path) -> io::Result<PathBuf> {
-    use std::os::unix::fs::PermissionsExt;
-
-    let dir = env::temp_dir()
-        .join("work-leaf-codex-wrapper")
-        .join(codex_trampoline_key(binary));
-    fs::create_dir_all(&dir)?;
-    let trampoline = dir.join("codex");
-    let script = format!(
-        "#!/bin/sh\nCODEX_REAL={}\nexec \"$CODEX_REAL\" \"$@\"\n",
-        shell_single_quote(&binary.to_string_lossy())
-    );
-    fs::write(&trampoline, script)?;
-    let mut permissions = fs::metadata(&trampoline)?.permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(&trampoline, permissions)?;
-    Ok(trampoline)
-}
-
-#[cfg(unix)]
-fn codex_trampoline_key(binary: &Path) -> String {
-    let mut hasher = DefaultHasher::new();
-    binary.hash(&mut hasher);
-    format!("{:016x}", hasher.finish())
-}
-
-#[cfg(unix)]
-fn shell_single_quote(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\"'\"'"))
-}
-
-#[cfg(not(unix))]
-fn codex_exec_trampoline(_binary: &Path) -> io::Result<PathBuf> {
-    Err(io::Error::other(
-        "codex exec trampoline is only used on Unix",
-    ))
 }
 
 fn split_command_line(line: &str) -> Vec<String> {
@@ -1615,6 +1565,10 @@ mod tests {
     use super::*;
     use crate::ui::{PaneFocus, TerminalUi, UiMode};
     use std::fs;
+    use std::sync::{Mutex, Once, OnceLock};
+
+    static REGISTER_TEST_CLEANUP: Once = Once::new();
+    static TEST_TEMP_ROOTS: OnceLock<Mutex<Vec<PathBuf>>> = OnceLock::new();
 
     #[test]
     fn launched_agent_result_selects_chat_and_enters_insert_mode() {
@@ -1665,36 +1619,23 @@ mod tests {
         assert_eq!(binary, first_dir.join("codex"));
     }
 
-    #[cfg(unix)]
     #[test]
-    fn codex_process_binary_resolver_uses_file_backed_exec_trampoline() {
-        let root = test_temp_dir("codex-exec-trampoline");
+    fn codex_process_binary_resolver_uses_stable_executable_directly() {
+        let root = test_temp_dir("codex-direct-executable");
         let bin_dir = root.join("bin with space");
         fs::create_dir_all(&bin_dir).unwrap();
         let codex = bin_dir.join("codex");
         fs::write(&codex, "").unwrap();
         let path = env::join_paths([bin_dir]).unwrap();
 
-        let binary = resolve_codex_process_binary_from_path(Some(path.as_os_str()));
-        let script = fs::read_to_string(&binary).unwrap();
+        let binary = resolve_codex_binary_from_path(Some(path.as_os_str()));
 
-        assert_ne!(binary, codex);
-        assert_eq!(binary.file_name(), Some(OsStr::new("codex")));
-        assert_eq!(
-            binary.parent().and_then(Path::parent),
-            Some(env::temp_dir().join("work-leaf-codex-wrapper").as_path())
-        );
-        assert!(script.contains(&format!(
-            "CODEX_REAL={}",
-            shell_single_quote(&codex.to_string_lossy())
-        )));
-        assert!(script.contains("\"$@\""));
+        assert_eq!(binary, codex);
     }
 
-    #[cfg(unix)]
     #[test]
-    fn codex_process_binary_resolver_keeps_distinct_trampolines_per_target_binary() {
-        let root = test_temp_dir("codex-distinct-exec-trampolines");
+    fn codex_process_binary_resolver_keeps_distinct_target_binaries() {
+        let root = test_temp_dir("codex-distinct-executables");
         let first_dir = root.join("first");
         let second_dir = root.join("second");
         fs::create_dir_all(&first_dir).unwrap();
@@ -1706,25 +1647,46 @@ mod tests {
         let first_path = env::join_paths([first_dir]).unwrap();
         let second_path = env::join_paths([second_dir]).unwrap();
 
-        let first_trampoline = resolve_codex_process_binary_from_path(Some(first_path.as_os_str()));
-        let first_script = fs::read_to_string(&first_trampoline).unwrap();
-        let second_trampoline =
-            resolve_codex_process_binary_from_path(Some(second_path.as_os_str()));
+        let first_binary = resolve_codex_binary_from_path(Some(first_path.as_os_str()));
+        let second_binary = resolve_codex_binary_from_path(Some(second_path.as_os_str()));
 
-        assert_ne!(first_trampoline, second_trampoline);
-        assert_eq!(fs::read_to_string(&first_trampoline).unwrap(), first_script);
-        assert!(first_script.contains(&first_codex.display().to_string()));
-        assert!(
-            fs::read_to_string(&second_trampoline)
-                .unwrap()
-                .contains(&second_codex.display().to_string())
-        );
+        assert_eq!(first_binary, first_codex);
+        assert_eq!(second_binary, second_codex);
+        assert_ne!(first_binary, second_binary);
     }
 
     fn test_temp_dir(name: &str) -> PathBuf {
         let root = env::temp_dir().join(format!("work-leaf-{name}-{}", process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).unwrap();
+        register_test_temp_dir(root.clone());
         root
+    }
+
+    fn register_test_temp_dir(root: PathBuf) {
+        REGISTER_TEST_CLEANUP.call_once(|| unsafe {
+            let _ = atexit(cleanup_test_temp_dirs);
+        });
+        TEST_TEMP_ROOTS
+            .get_or_init(|| Mutex::new(Vec::new()))
+            .lock()
+            .unwrap()
+            .push(root);
+    }
+
+    unsafe extern "C" {
+        fn atexit(callback: extern "C" fn()) -> i32;
+    }
+
+    extern "C" fn cleanup_test_temp_dirs() {
+        let Some(roots) = TEST_TEMP_ROOTS.get() else {
+            return;
+        };
+        let Ok(mut roots) = roots.lock() else {
+            return;
+        };
+        for root in roots.drain(..) {
+            let _ = fs::remove_dir_all(root);
+        }
     }
 }

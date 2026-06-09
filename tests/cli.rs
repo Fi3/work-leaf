@@ -11,6 +11,8 @@ use work_leaf::{
     parse_process_args, render_process_help,
 };
 
+mod temp_cleanup;
+
 #[test]
 fn binary_help_describes_launching_orchestrator_not_internal_operations() {
     let output = Command::new(env!("CARGO_BIN_EXE_work-leaf"))
@@ -696,6 +698,7 @@ fn temp_dir(name: &str) -> PathBuf {
     let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
+    temp_cleanup::register(&root);
     root
 }
 

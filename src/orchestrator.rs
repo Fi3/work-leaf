@@ -4,17 +4,20 @@ use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 use std::{fmt, fs};
 
 use crate::agent::{AgentBackend, AgentError, AgentId, AgentStreamEvent, ChatMessage};
 use crate::locks::{CommandWriteIntent, CommandWritePolicy, FileAccessError, FileLockTable};
 use crate::patch::{GitPatcher, PatchError, PatchRequest, render_no_files_prompt};
 
+const WORK_LEAF_CONTEXT_BUNDLE_DIR_ENV: &str = "WORK_LEAF_CONTEXT_BUNDLE_DIR";
+
 #[derive(Debug)]
 pub struct AgentOrchestrator<B> {
     locks: FileLockTable,
     file_reads: FileReadTracker,
+    context_bundles: ContextBundleStore,
     command_changes: CommandChangeTracker,
     command_policy: CommandWritePolicy,
     locked_command_timeout: Duration,
@@ -29,6 +32,7 @@ where
         Self {
             locks: FileLockTable::new(root),
             file_reads: FileReadTracker::default(),
+            context_bundles: ContextBundleStore::new(),
             command_changes: CommandChangeTracker::default(),
             command_policy: CommandWritePolicy,
             locked_command_timeout: default_locked_command_timeout(),
@@ -52,6 +56,7 @@ where
             DirectiveServices {
                 locks: &self.locks,
                 file_reads: &self.file_reads,
+                context_bundles: &self.context_bundles,
                 command_changes: &self.command_changes,
                 command_policy: &self.command_policy,
                 locked_command_timeout: self.locked_command_timeout,
@@ -191,6 +196,18 @@ pub(crate) struct FileReadTracker {
     inner: Arc<Mutex<BTreeMap<AgentId, BTreeMap<PathBuf, TrackedFileSnapshot>>>>,
 }
 
+#[derive(Clone, Debug)]
+pub(crate) struct ContextBundleStore {
+    inner: Arc<ContextBundleStoreInner>,
+}
+
+#[derive(Debug)]
+struct ContextBundleStoreInner {
+    parent: PathBuf,
+    dir: PathBuf,
+    counter: AtomicUsize,
+}
+
 #[derive(Clone, Debug, Default)]
 pub(crate) struct CommandChangeTracker {
     inner: Arc<Mutex<BTreeMap<AgentId, BTreeSet<PathBuf>>>>,
@@ -205,15 +222,93 @@ struct StaleFileUpdate {
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct TrackedFileSnapshot {
     text: String,
+    digest: String,
 }
 
 #[derive(Clone, Copy)]
 pub(crate) struct DirectiveServices<'a> {
     pub locks: &'a FileLockTable,
     pub file_reads: &'a FileReadTracker,
+    pub context_bundles: &'a ContextBundleStore,
     pub command_changes: &'a CommandChangeTracker,
     pub command_policy: &'a CommandWritePolicy,
     pub locked_command_timeout: Duration,
+}
+
+impl ContextBundleStore {
+    pub(crate) fn new() -> Self {
+        static STORE_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+        let parent = std::env::var_os(WORK_LEAF_CONTEXT_BUNDLE_DIR_ENV)
+            .map(PathBuf::from)
+            .unwrap_or_else(|| std::env::temp_dir().join("work-leaf-context-bundles"));
+        cleanup_stale_context_bundle_dirs(&parent);
+        let counter = STORE_COUNTER.fetch_add(1, Ordering::Relaxed);
+        let dir = parent.join(format!("orchestrator-{}-{counter}", std::process::id()));
+        Self {
+            inner: Arc::new(ContextBundleStoreInner {
+                parent,
+                dir,
+                counter: AtomicUsize::new(0),
+            }),
+        }
+    }
+
+    fn write(&self, snapshots: &[crate::locks::FileSnapshot]) -> Option<PathBuf> {
+        let counter = self.inner.counter.fetch_add(1, Ordering::Relaxed);
+        fs::create_dir_all(&self.inner.dir).ok()?;
+        let path = self.inner.dir.join(format!("bundle-{counter}.md"));
+        let mut text = String::from("# Work Leaf Context Bundle\n\n");
+        text.push_str("This file contains orchestrator-mediated read output. Use it as read-only context; submit project changes through `@work-leaf patch`.\n");
+        for snapshot in snapshots {
+            text.push_str("\n----- BEGIN FILE ");
+            text.push_str(&snapshot.path.display().to_string());
+            text.push_str(" -----\n");
+            text.push_str("digest: ");
+            text.push_str(&content_digest(&snapshot.text));
+            text.push_str("\n\n");
+            text.push_str(&snapshot.text);
+            if !snapshot.text.ends_with('\n') {
+                text.push('\n');
+            }
+            text.push_str("----- END FILE ");
+            text.push_str(&snapshot.path.display().to_string());
+            text.push_str(" -----\n");
+        }
+        fs::write(&path, text).ok()?;
+        Some(path)
+    }
+}
+
+impl Drop for ContextBundleStoreInner {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.dir);
+        let _ = fs::remove_dir(&self.parent);
+    }
+}
+
+fn cleanup_stale_context_bundle_dirs(parent: &Path) {
+    let Ok(entries) = fs::read_dir(parent) else {
+        return;
+    };
+    let now = SystemTime::now();
+    for entry in entries.flatten() {
+        let Ok(metadata) = entry.metadata() else {
+            continue;
+        };
+        let stale = metadata
+            .modified()
+            .ok()
+            .and_then(|modified| now.duration_since(modified).ok())
+            .is_some_and(|age| age > Duration::from_secs(24 * 60 * 60));
+        if stale {
+            if metadata.is_dir() {
+                let _ = fs::remove_dir_all(entry.path());
+            } else {
+                let _ = fs::remove_file(entry.path());
+            }
+        }
+    }
 }
 
 impl FileReadTracker {
@@ -229,6 +324,7 @@ impl FileReadTracker {
                 snapshot.path.clone(),
                 TrackedFileSnapshot {
                     text: snapshot.text.clone(),
+                    digest: content_digest(&snapshot.text),
                 },
             );
         }
@@ -389,13 +485,22 @@ where
     let mut directives = directives.into_iter().peekable();
     while let Some(directive) = directives.next() {
         match directive {
-            AgentDirective::Read(mut paths) => {
+            AgentDirective::Read(mut request) => {
                 while matches!(directives.peek(), Some(AgentDirective::Read(_))) {
-                    if let Some(AgentDirective::Read(next_paths)) = directives.next() {
-                        paths.extend(next_paths);
+                    if let Some(AgentDirective::Read(next_request)) = directives.next() {
+                        request.paths.extend(next_request.paths);
+                        request.force |= next_request.force;
                     }
                 }
-                send_file_read_response(backend, services, agent_id, &paths, stream, &mut run)?;
+                send_file_read_response(
+                    backend,
+                    services,
+                    agent_id,
+                    &request.paths,
+                    request.force,
+                    stream,
+                    &mut run,
+                )?;
             }
             AgentDirective::Classify(command) => {
                 let intent = services
@@ -551,6 +656,7 @@ fn send_file_read_response<B>(
     services: DirectiveServices<'_>,
     agent_id: &AgentId,
     paths: &[PathBuf],
+    force: bool,
     stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
     run: &mut DirectiveRun,
 ) -> Result<(), OrchestratorError>
@@ -558,6 +664,8 @@ where
     B: AgentBackend,
 {
     let response = read_requested_files(services.locks, paths)?;
+    let (exact_snapshots, changed_snapshots, unchanged_snapshots) =
+        split_repeated_file_reads(services.file_reads, agent_id, &response.snapshots, force);
     let normalized_paths = response
         .snapshots
         .iter()
@@ -568,7 +676,15 @@ where
         .iter()
         .map(|failure| failure.path.clone())
         .collect::<Vec<_>>();
-    let prompt = render_file_read_response(&response.snapshots, &response.failures);
+    let prompt = render_file_read_response(
+        services.context_bundles,
+        services.file_reads,
+        agent_id,
+        &exact_snapshots,
+        &changed_snapshots,
+        &unchanged_snapshots,
+        &response.failures,
+    );
     let mut sink = |event| stream(agent_id, event);
     let reply = backend.send_streaming(agent_id, &prompt, &mut sink)?;
     services
@@ -590,6 +706,30 @@ where
         });
     }
     Ok(())
+}
+
+fn split_repeated_file_reads(
+    file_reads: &FileReadTracker,
+    agent_id: &AgentId,
+    snapshots: &[crate::locks::FileSnapshot],
+    _force: bool,
+) -> (
+    Vec<crate::locks::FileSnapshot>,
+    Vec<crate::locks::FileSnapshot>,
+    Vec<crate::locks::FileSnapshot>,
+) {
+    let mut exact = Vec::new();
+    let mut changed = Vec::new();
+    let mut unchanged = Vec::new();
+    for snapshot in snapshots {
+        let current_digest = content_digest(&snapshot.text);
+        match file_reads.snapshot_for(agent_id, &snapshot.path) {
+            Some(previous) if previous.digest == current_digest => unchanged.push(snapshot.clone()),
+            Some(_) => changed.push(snapshot.clone()),
+            None => exact.push(snapshot.clone()),
+        }
+    }
+    (exact, changed, unchanged)
 }
 
 fn send_stale_file_updates<B>(
@@ -769,6 +909,9 @@ fn run_shell_command(
             .current_dir(root)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
+        if let Some(tmp_dir) = std::env::var_os("WORK_LEAF_COMMAND_TMPDIR") {
+            command_builder.env("TMPDIR", tmp_dir);
+        }
         command_builder.process_group(0).spawn()?
     };
 
@@ -900,7 +1043,7 @@ fn read_requested_files(
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum AgentDirective {
-    Read(Vec<PathBuf>),
+    Read(FileReadRequest),
     Classify(Vec<String>),
     Run {
         command: String,
@@ -915,6 +1058,12 @@ enum AgentDirective {
         message: String,
     },
     Done,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct FileReadRequest {
+    paths: Vec<PathBuf>,
+    force: bool,
 }
 
 fn parse_agent_directives(text: &str) -> Result<Vec<AgentDirective>, OrchestratorError> {
@@ -933,11 +1082,7 @@ fn parse_agent_directives(text: &str) -> Result<Vec<AgentDirective>, Orchestrato
         if body == "done" {
             directives.push(AgentDirective::Done);
         } else if let Some(rest) = directive_rest(body, "read") {
-            let paths = split_required(rest, "read requires at least one path")?
-                .into_iter()
-                .map(PathBuf::from)
-                .collect::<Vec<_>>();
-            directives.push(AgentDirective::Read(paths));
+            directives.push(AgentDirective::Read(parse_read_request(rest)?));
         } else if let Some(rest) = directive_rest(body, "locks classify") {
             directives.push(AgentDirective::Classify(split_required(
                 rest,
@@ -1001,6 +1146,24 @@ fn parse_agent_directives(text: &str) -> Result<Vec<AgentDirective>, Orchestrato
     Ok(directives)
 }
 
+fn parse_read_request(rest: &str) -> Result<FileReadRequest, OrchestratorError> {
+    let mut force = false;
+    let mut paths = Vec::new();
+    for part in split_required(rest, "read requires at least one path")? {
+        if part == "--force" {
+            force = true;
+        } else {
+            paths.push(PathBuf::from(part));
+        }
+    }
+    if paths.is_empty() {
+        return Err(OrchestratorError::Usage(
+            "read requires at least one path".to_string(),
+        ));
+    }
+    Ok(FileReadRequest { paths, force })
+}
+
 fn directive_body(line: &str) -> Option<&str> {
     let line = line.trim_start();
     let rest = line.strip_prefix("@work-leaf")?;
@@ -1056,6 +1219,69 @@ fn parse_locked_run(rest: &str) -> Result<(Vec<PathBuf>, String), OrchestratorEr
 }
 
 fn render_file_read_response(
+    context_bundles: &ContextBundleStore,
+    file_reads: &FileReadTracker,
+    agent_id: &AgentId,
+    exact_snapshots: &[crate::locks::FileSnapshot],
+    changed_snapshots: &[crate::locks::FileSnapshot],
+    unchanged_snapshots: &[crate::locks::FileSnapshot],
+    failures: &[FileReadFailure],
+) -> String {
+    let exact_text = if should_bundle_file_read_response(exact_snapshots) {
+        render_bundled_file_read_response(context_bundles, exact_snapshots, &[])
+            .unwrap_or_else(|| render_file_read_response_inline(exact_snapshots, &[]))
+    } else {
+        render_file_read_response_inline(exact_snapshots, &[])
+    };
+    render_file_read_response_with_repeats(
+        exact_text,
+        file_reads,
+        agent_id,
+        changed_snapshots,
+        unchanged_snapshots,
+        failures,
+    )
+}
+
+fn render_file_read_response_with_repeats(
+    exact_text: String,
+    file_reads: &FileReadTracker,
+    agent_id: &AgentId,
+    changed_snapshots: &[crate::locks::FileSnapshot],
+    unchanged_snapshots: &[crate::locks::FileSnapshot],
+    failures: &[FileReadFailure],
+) -> String {
+    let mut text = exact_text;
+    if !changed_snapshots.is_empty() {
+        text.push_str("\nRepeated file reads with changes\n");
+        text.push_str(
+            "These files changed since this agent's last mediated snapshot, so Work Leaf is sending diffs instead of full file text. Continue from the previous snapshot and request narrower related context if the diff is insufficient.\n",
+        );
+        for snapshot in changed_snapshots {
+            render_changed_repeat_read_snapshot(&mut text, file_reads, agent_id, snapshot);
+        }
+    }
+    if !unchanged_snapshots.is_empty() {
+        text.push_str("\nRepeated file reads unchanged\n");
+        text.push_str(
+            "Work Leaf already sent this agent the exact text for these files, and the current digests still match. Full text is not resent; use the existing snapshot.\n",
+        );
+        for snapshot in unchanged_snapshots {
+            text.push_str("- ");
+            text.push_str(&snapshot.path.display().to_string());
+            text.push_str(" (");
+            text.push_str(&content_digest(&snapshot.text));
+            text.push_str(")\n");
+        }
+    }
+    if !failures.is_empty() {
+        text.push_str("\nUnavailable file text\n");
+        text.push_str(&render_file_read_failures(failures));
+    }
+    text
+}
+
+fn render_file_read_response_inline(
     snapshots: &[crate::locks::FileSnapshot],
     failures: &[FileReadFailure],
 ) -> String {
@@ -1076,6 +1302,84 @@ fn render_file_read_response(
     text
 }
 
+fn render_changed_repeat_read_snapshot(
+    text: &mut String,
+    file_reads: &FileReadTracker,
+    agent_id: &AgentId,
+    snapshot: &crate::locks::FileSnapshot,
+) {
+    text.push_str("\n--- ");
+    text.push_str(&snapshot.path.display().to_string());
+    text.push_str(" ---\n");
+    text.push_str("current digest: ");
+    text.push_str(&content_digest(&snapshot.text));
+    text.push('\n');
+
+    let Some(previous) = file_reads.snapshot_for(agent_id, &snapshot.path) else {
+        render_untracked_refresh_snapshot(text, snapshot);
+        return;
+    };
+    text.push_str("previous digest: ");
+    text.push_str(&previous.digest);
+    text.push('\n');
+    match render_snapshot_diff(&snapshot.path, &previous.text, &snapshot.text) {
+        Some(diff) => {
+            text.push_str("status: changed since this agent's last snapshot\n");
+            text.push_str(&diff);
+            if !diff.ends_with('\n') {
+                text.push('\n');
+            }
+        }
+        None => {
+            text.push_str("status: changed since this agent's last snapshot\n");
+            text.push_str(
+                "diff unavailable. Full text is not resent for repeated reads; request narrower related context or continue from the previous snapshot.\n",
+            );
+        }
+    }
+}
+
+const MAX_INLINE_FILE_READ_BYTES: usize = 24 * 1024;
+const MAX_INLINE_SINGLE_FILE_READ_BYTES: usize = 16 * 1024;
+
+fn should_bundle_file_read_response(snapshots: &[crate::locks::FileSnapshot]) -> bool {
+    let total = snapshots
+        .iter()
+        .map(|snapshot| snapshot.text.len())
+        .sum::<usize>();
+    total > MAX_INLINE_FILE_READ_BYTES
+        || snapshots
+            .iter()
+            .any(|snapshot| snapshot.text.len() > MAX_INLINE_SINGLE_FILE_READ_BYTES)
+}
+
+fn render_bundled_file_read_response(
+    context_bundles: &ContextBundleStore,
+    snapshots: &[crate::locks::FileSnapshot],
+    failures: &[FileReadFailure],
+) -> Option<String> {
+    let bundle_path = context_bundles.write(snapshots)?;
+    let mut text = String::from("work-leaf file text\n");
+    text.push_str("Exact file text is in an orchestrator context bundle instead of this chat to keep the agent session compact.\n");
+    text.push_str("Context bundle: ");
+    text.push_str(&bundle_path.display().to_string());
+    text.push('\n');
+    text.push_str("You may read this temporary bundle file for the exact mediated file text. Do not edit the bundle; project writes still require `@work-leaf patch`.\n");
+    text.push_str("Bundled files:\n");
+    for snapshot in snapshots {
+        text.push_str("- ");
+        text.push_str(&snapshot.path.display().to_string());
+        text.push_str(" (");
+        text.push_str(&content_digest(&snapshot.text));
+        text.push_str(")\n");
+    }
+    if !failures.is_empty() {
+        text.push_str("\nUnavailable file text\n");
+        text.push_str(&render_file_read_failures(failures));
+    }
+    Some(text)
+}
+
 const MAX_AUTOMATIC_REFRESH_DIFF_BYTES: usize = 48 * 1024;
 const MAX_AUTOMATIC_FULL_REFRESH_BYTES: usize = 8 * 1024;
 
@@ -1087,7 +1391,7 @@ fn render_file_refresh_response(
 ) -> String {
     let mut text = String::from("work-leaf file refresh\n");
     text.push_str(
-        "This is a compact refresh, not a patch to submit. It shows changes from the last file text this agent received. Request full text with `@work-leaf read <path>` only if the compact refresh is insufficient.\n",
+        "This is a compact refresh, not a patch to submit. It shows changes from the last file text this agent received. Repeated full-text refreshes are intentionally avoided to keep the session compact.\n",
     );
 
     for snapshot in snapshots {
@@ -1104,7 +1408,7 @@ fn render_file_refresh_response(
         };
 
         text.push_str("previous digest: ");
-        text.push_str(&content_digest(&previous.text));
+        text.push_str(&previous.digest);
         text.push('\n');
 
         if previous.text == snapshot.text {
@@ -1124,15 +1428,15 @@ fn render_file_refresh_response(
                 text.push_str("status: changed since this agent's last snapshot\n");
                 text.push_str("diff omitted: compact refresh would be ");
                 text.push_str(&diff.len().to_string());
-                text.push_str(" bytes. Request exact text with `@work-leaf read ");
-                text.push_str(&snapshot.path.display().to_string());
-                text.push_str("` if this file is still needed.\n");
+                text.push_str(
+                    " bytes. Request narrower related context or continue from the previous snapshot if this file is still needed.\n",
+                );
             }
             None => {
                 text.push_str("status: changed since this agent's last snapshot\n");
-                text.push_str("diff unavailable. Request exact text with `@work-leaf read ");
-                text.push_str(&snapshot.path.display().to_string());
-                text.push_str("` if this file is still needed.\n");
+                text.push_str(
+                    "diff unavailable. Request narrower related context or continue from the previous snapshot if this file is still needed.\n",
+                );
             }
         }
     }
@@ -1157,7 +1461,7 @@ fn render_untracked_refresh_snapshot(text: &mut String, snapshot: &crate::locks:
     } else {
         text.push_str("current file text omitted: file is ");
         text.push_str(&snapshot.text.len().to_string());
-        text.push_str(" bytes. Request exact text with `@work-leaf read ");
+        text.push_str(" bytes. Request mediated file text with `@work-leaf read ");
         text.push_str(&snapshot.path.display().to_string());
         text.push_str("` if this file is still needed.\n");
     }

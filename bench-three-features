@@ -1,0 +1,580 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: bench-three-features [--dry-run]
+
+Run the real three-feature orchestrator benchmark with the current Work Leaf
+binaries against a temporary checkout at the historical base commit. The runner
+drives the localhost HTTP API directly, saves a benchmark report every time it
+runs, and always removes the temporary checkout.
+
+Environment:
+  WORK_LEAF_BENCH_BASE          base commit for the temp checkout
+  WORK_LEAF_BENCH_TMPDIR        parent directory for the temporary checkout
+  WORK_LEAF_BENCH_RESULTS_DIR   report directory, default bench-results
+  WORK_LEAF_BENCH_SKIP_BUILD    set to 1 to skip cargo build --release --bins
+  WORK_LEAF_BENCH_BIN_DIR       directory containing current Work Leaf binaries
+  WORK_LEAF_BENCH_LISTEN        daemon listen address, default 127.0.0.1:0
+  WORK_LEAF_BENCH_TIMEOUT_SECS  total timeout, default 7200
+  WORK_LEAF_BENCH_STALL_SECS    no-progress timeout, default 900
+  WORK_LEAF_BENCH_MODEL         optional Codex model passed to the daemon
+  WORK_LEAF_BENCH_NO_READ_PERMISSION set to 1 to pass --no-read-permission
+  WORK_LEAF_BENCH_OPERATOR_NOTES optional human notes saved in the report
+  WORK_LEAF_CODEX_SDK_PYTHON    optional Python with openai-codex installed
+USAGE
+}
+
+dry_run=0
+original_args=("$@")
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run)
+      dry_run=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "unknown bench-three-features option: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+base_commit="${WORK_LEAF_BENCH_BASE:-c92a0b7060a36eac6db2d869b85e589a7a9480f9}"
+tmp_parent="${WORK_LEAF_BENCH_TMPDIR:-${TMPDIR:-/tmp}}"
+results_dir="${WORK_LEAF_BENCH_RESULTS_DIR:-$repo_root/bench-results}"
+timeout_secs="${WORK_LEAF_BENCH_TIMEOUT_SECS:-7200}"
+stall_secs="${WORK_LEAF_BENCH_STALL_SECS:-900}"
+listen_addr="${WORK_LEAF_BENCH_LISTEN:-127.0.0.1:0}"
+bin_dir="${WORK_LEAF_BENCH_BIN_DIR:-$repo_root/target/release}"
+bench_model="${WORK_LEAF_BENCH_MODEL:-default}"
+no_read_permission="${WORK_LEAF_BENCH_NO_READ_PERMISSION:-0}"
+run_id="${WORK_LEAF_BENCH_RUN_ID:-$(date +%Y%m%dT%H%M%S%z)}"
+mkdir -p "$tmp_parent" "$results_dir"
+results_dir="$(cd "$results_dir" && pwd)"
+
+shell_quote() {
+  printf '%q' "$1"
+}
+
+tiny_pid_namespace() {
+  [[ "$$" -le 5 && "$PPID" -eq 1 ]]
+}
+
+relay_supervisor_log() {
+  local log_file="$1"
+  local last_line=0
+  local total_lines
+  while true; do
+    if [[ -f "$log_file" ]]; then
+      total_lines="$(wc -l < "$log_file" | tr -d ' ')"
+      if (( total_lines > last_line )); then
+        sed -n "$((last_line + 1)),${total_lines}p" "$log_file"
+        last_line="$total_lines"
+      fi
+    fi
+    if ! tmux has-session -t "$2" 2>/dev/null; then
+      break
+    fi
+    sleep 2
+  done
+  if [[ -f "$log_file" ]]; then
+    total_lines="$(wc -l < "$log_file" | tr -d ' ')"
+    if (( total_lines > last_line )); then
+      sed -n "$((last_line + 1)),${total_lines}p" "$log_file"
+    fi
+  fi
+}
+
+launch_tmux_supervisor_if_needed() {
+  if [[ "$dry_run" == "1" || "${WORK_LEAF_BENCH_SUPERVISED:-0}" == "1" ]]; then
+    return
+  fi
+  if [[ "${WORK_LEAF_BENCH_DISABLE_TMUX_SUPERVISOR:-0}" == "1" ]]; then
+    return
+  fi
+  if ! tiny_pid_namespace || ! command -v tmux >/dev/null 2>&1; then
+    return
+  fi
+
+  local session="work-leaf-bench-${run_id//[^A-Za-z0-9_]/_}"
+  local supervisor_log="$results_dir/${run_id}-three-feature-bench-supervisor.log"
+  local supervisor_status="$results_dir/${run_id}-three-feature-bench-supervisor.status"
+  local supervisor_command="$results_dir/${run_id}-three-feature-bench-supervisor.command"
+  local command_text="cd $(shell_quote "$repo_root") && "
+  local name
+  for name in WORK_LEAF_BENCH_BASE WORK_LEAF_BENCH_TMPDIR WORK_LEAF_BENCH_RESULTS_DIR \
+    WORK_LEAF_BENCH_SKIP_BUILD WORK_LEAF_BENCH_BIN_DIR WORK_LEAF_BENCH_LISTEN \
+    WORK_LEAF_BENCH_TIMEOUT_SECS WORK_LEAF_BENCH_STALL_SECS WORK_LEAF_BENCH_MODEL \
+    WORK_LEAF_BENCH_NO_READ_PERMISSION \
+    WORK_LEAF_CODEX_SDK_PYTHON WORK_LEAF_CODEX_BACKEND; do
+    if [[ -n "${!name+x}" ]]; then
+      command_text+="$name=$(shell_quote "${!name}") "
+    fi
+  done
+  command_text+="WORK_LEAF_BENCH_SUPERVISED=1 WORK_LEAF_BENCH_RUN_ID=$(shell_quote "$run_id") $(shell_quote "$repo_root/bench-three-features")"
+  local arg
+  for arg in "${original_args[@]}"; do
+    command_text+=" $(shell_quote "$arg")"
+  done
+  command_text+=" >$(shell_quote "$supervisor_log") 2>&1; status=\$?; printf '%s\n' \"\$status\" >$(shell_quote "$supervisor_status"); exit \"\$status\""
+
+  rm -f "$supervisor_log" "$supervisor_status" "$supervisor_command"
+  printf '%s\n' "$command_text" > "$supervisor_command"
+  printf '[%s] tiny PID namespace detected; supervising bench in tmux session %s\n' "$(date '+%H:%M:%S')" "$session"
+  tmux new-session -d -s "$session" "bash -lc $(shell_quote "$command_text")"
+  relay_supervisor_log "$supervisor_log" "$session"
+  if [[ -f "$supervisor_status" ]]; then
+    exit "$(cat "$supervisor_status")"
+  fi
+  exit 1
+}
+
+launch_tmux_supervisor_if_needed
+
+find "$tmp_parent/work-leaf-codex-wrapper" -maxdepth 1 -type d \
+  -mmin +10 -exec rm -rf {} + 2>/dev/null || true
+rmdir "$tmp_parent/work-leaf-codex-wrapper" 2>/dev/null || true
+find "$tmp_parent" -maxdepth 1 -type d -name 'work-leaf-3feature-bench.*' -mmin +10 -exec rm -rf {} + 2>/dev/null || true
+tmp_root="$(mktemp -d "$tmp_parent/work-leaf-3feature-bench.XXXXXX")"
+checkout_dir="$tmp_root/repo"
+child_tmp_dir="$tmp_root/tmp"
+artifact_dir="$results_dir/${run_id}-three-feature-bench-artifacts"
+report_path="$results_dir/${run_id}-three-feature-bench.md"
+index_path="$results_dir/three-feature-bench.jsonl"
+daemon_pid=""
+url=""
+start_epoch="$(date +%s)"
+review_completed="no"
+linearize_completed="no"
+code_quality="not run"
+result="fail"
+failure_reason=""
+token_usage="unavailable"
+operator_notes="${WORK_LEAF_BENCH_OPERATOR_NOTES:-}"
+reported=0
+
+log() {
+  printf '[%s] %s\n' "$(date '+%H:%M:%S')" "$*"
+}
+
+cleanup_daemon_tmp() {
+  if [[ -n "${daemon_pid:-}" ]]; then
+    find "$tmp_parent/work-leaf-codex-wrapper" -maxdepth 1 -type d \
+      -name "${daemon_pid}-*" -exec rm -rf {} + 2>/dev/null || true
+    rmdir "$tmp_parent/work-leaf-codex-wrapper" 2>/dev/null || true
+  fi
+}
+
+cleanup() {
+  local status=$?
+  if [[ "$status" -ne 0 && "$reported" == "0" ]]; then
+    result="fail"
+    failure_reason="${failure_reason:-bench exited unexpectedly with status $status}"
+    if [[ -n "${url:-}" ]]; then
+      curl -fsS "$url/state" > "$tmp_root/final-state.json" 2>/dev/null || true
+    fi
+    if [[ ! -f "$tmp_root/final-state.json" && -f "$tmp_root/state.json" ]]; then
+      cp "$tmp_root/state.json" "$tmp_root/final-state.json" 2>/dev/null || true
+    fi
+    git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt" 2>/dev/null || true
+    git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt" 2>/dev/null || true
+    write_report "$failure_reason" || true
+  fi
+  if [[ -n "${url:-}" ]]; then
+    curl -fsS -X POST -H 'Content-Type: application/json' --data '{}' "$url/shutdown" >/dev/null 2>&1 || true
+  fi
+  if [[ -n "${daemon_pid:-}" ]] && kill -0 "$daemon_pid" 2>/dev/null; then
+    kill "$daemon_pid" 2>/dev/null || true
+    wait "$daemon_pid" 2>/dev/null || true
+  fi
+  cleanup_daemon_tmp
+  rm -rf "$tmp_root"
+  exit "$status"
+}
+trap cleanup EXIT INT TERM
+
+copy_artifacts() {
+  mkdir -p "$artifact_dir"
+  for file in state.json final-state.json daemon.out daemon.err daemon-env.txt daemon-ps.txt final-status.txt final-log.txt checks.log sdk-install.log codex-sdk-python.txt; do
+    if [[ -f "$tmp_root/$file" ]]; then
+      cp "$tmp_root/$file" "$artifact_dir/$file"
+    fi
+  done
+  mkdir -p "$artifact_dir/bin"
+  for binary in work-leaf work-leaf-orchestrator; do
+    if [[ -x "$bin_dir/$binary" ]]; then
+      cp "$bin_dir/$binary" "$artifact_dir/bin/$binary"
+    fi
+  done
+  if compgen -G "$artifact_dir/bin/*" >/dev/null; then
+    (cd "$artifact_dir/bin" && sha256sum * > SHA256SUMS)
+  fi
+}
+
+save_repo_snapshot() {
+  local label="$1"
+  local safe_label commit_count snapshot_dir patch_dir
+  [[ -d "$checkout_dir/.git" ]] || return
+  safe_label="$(printf '%s' "$label" | tr -c 'A-Za-z0-9._-' '-')"
+  snapshot_dir="$artifact_dir/patches/$safe_label"
+  patch_dir="$snapshot_dir/format-patch"
+  mkdir -p "$patch_dir"
+  git -C "$checkout_dir" rev-parse --show-toplevel > "$snapshot_dir/repo-path.txt" 2>/dev/null || true
+  git -C "$checkout_dir" status --short > "$snapshot_dir/git-status.txt" 2>/dev/null || true
+  git -C "$checkout_dir" log --oneline --decorate "$base_commit"..HEAD > "$snapshot_dir/git-log.txt" 2>/dev/null || true
+  git -C "$checkout_dir" diff --stat "$base_commit"..HEAD > "$snapshot_dir/diff-stat.txt" 2>/dev/null || true
+  git -C "$checkout_dir" diff --stat > "$snapshot_dir/worktree-diff-stat.txt" 2>/dev/null || true
+  git -C "$checkout_dir" diff > "$snapshot_dir/worktree.diff" 2>/dev/null || true
+  git -C "$checkout_dir" diff --cached > "$snapshot_dir/index.diff" 2>/dev/null || true
+  commit_count="$(git -C "$checkout_dir" rev-list --count HEAD ^"$base_commit" 2>/dev/null || printf '0')"
+  if [[ "$commit_count" != "0" ]]; then
+    git -C "$checkout_dir" format-patch --no-signature -o "$patch_dir" "$base_commit"..HEAD > "$snapshot_dir/format-patch-files.txt" 2>/dev/null || true
+    git -C "$checkout_dir" bundle create "$snapshot_dir/commits.bundle" "$base_commit"..HEAD > "$snapshot_dir/bundle-create.txt" 2>&1 || true
+  else
+    printf 'no commits after %s\n' "$base_commit" > "$snapshot_dir/no-commits.txt"
+  fi
+}
+
+redact_sensitive_env() {
+  sed -E \
+    -e 's/^(.*(TOKEN|token|Token|SECRET|secret|Secret|PASSWORD|password|Password|KEY|key|Key|AUTH|auth|Auth|CREDENTIAL|credential|Credential|COOKIE|cookie|Cookie|SESSION|session|Session)[^=]*)=.*/\1=<redacted>/'
+}
+
+ensure_codex_sdk_python() {
+  if [[ -n "${WORK_LEAF_CODEX_SDK_PYTHON:-}" ]]; then
+    sdk_python="$WORK_LEAF_CODEX_SDK_PYTHON"
+  else
+    sdk_python="$tmp_root/codex-sdk-venv/bin/python"
+    python -m venv "$tmp_root/codex-sdk-venv" >>"$tmp_root/sdk-install.log" 2>&1
+  fi
+
+  if ! "$sdk_python" - <<'PY' >/dev/null 2>>"$tmp_root/sdk-install.log"
+import openai_codex
+PY
+  then
+    "$sdk_python" -m pip install --cache-dir "${WORK_LEAF_PIP_CACHE_DIR:-/tmp/work-leaf-pip-cache}" openai-codex >>"$tmp_root/sdk-install.log" 2>&1
+  fi
+
+  "$sdk_python" - <<'PY' >>"$tmp_root/sdk-install.log" 2>&1
+import openai_codex
+print(openai_codex.__version__)
+PY
+  printf 'WORK_LEAF_CODEX_BACKEND=sdk\nWORK_LEAF_CODEX_SDK_PYTHON=%s\n' "$sdk_python" > "$tmp_root/codex-sdk-python.txt"
+}
+
+session_summary() {
+  local state_file="$1"
+  if [[ -f "$state_file" ]]; then
+    jq -r '.snapshot.sessions[]? | [.id, (.loading // "-"), (.completion // "-"), (.lines | length), .title] | @tsv' "$state_file" 2>/dev/null || true
+  fi
+}
+
+write_report() {
+  local comment="$1"
+  local end_epoch elapsed commits status_lines recent_log benched_commit benched_dirty
+  local changed_files changed_lines_added changed_lines_deleted changed_lines_total
+  local binaries_produced effective_notes read_permission_mode patch_artifacts
+  end_epoch="$(date +%s)"
+  elapsed=$((end_epoch - start_epoch))
+  commits="$(git -C "$checkout_dir" rev-list --count HEAD ^"$base_commit" 2>/dev/null || printf '0')"
+  status_lines="$(cat "$tmp_root/final-status.txt" 2>/dev/null || true)"
+  recent_log="$(cat "$tmp_root/final-log.txt" 2>/dev/null || true)"
+  benched_commit="$(git -C "$repo_root" rev-parse HEAD 2>/dev/null || printf 'unknown')"
+  if git -C "$repo_root" diff --quiet --ignore-submodules -- && git -C "$repo_root" diff --cached --quiet --ignore-submodules --; then
+    benched_dirty="no"
+  else
+    benched_dirty="yes"
+  fi
+  changed_files="$(git -C "$checkout_dir" diff --name-only "$base_commit"..HEAD 2>/dev/null | wc -l | tr -d ' ')"
+  read -r changed_lines_added changed_lines_deleted < <(
+    git -C "$checkout_dir" diff --numstat "$base_commit"..HEAD 2>/dev/null |
+      awk '{ if ($1 ~ /^[0-9]+$/) added += $1; if ($2 ~ /^[0-9]+$/) deleted += $2 } END { printf "%d %d\n", added, deleted }'
+  )
+  changed_lines_total=$((changed_lines_added + changed_lines_deleted))
+  copy_artifacts
+  save_repo_snapshot "$result"
+  binaries_produced="$(find "$artifact_dir/bin" -maxdepth 1 -type f -perm -111 -printf '%f ' 2>/dev/null | sed 's/[[:space:]]*$//')"
+  patch_artifacts="$artifact_dir/patches/$result"
+  effective_notes="${operator_notes:-$comment}"
+  if [[ "$no_read_permission" == "1" || "$no_read_permission" == "true" || "$no_read_permission" == "yes" ]]; then
+    read_permission_mode="direct agent file reads enabled (--no-read-permission)"
+  else
+    read_permission_mode="orchestrator-mediated file reads"
+  fi
+  cat > "$report_path" <<EOF
+# Three-Feature Smoke Bench
+
+- result: $result
+- started_at: $(date -d "@$start_epoch" -Iseconds)
+- finished_at: $(date -d "@$end_epoch" -Iseconds)
+- duration_seconds: $elapsed
+- benched_binary_commit: $benched_commit
+- benched_binary_dirty: $benched_dirty
+- agent_backend: codex
+- agent_transport: sdk
+- agent_model: $bench_model
+- sdk_python: ${sdk_python:-unavailable}
+- no_read_permission: $no_read_permission
+- read_permission_mode: $read_permission_mode
+- base_commit: $base_commit
+- temp_checkout: $tmp_root
+- temp_checkout_kept: 0
+- review_completed: $review_completed
+- linearize_completed: $linearize_completed
+- commits_after_base: $commits
+- changed_files: $changed_files
+- changed_lines_added: $changed_lines_added
+- changed_lines_deleted: $changed_lines_deleted
+- changed_lines_total: $changed_lines_total
+- token_usage: $token_usage
+- code_quality: $code_quality
+- comment: $comment
+- operator_notes: $effective_notes
+- artifacts: $artifact_dir
+- binaries: $artifact_dir/bin
+- binaries_produced: ${binaries_produced:-none}
+- patch_artifacts: $patch_artifacts
+
+## Sessions
+
+\`\`\`
+$(session_summary "$tmp_root/final-state.json")
+\`\`\`
+
+## Recent Commits
+
+\`\`\`
+$recent_log
+\`\`\`
+
+## Final Status
+
+\`\`\`
+$status_lines
+\`\`\`
+EOF
+  jq -n \
+    --arg run_id "$run_id" \
+    --arg result "$result" \
+    --arg benched_binary_commit "$benched_commit" \
+    --arg benched_binary_dirty "$benched_dirty" \
+    --arg agent_backend "codex" \
+    --arg agent_transport "sdk" \
+    --arg agent_model "$bench_model" \
+    --arg sdk_python "${sdk_python:-unavailable}" \
+    --arg no_read_permission "$no_read_permission" \
+    --arg read_permission_mode "$read_permission_mode" \
+    --arg base_commit "$base_commit" \
+    --arg report "$report_path" \
+    --arg review_completed "$review_completed" \
+    --arg linearize_completed "$linearize_completed" \
+    --arg code_quality "$code_quality" \
+    --arg token_usage "$token_usage" \
+    --arg comment "$comment" \
+    --arg operator_notes "$effective_notes" \
+    --arg binaries_produced "${binaries_produced:-none}" \
+    --arg patch_artifacts "$patch_artifacts" \
+    --argjson duration_seconds "$elapsed" \
+    --argjson commits_after_base "$commits" \
+    --argjson changed_files "$changed_files" \
+    --argjson changed_lines_added "$changed_lines_added" \
+    --argjson changed_lines_deleted "$changed_lines_deleted" \
+    --argjson changed_lines_total "$changed_lines_total" \
+    '{run_id:$run_id,result:$result,benched_binary_commit:$benched_binary_commit,benched_binary_dirty:$benched_binary_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,agent_model:$agent_model,sdk_python:$sdk_python,no_read_permission:$no_read_permission,read_permission_mode:$read_permission_mode,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
+    >> "$index_path"
+  reported=1
+  log "bench report: $report_path"
+}
+
+collect_token_usage() {
+  if [[ ! -f "$tmp_root/final-state.json" ]]; then
+    return
+  fi
+  if [[ -n "${url:-}" ]]; then
+    curl -fsS "$url/state" > "$tmp_root/final-state.next.json" 2>/dev/null \
+      && mv "$tmp_root/final-state.next.json" "$tmp_root/final-state.json" \
+      || rm -f "$tmp_root/final-state.next.json"
+  fi
+  token_usage="$(
+    jq -r '
+      [.snapshot.sessions[]? as $session
+        | select($session.token_usage != null)
+        | "\($session.id): input=\($session.token_usage.input_tokens) cached_input=\($session.token_usage.cached_input_tokens) output=\($session.token_usage.output_tokens) reasoning_output=\($session.token_usage.reasoning_output_tokens)"]
+      | if length == 0 then "unavailable" else join("; ") end
+    ' "$tmp_root/final-state.json" 2>/dev/null || printf 'unavailable'
+  )"
+}
+
+fail_bench() {
+  failure_reason="$1"
+  result="fail"
+  curl -fsS "$url/state" > "$tmp_root/final-state.json" 2>/dev/null || cp "$tmp_root/state.json" "$tmp_root/final-state.json" 2>/dev/null || true
+  git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt" 2>/dev/null || true
+  git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt" 2>/dev/null || true
+  collect_token_usage
+  write_report "$failure_reason"
+  exit 1
+}
+
+post_command() {
+  local line="$1"
+  jq -n --arg line "$line" '{line:$line}' |
+    curl -fsS -H 'Content-Type: application/json' --data-binary @- "$url/command" >/dev/null
+}
+
+post_agent() {
+  local agent_id="$1"
+  local message="$2"
+  jq -n --arg agent_id "$agent_id" --arg message "$message" '{agent_id:$agent_id,message:$message}' |
+    curl -fsS -H 'Content-Type: application/json' --data-binary @- "$url/agent/message" >/dev/null
+}
+
+log "WORK_LEAF_BENCH_TEMP=$tmp_root"
+log "WORK_LEAF_BENCH_BASE=$base_commit"
+
+if [[ "$dry_run" == "1" ]]; then
+  git -C "$repo_root" clone --no-checkout --no-hardlinks "$repo_root" "$checkout_dir" >/dev/null
+  git -C "$checkout_dir" checkout --detach "$base_commit" >/dev/null
+  result="skipped"
+  code_quality="not run"
+  write_report "dry run created and removed the isolated checkout without launching agents"
+  exit 0
+fi
+
+if [[ "${WORK_LEAF_BENCH_SKIP_BUILD:-}" != "1" ]]; then
+  (cd "$repo_root" && cargo build --release --bins)
+fi
+
+git -C "$repo_root" clone --no-checkout --no-hardlinks "$repo_root" "$checkout_dir" >/dev/null
+git -C "$checkout_dir" checkout --detach "$base_commit" >/dev/null
+mkdir -p "$child_tmp_dir"
+ensure_codex_sdk_python
+
+daemon_args=("--listen" "$listen_addr")
+if [[ -n "${WORK_LEAF_BENCH_MODEL:-}" ]]; then
+  daemon_args+=("--model" "$WORK_LEAF_BENCH_MODEL")
+fi
+if [[ "$no_read_permission" == "1" || "$no_read_permission" == "true" || "$no_read_permission" == "yes" ]]; then
+  daemon_args+=("--no-read-permission")
+fi
+(
+  cd "$checkout_dir"
+  exec env WORK_LEAF_CODEX_BACKEND=sdk WORK_LEAF_CODEX_SDK_PYTHON="$sdk_python" WORK_LEAF_CONTEXT_BUNDLE_DIR="$tmp_root/context-bundles" WORK_LEAF_COMMAND_TMPDIR="$child_tmp_dir" WORK_LEAF_CODEX_TRACE=1 "$bin_dir/work-leaf-orchestrator" "${daemon_args[@]}" >"$tmp_root/daemon.out" 2>"$tmp_root/daemon.err"
+) &
+daemon_pid=$!
+{
+  printf 'daemon_pid=%s\n' "$daemon_pid"
+  printf 'bench_pid=%s\n' "$$"
+  printf 'parent_pid=%s\n' "$PPID"
+  ps -o pid,ppid,pgid,sid,stat,comm,args -p "$daemon_pid" 2>/dev/null || true
+} > "$tmp_root/daemon-ps.txt"
+if [[ -r "/proc/$daemon_pid/environ" ]]; then
+  tr '\0' '\n' < "/proc/$daemon_pid/environ" | redact_sensitive_env > "$tmp_root/daemon-env.txt" 2>/dev/null || true
+fi
+
+for _ in $(seq 1 200); do
+  if [[ -s "$tmp_root/daemon.out" ]]; then
+    url="$(sed -n 's/^WORK_LEAF_ORCHESTRATOR_URL=//p' "$tmp_root/daemon.out" | head -n1)"
+    [[ -n "$url" ]] && break
+  fi
+  if ! kill -0 "$daemon_pid" 2>/dev/null; then
+    fail_bench "orchestrator exited before printing a URL"
+  fi
+  sleep 0.1
+done
+[[ -n "$url" ]] || fail_bench "timed out waiting for orchestrator URL"
+log "daemon URL: $url"
+
+post_command 'new add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select' || fail_bench "failed to post first patch-agent command"
+post_command 'new when an user prompt start with / and is followed by something without whitespace that is a command for the agent; the orchestrator must send it to the selected backend agent and show that backend response' || fail_bench "failed to post second patch-agent command"
+post_command 'new when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it' || fail_bench "failed to post third patch-agent command"
+log "started 3 patch agents"
+
+linearize_started=0
+accepted_linearize=0
+last_sig=""
+last_progress_epoch="$start_epoch"
+
+while true; do
+  now="$(date +%s)"
+  elapsed=$((now - start_epoch))
+  (( elapsed <= timeout_secs )) || fail_bench "timed out after ${elapsed}s"
+
+  curl -fsS "$url/state" > "$tmp_root/state.json" || fail_bench "orchestrator state request failed"
+  if [[ -f "$tmp_root/abort-reason" ]]; then
+    fail_bench "$(cat "$tmp_root/abort-reason")"
+  fi
+  busy="$(jq -r '.busy' "$tmp_root/state.json")"
+  sig="$(jq -r '[.snapshot.sessions[] | "\(.id):\(.loading // "-"):\(.completion // "-"):lines=\(.lines|length):title=\(.title)"] | join(" | ")' "$tmp_root/state.json")"
+  if [[ "$sig" != "$last_sig" ]]; then
+    last_sig="$sig"
+    last_progress_epoch="$now"
+    log "elapsed=${elapsed}s busy=$busy $sig"
+  fi
+  if (( now - last_progress_epoch > stall_secs )); then
+    fail_bench "stalled for more than ${stall_secs}s without session state changes"
+  fi
+
+  reviews="$(jq '[.snapshot.sessions[] | select(.id|startswith("review-"))] | length' "$tmp_root/state.json")"
+  ready_users="$(jq '[.snapshot.sessions[] | select((.id|test("^user-[0-9]+$")) and .completion == "NeedsDecision")] | length' "$tmp_root/state.json")"
+  user_count="$(jq '[.snapshot.sessions[] | select(.id|test("^user-[0-9]+$"))] | length' "$tmp_root/state.json")"
+  commits_after_base="$(git -C "$checkout_dir" rev-list --count HEAD ^"$base_commit" 2>/dev/null || printf '0')"
+  launch_errors="$(jq '[.snapshot.sessions[] | select((.id|test("^user-[0-9]+$")) and ([.lines[]? | select(startswith("error:"))] | length > 0))] | length' "$tmp_root/state.json")"
+  if [[ "$busy" == "false" && "$user_count" == "3" && "$launch_errors" == "3" && "$commits_after_base" == "0" ]]; then
+    fail_bench "all three initial Codex launches failed before producing work"
+  fi
+
+  if [[ "$linearize_started" == "0" && "$ready_users" == "3" && "$reviews" -ge 3 && "$busy" == "false" ]]; then
+    review_completed="yes"
+    log "all patch agents reviewed; launching linearize"
+    post_command 'linearize' || fail_bench "failed to post linearize command"
+    linearize_started=1
+    sleep 5
+    continue
+  fi
+
+  linearize_ready="$(jq '[.snapshot.sessions[] | select(.id == "linearize" and .loading == null)] | length' "$tmp_root/state.json")"
+  if [[ "$linearize_started" == "1" && "$accepted_linearize" == "0" && "$linearize_ready" != "0" && "$busy" == "false" ]]; then
+    log "linearizer ready; accepting plan"
+    post_agent 'linearize' 'Accept the proposed linearization plan. Rewrite the reviewed provisional agent commits into final commits now, preserving all three reviewed features. Run the repository required checks and report the final commit messages and verification.' || fail_bench "failed to accept linearize plan"
+    accepted_linearize=1
+    sleep 5
+    continue
+  fi
+
+  if [[ "$accepted_linearize" == "1" && "$busy" == "false" ]]; then
+    linearize_completed="yes"
+    curl -fsS "$url/state" > "$tmp_root/final-state.json" || fail_bench "orchestrator final-state request failed"
+    git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt"
+    git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt"
+    if [[ -s "$tmp_root/final-status.txt" ]]; then
+      code_quality="not run; final repository was dirty"
+      fail_bench "linearize finished with a dirty repository"
+    fi
+    log "running final code quality checks"
+    (
+      cd "$checkout_dir"
+      export TMPDIR="$child_tmp_dir"
+      cargo fmt -- --check
+      cargo clippy --all-targets --all-features -- -D warnings
+      cargo test --all-targets --all-features
+    ) >"$tmp_root/checks.log" 2>&1 || {
+      code_quality="failed; see checks.log"
+      fail_bench "final repository checks failed"
+    }
+    code_quality="passed cargo fmt -- --check; cargo clippy --all-targets --all-features -- -D warnings; cargo test --all-targets --all-features"
+    result="pass"
+    collect_token_usage
+    write_report "review and linearize completed; final repository checks passed"
+    exit 0
+  fi
+
+  sleep 5
+done

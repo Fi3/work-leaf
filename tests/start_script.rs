@@ -19,6 +19,9 @@ fn start_script_builds_release_binaries_and_stops_daemon_after_cli_exit() {
     assert!(script.contains("cargo build --release"));
     assert!(script.contains("work-leaf-orchestrator"));
     assert!(script.contains("kill"));
+    assert!(script.contains("work-leaf-codex-wrapper"));
+    assert!(script.contains("-name \"${daemon_pid}-*\""));
+    assert!(script.contains("-mmin +10"));
 
     let root = temp_dir("start-script");
     let mut app = PtyStart::spawn(root.path(), Path::new(env!("CARGO_BIN_EXE_work-leaf")));
@@ -51,6 +54,7 @@ impl PtyStart {
             .env("WORK_LEAF_START_SKIP_BUILD", "1")
             .env("WORK_LEAF_START_BIN_DIR", bin_dir)
             .env("WORK_LEAF_START_LISTEN", "127.0.0.1:0")
+            .env("WORK_LEAF_CODEX_BACKEND", "exec")
             .stdin(stdin)
             .stdout(stdout)
             .stderr(stderr)
@@ -148,6 +152,11 @@ impl Drop for PtyStart {
 fn start_script_uses_default_daemon_port_and_fails_when_unavailable() {
     let script = fs::read_to_string("start").expect("root start script exists");
     assert!(script.contains("WORK_LEAF_START_LISTEN:-127.0.0.1:7878"));
+    assert!(script.contains("ensure_codex_sdk_python()"));
+    assert!(script.contains("WORK_LEAF_CODEX_BACKEND:-sdk"));
+    assert!(script.contains("WORK_LEAF_CODEX_BACKEND=exec"));
+    assert!(script.contains("target/work-leaf-codex-sdk-venv"));
+    assert!(script.contains("openai-codex"));
 
     let root = temp_dir("start-script-port-busy");
     let _listener = TcpListener::bind("127.0.0.1:7878").ok();
@@ -157,6 +166,7 @@ fn start_script_uses_default_daemon_port_and_fails_when_unavailable() {
         .current_dir(root.path())
         .env("WORK_LEAF_START_SKIP_BUILD", "1")
         .env("WORK_LEAF_START_BIN_DIR", bin_dir)
+        .env("WORK_LEAF_CODEX_BACKEND", "exec")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -253,6 +263,138 @@ fn three_feature_smoke_script_cleans_temp_checkout_after_launch_failure() {
         !temp_root.exists(),
         "smoke script should remove failed-launch temp root {temp_root:?}"
     );
+}
+
+#[test]
+fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results() {
+    let script =
+        fs::read_to_string("bench-three-features").expect("three-feature bench script exists");
+    let mode = fs::metadata("bench-three-features")
+        .expect("three-feature bench script is statable")
+        .permissions()
+        .mode();
+
+    assert_ne!(mode & 0o111, 0, "bench script should be executable");
+    assert!(script.contains("WORK_LEAF_BENCH_BASE:-c92a0b7060a36eac6db2d869b85e589a7a9480f9"));
+    assert!(script.contains("curl -fsS \"$url/state\""));
+    assert!(script.contains("bench-results"));
+    assert!(script.contains("results_dir=\"$(cd \"$results_dir\" && pwd)\""));
+    assert!(script.contains("three-feature-bench.jsonl"));
+    assert!(script.contains("WORK_LEAF_BENCH_SUPERVISED=1"));
+    assert!(script.contains("WORK_LEAF_BENCH_RUN_ID"));
+    assert!(script.contains("tmux new-session -d -s"));
+    assert!(script.contains("\"bash -lc $(shell_quote \"$command_text\")\""));
+    assert!(script.contains("three-feature-bench-supervisor.log"));
+    assert!(script.contains("three-feature-bench-supervisor.status"));
+    assert!(script.contains("three-feature-bench-supervisor.command"));
+    assert!(script.contains("work-leaf-orchestrator"));
+    assert!(script.contains("$artifact_dir/bin"));
+    assert!(script.contains("cp \"$bin_dir/$binary\" \"$artifact_dir/bin/$binary\""));
+    assert!(script.contains("sha256sum * > SHA256SUMS"));
+    assert!(script.contains("save_repo_snapshot()"));
+    assert!(script.contains("$artifact_dir/patches/$safe_label"));
+    assert!(
+        script.contains("format-patch --no-signature -o \"$patch_dir\" \"$base_commit\"..HEAD")
+    );
+    assert!(
+        script.contains("bundle create \"$snapshot_dir/commits.bundle\" \"$base_commit\"..HEAD")
+    );
+    assert!(script.contains("patch_artifacts"));
+    assert!(script.contains("WORK_LEAF_CODEX_TRACE=1"));
+    assert!(
+        script.contains(
+            "exec env WORK_LEAF_CODEX_BACKEND=sdk WORK_LEAF_CODEX_SDK_PYTHON=\"$sdk_python\" WORK_LEAF_CONTEXT_BUNDLE_DIR=\"$tmp_root/context-bundles\" WORK_LEAF_COMMAND_TMPDIR=\"$child_tmp_dir\" WORK_LEAF_CODEX_TRACE=1"
+        )
+    );
+    assert!(script.contains("ensure_codex_sdk_python"));
+    assert!(script.contains("codex-sdk-venv"));
+    assert!(script.contains("sdk-install.log"));
+    assert!(script.contains("codex-sdk-python.txt"));
+    assert!(script.contains("openai-codex"));
+    assert!(script.contains("redact_sensitive_env()"));
+    assert!(script.contains("<redacted>"));
+    assert!(script.contains("TMPDIR=\"$child_tmp_dir\""));
+    assert!(script.contains("final-state.next.json"));
+    assert!(script.contains("daemon-env.txt"));
+    assert!(script.contains("daemon-ps.txt"));
+    assert!(script.contains("/proc/$daemon_pid/environ"));
+    assert!(script.contains("abort-reason"));
+    assert!(script.contains("work-leaf-codex-wrapper"));
+    assert!(script.contains("-name \"${daemon_pid}-*\""));
+    assert!(script.contains("review_completed"));
+    assert!(script.contains("select(.id|startswith(\"review-\"))"));
+    assert!(!script.contains(".feature|test(\"review\""));
+    assert!(!script.contains(".title|test(\"review\""));
+    assert!(script.contains("linearize_completed"));
+    assert!(script.contains("post_command 'linearize' || fail_bench \"failed to post linearize command\"\n    linearize_started=1\n    sleep 5\n    continue"));
+    assert!(script.contains("post_agent 'linearize' 'Accept the proposed linearization plan."));
+    assert!(script.contains("accepted_linearize=1\n    sleep 5\n    continue"));
+    assert!(script.contains("token_usage"));
+    assert!(script.contains("$session.token_usage.input_tokens"));
+    assert!(!script.contains("post_agent \"$session_id\" \"/status\""));
+    assert!(script.contains("code_quality"));
+    assert!(script.contains("agent_backend: codex"));
+    assert!(script.contains("agent_transport: sdk"));
+    assert!(script.contains("agent_model"));
+    assert!(script.contains("no_read_permission"));
+    assert!(script.contains("read_permission_mode"));
+    assert!(script.contains("WORK_LEAF_BENCH_NO_READ_PERMISSION"));
+    assert!(script.contains("daemon_args+=(\"--no-read-permission\")"));
+    assert!(script.contains("changed_files"));
+    assert!(script.contains("changed_lines_total"));
+    assert!(script.contains("benched_binary_commit"));
+    assert!(script.contains("rm -rf \"$tmp_root\""));
+    assert!(script.contains("bench exited unexpectedly with status"));
+    assert!(script.contains("orchestrator state request failed"));
+    assert!(script.contains("-mmin +10"));
+    assert!(!script.contains("WORK_LEAF_BENCH_KEEP_TEMP"));
+}
+
+#[test]
+fn three_feature_bench_script_cleans_temp_checkout_and_writes_dry_run_report() {
+    let root = temp_dir("three-feature-bench-dry-run");
+    let results = root.path().join("results");
+    let output = Command::new(Path::new(env!("CARGO_MANIFEST_DIR")).join("bench-three-features"))
+        .arg("--dry-run")
+        .env("WORK_LEAF_BENCH_BASE", "HEAD")
+        .env("WORK_LEAF_BENCH_TMPDIR", root.path())
+        .env("WORK_LEAF_BENCH_RESULTS_DIR", &results)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "dry run should succeed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let temp_root = stdout
+        .lines()
+        .find_map(|line| {
+            line.split_once("WORK_LEAF_BENCH_TEMP=")
+                .map(|(_, path)| PathBuf::from(path))
+        })
+        .expect("dry run should print temp root");
+    assert!(
+        !temp_root.exists(),
+        "bench script should remove dry-run temp root {temp_root:?}"
+    );
+    let reports = fs::read_dir(&results)
+        .unwrap()
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .collect::<Vec<_>>();
+    assert!(
+        reports.iter().any(|path| path
+            .file_name()
+            .is_some_and(|name| name.to_string_lossy().ends_with("-three-feature-bench.md"))),
+        "dry run should write a markdown bench report"
+    );
+    assert!(results.join("three-feature-bench.jsonl").exists());
 }
 
 struct TempProject {

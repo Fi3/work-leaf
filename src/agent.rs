@@ -4,7 +4,9 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
-pub use crate::agent_runtime::{AgentBackend, AgentShutdownHandle, AgentStreamEvent};
+pub use crate::agent_runtime::{
+    AgentBackend, AgentShutdownHandle, AgentStreamEvent, AgentTokenUsage,
+};
 use crate::instructions::{ProjectInstructionFile, load_project_instructions};
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -218,6 +220,7 @@ impl PromptPolicy {
         match read_permission {
             ReadPermission::Orchestrator => lines.extend([
                 "You are not allowed to read files directly; ask the orchestrator to provide file text.",
+                "You may read temporary context bundle files only when the orchestrator gives you their exact paths in a Work Leaf response; those bundles are orchestrator-provided file text, not project files.",
                 "You are not allowed to write files directly; provide a unified diff patch for every file you want to change.",
                 "Commands that create, update, delete, format, build, test, or otherwise write files require orchestrator mediation.",
                 "Keep every patch focused on the current feature and explain the specific reason for the patch.",
@@ -225,6 +228,8 @@ impl PromptPolicy {
                 "Emit every `@work-leaf ...` request as a top-level plain response line, without quotes, prose, or code fences, so the orchestrator can parse it.",
                 "Never claim that you are switching to local workspace tools; keep using orchestrator directives until the orchestrator responds.",
                 "Use `@work-leaf read <path>` to request file text from the orchestrator.",
+                "If you request a file you already received, Work Leaf compares digests and returns either unchanged status or a diff from your last snapshot; do not use repeated reads to reload whole files.",
+                "Use `@work-leaf read --force <path>` only when you need a fresh full file snapshot after the unchanged or diff response is insufficient.",
                 "Request related files together, because `@work-leaf read <path> <path...>` returns multiple file snapshots in one orchestrator response.",
             ]),
             ReadPermission::DirectFilesystem => lines.extend([

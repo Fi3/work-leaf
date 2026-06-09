@@ -4,13 +4,15 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use work_leaf::{
     AgentBackend, AgentError, AgentId, AgentKind, AgentLaunch, AgentProfile, AgentSession,
-    ChatMessage, CommandChat, MessageRole, WorkLeafCompletion, WorkLeafController, WorkLeafEvent,
-    WorkLeafLoading,
+    AgentStreamEvent, ChatMessage, CommandChat, MessageRole, WorkLeafCompletion,
+    WorkLeafController, WorkLeafEvent, WorkLeafLoading,
 };
+
+mod temp_cleanup;
 
 #[test]
 fn controller_exposes_ui_neutral_events_and_snapshot_without_terminal_ui() {
@@ -28,13 +30,13 @@ fn controller_exposes_ui_neutral_events_and_snapshot_without_terminal_ui() {
     }));
     let starting = controller.snapshot();
     let session = starting.session(&agent_id).expect("session exists");
-    assert_eq!(session.title, "user-agent");
+    assert_eq!(session.title, "implement-parser-combinator");
     assert_eq!(session.loading, Some(WorkLeafLoading::Launching));
 
     assert!(controller.wait_for_idle(Duration::from_secs(1)));
     let ready = controller.snapshot();
     let session = ready.session(&agent_id).expect("session exists");
-    assert_eq!(session.title, "parser-combinator");
+    assert_eq!(session.title, "implement-parser-combinator");
     assert_eq!(session.loading, None);
     assert!(session.lines.iter().any(|line| line == "launch reply"));
 
@@ -144,7 +146,7 @@ fn controller_status_events_do_not_resend_existing_large_transcripts() {
 }
 
 #[test]
-fn controller_uses_backend_agent_to_name_chat_from_first_prompt() {
+fn controller_names_chat_from_first_prompt_without_backend_title_agent() {
     let backend = FakeBackend::new(["launch reply"]);
     let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
     let mut controller = WorkLeafController::new(chat);
@@ -156,15 +158,119 @@ fn controller_uses_backend_agent_to_name_chat_from_first_prompt() {
     assert!(controller.wait_for_idle(Duration::from_secs(1)));
     let snapshot = controller.snapshot();
     let session = snapshot.session(&agent_id).expect("session exists");
-    assert_eq!(session.title, "oauth-redirect-handler");
+    assert_eq!(session.title, "please-fix-login-callback");
     assert!(session.lines.iter().any(|line| line == "launch reply"));
 
     let launches = backend.launches();
-    assert!(launches.iter().any(|launch| {
-        launch.id.as_str() == "title-user-1"
-            && launch.feature == "chat-title"
-            && launch.prompt.contains("please fix login callback")
-    }));
+    assert_eq!(launches.len(), 1);
+    assert_eq!(launches[0].id.as_str(), "user-1");
+}
+
+#[test]
+fn controller_queues_rapid_agent_launches_until_startup_stream() {
+    let backend = LaunchTimingBackend::default();
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    controller.create_agent("first feature").unwrap();
+    controller.create_agent("second feature").unwrap();
+    controller.create_agent("third feature").unwrap();
+
+    thread::sleep(Duration::from_millis(50));
+    assert_eq!(
+        backend.starts().len(),
+        0,
+        "creating agents should queue launches without entering the backend"
+    );
+
+    assert!(controller.is_busy());
+    thread::sleep(Duration::from_millis(50));
+    controller.drain_events();
+    assert_eq!(
+        backend.starts().len(),
+        1,
+        "rapid launches should not all enter the backend before the first startup stream"
+    );
+
+    assert!(controller.wait_for_idle(Duration::from_secs(4)));
+    let starts = backend.starts();
+    assert_eq!(starts.len(), 3);
+    assert!(
+        starts[1].duration_since(starts[0]) >= Duration::from_millis(80),
+        "second launch should wait for first startup stream: {starts:?}"
+    );
+    assert!(
+        starts[2].duration_since(starts[1]) >= Duration::from_millis(80),
+        "third launch should wait for second startup stream: {starts:?}"
+    );
+}
+
+#[test]
+fn controller_reports_worker_panic_without_panicking() {
+    let backend = PanicLaunchBackend;
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("panic please").unwrap();
+
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    let snapshot = controller.snapshot();
+    let session = snapshot.session(&agent_id).expect("session exists");
+    assert_eq!(session.loading, None);
+    assert!(
+        session
+            .lines
+            .iter()
+            .any(|line| line.contains("worker panicked"))
+    );
+}
+
+#[derive(Clone, Debug)]
+struct PanicLaunchBackend;
+
+impl AgentBackend for PanicLaunchBackend {
+    fn launch(&mut self, _request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        panic!("intentional backend panic")
+    }
+
+    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+        panic!("intentional backend panic")
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+struct LaunchTimingBackend {
+    starts: Arc<Mutex<Vec<Instant>>>,
+}
+
+impl LaunchTimingBackend {
+    fn starts(&self) -> Vec<Instant> {
+        self.starts.lock().unwrap().clone()
+    }
+}
+
+impl AgentBackend for LaunchTimingBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        self.launch_streaming(request, &mut |_| {})
+    }
+
+    fn launch_streaming(
+        &mut self,
+        request: AgentLaunch,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+    ) -> Result<AgentSession, AgentError> {
+        self.starts.lock().unwrap().push(Instant::now());
+        thread::sleep(Duration::from_millis(100));
+        sink(AgentStreamEvent::Status("Codex is working".to_string()));
+        thread::sleep(Duration::from_millis(100));
+        let mut session = AgentSession::new(request);
+        session.push_message(MessageRole::Agent, "launch reply");
+        Ok(session)
+    }
+
+    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+        Ok(ChatMessage::new(MessageRole::Agent, "reply"))
+    }
 }
 
 #[test]
@@ -1193,6 +1299,7 @@ fn git_repo(name: &str) -> PathBuf {
     let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
+    temp_cleanup::register(&root);
     git(&root, ["init", "-q"]);
     git(&root, ["config", "user.email", "test@example.com"]);
     git(&root, ["config", "user.name", "Test User"]);

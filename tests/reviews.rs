@@ -8,6 +8,8 @@ use work_leaf::{
     GitHistory, MessageRole, ReviewCoordinator,
 };
 
+mod temp_cleanup;
+
 #[test]
 fn git_history_finds_latest_commit_for_each_agent_id() {
     let root = git_repo("review-history");
@@ -192,6 +194,7 @@ fn git_repo(name: &str) -> PathBuf {
     let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
+    temp_cleanup::register(&root);
     git(&root, ["init"]);
     git(&root, ["config", "user.name", "Work Leaf Test"]);
     git(&root, ["config", "user.email", "work-leaf@example.test"]);

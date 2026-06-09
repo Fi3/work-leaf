@@ -11,6 +11,8 @@ use work_leaf::{
     CodexCommandConfig, CommandChat, MessageRole, PaneFocus, PromptPolicy, TerminalApp, UiMode,
 };
 
+mod temp_cleanup;
+
 #[test]
 fn terminal_app_new_and_chat_message_use_real_command_chat_backend() {
     let backend = FakeBackend::new(["launch reply", "follow reply"]);
@@ -88,7 +90,7 @@ fn terminal_app_slash_command_from_colon_prompt_sends_to_selected_agent() {
 }
 
 #[test]
-fn terminal_app_codex_status_slash_command_reports_backend_status_without_resume() {
+fn terminal_app_codex_status_slash_command_resumes_backend_session() {
     let root = temp_dir("terminal-app-codex-slash-command");
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
@@ -106,7 +108,7 @@ done
 input=$(cat)
 if [ \"$seen_resume\" = \"1\" ]; then
   printf '%s\\n' \"$input\" >> \"$(dirname \"$0\")/resume.log\"
-  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"resume\",\"type\":\"agent_message\",\"text\":\"unexpected resume input\"}}'
+  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"resume\",\"type\":\"agent_message\",\"text\":\"backend status from fake codex\"}}'
 else
   printf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-slash-command\"}'
   printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"launch\",\"type\":\"agent_message\",\"text\":\"launch reply from fake codex\"}}'
@@ -130,11 +132,10 @@ fi
 
     let frame = app.render_frame();
     assert!(frame.contains("user: /status"));
-    assert!(frame.contains(">_ OpenAI Codex"), "{frame}");
-    assert!(frame.contains("Session: thread-slash-command"), "{frame}");
-    assert!(
-        !fake_bin.join("resume.log").exists(),
-        "Codex /status must not be sent through exec resume"
+    assert!(frame.contains("backend status from fake codex"), "{frame}");
+    assert_eq!(
+        fs::read_to_string(fake_bin.join("resume.log")).unwrap(),
+        "/status\n"
     );
 }
 
@@ -1088,7 +1089,7 @@ fn terminal_app_names_interactive_chat_from_first_inserted_prompt_immediately() 
 
     assert!(app.wait_for_idle(Duration::from_secs(1)));
     let named_left_pane = app.ui().render_left_pane();
-    assert!(named_left_pane.contains(">oauth-redirect-handler"));
+    assert!(named_left_pane.contains(">please-fix-the-oauth-redirect-handler"));
     assert!(!named_left_pane.contains("oauth redirect handler"));
     assert!(!named_left_pane.contains("working: user-agent"));
 
@@ -1135,6 +1136,7 @@ fn temp_dir(name: &str) -> PathBuf {
     let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
+    temp_cleanup::register(&root);
     root
 }
 

@@ -75,6 +75,14 @@ the current checkout unless `WORK_LEAF_SMOKE_SKIP_BUILD=1`, passes those binarie
 `WORK_LEAF_START_BIN_DIR`, prints the three real-agent `:new` prompts, and removes the temporary
 checkout on normal exit, launch failure, or interruption.
 
+The project-root `bench-three-features` script runs the same three-feature scenario through the
+localhost HTTP API with the real configured Codex backend. It builds the current release binaries
+unless `WORK_LEAF_BENCH_SKIP_BUILD=1`, runs those binaries against a temporary checkout at the smoke
+base commit, polls the daemon through `GET /state`, records pass/fail, duration, review and
+linearize completion, commit churn, code-quality checks, and efficiency notes under
+`bench-results`, enables Codex child-process tracing in the daemon artifacts, and removes the
+temporary checkout before exit.
+
 ## Agent Domain
 
 `src/agent.rs` owns provider-neutral agent data:
@@ -126,33 +134,43 @@ public lifecycle extension is required before external child processes can parti
 
 `src/codex.rs` contains the Codex-specific implementation of the neutral agent runtime interface:
 
-- `SandboxMode` and `CodexCommandConfig` define Codex CLI invocation settings.
+- `SandboxMode`, `CodexTransport`, and `CodexCommandConfig` define Codex runtime settings.
 - `CodexInvocation` records the command, arguments, and prompt used for an invocation.
 - `CodexBackend` stores Codex session history and implements `AgentBackend`.
-- `CodexBackend::build_launch_invocation` and `CodexBackend::build_send_invocation` construct
-  `codex exec` and `codex exec resume` calls. Launch invocations include the injected
+- The daemon Codex path uses `CodexTransport::Sdk`. `src/cli.rs::codex_backend` selects this mode
+  when `WORK_LEAF_CODEX_BACKEND=sdk` or `WORK_LEAF_CODEX_SDK_PYTHON` is present. The `start` script
+  provisions `target/work-leaf-codex-sdk-venv` and exports those variables by default; setting
+  `WORK_LEAF_CODEX_BACKEND=exec` keeps the explicit fallback path for deterministic fake-Codex
+  tests and emergency operation.
+- `CodexTransport::Sdk` starts one embedded Python sidecar from `src/codex_sdk_sidecar.py`. The
+  sidecar imports the `openai-codex` Python SDK, starts one `codex app-server --listen stdio://`
+  process through `openai_codex.client.CodexClient`, and multiplexes Work Leaf launch, send, and
+  interrupt requests over JSONL. Work Leaf passes the resolved local Codex binary to
+  `CodexConfig.codex_bin`, so the SDK drives the same Codex runtime selected from `PATH` instead of
+  silently using the SDK package's pinned binary.
+- `CodexBackend::build_launch_invocation` and `CodexBackend::build_send_invocation` construct the
+  fallback `codex exec` and `codex exec resume` calls. Launch invocations include the injected
   `PromptPolicy`; resumed invocations for known sessions pass only the follow-up message because the
   Codex thread already contains the launch-time policy and repository instructions. These
-  noninteractive calls disable Codex apps so the daemon does not depend on local app-server state
-  initialization inside the provider sandbox.
+  noninteractive calls disable Codex apps and are retained for tests and explicit fallback.
 - `src/cli.rs::codex_backend` resolves the Codex binary from `PATH` for real process launches and
   skips Codex's temporary `~/.codex/tmp/arg0` shim when a stable `codex` executable is available
-  later in `PATH`. On Unix, `codex_backend` writes a small executable trampoline under
-  `/tmp/work-leaf-codex-wrapper/<binary-key>/codex` that immediately `exec`s the selected Codex
-  binary. The key is derived from the target binary path so concurrently running checks or daemons
-  that resolve different Codex binaries do not overwrite each other's trampoline. `codex_backend`
-  prepends that trampoline directory to the daemon process `PATH` before worker threads start, and
-  `CodexBackend` also prepends it to each child `PATH` while preserving the rest of the caller's
-  environment.
+  later in `PATH`. The selected executable is launched directly by the SDK sidecar or by fallback
+  exec mode. `codex_backend` prepends its parent directory to the daemon process `PATH` before worker
+  threads start, and fallback exec mode also prepends that directory to each child `PATH` while
+  preserving the rest of the caller's environment.
 - `CodexBackend::record_launch_reply`, `record_launch_output`, and `session` maintain in-memory
   session state.
-- `CodexBackend` parses Codex `--json` event lines from stdout to capture `thread.started`
-  identifiers for resume and to convert agent message, error, and status events into
-  `AgentStreamEvent` values. The parser accepts standard JSON whitespace around field separators
-  while preserving string contents.
+- `CodexBackend` parses fallback Codex `--json` event lines from stdout to capture
+  `thread.started` identifiers for resume and to convert agent message, error, and status events
+  into `AgentStreamEvent` values. The SDK path receives app-server notifications from the Python
+  sidecar and records the returned thread id, final agent response, and per-turn token usage in the
+  same provider-neutral session state.
 - `CodexBackend` serializes launch and send operations per `AgentId` across cloned backend handles.
-  This keeps a single Codex thread from receiving overlapping `resume` processes while allowing
-  different agent sessions to work concurrently.
+  This keeps a single Codex thread from receiving overlapping turns while allowing different agent
+  sessions to work concurrently through the shared SDK/app-server sidecar. Fallback exec mode also
+  serializes the short child-process startup window across agents until Codex reports
+  `turn.started`, so concurrent launches do not race Codex local initialization.
 
 `CodexBackend` is a provider implementation, not the owner of the generic agent contract. Callers
 that need provider-neutral behavior import `AgentBackend` from `work_leaf::agent` or from the
@@ -196,7 +214,7 @@ The controller owns:
 
 - session selection and session snapshots,
 - per-session loading state,
-- LLM-generated chat titles through hidden `title-<agent-id>` backend launches, with
+- deterministic chat titles derived locally from the first user prompt, with
   `src/chat_title.rs::ChatTitleAgent` tracking first-prompt naming state,
 - command transcripts,
 - background launch/send/review workers,
@@ -206,7 +224,11 @@ The controller owns:
 - shutdown propagation to running agents.
 
 When an agent worker finishes, the controller records the agent output and clears that session's
-loading state. A user-agent session becomes review-ready when that agent has an unreviewed
+loading state. Launch requests are queued by command handling and started from the controller polling
+path. Rapidly created launches wait until the active launch reports backend startup progress or
+finishes, which prevents multiple backend child-process startups from piling up while still allowing
+the agents to run concurrently after startup. A user-agent session becomes review-ready when that
+agent has an unreviewed
 provisional commit in git history and the agent emits `@work-leaf done`; the patch commit and the
 done directive may come from different turns in the same session. Successful patch application
 returns a continuation prompt to the patch agent when the agent has not reported done, so the agent
@@ -218,6 +240,17 @@ terminated, locks are released, and a longer run requires user authorization. `P
 project instruction files into agent prompts, and the active backend agent is responsible for
 choosing and requesting the repository checks required by those instructions before reporting work
 done.
+When a mediated file-read response would be large, the orchestrator writes the exact file text to a
+temporary context bundle in a per-orchestrator system-temp directory and sends the agent a compact
+manifest with the bundle path, file names, digests, and byte counts. The bundle directory is removed
+when the owning orchestrator state is dropped. Agents in orchestrator-read mode may read only those
+orchestrator-provided bundle paths directly; repository file reads remain mediated by
+`@work-leaf read`, and repository writes still require `@work-leaf patch`. The orchestrator tracks
+per-agent file snapshots with digests. A repeated read for unchanged text returns only the matching
+digest; a repeated read for changed text returns a diff from that agent's last mediated snapshot
+instead of re-sending full file text. The `@work-leaf read --force <path>` form is accepted for
+compatibility, but once an agent has a tracked snapshot for a path the repeated-read response still
+uses the digest/diff path so large files are not repeatedly copied into the same agent session.
 Tracked file changes produced by locked commands remain pending for that patch agent until the agent
 commits them through the patch protocol or reverts them. Pending command changes block
 `@work-leaf done`, and the orchestrator returns the tracked diff so the agent can submit the command
@@ -252,8 +285,7 @@ Frontend code should use these methods:
 - `send_message` to send a prompt to one session while other sessions may still be busy.
   Messages that start with `/` followed by a non-empty command token are routed to the selected
   backend instead of being interpreted as Work Leaf commands. The slash command output visible in
-  the chat is the backend response; the Codex `exec` backend handles `/status` as backend
-  introspection because `codex exec resume` accepts prompts rather than interactive slash commands.
+  the chat is the selected backend's response to the raw slash-prefixed message.
 - `start_review` to create or resume reviewer sessions for explicit history-wide review and stream
   reviewer output.
 - `is_busy`, `wait_for_idle`, and `wait_for_session_line` for tests and event loops.
@@ -262,10 +294,10 @@ Frontend code should use these methods:
 The controller exposes renderable state through:
 
 - `WorkLeafSnapshot`, which contains the command transcript and sessions.
-- `WorkLeafSession`, which contains agent id, kind, feature/title, transcript lines, and loading
-  state.
+- `WorkLeafSession`, which contains agent id, kind, feature/title, transcript lines, loading state,
+  completion state, and optional provider token usage.
 - `WorkLeafEvent`, which reports session creation, session updates, streamed lines, selection
-  changes, transcript lines, and quit requests.
+  changes, token-usage updates, transcript lines, and quit requests.
 - `WorkLeafLoading`, which distinguishes launch and waiting-for-reply states.
 
 `WorkLeafEvent` uses append-oriented transcript events for efficient remote frontends. `AgentAdded`
@@ -285,6 +317,8 @@ spawning, session naming, review lookup, loading bookkeeping, or orchestrator ev
 owns no workflow behavior; each HTTP route delegates to the corresponding controller method or DTO:
 
 - `GET /snapshot` returns `WorkLeafSnapshot`.
+- `GET /state` polls workers once and returns `WorkLeafControllerState`, containing both `busy` and
+  `snapshot`, for polling clients that need consistent state with one HTTP request.
 - `POST /events/drain` returns pending `WorkLeafEvent` values after polling workers when needed.
 - `GET /busy` returns the controller busy state.
 - `POST /command` calls `WorkLeafController::execute_command_line`.
@@ -394,9 +428,8 @@ active instance, each reviewed hash is listed independently for the linearizer.
 `src/instructions.rs` is crate-private. It loads project instruction files used by `PromptPolicy`
 for agent launch prompts.
 
-`src/chat_title.rs` is crate-private. It builds the prompt used for hidden chat-title backend
-launches, sanitizes title replies to lowercase hyphenated names capped at 80 characters, provides a
-first-prompt fallback, and tracks which sessions have already requested a generated title.
+`src/chat_title.rs` is crate-private. It derives lowercase hyphenated chat titles from first prompts,
+caps titles at 80 characters, and tracks which sessions have already been named.
 
 ## Extension Rules
 

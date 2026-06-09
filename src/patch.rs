@@ -71,11 +71,14 @@ impl GitPatcher {
         files: Vec<PathBuf>,
     ) -> Result<PatchOutcome, PatchError> {
         let check = self
-            .git_with_stdin(["apply", "--check", "-"], &request.diff)
+            .git_with_stdin(["apply", "--recount", "--check", "-"], &request.diff)
             .map_err(PatchError::Git)?;
         if !check.status.success() {
             let reverse_check = self
-                .git_with_stdin(["apply", "--reverse", "--check", "-"], &request.diff)
+                .git_with_stdin(
+                    ["apply", "--reverse", "--recount", "--check", "-"],
+                    &request.diff,
+                )
                 .map_err(PatchError::Git)?;
             if reverse_check.status.success()
                 && self.has_head_diff(&files).map_err(PatchError::Git)?
@@ -93,7 +96,7 @@ impl GitPatcher {
             });
         }
 
-        self.git_with_stdin(["apply", "-"], &request.diff)
+        self.git_with_stdin(["apply", "--recount", "-"], &request.diff)
             .and_then(|output| self.require_success(output, "git apply"))
             .map_err(PatchError::Git)?;
 
@@ -300,7 +303,7 @@ fn render_patch_context(request: &PatchRequest, files: &[PathBuf]) -> String {
         .filter(|line| line.starts_with('-') && !line.starts_with("---"))
         .count();
     format!(
-        "The orchestrator applied this provisional patch for {} while the agent was working on feature `{}`. The agent stated the reason as `{}`. The patch touched {} and changed the working tree with {} added line(s) and {} removed line(s). The orchestrator validated with `git apply --check`, applied the submitted unified diff under the repository write locks, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.",
+        "The orchestrator applied this provisional patch for {} while the agent was working on feature `{}`. The agent stated the reason as `{}`. The patch touched {} and changed the working tree with {} added line(s) and {} removed line(s). The orchestrator validated with `git apply --recount --check`, applied the submitted unified diff under the repository write locks, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.",
         request.agent_id, request.feature, request.reason, files, additions, removals
     )
 }

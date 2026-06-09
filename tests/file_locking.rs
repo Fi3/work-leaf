@@ -6,6 +6,8 @@ use std::time::Duration;
 
 use work_leaf::{CommandWritePolicy, FileLockTable};
 
+mod temp_cleanup;
+
 #[test]
 fn orchestrator_reads_files_through_shared_read_locks() {
     let root = unique_temp_dir("read-locks");
@@ -133,5 +135,6 @@ fn unique_temp_dir(name: &str) -> PathBuf {
     ));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
+    temp_cleanup::register(&root);
     root
 }

@@ -365,14 +365,6 @@ if [ "$seen_resume" = "1" ]; then
   esac
 else
   case "$input" in
-    *"Name this work-leaf chat"*"second"*)
-      printf '%s\n' '{"type":"thread.started","thread_id":"thread-title-second"}'
-      printf '%s\n' '{"type":"item.completed","item":{"id":"title-second","type":"agent_message","text":"second"}}'
-      ;;
-    *"Name this work-leaf chat"*)
-      printf '%s\n' '{"type":"thread.started","thread_id":"thread-title-first"}'
-      printf '%s\n' '{"type":"item.completed","item":{"id":"title-first","type":"agent_message","text":"patch-ui"}}'
-      ;;
     *"second"*)
       printf '%s\n' '{"type":"thread.started","thread_id":"thread-second"}'
       printf '%s\n' '{"type":"item.completed","item":{"id":"second","type":"agent_message","text":"second launch ready"}}'

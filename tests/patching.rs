@@ -7,6 +7,8 @@ use work_leaf::{
     MessageRole, PatchCoordinator, PatchError, PatchRequest,
 };
 
+mod temp_cleanup;
+
 #[test]
 fn patcher_applies_unified_diff_and_creates_metadata_commit() {
     let root = git_repo("patch-applies");
@@ -47,7 +49,39 @@ diff --git a/src/lib.rs b/src/lib.rs
     assert!(message.contains("Context:"));
     assert!(message.contains("The orchestrator applied this provisional patch for chat-1"));
     assert!(message.contains("src/lib.rs"));
-    assert!(message.contains("validated with `git apply --check`"));
+    assert!(message.contains("validated with `git apply --recount --check`"));
+}
+
+#[test]
+fn patcher_applies_unified_diff_with_incorrect_hunk_counts() {
+    let root = git_repo("patch-recount-hunks");
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(root.join("src/lib.rs"), "pub fn value() -> u8 { 1 }\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial library fixture"]);
+
+    let patcher = GitPatcher::new(root.clone(), FileLockTable::new(root.clone()));
+    let outcome = patcher
+        .apply(PatchRequest::new(
+            AgentId::new("chat-1").unwrap(),
+            "parser",
+            "return the recounted value",
+            "\
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1,99 +1,99 @@
+-pub fn value() -> u8 { 1 }
++pub fn value() -> u8 { 2 }
+",
+        ))
+        .unwrap();
+
+    assert_eq!(
+        fs::read_to_string(root.join("src/lib.rs")).unwrap(),
+        "pub fn value() -> u8 { 2 }\n"
+    );
+    assert_eq!(outcome.files, vec![PathBuf::from("src/lib.rs")]);
 }
 
 #[test]
@@ -414,7 +448,9 @@ fn git_repo(name: &str) -> PathBuf {
 }
 
 fn git_repo_root(name: &str) -> PathBuf {
-    std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()))
+    let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
+    temp_cleanup::register(&root);
+    root
 }
 
 fn git<const N: usize>(root: &Path, args: [&str; N]) {

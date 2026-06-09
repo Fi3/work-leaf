@@ -1,4 +1,5 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
@@ -7,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::agent::{
     AgentBackend, AgentId, AgentKind, AgentLaunch, AgentShutdownHandle, AgentStreamEvent,
+    AgentTokenUsage,
 };
 use crate::chat_title::{ChatTitleAgent, fallback_chat_title_from_prompt};
 use crate::cli::{
@@ -29,6 +31,8 @@ where
     shutdown: AgentShutdownHandle,
     shutdown_on_drop: bool,
     workers: Vec<Worker>,
+    pending_launches: VecDeque<AgentLaunch>,
+    launch_starting: BTreeSet<AgentId>,
     command_transcript: Vec<String>,
     sessions: BTreeMap<AgentId, WorkLeafSession>,
     title_agent: ChatTitleAgent,
@@ -50,6 +54,8 @@ where
             shutdown,
             shutdown_on_drop: true,
             workers: Vec::new(),
+            pending_launches: VecDeque::new(),
+            launch_starting: BTreeSet::new(),
             command_transcript: vec![render_command_chat_help()],
             sessions: BTreeMap::new(),
             title_agent: ChatTitleAgent::new(),
@@ -93,20 +99,20 @@ where
 
     pub fn is_busy(&mut self) -> bool {
         self.poll_worker();
-        !self.workers.is_empty()
+        !self.workers.is_empty() || !self.pending_launches.is_empty()
     }
 
     pub fn wait_for_idle(&mut self, timeout: Duration) -> bool {
         let start = Instant::now();
         while start.elapsed() < timeout {
             self.poll_worker();
-            if self.workers.is_empty() {
+            if self.workers.is_empty() && self.pending_launches.is_empty() {
                 return true;
             }
             thread::sleep(Duration::from_millis(10));
         }
         self.poll_worker();
-        self.workers.is_empty()
+        self.workers.is_empty() && self.pending_launches.is_empty()
     }
 
     pub fn wait_for_session_line(
@@ -228,25 +234,24 @@ where
         };
         let agent_id = launch.id.clone();
         self.remember_agent_review_baseline(&agent_id);
-        let title_prompt = self.reserve_launch_title_prompt(&launch, title_pending);
-        let title = launch.feature.clone();
+        let title = self
+            .reserve_launch_title(&launch, title_pending)
+            .unwrap_or_else(|| launch.feature.clone());
         self.register_agent_feature(agent_id.clone(), title.clone());
         self.add_session(WorkLeafSession {
             id: agent_id.clone(),
             kind: launch.kind.clone(),
-            title,
-            feature: launch.feature.clone(),
+            title: title.clone(),
+            feature: title,
             lines: Vec::new(),
             loading: Some(WorkLeafLoading::Launching),
             completion: None,
+            token_usage: None,
         });
         self.pending_events.push(WorkLeafEvent::AgentSelected {
             agent_id: agent_id.clone(),
         });
-        if let Some(first_prompt) = title_prompt {
-            self.start_title_worker(agent_id.clone(), first_prompt);
-        }
-        self.start_launch_worker(launch);
+        self.queue_or_start_launch_worker(launch);
         Ok(agent_id)
     }
 
@@ -279,22 +284,18 @@ where
             self.set_session_completion(agent_id, None);
         }
 
-        let title_prompt = self.reserve_first_chat_title_prompt(agent_id, message);
+        if let Some(title) = self.reserve_first_chat_title(agent_id, message) {
+            self.apply_agent_title(agent_id, title);
+        }
         self.set_session_loading(agent_id, Some(WorkLeafLoading::WaitingForReply));
         self.append_agent_line(agent_id, format!("user: {message}"));
         let agent_id = agent_id.clone();
         let message = message.to_string();
-        if let Some(first_prompt) = title_prompt {
-            self.start_title_worker(agent_id.clone(), first_prompt);
-        }
-        self.start_worker(move |mut chat, sender| {
+        self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
             let stream_sender = sender.clone();
             let display_name = chat.agent_profile().display_name.clone();
             let mut stream = move |event_agent_id: &AgentId, event| {
-                let _ = stream_sender.send(WorkerEvent::Stream {
-                    agent_id: event_agent_id.clone(),
-                    text: stream_event_text(event, &display_name),
-                });
+                send_worker_stream_event(&stream_sender, event_agent_id, event, &display_name);
             };
             match chat.send_to_agent_streaming_with_ids(&agent_id, &message, &mut stream) {
                 Ok(result) => {
@@ -391,6 +392,7 @@ where
                     lines: Vec::new(),
                     loading: Some(WorkLeafLoading::WaitingForReply),
                     completion: None,
+                    token_usage: None,
                 });
             }
             if reviewer_ids.is_empty() {
@@ -430,11 +432,12 @@ where
             lines: Vec::new(),
             loading: Some(WorkLeafLoading::Launching),
             completion: None,
+            token_usage: None,
         });
         self.pending_events.push(WorkLeafEvent::AgentSelected {
             agent_id: agent_id.clone(),
         });
-        self.start_launch_worker(launch);
+        self.queue_or_start_launch_worker(launch);
         Ok(Some(agent_id))
     }
 
@@ -450,7 +453,7 @@ where
     }
 
     pub fn shutdown(&mut self) {
-        self.shutdown.shutdown();
+        self.shutdown_agents();
     }
 
     fn poll_worker(&mut self) {
@@ -479,6 +482,7 @@ where
                 index += 1;
             }
         }
+        self.start_next_pending_launch();
     }
 
     fn session_contains(&self, agent_id: &AgentId, needle: &str) -> bool {
@@ -487,7 +491,7 @@ where
             .is_some_and(|session| session.lines.iter().any(|line| line.contains(needle)))
     }
 
-    fn reserve_launch_title_prompt(
+    fn reserve_launch_title(
         &mut self,
         launch: &AgentLaunch,
         title_pending: bool,
@@ -496,7 +500,7 @@ where
             None
         } else {
             self.title_agent.mark_named(&launch.id);
-            Some(launch.prompt.clone())
+            Some(fallback_chat_title_from_prompt(&launch.prompt))
         }
     }
 
@@ -506,18 +510,14 @@ where
         }
     }
 
-    fn reserve_first_chat_title_prompt(
-        &mut self,
-        agent_id: &AgentId,
-        prompt: &str,
-    ) -> Option<String> {
+    fn reserve_first_chat_title(&mut self, agent_id: &AgentId, prompt: &str) -> Option<String> {
         if !agent_id.as_str().starts_with("user-") {
             return None;
         }
         if !self.title_agent.reserve_first_prompt_title(agent_id) {
             return None;
         }
-        Some(prompt.to_string())
+        Some(fallback_chat_title_from_prompt(prompt))
     }
 
     fn remember_agent_review_baseline(&mut self, agent_id: &AgentId) {
@@ -544,17 +544,28 @@ where
             .push(WorkLeafEvent::AgentAdded { session });
     }
 
+    fn queue_or_start_launch_worker(&mut self, launch: AgentLaunch) {
+        self.pending_launches.push_back(launch);
+    }
+
+    fn start_next_pending_launch(&mut self) {
+        if !self.launch_starting.is_empty() {
+            return;
+        }
+        if let Some(launch) = self.pending_launches.pop_front() {
+            self.start_launch_worker(launch);
+        }
+    }
+
     fn start_launch_worker(&mut self, launch: AgentLaunch) {
         let agent_id = launch.id.clone();
         self.set_session_loading(&agent_id, Some(WorkLeafLoading::Launching));
-        self.start_worker(move |mut chat, sender| {
+        self.launch_starting.insert(agent_id.clone());
+        self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
             let stream_sender = sender.clone();
             let display_name = chat.agent_profile().display_name.clone();
             let mut stream = move |event_agent_id: &AgentId, event| {
-                let _ = stream_sender.send(WorkerEvent::Stream {
-                    agent_id: event_agent_id.clone(),
-                    text: stream_event_text(event, &display_name),
-                });
+                send_worker_stream_event(&stream_sender, event_agent_id, event, &display_name);
             };
             match chat.launch_prepared_agent_streaming_with_ids(launch, &mut stream) {
                 Ok(result) => {
@@ -573,30 +584,18 @@ where
         });
     }
 
-    fn start_title_worker(&mut self, agent_id: AgentId, first_prompt: String) {
-        self.start_worker(move |mut chat, sender| {
-            let title = chat
-                .generate_chat_title(&agent_id, &first_prompt)
-                .unwrap_or_else(|_| fallback_chat_title_from_prompt(&first_prompt));
-            let _ = sender.send(WorkerEvent::TitleGenerated { agent_id, title });
-        });
-    }
-
     fn start_review_worker(
         &mut self,
         commit: crate::review::AgentCommit,
         reviewer_id: AgentId,
         reuse_reviewer: bool,
     ) {
-        self.start_worker(move |mut chat, sender| {
+        self.start_worker(Some(reviewer_id.clone()), move |mut chat, sender| {
             let stream_sender = sender.clone();
             let display_name = chat.agent_profile().display_name.clone();
             let reviewed_agent_id = commit.agent_id.clone();
             let mut stream = move |event_agent_id: &AgentId, event| {
-                let _ = stream_sender.send(WorkerEvent::Stream {
-                    agent_id: event_agent_id.clone(),
-                    text: stream_event_text(event, &display_name),
-                });
+                send_worker_stream_event(&stream_sender, event_agent_id, event, &display_name);
             };
             match chat.review_commit_streaming_with_ids(
                 commit,
@@ -622,23 +621,25 @@ where
     }
 
     fn start_command_worker(&mut self, line: String) {
-        self.start_worker(move |mut chat, sender| match chat.handle_line(&line) {
-            Ok(result) => {
-                let _ = sender.send(WorkerEvent::Complete {
-                    agent_id: None,
-                    result,
-                });
-            }
-            Err(error) => {
-                let _ = sender.send(WorkerEvent::Error {
-                    agent_id: None,
-                    message: command_chat_error_text(&error),
-                });
+        self.start_worker(None, move |mut chat, sender| {
+            match chat.handle_line(&line) {
+                Ok(result) => {
+                    let _ = sender.send(WorkerEvent::Complete {
+                        agent_id: None,
+                        result,
+                    });
+                }
+                Err(error) => {
+                    let _ = sender.send(WorkerEvent::Error {
+                        agent_id: None,
+                        message: command_chat_error_text(&error),
+                    });
+                }
             }
         });
     }
 
-    fn start_worker<F>(&mut self, operation: F)
+    fn start_worker<F>(&mut self, agent_id: Option<AgentId>, operation: F)
     where
         F: FnOnce(CommandChat<B>, Sender<WorkerEvent>) + Send + 'static,
     {
@@ -646,23 +647,34 @@ where
             return;
         };
         let (sender, receiver) = mpsc::channel();
-        let handle = thread::spawn(move || operation(chat, sender));
+        let panic_sender = sender.clone();
+        let handle = thread::spawn(move || {
+            if catch_unwind(AssertUnwindSafe(|| operation(chat, sender))).is_err() {
+                let _ = panic_sender.send(WorkerEvent::WorkerPanicked { agent_id });
+            }
+        });
         self.workers.push(Worker { receiver, handle });
     }
 
     fn apply_worker_event(&mut self, event: WorkerEvent) {
         match event {
             WorkerEvent::Stream { agent_id, text } => {
+                if text.contains("Codex is working") {
+                    self.launch_starting.remove(&agent_id);
+                    self.start_next_pending_launch();
+                }
                 self.append_agent_line(&agent_id, text);
             }
-            WorkerEvent::TitleGenerated { agent_id, title } => {
-                self.apply_agent_title(&agent_id, title);
+            WorkerEvent::Usage { agent_id, usage } => {
+                self.record_agent_usage(&agent_id, usage);
             }
             WorkerEvent::Complete { agent_id, result } => {
                 if let Some(agent_id) = agent_id {
                     let start_review = self.should_start_review(&agent_id, &result);
+                    self.launch_starting.remove(&agent_id);
                     self.set_session_loading(&agent_id, None);
                     self.apply_agent_result(&agent_id, &result);
+                    self.start_next_pending_launch();
                     if start_review && let Err(error) = self.start_review_for_patch_agent(&agent_id)
                     {
                         self.push_command_line(command_chat_error_text(&error));
@@ -676,8 +688,10 @@ where
             }
             WorkerEvent::Error { agent_id, message } => {
                 if let Some(agent_id) = agent_id {
+                    self.launch_starting.remove(&agent_id);
                     self.set_session_loading(&agent_id, None);
                     self.append_agent_line(&agent_id, message);
+                    self.start_next_pending_launch();
                 } else {
                     self.push_command_line(message);
                 }
@@ -690,6 +704,17 @@ where
                 self.review_commits_in_progress.remove(&reviewed_agent_id);
                 self.set_session_loading(&reviewer_id, None);
                 self.append_agent_line(&reviewer_id, message);
+            }
+            WorkerEvent::WorkerPanicked { agent_id } => {
+                let message = "work-leaf: worker panicked; see daemon stderr for details";
+                if let Some(agent_id) = agent_id {
+                    self.launch_starting.remove(&agent_id);
+                    self.set_session_loading(&agent_id, None);
+                    self.append_agent_line(&agent_id, message.to_string());
+                    self.start_next_pending_launch();
+                } else {
+                    self.push_command_line(message.to_string());
+                }
             }
         }
     }
@@ -758,6 +783,26 @@ where
 
     fn append_agent_line_allow_duplicate(&mut self, agent_id: &AgentId, line: String) {
         self.append_agent_line_with_dedupe(agent_id, line, false);
+    }
+
+    fn record_agent_usage(&mut self, agent_id: &AgentId, usage: AgentTokenUsage) {
+        let fallback_kind = self.agent_kind();
+        if !self.sessions.contains_key(agent_id) {
+            let session = WorkLeafSession::unknown(agent_id.clone(), fallback_kind);
+            self.sessions.insert(agent_id.clone(), session.clone());
+            self.pending_events
+                .push(WorkLeafEvent::AgentAdded { session });
+        }
+        let session = self
+            .sessions
+            .get_mut(agent_id)
+            .expect("session was inserted before recording usage");
+        let token_usage = session.token_usage.unwrap_or_default().combine(usage);
+        session.token_usage = Some(token_usage);
+        self.pending_events.push(WorkLeafEvent::AgentUsageUpdated {
+            agent_id: agent_id.clone(),
+            token_usage,
+        });
     }
 
     fn append_agent_line_with_dedupe(&mut self, agent_id: &AgentId, line: String, dedupe: bool) {
@@ -913,8 +958,16 @@ where
     }
 
     fn request_quit(&mut self) {
-        self.shutdown.shutdown();
+        self.shutdown_agents();
         self.pending_events.push(WorkLeafEvent::QuitRequested);
+    }
+
+    fn shutdown_agents(&mut self) {
+        if let Some(chat) = self.chat.as_mut() {
+            chat.shutdown_agents();
+        } else {
+            self.shutdown.shutdown();
+        }
     }
 
     fn agent_display_name(&self) -> String {
@@ -938,7 +991,7 @@ where
 {
     fn drop(&mut self) {
         if self.shutdown_on_drop {
-            self.shutdown.shutdown();
+            self.shutdown_agents();
         }
     }
 }
@@ -969,6 +1022,7 @@ pub struct WorkLeafSession {
     pub lines: Vec<String>,
     pub loading: Option<WorkLeafLoading>,
     pub completion: Option<WorkLeafCompletion>,
+    pub token_usage: Option<AgentTokenUsage>,
 }
 
 impl WorkLeafSession {
@@ -981,6 +1035,7 @@ impl WorkLeafSession {
             lines: Vec::new(),
             loading: None,
             completion: None,
+            token_usage: None,
         }
     }
 }
@@ -1013,6 +1068,10 @@ pub enum WorkLeafEvent {
         loading: Option<WorkLeafLoading>,
         completion: Option<WorkLeafCompletion>,
     },
+    AgentUsageUpdated {
+        agent_id: AgentId,
+        token_usage: AgentTokenUsage,
+    },
     AgentLineAppended {
         agent_id: AgentId,
         line: String,
@@ -1038,9 +1097,9 @@ enum WorkerEvent {
         agent_id: AgentId,
         text: String,
     },
-    TitleGenerated {
+    Usage {
         agent_id: AgentId,
-        title: String,
+        usage: AgentTokenUsage,
     },
     Complete {
         agent_id: Option<AgentId>,
@@ -1055,6 +1114,31 @@ enum WorkerEvent {
         reviewed_agent_id: AgentId,
         message: String,
     },
+    WorkerPanicked {
+        agent_id: Option<AgentId>,
+    },
+}
+
+fn send_worker_stream_event(
+    sender: &Sender<WorkerEvent>,
+    agent_id: &AgentId,
+    event: AgentStreamEvent,
+    agent_display_name: &str,
+) {
+    match event {
+        AgentStreamEvent::Usage(usage) => {
+            let _ = sender.send(WorkerEvent::Usage {
+                agent_id: agent_id.clone(),
+                usage,
+            });
+        }
+        event => {
+            let _ = sender.send(WorkerEvent::Stream {
+                agent_id: agent_id.clone(),
+                text: stream_event_text(event, agent_display_name),
+            });
+        }
+    }
 }
 
 fn stream_event_text(event: AgentStreamEvent, agent_display_name: &str) -> String {
@@ -1063,6 +1147,7 @@ fn stream_event_text(event: AgentStreamEvent, agent_display_name: &str) -> Strin
         AgentStreamEvent::Status(text) => format!("{label}: {text}"),
         AgentStreamEvent::AgentMessage(text) => text,
         AgentStreamEvent::Error(text) => format!("{label} error: {text}"),
+        AgentStreamEvent::Usage(_) => String::new(),
     }
 }
 

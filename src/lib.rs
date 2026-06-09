@@ -17,15 +17,17 @@ pub mod workspace;
 
 pub use agent::{
     AgentBackend, AgentError, AgentId, AgentKind, AgentLaunch, AgentProfile, AgentSession,
-    AgentShutdownHandle, AgentStreamEvent, ChatMessage, MessageRole, PromptPolicy, ReadPermission,
+    AgentShutdownHandle, AgentStreamEvent, AgentTokenUsage, ChatMessage, MessageRole, PromptPolicy,
+    ReadPermission,
 };
 pub use cli::{
     CliError, CommandChat, CommandChatResult, ProcessCommand, parse_process_args,
     render_command_chat_help, render_process_help, run_cli_from_env,
 };
-pub use codex::{CodexBackend, CodexCommandConfig, CodexInvocation, SandboxMode};
+pub use codex::{CodexBackend, CodexCommandConfig, CodexInvocation, CodexTransport, SandboxMode};
 pub use http_controller::{
-    HttpControllerClient, HttpControllerServer, OrchestratorHttpError, run_orchestrator_from_env,
+    HttpControllerClient, HttpControllerServer, OrchestratorHttpError, WorkLeafControllerState,
+    run_orchestrator_from_env,
 };
 pub use linearize::{
     LinearizeAction, LinearizeError, LinearizeGroup, LinearizeHandoff, LinearizePlan,

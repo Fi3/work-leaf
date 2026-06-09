@@ -19,6 +19,12 @@ prints the three `:new` commands used by the real-agent smoke and removes the te
 when Work Leaf exits, fails, or is interrupted. Set `WORK_LEAF_SMOKE_BASE` to choose a different
 base commit, or pass daemon options after `--`.
 
+`./bench-three-features` runs the same three-feature scenario through the localhost HTTP API with
+the real configured Codex backend. It uses the default mediated-read workflow, records pass/fail,
+duration, review and linearize completion, commit churn, code-quality checks, and observed
+inefficiencies under `bench-results`, and enables Codex child-process trace output in the saved
+daemon artifacts. It always removes its temporary checkout.
+
 `work-leaf-orchestrator` owns the controller, agent backend, locks, review routing, and patch
 workflow. It prints `WORK_LEAF_ORCHESTRATOR_URL=http://...` after binding its localhost HTTP API.
 `work-leaf` connects to that URL through `WORK_LEAF_ORCHESTRATOR_URL`; when the variable is absent,

@@ -1,8 +1,11 @@
 use std::collections::BTreeMap;
+use std::env;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+
+use serde::{Deserialize, Serialize};
 
 use crate::agent::{AgentError, AgentId, AgentLaunch, AgentSession, ChatMessage};
 
@@ -15,6 +18,10 @@ pub trait AgentBackend {
 
     fn shutdown_handle(&self) -> AgentShutdownHandle {
         AgentShutdownHandle::default()
+    }
+
+    fn shutdown(&mut self) {
+        self.shutdown_handle().shutdown();
     }
 
     fn launch_streaming(
@@ -42,6 +49,7 @@ pub struct AgentShutdownHandle {
 
 impl AgentShutdownHandle {
     pub fn shutdown(&self) {
+        trace_agent_shutdown(format_args!("shutdown requested"));
         let processes = {
             let mut registry = self
                 .registry
@@ -51,6 +59,7 @@ impl AgentShutdownHandle {
             registry.processes.values().copied().collect::<Vec<_>>()
         };
         for process in &processes {
+            trace_agent_shutdown(format_args!("terminating pid {}", process.pid));
             process.terminate();
         }
 
@@ -59,13 +68,22 @@ impl AgentShutdownHandle {
         }
 
         for process in self.active_processes() {
+            trace_agent_shutdown(format_args!("killing pid {}", process.pid));
             process.kill();
         }
         let _ = self.wait_for_processes(Duration::from_millis(500));
     }
 
     pub(crate) fn register(&self, pid: u32) -> ActiveAgentProcessGuard {
-        let process = ActiveAgentProcess::new(pid);
+        self.register_process(ActiveAgentProcess::new(pid))
+    }
+
+    pub(crate) fn register_single_process(&self, pid: u32) -> ActiveAgentProcessGuard {
+        self.register_process(ActiveAgentProcess::new_single(pid))
+    }
+
+    fn register_process(&self, process: ActiveAgentProcess) -> ActiveAgentProcessGuard {
+        let pid = process.pid;
         let shutting_down = {
             let mut registry = self
                 .registry
@@ -139,6 +157,12 @@ impl AgentShutdownHandle {
     }
 }
 
+fn trace_agent_shutdown(message: std::fmt::Arguments<'_>) {
+    if env::var_os("WORK_LEAF_CODEX_TRACE").is_some() {
+        eprintln!("work-leaf agent shutdown: {message}");
+    }
+}
+
 #[derive(Debug, Default)]
 struct AgentProcessRegistry {
     processes: BTreeMap<u32, ActiveAgentProcess>,
@@ -156,6 +180,13 @@ impl ActiveAgentProcess {
         Self {
             pid,
             kill_process_group: agent_children_use_process_group(),
+        }
+    }
+
+    fn new_single(pid: u32) -> Self {
+        Self {
+            pid,
+            kill_process_group: false,
         }
     }
 
@@ -191,6 +222,26 @@ pub enum AgentStreamEvent {
     Status(String),
     AgentMessage(String),
     Error(String),
+    Usage(AgentTokenUsage),
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct AgentTokenUsage {
+    pub input_tokens: u64,
+    pub cached_input_tokens: u64,
+    pub output_tokens: u64,
+    pub reasoning_output_tokens: u64,
+}
+
+impl AgentTokenUsage {
+    pub fn combine(self, other: Self) -> Self {
+        Self {
+            input_tokens: self.input_tokens + other.input_tokens,
+            cached_input_tokens: self.cached_input_tokens + other.cached_input_tokens,
+            output_tokens: self.output_tokens + other.output_tokens,
+            reasoning_output_tokens: self.reasoning_output_tokens + other.reasoning_output_tokens,
+        }
+    }
 }
 
 #[cfg(unix)]
@@ -203,6 +254,12 @@ pub(crate) fn configure_agent_child_process(command: &mut Command) {
 
 #[cfg(not(unix))]
 pub(crate) fn configure_agent_child_process(_command: &mut Command) {}
+
+#[cfg(unix)]
+pub(crate) fn configure_persistent_agent_child_process(_command: &mut Command) {}
+
+#[cfg(not(unix))]
+pub(crate) fn configure_persistent_agent_child_process(_command: &mut Command) {}
 
 #[cfg(target_os = "linux")]
 fn configure_parent_death_signal(command: &mut Command) {

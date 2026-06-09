@@ -9,6 +9,8 @@ use work_leaf::{
     PatchRequest, ReviewCoordinator,
 };
 
+mod temp_cleanup;
+
 #[test]
 fn non_ui_agent_patch_review_and_linearize_flow_works_end_to_end() {
     let root = git_repo("non-ui-flow");
@@ -126,6 +128,7 @@ fn git_repo(name: &str) -> PathBuf {
     let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
+    temp_cleanup::register(&root);
     git(&root, ["init"]);
     git(&root, ["config", "user.name", "Work Leaf Test"]);
     git(&root, ["config", "user.email", "work-leaf@example.test"]);
