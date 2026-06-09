@@ -12,12 +12,13 @@ const ENDPOINTS = {
 
 const POLL_MS = 900;
 const STATE_REFRESH_MS = 5000;
+const COMMAND_SURFACE_ID = "__command__";
 
 const state = {
   apiBase: "",
   connected: false,
   busy: false,
-  selectedAgentId: null,
+  selectedAgentId: COMMAND_SURFACE_ID,
   snapshot: {
     command_transcript: [],
     sessions: [],
@@ -330,7 +331,7 @@ function applyEvents(events) {
       case "AgentAdded":
       case "AgentUpdated":
         upsertSession(payload.session);
-        if (!state.selectedAgentId) {
+        if (!hasSelection()) {
           state.selectedAgentId = idKey(payload.session.id);
         }
         break;
@@ -381,6 +382,9 @@ function normalizeSnapshot(snapshot) {
 }
 
 function ensureSelection() {
+  if (state.selectedAgentId === COMMAND_SURFACE_ID) {
+    return;
+  }
   if (
     state.selectedAgentId &&
     state.snapshot.sessions.some((session) => idKey(session.id) === state.selectedAgentId)
@@ -390,11 +394,11 @@ function ensureSelection() {
 
   state.selectedAgentId = state.snapshot.sessions[0]
     ? idKey(state.snapshot.sessions[0].id)
-    : null;
+    : COMMAND_SURFACE_ID;
 }
 
 function selectCommandSurface() {
-  state.selectedAgentId = null;
+  state.selectedAgentId = COMMAND_SURFACE_ID;
   render();
 }
 
@@ -428,7 +432,7 @@ function upsertSessionStatus(payload) {
       token_usage: null,
     };
     state.snapshot.sessions.push(session);
-    if (!state.selectedAgentId) {
+    if (!hasSelection()) {
       state.selectedAgentId = key;
     }
     return;
@@ -460,6 +464,10 @@ function findSession(agentId) {
   return state.snapshot.sessions.find((session) => idKey(session.id) === key);
 }
 
+function hasSelection() {
+  return Boolean(state.selectedAgentId);
+}
+
 function render() {
   renderStatus();
   renderSessions();
@@ -475,7 +483,7 @@ function renderStatus() {
 }
 
 function renderSessions() {
-  dom.commandSurface.classList.toggle("selected", !state.selectedAgentId);
+  dom.commandSurface.classList.toggle("selected", state.selectedAgentId === COMMAND_SURFACE_ID);
   dom.sessionList.replaceChildren(
     ...state.snapshot.sessions.map((session) => {
       const key = idKey(session.id);
@@ -500,7 +508,9 @@ function renderSessions() {
 }
 
 function renderThread() {
-  const session = state.selectedAgentId ? findSession(state.selectedAgentId) : null;
+  const session = state.selectedAgentId === COMMAND_SURFACE_ID
+    ? null
+    : findSession(state.selectedAgentId);
   if (session) {
     dom.threadTitle.textContent = session.title || session.feature || idKey(session.id);
     dom.threadMeta.textContent = `${idKey(session.id)} - ${kindText(session.kind)}`;
@@ -542,7 +552,7 @@ function renderLines(lines, surface) {
 }
 
 function renderControls() {
-  const hasAgent = Boolean(state.selectedAgentId);
+  const hasAgent = state.selectedAgentId !== COMMAND_SURFACE_ID;
   dom.refreshButton.disabled = !state.apiBase;
   dom.shutdownButton.disabled = !state.connected;
   dom.launchButton.disabled = !state.connected;
