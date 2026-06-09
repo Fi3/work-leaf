@@ -153,6 +153,8 @@ impl PtyWorkLeaf {
         let child = Command::new(env!("CARGO_BIN_EXE_work-leaf"))
             .current_dir(project_dir)
             .env("PATH", path)
+            .env("WORK_LEAF_CODEX_BACKEND", "exec")
+            .env_remove("WORK_LEAF_CODEX_SDK_PYTHON")
             .stdin(stdin)
             .stdout(stdout)
             .stderr(stderr)
