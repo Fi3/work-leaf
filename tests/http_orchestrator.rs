@@ -87,7 +87,11 @@ fn localhost_http_controller_serves_static_web_ui_assets() {
 fn http_get(base_url: &str, path: &str) -> String {
     let address = base_url.strip_prefix("http://").unwrap();
     let mut stream = TcpStream::connect(address).unwrap();
-    write!(stream, "GET {path} HTTP/1.1\r\nHost: {address}\r\nConnection: close\r\n\r\n").unwrap();
+    write!(
+        stream,
+        "GET {path} HTTP/1.1\r\nHost: {address}\r\nConnection: close\r\n\r\n"
+    )
+    .unwrap();
     let mut response = String::new();
     stream.read_to_string(&mut response).unwrap();
     response
@@ -111,6 +115,8 @@ impl Daemon {
             .current_dir(project_dir)
             .env("PATH", path)
             .stdout(Stdio::piped())
+            .env("WORK_LEAF_CODEX_BACKEND", "exec")
+            .env_remove("WORK_LEAF_CODEX_SDK_PYTHON")
             .stderr(Stdio::piped())
             .spawn()
             .unwrap();
