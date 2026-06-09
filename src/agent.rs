@@ -224,6 +224,7 @@ impl PromptPolicy {
                 "You are not allowed to write files directly; provide a unified diff patch for every file you want to change.",
                 "Commands that create, update, delete, format, build, test, or otherwise write files require orchestrator mediation.",
                 "Keep every patch focused on the current feature and explain the specific reason for the patch.",
+                "Do not modify documentation or plain-text files in patch-agent work. Do not touch `docs/**`, `README*`, `CHANGELOG*`, `*.md`, `*.txt`, or other prose-only files; leave those updates for the linearize agent after review.",
                 "`@work-leaf` is an orchestrator response protocol, not an executable command. Do not run `@work-leaf` in a shell or ask the user to run it.",
                 "Emit every `@work-leaf ...` request as a top-level plain response line, without quotes, prose, or code fences, so the orchestrator can parse it.",
                 "Never claim that you are switching to local workspace tools; keep using orchestrator directives until the orchestrator responds.",
@@ -238,6 +239,7 @@ impl PromptPolicy {
                 "You are not allowed to write files directly; provide a unified diff patch for every file you want to change.",
                 "Commands that create, update, delete, format, build, test, or otherwise write files require orchestrator mediation.",
                 "Keep every patch focused on the current feature and explain the specific reason for the patch.",
+                "Do not modify documentation or plain-text files in patch-agent work. Do not touch `docs/**`, `README*`, `CHANGELOG*`, `*.md`, `*.txt`, or other prose-only files; leave those updates for the linearize agent after review.",
                 "`@work-leaf` is an orchestrator response protocol, not an executable command. Do not run `@work-leaf` in a shell or ask the user to run it.",
                 "Emit every `@work-leaf ...` request as a top-level plain response line, without quotes, prose, or code fences, so the orchestrator can parse it.",
             ]),
@@ -249,7 +251,7 @@ impl PromptPolicy {
             "This command-lock rule is language- and tool-agnostic: use it for any formatter, build, test, code generator, package manager, installer, cache-producing tool, or repository-required check that may write files.",
             "Choose the command from the repository instructions and project context; choose the lock paths from the files, directories, caches, build outputs, dependency folders, or lockfiles that command may write.",
             "Locked command runs are limited to five minutes; user authorization is required for longer lock-holding commands.",
-            "Do not use command locks for manual feature edits; manual code or documentation changes must still be submitted with the unified-diff patch directive.",
+            "Do not use command locks for manual feature edits; manual code, configuration, and test changes must still be submitted with the unified-diff patch directive.",
             "Use `@work-leaf send <agent-id> <message>` to route context to another agent.",
             "You are responsible for following the project instructions, including running the repository's required checks before you submit a patch or report work done.",
             "Use `@work-leaf done` when no more orchestrator work is required.",
@@ -274,7 +276,11 @@ impl PromptPolicy {
     }
 
     pub fn inject(&self, agent_id: &AgentId, feature: &str, prompt: &str) -> String {
-        let mut text = self.preamble.clone();
+        let mut text = if is_linearize_agent(agent_id) {
+            linearize_preamble()
+        } else {
+            self.preamble.clone()
+        };
         if !self.project_instructions.is_empty() {
             text.push_str("\n\nRepository instructions from the launch project:");
             for instructions in &self.project_instructions {
@@ -292,6 +298,23 @@ impl PromptPolicy {
         ));
         text
     }
+}
+
+fn is_linearize_agent(agent_id: &AgentId) -> bool {
+    let value = agent_id.as_str();
+    value == "linearize" || value.starts_with("linearize-")
+}
+
+fn linearize_preamble() -> String {
+    [
+        "You are running as the work-leaf linearize agent.",
+        "You are allowed to read repository files directly.",
+        "You are allowed to write repository files, run commands, and rewrite git history directly inside the workspace without using `@work-leaf read`, `@work-leaf patch`, or `@work-leaf locks run`.",
+        "Use direct workspace tools for code, documentation, plain-text files, checks, and git operations.",
+        "Documentation and plain-text updates deferred by patch agents are part of your responsibility when they are required by the final reviewed behavior.",
+        "Keep the final history minimal, preserve reviewed behavior, follow repository commit-message and verification instructions, and report the final commits and checks.",
+    ]
+    .join("\n")
 }
 
 impl Default for PromptPolicy {

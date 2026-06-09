@@ -29,6 +29,8 @@ fn prompt_policy_wraps_every_agent_prompt_with_file_access_rules() {
     assert!(wrapped.contains("orchestrator-provided file text"));
     assert!(wrapped.contains("not allowed to write files directly"));
     assert!(wrapped.contains("provide a unified diff patch"));
+    assert!(wrapped.contains("Do not modify documentation or plain-text files"));
+    assert!(wrapped.contains("leave those updates for the linearize agent after review"));
     assert!(wrapped.contains("Do not run `@work-leaf` in a shell"));
     assert!(wrapped.contains("@work-leaf read <path>"));
     assert!(wrapped.contains("@work-leaf read --force <path>"));
@@ -58,10 +60,30 @@ fn prompt_policy_can_allow_direct_filesystem_reads() {
     assert!(!wrapped.contains("ask the orchestrator to provide file text"));
     assert!(!wrapped.contains("@work-leaf read <path>"));
     assert!(wrapped.contains("not allowed to write files directly"));
+    assert!(wrapped.contains("Do not modify documentation or plain-text files"));
     assert!(wrapped.contains("@work-leaf patch <reason>"));
     assert!(wrapped.contains("@work-leaf locks run <path> <path...> -- <command>"));
     assert!(wrapped.contains("language- and tool-agnostic"));
     assert!(wrapped.contains("implement the flag parser"));
+}
+
+#[test]
+fn prompt_policy_gives_linearize_agent_direct_workspace_access() {
+    let policy = PromptPolicy::for_restricted_agents();
+    let wrapped = policy.inject(
+        &AgentId::new("linearize").unwrap(),
+        "linearize reviewed patches",
+        "rewrite history",
+    );
+
+    assert!(wrapped.contains("work-leaf linearize agent"));
+    assert!(wrapped.contains("allowed to read repository files directly"));
+    assert!(wrapped.contains("allowed to write repository files"));
+    assert!(wrapped.contains(
+        "without using `@work-leaf read`, `@work-leaf patch`, or `@work-leaf locks run`"
+    ));
+    assert!(wrapped.contains("Documentation and plain-text updates deferred by patch agents"));
+    assert!(!wrapped.contains("not allowed to write files directly"));
 }
 
 #[test]
@@ -123,6 +145,32 @@ fn codex_backend_builds_exec_invocation_for_project_directory() {
     );
     assert!(invocation.stdin.contains("Agent-ID: chat-a"));
     assert!(invocation.stdin.contains("add ripgrep support"));
+}
+
+#[test]
+fn codex_backend_launches_linearize_with_workspace_write_sandbox() {
+    let config = CodexCommandConfig::new(PathBuf::from("/repo")).with_binary("codex");
+    let backend = CodexBackend::new(config, PromptPolicy::for_restricted_agents());
+
+    let invocation = backend.build_launch_invocation(&AgentLaunch::new(
+        AgentId::new("linearize").unwrap(),
+        AgentKind::Codex,
+        "linearize reviewed patches",
+        "rewrite reviewed commits",
+    ));
+
+    let sandbox_position = invocation
+        .args
+        .iter()
+        .position(|arg| arg == "--sandbox")
+        .expect("sandbox argument");
+    assert_eq!(invocation.args[sandbox_position + 1], "workspace-write");
+    assert!(invocation.stdin.contains("work-leaf linearize agent"));
+    assert!(
+        invocation
+            .stdin
+            .contains("allowed to write repository files")
+    );
 }
 
 #[test]
@@ -496,6 +544,105 @@ done
         output_tokens: 2,
         reasoning_output_tokens: 1
     })));
+}
+
+#[test]
+fn codex_backend_sdk_transport_returns_full_streamed_message_transcript() {
+    let root = temp_dir("codex-sdk-sidecar-streamed-transcript");
+    let fake_bin = root.join("bin");
+    fs::create_dir_all(&fake_bin).unwrap();
+    let fake_python = fake_bin.join("python");
+    fs::write(
+        &fake_python,
+        r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  printf '{"id":%s,"event":{"type":"message","text":"@work-leaf read src/ui.rs"}}\n' "$id"
+  printf '{"id":%s,"event":{"type":"message","text":"@work-leaf done"}}\n' "$id"
+  printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-1","reply":"@work-leaf done"}\n' "$id"
+done
+"#,
+    )
+    .unwrap();
+    make_executable(&fake_python);
+
+    let mut backend = CodexBackend::new(
+        CodexCommandConfig::new(root.clone())
+            .with_binary("/usr/bin/codex")
+            .with_sdk_transport()
+            .with_sdk_python(&fake_python),
+        PromptPolicy::for_restricted_agents(),
+    );
+    let agent_id = AgentId::new("chat-a").unwrap();
+    let mut events = Vec::new();
+
+    let session = backend
+        .launch_streaming(
+            AgentLaunch::new(agent_id, AgentKind::Codex, "sdk", "launch through sdk"),
+            &mut |event| events.push(event),
+        )
+        .unwrap();
+
+    assert_eq!(
+        session.messages[1].text,
+        "@work-leaf read src/ui.rs\n\n@work-leaf done"
+    );
+    assert!(events.contains(&AgentStreamEvent::AgentMessage(
+        "@work-leaf read src/ui.rs".to_string()
+    )));
+    assert!(events.contains(&AgentStreamEvent::AgentMessage(
+        "@work-leaf done".to_string()
+    )));
+}
+
+#[test]
+fn codex_backend_sdk_transport_sends_workspace_write_for_linearize() {
+    let root = temp_dir("codex-sdk-linearize-sandbox");
+    let fake_bin = root.join("bin");
+    fs::create_dir_all(&fake_bin).unwrap();
+    let fake_python = fake_bin.join("python");
+    fs::write(
+        &fake_python,
+        r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$line" in
+    *'"agent_id":"linearize"'*'"sandbox":"workspace-write"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-linearize","reply":"linearize sandbox ok"}\n' "$id"
+      ;;
+    *)
+      printf '{"id":%s,"ok":false,"error":"unexpected request"}\n' "$id"
+      ;;
+  esac
+done
+"#,
+    )
+    .unwrap();
+    make_executable(&fake_python);
+
+    let mut backend = CodexBackend::new(
+        CodexCommandConfig::new(root.clone())
+            .with_binary("/usr/bin/codex")
+            .with_sdk_transport()
+            .with_sdk_python(&fake_python),
+        PromptPolicy::for_restricted_agents(),
+    );
+
+    let session = backend
+        .launch_streaming(
+            AgentLaunch::new(
+                AgentId::new("linearize").unwrap(),
+                AgentKind::Codex,
+                "linearize reviewed patches",
+                "rewrite history",
+            ),
+            &mut |_| {},
+        )
+        .unwrap();
+
+    assert_eq!(session.messages[1].text, "linearize sandbox ok");
 }
 
 #[test]

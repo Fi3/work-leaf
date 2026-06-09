@@ -99,6 +99,13 @@ temporary checkout before exit.
   filesystem reads while keeping writes mediated by patches.
 - `AgentError` is the shared error type for launch, send, and prompt policy failures.
 
+Patch-agent prompts keep documentation and prose-only files out of patch-agent scope. Patch agents
+work on code, tests, configuration, and other feature files through orchestrator patches; docs,
+README, changelog, markdown, txt, and other prose-only updates are handled during linearization when
+the final reviewed behavior requires them. Linearize-agent prompts use a separate direct-workspace
+policy: the linearizer reads and writes repository files, runs commands, and rewrites git history
+directly rather than using `@work-leaf` read, patch, or lock directives.
+
 `src/agent.rs` also re-exports `AgentBackend`, `AgentStreamEvent`, and `AgentShutdownHandle` from
 `src/agent_runtime.rs`, so callers can import all provider-neutral agent interfaces from
 `work_leaf::agent`.
@@ -164,8 +171,14 @@ public lifecycle extension is required before external child processes can parti
 - `CodexBackend` parses fallback Codex `--json` event lines from stdout to capture
   `thread.started` identifiers for resume and to convert agent message, error, and status events
   into `AgentStreamEvent` values. The SDK path receives app-server notifications from the Python
-  sidecar and records the returned thread id, final agent response, and per-turn token usage in the
-  same provider-neutral session state.
+  sidecar and records the returned thread id, the complete assistant-message transcript for the turn,
+  and per-turn token usage in the same provider-neutral session state. The complete transcript is
+  used for orchestrator directive parsing even when the SDK reports several assistant message items
+  before the final turn-completed response.
+- Codex linearizer sessions run with `workspace-write` sandbox and approval policy `never` so they can
+  inspect files, update code or documentation, run checks, and rewrite history directly. Patch agents
+  and reviewer agents keep the configured Codex sandbox and continue to use orchestrator-mediated
+  writes.
 - `CodexBackend` serializes launch and send operations per `AgentId` across cloned backend handles.
   This keeps a single Codex thread from receiving overlapping turns while allowing different agent
   sessions to work concurrently through the shared SDK/app-server sidecar. Fallback exec mode also
@@ -267,6 +280,11 @@ When review resolves with no findings, the controller marks the patch-agent sess
 user completion decision and appends a yes/no question to that session. `yes` closes the feature,
 `no` keeps it open, and a later message in a closed chat clears the closed state before sending the
 message to the agent backend.
+
+When linearization starts, the controller interrupts all visible non-linearizer sessions, clears their
+loading state, leaves their chat transcripts visible, and ignores late worker events from those
+stopped sessions. This keeps stale patch or review workers from appending findings or starting new
+reviews after the linearizer has taken ownership of the reviewed work.
 
 The command transcript is also the conversation history for the persistent `command-agent`. That
 system agent interprets chat sent to the Work Leaf command surface. It recognizes literal command
@@ -414,7 +432,9 @@ reviewer output as findings. `CommandChat` and `WorkLeafController` keep a stabl
 already completed review. `AgentCommit`, `ReviewResult`, and `ReviewError` are the public review
 workflow types. `WorkLeafController` scopes automatic review after a patch agent reports done to the
 patch agent that produced the provisional commit; explicit review commands use the history-wide
-review target lookup.
+review target lookup. Reviewer prompts treat documentation and prose-only updates as linearizer
+responsibility, so missing docs, README, changelog, markdown, txt, or other plain-text updates are not
+reported as patch-agent findings.
 
 `src/linearize.rs::LinearizePlanner<B>` prepares linearization questions and launches a linearizer
 agent with decisions, groups, and required tests. `LinearizeAction`, `LinearizeGroup`,
@@ -423,7 +443,10 @@ linearization workflow types. `CommandChat` and `WorkLeafController` launch line
 exact commits recorded as reviewed in the current command-chat or controller instance; unrelated
 historical agent metadata commits are outside the linearizer scope unless the user explicitly reviews
 or adds them in that session. When one patch-agent id completes multiple reviewed commits in one
-active instance, each reviewed hash is listed independently for the linearizer.
+active instance, each reviewed hash is listed independently for the linearizer. The linearizer owns
+documentation and plain-text updates deferred by patch agents, uses direct workspace access instead of
+orchestrator mediation, and rewrites provisional work-leaf commits into final commits after the user
+accepts its proposed plan.
 
 `src/instructions.rs` is crate-private. It loads project instruction files used by `PromptPolicy`
 for agent launch prompts.

@@ -41,6 +41,7 @@ where
     review_commits_in_progress: BTreeMap<AgentId, String>,
     reviewed_agent_commits: BTreeMap<AgentId, String>,
     agent_review_baselines: BTreeMap<AgentId, String>,
+    stopped_for_linearize: BTreeSet<AgentId>,
 }
 
 impl<B> WorkLeafController<B>
@@ -64,6 +65,7 @@ where
             review_commits_in_progress: BTreeMap::new(),
             reviewed_agent_commits: BTreeMap::new(),
             agent_review_baselines: BTreeMap::new(),
+            stopped_for_linearize: BTreeSet::new(),
         }
     }
 
@@ -260,6 +262,7 @@ where
         if message.is_empty() {
             return Ok(());
         }
+        self.stopped_for_linearize.remove(agent_id);
         let is_agent_slash_command = is_agent_slash_command_message(message);
         if !is_agent_slash_command
             && self.session_completion(agent_id) == Some(WorkLeafCompletion::NeedsDecision)
@@ -421,6 +424,7 @@ where
             return Ok(None);
         };
 
+        self.stop_non_linearize_agents_for_linearize();
         let agent_id = launch.id.clone();
         let title = launch.feature.clone();
         self.register_agent_feature(agent_id.clone(), title.clone());
@@ -544,6 +548,35 @@ where
             .push(WorkLeafEvent::AgentAdded { session });
     }
 
+    fn stop_non_linearize_agents_for_linearize(&mut self) {
+        let display_name = self.agent_display_name();
+        let agent_ids = self
+            .sessions
+            .keys()
+            .filter(|agent_id| !is_linearize_agent_id(agent_id))
+            .cloned()
+            .collect::<Vec<_>>();
+
+        self.pending_launches
+            .retain(|launch| is_linearize_agent_id(&launch.id));
+        self.launch_starting.retain(is_linearize_agent_id);
+        self.review_commits_in_progress.clear();
+
+        for agent_id in agent_ids {
+            let _ = self
+                .chat
+                .as_mut()
+                .expect("work-leaf controller command chat is present")
+                .interrupt_agent(&agent_id);
+            self.stopped_for_linearize.insert(agent_id.clone());
+            self.set_session_loading(&agent_id, None);
+            self.append_agent_line(
+                &agent_id,
+                format!("work-leaf: stopped {display_name} before linearize"),
+            );
+        }
+    }
+
     fn queue_or_start_launch_worker(&mut self, launch: AgentLaunch) {
         self.pending_launches.push_back(launch);
     }
@@ -659,6 +692,9 @@ where
     fn apply_worker_event(&mut self, event: WorkerEvent) {
         match event {
             WorkerEvent::Stream { agent_id, text } => {
+                if self.stopped_for_linearize.contains(&agent_id) {
+                    return;
+                }
                 if text.contains("Codex is working") {
                     self.launch_starting.remove(&agent_id);
                     self.start_next_pending_launch();
@@ -666,10 +702,19 @@ where
                 self.append_agent_line(&agent_id, text);
             }
             WorkerEvent::Usage { agent_id, usage } => {
+                if self.stopped_for_linearize.contains(&agent_id) {
+                    return;
+                }
                 self.record_agent_usage(&agent_id, usage);
             }
             WorkerEvent::Complete { agent_id, result } => {
                 if let Some(agent_id) = agent_id {
+                    if self.stopped_for_linearize.contains(&agent_id) {
+                        self.launch_starting.remove(&agent_id);
+                        self.set_session_loading(&agent_id, None);
+                        self.start_next_pending_launch();
+                        return;
+                    }
                     let start_review = self.should_start_review(&agent_id, &result);
                     self.launch_starting.remove(&agent_id);
                     self.set_session_loading(&agent_id, None);
@@ -688,6 +733,12 @@ where
             }
             WorkerEvent::Error { agent_id, message } => {
                 if let Some(agent_id) = agent_id {
+                    if self.stopped_for_linearize.contains(&agent_id) {
+                        self.launch_starting.remove(&agent_id);
+                        self.set_session_loading(&agent_id, None);
+                        self.start_next_pending_launch();
+                        return;
+                    }
                     self.launch_starting.remove(&agent_id);
                     self.set_session_loading(&agent_id, None);
                     self.append_agent_line(&agent_id, message);
@@ -701,6 +752,13 @@ where
                 reviewed_agent_id,
                 message,
             } => {
+                if self.stopped_for_linearize.contains(&reviewer_id)
+                    || self.stopped_for_linearize.contains(&reviewed_agent_id)
+                {
+                    self.review_commits_in_progress.remove(&reviewed_agent_id);
+                    self.set_session_loading(&reviewer_id, None);
+                    return;
+                }
                 self.review_commits_in_progress.remove(&reviewed_agent_id);
                 self.set_session_loading(&reviewer_id, None);
                 self.append_agent_line(&reviewer_id, message);
@@ -740,8 +798,9 @@ where
         match result {
             CommandChatResult::AgentLaunched { reply, .. }
             | CommandChatResult::AgentMessage { reply, .. } => {
-                if !reply.is_empty() {
-                    self.append_agent_line(agent_id, reply.clone());
+                let visible_reply = self.unstreamed_agent_reply(agent_id, reply);
+                if !visible_reply.is_empty() {
+                    self.append_agent_line(agent_id, visible_reply);
                 }
             }
             CommandChatResult::ReviewComplete(results) => {
@@ -948,6 +1007,13 @@ where
             .and_then(|session| session.completion)
     }
 
+    fn unstreamed_agent_reply(&self, agent_id: &AgentId, reply: &str) -> String {
+        let Some(session) = self.sessions.get(agent_id) else {
+            return reply.to_string();
+        };
+        trim_streamed_reply_blocks(reply, &session.lines).to_string()
+    }
+
     fn push_command_line(&mut self, line: String) {
         if line.is_empty() {
             return;
@@ -999,6 +1065,24 @@ where
 fn contains_done_directive(text: &str) -> bool {
     text.lines()
         .any(|line| line.trim_start() == "@work-leaf done")
+}
+
+fn trim_streamed_reply_blocks<'a>(reply: &'a str, streamed_lines: &[String]) -> &'a str {
+    let mut remaining = reply;
+    loop {
+        remaining = remaining.trim_start_matches('\n');
+        let block_end = remaining.find("\n\n").unwrap_or(remaining.len());
+        let block = &remaining[..block_end];
+        if block.is_empty() || !streamed_lines.iter().any(|line| line == block) {
+            return remaining;
+        }
+        remaining = &remaining[block_end..];
+    }
+}
+
+fn is_linearize_agent_id(agent_id: &AgentId) -> bool {
+    let value = agent_id.as_str();
+    value == "linearize" || value.starts_with("linearize-")
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

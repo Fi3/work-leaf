@@ -336,6 +336,11 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains("agent_backend: codex"));
     assert!(script.contains("agent_transport: sdk"));
     assert!(script.contains("agent_model"));
+    assert!(script.contains("agent_model_source"));
+    assert!(script.contains("requested_agent_model"));
+    assert!(script.contains("detect_codex_model()"));
+    assert!(script.contains("ConfigReadResponse"));
+    assert!(script.contains("\"config/read\""));
     assert!(script.contains("no_read_permission"));
     assert!(script.contains("read_permission_mode"));
     assert!(script.contains("WORK_LEAF_BENCH_NO_READ_PERMISSION"));

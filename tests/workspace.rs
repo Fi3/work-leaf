@@ -79,6 +79,43 @@ fn controller_line_events_do_not_resend_full_session_transcripts() {
 }
 
 #[test]
+fn controller_does_not_append_streamed_agent_messages_again_on_completion() {
+    let backend = StreamingTranscriptBackend;
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("stream directives").unwrap();
+
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    let snapshot = controller.snapshot();
+    let session = snapshot.session(&agent_id).expect("session exists");
+    assert_eq!(
+        session
+            .lines
+            .iter()
+            .filter(|line| line.as_str() == "@work-leaf read src/ui.rs")
+            .count(),
+        1,
+        "{session:?}"
+    );
+    assert_eq!(
+        session
+            .lines
+            .iter()
+            .filter(|line| line.as_str() == "@work-leaf done")
+            .count(),
+        1,
+        "{session:?}"
+    );
+    assert!(
+        session
+            .lines
+            .iter()
+            .any(|line| line.contains("agent user-1 reported done"))
+    );
+}
+
+#[test]
 fn controller_status_events_do_not_resend_existing_large_transcripts() {
     let large_reply = "large transcript line\n".repeat(8192);
     let backend = FakeBackend::new([large_reply.as_str(), "follow reply"]);
@@ -990,6 +1027,33 @@ fn controller_can_create_review_and_linearize_three_features_from_missing_featur
         .count();
     assert_eq!(patch_launches, 3, "{launches:?}");
     assert_eq!(review_launches, 3, "{launches:?}");
+    let interrupts = backend.interrupts();
+    for agent_id in [
+        "user-1",
+        "user-2",
+        "user-3",
+        "review-user-1",
+        "review-user-2",
+        "review-user-3",
+    ] {
+        assert!(
+            interrupts
+                .iter()
+                .any(|interrupted| interrupted.as_str() == agent_id),
+            "{interrupts:?}"
+        );
+    }
+    let snapshot = controller.snapshot();
+    for agent_id in [&visual_id, &slash_id, &completion_id] {
+        let session = snapshot.session(agent_id).expect("patch session exists");
+        assert!(
+            session
+                .lines
+                .iter()
+                .any(|line| line.contains("stopped Codex before linearize")),
+            "{session:?}"
+        );
+    }
     let linearize_launch = launches
         .iter()
         .find(|launch| launch.id.as_str() == "linearize")
@@ -1122,6 +1186,9 @@ struct InterruptibleBackend {
     interrupted: Arc<Mutex<bool>>,
 }
 
+#[derive(Clone, Debug)]
+struct StreamingTranscriptBackend;
+
 #[derive(Clone, Debug, Default)]
 struct ThreeFeatureBackend {
     state: Arc<Mutex<ThreeFeatureState>>,
@@ -1131,6 +1198,7 @@ struct ThreeFeatureBackend {
 struct ThreeFeatureState {
     launches: Vec<AgentLaunch>,
     sends: Vec<(AgentId, String)>,
+    interrupts: Vec<AgentId>,
 }
 
 impl FakeBackend {
@@ -1169,6 +1237,10 @@ impl FakeBackend {
 impl ThreeFeatureBackend {
     fn launches(&self) -> Vec<AgentLaunch> {
         self.state.lock().unwrap().launches.clone()
+    }
+
+    fn interrupts(&self) -> Vec<AgentId> {
+        self.state.lock().unwrap().interrupts.clone()
     }
 
     fn launch_reply(request: &AgentLaunch) -> String {
@@ -1229,6 +1301,35 @@ impl AgentBackend for FakeBackend {
     }
 }
 
+impl AgentBackend for StreamingTranscriptBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        let mut session = AgentSession::new(request);
+        session.push_message(
+            MessageRole::Agent,
+            "@work-leaf read src/ui.rs\n\n@work-leaf done",
+        );
+        Ok(session)
+    }
+
+    fn launch_streaming(
+        &mut self,
+        request: AgentLaunch,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+    ) -> Result<AgentSession, AgentError> {
+        sink(AgentStreamEvent::AgentMessage(
+            "@work-leaf read src/ui.rs".to_string(),
+        ));
+        sink(AgentStreamEvent::AgentMessage(
+            "@work-leaf done".to_string(),
+        ));
+        self.launch(request)
+    }
+
+    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+        Ok(ChatMessage::new(MessageRole::Agent, "unused"))
+    }
+}
+
 impl AgentBackend for ThreeFeatureBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
         let reply = Self::launch_reply(&request);
@@ -1248,6 +1349,11 @@ impl AgentBackend for ThreeFeatureBackend {
             MessageRole::Agent,
             "summary: implemented the requested fixture feature",
         ))
+    }
+
+    fn interrupt(&mut self, agent_id: &AgentId) -> Result<(), AgentError> {
+        self.state.lock().unwrap().interrupts.push(agent_id.clone());
+        Ok(())
     }
 }
 

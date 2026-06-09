@@ -101,14 +101,29 @@ fn review_coordinator_loops_until_reviewer_reports_no_findings() {
             .contains("summary: returns a parser value")
     );
     assert!(backend.launches[0].prompt.contains("chat-a"));
+    assert!(
+        backend.launches[0]
+            .prompt
+            .contains("Documentation and plain-text updates are deferred to the linearize agent")
+    );
 
     assert_eq!(backend.sends.len(), 3);
     assert_eq!(backend.sends[0].0.as_str(), "chat-a");
     assert!(backend.sends[0].1.contains("summarize"));
     assert_eq!(backend.sends[1].0.as_str(), "chat-a");
     assert!(backend.sends[1].1.contains("missing edge case"));
+    assert!(
+        backend.sends[1]
+            .1
+            .contains("Do not modify documentation or plain-text files")
+    );
     assert_eq!(backend.sends[2].0.as_str(), "review-chat-a");
     assert!(backend.sends[2].1.contains("check the patch again"));
+    assert!(
+        backend.sends[2]
+            .1
+            .contains("must not be reported as remaining patch-agent findings")
+    );
 }
 
 #[test]

@@ -230,7 +230,7 @@ where
         let reviewer_id = AgentId::new(format!("review-{}", commit.agent_id.as_str()))
             .map_err(ReviewError::Agent)?;
         let review_prompt = format!(
-            "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\nSummary from original agent:\n{}\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.",
+            "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\nSummary from original agent:\n{}\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.",
             commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context, summary
         );
         let reviewer_session = self
@@ -251,7 +251,7 @@ where
 
         while !has_no_findings(&review_text) && rounds < self.max_rounds {
             let fix_prompt = format!(
-                "The reviewer found issues in your patch for commit {}.\n{}\n\nPlease fix the patch through the orchestrator patch flow.",
+                "The reviewer found issues in your patch for commit {}.\n{}\n\nPlease fix the patch through the orchestrator patch flow. Do not modify documentation or plain-text files; documentation and prose updates are deferred to the linearize agent.",
                 commit.hash, review_text
             );
             self.backend
@@ -259,7 +259,7 @@ where
                 .map_err(ReviewError::Agent)?;
 
             let recheck_prompt = format!(
-                "The original agent has responded to the findings for commit {}. Please check the patch again and reply with NO_FINDINGS if resolved, otherwise list remaining FINDINGS.",
+                "The original agent has responded to the findings for commit {}. Please check the patch again and reply with NO_FINDINGS if resolved, otherwise list remaining FINDINGS. Documentation and plain-text updates are deferred to the linearize agent and must not be reported as remaining patch-agent findings.",
                 commit.hash
             );
             review_text = self

@@ -55,6 +55,12 @@ fn interactive_linearize_prompt_requires_user_accepted_plan_before_rewrite() {
     assert!(prompt.contains("AGENTS.md commit message rules"));
     assert!(prompt.contains("diff against main/master as small as possible"));
     assert!(prompt.contains("Run the checks required by the repository instructions"));
+    assert!(prompt.contains("Update documentation and plain-text files directly"));
+    assert!(
+        prompt.contains(
+            "do not use `@work-leaf read`, `@work-leaf patch`, or `@work-leaf locks run`"
+        )
+    );
     assert!(prompt.contains("Agent-ID: chat-a"));
     assert!(prompt.contains("Subject: UPDATE apply parser patch from chat-a"));
 }
@@ -120,6 +126,13 @@ fn linearize_handoff_launches_codex_agent_with_decisions_groups_and_tests() {
     assert!(prompt.contains("Group parser-and-cli: chat-a, chat-c"));
     assert!(prompt.contains("cargo test"));
     assert!(prompt.contains("make the diff against master/main as small as possible"));
+    assert!(
+        prompt
+            .contains("Documentation and plain-text files intentionally deferred by patch agents")
+    );
+    assert!(
+        prompt.contains("Use direct workspace reads, writes, commands, and git history rewrites")
+    );
 }
 
 #[derive(Debug)]

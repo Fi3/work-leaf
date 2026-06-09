@@ -448,6 +448,9 @@ fn command_chat_reuses_reviewer_for_later_commit_from_same_patch_agent() {
         target.as_str() == "review-user-1"
             && prompt.contains("Review the full patch scope")
             && prompt.contains("second pass")
+            && prompt.contains(
+                "Documentation and plain-text updates are deferred to the linearize agent",
+            )
     }));
 }
 
@@ -625,6 +628,58 @@ fi
     let message = git_output(&root, ["log", "-1", "--pretty=%B"]);
     assert!(message.contains("Agent-ID: user-1"));
     assert!(message.contains("Feature: user-agent"));
+    assert!(message.contains("Reason: return value two"));
+}
+
+#[test]
+fn command_chat_processes_sdk_streamed_directives_before_final_reply() {
+    let root = temp_git_repo("command-chat-sdk-streamed-directives");
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(root.join("src/lib.rs"), "pub fn value() -> u8 { 1 }\n").unwrap();
+    git(&root, ["add", "src/lib.rs"]);
+    git(
+        &root,
+        ["commit", "-m", "ADD initial streamed directive fixture"],
+    );
+    let fake_bin = root.join("bin");
+    fs::create_dir_all(&fake_bin).unwrap();
+    let fake_python = fake_bin.join("python");
+    fs::write(
+        &fake_python,
+        r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  printf '%s\n' "{\"id\":$id,\"event\":{\"type\":\"message\",\"text\":\"@work-leaf patch return value two\\ndiff --git a/src/lib.rs b/src/lib.rs\\n--- a/src/lib.rs\\n+++ b/src/lib.rs\\n@@ -1 +1 @@\\n-pub fn value() -> u8 { 1 }\\n+pub fn value() -> u8 { 2 }\\n@work-leaf end\"}}"
+  printf '%s\n' "{\"id\":$id,\"event\":{\"type\":\"message\",\"text\":\"@work-leaf done\"}}"
+  printf '%s\n' "{\"id\":$id,\"ok\":true,\"thread_id\":\"sdk-thread-1\",\"reply\":\"@work-leaf done\"}"
+done
+"#,
+    )
+    .unwrap();
+    make_executable(&fake_python);
+    let backend = CodexBackend::new(
+        CodexCommandConfig::new(root.clone())
+            .with_binary("/usr/bin/codex")
+            .with_sdk_transport()
+            .with_sdk_python(&fake_python),
+        PromptPolicy::for_restricted_agents(),
+    );
+    let mut chat = CommandChat::new(root.clone(), backend);
+
+    let result = chat.handle_line("new run sdk streamed directives").unwrap();
+
+    let CommandChatResult::AgentLaunched { reply, .. } = result else {
+        panic!("expected launched agent");
+    };
+    assert!(reply.contains("applied patch from user-1: return value two"));
+    assert!(reply.contains("agent user-1 reported done"));
+    assert_eq!(
+        fs::read_to_string(root.join("src/lib.rs")).unwrap(),
+        "pub fn value() -> u8 { 2 }\n"
+    );
+    let message = git_output(&root, ["log", "-1", "--pretty=%B"]);
+    assert!(message.contains("Agent-ID: user-1"));
     assert!(message.contains("Reason: return value two"));
 }
 

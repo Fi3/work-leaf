@@ -203,6 +203,15 @@ struct CodexSdkTurnOutput {
     usage: Option<AgentTokenUsage>,
 }
 
+#[derive(Clone, Debug)]
+struct CodexSdkTurnRequest<'a> {
+    op: &'a str,
+    agent_id: &'a AgentId,
+    prompt: &'a str,
+    thread_id: Option<&'a str>,
+    sandbox: SandboxMode,
+}
+
 #[derive(Debug, Serialize)]
 struct CodexSdkConfig {
     codex_bin: String,
@@ -222,10 +231,7 @@ impl CodexSdkSidecar {
 
     fn request_streaming(
         &self,
-        op: &str,
-        agent_id: &AgentId,
-        prompt: &str,
-        thread_id: Option<&str>,
+        turn: CodexSdkTurnRequest<'_>,
         shutdown: &AgentShutdownHandle,
         sink: &mut dyn FnMut(AgentStreamEvent),
     ) -> Result<CodexSdkTurnOutput, AgentError> {
@@ -233,23 +239,27 @@ impl CodexSdkSidecar {
         let request_id = self.next_request_id.fetch_add(1, Ordering::Relaxed);
         let request = json!({
             "id": request_id,
-            "op": op,
-            "agent_id": agent_id.as_str(),
-            "thread_id": thread_id,
-            "prompt": prompt,
+            "op": turn.op,
+            "agent_id": turn.agent_id.as_str(),
+            "thread_id": turn.thread_id,
+            "prompt": turn.prompt,
             "cwd": self.config.project_dir.display().to_string(),
             "model": self.config.model.as_deref(),
-            "sandbox": self.config.sandbox.as_codex_arg(),
+            "sandbox": turn.sandbox.as_codex_arg(),
         });
         self.write_request_with_restart(request_id, &request, shutdown)?;
 
         let mut output = CodexSdkTurnOutput::default();
+        let mut streamed_messages = Vec::new();
         loop {
             let inbound = self.next_message(request_id)?;
             if let Some(event) = inbound.event {
                 match event {
                     CodexSdkEvent::Status { text } => sink(AgentStreamEvent::Status(text)),
-                    CodexSdkEvent::Message { text } => sink(AgentStreamEvent::AgentMessage(text)),
+                    CodexSdkEvent::Message { text } => {
+                        streamed_messages.push(text.clone());
+                        sink(AgentStreamEvent::AgentMessage(text));
+                    }
                     CodexSdkEvent::Usage { usage } => sink(AgentStreamEvent::Usage(usage)),
                 }
                 continue;
@@ -258,7 +268,11 @@ impl CodexSdkSidecar {
                 Some(true) => {
                     self.unregister_request(request_id);
                     output.thread_id = inbound.thread_id.unwrap_or_default();
-                    output.reply = inbound.reply.unwrap_or_default();
+                    output.reply = if streamed_messages.is_empty() {
+                        inbound.reply.unwrap_or_default()
+                    } else {
+                        streamed_messages.join("\n\n")
+                    };
                     output.usage = inbound.usage;
                     return Ok(output);
                 }
@@ -660,6 +674,11 @@ fn is_codex_slash_command(prompt: &str) -> bool {
     matches!(chars.next(), Some('/')) && chars.next().is_some_and(|ch| !ch.is_whitespace())
 }
 
+fn is_linearize_agent(agent_id: &AgentId) -> bool {
+    let value = agent_id.as_str();
+    value == "linearize" || value.starts_with("linearize-")
+}
+
 fn trace_codex_sdk(message: std::fmt::Arguments<'_>) {
     if env::var_os("WORK_LEAF_CODEX_TRACE").is_some() {
         eprintln!("work-leaf codex sdk: {message}");
@@ -700,7 +719,7 @@ impl CodexBackend {
         let stdin = self
             .policy
             .inject(&request.id, &request.feature, &request.prompt);
-        self.exec_invocation(stdin)
+        self.exec_invocation(stdin, self.sandbox_for_agent(&request.id))
     }
 
     pub fn build_send_invocation(
@@ -731,7 +750,7 @@ impl CodexBackend {
         } else {
             self.policy.inject(agent_id, &feature, prompt)
         };
-        self.resume_invocation(&resume_id, stdin)
+        self.resume_invocation(&resume_id, stdin, self.sandbox_for_agent(agent_id))
     }
 
     pub fn record_launch_reply(
@@ -779,6 +798,14 @@ impl CodexBackend {
             .cloned()
     }
 
+    fn sandbox_for_agent(&self, agent_id: &AgentId) -> SandboxMode {
+        if is_linearize_agent(agent_id) {
+            SandboxMode::WorkspaceWrite
+        } else {
+            self.config.sandbox.clone()
+        }
+    }
+
     fn record_send_reply(
         &mut self,
         agent_id: &AgentId,
@@ -811,14 +838,14 @@ impl CodexBackend {
         Ok(message)
     }
 
-    fn exec_invocation(&self, stdin: String) -> CodexInvocation {
+    fn exec_invocation(&self, stdin: String, sandbox: SandboxMode) -> CodexInvocation {
         let mut args = vec![
             "--disable".to_string(),
             "apps".to_string(),
             "--cd".to_string(),
             self.config.project_dir.display().to_string(),
             "--sandbox".to_string(),
-            self.config.sandbox.as_codex_arg().to_string(),
+            sandbox.as_codex_arg().to_string(),
             "--ask-for-approval".to_string(),
             "never".to_string(),
         ];
@@ -842,6 +869,7 @@ impl CodexBackend {
         &self,
         resume_id: &str,
         stdin: String,
+        sandbox: SandboxMode,
     ) -> Result<CodexInvocation, AgentError> {
         let mut args = vec![
             "--disable".to_string(),
@@ -849,7 +877,7 @@ impl CodexBackend {
             "--cd".to_string(),
             self.config.project_dir.display().to_string(),
             "--sandbox".to_string(),
-            self.config.sandbox.as_codex_arg().to_string(),
+            sandbox.as_codex_arg().to_string(),
             "--ask-for-approval".to_string(),
             "never".to_string(),
         ];
@@ -1162,10 +1190,13 @@ impl AgentBackend for CodexBackend {
                 .policy
                 .inject(&request.id, &request.feature, &request.prompt);
             let output = self.sdk.request_streaming(
-                "launch",
-                &request.id,
-                &prompt,
-                None,
+                CodexSdkTurnRequest {
+                    op: "launch",
+                    agent_id: &request.id,
+                    prompt: &prompt,
+                    thread_id: None,
+                    sandbox: self.sandbox_for_agent(&request.id),
+                },
                 &self.shutdown,
                 sink,
             )?;
@@ -1226,10 +1257,13 @@ impl AgentBackend for CodexBackend {
                 "send"
             };
             let output = self.sdk.request_streaming(
-                op,
-                agent_id,
-                &sdk_prompt,
-                thread_id.as_deref(),
+                CodexSdkTurnRequest {
+                    op,
+                    agent_id,
+                    prompt: &sdk_prompt,
+                    thread_id: thread_id.as_deref(),
+                    sandbox: self.sandbox_for_agent(agent_id),
+                },
                 &self.shutdown,
                 sink,
             )?;

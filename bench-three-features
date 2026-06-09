@@ -53,7 +53,9 @@ timeout_secs="${WORK_LEAF_BENCH_TIMEOUT_SECS:-7200}"
 stall_secs="${WORK_LEAF_BENCH_STALL_SECS:-900}"
 listen_addr="${WORK_LEAF_BENCH_LISTEN:-127.0.0.1:0}"
 bin_dir="${WORK_LEAF_BENCH_BIN_DIR:-$repo_root/target/release}"
-bench_model="${WORK_LEAF_BENCH_MODEL:-default}"
+requested_bench_model="${WORK_LEAF_BENCH_MODEL:-default}"
+bench_model="$requested_bench_model"
+bench_model_source="requested"
 no_read_permission="${WORK_LEAF_BENCH_NO_READ_PERMISSION:-0}"
 run_id="${WORK_LEAF_BENCH_RUN_ID:-$(date +%Y%m%dT%H%M%S%z)}"
 mkdir -p "$tmp_parent" "$results_dir"
@@ -269,6 +271,66 @@ PY
   printf 'WORK_LEAF_CODEX_BACKEND=sdk\nWORK_LEAF_CODEX_SDK_PYTHON=%s\n' "$sdk_python" > "$tmp_root/codex-sdk-python.txt"
 }
 
+detect_codex_model() {
+  if [[ -n "${WORK_LEAF_BENCH_MODEL:-}" ]]; then
+    bench_model="$WORK_LEAF_BENCH_MODEL"
+    bench_model_source="WORK_LEAF_BENCH_MODEL"
+    return
+  fi
+
+  local codex_bin detected
+  codex_bin="$(command -v codex 2>/dev/null || true)"
+  if [[ -z "$codex_bin" ]]; then
+    bench_model="unknown"
+    bench_model_source="codex binary not found"
+    return
+  fi
+
+  detected="$(
+    "$sdk_python" - "$checkout_dir" "$codex_bin" 2>>"$tmp_root/sdk-install.log" <<'PY'
+import sys
+
+from openai_codex import CodexConfig
+from openai_codex.client import CodexClient
+from openai_codex.generated.v2_all import ConfigReadResponse
+
+cwd = sys.argv[1]
+codex_bin = sys.argv[2]
+client = CodexClient(
+    CodexConfig(
+        codex_bin=codex_bin,
+        cwd=cwd,
+        client_name="work_leaf_bench",
+        client_title="Work Leaf Bench",
+        client_version="0.1.0",
+        experimental_api=True,
+    )
+)
+client.start()
+try:
+    client.initialize()
+    config = client.request(
+        "config/read",
+        {"cwd": cwd, "includeLayers": False},
+        response_model=ConfigReadResponse,
+    ).config
+    print(getattr(config, "model", None) or "unknown")
+finally:
+    client.close()
+PY
+  )" || true
+
+  detected="$(printf '%s\n' "$detected" | tail -n1 | tr -d '\r')"
+  if [[ -n "$detected" && "$detected" != "unknown" ]]; then
+    bench_model="$detected"
+    bench_model_source="codex sdk config/read"
+  else
+    bench_model="unknown"
+    bench_model_source="codex sdk config/read unavailable"
+  fi
+  printf 'agent_model=%s\nagent_model_source=%s\n' "$bench_model" "$bench_model_source" >> "$tmp_root/codex-sdk-python.txt"
+}
+
 session_summary() {
   local state_file="$1"
   if [[ -f "$state_file" ]]; then
@@ -320,6 +382,8 @@ write_report() {
 - agent_backend: codex
 - agent_transport: sdk
 - agent_model: $bench_model
+- agent_model_source: $bench_model_source
+- requested_agent_model: $requested_bench_model
 - sdk_python: ${sdk_python:-unavailable}
 - no_read_permission: $no_read_permission
 - read_permission_mode: $read_permission_mode
@@ -368,6 +432,8 @@ EOF
     --arg agent_backend "codex" \
     --arg agent_transport "sdk" \
     --arg agent_model "$bench_model" \
+    --arg agent_model_source "$bench_model_source" \
+    --arg requested_agent_model "$requested_bench_model" \
     --arg sdk_python "${sdk_python:-unavailable}" \
     --arg no_read_permission "$no_read_permission" \
     --arg read_permission_mode "$read_permission_mode" \
@@ -387,7 +453,7 @@ EOF
     --argjson changed_lines_added "$changed_lines_added" \
     --argjson changed_lines_deleted "$changed_lines_deleted" \
     --argjson changed_lines_total "$changed_lines_total" \
-    '{run_id:$run_id,result:$result,benched_binary_commit:$benched_binary_commit,benched_binary_dirty:$benched_binary_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,agent_model:$agent_model,sdk_python:$sdk_python,no_read_permission:$no_read_permission,read_permission_mode:$read_permission_mode,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
+    '{run_id:$run_id,result:$result,benched_binary_commit:$benched_binary_commit,benched_binary_dirty:$benched_binary_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,agent_model:$agent_model,agent_model_source:$agent_model_source,requested_agent_model:$requested_agent_model,sdk_python:$sdk_python,no_read_permission:$no_read_permission,read_permission_mode:$read_permission_mode,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
     >> "$index_path"
   reported=1
   log "bench report: $report_path"
@@ -456,6 +522,7 @@ git -C "$repo_root" clone --no-checkout --no-hardlinks "$repo_root" "$checkout_d
 git -C "$checkout_dir" checkout --detach "$base_commit" >/dev/null
 mkdir -p "$child_tmp_dir"
 ensure_codex_sdk_python
+detect_codex_model
 
 daemon_args=("--listen" "$listen_addr")
 if [[ -n "${WORK_LEAF_BENCH_MODEL:-}" ]]; then
