@@ -715,23 +715,21 @@ where
         }
         self.ensure_session_exists(agent_id)?;
         self.ensure_session_exists(dependency)?;
-        if let Some(session) = self.sessions.get_mut(agent_id) {
-            if !session
+        if let Some(session) = self.sessions.get_mut(agent_id)
+            && !session
                 .depends_on
                 .iter()
                 .any(|existing| existing == dependency)
-            {
-                session.depends_on.push(dependency.clone());
-            }
+        {
+            session.depends_on.push(dependency.clone());
         }
-        if let Some(session) = self.sessions.get_mut(dependency) {
-            if !session
+        if let Some(session) = self.sessions.get_mut(dependency)
+            && !session
                 .depended_on_by
                 .iter()
                 .any(|existing| existing == agent_id)
-            {
-                session.depended_on_by.push(agent_id.clone());
-            }
+        {
+            session.depended_on_by.push(agent_id.clone());
         }
         self.publish_full_session(agent_id);
         self.publish_full_session(dependency);
