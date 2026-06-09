@@ -1142,7 +1142,7 @@ fn terminal_app_delays_dependent_new_until_dependency_closes() {
         "dependent launch must not reach the backend before the parent closes"
     );
 
-    app.handle_bytes(&[27, 23, b'h', b'k', b'l']);
+    app.handle_bytes(&[27, 23, b'h', b'k', b'k', b'l']);
     app.handle_bytes(b"iyes\n");
     assert!(app.wait_for_idle(Duration::from_secs(2)));
 
@@ -1150,12 +1150,14 @@ fn terminal_app_delays_dependent_new_until_dependency_closes() {
     assert!(
         launches
             .iter()
-            .any(|launch| launch.id.as_str() == "user-2"
-                && launch.prompt == "update follow-up"),
+            .any(|launch| launch.id.as_str() == "user-2" && launch.prompt == "update follow-up"),
         "{launches:?}"
     );
     let frame = app.render_frame();
-    assert!(frame.contains("work-leaf: feature marked closed"), "{frame}");
+    assert!(
+        frame.contains("work-leaf: feature marked closed"),
+        "{frame}"
+    );
     assert!(app.ui().render_left_pane().contains("CLOSED"));
 }
 
@@ -1327,19 +1329,11 @@ impl AgentBackend for FakeBackend {
             session.push_message(MessageRole::User, prompt);
             session.push_message(MessageRole::Agent, reply.clone());
         }
-        Ok(ChatMessage::new(
-            MessageRole::Agent,
-            reply,
-        ))
+        Ok(ChatMessage::new(MessageRole::Agent, reply))
     }
 
     fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
-        self.state
-            .lock()
-            .unwrap()
-            .sessions
-            .get(agent_id)
-            .cloned()
+        self.state.lock().unwrap().sessions.get(agent_id).cloned()
     }
 }
 
