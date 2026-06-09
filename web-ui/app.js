@@ -229,7 +229,7 @@ async function sendComposerMessage() {
     return;
   }
 
-  if (state.selectedAgentId) {
+  if (state.selectedAgentId !== COMMAND_SURFACE_ID) {
     await postJson(ENDPOINTS.agentMessage, {
       agent_id: state.selectedAgentId,
       message,

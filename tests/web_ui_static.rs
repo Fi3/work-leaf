@@ -62,6 +62,11 @@ fn static_web_ui_assets_are_present_and_wired_to_http_controller() {
     );
 
     assert!(
+        js.contains("if (state.selectedAgentId !== COMMAND_SURFACE_ID)"),
+        "app.js routes composer messages based on actual agent selection"
+    );
+
+    assert!(
         css.contains("@media"),
         "styles.css includes responsive layout rules"
     );
