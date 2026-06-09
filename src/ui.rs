@@ -1,6 +1,8 @@
 use std::{
     cell::{Cell, RefCell},
+    io::Write,
     path::PathBuf,
+    process::{Command, Stdio},
     time::{Duration, Instant},
 };
 
@@ -148,6 +150,12 @@ struct VisualSelection {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+struct VisualCursor {
+    pane: PaneFocus,
+    point: VisualPoint,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 struct LeftPaneLine {
     text: String,
     ready: bool,
@@ -217,6 +225,7 @@ pub struct TerminalUi {
     pending_bell: Cell<bool>,
     pending_clipboard: RefCell<Option<String>>,
     last_copied_text: Option<String>,
+    visual_cursor: Option<VisualCursor>,
     visual_selection: Option<VisualSelection>,
     status_notice: Option<StatusNotice>,
     command_mode_typing_count: usize,
@@ -242,6 +251,7 @@ impl TerminalUi {
             pending_bell: Cell::new(false),
             pending_clipboard: RefCell::new(None),
             last_copied_text: None,
+            visual_cursor: None,
             visual_selection: None,
             status_notice: None,
             command_mode_typing_count: 0,
@@ -421,6 +431,10 @@ impl TerminalUi {
             return self.handle_visual_key(key, visible_right_content);
         }
 
+        if self.visual_cursor.is_some() {
+            return self.handle_visual_cursor_key(key, visible_right_content, right_cursor_column);
+        }
+
         if let Some(pending) = self.pending.take() {
             return self.handle_pending_key(pending, key);
         }
@@ -440,11 +454,7 @@ impl TerminalUi {
                 Vec::new()
             }
             UiKey::Char('v') if self.mode == UiMode::Command => {
-                self.start_visual_selection(
-                    VisualSelectionMode::Character,
-                    visible_right_content,
-                    right_cursor_column,
-                );
+                self.start_visual_cursor(visible_right_content, right_cursor_column);
                 Vec::new()
             }
             UiKey::Char('V') if self.mode == UiMode::Command => {
@@ -805,15 +815,72 @@ impl TerminalUi {
         Vec::new()
     }
 
+    fn handle_visual_cursor_key(
+        &mut self,
+        key: UiKey,
+        visible_right_content: &str,
+        right_cursor_column: Option<usize>,
+    ) -> Vec<UiAction> {
+        match key {
+            UiKey::Esc => self.clear_visual_selection(),
+            UiKey::Char('v') => self.start_visual_selection(
+                VisualSelectionMode::Character,
+                visible_right_content,
+                right_cursor_column,
+            ),
+            UiKey::Char('V') => self.start_visual_selection(
+                VisualSelectionMode::Line,
+                visible_right_content,
+                right_cursor_column,
+            ),
+            UiKey::Char(CTRL_V) => self.start_visual_selection(
+                VisualSelectionMode::Block,
+                visible_right_content,
+                right_cursor_column,
+            ),
+            UiKey::Char('Y') => {
+                self.yank_current_line(visible_right_content, right_cursor_column);
+                self.clear_visual_selection();
+            }
+            UiKey::Char('h') | UiKey::Left => self.move_visual_cursor(0, -1, visible_right_content),
+            UiKey::Char('l') | UiKey::Right => self.move_visual_cursor(0, 1, visible_right_content),
+            UiKey::Char('j') | UiKey::Down => self.move_visual_cursor(1, 0, visible_right_content),
+            UiKey::Char('k') | UiKey::Up => self.move_visual_cursor(-1, 0, visible_right_content),
+            _ => {}
+        }
+        Vec::new()
+    }
+
+    fn start_visual_cursor(
+        &mut self,
+        visible_right_content: &str,
+        right_cursor_column: Option<usize>,
+    ) {
+        let point = self.visual_start_point(visible_right_content, right_cursor_column);
+        self.visual_cursor = Some(VisualCursor {
+            pane: self.focus,
+            point,
+        });
+    }
+
     fn start_visual_selection(
         &mut self,
         mode: VisualSelectionMode,
         visible_right_content: &str,
         right_cursor_column: Option<usize>,
     ) {
-        let point = self.visual_start_point(visible_right_content, right_cursor_column);
+        let (pane, point) = self
+            .visual_cursor
+            .take()
+            .map(|cursor| (cursor.pane, cursor.point))
+            .unwrap_or_else(|| {
+                (
+                    self.focus,
+                    self.visual_start_point(visible_right_content, right_cursor_column),
+                )
+            });
         self.visual_selection = Some(VisualSelection {
-            pane: self.focus,
+            pane,
             mode,
             anchor: point,
             cursor: point,
@@ -827,6 +894,7 @@ impl TerminalUi {
     }
 
     fn clear_visual_selection(&mut self) {
+        self.visual_cursor = None;
         self.visual_selection = None;
     }
 
@@ -880,21 +948,34 @@ impl TerminalUi {
         column_delta: isize,
         visible_right_content: &str,
     ) {
-        let Some(selection) = self.visual_selection.clone() else {
+        let Some((pane, point)) = self
+            .visual_selection
+            .as_ref()
+            .map(|selection| (selection.pane, selection.cursor))
+            .or_else(|| {
+                self.visual_cursor
+                    .as_ref()
+                    .map(|cursor| (cursor.pane, cursor.point))
+            })
+        else {
             return;
         };
-        let lines = self.visual_pane_lines(visible_right_content, selection.pane);
+        let lines = self.visual_pane_lines(visible_right_content, pane);
         if lines.is_empty() {
             return;
         }
         let max_row = lines.len().saturating_sub(1) as isize;
-        let next_row = (selection.cursor.row as isize + row_delta).clamp(0, max_row) as usize;
+        let next_row = (point.row as isize + row_delta).clamp(0, max_row) as usize;
         let line_len = lines[next_row].chars().count();
         let max_column = line_len.saturating_sub(1) as isize;
-        let next_column =
-            (selection.cursor.column as isize + column_delta).clamp(0, max_column) as usize;
+        let next_column = (point.column as isize + column_delta).clamp(0, max_column) as usize;
         if let Some(selection) = self.visual_selection.as_mut() {
             selection.cursor = VisualPoint {
+                row: next_row,
+                column: next_column,
+            };
+        } else if let Some(cursor) = self.visual_cursor.as_mut() {
+            cursor.point = VisualPoint {
                 row: next_row,
                 column: next_column,
             };
@@ -906,8 +987,17 @@ impl TerminalUi {
         visible_right_content: &str,
         right_cursor_column: Option<usize>,
     ) {
-        let point = self.visual_start_point(visible_right_content, right_cursor_column);
-        let lines = self.visual_pane_lines(visible_right_content, self.focus);
+        let (pane, point) = self
+            .visual_cursor
+            .as_ref()
+            .map(|cursor| (cursor.pane, cursor.point))
+            .unwrap_or_else(|| {
+                (
+                    self.focus,
+                    self.visual_start_point(visible_right_content, right_cursor_column),
+                )
+            });
+        let lines = self.visual_pane_lines(visible_right_content, pane);
         if let Some(text) = lines.get(point.row).cloned() {
             self.copy_text_to_clipboard(text);
         }
@@ -933,6 +1023,7 @@ impl TerminalUi {
     fn copy_text_to_clipboard(&mut self, text: String) {
         let char_count = text.chars().count();
         self.last_copied_text = Some(text.clone());
+        let _ = write_system_clipboard(&text);
         self.pending_clipboard.replace(Some(text));
         self.show_status_notice(
             format!("copied {char_count} chars"),
@@ -1061,15 +1152,22 @@ impl TerminalUi {
     }
 
     fn visual_cursor_position(&self, visible_right_content: &str) -> Option<(u16, u16)> {
-        let selection = self.visual_selection.as_ref()?;
-        let area = self.visual_pane_area(selection.pane)?;
-        let lines = self.visual_pane_lines(visible_right_content, selection.pane);
+        let (pane, point) = self
+            .visual_selection
+            .as_ref()
+            .map(|selection| (selection.pane, selection.cursor))
+            .or_else(|| {
+                self.visual_cursor
+                    .as_ref()
+                    .map(|cursor| (cursor.pane, cursor.point))
+            })?;
+        let area = self.visual_pane_area(pane)?;
+        let lines = self.visual_pane_lines(visible_right_content, pane);
         if lines.is_empty() {
             return Some((area.y.saturating_add(1), area.x.saturating_add(1)));
         }
-        let row = selection.cursor.row.min(lines.len().saturating_sub(1));
-        let column = selection
-            .cursor
+        let row = point.row.min(lines.len().saturating_sub(1));
+        let column = point
             .column
             .min(lines[row].chars().count().saturating_sub(1));
         Some((
@@ -1471,6 +1569,15 @@ impl TerminalUi {
             );
         }
 
+        if self.visual_cursor.is_some() {
+            return format!(
+                "mode=visual-cursor focus={} window={}/{}",
+                self.focus.as_str(),
+                self.active_window + 1,
+                self.windows.len()
+            );
+        }
+
         if let Some(notice) = self.active_status_notice() {
             return notice.to_string();
         }
@@ -1704,6 +1811,57 @@ fn base64_encode(bytes: &[u8]) -> String {
         }
     }
     encoded
+}
+
+fn write_system_clipboard(text: &str) -> bool {
+    clipboard_commands()
+        .into_iter()
+        .any(|(program, args)| run_clipboard_command(program, &args, text))
+}
+
+fn clipboard_commands() -> Vec<(&'static str, Vec<&'static str>)> {
+    let mut commands = Vec::new();
+    if std::env::var_os("WAYLAND_DISPLAY").is_some() {
+        commands.push(("wl-copy", Vec::new()));
+    }
+    if std::env::var_os("DISPLAY").is_some() {
+        commands.push(("xclip", vec!["-selection", "clipboard"]));
+        commands.push(("xsel", vec!["--clipboard", "--input"]));
+    }
+    if std::env::var_os("TMUX").is_some() {
+        commands.push(("tmux", vec!["load-buffer", "-w", "-"]));
+    }
+    #[cfg(target_os = "macos")]
+    commands.push(("pbcopy", Vec::new()));
+    #[cfg(target_os = "windows")]
+    commands.push(("clip.exe", Vec::new()));
+    commands
+}
+
+fn run_clipboard_command(program: &str, args: &[&str], text: &str) -> bool {
+    let Ok(mut child) = Command::new(program)
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    else {
+        return false;
+    };
+
+    let Some(mut stdin) = child.stdin.take() else {
+        let _ = child.kill();
+        let _ = child.wait();
+        return false;
+    };
+    if stdin.write_all(text.as_bytes()).is_err() {
+        drop(stdin);
+        let _ = child.kill();
+        let _ = child.wait();
+        return false;
+    }
+    drop(stdin);
+    child.wait().is_ok_and(|status| status.success())
 }
 
 fn buffer_to_string(buffer: &Buffer) -> String {

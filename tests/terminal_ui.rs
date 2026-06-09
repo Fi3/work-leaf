@@ -332,6 +332,41 @@ fn visual_mode_yanks_left_pane_line_and_block_selections() {
 }
 
 #[test]
+fn visual_mode_v_enters_cursor_mode_before_selecting_text() {
+    let mut ui = TerminalUi::new(120, 20);
+    let chat_a = AgentId::new("chat-a").unwrap();
+    let chat_b = AgentId::new("chat-b").unwrap();
+    ui.add_agent(AgentListEntry::new(chat_a, "parser"));
+    ui.add_agent(AgentListEntry::new(chat_b, "docs"));
+
+    ui.handle_key(UiKey::Char('v'));
+
+    assert!(!ui.visual_selection_active());
+    assert!(
+        ui.render_screen("right pane")
+            .contains("mode=visual-cursor focus=left")
+    );
+
+    ui.handle_key(UiKey::Char('j'));
+    assert!(!ui.visual_selection_active());
+    assert!(
+        ui.render_screen("right pane")
+            .contains("mode=visual-cursor focus=left")
+    );
+
+    ui.handle_key(UiKey::Char('v'));
+    assert!(ui.visual_selection_active());
+    ui.handle_key(UiKey::Esc);
+
+    ui.handle_key(UiKey::Char('v'));
+    ui.handle_key(UiKey::Char('j'));
+    ui.handle_key(UiKey::Char('V'));
+    ui.handle_key(UiKey::Char('y'));
+
+    assert_eq!(ui.copied_text(), Some(" parser chat-a"));
+}
+
+#[test]
 fn raw_mode_screen_uses_crlf_so_frame_fills_terminal_width() {
     let ui = TerminalUi::new(80, 8);
     let rendered = ui.render_screen("command chat");

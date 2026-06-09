@@ -278,7 +278,7 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
         "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
         "summary: README changes from before to after",
         "NO_FINDINGS",
-        "fork launch reply",
+        "backend status reply",
         "follow reply",
     ]);
     let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
@@ -303,6 +303,7 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
     let sends_after_review = backend.sends().len();
 
     controller.send_message(&agent_id, "/status").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
     let snapshot = controller.snapshot();
     let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
     assert_eq!(
@@ -314,29 +315,15 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
         patch_agent
             .lines
             .iter()
-            .any(|line| line.contains("status: needs user decision"))
+            .any(|line| line == "backend status reply")
     );
-    assert_eq!(backend.sends().len(), sends_after_review);
-
-    controller
-        .send_message(&agent_id, "/fork try another approach")
-        .unwrap();
-    assert!(controller.wait_for_idle(Duration::from_secs(1)));
-    let snapshot = controller.snapshot();
-    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
-    assert_eq!(
-        patch_agent.completion,
-        Some(WorkLeafCompletion::NeedsDecision)
-    );
-    let fork_agent = AgentId::new("user-2").unwrap();
-    let fork_session = snapshot.session(&fork_agent).expect("fork session exists");
+    assert_eq!(backend.sends().len(), sends_after_review + 1);
     assert!(
-        fork_session
-            .lines
+        backend
+            .sends()
             .iter()
-            .any(|line| line == "fork launch reply")
+            .any(|(target, prompt)| target == &agent_id && prompt == "/status")
     );
-    assert_eq!(backend.sends().len(), sends_after_review);
 
     controller.send_message(&agent_id, "maybe").unwrap();
     let snapshot = controller.snapshot();
@@ -351,7 +338,7 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
             .iter()
             .any(|line| line == "work-leaf: answer yes or no to close this feature")
     );
-    assert_eq!(backend.sends().len(), sends_after_review);
+    assert_eq!(backend.sends().len(), sends_after_review + 1);
 
     controller.send_message(&agent_id, "yes").unwrap();
     let snapshot = controller.snapshot();
@@ -363,7 +350,7 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
             .iter()
             .any(|line| line == "work-leaf: feature marked closed")
     );
-    assert_eq!(backend.sends().len(), sends_after_review);
+    assert_eq!(backend.sends().len(), sends_after_review + 1);
 
     controller
         .send_message(&agent_id, "add another tweak")
@@ -468,8 +455,8 @@ fn controller_starts_review_when_agent_reports_done_after_prior_patch_turn() {
 }
 
 #[test]
-fn controller_handles_agent_slash_commands_without_resuming_agent() {
-    let backend = FakeBackend::new(["launch reply", "backend should not receive slash command"]);
+fn controller_sends_agent_slash_commands_to_the_backend_unchanged() {
+    let backend = FakeBackend::new(["launch reply", "backend status output"]);
     let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
     let mut controller = WorkLeafController::new(chat);
 
@@ -478,6 +465,7 @@ fn controller_handles_agent_slash_commands_without_resuming_agent() {
     controller.drain_events();
 
     controller.send_message(&agent_id, "/status").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
 
     let snapshot = controller.snapshot();
     let session = snapshot.session(&agent_id).expect("session exists");
@@ -487,17 +475,18 @@ fn controller_handles_agent_slash_commands_without_resuming_agent() {
         session
             .lines
             .iter()
-            .any(|line| line.contains("work-leaf: user-1 status"))
+            .any(|line| line == "backend status output")
     );
-    assert!(
-        backend.sends().is_empty(),
-        "slash commands should execute locally without an agent resume"
+    assert_eq!(
+        backend.sends(),
+        vec![(agent_id.clone(), "/status".to_string())],
+        "slash commands must be sent to the selected agent unchanged"
     );
 }
 
 #[test]
-fn controller_fork_slash_command_creates_new_agent_without_resuming_source_agent() {
-    let backend = FakeBackend::new(["launch reply", "fork launch reply"]);
+fn controller_sends_fork_slash_command_to_the_same_agent_unchanged() {
+    let backend = FakeBackend::new(["launch reply", "backend fork output"]);
     let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
     let mut controller = WorkLeafController::new(chat);
 
@@ -510,7 +499,6 @@ fn controller_fork_slash_command_creates_new_agent_without_resuming_source_agent
         .unwrap();
     assert!(controller.wait_for_idle(Duration::from_secs(1)));
 
-    let fork_agent = AgentId::new("user-2").unwrap();
     let snapshot = controller.snapshot();
     let source = snapshot
         .session(&source_agent)
@@ -525,17 +513,16 @@ fn controller_fork_slash_command_creates_new_agent_without_resuming_source_agent
         source
             .lines
             .iter()
-            .any(|line| line == "work-leaf: forked user-1 into user-2")
+            .any(|line| line == "backend fork output")
     );
-    let fork = snapshot.session(&fork_agent).expect("fork agent exists");
-    assert_eq!(fork.loading, None);
-    assert!(
-        fork.lines.iter().any(|line| line == "fork launch reply"),
-        "{fork:?}"
-    );
-    assert!(
-        backend.sends().is_empty(),
-        "fork slash commands should launch a new agent without resuming the source agent"
+    assert!(snapshot.session(&AgentId::new("user-2").unwrap()).is_none());
+    assert_eq!(
+        backend.sends(),
+        vec![(
+            source_agent.clone(),
+            "/fork try an alternate implementation".to_string()
+        )],
+        "slash commands must not be converted into Work Leaf actions"
     );
 }
 
@@ -848,7 +835,7 @@ fn controller_can_create_review_and_linearize_three_features_from_missing_featur
         .create_agent("add vim like visual mode for both panes")
         .unwrap();
     let slash_id = controller
-        .create_agent("execute slash commands locally when a prompt starts with slash")
+        .create_agent("send slash commands unchanged to the selected backend agent")
         .unwrap();
     let completion_id = controller
         .create_agent("ask yes or no when reviewed patch work is done")
@@ -1097,7 +1084,7 @@ impl ThreeFeatureBackend {
         }
         if request.prompt.contains("slash") {
             return feature_patch(
-                "local slash commands",
+                "agent slash command pass-through",
                 "features/slash_commands.txt",
                 "implemented slash commands",
             );

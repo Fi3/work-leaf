@@ -629,7 +629,13 @@ where
     }
 
     fn handle_command_line(&mut self, line: &str) {
-        self.controller.execute_command_line(line);
+        if is_agent_slash_command_line(line)
+            && let Some(agent_id) = self.ui.selected_agent().cloned()
+        {
+            self.controller.send_message(&agent_id, line);
+        } else {
+            self.controller.execute_command_line(line);
+        }
         self.apply_controller_events();
     }
 
@@ -1005,6 +1011,15 @@ fn session_display_title(session: &WorkLeafSession) -> String {
         Some(WorkLeafCompletion::Closed) => format!("{} CLOSED", session.title),
         None => session.title.clone(),
     }
+}
+
+fn is_agent_slash_command_line(line: &str) -> bool {
+    let line = line.trim();
+    line.strip_prefix('/').is_some_and(|rest| {
+        rest.chars()
+            .next()
+            .is_some_and(|first| !first.is_whitespace())
+    })
 }
 
 #[cfg(test)]

@@ -44,9 +44,9 @@ fn terminal_app_new_and_chat_message_use_real_command_chat_backend() {
 }
 
 #[test]
-fn terminal_app_slash_command_from_chat_view_executes_locally() {
-    let backend = FakeBackend::new(["launch reply", "backend should not receive /status"]);
-    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+fn terminal_app_slash_command_from_chat_view_sends_to_selected_agent() {
+    let backend = FakeBackend::new(["launch reply", "backend status output"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
     let mut app = TerminalApp::new(chat, 100, 24);
 
     app.handle_bytes(b":new status command\n");
@@ -57,18 +57,38 @@ fn terminal_app_slash_command_from_chat_view_executes_locally() {
     assert_eq!(app.ui().mode(), UiMode::Insert);
     assert_eq!(app.ui().focus(), PaneFocus::Right);
     assert!(app.render_frame().contains("user: /status"));
-    assert!(app.render_frame().contains("work-leaf: user-1 status"));
+    assert!(app.render_frame().contains("backend status output"));
 
     let backend = app.into_chat().into_backend();
-    let sends = backend.sends();
-    assert!(
-        sends.is_empty(),
-        "slash commands must execute locally without resuming the backend"
+    assert_eq!(
+        backend.sends(),
+        vec![(AgentId::new("user-1").unwrap(), "/status".to_string())]
     );
 }
 
 #[test]
-fn terminal_app_codex_slash_command_does_not_resume_agent() {
+fn terminal_app_slash_command_from_colon_prompt_sends_to_selected_agent() {
+    let backend = FakeBackend::new(["launch reply", "backend colon status output"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut app = TerminalApp::new(chat, 100, 24);
+
+    app.handle_bytes(b":new status command\n");
+    app.wait_for_idle(Duration::from_secs(1));
+    app.handle_bytes(b"\x1b:/status\n");
+    app.wait_for_idle(Duration::from_secs(1));
+
+    assert!(app.render_frame().contains("user: /status"));
+    assert!(app.render_frame().contains("backend colon status output"));
+
+    let backend = app.into_chat().into_backend();
+    assert_eq!(
+        backend.sends(),
+        vec![(AgentId::new("user-1").unwrap(), "/status".to_string())]
+    );
+}
+
+#[test]
+fn terminal_app_codex_status_slash_command_reports_backend_status_without_resume() {
     let root = temp_dir("terminal-app-codex-slash-command");
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
@@ -86,7 +106,7 @@ done
 input=$(cat)
 if [ \"$seen_resume\" = \"1\" ]; then
   printf '%s\\n' \"$input\" >> \"$(dirname \"$0\")/resume.log\"
-  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"resume\",\"type\":\"agent_message\",\"text\":\"backend resume should not run\"}}'
+  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"resume\",\"type\":\"agent_message\",\"text\":\"unexpected resume input\"}}'
 else
   printf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-slash-command\"}'
   printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"launch\",\"type\":\"agent_message\",\"text\":\"launch reply from fake codex\"}}'
@@ -110,9 +130,12 @@ fi
 
     let frame = app.render_frame();
     assert!(frame.contains("user: /status"));
-    assert!(frame.contains("work-leaf: user-1 status"));
-    assert!(!frame.contains("backend resume should not run"), "{frame}");
-    assert!(!fake_bin.join("resume.log").exists());
+    assert!(frame.contains(">_ OpenAI Codex"), "{frame}");
+    assert!(frame.contains("Session: thread-slash-command"), "{frame}");
+    assert!(
+        !fake_bin.join("resume.log").exists(),
+        "Codex /status must not be sent through exec resume"
+    );
 }
 
 #[test]
@@ -987,6 +1010,7 @@ fn terminal_app_marks_reviewed_patch_agent_done_and_closed_visibly() {
         "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
         "summary: README changes from before to after",
         "NO_FINDINGS",
+        "backend status output",
         "follow reply",
     ]);
     let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
@@ -1004,20 +1028,22 @@ fn terminal_app_marks_reviewed_patch_agent_done_and_closed_visibly() {
     let sends_after_review = backend.sends().len();
 
     app.handle_bytes(b"i/status\n");
+    assert!(app.wait_for_idle(Duration::from_secs(1)));
     let frame = app.render_frame();
     assert!(frame.contains("user: /status"));
-    assert!(frame.contains("status: needs user decision"));
-    assert_eq!(backend.sends().len(), sends_after_review);
+    assert!(frame.contains("backend status output"));
+    assert!(app.ui().render_left_pane().contains("DONE?"));
+    assert_eq!(backend.sends().len(), sends_after_review + 1);
 
     app.handle_bytes(b"maybe\n");
     assert!(app.render_frame().contains("work-leaf: answer yes or no"));
-    assert_eq!(backend.sends().len(), sends_after_review);
+    assert_eq!(backend.sends().len(), sends_after_review + 1);
 
     app.handle_bytes(b"yes\n");
     let frame = app.render_frame();
     assert!(frame.contains("work-leaf: feature marked closed"));
     assert!(app.ui().render_left_pane().contains("CLOSED"));
-    assert_eq!(backend.sends().len(), sends_after_review);
+    assert_eq!(backend.sends().len(), sends_after_review + 1);
 
     app.handle_bytes(b"add another tweak\n");
     assert!(app.wait_for_idle(Duration::from_secs(1)));

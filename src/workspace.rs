@@ -255,12 +255,10 @@ where
         if message.is_empty() {
             return Ok(());
         }
-        if let Some(command) = AgentSlashCommand::parse(message) {
-            self.append_agent_line(agent_id, format!("user: {message}"));
-            self.handle_agent_slash_command(agent_id, command);
-            return Ok(());
-        }
-        if self.session_completion(agent_id) == Some(WorkLeafCompletion::NeedsDecision) {
+        let is_agent_slash_command = is_agent_slash_command_message(message);
+        if !is_agent_slash_command
+            && self.session_completion(agent_id) == Some(WorkLeafCompletion::NeedsDecision)
+        {
             self.handle_completion_answer(agent_id, message);
             return Ok(());
         }
@@ -696,81 +694,6 @@ where
         }
     }
 
-    fn handle_agent_slash_command(&mut self, agent_id: &AgentId, command: AgentSlashCommand<'_>) {
-        match command {
-            AgentSlashCommand::Help => {
-                self.append_agent_line(
-                    agent_id,
-                    "work-leaf: available agent commands: /status, /fork [prompt], /review, /help"
-                        .to_string(),
-                );
-            }
-            AgentSlashCommand::Status => {
-                let status = self.agent_status_text(agent_id);
-                self.append_agent_line(agent_id, status);
-            }
-            AgentSlashCommand::Fork(prompt) => {
-                let source = self
-                    .sessions
-                    .get(agent_id)
-                    .map(|session| format!("{} ({})", session.id, session.title))
-                    .unwrap_or_else(|| agent_id.to_string());
-                let prompt = if prompt.trim().is_empty() {
-                    format!("Fork {source}. Continue the same task from this chat.")
-                } else {
-                    format!("Fork {source}. {}", prompt.trim())
-                };
-                match self.create_agent(prompt) {
-                    Ok(new_agent_id) => self.append_agent_line(
-                        agent_id,
-                        format!("work-leaf: forked {agent_id} into {new_agent_id}"),
-                    ),
-                    Err(error) => self.append_agent_line(agent_id, command_chat_error_text(&error)),
-                }
-            }
-            AgentSlashCommand::Review => match self.start_review_for_patch_agent(agent_id) {
-                Ok(reviewers) if reviewers.is_empty() => self.append_agent_line(
-                    agent_id,
-                    "work-leaf: no reviewable patch commit is ready for this agent".to_string(),
-                ),
-                Ok(reviewers) => self.append_agent_line(
-                    agent_id,
-                    format!(
-                        "work-leaf: started review {}",
-                        display_agent_ids(&reviewers)
-                    ),
-                ),
-                Err(error) => self.append_agent_line(agent_id, command_chat_error_text(&error)),
-            },
-            AgentSlashCommand::Unknown(name) => {
-                self.append_agent_line(
-                    agent_id,
-                    format!(
-                        "work-leaf: unknown agent command `/{name}`; available: /status, /fork, /review, /help"
-                    ),
-                );
-            }
-        }
-    }
-
-    fn agent_status_text(&self, agent_id: &AgentId) -> String {
-        let Some(session) = self.sessions.get(agent_id) else {
-            return format!("work-leaf: {agent_id} status: unknown session");
-        };
-        let state = match (session.loading, session.completion) {
-            (_, Some(WorkLeafCompletion::Closed)) => "closed",
-            (_, Some(WorkLeafCompletion::NeedsDecision)) => "needs user decision",
-            (Some(WorkLeafLoading::Launching), _) => "launching",
-            (Some(WorkLeafLoading::WaitingForReply), _) => "waiting",
-            (None, None) => "ready",
-        };
-        format!(
-            "work-leaf: {agent_id} status: {state}; title: {}; lines: {}",
-            session.title,
-            session.lines.len()
-        )
-    }
-
     fn handle_completion_answer(&mut self, agent_id: &AgentId, message: &str) {
         self.append_agent_line(agent_id, format!("user: {message}"));
         match message.to_ascii_lowercase().as_str() {
@@ -1149,43 +1072,12 @@ enum CommandAgentResponse {
     Reply(String),
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum AgentSlashCommand<'a> {
-    Help,
-    Status,
-    Fork(&'a str),
-    Review,
-    Unknown(&'a str),
-}
-
-impl<'a> AgentSlashCommand<'a> {
-    fn parse(message: &'a str) -> Option<Self> {
-        let message = message.strip_prefix('/')?;
-        let command_len = message
-            .char_indices()
-            .find_map(|(index, ch)| ch.is_whitespace().then_some(index))
-            .unwrap_or(message.len());
-        if command_len == 0 {
-            return None;
-        }
-        let command = &message[..command_len];
-        let rest = message[command_len..].trim_start();
-        Some(match command {
-            "help" | "?" => Self::Help,
-            "status" => Self::Status,
-            "fork" => Self::Fork(rest),
-            "review" => Self::Review,
-            other => Self::Unknown(other),
-        })
-    }
-}
-
-fn display_agent_ids(agent_ids: &[AgentId]) -> String {
-    agent_ids
-        .iter()
-        .map(AgentId::as_str)
-        .collect::<Vec<_>>()
-        .join(", ")
+fn is_agent_slash_command_message(message: &str) -> bool {
+    message.strip_prefix('/').is_some_and(|rest| {
+        rest.chars()
+            .next()
+            .is_some_and(|first| !first.is_whitespace())
+    })
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

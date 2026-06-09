@@ -28,6 +28,14 @@ impl SandboxMode {
             Self::DangerFullAccess => "danger-full-access",
         }
     }
+
+    fn display_name(&self) -> &'static str {
+        match self {
+            Self::ReadOnly => "read-only",
+            Self::WorkspaceWrite => "workspace-write",
+            Self::DangerFullAccess => "danger-full-access",
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -190,6 +198,89 @@ impl CodexBackend {
             .sessions
             .get(agent_id)
             .cloned()
+    }
+
+    fn handle_slash_command(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+    ) -> Result<Option<ChatMessage>, AgentError> {
+        let Some(command) = CodexSlashCommand::parse(prompt) else {
+            return Ok(None);
+        };
+        let reply = match command {
+            CodexSlashCommand::Status => self.codex_status_text(agent_id),
+            CodexSlashCommand::Unsupported(name) => format!(
+                "OpenAI Codex command `/{name}` is not available through the non-interactive codex exec backend.\n\
+The command was not sent as a model prompt. Supported backend slash commands: /status."
+            ),
+        };
+        self.record_send_reply(agent_id, prompt, reply).map(Some)
+    }
+
+    fn codex_status_text(&self, agent_id: &AgentId) -> String {
+        let state = self
+            .state
+            .lock()
+            .expect("codex backend state mutex poisoned");
+        let session = state.sessions.get(agent_id);
+        let thread_id = state
+            .thread_ids
+            .get(agent_id)
+            .map(String::as_str)
+            .unwrap_or(agent_id.as_str());
+        let feature = session
+            .map(|session| session.feature.as_str())
+            .unwrap_or("unknown");
+        let message_count = session
+            .map(|session| session.messages.len())
+            .unwrap_or_default();
+        let model = self.config.model.as_deref().unwrap_or("configured default");
+        format!(
+            ">_ OpenAI Codex\n\n\
+Model: {model}\n\
+Directory: {}\n\
+Permissions: sandbox {}, approval never\n\
+Agent: {agent_id}\n\
+Feature: {feature}\n\
+Session: {thread_id}\n\
+Messages: {message_count}\n\
+Transport: codex exec",
+            self.config.project_dir.display(),
+            self.config.sandbox.display_name()
+        )
+    }
+
+    fn record_send_reply(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+        reply: String,
+    ) -> Result<ChatMessage, AgentError> {
+        let message = ChatMessage::new(MessageRole::Agent, reply);
+        let mut state = self
+            .state
+            .lock()
+            .expect("codex backend state mutex poisoned");
+        if let Some(session) = state.sessions.get_mut(agent_id) {
+            session.push_message(MessageRole::User, prompt);
+        } else {
+            state.sessions.insert(
+                agent_id.clone(),
+                AgentSession::new(AgentLaunch::new(
+                    agent_id.clone(),
+                    AgentKind::Codex,
+                    "unknown",
+                    prompt,
+                )),
+            );
+        }
+        let session = state
+            .sessions
+            .get_mut(agent_id)
+            .ok_or_else(|| AgentError::UnknownSession(agent_id.clone()))?;
+        session.messages.push(message.clone());
+        Ok(message)
     }
 
     fn exec_invocation(&self, stdin: String) -> CodexInvocation {
@@ -390,33 +481,13 @@ impl AgentBackend for CodexBackend {
 
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
         let _operation_guard = self.acquire_agent_operation(agent_id);
+        if let Some(message) = self.handle_slash_command(agent_id, prompt)? {
+            return Ok(message);
+        }
         let invocation = self.build_send_invocation(agent_id, prompt)?;
         let output = self.run_invocation_streaming(&invocation, Some(agent_id), &mut |_| {})?;
         let reply = parse_codex_output(&output).agent_reply.unwrap_or(output);
-        let message = ChatMessage::new(MessageRole::Agent, reply);
-        let mut state = self
-            .state
-            .lock()
-            .expect("codex backend state mutex poisoned");
-        if let Some(session) = state.sessions.get_mut(agent_id) {
-            session.push_message(MessageRole::User, prompt);
-        } else {
-            state.sessions.insert(
-                agent_id.clone(),
-                AgentSession::new(AgentLaunch::new(
-                    agent_id.clone(),
-                    AgentKind::Codex,
-                    "unknown",
-                    prompt,
-                )),
-            );
-        }
-        let session = state
-            .sessions
-            .get_mut(agent_id)
-            .ok_or_else(|| AgentError::UnknownSession(agent_id.clone()))?;
-        session.messages.push(message.clone());
-        Ok(message)
+        self.record_send_reply(agent_id, prompt, reply)
     }
 
     fn shutdown_handle(&self) -> AgentShutdownHandle {
@@ -455,33 +526,38 @@ impl AgentBackend for CodexBackend {
         sink: &mut dyn FnMut(AgentStreamEvent),
     ) -> Result<ChatMessage, AgentError> {
         let _operation_guard = self.acquire_agent_operation(agent_id);
+        if let Some(message) = self.handle_slash_command(agent_id, prompt)? {
+            return Ok(message);
+        }
         let invocation = self.build_send_invocation(agent_id, prompt)?;
         let output = self.run_invocation_streaming(&invocation, Some(agent_id), sink)?;
         let reply = parse_codex_output(&output).agent_reply.unwrap_or(output);
-        let message = ChatMessage::new(MessageRole::Agent, reply);
-        let mut state = self
-            .state
-            .lock()
-            .expect("codex backend state mutex poisoned");
-        if let Some(session) = state.sessions.get_mut(agent_id) {
-            session.push_message(MessageRole::User, prompt);
-        } else {
-            state.sessions.insert(
-                agent_id.clone(),
-                AgentSession::new(AgentLaunch::new(
-                    agent_id.clone(),
-                    AgentKind::Codex,
-                    "unknown",
-                    prompt,
-                )),
-            );
+        self.record_send_reply(agent_id, prompt, reply)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum CodexSlashCommand<'a> {
+    Status,
+    Unsupported(&'a str),
+}
+
+impl<'a> CodexSlashCommand<'a> {
+    fn parse(prompt: &'a str) -> Option<Self> {
+        let prompt = prompt.trim();
+        let command = prompt.strip_prefix('/')?;
+        let command_len = command
+            .char_indices()
+            .find_map(|(index, ch)| ch.is_whitespace().then_some(index))
+            .unwrap_or(command.len());
+        if command_len == 0 {
+            return None;
         }
-        let session = state
-            .sessions
-            .get_mut(agent_id)
-            .ok_or_else(|| AgentError::UnknownSession(agent_id.clone()))?;
-        session.messages.push(message.clone());
-        Ok(message)
+        let name = &command[..command_len];
+        Some(match name {
+            "status" => Self::Status,
+            other => Self::Unsupported(other),
+        })
     }
 }
 

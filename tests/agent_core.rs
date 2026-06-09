@@ -272,6 +272,95 @@ fn codex_backend_resume_invocation_uses_raw_follow_up_after_launch_context() {
 }
 
 #[test]
+fn codex_backend_status_slash_command_reports_backend_status_without_resume() {
+    let root = temp_dir("codex-status-slash-command");
+    let codex = root.join("codex");
+    fs::write(
+        &codex,
+        "#!/bin/sh\nprintf '%s\\n' should-not-run >> \"$(dirname \"$0\")/runs.log\"\n",
+    )
+    .unwrap();
+    make_executable(&codex);
+    let mut backend = CodexBackend::new(
+        CodexCommandConfig::new(root.clone())
+            .with_binary(&codex)
+            .with_model("gpt-test"),
+        PromptPolicy::for_restricted_agents(),
+    );
+    let agent_id = AgentId::new("chat-a").unwrap();
+    backend
+        .record_launch_output(
+            AgentLaunch::new(
+                agent_id.clone(),
+                AgentKind::Codex,
+                "parser",
+                "implement parser",
+            ),
+            r#"{"type":"thread.started","thread_id":"thread-123"}"#.to_string(),
+        )
+        .unwrap();
+
+    let reply = backend.send(&agent_id, "/status").unwrap();
+
+    assert!(reply.text.contains(">_ OpenAI Codex"));
+    assert!(reply.text.contains("Model: gpt-test"));
+    assert!(
+        reply
+            .text
+            .contains(&format!("Directory: {}", root.display()))
+    );
+    assert!(reply.text.contains("Permissions: sandbox read-only"));
+    assert!(reply.text.contains("Agent: chat-a"));
+    assert!(reply.text.contains("Session: thread-123"));
+    assert!(
+        !root.join("runs.log").exists(),
+        "Codex status must not resume the model session"
+    );
+    let session = backend.session(&agent_id).unwrap();
+    assert_eq!(session.messages[2].role, MessageRole::User);
+    assert_eq!(session.messages[2].text, "/status");
+    assert_eq!(session.messages[3].role, MessageRole::Agent);
+    assert!(session.messages[3].text.contains(">_ OpenAI Codex"));
+}
+
+#[test]
+fn codex_backend_unsupported_slash_command_is_not_sent_as_model_prompt() {
+    let root = temp_dir("codex-unsupported-slash-command");
+    let codex = root.join("codex");
+    fs::write(
+        &codex,
+        "#!/bin/sh\nprintf '%s\\n' should-not-run >> \"$(dirname \"$0\")/runs.log\"\n",
+    )
+    .unwrap();
+    make_executable(&codex);
+    let mut backend = CodexBackend::new(
+        CodexCommandConfig::new(root.clone()).with_binary(&codex),
+        PromptPolicy::for_restricted_agents(),
+    );
+    let agent_id = AgentId::new("chat-a").unwrap();
+    backend
+        .record_launch_output(
+            AgentLaunch::new(
+                agent_id.clone(),
+                AgentKind::Codex,
+                "parser",
+                "implement parser",
+            ),
+            r#"{"type":"thread.started","thread_id":"thread-123"}"#.to_string(),
+        )
+        .unwrap();
+
+    let reply = backend.send(&agent_id, "/fork try another path").unwrap();
+
+    assert!(reply.text.contains("OpenAI Codex command `/fork`"));
+    assert!(reply.text.contains("not sent as a model prompt"));
+    assert!(
+        !root.join("runs.log").exists(),
+        "unsupported Codex slash commands must not become model prompts"
+    );
+}
+
+#[test]
 fn codex_backend_process_failure_reports_stdout_when_stderr_is_empty() {
     let root = temp_dir("codex-failure-stdout");
     let codex = root.join("codex");

@@ -244,9 +244,10 @@ Frontend code should use these methods:
 - `create_agent` to reserve, select, and launch an agent session from a prompt.
 - `send_command_agent_message` to route chat from the Work Leaf command surface to `command-agent`.
 - `send_message` to send a prompt to one session while other sessions may still be busy.
-  Messages that start with `/` followed by a non-empty command token are local agent-chat commands;
-  the controller handles `/status`, `/fork [prompt]`, `/review`, and `/help` immediately without
-  resuming the backend agent session.
+  Messages that start with `/` followed by a non-empty command token are routed to the selected
+  backend instead of being interpreted as Work Leaf commands. The slash command output visible in
+  the chat is the backend response; the Codex `exec` backend handles `/status` as backend
+  introspection because `codex exec resume` accepts prompts rather than interactive slash commands.
 - `start_review` to create or resume reviewer sessions for explicit history-wide review and stream
   reviewer output.
 - `is_busy`, `wait_for_idle`, and `wait_for_session_line` for tests and event loops.
@@ -312,8 +313,9 @@ surface is selected. Bracketed-paste newlines and Shift+Enter are chat prompt li
 Enter submits the buffered chat text.
 When an agent chat is selected in command mode, `/` focuses the chat, seeds the chat buffer with
 `/`, and enters insert mode so `/status`-style input submits through the same selected-agent chat
-path. Selected-agent chat messages whose first token is a slash command are resolved by the
-controller and return a Work Leaf response in the chat transcript without sending a provider request.
+path. Selected-agent chat messages whose first token is a slash command are routed to the selected
+backend rather than the Work Leaf command parser. Slash-prefixed colon-prompt input also routes to
+the selected agent chat when an agent is selected.
 
 The terminal app maps a session to a left-pane `READY` marker when the controller exposes no loading
 state for that session. Sessions waiting for a completion answer show `DONE?` in the row title, and
