@@ -386,7 +386,7 @@ fn codex_backend_streams_recorded_token_usage() {
     let codex = root.join("codex");
     fs::write(
         &codex,
-        "#!/bin/sh\nprintf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-usage\"}' '{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"launch ok\"}}' '{\"type\":\"turn.completed\",\"usage\":{\"input_tokens\":100,\"cached_input_tokens\":40,\"output_tokens\":9,\"reasoning_output_tokens\":3}}'\n",
+        "#!/bin/sh\ncat >/dev/null\nprintf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-usage\"}' '{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"launch ok\"}}' '{\"type\":\"turn.completed\",\"usage\":{\"input_tokens\":100,\"cached_input_tokens\":40,\"output_tokens\":9,\"reasoning_output_tokens\":3}}'\n",
     )
     .unwrap();
     make_executable(&codex);

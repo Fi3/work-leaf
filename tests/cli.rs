@@ -714,6 +714,10 @@ fn scripted_command_chat_reports_agent_launch_error_without_exiting() {
 
     let mut child = Command::new(env!("CARGO_BIN_EXE_work-leaf"))
         .env("PATH", format!("{}:{}", fake_bin.display(), current_path()))
+        .env("WORK_LEAF_IN_PROCESS", "1")
+        .env("WORK_LEAF_CODEX_BACKEND", "exec")
+        .env_remove("WORK_LEAF_CODEX_SDK_PYTHON")
+        .env_remove("WORK_LEAF_ORCHESTRATOR_URL")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -728,12 +732,16 @@ fn scripted_command_chat_reports_agent_launch_error_without_exiting() {
 
     let output = child.wait_with_output().unwrap();
 
-    assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "status: {}\nstdout:\n{stdout}\nstderr:\n{stderr}",
+        output.status
+    );
     assert!(stdout.contains("work-leaf orchestrator"));
     assert!(stdout.contains("codex launch failed"));
     assert!(stdout.contains("Command chat:"));
-    let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.is_empty());
 }
 

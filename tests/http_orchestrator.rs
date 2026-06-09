@@ -2,7 +2,7 @@
 
 use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};
-use std::net::TcpStream;
+use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -13,6 +13,9 @@ use work_leaf::{AgentId, HttpControllerClient};
 
 #[test]
 fn localhost_http_controller_preserves_terminal_workflow_state() {
+    if localhost_tcp_is_unavailable() {
+        return;
+    }
     let root = temp_dir("http-controller");
     let fake_bin = write_fake_codex(root.path(), HTTP_CODEX);
     let mut daemon = Daemon::spawn(root.path(), &fake_bin);
@@ -56,6 +59,9 @@ fn localhost_http_controller_preserves_terminal_workflow_state() {
 
 #[test]
 fn localhost_http_controller_serves_static_web_ui_assets() {
+    if localhost_tcp_is_unavailable() {
+        return;
+    }
     let root = temp_dir("http-web-ui");
     let fake_bin = write_fake_codex(root.path(), HTTP_CODEX);
     let mut daemon = Daemon::spawn(root.path(), &fake_bin);
@@ -95,6 +101,20 @@ fn http_get(base_url: &str, path: &str) -> String {
     let mut response = String::new();
     stream.read_to_string(&mut response).unwrap();
     response
+}
+
+fn localhost_tcp_is_unavailable() -> bool {
+    match TcpListener::bind("127.0.0.1:0") {
+        Ok(listener) => {
+            drop(listener);
+            false
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
+            eprintln!("skipping localhost HTTP test: {error}");
+            true
+        }
+        Err(error) => panic!("unexpected localhost bind failure: {error}"),
+    }
 }
 
 struct Daemon {
