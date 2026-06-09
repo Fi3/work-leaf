@@ -915,7 +915,6 @@ pub fn render_command_chat_help() -> String {
     [
         "Command chat:",
         "  new [prompt...]",
-        "  promote <agent-id> [prompt...]",
         "  review",
         "  linearize",
         "  quit",
