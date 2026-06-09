@@ -9,8 +9,8 @@ use std::thread;
 use std::time::Duration;
 
 use crate::agent::{
-    AgentBackend, AgentId, AgentLaunch, AgentProfile, AgentShutdownHandle, AgentStreamEvent,
-    PromptPolicy, ReadPermission,
+    AgentBackend, AgentId, AgentLaunch, AgentProfile, AgentSession, AgentShutdownHandle,
+    AgentStreamEvent, PromptPolicy, ReadPermission,
 };
 use crate::codex::{CodexBackend, CodexCommandConfig};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
@@ -303,6 +303,10 @@ where
 
     pub(crate) fn register_agent_feature(&mut self, agent_id: AgentId, feature: String) {
         self.agents.insert(agent_id, feature);
+    }
+
+    pub(crate) fn agent_session(&self, agent_id: &AgentId) -> Option<AgentSession> {
+        self.backend.as_ref()?.session(agent_id)
     }
 
     pub(crate) fn mark_reviewed_agent_commit(&mut self, commit: AgentCommit) {

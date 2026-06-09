@@ -7,8 +7,8 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 
 use crate::agent::{
-    AgentBackend, AgentId, AgentKind, AgentLaunch, AgentShutdownHandle, AgentStreamEvent,
-    AgentTokenUsage,
+    AgentBackend, AgentId, AgentKind, AgentLaunch, AgentSession, AgentShutdownHandle,
+    AgentStreamEvent, AgentTokenUsage, ChatMessage, MessageRole,
 };
 use crate::chat_title::{ChatTitleAgent, fallback_chat_title_from_prompt};
 use crate::cli::{
@@ -395,16 +395,17 @@ where
         let request = parse_agent_creation_request(split_command_line(prompt))?;
         let depends_on = request.depends_on.or(inherited_dependency);
         let fork_prompt = request.args.join(" ");
-        let source = self
-            .sessions
-            .get(source_agent_id)
-            .cloned()
-            .ok_or_else(|| {
-                CliError::Agent(crate::agent::AgentError::UnknownSession(
-                    source_agent_id.clone(),
-                ))
-            })?;
-        let launch_prompt = fork_launch_prompt(&source, &fork_prompt);
+        let source = self.sessions.get(source_agent_id).cloned().ok_or_else(|| {
+            CliError::Agent(crate::agent::AgentError::UnknownSession(
+                source_agent_id.clone(),
+            ))
+        })?;
+        let backend_session = self
+            .chat
+            .as_ref()
+            .and_then(|chat| chat.agent_session(source_agent_id));
+        let launch_prompt =
+            fork_launch_prompt(source_agent_id, backend_session.as_ref(), &source, &fork_prompt);
         let launch = self.prepare_agent_launch(&[launch_prompt])?;
         let agent_id = launch.id.clone();
         self.remember_agent_review_baseline(&agent_id);
@@ -708,17 +709,27 @@ where
         dependency: &AgentId,
     ) -> Result<(), CliError> {
         if agent_id == dependency {
-            return Err(CliError::Usage("an agent cannot depend on itself".to_string()));
+            return Err(CliError::Usage(
+                "an agent cannot depend on itself".to_string(),
+            ));
         }
         self.ensure_session_exists(agent_id)?;
         self.ensure_session_exists(dependency)?;
         if let Some(session) = self.sessions.get_mut(agent_id) {
-            if !session.depends_on.iter().any(|existing| existing == dependency) {
+            if !session
+                .depends_on
+                .iter()
+                .any(|existing| existing == dependency)
+            {
                 session.depends_on.push(dependency.clone());
             }
         }
         if let Some(session) = self.sessions.get_mut(dependency) {
-            if !session.depended_on_by.iter().any(|existing| existing == agent_id) {
+            if !session
+                .depended_on_by
+                .iter()
+                .any(|existing| existing == agent_id)
+            {
                 session.depended_on_by.push(agent_id.clone());
             }
         }
@@ -745,13 +756,8 @@ where
             &agent_id,
             format!("work-leaf: waiting for {dependency} to be marked done"),
         );
-        self.pending_dependent_launches.insert(
-            agent_id,
-            PendingDependentLaunch {
-                launch,
-                dependency,
-            },
-        );
+        self.pending_dependent_launches
+            .insert(agent_id, PendingDependentLaunch { launch, dependency });
     }
 
     fn defer_send_until_dependency(
@@ -1389,7 +1395,9 @@ pub struct WorkLeafSession {
     pub loading: Option<WorkLeafLoading>,
     pub completion: Option<WorkLeafCompletion>,
     pub token_usage: Option<AgentTokenUsage>,
+    #[serde(default)]
     pub depends_on: Vec<AgentId>,
+    #[serde(default)]
     pub depended_on_by: Vec<AgentId>,
 }
 
@@ -1564,14 +1572,18 @@ fn parse_agent_creation_request(args: Vec<String>) -> Result<AgentCreationReques
         match args[index].as_str() {
             "--depends-on" => {
                 let Some(value) = args.get(index + 1) else {
-                    return Err(CliError::Usage("--depends-on requires an agent id".to_string()));
+                    return Err(CliError::Usage(
+                        "--depends-on requires an agent id".to_string(),
+                    ));
                 };
                 depends_on = Some(AgentId::new(value.clone()).map_err(CliError::Agent)?);
                 index += 2;
             }
             "--fork-from" => {
                 let Some(value) = args.get(index + 1) else {
-                    return Err(CliError::Usage("--fork-from requires an agent id".to_string()));
+                    return Err(CliError::Usage(
+                        "--fork-from requires an agent id".to_string(),
+                    ));
                 };
                 fork_from = Some(AgentId::new(value.clone()).map_err(CliError::Agent)?);
                 index += 2;
@@ -1590,18 +1602,29 @@ fn parse_agent_creation_request(args: Vec<String>) -> Result<AgentCreationReques
     })
 }
 
-fn fork_launch_prompt(source: &WorkLeafSession, prompt: &str) -> String {
+fn fork_launch_prompt(
+    source_agent_id: &AgentId,
+    backend_session: Option<&AgentSession>,
+    source: &WorkLeafSession,
+    prompt: &str,
+) -> String {
     let source_title_words = source.title.replace('-', " ");
     let mut text = format!(
-        "Fork this Work Leaf patch-agent session from {}.\n\nSource feature: {}\nConversation history from {} [{}]:",
-        source.id, source_title_words, source.id, source.title
+        "Fork this Work Leaf patch-agent session from {source_agent_id}.\n\nSource feature: {source_title_words}\nConversation history from {source_agent_id} [{}]:",
+        source.title
     );
-    if source.lines.is_empty() {
-        text.push_str("\n(no visible transcript)");
+    if let Some(session) = backend_session {
+        for message in &session.messages {
+            append_history_message(&mut text, message);
+        }
     } else {
-        for line in &source.lines {
-            text.push('\n');
-            text.push_str(line);
+        if source.lines.is_empty() {
+            text.push_str("\n(no visible transcript)");
+        } else {
+            for line in &source.lines {
+                text.push('\n');
+                text.push_str(line);
+            }
         }
     }
     if prompt.is_empty() {
@@ -1611,6 +1634,19 @@ fn fork_launch_prompt(source: &WorkLeafSession, prompt: &str) -> String {
         text.push_str(prompt);
     }
     text
+}
+
+fn append_history_message(text: &mut String, message: &ChatMessage) {
+    let role = match message.role {
+        MessageRole::User => "user",
+        MessageRole::Agent => "agent",
+        MessageRole::Orchestrator => "orchestrator",
+        MessageRole::System => "system",
+    };
+    text.push('\n');
+    text.push_str(role);
+    text.push_str(": ");
+    text.push_str(&message.text);
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

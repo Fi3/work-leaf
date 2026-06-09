@@ -1131,6 +1131,10 @@ impl AgentBackend for CodexBackend {
         self.record_launch_output(request, output)
     }
 
+    fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
+        CodexBackend::session(self, agent_id)
+    }
+
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
         if self.config.transport == CodexTransport::Sdk {
             return self.send_streaming(agent_id, prompt, &mut |_| {});
