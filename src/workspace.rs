@@ -13,7 +13,7 @@ use crate::agent::{
 use crate::chat_title::{ChatTitleAgent, fallback_chat_title_from_prompt};
 use crate::cli::{
     CliError, CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
-    render_command_chat_help,
+    patch_promotion_prompt, render_command_chat_help,
 };
 use crate::review::{AgentCommit, GitHistory, ReviewResult};
 
@@ -155,6 +155,11 @@ where
             "new" => {
                 let prompt = parts[1..].join(" ");
                 if let Err(error) = self.create_agent(prompt) {
+                    self.push_command_line(command_chat_error_text(&error));
+                }
+            }
+            "promote" | "escalate" => {
+                if let Err(error) = self.promote_agent_from_command(command, &parts[1..]) {
                     self.push_command_line(command_chat_error_text(&error));
                 }
             }
@@ -352,13 +357,7 @@ where
         let request = parse_agent_creation_request(split_command_line(prompt))?;
         self.validate_dependency_target(agent_id, request.depends_on.as_ref())?;
         let prompt = request.args.join(" ");
-        let promotion_prompt = if prompt.is_empty() {
-            "Continue this existing Work Leaf session as a patch agent. Report the broad feature before proposing patches, follow the patch-agent instructions, and use the orchestrator patch flow for file changes.".to_string()
-        } else {
-            format!(
-                "Continue this existing Work Leaf session as a patch agent.\n\nPatch task:\n{prompt}\n\nReport the broad feature before proposing patches, follow the patch-agent instructions, and use the orchestrator patch flow for file changes."
-            )
-        };
+        let promotion_prompt = patch_promotion_prompt(&prompt);
         self.append_agent_line(
             agent_id,
             "work-leaf: escalated this chat to a patch agent".to_string(),
@@ -670,6 +669,18 @@ where
             .as_mut()
             .expect("work-leaf controller command chat is present");
         chat.prepare_agent_launch(args)
+    }
+
+    fn promote_agent_from_command(
+        &mut self,
+        command: &str,
+        args: &[String],
+    ) -> Result<(), CliError> {
+        let Some(agent_id) = args.first() else {
+            return Err(CliError::Usage(format!("{command} requires an agent id")));
+        };
+        let agent_id = AgentId::new(agent_id.clone()).map_err(CliError::Agent)?;
+        self.promote_agent_to_patch(&agent_id, &args[1..].join(" "))
     }
 
     fn reserve_first_chat_title(&mut self, agent_id: &AgentId, prompt: &str) -> Option<String> {

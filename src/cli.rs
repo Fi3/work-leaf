@@ -344,6 +344,7 @@ where
             "help" | "?" => Ok(CommandChatResult::Help(render_command_chat_help())),
             "quit" | "exit" | "q" => Ok(CommandChatResult::Quit),
             "new" => self.launch_agent(&parts[1..]),
+            "promote" | "escalate" => self.promote_agent(&parts[1..]),
             "review" => self.review(),
             "linearize" => self.linearize(),
             "linearize-questions" => self.linearize_questions(),
@@ -354,6 +355,15 @@ where
                 "unknown command chat command `{other}`"
             ))),
         }
+    }
+
+    fn promote_agent(&mut self, args: &[String]) -> Result<CommandChatResult, CliError> {
+        let Some(agent_id) = args.first() else {
+            return Err(CliError::Usage("promote requires an agent id".to_string()));
+        };
+        let agent_id = AgentId::new(agent_id.clone()).map_err(CliError::Agent)?;
+        let prompt = args[1..].join(" ");
+        self.send_to_agent(&agent_id, &patch_promotion_prompt(&prompt))
     }
 
     pub fn send_to_agent(
@@ -905,6 +915,7 @@ pub fn render_command_chat_help() -> String {
     [
         "Command chat:",
         "  new [prompt...]",
+        "  promote <agent-id> [prompt...]",
         "  review",
         "  linearize",
         "  quit",
@@ -912,6 +923,16 @@ pub fn render_command_chat_help() -> String {
         "Patches and file locks are triggered automatically when agents interact with the orchestrator.",
     ]
     .join("\n")
+}
+
+pub(crate) fn patch_promotion_prompt(prompt: &str) -> String {
+    if prompt.is_empty() {
+        "Continue this existing Work Leaf session as a patch agent. Report the broad feature before proposing patches, follow the patch-agent instructions, and use the orchestrator patch flow for file changes.".to_string()
+    } else {
+        format!(
+            "Continue this existing Work Leaf session as a patch agent.\n\nPatch task:\n{prompt}\n\nReport the broad feature before proposing patches, follow the patch-agent instructions, and use the orchestrator patch flow for file changes."
+        )
+    }
 }
 
 fn run_command_chat<B>(chat: CommandChat<B>) -> Result<(), CliError>

@@ -443,7 +443,9 @@ impl UiHarness {
 
     fn defer_escape_key(&self) -> bool {
         self.ui.mode() == UiMode::Prompt
-            || (self.ui.mode() == UiMode::Insert && self.ui.focus() == PaneFocus::Right)
+            || (self.ui.mode() == UiMode::Insert
+                && self.ui.focus() == PaneFocus::Right
+                && !self.chat_buffer.is_empty())
     }
 
     fn finish_pending_escape_sequence(&mut self) {

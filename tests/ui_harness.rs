@@ -54,6 +54,24 @@ fn scripted_harness_switches_modes_without_enter() {
 }
 
 #[test]
+fn scripted_harness_empty_chat_escape_enters_command_mode_and_forks_selected_agent() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(&[23, b'l']);
+    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+    harness.handle_byte(b'i');
+    assert_eq!(harness.ui().mode(), UiMode::Insert);
+
+    harness.handle_byte(27);
+    assert_eq!(harness.ui().mode(), UiMode::Command);
+    harness.handle_byte(b'f');
+
+    assert!(harness.transcript().iter().any(|line| {
+        line.contains("ForkAgent") && line.contains("user-1")
+    }));
+}
+
+#[test]
 fn scripted_harness_prompt_arrow_keys_move_visible_cursor() {
     let mut harness = UiHarness::new(80, 24);
     harness.handle_bytes(b":ab\x1b[D");

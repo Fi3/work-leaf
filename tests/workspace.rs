@@ -608,7 +608,11 @@ fn controller_rejects_unknown_dependency_without_creating_agent() {
     assert!(snapshot.session(&AgentId::new("user-2").unwrap()).is_none());
     let launches = backend.launches();
     assert_eq!(launches.len(), 1);
-    assert!(launches.iter().all(|launch| launch.id != AgentId::new("user-2").unwrap()));
+    assert!(
+        launches
+            .iter()
+            .all(|launch| launch.id != AgentId::new("user-2").unwrap())
+    );
 }
 
 #[test]
@@ -654,9 +658,7 @@ fn controller_linearize_cancels_pending_dependent_launches_visibly() {
     );
     assert!(
         child_session.lines.iter().any(|line| {
-            line == &format!(
-                "work-leaf: cancelled dependency wait for {parent} before linearize"
-            )
+            line == &format!("work-leaf: cancelled dependency wait for {parent} before linearize")
         }),
         "{child_session:?}"
     );
@@ -869,6 +871,43 @@ fn controller_promotes_existing_agent_to_patch_agent_without_relaunching() {
             .any(|line| line == "work-leaf: escalated this chat to a patch agent")
     );
     assert!(session.lines.iter().any(|line| line == "patch ready"));
+}
+
+#[test]
+fn controller_command_promotes_existing_agent_to_patch_agent() {
+    let backend = FakeBackend::new(["reader reply", "promotion reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("inspect the regression").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    controller.drain_events();
+
+    controller.execute_command_line(&format!("promote {agent_id} implement the fix"));
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+
+    let snapshot = controller.snapshot();
+    let session = snapshot.session(&agent_id).expect("session exists");
+    assert_eq!(session.loading, None);
+    assert!(
+        session
+            .lines
+            .iter()
+            .any(|line| line == "work-leaf: escalated this chat to a patch agent")
+    );
+    assert!(session
+        .lines
+        .iter()
+        .any(|line| line.contains("Patch task:") && line.contains("implement the fix")));
+    assert!(session.lines.iter().any(|line| line == "promotion reply"));
+    assert!(snapshot.session(&AgentId::new("user-2").unwrap()).is_none());
+
+    assert_eq!(backend.launches().len(), 1);
+    let sends = backend.sends();
+    assert_eq!(sends.len(), 1);
+    assert_eq!(sends[0].0, agent_id);
+    assert!(sends[0].1.contains("Continue this existing Work Leaf session as a patch agent"));
+    assert!(sends[0].1.contains("implement the fix"));
 }
 
 #[test]
