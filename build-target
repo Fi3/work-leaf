@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+dist_dir="${WORK_LEAF_DIST_DIR:-$repo_root/dist}"
+target_list="${WORK_LEAF_BUILD_TARGETS:-x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-apple-darwin aarch64-apple-darwin x86_64-pc-windows-msvc aarch64-pc-windows-msvc}"
+
+mkdir -p "$dist_dir"
+
+for target in $target_list; do
+  case "$target" in
+    *-pc-windows-*)
+      binary_name="work-leaf.exe"
+      ;;
+    *)
+      binary_name="work-leaf"
+      ;;
+  esac
+
+  echo "building work-leaf for $target"
+  (cd "$repo_root" && cargo build --release --locked --bin work-leaf --target "$target")
+
+  package_dir="$dist_dir/work-leaf-$target"
+  rm -rf "$package_dir"
+  mkdir -p "$package_dir"
+  cp "$repo_root/target/$target/release/$binary_name" "$package_dir/$binary_name"
+
+  case "$target" in
+    *-pc-windows-*)
+      if command -v zip >/dev/null 2>&1; then
+        (cd "$dist_dir" && rm -f "work-leaf-$target.zip" && zip -qr "work-leaf-$target.zip" "work-leaf-$target")
+      fi
+      ;;
+    *)
+      (cd "$dist_dir" && rm -f "work-leaf-$target.tar.gz" && tar -czf "work-leaf-$target.tar.gz" "work-leaf-$target")
+      ;;
+  esac
+done
+
+cat <<EOF
+Built Work Leaf packages in:
+  $dist_dir
+
+Each package contains the single work-leaf binary. Runtime machines need Codex
+available on PATH; no Rust toolchain, Python SDK, or platform SDK is required.
+EOF

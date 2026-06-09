@@ -2,11 +2,11 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::env;
 use std::ffi::OsStr;
 use std::fmt;
-use std::io::{self, BufRead, BufReader, IsTerminal, Read, Write};
+use std::io::{self, BufRead, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::{self, Child, Command, Stdio};
+use std::process::{self, Command, Stdio};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use crate::agent::{
     AgentBackend, AgentId, AgentLaunch, AgentProfile, AgentShutdownHandle, AgentStreamEvent,
@@ -129,102 +129,52 @@ fn run_in_process_cli(
 
 fn run_http_cli(model: Option<String>, read_permission: ReadPermission) -> Result<(), CliError> {
     let project_dir = env::current_dir()?;
-    let (client, _daemon) = http_client_from_env_or_spawn(model, read_permission)?;
-    run_http_command_chat(client, project_dir)
-}
-
-fn http_client_from_env_or_spawn(
-    model: Option<String>,
-    read_permission: ReadPermission,
-) -> Result<(HttpControllerClient, Option<ManagedOrchestrator>), CliError> {
     if let Ok(url) = env::var("WORK_LEAF_ORCHESTRATOR_URL") {
         let client = HttpControllerClient::connect(url).map_err(http_cli_error)?;
-        return Ok((client, None));
+        return run_http_command_chat(client, project_dir);
     }
 
-    let mut daemon = ManagedOrchestrator::spawn(model, read_permission)?;
-    let client = HttpControllerClient::connect(daemon.url.clone()).map_err(http_cli_error)?;
-    daemon.client_url = Some(client.base_url().to_string());
-    Ok((client, Some(daemon)))
+    let daemon = ManagedInProcessOrchestrator::start(project_dir.clone(), model, read_permission)?;
+    run_http_command_chat(daemon.client(), project_dir)
 }
 
-#[derive(Debug)]
-struct ManagedOrchestrator {
-    child: Child,
-    url: String,
-    client_url: Option<String>,
+struct ManagedInProcessOrchestrator {
+    client: HttpControllerClient,
+    thread: Option<thread::JoinHandle<Result<(), OrchestratorHttpError>>>,
 }
 
-impl ManagedOrchestrator {
-    fn spawn(model: Option<String>, read_permission: ReadPermission) -> Result<Self, CliError> {
-        let mut command = Command::new(orchestrator_binary_path()?);
-        command.arg("--listen").arg("127.0.0.1:0");
-        if let Some(model) = model {
-            command.arg("--model").arg(model);
-        }
-        if read_permission == ReadPermission::DirectFilesystem {
-            command.arg("--no-read-permission");
-        }
-        command
-            .current_dir(env::current_dir()?)
-            .env("WORK_LEAF_PARENT_PID", process::id().to_string())
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null());
-
-        let mut child = command.spawn()?;
-        let stdout = child.stdout.take().ok_or_else(|| {
-            CliError::Io(io::Error::other("orchestrator stdout was not captured"))
-        })?;
-        let mut lines = BufReader::new(stdout).lines();
-        let line = lines.next().ok_or_else(|| {
-            CliError::Io(io::Error::other("orchestrator exited before startup"))
-        })??;
-        let url = line
-            .strip_prefix("WORK_LEAF_ORCHESTRATOR_URL=")
-            .ok_or_else(|| {
-                CliError::Io(io::Error::other("orchestrator did not print a startup URL"))
-            })?
-            .to_string();
-        thread::spawn(move || for _ in lines {});
+impl ManagedInProcessOrchestrator {
+    fn start(
+        project_dir: PathBuf,
+        model: Option<String>,
+        read_permission: ReadPermission,
+    ) -> Result<Self, CliError> {
+        let backend = codex_backend(project_dir.clone(), model, read_permission)?;
+        let chat = CommandChat::new(project_dir, backend);
+        let controller = crate::WorkLeafController::new(chat);
+        let server = crate::HttpControllerServer::bind("127.0.0.1:0").map_err(http_cli_error)?;
+        let url = server.local_url().map_err(http_cli_error)?;
+        let thread = thread::spawn(move || server.serve(controller));
+        let client = HttpControllerClient::connect(url).map_err(http_cli_error)?;
         Ok(Self {
-            child,
-            url,
-            client_url: None,
+            client,
+            thread: Some(thread),
         })
     }
-}
 
-impl Drop for ManagedOrchestrator {
-    fn drop(&mut self) {
-        if self.child.try_wait().ok().flatten().is_some() {
-            return;
-        }
-        if let Some(url) = &self.client_url
-            && let Ok(mut client) = HttpControllerClient::connect(url.clone())
-        {
-            let _ = client.shutdown();
-        }
-        let start = Instant::now();
-        while start.elapsed() < Duration::from_secs(2) {
-            if self.child.try_wait().ok().flatten().is_some() {
-                return;
-            }
-            thread::sleep(Duration::from_millis(20));
-        }
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+    fn client(&self) -> HttpControllerClient {
+        self.client.clone()
     }
 }
 
-fn orchestrator_binary_path() -> Result<PathBuf, CliError> {
-    let exe = env::current_exe()?;
-    let name = if cfg!(windows) {
-        "work-leaf-orchestrator.exe"
-    } else {
-        "work-leaf-orchestrator"
-    };
-    Ok(exe.with_file_name(name))
+impl Drop for ManagedInProcessOrchestrator {
+    fn drop(&mut self) {
+        let mut client = self.client.clone();
+        let _ = client.shutdown();
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+    }
 }
 
 fn http_cli_error(error: OrchestratorHttpError) -> CliError {

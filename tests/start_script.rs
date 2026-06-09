@@ -2,7 +2,6 @@
 
 use std::fs;
 use std::io::{ErrorKind, Read, Write};
-use std::net::TcpListener;
 use std::os::fd::FromRawFd;
 use std::os::raw::{c_char, c_int, c_void};
 use std::os::unix::fs::PermissionsExt;
@@ -17,11 +16,11 @@ use std::time::{Duration, Instant};
 fn start_script_builds_release_binaries_and_stops_daemon_after_cli_exit() {
     let script = fs::read_to_string("start").expect("root start script exists");
     assert!(script.contains("cargo build --release"));
-    assert!(script.contains("work-leaf-orchestrator"));
-    assert!(script.contains("kill"));
-    assert!(script.contains("work-leaf-codex-wrapper"));
-    assert!(script.contains("-name \"${daemon_pid}-*\""));
-    assert!(script.contains("-mmin +10"));
+    assert!(script.contains("--bin work-leaf"));
+    assert!(script.contains("exec \"$cli_bin\" \"$@\""));
+    assert!(!script.contains("work-leaf-orchestrator"));
+    assert!(!script.contains("openai-codex"));
+    assert!(!script.contains("python -m venv"));
 
     let root = temp_dir("start-script");
     let mut app = PtyStart::spawn(root.path(), Path::new(env!("CARGO_BIN_EXE_work-leaf")));
@@ -149,41 +148,13 @@ impl Drop for PtyStart {
 }
 
 #[test]
-fn start_script_uses_default_daemon_port_and_fails_when_unavailable() {
+fn start_script_delegates_daemon_lifecycle_to_single_binary() {
     let script = fs::read_to_string("start").expect("root start script exists");
-    assert!(script.contains("WORK_LEAF_START_LISTEN:-127.0.0.1:7878"));
-    assert!(script.contains("ensure_codex_sdk_python()"));
-    assert!(script.contains("WORK_LEAF_CODEX_BACKEND:-sdk"));
-    assert!(script.contains("WORK_LEAF_CODEX_BACKEND=exec"));
-    assert!(script.contains("target/work-leaf-codex-sdk-venv"));
-    assert!(script.contains("openai-codex"));
-
-    let root = temp_dir("start-script-port-busy");
-    let _listener = TcpListener::bind("127.0.0.1:7878").ok();
-    let bin_dir = Path::new(env!("CARGO_BIN_EXE_work-leaf")).parent().unwrap();
-
-    let output = Command::new(Path::new(env!("CARGO_MANIFEST_DIR")).join("start"))
-        .current_dir(root.path())
-        .env("WORK_LEAF_START_SKIP_BUILD", "1")
-        .env("WORK_LEAF_START_BIN_DIR", bin_dir)
-        .env("WORK_LEAF_CODEX_BACKEND", "exec")
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .unwrap();
-
-    assert!(
-        !output.status.success(),
-        "start should fail when the default daemon port is unavailable"
-    );
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("work-leaf orchestrator exited before startup")
-            || stderr.contains("Address already in use")
-            || stderr.contains("AddrInUse"),
-        "{stderr}"
-    );
+    assert!(script.contains("WORK_LEAF_START_BIN_DIR"));
+    assert!(script.contains("cli_bin=\"$bin_dir/work-leaf\""));
+    assert!(!script.contains("WORK_LEAF_START_LISTEN"));
+    assert!(!script.contains("WORK_LEAF_ORCHESTRATOR_URL"));
+    assert!(!script.contains("WORK_LEAF_CODEX_SDK_PYTHON"));
 }
 
 #[test]

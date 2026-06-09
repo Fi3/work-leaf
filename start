@@ -4,90 +4,10 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ "${WORK_LEAF_START_SKIP_BUILD:-}" != "1" ]]; then
-  (cd "$repo_root" && cargo build --release --bins)
+  (cd "$repo_root" && cargo build --release --bin work-leaf)
 fi
 
 bin_dir="${WORK_LEAF_START_BIN_DIR:-$repo_root/target/release}"
-daemon_bin="$bin_dir/work-leaf-orchestrator"
 cli_bin="$bin_dir/work-leaf"
-listen_addr="${WORK_LEAF_START_LISTEN:-127.0.0.1:7878}"
-startup_log="$(mktemp "${TMPDIR:-/tmp}/work-leaf-daemon.XXXXXX")"
-find "${TMPDIR:-/tmp}/work-leaf-codex-wrapper" -maxdepth 1 -type d \
-  -mmin +10 -exec rm -rf {} + 2>/dev/null || true
-rmdir "${TMPDIR:-/tmp}/work-leaf-codex-wrapper" 2>/dev/null || true
 
-ensure_codex_sdk_python() {
-  if [[ "${WORK_LEAF_CODEX_BACKEND:-sdk}" == "exec" ]]; then
-    export WORK_LEAF_CODEX_BACKEND=exec
-    return
-  fi
-
-  export WORK_LEAF_CODEX_BACKEND=sdk
-  if [[ -n "${WORK_LEAF_CODEX_SDK_PYTHON:-}" ]]; then
-    return
-  fi
-
-  local sdk_dir="$repo_root/target/work-leaf-codex-sdk-venv"
-  local sdk_python="$sdk_dir/bin/python"
-  mkdir -p "$repo_root/target"
-  if [[ ! -x "$sdk_python" ]]; then
-    python -m venv "$sdk_dir"
-  fi
-  if ! "$sdk_python" - <<'PY' >/dev/null 2>&1
-import openai_codex
-PY
-  then
-    "$sdk_python" -m pip install --cache-dir "${WORK_LEAF_PIP_CACHE_DIR:-/tmp/work-leaf-pip-cache}" openai-codex
-  fi
-  export WORK_LEAF_CODEX_SDK_PYTHON="$sdk_python"
-}
-
-daemon_pid=""
-cleanup_daemon_tmp() {
-  if [[ -n "${daemon_pid:-}" ]]; then
-    find "${TMPDIR:-/tmp}/work-leaf-codex-wrapper" -maxdepth 1 -type d \
-      -name "${daemon_pid}-*" -exec rm -rf {} + 2>/dev/null || true
-    rmdir "${TMPDIR:-/tmp}/work-leaf-codex-wrapper" 2>/dev/null || true
-  fi
-}
-
-cleanup() {
-  local status=$?
-  if [[ -n "$daemon_pid" ]] && kill -0 "$daemon_pid" 2>/dev/null; then
-    kill "$daemon_pid" 2>/dev/null || true
-    wait "$daemon_pid" 2>/dev/null || true
-  fi
-  cleanup_daemon_tmp
-  rm -f "$startup_log"
-  exit "$status"
-}
-trap cleanup EXIT INT TERM
-
-ensure_codex_sdk_python
-"$daemon_bin" --listen "$listen_addr" "$@" >"$startup_log" &
-daemon_pid=$!
-
-while true; do
-  if [[ -s "$startup_log" ]]; then
-    startup_line="$(head -n 1 "$startup_log")"
-    break
-  fi
-  if ! kill -0 "$daemon_pid" 2>/dev/null; then
-    wait "$daemon_pid" || true
-    echo "work-leaf orchestrator exited before startup" >&2
-    exit 1
-  fi
-  sleep 0.02
-done
-
-case "$startup_line" in
-  WORK_LEAF_ORCHESTRATOR_URL=*)
-    export WORK_LEAF_ORCHESTRATOR_URL="${startup_line#WORK_LEAF_ORCHESTRATOR_URL=}"
-    ;;
-  *)
-    echo "work-leaf orchestrator did not print a startup URL" >&2
-    exit 1
-    ;;
-esac
-
-"$cli_bin"
+exec "$cli_bin" "$@"
