@@ -22,7 +22,7 @@ Environment:
   WORK_LEAF_CODEX_BENCH_SKIP_BUILD    set to 1 to skip saving release binaries
   WORK_LEAF_CODEX_BENCH_BIN_DIR       directory containing Work Leaf binaries
   WORK_LEAF_CODEX_BENCH_TIMEOUT_SECS  total timeout, default 14400
-  WORK_LEAF_CODEX_BENCH_REVIEW_ROUNDS max review/fix rounds per feature, default 3
+  WORK_LEAF_CODEX_BENCH_REVIEW_ROUNDS max review/fix rounds per feature, default 0 to use only the global timeout
   WORK_LEAF_CODEX_BENCH_MODEL         optional Codex model passed to codex exec
   WORK_LEAF_CODEX_BENCH_SANDBOX       patch/linearize sandbox, default workspace-write
   WORK_LEAF_CODEX_BENCH_OPERATOR_NOTES optional human notes saved in the report
@@ -60,7 +60,7 @@ base_commit="${WORK_LEAF_CODEX_BENCH_BASE:-c92a0b7060a36eac6db2d869b85e589a7a948
 tmp_parent="${WORK_LEAF_CODEX_BENCH_TMPDIR:-${TMPDIR:-/tmp}}"
 results_dir="${WORK_LEAF_CODEX_BENCH_RESULTS_DIR:-$repo_root/bench-results}"
 timeout_secs="${WORK_LEAF_CODEX_BENCH_TIMEOUT_SECS:-14400}"
-review_rounds="${WORK_LEAF_CODEX_BENCH_REVIEW_ROUNDS:-3}"
+review_rounds="${WORK_LEAF_CODEX_BENCH_REVIEW_ROUNDS:-0}"
 patch_sandbox="${WORK_LEAF_CODEX_BENCH_SANDBOX:-workspace-write}"
 review_sandbox="${WORK_LEAF_CODEX_BENCH_REVIEW_SANDBOX:-read-only}"
 requested_bench_model="${WORK_LEAF_CODEX_BENCH_MODEL:-default}"
@@ -69,6 +69,10 @@ bench_model_source="requested"
 bin_dir="${WORK_LEAF_CODEX_BENCH_BIN_DIR:-$repo_root/target/release}"
 run_id="${WORK_LEAF_CODEX_BENCH_RUN_ID:-$(date +%Y%m%dT%H%M%S%z)}"
 operator_notes="${WORK_LEAF_CODEX_BENCH_OPERATOR_NOTES:-}"
+if ! [[ "$review_rounds" =~ ^[0-9]+$ ]]; then
+  echo "WORK_LEAF_CODEX_BENCH_REVIEW_ROUNDS must be a non-negative integer" >&2
+  exit 2
+fi
 case "$mode" in
   sequential)
     bench_name="three-feature-sequential-bench"
@@ -299,6 +303,7 @@ write_report() {
 - temp_checkout_kept: 0
 - review_completed: $review_completed
 - linearize_completed: $linearize_completed
+- review_round_limit: $review_rounds
 - commits_after_base: $commits
 - changed_files: $changed_files
 - changed_lines_added: $changed_lines_added
@@ -346,6 +351,7 @@ EOF
     --arg report "$report_path" \
     --arg review_completed "$review_completed" \
     --arg linearize_completed "$linearize_completed" \
+    --arg review_round_limit "$review_rounds" \
     --arg code_quality "$code_quality" \
     --arg token_usage "$token_usage" \
     --arg comment "$comment" \
@@ -358,7 +364,7 @@ EOF
     --argjson changed_lines_added "$changed_lines_added" \
     --argjson changed_lines_deleted "$changed_lines_deleted" \
     --argjson changed_lines_total "$changed_lines_total" \
-    '{run_id:$run_id,result:$result,bench_mode:$bench_mode,benched_binary_commit:$benched_binary_commit,bench_driver_commit:$bench_driver_commit,bench_driver_dirty:$bench_driver_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,codex_version:$codex_version,agent_model:$agent_model,agent_model_source:$agent_model_source,requested_agent_model:$requested_agent_model,sdk_python:$sdk_python,no_read_permission:$no_read_permission,web_ui_url:$web_ui_url,read_permission_mode:$read_permission_mode,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
+    '{run_id:$run_id,result:$result,bench_mode:$bench_mode,benched_binary_commit:$benched_binary_commit,bench_driver_commit:$bench_driver_commit,bench_driver_dirty:$bench_driver_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,codex_version:$codex_version,agent_model:$agent_model,agent_model_source:$agent_model_source,requested_agent_model:$requested_agent_model,sdk_python:$sdk_python,no_read_permission:$no_read_permission,web_ui_url:$web_ui_url,read_permission_mode:$read_permission_mode,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,review_round_limit:$review_round_limit,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
     >> "$index_path"
   reported=1
   log "bench report: $report_path"
@@ -680,7 +686,12 @@ run_feature_cycle() {
     "Record the direct Codex implementation for benchmark request $feature_index so a separate Codex reviewer can evaluate exactly that behavior." \
     || return 1
 
-  for round in $(seq 1 "$review_rounds"); do
+  round=1
+  while true; do
+    if [[ "$review_rounds" != "0" && "$round" -gt "$review_rounds" ]]; then
+      printf 'feature=%s\nrounds=%s\nresult=review-findings-remained\n' "$feature_index" "$review_rounds" >> "$review_result_file"
+      return 1
+    fi
     review_label="${label_prefix}-review-${round}"
     run_codex "$review_label" "$repo" "$review_sandbox" "$(review_prompt "$feature_index" "$feature_base" "$previous_evidence_file")" \
       || return 1
@@ -702,9 +713,8 @@ run_feature_cycle() {
     else
       printf 'feature=%s\nround=%s\nfix=%s\nresult=no file changes after fix; carrying author response/evidence into next review\n' "$feature_index" "$round" "$fix_label" >> "$review_result_file"
     fi
+    round=$((round + 1))
   done
-  printf 'feature=%s\nrounds=%s\nresult=review-findings-remained\n' "$feature_index" "$review_rounds" >> "$review_result_file"
-  return 1
 }
 
 run_sequential_bench() {

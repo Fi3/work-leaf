@@ -420,6 +420,15 @@ fn direct_codex_three_feature_bench_scripts_describe_sequential_and_worktree_mod
     assert!(common.contains("agent_transport: direct-codex-cli"));
     assert!(common.contains("review_completed"));
     assert!(common.contains("linearize_completed"));
+    assert!(common.contains(
+        "WORK_LEAF_CODEX_BENCH_REVIEW_ROUNDS max review/fix rounds per feature, default 0 to use only the global timeout"
+    ));
+    assert!(common.contains("review_rounds=\"${WORK_LEAF_CODEX_BENCH_REVIEW_ROUNDS:-0}\""));
+    assert!(common.contains("review_round_limit"));
+    assert!(common.contains("while true; do"));
+    assert!(
+        common.contains("[[ \"$review_rounds\" != \"0\" && \"$round\" -gt \"$review_rounds\" ]]")
+    );
     assert!(common.contains("token_usage"));
     assert!(common.contains("patch_artifacts"));
     assert!(common.contains("codex --disable apps --cd"));
