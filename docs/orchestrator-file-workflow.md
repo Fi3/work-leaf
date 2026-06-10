@@ -134,6 +134,14 @@ The current source already has system-style internal behavior:
 
 Agent launch prompts include a file-access policy.
 `src/agent.rs::PromptPolicy` injects rules selected by `src/agent.rs::ReadPermission`.
+When project instruction files are present, `PromptPolicy` also injects a concurrent Work Leaf
+translation before the original instruction text for non-linearizer agents. The translation keeps the
+instruction files authoritative for repository-specific architecture, APIs, naming, style, safety
+rules, and quality bars, and adapts only ownership, timing, and tool-access assumptions for a shared
+worktree. It detects generic rule categories such as checks, tests, documentation, commit messages,
+review rules, and real-agent verification, then maps them to patch-agent, review-agent, or
+linearize-agent responsibilities. Linearize agents receive the original project instructions with the
+direct-workspace linearizer policy instead of the patch-agent translation.
 
 With `ReadPermission::Orchestrator`, prompts tell agents:
 

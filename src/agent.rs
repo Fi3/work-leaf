@@ -288,7 +288,9 @@ impl PromptPolicy {
             text.push_str("\n\nRepository instructions from the launch project:");
             if !linearize_agent {
                 text.push_str("\n\n");
-                text.push_str(concurrent_work_leaf_interpretation());
+                text.push_str(&concurrent_work_leaf_interpretation(
+                    &self.project_instructions,
+                ));
             }
             for instructions in &self.project_instructions {
                 text.push_str("\n\n--- ");
@@ -307,14 +309,154 @@ impl PromptPolicy {
     }
 }
 
-fn concurrent_work_leaf_interpretation() -> &'static str {
-    "Concurrent Work Leaf interpretation:\n\
+fn concurrent_work_leaf_interpretation(instruction_files: &[ProjectInstructionFile]) -> String {
+    let mut text = "Concurrent Work Leaf interpretation:\n\
 - preserve the repository-specific intent of the instructions below; use the repo's architecture, APIs, naming, style, and checks.\n\
 - Apply broad repository check requirements in a shared-worktree way. Prefer focused checks for files you touched, checks that existed before your patch, and checks you added yourself.\n\
 - Avoid write-producing broad formatters over the whole repository while other patch agents are active. Prefer check-only formatter commands or formatter commands scoped to files you touched.\n\
 - If a broad required check is blocked only by another patch agent's owned files or focused tests, do not take over that agent's work. Report the blocker once with the concrete failing file/test and stop retrying the same broad check.\n\
 - Do not repeatedly rerun the same broad check after it fails for the same external integration blocker. After your focused checks pass and any external blocker is reported, use `@work-leaf done` and leave cross-agent reconciliation to review or linearize.\n\
 - Treat compact file refreshes and repeated-read digests as authoritative. Use `@work-leaf read --force` only when the diff or digest response is insufficient for a specific patch."
+        .to_string();
+
+    for instructions in instruction_files {
+        text.push_str("\n\n");
+        text.push_str(&concurrent_instruction_translation(instructions));
+    }
+
+    text
+}
+
+fn concurrent_instruction_translation(instructions: &ProjectInstructionFile) -> String {
+    let topics = InstructionTopics::detect(&instructions.text);
+    let mut lines = vec![
+        format!(
+            "Concurrent Work Leaf translation for {}:",
+            instructions.path.display()
+        ),
+        "- Treat the instruction file below as authoritative for repository-specific architecture, APIs, style, naming, safety rules, and quality bars.".to_string(),
+        "- Translate only ownership, timing, and tool-access details that assume one agent owns the whole workspace.".to_string(),
+        "- Patch agents own the current feature patch; review and linearize agents own cross-agent reconciliation and final history.".to_string(),
+    ];
+
+    if topics.checks {
+        lines.extend([
+            "- Required checks remain mandatory. As a patch agent, run focused checks for files you touched and checks you added or changed; leave broad cross-agent failures to review or linearization after reporting the exact blocker.".to_string(),
+            "- If an instruction requires a repository-wide formatter, prefer check-only mode or a file-scoped formatter for your touched files while other patch agents are active.".to_string(),
+        ]);
+    }
+    if topics.tests {
+        lines.push(
+            "- Test requirements remain mandatory. Design the needed tests, but submit tests with the implementation needed to keep the shared worktree buildable.".to_string(),
+        );
+    }
+    if topics.docs {
+        lines.push(
+            "- Documentation rules remain mandatory. Patch agents do not edit docs or prose-only files; required docs updates are handled by the linearize agent after reviewed behavior is accepted.".to_string(),
+        );
+    }
+    if topics.commits {
+        lines.push(
+            "- Commit-message rules remain mandatory. Patch agents express intent through the `@work-leaf patch <reason>` reason; final commit-message compliance is enforced through patch reason and final linearized commits.".to_string(),
+        );
+    }
+    if topics.reviews {
+        lines.push(
+            "- Review rules remain mandatory. Reviewers inspect only the reviewed patch scope; integration cleanup and broad history shaping are linearization responsibilities.".to_string(),
+        );
+    }
+    if topics.real_agent_verification {
+        lines.push(
+            "- Real-agent verification rules remain mandatory. For agent-facing behavior, run or report a bounded real-agent scenario and exact result before `@work-leaf done`; if local setup blocks it, report the exact pre-agent blocker.".to_string(),
+        );
+    }
+
+    lines.join("\n")
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct InstructionTopics {
+    checks: bool,
+    tests: bool,
+    docs: bool,
+    commits: bool,
+    reviews: bool,
+    real_agent_verification: bool,
+}
+
+impl InstructionTopics {
+    fn detect(text: &str) -> Self {
+        let text = text.to_ascii_lowercase();
+        Self {
+            checks: mentions_any(
+                &text,
+                &[
+                    "required check",
+                    "required checks",
+                    "cargo check",
+                    "cargo fmt",
+                    "cargo clippy",
+                    "cargo test",
+                    "format",
+                    "formatter",
+                    "lint",
+                    "build",
+                ],
+            ),
+            tests: mentions_any(
+                &text,
+                &[
+                    "test",
+                    "tests",
+                    "coverage",
+                    "regression",
+                    "failing test",
+                    "test-first",
+                ],
+            ),
+            docs: mentions_any(
+                &text,
+                &[
+                    "documentation",
+                    "docs",
+                    "readme",
+                    "changelog",
+                    "markdown",
+                    ".md",
+                    ".txt",
+                    "plain text",
+                    "prose",
+                ],
+            ),
+            commits: mentions_any(
+                &text,
+                &[
+                    "commit message",
+                    "commit-message",
+                    "commit messages",
+                    "git commit",
+                    "commit must",
+                    "commits must",
+                ],
+            ),
+            reviews: mentions_any(&text, &["review", "reviews", "reviewer", "findings"]),
+            real_agent_verification: mentions_any(
+                &text,
+                &[
+                    "real agent",
+                    "real-agent",
+                    "agent-facing",
+                    "smoke check",
+                    "smoke test",
+                    "verification",
+                ],
+            ),
+        }
+    }
+}
+
+fn mentions_any(text: &str, needles: &[&str]) -> bool {
+    needles.iter().any(|needle| text.contains(needle))
 }
 
 fn is_linearize_agent(agent_id: &AgentId) -> bool {

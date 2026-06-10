@@ -99,12 +99,16 @@ temporary checkout before exit.
   filesystem reads while keeping writes mediated by patches.
 - `AgentError` is the shared error type for launch, send, and prompt policy failures.
 
-For non-linearizer project agents, `PromptPolicy` adds a concurrent Work Leaf interpretation before
-the loaded project instruction files. This interpretation preserves the repository-specific intent
-of those files while adapting broad validation and formatter requirements to a shared-worktree
-orchestrator: patch agents prefer focused checks they touched or introduced, report blockers caused
-only by another patch agent's owned files once, and leave cross-agent reconciliation to review or
-linearization. Linearize agents receive the direct-workspace linearizer policy instead.
+For non-linearizer project agents, `PromptPolicy` adds a concurrent Work Leaf interpretation and a
+per-instruction-file translation before the loaded project instruction files. The original files
+remain present and authoritative for repository-specific architecture, APIs, naming, style, safety
+rules, and quality bars. The translation adapts only ownership, timing, and tool-access assumptions
+that normally assume one agent owns the whole workspace: patch agents prefer focused checks they
+touched or introduced, report blockers caused only by another patch agent's owned files once, and
+leave cross-agent reconciliation to review or linearization. The translator detects generic
+instruction categories such as checks, tests, documentation, commit messages, review rules, and
+real-agent verification, then maps each category to patch-agent, review-agent, or linearize-agent
+responsibilities. Linearize agents receive the direct-workspace linearizer policy instead.
 
 Patch-agent prompts keep documentation and prose-only files out of patch-agent scope. Patch agents
 work on code, tests, configuration, and other feature files through orchestrator patches; docs,

@@ -146,6 +146,37 @@ fn prompt_policy_translates_project_instructions_for_concurrent_patch_agents() {
 }
 
 #[test]
+fn prompt_policy_builds_concurrent_translation_from_project_instruction_rules() {
+    let root = temp_dir("prompt-policy-project-instruction-translation");
+    fs::write(
+        root.join("AGENTS.md"),
+        "## Required Checks\nRun `cargo fmt` and `cargo test` before submitting.\n\n\
+## Documentation\nUpdate README.md when public behavior changes.\n\n\
+## Commit message rules\nEvery commit must start with ADD or FIX.\n\n\
+## Real Agent Verification\nRun a real agent smoke test for agent-facing behavior.\n",
+    )
+    .unwrap();
+    let policy = PromptPolicy::for_project(&root).unwrap();
+
+    let wrapped = policy.inject(
+        &AgentId::new("user-1").unwrap(),
+        "feature flags",
+        "implement the flag parser",
+    );
+
+    assert!(wrapped.contains("Concurrent Work Leaf translation for AGENTS.md"));
+    assert!(wrapped.contains("Required checks remain mandatory"));
+    assert!(wrapped.contains("checks you added or changed"));
+    assert!(wrapped.contains("Documentation rules remain mandatory"));
+    assert!(wrapped.contains("handled by the linearize agent"));
+    assert!(wrapped.contains("Commit-message rules remain mandatory"));
+    assert!(wrapped.contains("patch reason and final linearized commits"));
+    assert!(wrapped.contains("Real-agent verification rules remain mandatory"));
+    assert!(wrapped.contains("bounded real-agent scenario"));
+    assert!(wrapped.contains("Run `cargo fmt` and `cargo test` before submitting."));
+}
+
+#[test]
 fn codex_backend_builds_exec_invocation_for_project_directory() {
     let config = CodexCommandConfig::new(PathBuf::from("/repo"))
         .with_binary("codex")
