@@ -2391,12 +2391,10 @@ fn render_already_applied_patch_prompt(files: &[PathBuf]) -> String {
 
 fn render_patch_applied_prompt(files: &[PathBuf]) -> String {
     let mut text = format!("work-leaf patch applied\nfiles: {}\n", display_paths(files));
-    text.push_str("Continue from the repository instructions.\n");
-    text.push_str("Run checks that existed before your patch or checks you added yourself. Do not run another patch agent's focused tests as local validation; report those as integration conflicts unless your own source change clearly caused them.\n");
-    text.push_str("Keep the shared worktree usable for the other patch agents: do not submit known-red, compile-breaking, or deliberately failing intermediate patches. If you prepared failing coverage first, include the test and the implementation needed for the shared tree to build in the same provisional patch.\n");
-    text.push_str("Run any required or relevant checks through `@work-leaf locks run <path>... -- <command>` when the command may write files.\n");
-    text.push_str("Keep locked command runs within five minutes unless the user authorizes a longer lock-holding command.\n");
-    text.push_str("Provide additional edits if checks fail or more work is needed; emit `@work-leaf done` only when this patch is ready for review.");
+    text.push_str("The orchestrator has already saved this patch as a provisional git commit. Do not resend this patch, do not rebase this same diff, and do not restate the patch body.\n");
+    text.push_str("Next step: run at most one focused validation step that is relevant to files you touched or checks you added. Use `@work-leaf locks run <path>... -- <command>` when that command may write files.\n");
+    text.push_str("Do not run another patch agent's focused tests as local validation. If a broad check is blocked only by another patch agent's owned files or tests, report that exact blocker once.\n");
+    text.push_str("After the focused validation passes, or after you report an external blocker, emit a top-level `@work-leaf done` so review can start. Send another edit only if validation found a concrete issue in your own patch.");
     text
 }
 

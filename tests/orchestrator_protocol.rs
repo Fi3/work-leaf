@@ -832,7 +832,12 @@ fn orchestrator_protocol_applies_structured_edit_directive_and_commits() {
     )));
     assert_eq!(backend.sends.len(), 1);
     assert_eq!(backend.sends[0].0, agent_id);
-    assert!(backend.sends[0].1.contains("work-leaf patch applied"));
+    let prompt = &backend.sends[0].1;
+    assert!(prompt.contains("work-leaf patch applied"));
+    assert!(prompt.contains("already saved this patch as a provisional git commit"));
+    assert!(prompt.contains("Do not resend this patch"));
+    assert!(prompt.contains("run at most one focused validation step"));
+    assert!(prompt.contains("emit a top-level `@work-leaf done`"));
 }
 
 #[test]
@@ -984,8 +989,17 @@ diff --git a/lib.rs b/lib.rs
     assert!(backend.sends[0].1.contains("please review"));
     assert_eq!(backend.sends[1].0, source);
     assert!(backend.sends[1].1.contains("work-leaf patch applied"));
-    assert!(backend.sends[1].1.contains("do not submit known-red"));
-    assert!(backend.sends[1].1.contains("same provisional patch"));
+    assert!(
+        backend.sends[1]
+            .1
+            .contains("already saved this patch as a provisional git commit")
+    );
+    assert!(backend.sends[1].1.contains("Do not resend this patch"));
+    assert!(
+        backend.sends[1]
+            .1
+            .contains("run at most one focused validation step")
+    );
     assert!(backend.sends[1].1.contains("@work-leaf done"));
 
     let message = git_output(&root, ["log", "-1", "--pretty=%B"]);
