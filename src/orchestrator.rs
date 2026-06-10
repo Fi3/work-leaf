@@ -233,12 +233,6 @@ pub(crate) struct OwnedPatchPath {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-struct StaleFileUpdate {
-    agent_id: AgentId,
-    paths: Vec<PathBuf>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
 struct TrackedFileSnapshot {
     text: String,
     digest: String,
@@ -375,30 +369,6 @@ impl FileReadTracker {
             .lock()
             .expect("file read tracker mutex poisoned")
             .remove(agent_id);
-    }
-
-    fn stale_readers(&self, changed_by: &AgentId, files: &[PathBuf]) -> Vec<StaleFileUpdate> {
-        let changed = files.iter().collect::<BTreeSet<_>>();
-        let reads = self.inner.lock().expect("file read tracker mutex poisoned");
-        reads
-            .iter()
-            .filter(|(agent_id, _)| *agent_id != changed_by)
-            .filter_map(|(agent_id, paths)| {
-                let stale_paths = paths
-                    .keys()
-                    .filter(|path| changed.contains(path))
-                    .cloned()
-                    .collect::<Vec<_>>();
-                if stale_paths.is_empty() {
-                    None
-                } else {
-                    Some(StaleFileUpdate {
-                        agent_id: agent_id.clone(),
-                        paths: stale_paths,
-                    })
-                }
-            })
-            .collect()
     }
 }
 
@@ -772,15 +742,13 @@ where
                             commit: outcome.commit,
                             files: outcome.files,
                         });
-                        send_stale_file_updates(
-                            backend, services, agent_id, &files, stream, &mut run,
-                        )?;
                     }
                     Err(PatchError::Conflict { files, diagnostic }) => {
                         let prompt = if is_already_applied_diagnostic(&diagnostic) {
                             render_already_applied_patch_prompt(&files)
-                        } else {
-                            let response = read_requested_files(services.locks, &files)?;
+                        } else if let Some(response) =
+                            patch_conflict_refresh_response(services, agent_id, &files)?
+                        {
                             let prompt = render_patch_conflict_prompt(
                                 agent_id,
                                 services.file_reads,
@@ -792,6 +760,8 @@ where
                                 .file_reads
                                 .record_snapshots(agent_id, &response.snapshots);
                             prompt
+                        } else {
+                            render_nonstale_patch_conflict_prompt(&files, &diagnostic)
                         };
                         let reply =
                             send_agent_streaming_interruptible(backend, agent_id, &prompt, stream)?;
@@ -844,9 +814,6 @@ where
                             commit: outcome.commit,
                             files: outcome.files,
                         });
-                        send_stale_file_updates(
-                            backend, services, agent_id, &files, stream, &mut run,
-                        )?;
                     }
                     Err(PatchError::Conflict { files, diagnostic }) => {
                         let prompt = if is_already_applied_diagnostic(&diagnostic) {
@@ -856,8 +823,9 @@ where
                                 "The orchestrator could not apply your edit.\n\nDiagnostic:\n{diagnostic}\n\n{}",
                                 structured_edit_format_guidance()
                             )
-                        } else {
-                            let response = read_requested_files(services.locks, &files)?;
+                        } else if let Some(response) =
+                            patch_conflict_refresh_response(services, agent_id, &files)?
+                        {
                             let prompt = render_structured_edit_conflict_prompt(
                                 agent_id,
                                 services.file_reads,
@@ -869,6 +837,8 @@ where
                                 .file_reads
                                 .record_snapshots(agent_id, &response.snapshots);
                             prompt
+                        } else {
+                            render_nonstale_structured_edit_conflict_prompt(&files, &diagnostic)
                         };
                         let reply =
                             send_agent_streaming_interruptible(backend, agent_id, &prompt, stream)?;
@@ -1039,34 +1009,6 @@ fn split_repeated_file_reads(
     (exact, changed, unchanged)
 }
 
-fn send_stale_file_updates<B>(
-    backend: &mut B,
-    services: DirectiveServices<'_>,
-    changed_by: &AgentId,
-    files: &[PathBuf],
-    stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
-    run: &mut DirectiveRun,
-) -> Result<(), OrchestratorError>
-where
-    B: AgentBackend,
-{
-    for update in services.file_reads.stale_readers(changed_by, files) {
-        let response = read_requested_files(services.locks, &update.paths)?;
-        let prompt = render_file_update_prompt(&update.agent_id, services.file_reads, &response);
-        let reply = send_agent_streaming_interruptible(backend, &update.agent_id, &prompt, stream)?;
-        services
-            .file_reads
-            .record_snapshots(&update.agent_id, &response.snapshots);
-        run.follow_up_replies
-            .push(follow_up(update.agent_id.clone(), reply));
-        run.events.push(OrchestratorEvent::FileUpdateSent {
-            agent_id: update.agent_id,
-            paths: update.paths,
-        });
-    }
-    Ok(())
-}
-
 fn run_command_for_agent<B>(
     backend: &mut B,
     services: DirectiveServices<'_>,
@@ -1184,15 +1126,29 @@ where
         stdout: output.stdout,
         stderr: output.stderr,
     });
-    let file_paths = locked_paths
-        .iter()
-        .filter(|path| services.locks.root().join(path).is_file())
-        .cloned()
-        .collect::<Vec<_>>();
-    if !file_paths.is_empty() {
-        send_stale_file_updates(backend, services, agent_id, &file_paths, stream, run)?;
-    }
     Ok(())
+}
+
+fn patch_conflict_refresh_response(
+    services: DirectiveServices<'_>,
+    agent_id: &AgentId,
+    files: &[PathBuf],
+) -> Result<Option<FileReadResponse>, OrchestratorError> {
+    let response = read_requested_files(services.locks, files)?;
+    if !response.failures.is_empty() || response.snapshots.len() != files.len() {
+        return Ok(Some(response));
+    }
+
+    for snapshot in &response.snapshots {
+        let Some(previous) = services.file_reads.snapshot_for(agent_id, &snapshot.path) else {
+            return Ok(Some(response));
+        };
+        if previous.digest != content_digest(&snapshot.text) {
+            return Ok(Some(response));
+        }
+    }
+
+    Ok(None)
 }
 
 fn tracked_changed_files(root: &Path) -> BTreeSet<PathBuf> {
@@ -2500,6 +2456,24 @@ fn render_structured_edit_conflict_prompt(
     text
 }
 
+fn render_nonstale_patch_conflict_prompt(files: &[PathBuf], diagnostic: &str) -> String {
+    format!(
+        "The orchestrator could not apply your patch.\nFiles: {}\n\nGit diagnostic:\n{}\n\nThe touched files still match this agent's latest snapshot. Do not rebase just because unrelated commits moved HEAD; fix the patch body or context against the snapshot you already have, or request narrower related context only if that snapshot is insufficient.\n{}",
+        display_paths(files),
+        diagnostic,
+        unified_diff_format_guidance()
+    )
+}
+
+fn render_nonstale_structured_edit_conflict_prompt(files: &[PathBuf], diagnostic: &str) -> String {
+    format!(
+        "The orchestrator could not apply your edit.\nFiles: {}\n\nDiagnostic:\n{}\n\nThe touched files still match this agent's latest snapshot. Do not rebase just because unrelated commits moved HEAD; fix the structured edit against the snapshot you already have, or request narrower related context only if that snapshot is insufficient.\n{}",
+        display_paths(files),
+        diagnostic,
+        structured_edit_format_guidance()
+    )
+}
+
 fn render_already_applied_patch_prompt(files: &[PathBuf]) -> String {
     let mut text = format!(
         "work-leaf patch already applied\nfiles: {}\n",
@@ -2551,21 +2525,6 @@ fn render_pending_command_changes_prompt(files: &[PathBuf], diff: &str) -> Strin
             text.push('\n');
         }
     }
-    text
-}
-
-fn render_file_update_prompt(
-    agent_id: &AgentId,
-    file_reads: &FileReadTracker,
-    response: &FileReadResponse,
-) -> String {
-    let mut text = [
-        "work-leaf file update",
-        "Another agent changed files you previously read before you submitted a patch.",
-        "Rebase any pending edit against the compact file refresh below.",
-    ]
-    .join("\n");
-    append_file_refresh_response(&mut text, agent_id, file_reads, response);
     text
 }
 

@@ -80,8 +80,9 @@ localhost HTTP API with the real configured Codex backend. It builds the current
 unless `WORK_LEAF_BENCH_SKIP_BUILD=1`, runs those binaries against a temporary checkout at the smoke
 base commit, polls the daemon through `GET /state`, records pass/fail, duration, review and
 linearize completion, commit churn, code-quality checks, and efficiency notes under
-`bench-results`, enables Codex child-process tracing in the daemon artifacts, and removes the
-temporary checkout before exit.
+`bench-results`, enables Codex child-process tracing in the daemon artifacts, runs Codex through the
+SDK transport, gives only the linearize agent a `danger-full-access` Codex sandbox through
+`WORK_LEAF_CODEX_LINEARIZE_SANDBOX`, and removes the temporary checkout before exit.
 
 The project-root `bench-three-features-sequential` and `bench-three-features-worktree` scripts run
 direct-Codex comparison baselines for the same three requests. Both use normal `codex exec --json`
@@ -207,10 +208,10 @@ public lifecycle extension is required before external child processes can parti
   and per-turn token usage in the same provider-neutral session state. The complete transcript is
   used for orchestrator directive parsing even when the SDK reports several assistant message items
   before the final turn-completed response.
-- Codex linearizer sessions run with `workspace-write` sandbox and approval policy `never` so they can
-  inspect files, update code or documentation, run checks, and rewrite history directly. Patch agents
-  and reviewer agents keep the configured Codex sandbox and continue to use orchestrator-mediated
-  writes.
+- Codex linearizer sessions run with the dedicated linearize sandbox, which defaults to
+  `workspace-write` and can be configured with `WORK_LEAF_CODEX_LINEARIZE_SANDBOX` (`read-only`,
+  `workspace-write`, or `danger-full-access`). The approval policy remains `never`. Patch agents and
+  reviewer agents keep the configured Codex sandbox and continue to use orchestrator-mediated writes.
 - `CodexBackend` serializes launch and send operations per `AgentId` across cloned backend handles.
   This keeps a single Codex thread from receiving overlapping turns while allowing different agent
   sessions to work concurrently through the shared SDK/app-server sidecar. Fallback exec mode also

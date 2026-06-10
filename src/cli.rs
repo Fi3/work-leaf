@@ -12,7 +12,7 @@ use crate::agent::{
     AgentBackend, AgentId, AgentLaunch, AgentProfile, AgentSession, AgentShutdownHandle,
     AgentStreamEvent, PromptPolicy, ReadPermission,
 };
-use crate::codex::{CodexBackend, CodexCommandConfig};
+use crate::codex::{CodexBackend, CodexCommandConfig, SandboxMode};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::locks::{CommandWritePolicy, FileLockTable};
 use crate::orchestrator::{
@@ -1481,6 +1481,9 @@ pub(crate) fn codex_backend(
     if let Some(model) = model {
         config = config.with_model(model);
     }
+    if let Some(sandbox) = codex_linearize_sandbox_from_env()? {
+        config = config.with_linearize_sandbox(sandbox);
+    }
     if use_codex_sdk_backend() {
         config = config.with_sdk_transport();
         if let Some(python) = env::var_os("WORK_LEAF_CODEX_SDK_PYTHON") {
@@ -1492,6 +1495,27 @@ pub(crate) fn codex_backend(
         PromptPolicy::for_project_with_read_permission(&project_dir, read_permission)
             .map_err(CliError::Agent)?,
     ))
+}
+
+fn codex_linearize_sandbox_from_env() -> Result<Option<SandboxMode>, CliError> {
+    let value = match env::var("WORK_LEAF_CODEX_LINEARIZE_SANDBOX") {
+        Ok(value) => value,
+        Err(env::VarError::NotPresent) => return Ok(None),
+        Err(env::VarError::NotUnicode(_)) => {
+            return Err(CliError::Usage(
+                "WORK_LEAF_CODEX_LINEARIZE_SANDBOX must be valid UTF-8".to_string(),
+            ));
+        }
+    };
+
+    match value.as_str() {
+        "read-only" => Ok(Some(SandboxMode::ReadOnly)),
+        "workspace-write" => Ok(Some(SandboxMode::WorkspaceWrite)),
+        "danger-full-access" => Ok(Some(SandboxMode::DangerFullAccess)),
+        _ => Err(CliError::Usage(format!(
+            "invalid WORK_LEAF_CODEX_LINEARIZE_SANDBOX `{value}`; expected read-only, workspace-write, or danger-full-access"
+        ))),
+    }
 }
 
 fn use_codex_sdk_backend() -> bool {
@@ -1612,6 +1636,7 @@ mod tests {
 
     static REGISTER_TEST_CLEANUP: Once = Once::new();
     static TEST_TEMP_ROOTS: OnceLock<Mutex<Vec<PathBuf>>> = OnceLock::new();
+    static TEST_ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn launched_agent_result_selects_chat_and_enters_insert_mode() {
@@ -1698,6 +1723,30 @@ mod tests {
         assert_ne!(first_binary, second_binary);
     }
 
+    #[test]
+    fn codex_linearize_sandbox_env_parses_known_modes_and_rejects_invalid_values() {
+        let _env_lock = TEST_ENV_LOCK.lock().unwrap();
+        let _guard = EnvGuard::new("WORK_LEAF_CODEX_LINEARIZE_SANDBOX");
+        unsafe {
+            env::set_var("WORK_LEAF_CODEX_LINEARIZE_SANDBOX", "danger-full-access");
+        }
+
+        assert_eq!(
+            codex_linearize_sandbox_from_env().unwrap(),
+            Some(SandboxMode::DangerFullAccess)
+        );
+
+        unsafe {
+            env::set_var("WORK_LEAF_CODEX_LINEARIZE_SANDBOX", "invalid");
+        }
+
+        assert!(matches!(
+            codex_linearize_sandbox_from_env(),
+            Err(CliError::Usage(message))
+                if message.contains("WORK_LEAF_CODEX_LINEARIZE_SANDBOX")
+        ));
+    }
+
     fn test_temp_dir(name: &str) -> PathBuf {
         let root = env::temp_dir().join(format!("work-leaf-{name}-{}", process::id()));
         let _ = fs::remove_dir_all(&root);
@@ -1730,6 +1779,29 @@ mod tests {
         };
         for root in roots.drain(..) {
             let _ = fs::remove_dir_all(root);
+        }
+    }
+
+    struct EnvGuard {
+        key: &'static str,
+        previous: Option<std::ffi::OsString>,
+    }
+
+    impl EnvGuard {
+        fn new(key: &'static str) -> Self {
+            let previous = env::var_os(key);
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            unsafe {
+                match self.previous.take() {
+                    Some(value) => env::set_var(self.key, value),
+                    None => env::remove_var(self.key),
+                }
+            }
         }
     }
 }

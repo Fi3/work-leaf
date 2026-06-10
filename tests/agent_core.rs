@@ -247,6 +247,28 @@ fn codex_backend_launches_linearize_with_workspace_write_sandbox() {
 }
 
 #[test]
+fn codex_backend_launches_linearize_with_configured_sandbox() {
+    let config = CodexCommandConfig::new(PathBuf::from("/repo"))
+        .with_binary("codex")
+        .with_linearize_sandbox(SandboxMode::DangerFullAccess);
+    let backend = CodexBackend::new(config, PromptPolicy::for_restricted_agents());
+
+    let invocation = backend.build_launch_invocation(&AgentLaunch::new(
+        AgentId::new("linearize").unwrap(),
+        AgentKind::Codex,
+        "linearize reviewed patches",
+        "rewrite reviewed commits",
+    ));
+
+    let sandbox_position = invocation
+        .args
+        .iter()
+        .position(|arg| arg == "--sandbox")
+        .expect("sandbox argument");
+    assert_eq!(invocation.args[sandbox_position + 1], "danger-full-access");
+}
+
+#[test]
 fn codex_backend_disables_codex_apps_for_daemon_exec_invocations() {
     let config = CodexCommandConfig::new(PathBuf::from("/repo")).with_binary("codex");
     let mut backend = CodexBackend::new(config, PromptPolicy::for_restricted_agents());
@@ -946,6 +968,56 @@ done
             .with_binary("/usr/bin/codex")
             .with_sdk_transport()
             .with_sdk_python(&fake_python),
+        PromptPolicy::for_restricted_agents(),
+    );
+
+    let session = backend
+        .launch_streaming(
+            AgentLaunch::new(
+                AgentId::new("linearize").unwrap(),
+                AgentKind::Codex,
+                "linearize reviewed patches",
+                "rewrite history",
+            ),
+            &mut |_| {},
+        )
+        .unwrap();
+
+    assert_eq!(session.messages[1].text, "linearize sandbox ok");
+}
+
+#[test]
+fn codex_backend_sdk_transport_sends_configured_sandbox_for_linearize() {
+    let root = temp_dir("codex-sdk-linearize-configured-sandbox");
+    let fake_bin = root.join("bin");
+    fs::create_dir_all(&fake_bin).unwrap();
+    let fake_python = fake_bin.join("python");
+    fs::write(
+        &fake_python,
+        r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$line" in
+    *'"agent_id":"linearize"'*'"sandbox":"danger-full-access"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-linearize","reply":"linearize sandbox ok"}\n' "$id"
+      ;;
+    *)
+      printf '{"id":%s,"ok":false,"error":"unexpected request"}\n' "$id"
+      ;;
+  esac
+done
+"#,
+    )
+    .unwrap();
+    make_executable(&fake_python);
+
+    let mut backend = CodexBackend::new(
+        CodexCommandConfig::new(root.clone())
+            .with_binary("/usr/bin/codex")
+            .with_sdk_transport()
+            .with_sdk_python(&fake_python)
+            .with_linearize_sandbox(SandboxMode::DangerFullAccess),
         PromptPolicy::for_restricted_agents(),
     );
 

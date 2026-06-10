@@ -281,7 +281,7 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains("WORK_LEAF_CODEX_TRACE=1"));
     assert!(
         script.contains(
-            "exec env WORK_LEAF_CODEX_BACKEND=sdk WORK_LEAF_CODEX_SDK_PYTHON=\"$sdk_python\" WORK_LEAF_CONTEXT_BUNDLE_DIR=\"$tmp_root/context-bundles\" WORK_LEAF_COMMAND_TMPDIR=\"$child_tmp_dir\" WORK_LEAF_CODEX_TRACE=1"
+            "exec env WORK_LEAF_CODEX_BACKEND=sdk WORK_LEAF_CODEX_SDK_PYTHON=\"$sdk_python\" WORK_LEAF_CONTEXT_BUNDLE_DIR=\"$tmp_root/context-bundles\" WORK_LEAF_COMMAND_TMPDIR=\"$child_tmp_dir\" WORK_LEAF_CODEX_TRACE=1 WORK_LEAF_CODEX_LINEARIZE_SANDBOX=danger-full-access"
         )
     );
     assert!(script.contains("ensure_codex_sdk_python"));

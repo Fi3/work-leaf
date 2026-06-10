@@ -540,8 +540,8 @@ fn command_chat_processes_reviewer_orchestrator_directives_before_findings() {
 }
 
 #[test]
-fn command_chat_proactively_updates_agents_with_stale_file_reads() {
-    let root = temp_git_repo("command-chat-stale-file-update");
+fn command_chat_does_not_interrupt_agents_with_stale_file_updates() {
+    let root = temp_git_repo("command-chat-no-stale-file-interrupt");
     fs::write(root.join("README.md"), "before\n").unwrap();
     git(&root, ["add", "."]);
     git(&root, ["commit", "-m", "ADD initial stale file fixture"]);
@@ -557,7 +557,6 @@ diff --git a/README.md b/README.md
 -before
 +after
 @work-leaf end",
-        "@work-leaf done",
         "@work-leaf done",
     ]);
     let mut chat = CommandChat::new(root.clone(), backend);
@@ -575,23 +574,19 @@ diff --git a/README.md b/README.md
     };
 
     assert!(reply.contains("applied patch from user-2"));
-    assert!(reply.contains("sent file update to user-1: README.md"));
-    assert!(reply.contains("agent user-1 reported done"));
     assert!(reply.contains("agent user-2 reported done"));
+    assert!(!reply.contains("sent file update to user-1"));
     assert_eq!(
         fs::read_to_string(root.join("README.md")).unwrap(),
         "after\n"
     );
 
     let backend = chat.into_backend();
-    assert_eq!(backend.sends.len(), 3);
+    assert_eq!(backend.sends.len(), 2);
     assert_eq!(backend.sends[0].0, AgentId::new("user-1").unwrap());
     assert!(backend.sends[0].1.contains("before"));
-    assert_eq!(backend.sends[1].0, AgentId::new("user-1").unwrap());
-    assert!(backend.sends[1].1.contains("work-leaf file update"));
-    assert!(backend.sends[1].1.contains("after"));
-    assert_eq!(backend.sends[2].0, AgentId::new("user-2").unwrap());
-    assert!(backend.sends[2].1.contains("work-leaf patch applied"));
+    assert_eq!(backend.sends[1].0, AgentId::new("user-2").unwrap());
+    assert!(backend.sends[1].1.contains("work-leaf patch applied"));
 }
 
 #[test]

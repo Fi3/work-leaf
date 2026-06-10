@@ -580,7 +580,7 @@ if [[ "$no_read_permission" == "1" || "$no_read_permission" == "true" || "$no_re
 fi
 (
   cd "$checkout_dir"
-  exec env WORK_LEAF_CODEX_BACKEND=sdk WORK_LEAF_CODEX_SDK_PYTHON="$sdk_python" WORK_LEAF_CONTEXT_BUNDLE_DIR="$tmp_root/context-bundles" WORK_LEAF_COMMAND_TMPDIR="$child_tmp_dir" WORK_LEAF_CODEX_TRACE=1 "$bin_dir/work-leaf-orchestrator" "${daemon_args[@]}" >"$tmp_root/daemon.out" 2>"$tmp_root/daemon.err"
+  exec env WORK_LEAF_CODEX_BACKEND=sdk WORK_LEAF_CODEX_SDK_PYTHON="$sdk_python" WORK_LEAF_CONTEXT_BUNDLE_DIR="$tmp_root/context-bundles" WORK_LEAF_COMMAND_TMPDIR="$child_tmp_dir" WORK_LEAF_CODEX_TRACE=1 WORK_LEAF_CODEX_LINEARIZE_SANDBOX=danger-full-access "$bin_dir/work-leaf-orchestrator" "${daemon_args[@]}" >"$tmp_root/daemon.out" 2>"$tmp_root/daemon.err"
 ) &
 daemon_pid=$!
 {

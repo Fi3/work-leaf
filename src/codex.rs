@@ -28,6 +28,7 @@ const REMOVED_CODEX_CHILD_ENV: &[&str] = &[
     "WORK_LEAF_CODEX_TRACE",
     "WORK_LEAF_COMMAND_TMPDIR",
     "WORK_LEAF_CONTEXT_BUNDLE_DIR",
+    "WORK_LEAF_CODEX_LINEARIZE_SANDBOX",
     WORK_LEAF_CODEX_SDK_PYTHON_ENV,
 ];
 const CODEX_STARTUP_RETRY_DELAYS_MS: &[u64] = &[1_000, 2_500, 5_000, 10_000];
@@ -63,6 +64,7 @@ pub struct CodexCommandConfig {
     pub project_dir: PathBuf,
     pub model: Option<String>,
     pub sandbox: SandboxMode,
+    pub linearize_sandbox: SandboxMode,
     pub transport: CodexTransport,
     pub sdk_python: Option<PathBuf>,
 }
@@ -74,6 +76,7 @@ impl CodexCommandConfig {
             project_dir,
             model: None,
             sandbox: SandboxMode::ReadOnly,
+            linearize_sandbox: SandboxMode::WorkspaceWrite,
             transport: CodexTransport::Exec,
             sdk_python: None,
         }
@@ -91,6 +94,11 @@ impl CodexCommandConfig {
 
     pub fn with_sandbox(mut self, sandbox: SandboxMode) -> Self {
         self.sandbox = sandbox;
+        self
+    }
+
+    pub fn with_linearize_sandbox(mut self, sandbox: SandboxMode) -> Self {
+        self.linearize_sandbox = sandbox;
         self
     }
 
@@ -865,7 +873,7 @@ impl CodexBackend {
 
     fn sandbox_for_agent(&self, agent_id: &AgentId) -> SandboxMode {
         if is_linearize_agent(agent_id) {
-            SandboxMode::WorkspaceWrite
+            self.config.linearize_sandbox.clone()
         } else {
             self.config.sandbox.clone()
         }

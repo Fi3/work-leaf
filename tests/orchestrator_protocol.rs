@@ -1542,8 +1542,8 @@ diff --git a/README.md b/README.md
 }
 
 #[test]
-fn orchestrator_protocol_proactively_sends_updated_files_to_stale_readers() {
-    let root = temp_git_repo("protocol-stale-reader-update");
+fn orchestrator_protocol_does_not_interrupt_readers_when_another_agent_changes_read_files() {
+    let root = temp_git_repo("protocol-stale-reader-no-interrupt");
     fs::write(root.join("README.md"), "before\n").unwrap();
     git(&root, ["add", "."]);
     git(&root, ["commit", "-m", "ADD initial stale reader fixture"]);
@@ -1583,27 +1583,22 @@ diff --git a/README.md b/README.md
                 if agent_id == &patcher && files == &vec![PathBuf::from("README.md")]
         )
     }));
-    assert!(events.iter().any(|event| {
+    assert!(!events.iter().any(|event| {
         matches!(
             event,
-            OrchestratorEvent::FileUpdateSent { agent_id, paths }
-                if agent_id == &reader && paths == &vec![PathBuf::from("README.md")]
+            OrchestratorEvent::FileUpdateSent { agent_id, .. } if agent_id == &reader
         )
     }));
-    assert_eq!(backend.sends.len(), 3);
+    assert_eq!(backend.sends.len(), 2);
     assert_eq!(backend.sends[0].0, reader);
     assert!(backend.sends[0].1.contains("before"));
-    assert_eq!(backend.sends[1].0, AgentId::new("user-1").unwrap());
-    assert!(backend.sends[1].1.contains("work-leaf file update"));
-    assert!(backend.sends[1].1.contains("README.md"));
-    assert!(backend.sends[1].1.contains("after"));
-    assert_eq!(backend.sends[2].0, patcher);
-    assert!(backend.sends[2].1.contains("work-leaf patch applied"));
+    assert_eq!(backend.sends[1].0, patcher);
+    assert!(backend.sends[1].1.contains("work-leaf patch applied"));
 }
 
 #[test]
-fn orchestrator_protocol_sends_compact_stale_updates_to_other_agents() {
-    let root = temp_git_repo("protocol-compact-stale-reader-update");
+fn orchestrator_protocol_defers_stale_reader_refresh_until_touched_file_conflict() {
+    let root = temp_git_repo("protocol-stale-refresh-on-conflict");
     let original = numbered_lines("before", 700);
     fs::write(root.join("README.md"), &original).unwrap();
     git(&root, ["add", "."]);
@@ -1640,17 +1635,45 @@ diff --git a/README.md b/README.md
 @work-leaf end",
         )
         .unwrap();
+    assert!(!events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::FileUpdateSent { agent_id, .. } if agent_id == &reader
+        )
+    }));
+
+    let events = orchestrator
+        .handle_agent_message(
+            &reader,
+            "docs",
+            "\
+@work-leaf patch update stale large readme line
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -348,7 +348,7 @@
+ before-0347
+ before-0348
+ before-0349
+-before-0350
++reader-0350
+ before-0351
+ before-0352
+ before-0353
+@work-leaf end",
+        )
+        .unwrap();
     let backend = orchestrator.into_backend();
 
     assert!(events.iter().any(|event| {
         matches!(
             event,
-            OrchestratorEvent::FileUpdateSent { agent_id, paths }
-                if agent_id == &reader && paths == &vec![PathBuf::from("README.md")]
+            OrchestratorEvent::PatchRejected { agent_id, files, .. }
+                if agent_id == &reader && files == &vec![PathBuf::from("README.md")]
         )
     }));
     assert_eq!(backend.sends.len(), 3);
-    let update_prompt = &backend.sends[1].1;
+    let update_prompt = &backend.sends[2].1;
     assert!(update_prompt.contains("work-leaf file refresh"));
     assert!(update_prompt.contains("-before-0350"));
     assert!(update_prompt.contains("+after-0350"));
@@ -1664,6 +1687,57 @@ diff --git a/README.md b/README.md
         !update_prompt.contains("before-0000\nbefore-0001\nbefore-0002"),
         "compact refresh should not inline the whole file"
     );
+}
+
+#[test]
+fn orchestrator_protocol_does_not_send_rebase_refresh_when_touched_files_match_snapshot() {
+    let root = temp_git_repo("protocol-nonstale-conflict-no-refresh");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    fs::write(root.join("other.txt"), "old\n").unwrap();
+    git(&root, ["add", "."]);
+    git(
+        &root,
+        ["commit", "-m", "ADD initial nonstale conflict fixture"],
+    );
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    orchestrator
+        .handle_agent_message(&agent_id, "docs", "@work-leaf read README.md")
+        .unwrap();
+    fs::write(root.join("other.txt"), "new\n").unwrap();
+    git(&root, ["add", "other.txt"]);
+    git(&root, ["commit", "-m", "UPDATE unrelated file"]);
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "\
+@work-leaf patch invalid context
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-missing
++after
+@work-leaf end",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::PatchRejected { agent_id: id, files, .. }
+                if id == &agent_id && files == &vec![PathBuf::from("README.md")]
+        )
+    }));
+    assert_eq!(backend.sends.len(), 2);
+    let conflict_prompt = &backend.sends[1].1;
+    assert!(conflict_prompt.contains("touched files still match this agent's latest snapshot"));
+    assert!(conflict_prompt.contains("Do not rebase just because unrelated commits moved HEAD"));
+    assert!(!conflict_prompt.contains("work-leaf file refresh"));
 }
 
 #[test]
