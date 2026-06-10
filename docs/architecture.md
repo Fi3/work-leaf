@@ -368,7 +368,11 @@ provides the initial session snapshot, `AgentLineAppended` carries one new sessi
 session metadata and loading state without re-sending the session transcript. `AgentUpdated` remains
 part of the DTO surface for full-session replacement when an integration needs it. Session line
 appends and status changes are not paired with full-session replacement events, so remote frontends
-can update long transcripts without re-receiving the full transcript text.
+can update long transcripts without re-receiving the full transcript text. When an agent turn is
+processed through orchestrator directive follow-ups, the controller keeps the final agent-visible
+reply but does not append aggregate `orchestrator:` and `agent follow-up from ...` transcript blocks
+as one chat line; those blocks duplicate streamed lines and command/file events that frontends
+already receive incrementally.
 
 New UIs should consume `WorkLeafController` and these DTOs. They should not duplicate worker
 spawning, session naming, review lookup, loading bookkeeping, or orchestrator event routing.
@@ -479,7 +483,11 @@ workflow types. `WorkLeafController` scopes automatic review after a patch agent
 patch agent that produced the provisional commit; explicit review commands use the history-wide
 review target lookup. Reviewer prompts treat documentation and prose-only updates as linearizer
 responsibility, so missing docs, README, changelog, markdown, txt, or other plain-text updates are not
-reported as patch-agent findings.
+reported as patch-agent findings. Review summary prompts ask patch agents to include verification
+evidence, real-agent smoke scenarios, and exact blockers. If a reviewer reports a non-code finding
+such as missing real-agent verification, the patch agent can resolve it by replying with the exact
+evidence or blocker instead of submitting another code patch, and the reviewer evaluates that
+evidence on the next pass.
 
 `src/linearize.rs::LinearizePlanner<B>` prepares linearization questions and launches a linearizer
 agent with decisions, groups, and required tests. `LinearizeAction`, `LinearizeGroup`,

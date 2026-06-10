@@ -642,7 +642,7 @@ where
         stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
     ) -> Result<ReviewResult, CliError> {
         let summary_prompt = format!(
-            "Please summarize the full reviewed patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\n\nFocus on what behavior the cumulative patch changes.",
+            "Please summarize the full reviewed patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\n\nFocus on what behavior the cumulative patch changes. Also include verification evidence from this session: focused checks, broad checks, real-agent smoke scenarios and results, and any exact blocker that prevented required verification.",
             commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context
         );
         let mut summary_stream = |event| stream(&commit.agent_id, event);
@@ -656,7 +656,7 @@ where
 
         let review_feature = format!("review {}", commit.feature);
         let review_prompt = format!(
-            "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\nSummary from original agent:\n{}\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.",
+            "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\nSummary from original agent:\n{}\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.\n\nFor agent-facing changes, missing required real-agent verification is a finding unless the summary or review scope includes the exact real-agent scenario and visible result, or the exact pre-agent blocker. If you report missing verification, state the precise evidence that would resolve it. When the patch agent responds with verification evidence or a blocker rather than code, evaluate that evidence instead of requiring another patch.",
             commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context, summary
         );
         let mut review_stream = |event| stream(&reviewer_id, event);
@@ -705,7 +705,7 @@ where
                 AgentStreamEvent::Status("reviewer findings routed back for fixes".to_string()),
             );
             let fix_prompt = format!(
-                "The reviewer found issues in your patch for commit {}.\n{}\n\nPlease fix the patch through the orchestrator patch flow. Do not modify documentation or plain-text files; documentation and prose updates are deferred to the linearize agent.",
+                "The reviewer found issues in your patch for commit {}.\n{}\n\nPlease fix the patch's code or test defects through the orchestrator patch flow. If a finding is about missing verification, missing explanation, or another non-code issue, resolve it by replying with the exact evidence, command result, real-agent scenario, or blocker; do not submit a cosmetic patch for non-code evidence. Do not modify documentation or plain-text files; documentation and prose updates are deferred to the linearize agent. Emit `@work-leaf done` when the findings are resolved.",
                 commit.hash, review_text
             );
             stream(
@@ -728,7 +728,7 @@ where
             )?;
 
             let recheck_prompt = format!(
-                "The original agent has responded to the findings for commit {}.\n{}\n\nPlease check the patch again and reply with NO_FINDINGS if resolved, otherwise list remaining FINDINGS. Documentation and plain-text updates are deferred to the linearize agent and must not be reported as remaining patch-agent findings.",
+                "The original agent has responded to the findings for commit {}.\n{}\n\nPlease check the patch again and reply with NO_FINDINGS if resolved, otherwise list remaining FINDINGS. The response may include code patches, verification evidence, real-agent smoke results, or an exact blocker; evaluate that evidence directly and do not require a code patch for a non-code finding. Documentation and plain-text updates are deferred to the linearize agent and must not be reported as remaining patch-agent findings.",
                 commit.hash, fix_reply
             );
             let mut recheck_stream = |event| stream(&reviewer_id, event);

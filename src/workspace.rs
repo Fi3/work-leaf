@@ -1469,7 +1469,7 @@ where
         let Some(session) = self.sessions.get(agent_id) else {
             return reply.to_string();
         };
-        trim_streamed_reply_blocks(reply, &session.lines).to_string()
+        trim_processed_agent_reply(reply, &session.lines)
     }
 
     fn push_command_line(&mut self, line: String) {
@@ -1540,6 +1540,71 @@ fn trim_streamed_reply_blocks<'a>(reply: &'a str, streamed_lines: &[String]) -> 
         }
         remaining = &remaining[block_end..];
     }
+}
+
+fn trim_processed_agent_reply(reply: &str, streamed_lines: &[String]) -> String {
+    let remaining = trim_streamed_reply_blocks(reply, streamed_lines).trim_start_matches('\n');
+    if remaining.is_empty() {
+        return String::new();
+    }
+    let retained_status = retained_orchestrator_status(remaining);
+    if let Some(payload) = last_agent_follow_up_payload(remaining) {
+        let compacted = trim_processed_agent_reply(payload, streamed_lines);
+        if compacted.is_empty() || streamed_lines.iter().any(|line| line == &compacted) {
+            return retained_status;
+        }
+        return join_visible_reply_blocks(&retained_status, &compacted);
+    }
+    if let Some(index) = orchestrator_block_start(remaining) {
+        let leading = remaining[..index].trim_end_matches('\n');
+        if leading.is_empty() || streamed_lines.iter().any(|line| line == leading) {
+            return retained_status;
+        }
+        return join_visible_reply_blocks(&retained_status, leading);
+    }
+    remaining.to_string()
+}
+
+fn retained_orchestrator_status(text: &str) -> String {
+    text.split("\n\n")
+        .filter_map(|block| block.strip_prefix("orchestrator:\n"))
+        .flat_map(str::lines)
+        .filter(|line| {
+            line.starts_with("agent ") && line.contains(" reported done")
+                || line.starts_with("sent file text to ")
+                || line.starts_with("reported unavailable file text to ")
+                || line.starts_with("sent file update to ")
+                || line.starts_with("classified command for ")
+                || line.starts_with("applied patch from ")
+                || line.starts_with("sent patch diagnostics to ")
+                || line.starts_with("ran command for ")
+                || line.starts_with("routed message from ")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn join_visible_reply_blocks(first: &str, second: &str) -> String {
+    match (first.is_empty(), second.is_empty()) {
+        (true, true) => String::new(),
+        (true, false) => second.to_string(),
+        (false, true) => first.to_string(),
+        (false, false) => format!("{first}\n\n{second}"),
+    }
+}
+
+fn last_agent_follow_up_payload(text: &str) -> Option<&str> {
+    let marker = "agent follow-up from ";
+    let marker_start = text.rfind(marker)?;
+    let payload_start = text[marker_start..].find(":\n")? + marker_start + 2;
+    Some(&text[payload_start..])
+}
+
+fn orchestrator_block_start(text: &str) -> Option<usize> {
+    if text.starts_with("orchestrator:") {
+        return Some(0);
+    }
+    text.find("\n\norchestrator:")
 }
 
 fn is_linearize_agent_id(agent_id: &AgentId) -> bool {

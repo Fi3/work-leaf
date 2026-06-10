@@ -116,6 +116,41 @@ fn controller_does_not_append_streamed_agent_messages_again_on_completion() {
 }
 
 #[test]
+fn controller_does_not_append_orchestrator_follow_up_blocks_on_completion() {
+    let root = std::env::temp_dir().join(format!(
+        "work-leaf-workspace-trims-orchestrator-follow-up-blocks-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(&root).unwrap();
+    temp_cleanup::register(&root);
+    fs::write(root.join("README.md"), "fixture context\n").unwrap();
+    let backend = FakeBackend::new(["@work-leaf read README.md", "final reply after read"]);
+    let chat = CommandChat::new(root, backend);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("read context").unwrap();
+
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    let snapshot = controller.snapshot();
+    let session = snapshot.session(&agent_id).expect("session exists");
+    assert!(
+        session
+            .lines
+            .iter()
+            .any(|line| line.contains("final reply after read")),
+        "{session:?}"
+    );
+    assert!(
+        !session
+            .lines
+            .iter()
+            .any(|line| line.contains("orchestrator:") || line.contains("agent follow-up from")),
+        "{session:?}"
+    );
+}
+
+#[test]
 fn controller_status_events_do_not_resend_existing_large_transcripts() {
     let large_reply = "large transcript line\n".repeat(8192);
     let backend = FakeBackend::new([large_reply.as_str(), "follow reply"]);
@@ -419,11 +454,13 @@ fn controller_starts_review_after_patch_agent_done_and_loops_until_clean() {
         target == &agent_id
             && prompt.contains("missing reviewed wording")
             && prompt.contains("Please fix the patch")
+            && prompt.contains("If a finding is about missing verification")
     }));
     assert!(sends.iter().any(|(target, prompt)| {
         target == &reviewer_id
             && prompt.contains("The original agent has responded to the findings")
             && prompt.contains("Please check the patch again")
+            && prompt.contains("verification evidence")
     }));
 }
 
