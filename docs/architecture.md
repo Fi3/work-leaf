@@ -303,10 +303,10 @@ compatibility, but once an agent has a tracked snapshot for a path the repeated-
 uses the digest/diff path so large files are not repeatedly copied into the same agent session.
 Tracked file changes produced by locked commands are captured as per-file diffs while the command
 locks are still held, then restored out of the shared checkout. Those captured command diffs remain
-pending for that patch agent until the agent submits them through the patch protocol or explicitly
-discards them. Pending command output blocks `@work-leaf done`, and the orchestrator returns the
-captured diff so the agent can submit the command output as a provisional patch when it belongs in
-the final work.
+pending for that patch agent until the agent submits them through the patch protocol or emits
+`@work-leaf command discard <reason>`. Pending command output blocks `@work-leaf done`, and the
+orchestrator returns the captured diff so the agent can submit the command output as a provisional
+patch when it belongs in the final work.
 Accepted patch commits are recorded in a patch-ownership ledger for coordination inside the shared
 worktree. The ledger tracks test-like paths by generic project conventions such as test/spec
 directories, test/spec file stems, and test/spec extensions. Patch-agent command directives that lock

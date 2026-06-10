@@ -442,9 +442,10 @@ captures a per-file diff while still holding the locks, restores those tracked f
 records the captured diff as pending command output for that patch agent. The command result includes
 the captured diff and explains that it was reverted from the shared checkout. The agent cannot finish
 with `@work-leaf done` while pending command output remains. The orchestrator asks the agent to
-submit the captured diff through `@work-leaf patch <reason>` or submit an explicit discard patch.
-This keeps formatter, build, test, or generator output out of the shared checkout until it becomes a
-normal provisional patch commit.
+submit the captured diff through `@work-leaf patch <reason>` or emit
+`@work-leaf command discard <reason>` when the command output is not needed. This keeps formatter,
+build, test, or generator output out of the shared checkout until it becomes a normal provisional
+patch commit.
 
 The command-lock rule is language- and tool-agnostic. Agents use it for any formatter, build, test,
 code generator, package manager, installer, cache-producing tool, or repository-required check that
@@ -496,8 +497,8 @@ A normal development session in default read-permission mode follows this shape:
 9. The orchestrator returns a patch-applied continuation prompt when the patch agent has not reported
    done.
 10. The patch agent runs required checks through locked command directives, commits any captured
-    command output through the patch protocol or explicitly discards it, and reports
-    `@work-leaf done` when the patch is ready for review.
+    command output through the patch protocol or discards it with `@work-leaf command discard`, and
+    reports `@work-leaf done` when the patch is ready for review.
 11. The orchestrator runs or schedules that patch agent's review agent when the patch agent reports
     `@work-leaf done`; the reviewed scope covers the unreviewed provisional commits from that patch
     agent.

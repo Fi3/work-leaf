@@ -747,6 +747,9 @@ where
                     &mut run,
                 )?;
             }
+            AgentDirective::DiscardCommandChanges => {
+                services.command_changes.clear_agent(agent_id);
+            }
             AgentDirective::Patch { reason, diff } => {
                 let patcher =
                     GitPatcher::new(services.locks.root().to_path_buf(), services.locks.clone());
@@ -1430,6 +1433,7 @@ enum AgentDirective {
         command: String,
         lock_paths: Vec<PathBuf>,
     },
+    DiscardCommandChanges,
     Patch {
         reason: String,
         diff: String,
@@ -1479,6 +1483,14 @@ fn parse_agent_directives(text: &str) -> Result<Vec<AgentDirective>, Orchestrato
                 command,
                 lock_paths,
             });
+        } else if let Some(rest) = directive_rest(body, "command discard") {
+            let reason = rest.trim();
+            if reason.is_empty() {
+                return Err(OrchestratorError::Usage(
+                    "command discard requires a reason".to_string(),
+                ));
+            }
+            directives.push(AgentDirective::DiscardCommandChanges);
         } else if let Some(rest) = directive_rest(body, "patch") {
             let reason = rest.trim();
             if reason.is_empty() {
@@ -2411,8 +2423,8 @@ fn render_pending_command_changes_prompt(files: &[PathBuf], diff: &str) -> Strin
     );
     text.push_str("Review cannot start until command-produced tracked changes are saved in a provisional commit or explicitly discarded.\n");
     text.push_str("If these changes are required, submit them with `@work-leaf patch <reason>` using the diff below; the orchestrator will apply and commit the captured diff through the normal patch path.\n");
-    text.push_str("In your next response, emit exactly one `@work-leaf patch` block or one revert patch block for these files, then stop your response immediately; do not repeat the same patch block and do not include `@work-leaf done` until Work Leaf reports the patch applied.\n");
-    text.push_str("If they are not required, submit a patch that reverts them. Then rerun required checks if needed and emit `@work-leaf done` only when no tracked command changes remain.\n");
+    text.push_str("If they are not required, emit `@work-leaf command discard <reason>` to clear this pending command output without writing or committing it.\n");
+    text.push_str("In your next response, emit exactly one `@work-leaf patch` block or one `@work-leaf command discard <reason>` directive for these files, then stop your response immediately; do not repeat the same patch block and do not include `@work-leaf done` until Work Leaf reports the patch applied or you have discarded the command output.\n");
     if !diff.trim().is_empty() {
         text.push_str("\nCurrent tracked diff:\n");
         text.push_str(diff);

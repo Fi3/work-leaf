@@ -509,8 +509,15 @@ fn orchestrator_protocol_blocks_done_until_command_changes_are_committed() {
     assert!(
         backend.sends[0]
             .1
-            .contains("emit exactly one `@work-leaf patch` block or one revert patch block"),
-        "pending command prompt should tell agents to avoid repeated patch blocks"
+            .contains("@work-leaf command discard <reason>")
+    );
+    assert!(
+        backend.sends[0]
+            .1
+            .contains(
+                "emit exactly one `@work-leaf patch` block or one `@work-leaf command discard <reason>` directive"
+            ),
+        "pending command prompt should tell agents to choose one command-output resolution"
     );
 }
 
@@ -560,6 +567,45 @@ fn orchestrator_protocol_resends_stored_command_diff_after_reverting_checkout() 
             .1
             .contains("diff --git a/README.md b/README.md")
     );
+}
+
+#[test]
+fn orchestrator_protocol_discards_captured_command_diff_before_done() {
+    let root = temp_git_repo("protocol-command-dirty-discard");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    fs::write(root.join("format.sh"), "printf 'after\\n' > README.md\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial formatting fixture"]);
+    let initial_head = git_output(&root, ["rev-parse", "HEAD"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "@work-leaf locks run README.md -- sh format.sh",
+        )
+        .unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "@work-leaf command discard formatter output not needed\n@work-leaf done",
+        )
+        .unwrap();
+
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "before\n"
+    );
+    assert!(git_output(&root, ["status", "--short", "--untracked-files=no"]).is_empty());
+    assert_eq!(git_output(&root, ["rev-parse", "HEAD"]), initial_head);
+    assert!(events.iter().any(
+        |event| matches!(event, OrchestratorEvent::AgentDone { agent_id: id } if id == &agent_id)
+    ));
 }
 
 #[test]
