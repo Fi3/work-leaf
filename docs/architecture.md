@@ -276,8 +276,11 @@ worktree. The ledger tracks test-like paths by generic project conventions such 
 directories, test/spec file stems, and test/spec extensions. Patch-agent command directives that lock
 another patch agent's focused test path are blocked before the command starts, and the agent receives
 compact guidance to run pre-existing checks or checks introduced by its own patch instead. Broad
-integration failures that involve another patch agent's focused tests are handled during review or
-linearization unless the submitting agent's own source change clearly caused the failure.
+validation commands may lock broad directories that contain another patch agent's focused tests when
+`CommandWritePolicy` classifies the command's write output as disjoint from those tests, such as a
+build or test runner that writes only cache or build output. Broad integration failures that involve
+another patch agent's focused tests are handled during review or linearization unless the submitting
+agent's own source change clearly caused the failure.
 Already-applied or stale duplicate patches receive a compact already-applied response instead of a
 file refresh, so the agent does not rebase and resend a diff already represented in the repository.
 

@@ -179,7 +179,8 @@ fn three_feature_smoke_script_describes_head_binary_old_base_workflow() {
     assert!(script.contains("WORK_LEAF_START_BIN_DIR=\"$bin_dir\""));
     assert!(script.contains("\"$repo_root/start\""));
     assert!(script.contains(":new add vim like visual mode"));
-    assert!(script.contains(":new when an user prompt start with /"));
+    assert!(script.contains(":new implement strict selected-agent slash command execution"));
+    assert!(script.contains("normal agent send/resume/model prompt path is insufficient"));
     assert!(script.contains(":new when review process is done"));
 }
 
@@ -266,6 +267,8 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains("sha256sum * > SHA256SUMS"));
     assert!(script.contains("save_repo_snapshot()"));
     assert!(script.contains("$artifact_dir/patches/$safe_label"));
+    assert!(script.contains("implement strict selected-agent slash command execution"));
+    assert!(script.contains("normal agent send/resume/model prompt path is insufficient"));
     assert!(
         script.contains("format-patch --no-signature -o \"$patch_dir\" \"$base_commit\"..HEAD")
     );

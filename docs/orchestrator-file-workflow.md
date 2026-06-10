@@ -397,6 +397,13 @@ orchestrator sends the command status, stdout, stderr, timeout state, and locked
 same agent as `work-leaf command result`. The command output is agent context; manual feature edits
 still use the unified-diff patch flow.
 
+The patch-ownership ledger blocks locked commands that directly target another patch agent's focused
+test path. Broad validation commands can still run when their broad lock paths include a directory
+that contains another patch agent's focused tests, as long as command classification identifies the
+command's write output as separate from those focused tests. This lets agents run integration
+validation that writes build or cache output while preserving the rule that another agent's focused
+tests are not used as local validation for the current patch.
+
 If a locked command leaves tracked file changes under the requested lock paths, those paths are
 tracked as pending command changes for that patch agent. The agent cannot finish with
 `@work-leaf done` while pending command changes remain. The orchestrator returns the current tracked

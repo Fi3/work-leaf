@@ -866,6 +866,97 @@ new file mode 100644
 }
 
 #[test]
+fn orchestrator_protocol_allows_broad_validation_over_other_agent_test_dirs() {
+    let root = temp_git_repo("protocol-other-agent-broad-validation");
+    fs::create_dir_all(root.join("tests")).unwrap();
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial ownership fixture"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let owner = AgentId::new("user-1").unwrap();
+    let other = AgentId::new("user-2").unwrap();
+
+    orchestrator
+        .handle_agent_message(
+            &owner,
+            "parser",
+            "\
+@work-leaf patch add focused test
+diff --git a/tests/parser.test b/tests/parser.test
+new file mode 100644
+--- /dev/null
++++ b/tests/parser.test
+@@ -0,0 +1 @@
++focused parser test
+@work-leaf end",
+        )
+        .unwrap();
+    let events = orchestrator
+        .handle_agent_message(
+            &other,
+            "slash",
+            "@work-leaf locks run tests target -- cargo test",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(
+        events
+            .iter()
+            .any(|event| matches!(event, OrchestratorEvent::CommandRun { .. })),
+        "broad validation commands should be allowed even when their broad lock names a test directory"
+    );
+    assert_eq!(backend.sends.len(), 2);
+    let prompt = &backend.sends[1].1;
+    assert!(prompt.contains("work-leaf command result"));
+    assert!(!prompt.contains("work-leaf command blocked by patch ownership"));
+}
+
+#[test]
+fn orchestrator_protocol_blocks_broad_test_locks_for_repo_writing_commands() {
+    let root = temp_git_repo("protocol-other-agent-root-writing-command");
+    fs::create_dir_all(root.join("tests")).unwrap();
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial ownership fixture"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let owner = AgentId::new("user-1").unwrap();
+    let other = AgentId::new("user-2").unwrap();
+
+    orchestrator
+        .handle_agent_message(
+            &owner,
+            "parser",
+            "\
+@work-leaf patch add focused test
+diff --git a/tests/parser.test b/tests/parser.test
+new file mode 100644
+--- /dev/null
++++ b/tests/parser.test
+@@ -0,0 +1 @@
++focused parser test
+@work-leaf end",
+        )
+        .unwrap();
+    let events = orchestrator
+        .handle_agent_message(&other, "slash", "@work-leaf locks run tests -- cargo fmt")
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, OrchestratorEvent::CommandRun { .. })),
+        "commands that may write the repo root should not run through another agent's test directory"
+    );
+    assert_eq!(backend.sends.len(), 2);
+    let prompt = &backend.sends[1].1;
+    assert!(prompt.contains("work-leaf command blocked by patch ownership"));
+}
+
+#[test]
 fn orchestrator_protocol_applies_patch_without_running_project_required_checks() {
     let root = temp_git_repo("protocol-no-required-check-run");
     fs::write(root.join("README.md"), "actual\n").unwrap();

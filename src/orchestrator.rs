@@ -476,6 +476,7 @@ impl PatchOwnershipTracker {
         &self,
         agent_id: &AgentId,
         locked_paths: &[PathBuf],
+        command_write_paths: &[PathBuf],
     ) -> Vec<(PathBuf, OwnedPatchPath)> {
         if locked_paths.is_empty() {
             return Vec::new();
@@ -489,17 +490,42 @@ impl PatchOwnershipTracker {
             .iter()
             .filter(|(_, owner)| &owner.agent_id != agent_id)
             .filter(|(owned_path, _)| {
-                locked_paths
-                    .iter()
-                    .any(|locked| paths_overlap(locked, owned_path))
+                should_block_owned_test_lock(locked_paths, command_write_paths, owned_path)
             })
             .map(|(path, owner)| (path.clone(), owner.clone()))
             .collect()
     }
 }
 
+fn should_block_owned_test_lock(
+    locked_paths: &[PathBuf],
+    command_write_paths: &[PathBuf],
+    owned_path: &Path,
+) -> bool {
+    let command_writes_owned_path = command_write_paths
+        .iter()
+        .any(|path| paths_overlap(path, owned_path));
+
+    locked_paths.iter().any(|locked| {
+        if locked == owned_path || locked.starts_with(owned_path) {
+            return true;
+        }
+        if owned_path.starts_with(locked) {
+            return command_write_paths.is_empty() || command_writes_owned_path;
+        }
+        false
+    })
+}
+
 fn paths_overlap(left: &Path, right: &Path) -> bool {
+    if is_repo_root_path(left) || is_repo_root_path(right) {
+        return true;
+    }
     left == right || left.starts_with(right) || right.starts_with(left)
+}
+
+fn is_repo_root_path(path: &Path) -> bool {
+    path.as_os_str().is_empty() || path == Path::new(".")
 }
 
 fn is_test_like_path(path: &Path) -> bool {
@@ -908,9 +934,18 @@ where
     B: AgentBackend,
 {
     let locked_paths = normalize_paths(services.locks, lock_paths)?;
-    let blocked_paths = services
-        .patch_ownership
-        .other_agent_test_locks(agent_id, &locked_paths);
+    let command_write_paths = normalize_paths(
+        services.locks,
+        &services
+            .command_policy
+            .classify(command.split_whitespace())
+            .paths,
+    )?;
+    let blocked_paths = services.patch_ownership.other_agent_test_locks(
+        agent_id,
+        &locked_paths,
+        &command_write_paths,
+    );
     if !blocked_paths.is_empty() {
         let prompt = render_other_agent_test_command_prompt(&blocked_paths);
         let mut sink = |event| stream(agent_id, event);
