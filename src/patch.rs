@@ -77,6 +77,10 @@ impl GitPatcher {
         request: PatchRequest,
         files: Vec<PathBuf>,
     ) -> Result<PatchOutcome, PatchError> {
+        if let Some(diagnostic) = malformed_hunk_header_diagnostic(&request.diff) {
+            return Err(PatchError::Conflict { files, diagnostic });
+        }
+
         let check = self
             .git_with_stdin(["apply", "--recount", "--check", "-"], &request.diff)
             .map_err(PatchError::Git)?;
@@ -372,7 +376,8 @@ where
                     )
                 } else {
                     format!(
-                        "The orchestrator could not apply your patch.\nFiles: {files_text}\n\nGit diagnostic:\n{diagnostic}\n\nPlease provide a corrected unified diff patch."
+                        "The orchestrator could not apply your patch.\nFiles: {files_text}\n\nGit diagnostic:\n{diagnostic}\n\n{}",
+                        unified_diff_format_guidance()
                     )
                 };
                 self.backend
@@ -393,8 +398,60 @@ where
 }
 
 pub(crate) fn render_no_files_prompt() -> String {
-    "The orchestrator could not apply your patch because the patch body did not include recognizable unified diff file headers such as `diff --git a/path b/path`, `--- a/path`, and `+++ b/path`.\n\nPlease resend the complete unified diff through `@work-leaf patch <reason>` followed by the patch body and `@work-leaf end`."
-        .to_string()
+    format!(
+        "The orchestrator could not apply your patch because the patch body did not include recognizable unified diff file headers such as `diff --git a/path b/path`, `--- a/path`, and `+++ b/path`.\n\n{}",
+        unified_diff_format_guidance()
+    )
+}
+
+pub(crate) fn unified_diff_format_guidance() -> &'static str {
+    "Resend the complete unified diff through `@work-leaf patch <reason>` followed by the patch body and `@work-leaf end`. Do not use placeholder `@@` hunk headers. Every hunk must use real unified-diff line ranges such as `@@ -old_start,old_count +new_start,new_count @@` from the current file text."
+}
+
+fn malformed_hunk_header_diagnostic(diff: &str) -> Option<String> {
+    for (index, line) in diff.lines().enumerate() {
+        let line = line.trim_end_matches('\r');
+        if line.starts_with("@@") && !valid_unified_hunk_header(line) {
+            return Some(format!(
+                "malformed unified diff: hunk header on line {} is missing unified diff line ranges; use `@@ -old_start,old_count +new_start,new_count @@` with real line numbers from the current file text",
+                index + 1
+            ));
+        }
+    }
+    None
+}
+
+fn valid_unified_hunk_header(line: &str) -> bool {
+    let Some(rest) = line.strip_prefix("@@ ") else {
+        return false;
+    };
+    let Some((ranges, _heading)) = rest.split_once(" @@") else {
+        return false;
+    };
+    let mut parts = ranges.split_whitespace();
+    let Some(old_range) = parts.next() else {
+        return false;
+    };
+    let Some(new_range) = parts.next() else {
+        return false;
+    };
+    old_range.strip_prefix('-').is_some_and(valid_unified_range)
+        && new_range.strip_prefix('+').is_some_and(valid_unified_range)
+}
+
+fn valid_unified_range(range: &str) -> bool {
+    let mut parts = range.split(',');
+    let Some(start) = parts.next() else {
+        return false;
+    };
+    if start.is_empty() || !start.chars().all(|ch| ch.is_ascii_digit()) {
+        return false;
+    }
+    match (parts.next(), parts.next()) {
+        (None, None) => true,
+        (Some(count), None) => !count.is_empty() && count.chars().all(|ch| ch.is_ascii_digit()),
+        _ => false,
+    }
 }
 
 fn parse_patch_path(raw: &str, prefix: &str) -> Option<PathBuf> {

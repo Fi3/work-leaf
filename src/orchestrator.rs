@@ -11,6 +11,7 @@ use crate::agent::{AgentBackend, AgentError, AgentId, AgentStreamEvent, ChatMess
 use crate::locks::{CommandWriteIntent, CommandWritePolicy, FileAccessError, FileLockTable};
 use crate::patch::{
     GitPatcher, PatchError, PatchRequest, is_already_applied_diagnostic, render_no_files_prompt,
+    unified_diff_format_guidance,
 };
 
 const WORK_LEAF_CONTEXT_BUNDLE_DIR_ENV: &str = "WORK_LEAF_CONTEXT_BUNDLE_DIR";
@@ -2027,6 +2028,9 @@ fn render_command_result(
             "\nuser authorization is required to rerun locked commands for longer than this limit.",
         );
     }
+    text.push_str(
+        "\nnext: Reply with the next Work Leaf directive, such as `@work-leaf done`, `@work-leaf patch`, `@work-leaf read`, or another `@work-leaf locks run`. Keep any non-directive explanation brief.",
+    );
     text.push_str("\nstdout:\n");
     text.push_str(&render_command_output(&output.stdout));
     text.push_str("stderr:\n");
@@ -2147,9 +2151,10 @@ fn render_patch_conflict_prompt(
     response: &FileReadResponse,
 ) -> String {
     let mut text = format!(
-        "The orchestrator could not apply your patch.\nFiles: {}\n\nGit diagnostic:\n{}\n\nRebase your patch against the compact file refresh below and provide a corrected unified diff patch.",
+        "The orchestrator could not apply your patch.\nFiles: {}\n\nGit diagnostic:\n{}\n\nRebase your patch against the compact file refresh below.\n{}",
         display_paths(files),
-        diagnostic
+        diagnostic,
+        unified_diff_format_guidance()
     );
     append_file_refresh_response(&mut text, agent_id, file_reads, response);
     text
