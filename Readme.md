@@ -25,6 +25,17 @@ duration, review and linearize completion, commit churn, code-quality checks, an
 inefficiencies under `bench-results`, and enables Codex child-process trace output in the saved
 daemon artifacts. It always removes its temporary checkout.
 
+`./bench-three-features-sequential` runs a direct-Codex baseline for the same three requests without
+Work Leaf orchestration. It implements and reviews one request at a time in a single temporary
+checkout, commits after each patch/fix turn, runs a final Codex linearizer, records the same
+duration, model, token, review, linearize, code-quality, patch, and binary artifacts, and removes
+its temporary checkout.
+
+`./bench-three-features-worktree` runs the direct-Codex worktree baseline. It creates one temporary
+Git worktree per request, runs the patch/review loops in parallel, then asks a final Codex
+linearizer to merge the reviewed branches into a minimal final history in the integration checkout.
+It records the same benchmark data and removes the temporary checkout and worktrees.
+
 `work-leaf-orchestrator` owns the controller, agent backend, locks, review routing, and patch
 workflow. It prints `WORK_LEAF_ORCHESTRATOR_URL=http://...` after binding its localhost HTTP API.
 `work-leaf` connects to that URL through `WORK_LEAF_ORCHESTRATOR_URL`; when the variable is absent,

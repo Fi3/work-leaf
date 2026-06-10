@@ -1,0 +1,818 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  bench-three-features-sequential [--dry-run]
+  bench-three-features-worktree [--dry-run]
+
+Run direct-Codex three-feature baselines against the historical Work Leaf base
+commit. The sequential mode asks one normal Codex session to implement each
+request, commits it, asks a separate normal Codex review session to review it,
+loops on fixes until clean, and then asks one final Codex session to linearize
+the resulting history. The worktree mode runs the same patch/review cycle for
+all three requests in parallel Git worktrees and asks a final Codex session to
+merge the reviewed branches into a minimal final history.
+
+Environment:
+  WORK_LEAF_CODEX_BENCH_BASE          base commit for the temp checkout
+  WORK_LEAF_CODEX_BENCH_TMPDIR        parent directory for temporary roots
+  WORK_LEAF_CODEX_BENCH_RESULTS_DIR   report directory, default bench-results
+  WORK_LEAF_CODEX_BENCH_SKIP_BUILD    set to 1 to skip saving release binaries
+  WORK_LEAF_CODEX_BENCH_BIN_DIR       directory containing Work Leaf binaries
+  WORK_LEAF_CODEX_BENCH_TIMEOUT_SECS  total timeout, default 14400
+  WORK_LEAF_CODEX_BENCH_REVIEW_ROUNDS max review/fix rounds per feature, default 3
+  WORK_LEAF_CODEX_BENCH_MODEL         optional Codex model passed to codex exec
+  WORK_LEAF_CODEX_BENCH_SANDBOX       patch/linearize sandbox, default workspace-write
+  WORK_LEAF_CODEX_BENCH_OPERATOR_NOTES optional human notes saved in the report
+  WORK_LEAF_CODEX_SDK_PYTHON          optional Python with openai-codex for model detection
+USAGE
+}
+
+mode="${1:-}"
+if [[ "$mode" != "sequential" && "$mode" != "worktree" ]]; then
+  usage >&2
+  exit 2
+fi
+shift
+
+dry_run=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run)
+      dry_run=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "unknown direct-Codex bench option: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+base_commit="${WORK_LEAF_CODEX_BENCH_BASE:-c92a0b7060a36eac6db2d869b85e589a7a9480f9}"
+tmp_parent="${WORK_LEAF_CODEX_BENCH_TMPDIR:-${TMPDIR:-/tmp}}"
+results_dir="${WORK_LEAF_CODEX_BENCH_RESULTS_DIR:-$repo_root/bench-results}"
+timeout_secs="${WORK_LEAF_CODEX_BENCH_TIMEOUT_SECS:-14400}"
+review_rounds="${WORK_LEAF_CODEX_BENCH_REVIEW_ROUNDS:-3}"
+patch_sandbox="${WORK_LEAF_CODEX_BENCH_SANDBOX:-workspace-write}"
+review_sandbox="${WORK_LEAF_CODEX_BENCH_REVIEW_SANDBOX:-read-only}"
+requested_bench_model="${WORK_LEAF_CODEX_BENCH_MODEL:-default}"
+bench_model="$requested_bench_model"
+bench_model_source="requested"
+bin_dir="${WORK_LEAF_CODEX_BENCH_BIN_DIR:-$repo_root/target/release}"
+run_id="${WORK_LEAF_CODEX_BENCH_RUN_ID:-$(date +%Y%m%dT%H%M%S%z)}"
+operator_notes="${WORK_LEAF_CODEX_BENCH_OPERATOR_NOTES:-}"
+case "$mode" in
+  sequential)
+    bench_name="three-feature-sequential-bench"
+    index_path_name="three-feature-sequential-bench.jsonl"
+    ;;
+  worktree)
+    bench_name="three-feature-worktree-bench"
+    index_path_name="three-feature-worktree-bench.jsonl"
+    ;;
+esac
+
+mkdir -p "$tmp_parent" "$results_dir"
+results_dir="$(cd "$results_dir" && pwd)"
+tmp_root="$(mktemp -d "$tmp_parent/work-leaf-3feature-${mode}-bench.XXXXXX")"
+checkout_dir="$tmp_root/repo"
+child_tmp_dir="$tmp_root/tmp"
+artifact_dir="$results_dir/${run_id}-${bench_name}-artifacts"
+report_path="$results_dir/${run_id}-${bench_name}.md"
+index_path="$results_dir/$index_path_name"
+start_epoch="$(date +%s)"
+result="fail"
+review_completed="no"
+linearize_completed="no"
+code_quality="not run"
+token_usage="unavailable"
+failure_reason=""
+reported=0
+sdk_python=""
+codex_bin=""
+
+feature_1='add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select'
+feature_2='implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt.'
+feature_3='when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it'
+
+log() {
+  printf '[%s] %s\n' "$(date '+%H:%M:%S')" "$*"
+}
+
+feature_prompt() {
+  case "$1" in
+    1) printf '%s\n' "$feature_1" ;;
+    2) printf '%s\n' "$feature_2" ;;
+    3) printf '%s\n' "$feature_3" ;;
+    *) return 1 ;;
+  esac
+}
+
+redact_sensitive_env() {
+  sed -E \
+    -e 's/^(.*(TOKEN|token|Token|SECRET|secret|Secret|PASSWORD|password|Password|KEY|key|Key|AUTH|auth|Auth|CREDENTIAL|credential|Credential|COOKIE|cookie|Cookie|SESSION|session|Session)[^=]*)=.*/\1=<redacted>/'
+}
+
+cleanup() {
+  local status=$?
+  if [[ "$status" -ne 0 && "$reported" == "0" ]]; then
+    result="fail"
+    failure_reason="${failure_reason:-bench exited unexpectedly with status $status}"
+    git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt" 2>/dev/null || true
+    git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt" 2>/dev/null || true
+    collect_token_usage || true
+    write_report "$failure_reason" || true
+  fi
+  rm -rf "$tmp_root"
+  exit "$status"
+}
+trap cleanup EXIT INT TERM
+
+copy_artifacts() {
+  mkdir -p "$artifact_dir"
+  for file in codex-version.txt codex-model.txt sdk-install.log driver-env.txt final-status.txt final-log.txt checks.log driver.log; do
+    if [[ -f "$tmp_root/$file" ]]; then
+      cp "$tmp_root/$file" "$artifact_dir/$file"
+    fi
+  done
+  if [[ -d "$tmp_root/runs" ]]; then
+    mkdir -p "$artifact_dir/runs"
+    cp -R "$tmp_root/runs/." "$artifact_dir/runs/"
+  fi
+  if [[ -d "$tmp_root/worktree-results" ]]; then
+    mkdir -p "$artifact_dir/worktree-results"
+    cp -R "$tmp_root/worktree-results/." "$artifact_dir/worktree-results/"
+  fi
+  mkdir -p "$artifact_dir/bin"
+  for binary in work-leaf work-leaf-orchestrator; do
+    if [[ -x "$bin_dir/$binary" ]]; then
+      cp "$bin_dir/$binary" "$artifact_dir/bin/$binary"
+    fi
+  done
+  if compgen -G "$artifact_dir/bin/*" >/dev/null; then
+    (cd "$artifact_dir/bin" && sha256sum * > SHA256SUMS)
+  fi
+}
+
+save_repo_snapshot() {
+  local label="$1"
+  local safe_label commit_count snapshot_dir patch_dir
+  [[ -d "$checkout_dir/.git" ]] || return
+  safe_label="$(printf '%s' "$label" | tr -c 'A-Za-z0-9._-' '-')"
+  snapshot_dir="$artifact_dir/patches/$safe_label"
+  patch_dir="$snapshot_dir/format-patch"
+  mkdir -p "$patch_dir"
+  git -C "$checkout_dir" rev-parse --show-toplevel > "$snapshot_dir/repo-path.txt" 2>/dev/null || true
+  git -C "$checkout_dir" status --short > "$snapshot_dir/git-status.txt" 2>/dev/null || true
+  git -C "$checkout_dir" log --oneline --decorate "$base_commit"..HEAD > "$snapshot_dir/git-log.txt" 2>/dev/null || true
+  git -C "$checkout_dir" diff --stat "$base_commit"..HEAD > "$snapshot_dir/diff-stat.txt" 2>/dev/null || true
+  git -C "$checkout_dir" diff --stat > "$snapshot_dir/worktree-diff-stat.txt" 2>/dev/null || true
+  git -C "$checkout_dir" diff > "$snapshot_dir/worktree.diff" 2>/dev/null || true
+  git -C "$checkout_dir" diff --cached > "$snapshot_dir/index.diff" 2>/dev/null || true
+  commit_count="$(git -C "$checkout_dir" rev-list --count HEAD ^"$base_commit" 2>/dev/null || printf '0')"
+  if [[ "$commit_count" != "0" ]]; then
+    git -C "$checkout_dir" format-patch --no-signature -o "$patch_dir" "$base_commit"..HEAD > "$snapshot_dir/format-patch-files.txt" 2>/dev/null || true
+    git -C "$checkout_dir" bundle create "$snapshot_dir/commits.bundle" "$base_commit"..HEAD > "$snapshot_dir/bundle-create.txt" 2>&1 || true
+  else
+    printf 'no commits after %s\n' "$base_commit" > "$snapshot_dir/no-commits.txt"
+  fi
+}
+
+collect_token_usage() {
+  if [[ ! -d "$tmp_root/runs" ]]; then
+    token_usage="unavailable"
+    return
+  fi
+  token_usage="$(
+    python3 - "$tmp_root/runs" <<'PY'
+import json
+import os
+import sys
+
+root = sys.argv[1]
+keys = {
+    "input_tokens": "input",
+    "inputtokens": "input",
+    "cached_input_tokens": "cached_input",
+    "cachedinputtokens": "cached_input",
+    "output_tokens": "output",
+    "outputtokens": "output",
+    "reasoning_output_tokens": "reasoning_output",
+    "reasoningoutputtokens": "reasoning_output",
+}
+
+def walk(value, totals):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            normalized = key.replace("_", "").lower()
+            if normalized in keys and isinstance(child, (int, float)):
+                totals[keys[normalized]] += int(child)
+            walk(child, totals)
+    elif isinstance(value, list):
+        for child in value:
+            walk(child, totals)
+
+parts = []
+for name in sorted(os.listdir(root)):
+    if not name.endswith(".jsonl"):
+        continue
+    totals = {"input": 0, "cached_input": 0, "output": 0, "reasoning_output": 0}
+    with open(os.path.join(root, name), "r", encoding="utf-8", errors="replace") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                walk(json.loads(line), totals)
+            except json.JSONDecodeError:
+                continue
+    if any(totals.values()):
+        label = name[:-6]
+        parts.append(
+            f"{label}: input={totals['input']} cached_input={totals['cached_input']} "
+            f"output={totals['output']} reasoning_output={totals['reasoning_output']}"
+        )
+print("; ".join(parts) if parts else "unavailable")
+PY
+  )"
+}
+
+write_report() {
+  local comment="$1"
+  local end_epoch elapsed commits status_lines recent_log driver_commit driver_dirty
+  local changed_files changed_lines_added changed_lines_deleted changed_lines_total
+  local binaries_produced effective_notes patch_artifacts codex_version
+  end_epoch="$(date +%s)"
+  elapsed=$((end_epoch - start_epoch))
+  commits="$(git -C "$checkout_dir" rev-list --count HEAD ^"$base_commit" 2>/dev/null || printf '0')"
+  status_lines="$(cat "$tmp_root/final-status.txt" 2>/dev/null || true)"
+  recent_log="$(cat "$tmp_root/final-log.txt" 2>/dev/null || true)"
+  driver_commit="$(git -C "$repo_root" rev-parse HEAD 2>/dev/null || printf 'unknown')"
+  if git -C "$repo_root" diff --quiet --ignore-submodules -- && git -C "$repo_root" diff --cached --quiet --ignore-submodules --; then
+    driver_dirty="no"
+  else
+    driver_dirty="yes"
+  fi
+  changed_files="$(git -C "$checkout_dir" diff --name-only "$base_commit"..HEAD 2>/dev/null | wc -l | tr -d ' ')"
+  read -r changed_lines_added changed_lines_deleted < <(
+    git -C "$checkout_dir" diff --numstat "$base_commit"..HEAD 2>/dev/null |
+      awk '{ if ($1 ~ /^[0-9]+$/) added += $1; if ($2 ~ /^[0-9]+$/) deleted += $2 } END { printf "%d %d\n", added, deleted }'
+  )
+  changed_lines_total=$((changed_lines_added + changed_lines_deleted))
+  copy_artifacts
+  save_repo_snapshot "$result"
+  binaries_produced="$(find "$artifact_dir/bin" -maxdepth 1 -type f -perm -111 -printf '%f ' 2>/dev/null | sed 's/[[:space:]]*$//')"
+  patch_artifacts="$artifact_dir/patches/$result"
+  effective_notes="${operator_notes:-$comment}"
+  codex_version="$(cat "$tmp_root/codex-version.txt" 2>/dev/null || printf 'unavailable')"
+  cat > "$report_path" <<EOF
+# Three-Feature Direct Codex Bench
+
+- result: $result
+- bench_mode: $mode
+- started_at: $(date -d "@$start_epoch" -Iseconds)
+- finished_at: $(date -d "@$end_epoch" -Iseconds)
+- duration_seconds: $elapsed
+- benched_binary_commit: n/a-direct-codex-baseline
+- bench_driver_commit: $driver_commit
+- bench_driver_dirty: $driver_dirty
+- agent_backend: codex
+- agent_transport: direct-codex-cli
+- codex_version: $codex_version
+- agent_model: $bench_model
+- agent_model_source: $bench_model_source
+- requested_agent_model: $requested_bench_model
+- sdk_python: ${sdk_python:-unavailable}
+- no_read_permission: n/a-direct-codex
+- web_ui_url: n/a-direct-codex
+- read_permission_mode: direct Codex filesystem access ($patch_sandbox)
+- base_commit: $base_commit
+- temp_checkout: $tmp_root
+- temp_checkout_kept: 0
+- review_completed: $review_completed
+- linearize_completed: $linearize_completed
+- commits_after_base: $commits
+- changed_files: $changed_files
+- changed_lines_added: $changed_lines_added
+- changed_lines_deleted: $changed_lines_deleted
+- changed_lines_total: $changed_lines_total
+- token_usage: $token_usage
+- code_quality: $code_quality
+- comment: $comment
+- operator_notes: $effective_notes
+- artifacts: $artifact_dir
+- binaries: $artifact_dir/bin
+- binaries_produced: ${binaries_produced:-none}
+- patch_artifacts: $patch_artifacts
+
+## Recent Commits
+
+\`\`\`
+$recent_log
+\`\`\`
+
+## Final Status
+
+\`\`\`
+$status_lines
+\`\`\`
+EOF
+  jq -n \
+    --arg run_id "$run_id" \
+    --arg result "$result" \
+    --arg bench_mode "$mode" \
+    --arg benched_binary_commit "n/a-direct-codex-baseline" \
+    --arg bench_driver_commit "$driver_commit" \
+    --arg bench_driver_dirty "$driver_dirty" \
+    --arg agent_backend "codex" \
+    --arg agent_transport "direct-codex-cli" \
+    --arg codex_version "$codex_version" \
+    --arg agent_model "$bench_model" \
+    --arg agent_model_source "$bench_model_source" \
+    --arg requested_agent_model "$requested_bench_model" \
+    --arg sdk_python "${sdk_python:-unavailable}" \
+    --arg no_read_permission "n/a-direct-codex" \
+    --arg web_ui_url "n/a-direct-codex" \
+    --arg read_permission_mode "direct Codex filesystem access ($patch_sandbox)" \
+    --arg base_commit "$base_commit" \
+    --arg report "$report_path" \
+    --arg review_completed "$review_completed" \
+    --arg linearize_completed "$linearize_completed" \
+    --arg code_quality "$code_quality" \
+    --arg token_usage "$token_usage" \
+    --arg comment "$comment" \
+    --arg operator_notes "$effective_notes" \
+    --arg binaries_produced "${binaries_produced:-none}" \
+    --arg patch_artifacts "$patch_artifacts" \
+    --argjson duration_seconds "$elapsed" \
+    --argjson commits_after_base "$commits" \
+    --argjson changed_files "$changed_files" \
+    --argjson changed_lines_added "$changed_lines_added" \
+    --argjson changed_lines_deleted "$changed_lines_deleted" \
+    --argjson changed_lines_total "$changed_lines_total" \
+    '{run_id:$run_id,result:$result,bench_mode:$bench_mode,benched_binary_commit:$benched_binary_commit,bench_driver_commit:$bench_driver_commit,bench_driver_dirty:$bench_driver_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,codex_version:$codex_version,agent_model:$agent_model,agent_model_source:$agent_model_source,requested_agent_model:$requested_agent_model,sdk_python:$sdk_python,no_read_permission:$no_read_permission,web_ui_url:$web_ui_url,read_permission_mode:$read_permission_mode,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
+    >> "$index_path"
+  reported=1
+  log "bench report: $report_path"
+}
+
+fail_bench() {
+  failure_reason="$1"
+  result="fail"
+  git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt" 2>/dev/null || true
+  git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt" 2>/dev/null || true
+  collect_token_usage || true
+  write_report "$failure_reason"
+  exit 1
+}
+
+ensure_codex_sdk_python() {
+  if [[ -n "${WORK_LEAF_CODEX_SDK_PYTHON:-}" ]]; then
+    sdk_python="$WORK_LEAF_CODEX_SDK_PYTHON"
+  else
+    sdk_python="$tmp_root/codex-sdk-venv/bin/python"
+    python3 -m venv "$tmp_root/codex-sdk-venv" >>"$tmp_root/sdk-install.log" 2>&1
+  fi
+
+  if ! "$sdk_python" - <<'PY' >/dev/null 2>>"$tmp_root/sdk-install.log"
+import openai_codex
+PY
+  then
+    "$sdk_python" -m pip install --cache-dir "${WORK_LEAF_PIP_CACHE_DIR:-/tmp/work-leaf-pip-cache}" openai-codex >>"$tmp_root/sdk-install.log" 2>&1
+  fi
+}
+
+detect_codex_model() {
+  if [[ -n "${WORK_LEAF_CODEX_BENCH_MODEL:-}" ]]; then
+    bench_model="$WORK_LEAF_CODEX_BENCH_MODEL"
+    bench_model_source="WORK_LEAF_CODEX_BENCH_MODEL"
+    return
+  fi
+  if [[ -z "$sdk_python" || -z "$codex_bin" ]]; then
+    bench_model="unknown"
+    bench_model_source="codex sdk config/read unavailable"
+    return
+  fi
+  local detected
+  detected="$(
+    "$sdk_python" - "$checkout_dir" "$codex_bin" 2>>"$tmp_root/sdk-install.log" <<'PY'
+import sys
+from openai_codex import CodexConfig
+from openai_codex.client import CodexClient
+from openai_codex.generated.v2_all import ConfigReadResponse
+
+cwd = sys.argv[1]
+codex_bin = sys.argv[2]
+client = CodexClient(
+    CodexConfig(
+        codex_bin=codex_bin,
+        cwd=cwd,
+        client_name="work_leaf_direct_bench",
+        client_title="Work Leaf Direct Bench",
+        client_version="0.1.0",
+        experimental_api=True,
+    )
+)
+client.start()
+try:
+    client.initialize()
+    config = client.request(
+        "config/read",
+        {"cwd": cwd, "includeLayers": False},
+        response_model=ConfigReadResponse,
+    ).config
+    print(getattr(config, "model", None) or "unknown")
+finally:
+    client.close()
+PY
+  )" || true
+  detected="$(printf '%s\n' "$detected" | tail -n1 | tr -d '\r')"
+  if [[ -n "$detected" && "$detected" != "unknown" ]]; then
+    bench_model="$detected"
+    bench_model_source="codex sdk config/read"
+  else
+    bench_model="unknown"
+    bench_model_source="codex sdk config/read unavailable"
+  fi
+  printf 'agent_model=%s\nagent_model_source=%s\n' "$bench_model" "$bench_model_source" > "$tmp_root/codex-model.txt"
+}
+
+extract_text_from_jsonl() {
+  local jsonl="$1"
+  local out="$2"
+  python3 - "$jsonl" > "$out" <<'PY'
+import json
+import sys
+
+text_keys = {"text", "message", "content", "response", "reply", "delta", "summary"}
+parts = []
+
+def walk(value, parent_key=""):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            walk(child, key)
+    elif isinstance(value, list):
+        for child in value:
+            walk(child, parent_key)
+    elif isinstance(value, str) and parent_key in text_keys:
+        parts.append(value)
+
+with open(sys.argv[1], "r", encoding="utf-8", errors="replace") as handle:
+    for line in handle:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            walk(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+
+print("\n".join(parts))
+PY
+}
+
+run_codex() {
+  local label="$1"
+  local cwd="$2"
+  local sandbox="$3"
+  local prompt="$4"
+  local run_dir jsonl stderr_file prompt_file text_file status_file
+  run_dir="$tmp_root/runs"
+  mkdir -p "$run_dir"
+  jsonl="$run_dir/${label}.jsonl"
+  stderr_file="$run_dir/${label}.stderr"
+  prompt_file="$run_dir/${label}.prompt.txt"
+  text_file="$run_dir/${label}.text.txt"
+  status_file="$run_dir/${label}.status"
+  printf '%s\n' "$prompt" > "$prompt_file"
+  log "codex $label in $cwd"
+
+  # Command shape intentionally mirrors normal direct Codex CLI usage:
+  # codex --disable apps --cd "$cwd" --sandbox "$sandbox" --ask-for-approval never exec --color never --json -
+  local args=(--disable apps --cd "$cwd" --sandbox "$sandbox" --ask-for-approval never)
+  if [[ -n "${WORK_LEAF_CODEX_BENCH_MODEL:-}" ]]; then
+    args+=(--model "$WORK_LEAF_CODEX_BENCH_MODEL")
+  fi
+  args+=(exec --color never --json -)
+  local now remaining
+  now="$(date +%s)"
+  remaining=$((deadline - now))
+  if (( remaining <= 0 )); then
+    printf 'timed out before starting %s\n' "$label" > "$stderr_file"
+    printf '124\n' > "$status_file"
+    return 124
+  fi
+  set +e
+  if command -v timeout >/dev/null 2>&1; then
+    timeout --foreground "${remaining}s" "$codex_bin" "${args[@]}" < "$prompt_file" > "$jsonl" 2> "$stderr_file"
+  else
+    "$codex_bin" "${args[@]}" < "$prompt_file" > "$jsonl" 2> "$stderr_file"
+  fi
+  local status=$?
+  set -e
+  printf '%s\n' "$status" > "$status_file"
+  extract_text_from_jsonl "$jsonl" "$text_file" || true
+  return "$status"
+}
+
+commit_if_changed() {
+  local repo="$1"
+  local subject="$2"
+  local body="$3"
+  if [[ -z "$(git -C "$repo" status --porcelain)" ]]; then
+    return 1
+  fi
+  git -C "$repo" add -A
+  git -C "$repo" commit -m "$subject" -m "$body" >/dev/null
+}
+
+implementation_prompt() {
+  local feature_index="$1"
+  local request
+  request="$(feature_prompt "$feature_index")"
+  cat <<EOF
+You are running as a normal direct Codex coding agent in this repository.
+
+Request $feature_index:
+$request
+
+Work directly in the checkout using the repository's normal AGENTS.md instructions.
+Do not use Work Leaf orchestrator directives. Do not create or use extra Git worktrees.
+Implement the feature with focused tests. Leave the changes uncommitted; the benchmark driver will
+make the commit after your turn. Avoid unrelated refactors and avoid documentation-only churn unless
+the behavior genuinely requires documentation.
+EOF
+}
+
+fix_prompt() {
+  local feature_index="$1"
+  local findings_file="$2"
+  local request
+  request="$(feature_prompt "$feature_index")"
+  cat <<EOF
+You are continuing the same direct Codex feature task.
+
+Request $feature_index:
+$request
+
+The reviewer reported the findings below. Fix only the reviewed feature behavior and tests needed to
+resolve those findings. Leave changes uncommitted; the benchmark driver will commit them.
+
+Reviewer findings:
+$(cat "$findings_file")
+EOF
+}
+
+review_prompt() {
+  local feature_index="$1"
+  local from_ref="$2"
+  local request
+  request="$(feature_prompt "$feature_index")"
+  cat <<EOF
+You are a normal direct Codex review agent. Do not modify files.
+
+Review only the changes for request $feature_index since commit $from_ref:
+$request
+
+Inspect the repository and the diff from $from_ref..HEAD. Report only bugs, regressions,
+missing tests for the changed behavior, or required documentation gaps introduced by this request.
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.
+EOF
+}
+
+linearize_prompt_sequential() {
+  cat <<EOF
+You are a normal direct Codex linearizer for a sequential three-feature benchmark.
+
+The repository contains reviewed commits for the three requests since $base_commit. Rewrite the
+history since $base_commit into the smallest clear set of final commits that preserves the reviewed
+behavior, updates documentation required by the resulting system, and follows this repository's
+commit-message rules. You may use git reset, rebase, cherry-pick, and commit directly.
+
+After rewriting, run the required repository checks from AGENTS.md:
+1. cargo fmt
+2. cargo clippy --all-targets --all-features -- -D warnings
+3. cargo test --all-targets --all-features
+
+Leave the repository clean and summarize the final commit messages and verification.
+EOF
+}
+
+linearize_prompt_worktree() {
+  cat <<EOF
+You are a normal direct Codex linearizer for a parallel worktree benchmark.
+
+This integration checkout is at base commit $base_commit. Three reviewed feature branches exist in
+the same Git repository:
+
+- bench-$run_id-feature-1: $(feature_prompt 1)
+- bench-$run_id-feature-2: $(feature_prompt 2)
+- bench-$run_id-feature-3: $(feature_prompt 3)
+
+Merge those reviewed branches into this checkout, resolve conflicts, minimize the final diff, and
+rewrite history if needed into the smallest clear set of final commits that preserves the reviewed
+behavior. Update documentation required by the resulting system and follow this repository's
+commit-message rules. You may use git show, diff, cherry-pick, reset, rebase, and commit directly.
+
+After rewriting, run the required repository checks from AGENTS.md:
+1. cargo fmt
+2. cargo clippy --all-targets --all-features -- -D warnings
+3. cargo test --all-targets --all-features
+
+Leave the repository clean and summarize the final commit messages and verification.
+EOF
+}
+
+review_is_clean() {
+  local file="$1"
+  python3 - "$file" <<'PY'
+import re
+import sys
+
+text = open(sys.argv[1], encoding="utf-8", errors="replace").read()
+for line in text.splitlines():
+    marker = line.strip().upper()
+    if marker == "NO_FINDINGS":
+        sys.exit(0)
+    if marker == "FINDINGS":
+        sys.exit(1)
+sys.exit(1)
+PY
+}
+
+run_feature_cycle() {
+  local feature_index="$1"
+  local repo="$2"
+  local label_prefix="$3"
+  local feature_base="$4"
+  local round review_label review_text fix_label
+  run_codex "${label_prefix}-implement" "$repo" "$patch_sandbox" "$(implementation_prompt "$feature_index")" \
+    || return 1
+  commit_if_changed \
+    "$repo" \
+    "ADD direct-Codex baseline feature $feature_index for review" \
+    "Record the direct Codex implementation for benchmark request $feature_index so a separate Codex reviewer can evaluate exactly that behavior." \
+    || return 1
+
+  for round in $(seq 1 "$review_rounds"); do
+    review_label="${label_prefix}-review-${round}"
+    run_codex "$review_label" "$repo" "$review_sandbox" "$(review_prompt "$feature_index" "$feature_base")" \
+      || return 1
+    review_text="$tmp_root/runs/${review_label}.text.txt"
+    if review_is_clean "$review_text"; then
+      printf 'feature=%s\nrounds=%s\nresult=clean\n' "$feature_index" "$round" > "$tmp_root/worktree-results/${label_prefix}.review"
+      return 0
+    fi
+    fix_label="${label_prefix}-fix-${round}"
+    run_codex "$fix_label" "$repo" "$patch_sandbox" "$(fix_prompt "$feature_index" "$review_text")" \
+      || return 1
+    commit_if_changed \
+      "$repo" \
+      "FIX direct-Codex baseline feature $feature_index after review" \
+      "Address the direct Codex reviewer findings for benchmark request $feature_index while keeping the change scoped to that reviewed feature." \
+      || return 1
+  done
+  printf 'feature=%s\nrounds=%s\nresult=review-findings-remained\n' "$feature_index" "$review_rounds" > "$tmp_root/worktree-results/${label_prefix}.review"
+  return 1
+}
+
+run_sequential_bench() {
+  local feature_index feature_base
+  for feature_index in 1 2 3; do
+    feature_base="$(git -C "$checkout_dir" rev-parse HEAD)"
+    log "sequential feature $feature_index starts at $feature_base"
+    run_feature_cycle "$feature_index" "$checkout_dir" "sequential-feature-${feature_index}" "$feature_base" \
+      || fail_bench "sequential feature $feature_index did not reach a clean review"
+  done
+  review_completed="yes"
+  run_codex "linearize" "$checkout_dir" "$patch_sandbox" "$(linearize_prompt_sequential)" \
+    || fail_bench "sequential linearizer failed"
+  linearize_completed="yes"
+}
+
+wait_for_parallel_features() {
+  local failed=0
+  local pid
+  for pid in "$@"; do
+    if ! wait "$pid"; then
+      failed=1
+    fi
+  done
+  return "$failed"
+}
+
+run_worktree_bench() {
+  local worktree_root="$tmp_root/worktrees"
+  local feature_index branch wt
+  local pids=()
+  mkdir -p "$worktree_root"
+  for feature_index in 1 2 3; do
+    branch="bench-$run_id-feature-$feature_index"
+    wt="$worktree_root/feature-$feature_index"
+    git -C "$checkout_dir" worktree add -B "$branch" "$wt" "$base_commit" >/dev/null
+    git -C "$wt" config user.email bench@example.com
+    git -C "$wt" config user.name "Work Leaf Bench"
+    (
+      run_feature_cycle "$feature_index" "$wt" "worktree-feature-${feature_index}" "$base_commit"
+      git -C "$wt" rev-parse HEAD > "$tmp_root/worktree-results/feature-${feature_index}.tip"
+    ) > "$tmp_root/worktree-results/feature-${feature_index}.driver.log" 2>&1 &
+    pids+=("$!")
+  done
+  wait_for_parallel_features "${pids[@]}" || fail_bench "one or more worktree feature cycles did not reach a clean review"
+  review_completed="yes"
+  run_codex "linearize" "$checkout_dir" "$patch_sandbox" "$(linearize_prompt_worktree)" \
+    || fail_bench "worktree linearizer failed"
+  linearize_completed="yes"
+}
+
+run_final_checks() {
+  git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt"
+  git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt"
+  if [[ -s "$tmp_root/final-status.txt" ]]; then
+    code_quality="not run; final repository was dirty"
+    fail_bench "linearize finished with a dirty repository"
+  fi
+  log "running final code quality checks"
+  (
+    cd "$checkout_dir"
+    export TMPDIR="$child_tmp_dir"
+    cargo fmt -- --check
+    cargo clippy --all-targets --all-features -- -D warnings
+    cargo test --all-targets --all-features
+  ) >"$tmp_root/checks.log" 2>&1 || {
+    code_quality="failed; see checks.log"
+    fail_bench "final repository checks failed"
+  }
+  code_quality="passed cargo fmt -- --check; cargo clippy --all-targets --all-features -- -D warnings; cargo test --all-targets --all-features"
+}
+
+log "WORK_LEAF_CODEX_BENCH_TEMP=$tmp_root"
+log "WORK_LEAF_CODEX_BENCH_BASE=$base_commit"
+printf 'WORK_LEAF_CODEX_BENCH_TEMP=%s\n' "$tmp_root"
+mkdir -p "$child_tmp_dir" "$tmp_root/runs" "$tmp_root/worktree-results"
+
+git -C "$repo_root" clone --no-checkout --no-hardlinks "$repo_root" "$checkout_dir" >/dev/null
+git -C "$checkout_dir" checkout --detach "$base_commit" >/dev/null
+git -C "$checkout_dir" config user.email bench@example.com
+git -C "$checkout_dir" config user.name "Work Leaf Bench"
+
+if [[ "$dry_run" == "1" ]]; then
+  result="skipped"
+  code_quality="not run"
+  git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt" 2>/dev/null || true
+  git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt" 2>/dev/null || true
+  write_report "dry run created and removed the isolated direct-Codex $mode checkout without launching agents"
+  exit 0
+fi
+
+if [[ "${WORK_LEAF_CODEX_BENCH_SKIP_BUILD:-}" != "1" ]]; then
+  (cd "$repo_root" && cargo build --release --bins)
+fi
+
+codex_bin="$(command -v codex 2>/dev/null || true)"
+[[ -n "$codex_bin" ]] || fail_bench "codex binary not found on PATH"
+{
+  printf 'codex_bin=%s\n' "$codex_bin"
+  "$codex_bin" --version 2>&1 || true
+} > "$tmp_root/codex-version.txt"
+env | redact_sensitive_env > "$tmp_root/driver-env.txt"
+ensure_codex_sdk_python
+detect_codex_model
+
+deadline=$((start_epoch + timeout_secs))
+if (( "$(date +%s)" > deadline )); then
+  fail_bench "timed out before starting"
+fi
+
+case "$mode" in
+  sequential)
+    run_sequential_bench
+    ;;
+  worktree)
+    run_worktree_bench
+    ;;
+esac
+
+run_final_checks
+result="pass"
+collect_token_usage
+git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt" 2>/dev/null || true
+git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt" 2>/dev/null || true
+write_report "direct Codex $mode benchmark completed review, linearize, and final checks"
+exit 0

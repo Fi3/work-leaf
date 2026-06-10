@@ -83,6 +83,17 @@ linearize completion, commit churn, code-quality checks, and efficiency notes un
 `bench-results`, enables Codex child-process tracing in the daemon artifacts, and removes the
 temporary checkout before exit.
 
+The project-root `bench-three-features-sequential` and `bench-three-features-worktree` scripts run
+direct-Codex comparison baselines for the same three requests. Both use normal `codex exec --json`
+sessions in temporary checkouts, save raw Codex JSONL/stdout/stderr artifacts, detect the configured
+Codex model through the SDK config when available, record token usage, save final patches and
+optional release binaries, run final repository checks, and remove temporary roots on exit. The
+sequential baseline implements one request, commits, reviews, fixes until clean, and then moves to
+the next request before a final direct-Codex linearizer rewrites history. The worktree baseline
+creates one Git worktree per request, runs the same patch/review loop for all requests in parallel,
+and asks a final direct-Codex linearizer in the integration checkout to merge the reviewed branches
+and produce a minimal final history.
+
 ## Agent Domain
 
 `src/agent.rs` owns provider-neutral agent data:
