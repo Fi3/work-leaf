@@ -6,6 +6,13 @@ use std::process::{Command, Output, Stdio};
 use crate::agent::{AgentBackend, AgentError, AgentId};
 use crate::locks::{FileAccessError, FileLockTable};
 
+pub(crate) const ALREADY_APPLIED_PATCH_DIAGNOSTIC: &str =
+    "patch already applied to current repository state";
+
+pub(crate) fn is_already_applied_diagnostic(diagnostic: &str) -> bool {
+    diagnostic.contains(ALREADY_APPLIED_PATCH_DIAGNOSTIC)
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PatchRequest {
     pub agent_id: AgentId,
@@ -84,11 +91,23 @@ impl GitPatcher {
                 && self.has_head_diff(&files).map_err(PatchError::Git)?
             {
                 self.git_add(&files).map_err(PatchError::Git)?;
+                if !self.has_staged_diff(&files).map_err(PatchError::Git)? {
+                    return Err(PatchError::Conflict {
+                        files,
+                        diagnostic: ALREADY_APPLIED_PATCH_DIAGNOSTIC.to_string(),
+                    });
+                }
                 self.git_commit(&request, &files).map_err(PatchError::Git)?;
                 let commit = self
                     .git_output(["rev-parse", "HEAD"])
                     .map_err(PatchError::Git)?;
                 return Ok(PatchOutcome { commit, files });
+            }
+            if reverse_check.status.success() {
+                return Err(PatchError::Conflict {
+                    files,
+                    diagnostic: ALREADY_APPLIED_PATCH_DIAGNOSTIC.to_string(),
+                });
             }
             return Err(PatchError::Conflict {
                 files,
@@ -184,6 +203,17 @@ impl GitPatcher {
         command
             .current_dir(&self.root)
             .args(["diff", "--quiet", "HEAD", "--"]);
+        for file in files {
+            command.arg(file);
+        }
+        Ok(!command.status()?.success())
+    }
+
+    fn has_staged_diff(&self, files: &[PathBuf]) -> Result<bool, std::io::Error> {
+        let mut command = Command::new("git");
+        command
+            .current_dir(&self.root)
+            .args(["diff", "--cached", "--quiet", "--"]);
         for file in files {
             command.arg(file);
         }
@@ -331,15 +361,20 @@ where
         match self.patcher.apply(request) {
             Ok(outcome) => Ok(outcome),
             Err(PatchError::Conflict { files, diagnostic }) => {
-                let prompt = format!(
-                    "The orchestrator could not apply your patch.\nFiles: {}\n\nGit diagnostic:\n{}\n\nPlease provide a corrected unified diff patch.",
-                    files
-                        .iter()
-                        .map(|path| path.display().to_string())
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                    diagnostic
-                );
+                let files_text = files
+                    .iter()
+                    .map(|path| path.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let prompt = if is_already_applied_diagnostic(&diagnostic) {
+                    format!(
+                        "work-leaf patch already applied\nfiles: {files_text}\nThe submitted patch is stale or already represented in the current repository state. Do not resend the same patch. Reread only the affected files if you still need context, then continue with your own feature or emit `@work-leaf done` when ready."
+                    )
+                } else {
+                    format!(
+                        "The orchestrator could not apply your patch.\nFiles: {files_text}\n\nGit diagnostic:\n{diagnostic}\n\nPlease provide a corrected unified diff patch."
+                    )
+                };
                 self.backend
                     .send(&agent_id, &prompt)
                     .map_err(PatchError::Agent)?;

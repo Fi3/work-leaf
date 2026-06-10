@@ -102,9 +102,12 @@ temporary checkout before exit.
 Patch-agent prompts keep documentation and prose-only files out of patch-agent scope. Patch agents
 work on code, tests, configuration, and other feature files through orchestrator patches; docs,
 README, changelog, markdown, txt, and other prose-only updates are handled during linearization when
-the final reviewed behavior requires them. Linearize-agent prompts use a separate direct-workspace
-policy: the linearizer reads and writes repository files, runs commands, and rewrites git history
-directly rather than using `@work-leaf` read, patch, or lock directives.
+the final reviewed behavior requires them. Patch-agent prompts also keep focused validation scoped to
+pre-existing checks or checks introduced by that same patch agent, leaving another patch agent's
+focused tests and broad integration reconciliation to review or linearization. Linearize-agent
+prompts use a separate direct-workspace policy: the linearizer reads and writes repository files,
+runs commands, and rewrites git history directly rather than using `@work-leaf` read, patch, or lock
+directives.
 
 `src/agent.rs` also re-exports `AgentBackend`, `AgentStreamEvent`, and `AgentShutdownHandle` from
 `src/agent_runtime.rs`, so callers can import all provider-neutral agent interfaces from
@@ -268,6 +271,15 @@ Tracked file changes produced by locked commands remain pending for that patch a
 commits them through the patch protocol or reverts them. Pending command changes block
 `@work-leaf done`, and the orchestrator returns the tracked diff so the agent can submit the command
 output as a provisional patch when it belongs in the final work.
+Accepted patch commits are recorded in a patch-ownership ledger for coordination inside the shared
+worktree. The ledger tracks test-like paths by generic project conventions such as test/spec
+directories, test/spec file stems, and test/spec extensions. Patch-agent command directives that lock
+another patch agent's focused test path are blocked before the command starts, and the agent receives
+compact guidance to run pre-existing checks or checks introduced by its own patch instead. Broad
+integration failures that involve another patch agent's focused tests are handled during review or
+linearization unless the submitting agent's own source change clearly caused the failure.
+Already-applied or stale duplicate patches receive a compact already-applied response instead of a
+file refresh, so the agent does not rebase and resend a diff already represented in the repository.
 
 Review bookkeeping has three scopes. The controller records a launch-time review baseline for each
 patch agent, tracks the latest reviewed hash for that patch agent so the same agent head is not
@@ -414,8 +426,9 @@ A web UI, desktop UI, or non-terminal integration should not depend on `Terminal
 
 `src/orchestrator.rs::AgentOrchestrator<B>` parses and executes `@work-leaf` directives emitted by
 agents. It uses `FileLockTable` for file reads and command write locks, `CommandWritePolicy` for
-command classification, `PatchCoordinator` for patch requests, and the active `AgentBackend` for
-routed follow-up messages. Its public output is `OrchestratorEvent`.
+command classification, `PatchCoordinator` for patch requests, a patch-ownership ledger for
+shared-worktree test coordination, and the active `AgentBackend` for routed follow-up messages. Its
+public output is `OrchestratorEvent`.
 
 `src/locks.rs::FileLockTable` owns root-scoped path normalization and read/write locking.
 `FileSnapshot` carries file read results. `CommandWritePolicy` and `CommandWriteIntent` provide

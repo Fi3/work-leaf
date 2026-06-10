@@ -9,7 +9,9 @@ use std::{fmt, fs};
 
 use crate::agent::{AgentBackend, AgentError, AgentId, AgentStreamEvent, ChatMessage};
 use crate::locks::{CommandWriteIntent, CommandWritePolicy, FileAccessError, FileLockTable};
-use crate::patch::{GitPatcher, PatchError, PatchRequest, render_no_files_prompt};
+use crate::patch::{
+    GitPatcher, PatchError, PatchRequest, is_already_applied_diagnostic, render_no_files_prompt,
+};
 
 const WORK_LEAF_CONTEXT_BUNDLE_DIR_ENV: &str = "WORK_LEAF_CONTEXT_BUNDLE_DIR";
 
@@ -19,6 +21,7 @@ pub struct AgentOrchestrator<B> {
     file_reads: FileReadTracker,
     context_bundles: ContextBundleStore,
     command_changes: CommandChangeTracker,
+    patch_ownership: PatchOwnershipTracker,
     command_policy: CommandWritePolicy,
     locked_command_timeout: Duration,
     backend: B,
@@ -34,6 +37,7 @@ where
             file_reads: FileReadTracker::default(),
             context_bundles: ContextBundleStore::new(),
             command_changes: CommandChangeTracker::default(),
+            patch_ownership: PatchOwnershipTracker::default(),
             command_policy: CommandWritePolicy,
             locked_command_timeout: default_locked_command_timeout(),
             backend,
@@ -58,6 +62,7 @@ where
                 file_reads: &self.file_reads,
                 context_bundles: &self.context_bundles,
                 command_changes: &self.command_changes,
+                patch_ownership: &self.patch_ownership,
                 command_policy: &self.command_policy,
                 locked_command_timeout: self.locked_command_timeout,
             },
@@ -213,6 +218,17 @@ pub(crate) struct CommandChangeTracker {
     inner: Arc<Mutex<BTreeMap<AgentId, BTreeSet<PathBuf>>>>,
 }
 
+#[derive(Clone, Debug, Default)]
+pub(crate) struct PatchOwnershipTracker {
+    inner: Arc<Mutex<BTreeMap<PathBuf, OwnedPatchPath>>>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct OwnedPatchPath {
+    agent_id: AgentId,
+    commit: String,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct StaleFileUpdate {
     agent_id: AgentId,
@@ -231,6 +247,7 @@ pub(crate) struct DirectiveServices<'a> {
     pub file_reads: &'a FileReadTracker,
     pub context_bundles: &'a ContextBundleStore,
     pub command_changes: &'a CommandChangeTracker,
+    pub patch_ownership: &'a PatchOwnershipTracker,
     pub command_policy: &'a CommandWritePolicy,
     pub locked_command_timeout: Duration,
 }
@@ -429,6 +446,118 @@ impl CommandChangeTracker {
     }
 }
 
+impl PatchOwnershipTracker {
+    fn record_patch(&self, agent_id: &AgentId, commit: &str, files: &[PathBuf]) {
+        let test_files = files
+            .iter()
+            .filter(|path| is_test_like_path(path))
+            .cloned()
+            .collect::<Vec<_>>();
+        if test_files.is_empty() {
+            return;
+        }
+
+        let mut ownership = self
+            .inner
+            .lock()
+            .expect("patch ownership tracker mutex poisoned");
+        for path in test_files {
+            ownership.insert(
+                path,
+                OwnedPatchPath {
+                    agent_id: agent_id.clone(),
+                    commit: commit.to_string(),
+                },
+            );
+        }
+    }
+
+    fn other_agent_test_locks(
+        &self,
+        agent_id: &AgentId,
+        locked_paths: &[PathBuf],
+    ) -> Vec<(PathBuf, OwnedPatchPath)> {
+        if locked_paths.is_empty() {
+            return Vec::new();
+        }
+
+        let ownership = self
+            .inner
+            .lock()
+            .expect("patch ownership tracker mutex poisoned");
+        ownership
+            .iter()
+            .filter(|(_, owner)| &owner.agent_id != agent_id)
+            .filter(|(owned_path, _)| {
+                locked_paths
+                    .iter()
+                    .any(|locked| paths_overlap(locked, owned_path))
+            })
+            .map(|(path, owner)| (path.clone(), owner.clone()))
+            .collect()
+    }
+}
+
+fn paths_overlap(left: &Path, right: &Path) -> bool {
+    left == right || left.starts_with(right) || right.starts_with(left)
+}
+
+fn is_test_like_path(path: &Path) -> bool {
+    let mut saw_test_component = false;
+    for component in path.components() {
+        let text = component.as_os_str().to_string_lossy().to_ascii_lowercase();
+        if matches!(
+            text.as_str(),
+            "test"
+                | "tests"
+                | "__tests__"
+                | "spec"
+                | "specs"
+                | "e2e"
+                | "integration"
+                | "integration-tests"
+                | "integration_tests"
+        ) {
+            saw_test_component = true;
+        }
+    }
+
+    if saw_test_component {
+        return true;
+    }
+
+    let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
+        return false;
+    };
+    let file_name = file_name.to_ascii_lowercase();
+    let extension = path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(str::to_ascii_lowercase);
+    if extension
+        .as_deref()
+        .is_some_and(|extension| matches!(extension, "test" | "spec"))
+    {
+        return true;
+    }
+
+    let stem = path
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap_or(file_name.as_str())
+        .to_ascii_lowercase();
+    let tokens = stem
+        .split(|character: char| !character.is_ascii_alphanumeric())
+        .filter(|token| !token.is_empty());
+    tokens.into_iter().any(|token| {
+        matches!(token, "test" | "tests" | "spec" | "specs")
+            || token.ends_with("test")
+            || token.ends_with("tests")
+            || token.ends_with("spec")
+            || token.ends_with("specs")
+    })
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct AgentFollowUp {
     pub agent_id: AgentId,
@@ -544,6 +673,9 @@ where
                         let files = outcome.files.clone();
                         services.file_reads.clear_files(agent_id, &files);
                         services.command_changes.clear_files(agent_id, &files);
+                        services
+                            .patch_ownership
+                            .record_patch(agent_id, &outcome.commit, &files);
                         applied_patch_files.extend(files.iter().cloned());
                         run.events.push(OrchestratorEvent::PatchApplied {
                             agent_id: agent_id.clone(),
@@ -557,22 +689,24 @@ where
                         )?;
                     }
                     Err(PatchError::Conflict { files, diagnostic }) => {
-                        let response = read_requested_files(services.locks, &files)?;
                         let mut sink = |event| stream(agent_id, event);
-                        let reply = backend.send_streaming(
-                            agent_id,
-                            &render_patch_conflict_prompt(
+                        let prompt = if is_already_applied_diagnostic(&diagnostic) {
+                            render_already_applied_patch_prompt(&files)
+                        } else {
+                            let response = read_requested_files(services.locks, &files)?;
+                            let prompt = render_patch_conflict_prompt(
                                 agent_id,
                                 services.file_reads,
                                 &files,
                                 &diagnostic,
                                 &response,
-                            ),
-                            &mut sink,
-                        )?;
-                        services
-                            .file_reads
-                            .record_snapshots(agent_id, &response.snapshots);
+                            );
+                            services
+                                .file_reads
+                                .record_snapshots(agent_id, &response.snapshots);
+                            prompt
+                        };
+                        let reply = backend.send_streaming(agent_id, &prompt, &mut sink)?;
                         run.follow_up_replies
                             .push(follow_up(agent_id.clone(), reply));
                         run.events.push(OrchestratorEvent::PatchRejected {
@@ -774,6 +908,18 @@ where
     B: AgentBackend,
 {
     let locked_paths = normalize_paths(services.locks, lock_paths)?;
+    let blocked_paths = services
+        .patch_ownership
+        .other_agent_test_locks(agent_id, &locked_paths);
+    if !blocked_paths.is_empty() {
+        let prompt = render_other_agent_test_command_prompt(&blocked_paths);
+        let mut sink = |event| stream(agent_id, event);
+        let reply = backend.send_streaming(agent_id, &prompt, &mut sink)?;
+        run.follow_up_replies
+            .push(follow_up(agent_id.clone(), reply));
+        return Ok(());
+    }
+
     let dirty_before = tracked_changed_files(services.locks.root());
     let output = services.locks.with_write_locks(&locked_paths, || {
         run_shell_command(
@@ -1608,12 +1754,39 @@ fn render_patch_conflict_prompt(
     text
 }
 
+fn render_already_applied_patch_prompt(files: &[PathBuf]) -> String {
+    let mut text = format!(
+        "work-leaf patch already applied\nfiles: {}\n",
+        display_paths(files)
+    );
+    text.push_str("The submitted patch is stale or already represented in the current repository state. Do not resend the same patch and do not rebase this same diff again.\n");
+    text.push_str("Reread only the affected files if you still need context, then continue with your own feature work or emit `@work-leaf done` when ready.");
+    text
+}
+
 fn render_patch_applied_prompt(files: &[PathBuf]) -> String {
     let mut text = format!("work-leaf patch applied\nfiles: {}\n", display_paths(files));
     text.push_str("Continue from the repository instructions.\n");
+    text.push_str("Run checks that existed before your patch or checks you added yourself. Do not run another patch agent's focused tests as local validation; report those as integration conflicts unless your own source change clearly caused them.\n");
     text.push_str("Run any required or relevant checks through `@work-leaf locks run <path>... -- <command>` when the command may write files.\n");
     text.push_str("Keep locked command runs within five minutes unless the user authorizes a longer lock-holding command.\n");
     text.push_str("Provide additional patches if checks fail or more work is needed; emit `@work-leaf done` only when this patch is ready for review.");
+    text
+}
+
+fn render_other_agent_test_command_prompt(blocked_paths: &[(PathBuf, OwnedPatchPath)]) -> String {
+    let mut text = String::from("work-leaf command blocked by patch ownership\n");
+    text.push_str("Do not run another patch agent's focused tests as local validation. Continue with checks that existed before your patch or checks you added yourself. If a broad integration check fails in another agent's test, report it as an integration conflict unless your own source change clearly caused it.\n");
+    text.push_str("Blocked test paths:\n");
+    for (path, owner) in blocked_paths {
+        text.push_str("- ");
+        text.push_str(&path.display().to_string());
+        text.push_str(" owned by ");
+        text.push_str(&owner.agent_id.to_string());
+        text.push_str(" at ");
+        text.push_str(&short_commit(&owner.commit));
+        text.push('\n');
+    }
     text
 }
 
@@ -1674,6 +1847,10 @@ fn display_paths(paths: &[PathBuf]) -> String {
         .map(|path| path.display().to_string())
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+fn short_commit(commit: &str) -> String {
+    commit.chars().take(7).collect()
 }
 
 fn display_status(status: Option<i32>) -> String {

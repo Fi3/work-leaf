@@ -691,6 +691,64 @@ diff --git a/README.md b/README.md
 }
 
 #[test]
+fn orchestrator_protocol_reports_already_applied_patches_without_rebase_refresh() {
+    let root = temp_git_repo("protocol-already-applied-patch");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "."]);
+    git(
+        &root,
+        ["commit", "-m", "ADD initial already-applied fixture"],
+    );
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let first = AgentId::new("user-1").unwrap();
+    let second = AgentId::new("user-2").unwrap();
+    let patch = "\
+@work-leaf patch update readme
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-before
++after
+@work-leaf end";
+
+    orchestrator
+        .handle_agent_message(&first, "docs", patch)
+        .unwrap();
+    let events = orchestrator
+        .handle_agent_message(&second, "docs", patch)
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "after\n"
+    );
+    assert_eq!(git_output(&root, ["rev-list", "--count", "HEAD"]), "2");
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::PatchRejected {
+                agent_id,
+                files,
+                diagnostic
+            } if agent_id == &second
+                && files == &vec![PathBuf::from("README.md")]
+                && diagnostic.contains("already applied")
+        )
+    }));
+    assert_eq!(backend.sends.len(), 2);
+    let prompt = &backend.sends[1].1;
+    assert!(prompt.contains("work-leaf patch already applied"));
+    assert!(prompt.contains("Do not resend the same patch"));
+    assert!(
+        !prompt.contains("work-leaf file refresh"),
+        "already-applied prompt should not send a rebase refresh: {prompt}"
+    );
+}
+
+#[test]
 fn orchestrator_protocol_sends_compact_patch_conflict_refresh_for_previously_read_files() {
     let root = temp_git_repo("protocol-compact-patch-conflict-refresh");
     let original = numbered_lines("before", 700);
@@ -751,6 +809,60 @@ diff --git a/README.md b/README.md
         !conflict_prompt.contains("before-0000\nbefore-0001\nbefore-0002"),
         "compact refresh should not inline the whole file"
     );
+}
+
+#[test]
+fn orchestrator_protocol_blocks_other_agent_owned_test_commands() {
+    let root = temp_git_repo("protocol-other-agent-test-command");
+    fs::create_dir_all(root.join("tests")).unwrap();
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial ownership fixture"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let owner = AgentId::new("user-1").unwrap();
+    let other = AgentId::new("user-2").unwrap();
+
+    orchestrator
+        .handle_agent_message(
+            &owner,
+            "parser",
+            "\
+@work-leaf patch add focused test
+diff --git a/tests/parser.test b/tests/parser.test
+new file mode 100644
+--- /dev/null
++++ b/tests/parser.test
+@@ -0,0 +1 @@
++focused parser test
+@work-leaf end",
+        )
+        .unwrap();
+    let events = orchestrator
+        .handle_agent_message(
+            &other,
+            "slash",
+            "@work-leaf locks run tests/parser.test -- sh -c 'printf ran > blocked.txt'",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(
+        !root.join("blocked.txt").exists(),
+        "other-agent focused test command should not run"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, OrchestratorEvent::CommandRun { .. })),
+        "blocked ownership commands should not be reported as executed"
+    );
+    assert_eq!(backend.sends.len(), 2);
+    let prompt = &backend.sends[1].1;
+    assert!(prompt.contains("work-leaf command blocked by patch ownership"));
+    assert!(prompt.contains("tests/parser.test"));
+    assert!(prompt.contains("user-1"));
+    assert!(prompt.contains("Do not run another patch agent's focused tests"));
 }
 
 #[test]

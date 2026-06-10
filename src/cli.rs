@@ -17,7 +17,7 @@ use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::locks::{CommandWritePolicy, FileLockTable};
 use crate::orchestrator::{
     AgentFollowUp, CommandChangeTracker, ContextBundleStore, DirectiveServices, FileReadTracker,
-    OrchestratorEvent, handle_agent_directives_streaming,
+    OrchestratorEvent, PatchOwnershipTracker, handle_agent_directives_streaming,
 };
 use crate::review::{AgentCommit, has_no_findings};
 use crate::review::{GitHistory, ReviewResult};
@@ -190,6 +190,7 @@ pub struct CommandChat<B> {
     file_reads: FileReadTracker,
     context_bundles: ContextBundleStore,
     command_changes: CommandChangeTracker,
+    patch_ownership: PatchOwnershipTracker,
     command_policy: CommandWritePolicy,
     agents: BTreeMap<AgentId, String>,
     reviewers: BTreeSet<AgentId>,
@@ -221,6 +222,7 @@ where
             file_reads: self.file_reads.clone(),
             context_bundles: self.context_bundles.clone(),
             command_changes: self.command_changes.clone(),
+            patch_ownership: self.patch_ownership.clone(),
             command_policy: self.command_policy.clone(),
             agents: self.agents.clone(),
             reviewers: self.reviewers.clone(),
@@ -246,6 +248,7 @@ where
             file_reads: FileReadTracker::default(),
             context_bundles: ContextBundleStore::new(),
             command_changes: CommandChangeTracker::default(),
+            patch_ownership: PatchOwnershipTracker::default(),
             project_dir,
             backend: Some(backend),
             shutdown,
@@ -565,6 +568,7 @@ where
                         file_reads: &self.file_reads,
                         context_bundles: &self.context_bundles,
                         command_changes: &self.command_changes,
+                        patch_ownership: &self.patch_ownership,
                         command_policy: &self.command_policy,
                         locked_command_timeout: self.locked_command_timeout,
                     },

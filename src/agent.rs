@@ -250,6 +250,7 @@ impl PromptPolicy {
             "Use `@work-leaf locks run <path> <path...> -- <command>` to run a command while the orchestrator holds write locks for every path the command may write.",
             "This command-lock rule is language- and tool-agnostic: use it for any formatter, build, test, code generator, package manager, installer, cache-producing tool, or repository-required check that may write files.",
             "Choose the command from the repository instructions and project context; choose the lock paths from the files, directories, caches, build outputs, dependency folders, or lockfiles that command may write.",
+            "Run checks that existed before your patch or checks you added yourself. Do not run another patch agent's focused tests as local validation; report those as integration conflicts unless your own source change clearly caused them.",
             "Locked command runs are limited to five minutes; user authorization is required for longer lock-holding commands.",
             "Do not use command locks for manual feature edits; manual code, configuration, and test changes must still be submitted with the unified-diff patch directive.",
             "Use `@work-leaf send <agent-id> <message>` to route context to another agent.",
