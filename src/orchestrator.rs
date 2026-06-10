@@ -16,6 +16,7 @@ use crate::patch::{
 };
 
 const WORK_LEAF_CONTEXT_BUNDLE_DIR_ENV: &str = "WORK_LEAF_CONTEXT_BUNDLE_DIR";
+const LOCKED_COMMAND_PROGRESS_INTERVAL: Duration = Duration::from_secs(30);
 
 #[derive(Debug)]
 pub struct AgentOrchestrator<B> {
@@ -1108,14 +1109,42 @@ where
     }
 
     let dirty_before = tracked_changed_files(services.locks.root());
+    stream(
+        agent_id,
+        AgentStreamEvent::Status(format!(
+            "waiting for locked command locks: {}",
+            display_paths(&locked_paths)
+        )),
+    );
     let output = services.locks.with_write_locks(&locked_paths, || {
+        stream(
+            agent_id,
+            AgentStreamEvent::Status(format!("running locked command: {command}")),
+        );
+        let mut progress = |elapsed| {
+            stream(
+                agent_id,
+                AgentStreamEvent::Status(format!(
+                    "locked command still running after {}: {command}",
+                    format_duration(elapsed)
+                )),
+            );
+        };
         run_shell_command(
             services.locks.root(),
             command,
             services.locked_command_timeout,
+            &mut progress,
         )
         .map_err(FileAccessError::Io)
     })?;
+    stream(
+        agent_id,
+        AgentStreamEvent::Status(format!(
+            "locked command finished: status={} command={command}",
+            display_status(output.status)
+        )),
+    );
     let command_changed_files = command_changed_files(
         &dirty_before,
         &tracked_changed_files(services.locks.root()),
@@ -1270,6 +1299,7 @@ fn run_shell_command(
     root: &std::path::Path,
     command: &str,
     timeout: Duration,
+    progress: &mut dyn FnMut(Duration),
 ) -> std::io::Result<CommandRunOutput> {
     #[cfg(windows)]
     let mut child = Command::new("cmd")
@@ -1300,6 +1330,7 @@ fn run_shell_command(
     };
 
     let start = Instant::now();
+    let mut last_progress = start;
     while start.elapsed() < timeout {
         if child.try_wait()?.is_some() {
             let output = child.wait_with_output()?;
@@ -1310,6 +1341,10 @@ fn run_shell_command(
                 timed_out: false,
                 timeout,
             });
+        }
+        if last_progress.elapsed() >= LOCKED_COMMAND_PROGRESS_INTERVAL {
+            progress(start.elapsed());
+            last_progress = Instant::now();
         }
         let remaining = timeout.saturating_sub(start.elapsed());
         thread::sleep(remaining.min(Duration::from_millis(10)));
@@ -1329,12 +1364,98 @@ fn run_shell_command(
 
 #[cfg(unix)]
 fn terminate_child(child: &mut std::process::Child) {
-    let child_id = child.id().to_string();
-    let _ = Command::new("kill").args(["-TERM", &child_id]).status();
-    thread::sleep(Duration::from_millis(10));
-    if child.try_wait().ok().flatten().is_none() {
-        let _ = child.kill();
+    let child_id = child.id();
+    let child_process_group = process_group_id(child_id);
+    let current_process_group = process_group_id(std::process::id());
+    let descendants = descendant_pids(child_id);
+    if child_process_group != current_process_group
+        && let Some(process_group_id) = child_process_group
+    {
+        terminate_process_group(process_group_id, "TERM");
     }
+    terminate_process(child_id, "TERM");
+    terminate_processes(&descendants, "TERM");
+    thread::sleep(Duration::from_millis(100));
+    let child_still_running = child.try_wait().ok().flatten().is_none();
+    let mut remaining = descendant_pids(child_id);
+    remaining.extend(descendants);
+    remaining.sort_unstable();
+    remaining.dedup();
+    if child_still_running || !remaining.is_empty() {
+        if child_process_group != current_process_group
+            && let Some(process_group_id) = child_process_group
+        {
+            terminate_process_group(process_group_id, "KILL");
+        }
+        terminate_processes(&remaining, "KILL");
+        if child_still_running {
+            terminate_process(child_id, "KILL");
+        }
+        thread::sleep(Duration::from_millis(10));
+        if child_still_running {
+            let _ = child.kill();
+        }
+    }
+}
+
+#[cfg(unix)]
+fn process_group_id(pid: u32) -> Option<u32> {
+    let output = Command::new("ps")
+        .args(["-o", "pgid=", "-p", &pid.to_string()])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    String::from_utf8_lossy(&output.stdout).trim().parse().ok()
+}
+
+#[cfg(unix)]
+fn terminate_process_group(process_group_id: u32, signal: &str) {
+    let process_group = format!("-{process_group_id}");
+    let _ = Command::new("kill")
+        .args([format!("-{signal}"), "--".to_string(), process_group])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+}
+
+#[cfg(unix)]
+fn terminate_process(pid: u32, signal: &str) {
+    let _ = Command::new("kill")
+        .args([format!("-{signal}"), pid.to_string()])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+}
+
+#[cfg(unix)]
+fn terminate_processes(pids: &[u32], signal: &str) {
+    for pid in pids.iter().rev() {
+        terminate_process(*pid, signal);
+    }
+}
+
+#[cfg(unix)]
+fn descendant_pids(pid: u32) -> Vec<u32> {
+    let Ok(output) = Command::new("pgrep")
+        .args(["-P", &pid.to_string()])
+        .output()
+    else {
+        return Vec::new();
+    };
+    if !output.status.success() {
+        return Vec::new();
+    }
+    let mut descendants = Vec::new();
+    for child_pid in String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter_map(|line| line.trim().parse::<u32>().ok())
+    {
+        descendants.extend(descendant_pids(child_pid));
+        descendants.push(child_pid);
+    }
+    descendants
 }
 
 #[cfg(windows)]

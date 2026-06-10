@@ -1,7 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::{Duration, Instant};
 
 use work_leaf::{
@@ -892,6 +894,59 @@ fn orchestrator_protocol_times_out_long_locked_command_runs() {
     assert!(backend.sends[0].1.contains("user authorization"));
 }
 
+#[cfg(unix)]
+#[test]
+fn orchestrator_protocol_timeout_releases_children_that_keep_output_pipes_open() {
+    let root = temp_git_repo("protocol-locked-command-timeout-pipes");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    fs::write(
+        root.join("hold-pipes.sh"),
+        "printf '%s\\n' \"$$\" > child.pid\ntrap '' TERM\nwhile :; do :; done\n",
+    )
+    .unwrap();
+    let agent_id = AgentId::new("user-1").unwrap();
+    let thread_root = root.clone();
+    let thread_agent_id = agent_id.clone();
+    let (sender, receiver) = mpsc::channel();
+
+    thread::spawn(move || {
+        let backend = RecordingBackend::default();
+        let mut orchestrator = AgentOrchestrator::new(thread_root, backend)
+            .with_locked_command_timeout(Duration::from_millis(50));
+        let result = orchestrator.handle_agent_message(
+            &thread_agent_id,
+            "docs",
+            "@work-leaf locks run README.md -- sh hold-pipes.sh",
+        );
+        let _ = sender.send(result);
+    });
+
+    let result = match receiver.recv_timeout(Duration::from_millis(800)) {
+        Ok(result) => result,
+        Err(error) => {
+            cleanup_pid_file_process(&root.join("child.pid"));
+            panic!("locked command should release pipes after timeout: {error}");
+        }
+    };
+
+    let events = result.unwrap();
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::CommandRun {
+                agent_id: id,
+                command,
+                status,
+                locked_paths,
+                ..
+            } if id == &agent_id
+                && command == "sh hold-pipes.sh"
+                && status.is_none()
+                && locked_paths == &vec![PathBuf::from("README.md")]
+        )
+    }));
+}
+
 #[test]
 fn orchestrator_protocol_returns_failing_command_output_to_agent() {
     let root = temp_git_repo("protocol-failing-command-run");
@@ -1737,6 +1792,19 @@ fn git_output<const N: usize>(root: &Path, args: [&str; N]) -> String {
         String::from_utf8_lossy(&output.stderr)
     );
     String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
+#[cfg(unix)]
+fn cleanup_pid_file_process(pid_file: &Path) {
+    let Ok(pid) = fs::read_to_string(pid_file) else {
+        return;
+    };
+    let pid = pid.trim();
+    if pid.is_empty() {
+        return;
+    }
+    let _ = Command::new("pkill").args(["-KILL", "-P", pid]).status();
+    let _ = Command::new("kill").args(["-KILL", pid]).status();
 }
 
 fn numbered_lines(prefix: &str, count: usize) -> String {

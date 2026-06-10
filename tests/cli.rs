@@ -733,6 +733,37 @@ done
 }
 
 #[test]
+fn command_chat_streams_locked_command_progress_status() {
+    let root = temp_git_repo("command-chat-locked-command-progress");
+    let backend = FakeBackend::new([
+        "@work-leaf locks run target -- sh -c 'printf command-ok'",
+        "@work-leaf done",
+    ]);
+    let mut chat = CommandChat::new(root, backend);
+    let launch = chat
+        .prepare_agent_launch(&["validate".to_string()])
+        .expect("launch is prepared");
+    let mut events = Vec::new();
+
+    let result = chat
+        .launch_prepared_agent_streaming_with_ids(launch, &mut |agent_id, event| {
+            events.push((agent_id.clone(), event));
+        })
+        .unwrap();
+
+    assert!(matches!(result, CommandChatResult::AgentLaunched { .. }));
+    assert!(events.iter().any(|(agent_id, event)| {
+        agent_id.as_str() == "user-1"
+            && matches!(
+                event,
+                AgentStreamEvent::Status(text)
+                    if text.contains("running locked command")
+                        && text.contains("sh -c 'printf command-ok'")
+            )
+    }));
+}
+
+#[test]
 fn failed_agent_launch_does_not_consume_user_agent_id() {
     let backend = FlakyLaunchBackend::default();
     let mut chat = CommandChat::new(PathBuf::from("/repo"), backend);
