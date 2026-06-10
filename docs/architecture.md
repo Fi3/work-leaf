@@ -301,10 +301,12 @@ digest; a repeated read for changed text returns a diff from that agent's last m
 instead of re-sending full file text. The `@work-leaf read --force <path>` form is accepted for
 compatibility, but once an agent has a tracked snapshot for a path the repeated-read response still
 uses the digest/diff path so large files are not repeatedly copied into the same agent session.
-Tracked file changes produced by locked commands remain pending for that patch agent until the agent
-commits them through the patch protocol or reverts them. Pending command changes block
-`@work-leaf done`, and the orchestrator returns the tracked diff so the agent can submit the command
-output as a provisional patch when it belongs in the final work.
+Tracked file changes produced by locked commands are captured as per-file diffs while the command
+locks are still held, then restored out of the shared checkout. Those captured command diffs remain
+pending for that patch agent until the agent submits them through the patch protocol or explicitly
+discards them. Pending command output blocks `@work-leaf done`, and the orchestrator returns the
+captured diff so the agent can submit the command output as a provisional patch when it belongs in
+the final work.
 Accepted patch commits are recorded in a patch-ownership ledger for coordination inside the shared
 worktree. The ledger tracks test-like paths by generic project conventions such as test/spec
 directories, test/spec file stems, and test/spec extensions. Patch-agent command directives that lock
@@ -485,11 +487,11 @@ resulting files, and let Git compute the final diff from the working tree. Unifi
 validated through `git apply --recount --check` before application. Patch application locks the
 touched files and the repository root path in `FileLockTable`; the root lock serializes git index
 operations such as `git add` and `git commit` while agents can still reason and produce patches
-concurrently. The unified-diff path also accepts a matching already-applied diff when a locked
-command has produced the tracked working-tree change, so the command output can be saved as the
-agent's provisional patch. `PatchCoordinator<B>` connects patch conflicts and malformed patch
-diagnostics back to the active agent backend. `PatchRequest`, `PatchOutcome`, and `PatchError` are
-the public patch workflow types.
+concurrently. The unified-diff path also accepts a matching already-applied diff when the same change
+is already present, and it applies captured locked-command diffs through the normal patch path so
+command output can be saved as the agent's provisional patch. `PatchCoordinator<B>` connects patch
+conflicts and malformed patch diagnostics back to the active agent backend. `PatchRequest`,
+`PatchOutcome`, and `PatchError` are the public patch workflow types.
 
 `src/review.rs::GitHistory` reads latest agent commits from repository history, builds cumulative
 review targets for a patch agent since a launch or reviewed baseline, and resolves agent metadata

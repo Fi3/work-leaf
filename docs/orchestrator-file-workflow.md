@@ -392,8 +392,9 @@ The legacy `@work-leaf patch <reason>` path accepts complete valid unified diffs
 file/root lock set, validates the entire diff with `git apply --recount --check`, applies the entire
 diff with `git apply --recount`, stages the touched files, and commits the provisional agent patch.
 Malformed unified diffs are rejected with unified-diff repair guidance. Matching already-applied
-unified diffs are accepted when a locked command has already produced the tracked working-tree
-change.
+unified diffs are accepted when the same change is already present; captured locked-command diffs
+normally apply through the standard patch path because the orchestrator restores command output from
+the shared checkout before the agent submits it.
 
 ## Command Write Classification
 
@@ -436,12 +437,14 @@ command's write output as separate from those focused tests. This lets agents ru
 validation that writes build or cache output while preserving the rule that another agent's focused
 tests are not used as local validation for the current patch.
 
-If a locked command leaves tracked file changes under the requested lock paths, those paths are
-tracked as pending command changes for that patch agent. The agent cannot finish with
-`@work-leaf done` while pending command changes remain. The orchestrator returns the current tracked
-diff and asks the agent to either submit that diff through `@work-leaf patch <reason>` or submit a
-reverting patch. Matching already-applied diffs are accepted by the patch flow so formatter, build,
-test, or generator output can be saved as a provisional patch commit without reapplying the diff.
+If a locked command leaves tracked file changes under the requested lock paths, the orchestrator
+captures a per-file diff while still holding the locks, restores those tracked files to `HEAD`, and
+records the captured diff as pending command output for that patch agent. The command result includes
+the captured diff and explains that it was reverted from the shared checkout. The agent cannot finish
+with `@work-leaf done` while pending command output remains. The orchestrator asks the agent to
+submit the captured diff through `@work-leaf patch <reason>` or submit an explicit discard patch.
+This keeps formatter, build, test, or generator output out of the shared checkout until it becomes a
+normal provisional patch commit.
 
 The command-lock rule is language- and tool-agnostic. Agents use it for any formatter, build, test,
 code generator, package manager, installer, cache-producing tool, or repository-required check that
@@ -492,9 +495,9 @@ A normal development session in default read-permission mode follows this shape:
    that agent a proactive `work-leaf file update` with fresh file text.
 9. The orchestrator returns a patch-applied continuation prompt when the patch agent has not reported
    done.
-10. The patch agent runs required checks through locked command directives, commits or reverts any
-    tracked command output through the patch protocol, and reports `@work-leaf done` when the patch is
-    ready for review.
+10. The patch agent runs required checks through locked command directives, commits any captured
+    command output through the patch protocol or explicitly discards it, and reports
+    `@work-leaf done` when the patch is ready for review.
 11. The orchestrator runs or schedules that patch agent's review agent when the patch agent reports
     `@work-leaf done`; the reviewed scope covers the unreviewed provisional commits from that patch
     agent.

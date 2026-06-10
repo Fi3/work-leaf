@@ -465,9 +465,13 @@ fn orchestrator_protocol_blocks_done_until_command_changes_are_committed() {
 
     assert_eq!(
         fs::read_to_string(root.join("README.md")).unwrap(),
-        "after\n"
+        "before\n",
+        "command-produced tracked changes must be reverted out of the shared checkout until the agent commits them through the patch protocol"
     );
-    assert!(git_output(&root, ["status", "--short"]).contains("README.md"));
+    assert!(
+        git_output(&root, ["status", "--short", "--untracked-files=no"]).is_empty(),
+        "command-produced tracked changes must not leak into the shared worktree"
+    );
     assert!(events.iter().any(|event| matches!(
         event,
         OrchestratorEvent::CommandRun {
@@ -484,20 +488,77 @@ fn orchestrator_protocol_blocks_done_until_command_changes_are_committed() {
     );
 
     let backend = orchestrator.into_backend();
+    assert_eq!(backend.sends.len(), 1);
+    assert!(
+        backend.sends[0]
+            .1
+            .contains("tracked command changes: captured and reverted")
+    );
+    assert!(
+        backend.sends[0]
+            .1
+            .contains("work-leaf command captured tracked file changes")
+    );
+    assert!(backend.sends[0].1.contains("README.md"));
+    assert!(
+        backend.sends[0]
+            .1
+            .contains("diff --git a/README.md b/README.md")
+    );
+    assert!(backend.sends[0].1.contains("@work-leaf patch <reason>"));
+    assert!(
+        backend.sends[0]
+            .1
+            .contains("emit exactly one `@work-leaf patch` block or one revert patch block"),
+        "pending command prompt should tell agents to avoid repeated patch blocks"
+    );
+}
+
+#[test]
+fn orchestrator_protocol_resends_stored_command_diff_after_reverting_checkout() {
+    let root = temp_git_repo("protocol-command-dirty-done-later");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    fs::write(root.join("format.sh"), "printf 'after\\n' > README.md\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial formatting fixture"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "@work-leaf locks run README.md -- sh format.sh",
+        )
+        .unwrap();
+
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "before\n"
+    );
+    assert!(git_output(&root, ["status", "--short", "--untracked-files=no"]).is_empty());
+
+    let events = orchestrator
+        .handle_agent_message(&agent_id, "docs", "@work-leaf done")
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, OrchestratorEvent::AgentDone { .. }))
+    );
     assert_eq!(backend.sends.len(), 2);
-    assert!(backend.sends[1].1.contains("tracked working-tree changes"));
-    assert!(backend.sends[1].1.contains("README.md"));
+    assert!(
+        backend.sends[1]
+            .1
+            .contains("work-leaf command captured tracked file changes")
+    );
     assert!(
         backend.sends[1]
             .1
             .contains("diff --git a/README.md b/README.md")
-    );
-    assert!(backend.sends[1].1.contains("@work-leaf patch <reason>"));
-    assert!(
-        backend.sends[1]
-            .1
-            .contains("emit exactly one `@work-leaf patch` block or one revert patch block"),
-        "pending command prompt should tell agents to avoid repeated patch blocks"
     );
 }
 
@@ -631,7 +692,7 @@ diff --git a/README.md b/README.md
         backend
             .sends
             .iter()
-            .filter(|(_, prompt)| prompt.contains("tracked working-tree changes"))
+            .filter(|(_, prompt)| prompt.contains("work-leaf command captured tracked file changes"))
             .count(),
         1,
         "committed command changes should not remain pending for their original agent"

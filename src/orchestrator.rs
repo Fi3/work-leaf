@@ -217,7 +217,7 @@ struct ContextBundleStoreInner {
 
 #[derive(Clone, Debug, Default)]
 pub(crate) struct CommandChangeTracker {
-    inner: Arc<Mutex<BTreeMap<AgentId, BTreeSet<PathBuf>>>>,
+    inner: Arc<Mutex<BTreeMap<AgentId, BTreeMap<PathBuf, String>>>>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -402,18 +402,19 @@ impl FileReadTracker {
 }
 
 impl CommandChangeTracker {
-    fn record_files(&self, agent_id: &AgentId, files: &[PathBuf]) {
-        if files.is_empty() {
+    fn record_diffs(&self, agent_id: &AgentId, diffs: &BTreeMap<PathBuf, String>) {
+        if diffs.is_empty() {
             return;
         }
         let mut pending = self
             .inner
             .lock()
             .expect("command change tracker mutex poisoned");
-        pending
-            .entry(agent_id.clone())
-            .or_default()
-            .extend(files.iter().cloned());
+        pending.entry(agent_id.clone()).or_default().extend(
+            diffs
+                .iter()
+                .map(|(path, diff)| (path.clone(), diff.clone())),
+        );
     }
 
     fn clear_files_for_all(&self, files: &[PathBuf]) {
@@ -426,7 +427,7 @@ impl CommandChangeTracker {
             .lock()
             .expect("command change tracker mutex poisoned");
         pending.retain(|_, paths| {
-            paths.retain(|path| !files.contains(path));
+            paths.retain(|path, _| !files.contains(path));
             !paths.is_empty()
         });
     }
@@ -438,14 +439,24 @@ impl CommandChangeTracker {
             .remove(agent_id);
     }
 
-    fn pending_files(&self, agent_id: &AgentId) -> Vec<PathBuf> {
-        self.inner
+    fn pending(&self, agent_id: &AgentId) -> PendingCommandChanges {
+        let pending = self
+            .inner
             .lock()
             .expect("command change tracker mutex poisoned")
             .get(agent_id)
-            .map(|paths| paths.iter().cloned().collect())
-            .unwrap_or_default()
+            .cloned()
+            .unwrap_or_default();
+        let files = pending.keys().cloned().collect::<Vec<_>>();
+        let diff = pending.values().cloned().collect::<Vec<_>>().join("");
+        PendingCommandChanges { files, diff }
     }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+struct PendingCommandChanges {
+    files: Vec<PathBuf>,
+    diff: String,
 }
 
 impl PatchOwnershipTracker {
@@ -899,24 +910,23 @@ where
                 });
             }
             AgentDirective::Done => {
-                let pending_files = services.command_changes.pending_files(agent_id);
-                if !pending_files.is_empty() {
-                    let diff = git_diff_head(services.locks.root(), &pending_files);
-                    let reply = send_agent_streaming_interruptible(
-                        backend,
-                        agent_id,
-                        &render_pending_command_changes_prompt(&pending_files, &diff),
-                        stream,
-                    )?;
-                    run.follow_up_replies
-                        .push(follow_up(agent_id.clone(), reply));
-                    break;
-                }
                 if run
                     .follow_up_replies
                     .iter()
                     .any(|follow_up| follow_up.agent_id == *agent_id)
                 {
+                    break;
+                }
+                let pending = services.command_changes.pending(agent_id);
+                if !pending.files.is_empty() {
+                    let reply = send_agent_streaming_interruptible(
+                        backend,
+                        agent_id,
+                        &render_pending_command_changes_prompt(&pending.files, &pending.diff),
+                        stream,
+                    )?;
+                    run.follow_up_replies
+                        .push(follow_up(agent_id.clone(), reply));
                     break;
                 }
                 services.file_reads.clear_agent(agent_id);
@@ -1108,10 +1118,29 @@ where
         &tracked_changed_files(services.locks.root()),
         &locked_paths,
     );
+    let command_changed_diffs =
+        command_changed_diffs(services.locks.root(), &command_changed_files);
+    revert_tracked_files(services.locks.root(), &command_changed_files)
+        .map_err(FileAccessError::Io)?;
     services
         .command_changes
-        .record_files(agent_id, &command_changed_files);
-    let prompt = render_command_result(command, &locked_paths, &output);
+        .record_diffs(agent_id, &command_changed_diffs);
+    let prompt = if command_changed_files.is_empty() {
+        render_command_result(command, &locked_paths, &output)
+    } else {
+        let diff = command_changed_diffs
+            .values()
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("");
+        render_command_result_with_pending_changes(
+            command,
+            &locked_paths,
+            &output,
+            &command_changed_files,
+            &diff,
+        )
+    };
     let reply = send_agent_streaming_interruptible(backend, agent_id, &prompt, stream)?;
     run.follow_up_replies
         .push(follow_up(agent_id.clone(), reply));
@@ -1186,6 +1215,39 @@ fn git_diff_head(root: &Path, files: &[PathBuf]) -> String {
         return String::new();
     }
     String::from_utf8_lossy(&output.stdout).to_string()
+}
+
+fn command_changed_diffs(root: &Path, files: &[PathBuf]) -> BTreeMap<PathBuf, String> {
+    files
+        .iter()
+        .filter_map(|file| {
+            let diff = git_diff_head(root, std::slice::from_ref(file));
+            if diff.trim().is_empty() {
+                None
+            } else {
+                Some((file.clone(), diff))
+            }
+        })
+        .collect()
+}
+
+fn revert_tracked_files(root: &Path, files: &[PathBuf]) -> std::io::Result<()> {
+    if files.is_empty() {
+        return Ok(());
+    }
+    let mut command = Command::new("git");
+    command.current_dir(root).args(["checkout", "--"]);
+    for file in files {
+        command.arg(file);
+    }
+    let output = command.output()?;
+    if output.status.success() {
+        return Ok(());
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Err(std::io::Error::other(format!(
+        "git checkout failed while reverting tracked command changes: {stderr}"
+    )))
 }
 
 fn normalize_paths(
@@ -2149,6 +2211,23 @@ fn render_command_result(
     text
 }
 
+fn render_command_result_with_pending_changes(
+    command: &str,
+    locked_paths: &[PathBuf],
+    output: &CommandRunOutput,
+    files: &[PathBuf],
+    diff: &str,
+) -> String {
+    let mut text = render_command_result(command, locked_paths, output);
+    text.push('\n');
+    text.push_str("tracked command changes: captured and reverted from the shared checkout\n");
+    text.push_str(
+        "The locked command wrote tracked files. Work Leaf captured the diff below, restored those files to HEAD, and recorded the diff as pending for this patch agent so other agents do not see uncommitted command output.\n",
+    );
+    text.push_str(&render_pending_command_changes_prompt(files, diff));
+    text
+}
+
 fn render_command_rejected(command: &str, locked_paths: &[PathBuf], diagnostic: &str) -> String {
     format!(
         "work-leaf command rejected\ncommand: {command}\nlocked paths: {}\nreason: {diagnostic}; this masks command failures, so Work Leaf did not run the command.\nRun the check normally and let Work Leaf capture the non-zero status, stdout, and stderr.",
@@ -2327,11 +2406,11 @@ fn render_other_agent_test_command_prompt(blocked_paths: &[(PathBuf, OwnedPatchP
 
 fn render_pending_command_changes_prompt(files: &[PathBuf], diff: &str) -> String {
     let mut text = format!(
-        "work-leaf command left tracked working-tree changes\nfiles: {}\n",
+        "work-leaf command captured tracked file changes\nfiles: {}\n",
         display_paths(files)
     );
-    text.push_str("Review cannot start until command-produced tracked changes are saved in a provisional commit or reverted.\n");
-    text.push_str("If these changes are required, submit them with `@work-leaf patch <reason>` using the diff below; the orchestrator accepts matching already-applied diffs and commits them.\n");
+    text.push_str("Review cannot start until command-produced tracked changes are saved in a provisional commit or explicitly discarded.\n");
+    text.push_str("If these changes are required, submit them with `@work-leaf patch <reason>` using the diff below; the orchestrator will apply and commit the captured diff through the normal patch path.\n");
     text.push_str("In your next response, emit exactly one `@work-leaf patch` block or one revert patch block for these files, then stop your response immediately; do not repeat the same patch block and do not include `@work-leaf done` until Work Leaf reports the patch applied.\n");
     text.push_str("If they are not required, submit a patch that reverts them. Then rerun required checks if needed and emit `@work-leaf done` only when no tracked command changes remain.\n");
     if !diff.trim().is_empty() {
