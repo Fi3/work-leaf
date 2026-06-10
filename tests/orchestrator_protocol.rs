@@ -488,6 +488,12 @@ fn orchestrator_protocol_blocks_done_until_command_changes_are_committed() {
             .contains("diff --git a/README.md b/README.md")
     );
     assert!(backend.sends[1].1.contains("@work-leaf patch <reason>"));
+    assert!(
+        backend.sends[1]
+            .1
+            .contains("emit exactly one `@work-leaf patch` block or one revert patch block"),
+        "pending command prompt should tell agents to avoid repeated patch blocks"
+    );
 }
 
 #[test]
@@ -537,6 +543,61 @@ diff --git a/README.md b/README.md
     assert!(events.iter().any(
         |event| matches!(event, OrchestratorEvent::AgentDone { agent_id: id } if id == &agent_id)
     ));
+}
+
+#[test]
+fn orchestrator_protocol_clears_command_changes_when_another_agent_commits_them() {
+    let root = temp_git_repo("protocol-cross-agent-command-dirty-commit");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    fs::write(root.join("format.sh"), "printf 'after\\n' > README.md\n").unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial formatting fixture"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let formatter = AgentId::new("user-1").unwrap();
+    let patcher = AgentId::new("user-2").unwrap();
+
+    orchestrator
+        .handle_agent_message(
+            &formatter,
+            "formatting",
+            "@work-leaf locks run README.md -- sh format.sh\n@work-leaf done",
+        )
+        .unwrap();
+    orchestrator
+        .handle_agent_message(
+            &patcher,
+            "docs",
+            "\
+@work-leaf patch include formatter output
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-before
++after
+@work-leaf end",
+        )
+        .unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(&formatter, "formatting", "@work-leaf done")
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(git_output(&root, ["status", "--short"]).is_empty());
+    assert!(events.iter().any(
+        |event| matches!(event, OrchestratorEvent::AgentDone { agent_id } if agent_id == &formatter)
+    ));
+    assert_eq!(
+        backend
+            .sends
+            .iter()
+            .filter(|(_, prompt)| prompt.contains("tracked working-tree changes"))
+            .count(),
+        1,
+        "committed command changes should not remain pending for their original agent"
+    );
 }
 
 #[test]

@@ -414,19 +414,19 @@ impl CommandChangeTracker {
             .extend(files.iter().cloned());
     }
 
-    fn clear_files(&self, agent_id: &AgentId, files: &[PathBuf]) {
+    fn clear_files_for_all(&self, files: &[PathBuf]) {
+        if files.is_empty() {
+            return;
+        }
+        let files = files.iter().collect::<BTreeSet<_>>();
         let mut pending = self
             .inner
             .lock()
             .expect("command change tracker mutex poisoned");
-        if let Some(paths) = pending.get_mut(agent_id) {
-            for file in files {
-                paths.remove(file);
-            }
-            if paths.is_empty() {
-                pending.remove(agent_id);
-            }
-        }
+        pending.retain(|_, paths| {
+            paths.retain(|path| !files.contains(path));
+            !paths.is_empty()
+        });
     }
 
     fn clear_agent(&self, agent_id: &AgentId) {
@@ -698,7 +698,7 @@ where
                     Ok(outcome) => {
                         let files = outcome.files.clone();
                         services.file_reads.clear_files(agent_id, &files);
-                        services.command_changes.clear_files(agent_id, &files);
+                        services.command_changes.clear_files_for_all(&files);
                         services
                             .patch_ownership
                             .record_patch(agent_id, &outcome.commit, &files);
@@ -2120,6 +2120,7 @@ fn render_pending_command_changes_prompt(files: &[PathBuf], diff: &str) -> Strin
     );
     text.push_str("Review cannot start until command-produced tracked changes are saved in a provisional commit or reverted.\n");
     text.push_str("If these changes are required, submit them with `@work-leaf patch <reason>` using the diff below; the orchestrator accepts matching already-applied diffs and commits them.\n");
+    text.push_str("In your next response, emit exactly one `@work-leaf patch` block or one revert patch block for these files, then stop your response immediately; do not repeat the same patch block and do not include `@work-leaf done` until Work Leaf reports the patch applied.\n");
     text.push_str("If they are not required, submit a patch that reverts them. Then rerun required checks if needed and emit `@work-leaf done` only when no tracked command changes remain.\n");
     if !diff.trim().is_empty() {
         text.push_str("\nCurrent tracked diff:\n");
