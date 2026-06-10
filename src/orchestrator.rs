@@ -1510,6 +1510,9 @@ fn should_interrupt_after_streamed_directive(text: &str) -> bool {
         if body == "done" {
             return true;
         }
+        if directive_rest(body, "read").is_some() {
+            return true;
+        }
         if directive_rest(body, "patch").is_some() || directive_rest(body, "edit").is_some() {
             in_patch = true;
             continue;
@@ -2472,5 +2475,12 @@ mod tests {
 
         let complete = format!("{partial}\n*** End Patch\n@work-leaf end");
         assert!(should_interrupt_after_streamed_directive(&complete));
+    }
+
+    #[test]
+    fn streamed_directive_interrupts_after_read_request() {
+        assert!(should_interrupt_after_streamed_directive(
+            "I need context.\n@work-leaf read src/lib.rs tests/ui_harness.rs"
+        ));
     }
 }

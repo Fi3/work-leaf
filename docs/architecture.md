@@ -206,9 +206,9 @@ public lifecycle extension is required before external child processes can parti
   `turn.started`, so concurrent launches do not race Codex local initialization.
 - In SDK mode, `CodexBackend` uses the interruptible streaming contract for patch/review agents. When
   a streamed assistant message already contains a complete terminal Work Leaf directive such as a
-  patch block, locked command, routed send, or done marker, the backend sends an app-server interrupt
-  for that active turn so the orchestrator can process the directive promptly instead of waiting for
-  the model to emit duplicate directive blocks.
+  read request, edit/patch block, locked command, routed send, or done marker, the backend sends an
+  app-server interrupt for that active turn so the orchestrator can process the directive promptly
+  instead of waiting for the model to emit duplicate directive blocks.
 
 `CodexBackend` is a provider implementation, not the owner of the generic agent contract. Callers
 that need provider-neutral behavior import `AgentBackend` from `work_leaf::agent` or from the
