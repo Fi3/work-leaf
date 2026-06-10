@@ -145,6 +145,8 @@ With `ReadPermission::Orchestrator`, prompts tell agents:
   project files;
 - use `@work-leaf locks run <path> <path...> -- <command>` to run commands while the orchestrator
   holds write locks for paths the command may write;
+- keep the shared worktree usable by submitting cohesive patches rather than known-red,
+  compile-breaking, or deliberately failing intermediate changes;
 - keep locked command runs within five minutes unless the user authorizes a longer lock-holding
   command;
 - use `@work-leaf done` when no more orchestrator work is required.
@@ -159,6 +161,8 @@ With `ReadPermission::DirectFilesystem`, prompts tell agents:
   project files;
 - use `@work-leaf locks run <path> <path...> -- <command>` to run commands while the orchestrator
   holds write locks for paths the command may write;
+- keep the shared worktree usable by submitting cohesive patches rather than known-red,
+  compile-breaking, or deliberately failing intermediate changes;
 - keep locked command runs within five minutes unless the user authorizes a longer lock-holding
   command;
 - use `@work-leaf done` when no more orchestrator work is required.
@@ -302,6 +306,8 @@ directive turn does not include `@work-leaf done`:
 work-leaf patch applied
 files: path
 Continue from the repository instructions.
+Run checks that existed before your patch or checks you added yourself. Do not run another patch agent's focused tests as local validation; report those as integration conflicts unless your own source change clearly caused them.
+Keep the shared worktree usable for the other patch agents: do not submit known-red, compile-breaking, or deliberately failing intermediate patches. If you prepared failing coverage first, include the test and the implementation needed for the shared tree to build in the same provisional patch.
 Run any required or relevant checks through `@work-leaf locks run <path>... -- <command>` when the command may write files.
 Keep locked command runs within five minutes unless the user authorizes a longer lock-holding command.
 Provide additional patches if checks fail or more work is needed; emit `@work-leaf done` only when this patch is ready for review.

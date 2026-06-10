@@ -251,6 +251,7 @@ impl PromptPolicy {
             "This command-lock rule is language- and tool-agnostic: use it for any formatter, build, test, code generator, package manager, installer, cache-producing tool, or repository-required check that may write files.",
             "Choose the command from the repository instructions and project context; choose the lock paths from the files, directories, caches, build outputs, dependency folders, or lockfiles that command may write.",
             "Run checks that existed before your patch or checks you added yourself. Do not run another patch agent's focused tests as local validation; report those as integration conflicts unless your own source change clearly caused them.",
+            "Keep the shared worktree usable for the other patch agents: do not submit known-red, compile-breaking, or deliberately failing intermediate patches. Design tests before implementation when required, but submit a cohesive patch that includes the test and the implementation needed for the shared tree to build.",
             "Locked command runs are limited to five minutes; user authorization is required for longer lock-holding commands.",
             "Do not use command locks for manual feature edits; manual code, configuration, and test changes must still be submitted with the unified-diff patch directive.",
             "Use `@work-leaf send <agent-id> <message>` to route context to another agent.",

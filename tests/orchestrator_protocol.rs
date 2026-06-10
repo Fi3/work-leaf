@@ -634,6 +634,8 @@ diff --git a/lib.rs b/lib.rs
     assert!(backend.sends[0].1.contains("please review"));
     assert_eq!(backend.sends[1].0, source);
     assert!(backend.sends[1].1.contains("work-leaf patch applied"));
+    assert!(backend.sends[1].1.contains("do not submit known-red"));
+    assert!(backend.sends[1].1.contains("same provisional patch"));
     assert!(backend.sends[1].1.contains("@work-leaf done"));
 
     let message = git_output(&root, ["log", "-1", "--pretty=%B"]);

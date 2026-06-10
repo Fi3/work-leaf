@@ -104,10 +104,11 @@ work on code, tests, configuration, and other feature files through orchestrator
 README, changelog, markdown, txt, and other prose-only updates are handled during linearization when
 the final reviewed behavior requires them. Patch-agent prompts also keep focused validation scoped to
 pre-existing checks or checks introduced by that same patch agent, leaving another patch agent's
-focused tests and broad integration reconciliation to review or linearization. Linearize-agent
-prompts use a separate direct-workspace policy: the linearizer reads and writes repository files,
-runs commands, and rewrites git history directly rather than using `@work-leaf` read, patch, or lock
-directives.
+focused tests and broad integration reconciliation to review or linearization. They also instruct
+patch agents to keep the shared worktree buildable by submitting cohesive patch units rather than
+known-red intermediate changes. Linearize-agent prompts use a separate direct-workspace policy: the
+linearizer reads and writes repository files, runs commands, and rewrites git history directly
+rather than using `@work-leaf` read, patch, or lock directives.
 
 `src/agent.rs` also re-exports `AgentBackend`, `AgentStreamEvent`, and `AgentShutdownHandle` from
 `src/agent_runtime.rs`, so callers can import all provider-neutral agent interfaces from

@@ -42,6 +42,8 @@ fn prompt_policy_wraps_every_agent_prompt_with_file_access_rules() {
     assert!(wrapped.contains("formatter, build, test, code generator, package manager"));
     assert!(wrapped.contains("checks that existed before your patch"));
     assert!(wrapped.contains("Do not run another patch agent's focused tests"));
+    assert!(wrapped.contains("do not submit known-red"));
+    assert!(wrapped.contains("submit a cohesive patch"));
     assert!(wrapped.contains("Choose the command from the repository instructions"));
     assert!(wrapped.contains("Do not use command locks for manual feature edits"));
     assert!(wrapped.contains("@work-leaf send <agent-id> <message>"));
@@ -68,6 +70,8 @@ fn prompt_policy_can_allow_direct_filesystem_reads() {
     assert!(wrapped.contains("language- and tool-agnostic"));
     assert!(wrapped.contains("checks that existed before your patch"));
     assert!(wrapped.contains("Do not run another patch agent's focused tests"));
+    assert!(wrapped.contains("do not submit known-red"));
+    assert!(wrapped.contains("submit a cohesive patch"));
     assert!(wrapped.contains("implement the flag parser"));
 }
 

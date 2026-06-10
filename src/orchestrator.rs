@@ -1803,6 +1803,7 @@ fn render_patch_applied_prompt(files: &[PathBuf]) -> String {
     let mut text = format!("work-leaf patch applied\nfiles: {}\n", display_paths(files));
     text.push_str("Continue from the repository instructions.\n");
     text.push_str("Run checks that existed before your patch or checks you added yourself. Do not run another patch agent's focused tests as local validation; report those as integration conflicts unless your own source change clearly caused them.\n");
+    text.push_str("Keep the shared worktree usable for the other patch agents: do not submit known-red, compile-breaking, or deliberately failing intermediate patches. If you prepared failing coverage first, include the test and the implementation needed for the shared tree to build in the same provisional patch.\n");
     text.push_str("Run any required or relevant checks through `@work-leaf locks run <path>... -- <command>` when the command may write files.\n");
     text.push_str("Keep locked command runs within five minutes unless the user authorizes a longer lock-holding command.\n");
     text.push_str("Provide additional patches if checks fail or more work is needed; emit `@work-leaf done` only when this patch is ready for review.");
