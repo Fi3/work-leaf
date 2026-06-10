@@ -429,6 +429,10 @@ fn direct_codex_three_feature_bench_scripts_describe_sequential_and_worktree_mod
     assert!(common.contains("wait_for_parallel_features"));
     assert!(common.contains("write_report \"dry run"));
     assert!(common.contains("rm -rf \"$tmp_root\""));
+    assert!(common.contains("Additional author response and verification evidence"));
+    assert!(common.contains("previous_evidence_file"));
+    assert!(common.contains("no file changes after"));
+    assert!(!common.contains("commit_if_changed \\\n      \"$repo\" \\\n      \"FIX direct-Codex baseline feature $feature_index after review\" \\\n      \"Address the direct Codex reviewer findings for benchmark request $feature_index while keeping the change scoped to that reviewed feature.\" \\\n      || return 1"));
 }
 
 #[test]

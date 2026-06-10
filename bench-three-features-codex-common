@@ -574,8 +574,15 @@ EOF
 review_prompt() {
   local feature_index="$1"
   local from_ref="$2"
-  local request
+  local previous_evidence_file="${3:-}"
+  local request previous_evidence
   request="$(feature_prompt "$feature_index")"
+  previous_evidence=""
+  if [[ -n "$previous_evidence_file" && -s "$previous_evidence_file" ]]; then
+    previous_evidence="
+Additional author response and verification evidence from the previous fix turn:
+$(cat "$previous_evidence_file")"
+  fi
   cat <<EOF
 You are a normal direct Codex review agent. Do not modify files.
 
@@ -584,6 +591,7 @@ $request
 
 Inspect the repository and the diff from $from_ref..HEAD. Report only bugs, regressions,
 missing tests for the changed behavior, or required documentation gaps introduced by this request.
+$previous_evidence
 If the patch is acceptable, reply with a standalone first review marker:
 
 NO_FINDINGS
@@ -661,7 +669,9 @@ run_feature_cycle() {
   local repo="$2"
   local label_prefix="$3"
   local feature_base="$4"
-  local round review_label review_text fix_label
+  local round review_label review_text fix_label previous_evidence_file review_result_file
+  previous_evidence_file=""
+  review_result_file="$tmp_root/worktree-results/${label_prefix}.review"
   run_codex "${label_prefix}-implement" "$repo" "$patch_sandbox" "$(implementation_prompt "$feature_index")" \
     || return 1
   commit_if_changed \
@@ -672,23 +682,28 @@ run_feature_cycle() {
 
   for round in $(seq 1 "$review_rounds"); do
     review_label="${label_prefix}-review-${round}"
-    run_codex "$review_label" "$repo" "$review_sandbox" "$(review_prompt "$feature_index" "$feature_base")" \
+    run_codex "$review_label" "$repo" "$review_sandbox" "$(review_prompt "$feature_index" "$feature_base" "$previous_evidence_file")" \
       || return 1
     review_text="$tmp_root/runs/${review_label}.text.txt"
     if review_is_clean "$review_text"; then
-      printf 'feature=%s\nrounds=%s\nresult=clean\n' "$feature_index" "$round" > "$tmp_root/worktree-results/${label_prefix}.review"
+      printf 'feature=%s\nrounds=%s\nresult=clean\n' "$feature_index" "$round" > "$review_result_file"
       return 0
     fi
     fix_label="${label_prefix}-fix-${round}"
     run_codex "$fix_label" "$repo" "$patch_sandbox" "$(fix_prompt "$feature_index" "$review_text")" \
       || return 1
-    commit_if_changed \
+    previous_evidence_file="$tmp_root/runs/${fix_label}.text.txt"
+    if commit_if_changed \
       "$repo" \
       "FIX direct-Codex baseline feature $feature_index after review" \
-      "Address the direct Codex reviewer findings for benchmark request $feature_index while keeping the change scoped to that reviewed feature." \
-      || return 1
+      "Address the direct Codex reviewer findings for benchmark request $feature_index while keeping the change scoped to that reviewed feature."
+    then
+      printf 'feature=%s\nround=%s\nfix=%s\nresult=committed\n' "$feature_index" "$round" "$fix_label" >> "$review_result_file"
+    else
+      printf 'feature=%s\nround=%s\nfix=%s\nresult=no file changes after fix; carrying author response/evidence into next review\n' "$feature_index" "$round" "$fix_label" >> "$review_result_file"
+    fi
   done
-  printf 'feature=%s\nrounds=%s\nresult=review-findings-remained\n' "$feature_index" "$review_rounds" > "$tmp_root/worktree-results/${label_prefix}.review"
+  printf 'feature=%s\nrounds=%s\nresult=review-findings-remained\n' "$feature_index" "$review_rounds" >> "$review_result_file"
   return 1
 }
 
