@@ -1347,6 +1347,8 @@ where
     }
 
     fn ask_feature_done(&mut self, agent_id: &AgentId) {
+        self.implicit_loading_agents.remove(agent_id);
+        self.set_session_loading(agent_id, None);
         self.set_session_completion(agent_id, Some(WorkLeafCompletion::NeedsDecision));
         self.append_agent_line_allow_duplicate(agent_id, FEATURE_DONE_QUESTION.to_string());
     }
@@ -2169,4 +2171,65 @@ fn strip_ascii_prefix_case_insensitive<'a>(message: &'a str, prefix: &str) -> Op
 
 fn split_command_line(line: &str) -> Vec<String> {
     line.split_whitespace().map(str::to_string).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::*;
+
+    #[derive(Clone, Debug)]
+    struct EmptyBackend;
+
+    impl AgentBackend for EmptyBackend {
+        fn launch(
+            &mut self,
+            request: AgentLaunch,
+        ) -> Result<AgentSession, crate::agent::AgentError> {
+            Ok(AgentSession::new(request))
+        }
+
+        fn send(
+            &mut self,
+            _agent_id: &AgentId,
+            _prompt: &str,
+        ) -> Result<ChatMessage, crate::agent::AgentError> {
+            Ok(ChatMessage::new(MessageRole::Agent, String::new()))
+        }
+    }
+
+    #[test]
+    fn feature_done_decision_clears_patch_agent_loading() {
+        let chat = CommandChat::new(PathBuf::from("/repo"), EmptyBackend);
+        let mut controller = WorkLeafController::new(chat);
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+
+        controller.register_agent_feature(agent_id.clone(), "visual mode".to_string());
+        controller.add_session(WorkLeafSession {
+            id: agent_id.clone(),
+            kind: AgentKind::Codex,
+            title: "user-1".to_string(),
+            feature: "visual mode".to_string(),
+            lines: Vec::new(),
+            loading: Some(WorkLeafLoading::WaitingForReply),
+            completion: None,
+            token_usage: None,
+            depends_on: Vec::new(),
+            depended_on_by: Vec::new(),
+        });
+        controller
+            .implicit_loading_agents
+            .insert(agent_id.clone(), 1);
+
+        controller.ask_feature_done(&agent_id);
+
+        let snapshot = controller.snapshot();
+        let session = snapshot
+            .session(&agent_id)
+            .expect("patch agent session exists");
+        assert_eq!(session.completion, Some(WorkLeafCompletion::NeedsDecision));
+        assert_eq!(session.loading, None);
+        assert!(!controller.implicit_loading_agents.contains_key(&agent_id));
+    }
 }
