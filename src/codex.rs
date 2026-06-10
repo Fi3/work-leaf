@@ -234,6 +234,7 @@ impl CodexSdkSidecar {
         turn: CodexSdkTurnRequest<'_>,
         shutdown: &AgentShutdownHandle,
         sink: &mut dyn FnMut(AgentStreamEvent),
+        mut should_interrupt: Option<&mut dyn FnMut(&AgentStreamEvent) -> bool>,
     ) -> Result<CodexSdkTurnOutput, AgentError> {
         self.ensure_started(shutdown)?;
         let request_id = self.next_request_id.fetch_add(1, Ordering::Relaxed);
@@ -251,16 +252,48 @@ impl CodexSdkSidecar {
 
         let mut output = CodexSdkTurnOutput::default();
         let mut streamed_messages = Vec::new();
+        let mut interrupt_requested = false;
         loop {
             let inbound = self.next_message(request_id)?;
             if let Some(event) = inbound.event {
                 match event {
-                    CodexSdkEvent::Status { text } => sink(AgentStreamEvent::Status(text)),
+                    CodexSdkEvent::Status { text } => {
+                        let event = AgentStreamEvent::Status(text);
+                        sink(event.clone());
+                        if !interrupt_requested
+                            && should_interrupt
+                                .as_deref_mut()
+                                .is_some_and(|detector| detector(&event))
+                        {
+                            interrupt_requested = true;
+                            self.interrupt(turn.agent_id, shutdown)?;
+                        }
+                    }
                     CodexSdkEvent::Message { text } => {
                         streamed_messages.push(text.clone());
-                        sink(AgentStreamEvent::AgentMessage(text));
+                        let event = AgentStreamEvent::AgentMessage(text);
+                        sink(event.clone());
+                        if !interrupt_requested
+                            && should_interrupt
+                                .as_deref_mut()
+                                .is_some_and(|detector| detector(&event))
+                        {
+                            interrupt_requested = true;
+                            self.interrupt(turn.agent_id, shutdown)?;
+                        }
                     }
-                    CodexSdkEvent::Usage { usage } => sink(AgentStreamEvent::Usage(usage)),
+                    CodexSdkEvent::Usage { usage } => {
+                        let event = AgentStreamEvent::Usage(usage);
+                        sink(event.clone());
+                        if !interrupt_requested
+                            && should_interrupt
+                                .as_deref_mut()
+                                .is_some_and(|detector| detector(&event))
+                        {
+                            interrupt_requested = true;
+                            self.interrupt(turn.agent_id, shutdown)?;
+                        }
+                    }
                 }
                 continue;
             }
@@ -1203,6 +1236,7 @@ impl AgentBackend for CodexBackend {
                 },
                 &self.shutdown,
                 sink,
+                None,
             )?;
             {
                 let mut state = self
@@ -1224,6 +1258,52 @@ impl AgentBackend for CodexBackend {
         let invocation = self.build_launch_invocation(&request);
         let output = self.run_invocation_streaming(&invocation, Some(&request.id), sink)?;
         self.record_launch_output(request, output)
+    }
+
+    fn launch_streaming_interruptible(
+        &mut self,
+        request: AgentLaunch,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+        should_interrupt: &mut dyn FnMut(&AgentStreamEvent) -> bool,
+    ) -> Result<AgentSession, AgentError> {
+        if self.config.transport == CodexTransport::Sdk {
+            let _operation_guard = self.acquire_agent_operation(&request.id);
+            let prompt = self
+                .policy
+                .inject(&request.id, &request.feature, &request.prompt);
+            let output = self.sdk.request_streaming(
+                CodexSdkTurnRequest {
+                    op: "launch",
+                    agent_id: &request.id,
+                    prompt: &prompt,
+                    thread_id: None,
+                    sandbox: self.sandbox_for_agent(&request.id),
+                },
+                &self.shutdown,
+                sink,
+                Some(should_interrupt),
+            )?;
+            {
+                let mut state = self
+                    .state
+                    .lock()
+                    .expect("codex backend state mutex poisoned");
+                if !output.thread_id.is_empty() {
+                    state
+                        .thread_ids
+                        .insert(request.id.clone(), output.thread_id.clone());
+                }
+                if let Some(usage) = output.usage {
+                    record_usage(&mut state, &request.id, usage);
+                }
+            }
+            return self.record_launch_reply(request, output.reply);
+        }
+        let mut stream = |event: AgentStreamEvent| {
+            sink(event.clone());
+            let _ = should_interrupt(&event);
+        };
+        self.launch_streaming(request, &mut stream)
     }
 
     fn send_streaming(
@@ -1270,6 +1350,7 @@ impl AgentBackend for CodexBackend {
                 },
                 &self.shutdown,
                 sink,
+                None,
             )?;
             if !output.thread_id.is_empty() || output.usage.is_some() {
                 let mut state = self
@@ -1300,6 +1381,76 @@ impl AgentBackend for CodexBackend {
         }
         let reply = parsed.agent_reply.unwrap_or(output);
         self.record_send_reply(agent_id, prompt, reply)
+    }
+
+    fn send_streaming_interruptible(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+        should_interrupt: &mut dyn FnMut(&AgentStreamEvent) -> bool,
+    ) -> Result<ChatMessage, AgentError> {
+        if self.config.transport == CodexTransport::Sdk {
+            let _operation_guard = self.acquire_agent_operation(agent_id);
+            let (has_session, feature, thread_id) = {
+                let state = self
+                    .state
+                    .lock()
+                    .expect("codex backend state mutex poisoned");
+                let feature = state
+                    .sessions
+                    .get(agent_id)
+                    .map(|session| session.feature.clone())
+                    .unwrap_or_else(|| "unknown".to_string());
+                (
+                    state.sessions.contains_key(agent_id),
+                    feature,
+                    state.thread_ids.get(agent_id).cloned(),
+                )
+            };
+            let sdk_prompt = if has_session {
+                prompt.to_string()
+            } else {
+                self.policy.inject(agent_id, &feature, prompt)
+            };
+            let op = if is_codex_slash_command(prompt) {
+                "command"
+            } else {
+                "send"
+            };
+            let output = self.sdk.request_streaming(
+                CodexSdkTurnRequest {
+                    op,
+                    agent_id,
+                    prompt: &sdk_prompt,
+                    thread_id: thread_id.as_deref(),
+                    sandbox: self.sandbox_for_agent(agent_id),
+                },
+                &self.shutdown,
+                sink,
+                Some(should_interrupt),
+            )?;
+            if !output.thread_id.is_empty() || output.usage.is_some() {
+                let mut state = self
+                    .state
+                    .lock()
+                    .expect("codex backend state mutex poisoned");
+                if !output.thread_id.is_empty() {
+                    state
+                        .thread_ids
+                        .insert(agent_id.clone(), output.thread_id.clone());
+                }
+                if let Some(usage) = output.usage {
+                    record_usage(&mut state, agent_id, usage);
+                }
+            }
+            return self.record_send_reply(agent_id, prompt, output.reply);
+        }
+        let mut stream = |event: AgentStreamEvent| {
+            sink(event.clone());
+            let _ = should_interrupt(&event);
+        };
+        self.send_streaming(agent_id, prompt, &mut stream)
     }
 }
 

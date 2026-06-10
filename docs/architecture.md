@@ -133,6 +133,11 @@ rather than using `@work-leaf` read, patch, or lock directives.
 - `AgentBackend::send` sends a prompt to an existing agent session.
 - `AgentBackend::launch_streaming` and `AgentBackend::send_streaming` provide real-time output to a
   sink of `AgentStreamEvent` values. Their default implementations call the non-streaming methods.
+- `AgentBackend::launch_streaming_interruptible` and
+  `AgentBackend::send_streaming_interruptible` extend the streaming calls with a provider-neutral
+  stop detector. Providers that can interrupt an in-flight turn use the detector to stop generation
+  after a complete terminal orchestrator directive has streamed; providers that do not override the
+  methods keep the ordinary streaming behavior.
 - `AgentBackend::shutdown_handle` returns an `AgentShutdownHandle` for terminating active provider
   processes.
 - `AgentStreamEvent` carries status text, streamed agent messages, and streamed errors.
@@ -199,6 +204,11 @@ public lifecycle extension is required before external child processes can parti
   sessions to work concurrently through the shared SDK/app-server sidecar. Fallback exec mode also
   serializes the short child-process startup window across agents until Codex reports
   `turn.started`, so concurrent launches do not race Codex local initialization.
+- In SDK mode, `CodexBackend` uses the interruptible streaming contract for patch/review agents. When
+  a streamed assistant message already contains a complete terminal Work Leaf directive such as a
+  patch block, locked command, routed send, or done marker, the backend sends an app-server interrupt
+  for that active turn so the orchestrator can process the directive promptly instead of waiting for
+  the model to emit duplicate directive blocks.
 
 `CodexBackend` is a provider implementation, not the owner of the generic agent contract. Callers
 that need provider-neutral behavior import `AgentBackend` from `work_leaf::agent` or from the

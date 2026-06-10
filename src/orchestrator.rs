@@ -597,6 +597,48 @@ pub(crate) struct DirectiveRun {
     pub completed: bool,
 }
 
+#[derive(Debug, Default)]
+pub(crate) struct DirectiveStreamInterruptDetector {
+    text: String,
+    interrupted: bool,
+}
+
+impl DirectiveStreamInterruptDetector {
+    pub fn observe(&mut self, event: &AgentStreamEvent) -> bool {
+        if self.interrupted {
+            return false;
+        }
+        let AgentStreamEvent::AgentMessage(text) = event else {
+            return false;
+        };
+        if !self.text.is_empty() {
+            self.text.push_str("\n\n");
+        }
+        self.text.push_str(text);
+        if should_interrupt_after_streamed_directive(&self.text) {
+            self.interrupted = true;
+            true
+        } else {
+            false
+        }
+    }
+}
+
+pub(crate) fn send_agent_streaming_interruptible<B>(
+    backend: &mut B,
+    agent_id: &AgentId,
+    prompt: &str,
+    stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+) -> Result<ChatMessage, AgentError>
+where
+    B: AgentBackend,
+{
+    let mut detector = DirectiveStreamInterruptDetector::default();
+    let mut sink = |event| stream(agent_id, event);
+    let mut should_interrupt = |event: &AgentStreamEvent| detector.observe(event);
+    backend.send_streaming_interruptible(agent_id, prompt, &mut sink, &mut should_interrupt)
+}
+
 pub(crate) fn handle_agent_directives<B>(
     backend: &mut B,
     services: DirectiveServices<'_>,
@@ -626,9 +668,12 @@ where
     let mut applied_patch_files = BTreeSet::new();
 
     if directives.is_empty() && needs_protocol_correction(text) {
-        let mut sink = |event| stream(agent_id, event);
-        let reply =
-            backend.send_streaming(agent_id, &render_protocol_correction_prompt(), &mut sink)?;
+        let reply = send_agent_streaming_interruptible(
+            backend,
+            agent_id,
+            &render_protocol_correction_prompt(),
+            stream,
+        )?;
         run.follow_up_replies
             .push(follow_up(agent_id.clone(), reply));
         run.events.push(OrchestratorEvent::ProtocolCorrectionSent {
@@ -661,11 +706,11 @@ where
                 let intent = services
                     .command_policy
                     .classify(command.iter().map(String::as_str));
-                let mut sink = |event| stream(agent_id, event);
-                let reply = backend.send_streaming(
+                let reply = send_agent_streaming_interruptible(
+                    backend,
                     agent_id,
                     &render_command_classification(&command, &intent),
-                    &mut sink,
+                    stream,
                 )?;
                 run.follow_up_replies
                     .push(follow_up(agent_id.clone(), reply));
@@ -715,7 +760,6 @@ where
                         )?;
                     }
                     Err(PatchError::Conflict { files, diagnostic }) => {
-                        let mut sink = |event| stream(agent_id, event);
                         let prompt = if is_already_applied_diagnostic(&diagnostic) {
                             render_already_applied_patch_prompt(&files)
                         } else {
@@ -732,7 +776,8 @@ where
                                 .record_snapshots(agent_id, &response.snapshots);
                             prompt
                         };
-                        let reply = backend.send_streaming(agent_id, &prompt, &mut sink)?;
+                        let reply =
+                            send_agent_streaming_interruptible(backend, agent_id, &prompt, stream)?;
                         run.follow_up_replies
                             .push(follow_up(agent_id.clone(), reply));
                         run.events.push(OrchestratorEvent::PatchRejected {
@@ -742,11 +787,11 @@ where
                         });
                     }
                     Err(PatchError::NoFiles) => {
-                        let mut sink = |event| stream(agent_id, event);
-                        let reply = backend.send_streaming(
+                        let reply = send_agent_streaming_interruptible(
+                            backend,
                             agent_id,
                             &render_no_files_prompt(),
-                            &mut sink,
+                            stream,
                         )?;
                         run.follow_up_replies
                             .push(follow_up(agent_id.clone(), reply));
@@ -762,11 +807,11 @@ where
                 }
             }
             AgentDirective::Send { target, message } => {
-                let mut sink = |event| stream(&target, event);
-                let reply = backend.send_streaming(
+                let reply = send_agent_streaming_interruptible(
+                    backend,
                     &target,
                     &format!("Message from {agent_id} about {feature}:\n{message}"),
-                    &mut sink,
+                    stream,
                 )?;
                 run.follow_up_replies.push(follow_up(target.clone(), reply));
                 run.events.push(OrchestratorEvent::MessageRouted {
@@ -778,11 +823,11 @@ where
                 let pending_files = services.command_changes.pending_files(agent_id);
                 if !pending_files.is_empty() {
                     let diff = git_diff_head(services.locks.root(), &pending_files);
-                    let mut sink = |event| stream(agent_id, event);
-                    let reply = backend.send_streaming(
+                    let reply = send_agent_streaming_interruptible(
+                        backend,
                         agent_id,
                         &render_pending_command_changes_prompt(&pending_files, &diff),
-                        &mut sink,
+                        stream,
                     )?;
                     run.follow_up_replies
                         .push(follow_up(agent_id.clone(), reply));
@@ -801,9 +846,12 @@ where
 
     if !applied_patch_files.is_empty() && !run.completed {
         let files = applied_patch_files.into_iter().collect::<Vec<_>>();
-        let mut sink = |event| stream(agent_id, event);
-        let reply =
-            backend.send_streaming(agent_id, &render_patch_applied_prompt(&files), &mut sink)?;
+        let reply = send_agent_streaming_interruptible(
+            backend,
+            agent_id,
+            &render_patch_applied_prompt(&files),
+            stream,
+        )?;
         run.follow_up_replies
             .push(follow_up(agent_id.clone(), reply));
     }
@@ -845,8 +893,7 @@ where
         &unchanged_snapshots,
         &response.failures,
     );
-    let mut sink = |event| stream(agent_id, event);
-    let reply = backend.send_streaming(agent_id, &prompt, &mut sink)?;
+    let reply = send_agent_streaming_interruptible(backend, agent_id, &prompt, stream)?;
     services
         .file_reads
         .record_snapshots(agent_id, &response.snapshots);
@@ -906,8 +953,7 @@ where
     for update in services.file_reads.stale_readers(changed_by, files) {
         let response = read_requested_files(services.locks, &update.paths)?;
         let prompt = render_file_update_prompt(&update.agent_id, services.file_reads, &response);
-        let mut sink = |event| stream(&update.agent_id, event);
-        let reply = backend.send_streaming(&update.agent_id, &prompt, &mut sink)?;
+        let reply = send_agent_streaming_interruptible(backend, &update.agent_id, &prompt, stream)?;
         services
             .file_reads
             .record_snapshots(&update.agent_id, &response.snapshots);
@@ -948,8 +994,7 @@ where
     );
     if !blocked_paths.is_empty() {
         let prompt = render_other_agent_test_command_prompt(&blocked_paths);
-        let mut sink = |event| stream(agent_id, event);
-        let reply = backend.send_streaming(agent_id, &prompt, &mut sink)?;
+        let reply = send_agent_streaming_interruptible(backend, agent_id, &prompt, stream)?;
         run.follow_up_replies
             .push(follow_up(agent_id.clone(), reply));
         return Ok(());
@@ -957,8 +1002,7 @@ where
 
     if let Some(diagnostic) = masked_command_diagnostic(command) {
         let prompt = render_command_rejected(command, &locked_paths, &diagnostic);
-        let mut sink = |event| stream(agent_id, event);
-        let reply = backend.send_streaming(agent_id, &prompt, &mut sink)?;
+        let reply = send_agent_streaming_interruptible(backend, agent_id, &prompt, stream)?;
         run.follow_up_replies
             .push(follow_up(agent_id.clone(), reply));
         return Ok(());
@@ -982,8 +1026,7 @@ where
         .command_changes
         .record_files(agent_id, &command_changed_files);
     let prompt = render_command_result(command, &locked_paths, &output);
-    let mut sink = |event| stream(agent_id, event);
-    let reply = backend.send_streaming(agent_id, &prompt, &mut sink)?;
+    let reply = send_agent_streaming_interruptible(backend, agent_id, &prompt, stream)?;
     run.follow_up_replies
         .push(follow_up(agent_id.clone(), reply));
     run.events.push(OrchestratorEvent::CommandRun {
@@ -1334,6 +1377,35 @@ fn parse_agent_directives(text: &str) -> Result<Vec<AgentDirective>, Orchestrato
     }
 
     Ok(directives)
+}
+
+fn should_interrupt_after_streamed_directive(text: &str) -> bool {
+    let mut in_patch = false;
+    for line in text.lines() {
+        let Some(body) = directive_body(line) else {
+            continue;
+        };
+        if in_patch {
+            if body == "end" {
+                return true;
+            }
+            continue;
+        }
+        if body == "done" {
+            return true;
+        }
+        if directive_rest(body, "patch").is_some() {
+            in_patch = true;
+            continue;
+        }
+        if directive_rest(body, "locks run").is_some()
+            || directive_rest(body, "locks classify").is_some()
+            || directive_rest(body, "send").is_some()
+        {
+            return true;
+        }
+    }
+    false
 }
 
 fn parse_read_request(rest: &str) -> Result<FileReadRequest, OrchestratorError> {

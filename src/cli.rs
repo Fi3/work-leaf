@@ -16,8 +16,9 @@ use crate::codex::{CodexBackend, CodexCommandConfig};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::locks::{CommandWritePolicy, FileLockTable};
 use crate::orchestrator::{
-    AgentFollowUp, CommandChangeTracker, ContextBundleStore, DirectiveServices, FileReadTracker,
-    OrchestratorEvent, PatchOwnershipTracker, handle_agent_directives_streaming,
+    AgentFollowUp, CommandChangeTracker, ContextBundleStore, DirectiveServices,
+    DirectiveStreamInterruptDetector, FileReadTracker, OrchestratorEvent, PatchOwnershipTracker,
+    handle_agent_directives_streaming, send_agent_streaming_interruptible,
 };
 use crate::review::{AgentCommit, has_no_findings};
 use crate::review::{GitHistory, ReviewResult};
@@ -26,6 +27,21 @@ use crate::ui::UiAction;
 use crate::{HttpControllerClient, OrchestratorHttpError, WorkLeafSnapshot};
 
 const DEFAULT_NEW_AGENT_PROMPT: &str = "Start a new work-leaf user-agent session. Ask the user what to work on if the task is not already clear, then report the broad feature before proposing patches.";
+
+fn launch_agent_streaming_interruptible<B>(
+    backend: &mut B,
+    launch: AgentLaunch,
+    stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+) -> Result<AgentSession, crate::agent::AgentError>
+where
+    B: AgentBackend,
+{
+    let agent_id = launch.id.clone();
+    let mut detector = DirectiveStreamInterruptDetector::default();
+    let mut sink = |event| stream(&agent_id, event);
+    let mut should_interrupt = |event: &AgentStreamEvent| detector.observe(event);
+    backend.launch_streaming_interruptible(launch, &mut sink, &mut should_interrupt)
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ProcessCommand {
@@ -398,14 +414,15 @@ where
             .get(agent_id)
             .cloned()
             .unwrap_or_else(|| "user-agent".to_string());
-        let mut send_stream = |event| stream(agent_id, event);
-        let reply = self
-            .backend
-            .as_mut()
-            .expect("command chat backend is present")
-            .send_streaming(agent_id, message, &mut send_stream)
-            .map_err(CliError::Agent)?
-            .text;
+        let reply = {
+            let backend = self
+                .backend
+                .as_mut()
+                .expect("command chat backend is present");
+            send_agent_streaming_interruptible(backend, agent_id, message, &mut *stream)
+        }
+        .map_err(CliError::Agent)?
+        .text;
         let reply = self.process_agent_reply_streaming(agent_id, &feature, reply, stream)?;
         Ok(CommandChatResult::AgentMessage {
             agent_id: agent_id.clone(),
@@ -464,13 +481,14 @@ where
         let feature = launch.feature.clone();
         self.remember_agent_review_baseline(&agent_id);
         self.reserve_prepared_agent_id(&agent_id);
-        let mut launch_stream = |event| stream(&agent_id, event);
-        let session = self
-            .backend
-            .as_mut()
-            .expect("command chat backend is present")
-            .launch_streaming(launch, &mut launch_stream)
-            .map_err(CliError::Agent)?;
+        let session = {
+            let backend = self
+                .backend
+                .as_mut()
+                .expect("command chat backend is present");
+            launch_agent_streaming_interruptible(backend, launch, &mut *stream)
+        }
+        .map_err(CliError::Agent)?;
         let reply = session
             .messages
             .last()
@@ -645,43 +663,59 @@ where
             "Please summarize the full reviewed patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\n\nFocus on what behavior the cumulative patch changes. Also include verification evidence from this session: focused checks, broad checks, real-agent smoke scenarios and results, and any exact blocker that prevented required verification.",
             commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context
         );
-        let mut summary_stream = |event| stream(&commit.agent_id, event);
-        let summary = self
-            .backend
-            .as_mut()
-            .expect("command chat backend is present")
-            .send_streaming(&commit.agent_id, &summary_prompt, &mut summary_stream)
-            .map_err(CliError::Agent)?
-            .text;
+        let summary = {
+            let backend = self
+                .backend
+                .as_mut()
+                .expect("command chat backend is present");
+            send_agent_streaming_interruptible(
+                backend,
+                &commit.agent_id,
+                &summary_prompt,
+                &mut *stream,
+            )
+        }
+        .map_err(CliError::Agent)?
+        .text;
 
         let review_feature = format!("review {}", commit.feature);
         let review_prompt = format!(
             "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\nSummary from original agent:\n{}\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.\n\nFor agent-facing changes, missing required real-agent verification is a finding unless the summary or review scope includes the exact real-agent scenario and visible result, or the exact pre-agent blocker. If you report missing verification, state the precise evidence that would resolve it. When the patch agent responds with verification evidence or a blocker rather than code, evaluate that evidence instead of requiring another patch.",
             commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context, summary
         );
-        let mut review_stream = |event| stream(&reviewer_id, event);
         let mut review_text = if reuse_reviewer {
-            self.backend
-                .as_mut()
-                .expect("command chat backend is present")
-                .send_streaming(&reviewer_id, &review_prompt, &mut review_stream)
-                .map_err(CliError::Agent)?
-                .text
+            {
+                let backend = self
+                    .backend
+                    .as_mut()
+                    .expect("command chat backend is present");
+                send_agent_streaming_interruptible(
+                    backend,
+                    &reviewer_id,
+                    &review_prompt,
+                    &mut *stream,
+                )
+            }
+            .map_err(CliError::Agent)?
+            .text
         } else {
-            let reviewer_session = self
-                .backend
-                .as_mut()
-                .expect("command chat backend is present")
-                .launch_streaming(
+            let reviewer_session = {
+                let backend = self
+                    .backend
+                    .as_mut()
+                    .expect("command chat backend is present");
+                launch_agent_streaming_interruptible(
+                    backend,
                     AgentLaunch::new(
                         reviewer_id.clone(),
                         self.agent_profile.kind.clone(),
                         review_feature.clone(),
                         review_prompt,
                     ),
-                    &mut review_stream,
+                    &mut *stream,
                 )
-                .map_err(CliError::Agent)?;
+            }
+            .map_err(CliError::Agent)?;
             reviewer_session
                 .messages
                 .last()
@@ -712,14 +746,20 @@ where
                 &commit.agent_id,
                 AgentStreamEvent::AgentMessage(format!("reviewer findings:\n{review_text}")),
             );
-            let mut fix_stream = |event| stream(&commit.agent_id, event);
-            let fix_reply = self
-                .backend
-                .as_mut()
-                .expect("command chat backend is present")
-                .send_streaming(&commit.agent_id, &fix_prompt, &mut fix_stream)
-                .map_err(CliError::Agent)?
-                .text;
+            let fix_reply = {
+                let backend = self
+                    .backend
+                    .as_mut()
+                    .expect("command chat backend is present");
+                send_agent_streaming_interruptible(
+                    backend,
+                    &commit.agent_id,
+                    &fix_prompt,
+                    &mut *stream,
+                )
+            }
+            .map_err(CliError::Agent)?
+            .text;
             let fix_reply = self.process_agent_reply_streaming(
                 &commit.agent_id,
                 &commit.feature,
@@ -731,14 +771,20 @@ where
                 "The original agent has responded to the findings for commit {}.\n{}\n\nPlease check the patch again and reply with NO_FINDINGS if resolved, otherwise list remaining FINDINGS. The response may include code patches, verification evidence, real-agent smoke results, or an exact blocker; evaluate that evidence directly and do not require a code patch for a non-code finding. Documentation and plain-text updates are deferred to the linearize agent and must not be reported as remaining patch-agent findings.",
                 commit.hash, fix_reply
             );
-            let mut recheck_stream = |event| stream(&reviewer_id, event);
-            let recheck_reply = self
-                .backend
-                .as_mut()
-                .expect("command chat backend is present")
-                .send_streaming(&reviewer_id, &recheck_prompt, &mut recheck_stream)
-                .map_err(CliError::Agent)?
-                .text;
+            let recheck_reply = {
+                let backend = self
+                    .backend
+                    .as_mut()
+                    .expect("command chat backend is present");
+                send_agent_streaming_interruptible(
+                    backend,
+                    &reviewer_id,
+                    &recheck_prompt,
+                    &mut *stream,
+                )
+            }
+            .map_err(CliError::Agent)?
+            .text;
             review_text = self
                 .process_agent_reply_streaming_result(
                     &reviewer_id,

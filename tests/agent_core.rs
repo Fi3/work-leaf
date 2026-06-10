@@ -666,6 +666,81 @@ done
 }
 
 #[test]
+fn codex_backend_sdk_transport_interrupts_after_complete_streamed_directive() {
+    let root = temp_dir("codex-sdk-interrupts-streamed-directive");
+    let fake_bin = root.join("bin");
+    fs::create_dir_all(&fake_bin).unwrap();
+    let fake_python = fake_bin.join("python");
+    fs::write(
+        &fake_python,
+        r#"#!/bin/sh
+log="$(dirname "$0")/requests.log"
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  printf '%s\n' "$line" >> "$log"
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$line" in
+    *'"op":"launch"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-1","reply":"ready"}\n' "$id"
+      ;;
+    *'"op":"send"'*)
+      patch='@work-leaf patch update readme\ndiff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end'
+      printf '{"id":%s,"event":{"type":"message","text":"%s"}}\n' "$id" "$patch"
+      IFS= read -r interrupt_line
+      printf '%s\n' "$interrupt_line" >> "$log"
+      interrupt_id=$(printf '%s' "$interrupt_line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+      printf '{"id":%s,"ok":true}\n' "$interrupt_id"
+      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-1","reply":"%s"}\n' "$id" "$patch"
+      ;;
+    *'"op":"interrupt"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      ;;
+    *)
+      printf '{"id":%s,"ok":false,"error":"unexpected request"}\n' "$id"
+      ;;
+  esac
+done
+"#,
+    )
+    .unwrap();
+    make_executable(&fake_python);
+
+    let mut backend = CodexBackend::new(
+        CodexCommandConfig::new(root.clone())
+            .with_binary("/usr/bin/codex")
+            .with_sdk_transport()
+            .with_sdk_python(&fake_python),
+        PromptPolicy::for_restricted_agents(),
+    );
+    let agent_id = AgentId::new("chat-a").unwrap();
+    backend
+        .launch_streaming(
+            AgentLaunch::new(agent_id.clone(), AgentKind::Codex, "sdk", "launch"),
+            &mut |_| {},
+        )
+        .unwrap();
+    let mut events = Vec::new();
+    let mut should_interrupt = |event: &AgentStreamEvent| matches!(event, AgentStreamEvent::AgentMessage(text) if text.contains("@work-leaf end"));
+
+    let reply = backend
+        .send_streaming_interruptible(
+            &agent_id,
+            "continue",
+            &mut |event| events.push(event),
+            &mut should_interrupt,
+        )
+        .unwrap();
+
+    assert!(reply.text.contains("@work-leaf patch update readme"));
+    assert!(events.iter().any(|event| matches!(
+        event,
+        AgentStreamEvent::AgentMessage(text) if text.contains("@work-leaf end")
+    )));
+    let requests = fs::read_to_string(fake_bin.join("requests.log")).unwrap();
+    assert!(requests.contains(r#""op":"interrupt""#), "{requests}");
+}
+
+#[test]
 fn codex_backend_sdk_transport_sends_workspace_write_for_linearize() {
     let root = temp_dir("codex-sdk-linearize-sandbox");
     let fake_bin = root.join("bin");

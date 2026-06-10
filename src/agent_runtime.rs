@@ -35,6 +35,19 @@ pub trait AgentBackend {
         self.launch(request)
     }
 
+    fn launch_streaming_interruptible(
+        &mut self,
+        request: AgentLaunch,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+        should_interrupt: &mut dyn FnMut(&AgentStreamEvent) -> bool,
+    ) -> Result<AgentSession, AgentError> {
+        let mut stream = |event: AgentStreamEvent| {
+            sink(event.clone());
+            let _ = should_interrupt(&event);
+        };
+        self.launch_streaming(request, &mut stream)
+    }
+
     fn send_streaming(
         &mut self,
         agent_id: &AgentId,
@@ -42,6 +55,20 @@ pub trait AgentBackend {
         _sink: &mut dyn FnMut(AgentStreamEvent),
     ) -> Result<ChatMessage, AgentError> {
         self.send(agent_id, prompt)
+    }
+
+    fn send_streaming_interruptible(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+        should_interrupt: &mut dyn FnMut(&AgentStreamEvent) -> bool,
+    ) -> Result<ChatMessage, AgentError> {
+        let mut stream = |event: AgentStreamEvent| {
+            sink(event.clone());
+            let _ = should_interrupt(&event);
+        };
+        self.send_streaming(agent_id, prompt, &mut stream)
     }
 }
 

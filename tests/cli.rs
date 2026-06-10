@@ -6,9 +6,9 @@ use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use work_leaf::{
-    AgentBackend, AgentError, AgentId, AgentSession, ChatMessage, CodexBackend, CodexCommandConfig,
-    CommandChat, CommandChatResult, MessageRole, ProcessCommand, PromptPolicy, ReadPermission,
-    parse_process_args, render_process_help,
+    AgentBackend, AgentError, AgentId, AgentLaunch, AgentSession, AgentStreamEvent, ChatMessage,
+    CodexBackend, CodexCommandConfig, CommandChat, CommandChatResult, MessageRole, ProcessCommand,
+    PromptPolicy, ReadPermission, parse_process_args, render_process_help,
 };
 
 mod temp_cleanup;
@@ -391,6 +391,49 @@ diff --git a/lib.rs b/lib.rs
     assert_eq!(backend.sends[0].0, AgentId::new("user-1").unwrap());
     assert!(backend.sends[0].1.contains("work-leaf patch applied"));
     assert!(backend.sends[0].1.contains("@work-leaf done"));
+}
+
+#[test]
+fn command_chat_interrupts_streaming_after_complete_patch_directive() {
+    let root = temp_git_repo("command-chat-interrupts-after-streamed-patch");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "."]);
+    git(
+        &root,
+        ["commit", "-m", "ADD initial streaming patch fixture"],
+    );
+    let backend = DuplicateStreamingPatchBackend::default();
+    let mut chat = CommandChat::new(root.clone(), backend);
+
+    chat.handle_line("new update readme").unwrap();
+    let result = chat
+        .send_to_agent(&AgentId::new("user-1").unwrap(), "continue")
+        .unwrap();
+
+    let CommandChatResult::AgentMessage { reply, .. } = result else {
+        panic!("expected agent reply");
+    };
+    assert!(reply.contains("applied patch from user-1"));
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "after\n"
+    );
+    assert_eq!(
+        git_output(&root, ["log", "--oneline", "--all"])
+            .lines()
+            .count(),
+        2
+    );
+
+    let backend = chat.into_backend();
+    assert!(
+        backend.interrupted,
+        "backend should have stopped after the first complete patch block"
+    );
+    assert_eq!(
+        backend.streamed_patch_blocks, 1,
+        "duplicate streamed patch blocks should not be emitted"
+    );
 }
 
 #[test]
@@ -823,6 +866,63 @@ struct FakeBackend {
     replies: VecDeque<String>,
     launches: Vec<work_leaf::AgentLaunch>,
     sends: Vec<(AgentId, String)>,
+}
+
+#[derive(Debug, Default)]
+struct DuplicateStreamingPatchBackend {
+    interrupted: bool,
+    streamed_patch_blocks: usize,
+}
+
+impl AgentBackend for DuplicateStreamingPatchBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        let mut session = AgentSession::new(request);
+        session.push_message(MessageRole::Agent, "ready");
+        Ok(session)
+    }
+
+    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+        Ok(ChatMessage::new(MessageRole::Agent, "done"))
+    }
+
+    fn send_streaming_interruptible(
+        &mut self,
+        _agent_id: &AgentId,
+        _prompt: &str,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+        should_interrupt: &mut dyn FnMut(&AgentStreamEvent) -> bool,
+    ) -> Result<ChatMessage, AgentError> {
+        if self.streamed_patch_blocks > 0 {
+            let done = AgentStreamEvent::AgentMessage("@work-leaf done".to_string());
+            sink(done.clone());
+            let _ = should_interrupt(&done);
+            return Ok(ChatMessage::new(MessageRole::Agent, "@work-leaf done"));
+        }
+
+        let patch = "\
+@work-leaf patch update readme
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-before
++after
+@work-leaf end";
+        let event = AgentStreamEvent::AgentMessage(patch.to_string());
+        sink(event.clone());
+        self.streamed_patch_blocks += 1;
+        if should_interrupt(&event) {
+            self.interrupted = true;
+            return Ok(ChatMessage::new(MessageRole::Agent, patch));
+        }
+
+        sink(AgentStreamEvent::AgentMessage(patch.to_string()));
+        self.streamed_patch_blocks += 1;
+        Ok(ChatMessage::new(
+            MessageRole::Agent,
+            format!("{patch}\n\n{patch}"),
+        ))
+    }
 }
 
 impl FakeBackend {
