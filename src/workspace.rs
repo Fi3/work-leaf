@@ -1,6 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::{
+    Arc, Mutex,
+    mpsc::{self, Receiver, Sender},
+};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
@@ -35,6 +38,7 @@ where
     pending_dependent_launches: BTreeMap<AgentId, PendingDependentLaunch>,
     pending_dependent_sends: BTreeMap<AgentId, Vec<PendingDependentSend>>,
     launch_starting: BTreeSet<AgentId>,
+    implicit_loading_agents: BTreeMap<AgentId, usize>,
     command_transcript: Vec<String>,
     sessions: BTreeMap<AgentId, WorkLeafSession>,
     title_agent: ChatTitleAgent,
@@ -61,6 +65,7 @@ where
             pending_dependent_launches: BTreeMap::new(),
             pending_dependent_sends: BTreeMap::new(),
             launch_starting: BTreeSet::new(),
+            implicit_loading_agents: BTreeMap::new(),
             command_transcript: vec![render_command_chat_help()],
             sessions: BTreeMap::new(),
             title_agent: ChatTitleAgent::new(),
@@ -326,21 +331,32 @@ where
         let message = message.to_string();
         self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
             let stream_sender = sender.clone();
+            let streamed_agent_ids = Arc::new(Mutex::new(BTreeSet::new()));
+            let stream_seen = Arc::clone(&streamed_agent_ids);
             let display_name = chat.agent_profile().display_name.clone();
             let mut stream = move |event_agent_id: &AgentId, event| {
-                send_worker_stream_event(&stream_sender, event_agent_id, event, &display_name);
+                let first_for_worker = stream_seen.lock().unwrap().insert(event_agent_id.clone());
+                send_worker_stream_event(
+                    &stream_sender,
+                    event_agent_id,
+                    event,
+                    &display_name,
+                    first_for_worker,
+                );
             };
             match chat.send_to_agent_streaming_with_ids(&agent_id, &message, &mut stream) {
                 Ok(result) => {
                     let _ = sender.send(WorkerEvent::Complete {
                         agent_id: Some(agent_id),
                         result,
+                        streamed_agent_ids: tracked_streamed_agent_ids(&streamed_agent_ids),
                     });
                 }
                 Err(error) => {
                     let _ = sender.send(WorkerEvent::Error {
                         agent_id: Some(agent_id),
                         message: command_chat_error_text(&error),
+                        streamed_agent_ids: tracked_streamed_agent_ids(&streamed_agent_ids),
                     });
                 }
             }
@@ -902,21 +918,32 @@ where
         self.launch_starting.insert(agent_id.clone());
         self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
             let stream_sender = sender.clone();
+            let streamed_agent_ids = Arc::new(Mutex::new(BTreeSet::new()));
+            let stream_seen = Arc::clone(&streamed_agent_ids);
             let display_name = chat.agent_profile().display_name.clone();
             let mut stream = move |event_agent_id: &AgentId, event| {
-                send_worker_stream_event(&stream_sender, event_agent_id, event, &display_name);
+                let first_for_worker = stream_seen.lock().unwrap().insert(event_agent_id.clone());
+                send_worker_stream_event(
+                    &stream_sender,
+                    event_agent_id,
+                    event,
+                    &display_name,
+                    first_for_worker,
+                );
             };
             match chat.launch_prepared_agent_streaming_with_ids(launch, &mut stream) {
                 Ok(result) => {
                     let _ = sender.send(WorkerEvent::Complete {
                         agent_id: Some(agent_id),
                         result,
+                        streamed_agent_ids: tracked_streamed_agent_ids(&streamed_agent_ids),
                     });
                 }
                 Err(error) => {
                     let _ = sender.send(WorkerEvent::Error {
                         agent_id: Some(agent_id),
                         message: command_chat_error_text(&error),
+                        streamed_agent_ids: tracked_streamed_agent_ids(&streamed_agent_ids),
                     });
                 }
             }
@@ -928,21 +955,32 @@ where
         self.append_agent_line(&agent_id, format!("user: {message}"));
         self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
             let stream_sender = sender.clone();
+            let streamed_agent_ids = Arc::new(Mutex::new(BTreeSet::new()));
+            let stream_seen = Arc::clone(&streamed_agent_ids);
             let display_name = chat.agent_profile().display_name.clone();
             let mut stream = move |event_agent_id: &AgentId, event| {
-                send_worker_stream_event(&stream_sender, event_agent_id, event, &display_name);
+                let first_for_worker = stream_seen.lock().unwrap().insert(event_agent_id.clone());
+                send_worker_stream_event(
+                    &stream_sender,
+                    event_agent_id,
+                    event,
+                    &display_name,
+                    first_for_worker,
+                );
             };
             match chat.send_to_agent_streaming_with_ids(&agent_id, &message, &mut stream) {
                 Ok(result) => {
                     let _ = sender.send(WorkerEvent::Complete {
                         agent_id: Some(agent_id),
                         result,
+                        streamed_agent_ids: tracked_streamed_agent_ids(&streamed_agent_ids),
                     });
                 }
                 Err(error) => {
                     let _ = sender.send(WorkerEvent::Error {
                         agent_id: Some(agent_id),
                         message: command_chat_error_text(&error),
+                        streamed_agent_ids: tracked_streamed_agent_ids(&streamed_agent_ids),
                     });
                 }
             }
@@ -957,10 +995,19 @@ where
     ) {
         self.start_worker(Some(reviewer_id.clone()), move |mut chat, sender| {
             let stream_sender = sender.clone();
+            let streamed_agent_ids = Arc::new(Mutex::new(BTreeSet::new()));
+            let stream_seen = Arc::clone(&streamed_agent_ids);
             let display_name = chat.agent_profile().display_name.clone();
             let reviewed_agent_id = commit.agent_id.clone();
             let mut stream = move |event_agent_id: &AgentId, event| {
-                send_worker_stream_event(&stream_sender, event_agent_id, event, &display_name);
+                let first_for_worker = stream_seen.lock().unwrap().insert(event_agent_id.clone());
+                send_worker_stream_event(
+                    &stream_sender,
+                    event_agent_id,
+                    event,
+                    &display_name,
+                    first_for_worker,
+                );
             };
             match chat.review_commit_streaming_with_ids(
                 commit,
@@ -972,6 +1019,7 @@ where
                     let _ = sender.send(WorkerEvent::Complete {
                         agent_id: Some(reviewer_id),
                         result: CommandChatResult::ReviewComplete(vec![result]),
+                        streamed_agent_ids: tracked_streamed_agent_ids(&streamed_agent_ids),
                     });
                 }
                 Err(error) => {
@@ -979,6 +1027,7 @@ where
                         reviewer_id,
                         reviewed_agent_id,
                         message: error.to_string(),
+                        streamed_agent_ids: tracked_streamed_agent_ids(&streamed_agent_ids),
                     });
                 }
             }
@@ -992,12 +1041,14 @@ where
                     let _ = sender.send(WorkerEvent::Complete {
                         agent_id: None,
                         result,
+                        streamed_agent_ids: BTreeSet::new(),
                     });
                 }
                 Err(error) => {
                     let _ = sender.send(WorkerEvent::Error {
                         agent_id: None,
                         message: command_chat_error_text(&error),
+                        streamed_agent_ids: BTreeSet::new(),
                     });
                 }
             }
@@ -1023,17 +1074,27 @@ where
 
     fn apply_worker_event(&mut self, event: WorkerEvent) {
         match event {
-            WorkerEvent::Stream { agent_id, text } => {
+            WorkerEvent::Stream {
+                agent_id,
+                text,
+                first_for_worker,
+            } => {
                 if self.stopped_for_linearize.contains(&agent_id) {
                     return;
                 }
-                if self
+                let loading = self
                     .sessions
                     .get(&agent_id)
-                    .and_then(|session| session.loading)
-                    == Some(WorkLeafLoading::Launching)
-                {
+                    .and_then(|session| session.loading);
+                if loading == Some(WorkLeafLoading::Launching) {
                     self.set_session_loading(&agent_id, Some(WorkLeafLoading::WaitingForReply));
+                } else if first_for_worker
+                    && let Some(count) = self.implicit_loading_agents.get_mut(&agent_id)
+                {
+                    *count += 1;
+                } else if first_for_worker && loading.is_none() {
+                    self.set_session_loading(&agent_id, Some(WorkLeafLoading::WaitingForReply));
+                    self.implicit_loading_agents.insert(agent_id.clone(), 1);
                 }
                 if self.launch_starting.remove(&agent_id) {
                     self.start_next_pending_launch();
@@ -1046,7 +1107,12 @@ where
                 }
                 self.record_agent_usage(&agent_id, usage);
             }
-            WorkerEvent::Complete { agent_id, result } => {
+            WorkerEvent::Complete {
+                agent_id,
+                result,
+                streamed_agent_ids,
+            } => {
+                self.clear_implicit_loading(&streamed_agent_ids);
                 if let Some(agent_id) = agent_id {
                     if self.stopped_for_linearize.contains(&agent_id) {
                         self.launch_starting.remove(&agent_id);
@@ -1070,7 +1136,12 @@ where
                     }
                 }
             }
-            WorkerEvent::Error { agent_id, message } => {
+            WorkerEvent::Error {
+                agent_id,
+                message,
+                streamed_agent_ids,
+            } => {
+                self.clear_implicit_loading(&streamed_agent_ids);
                 if let Some(agent_id) = agent_id {
                     if self.stopped_for_linearize.contains(&agent_id) {
                         self.launch_starting.remove(&agent_id);
@@ -1090,7 +1161,9 @@ where
                 reviewer_id,
                 reviewed_agent_id,
                 message,
+                streamed_agent_ids,
             } => {
+                self.clear_implicit_loading(&streamed_agent_ids);
                 if self.stopped_for_linearize.contains(&reviewer_id)
                     || self.stopped_for_linearize.contains(&reviewed_agent_id)
                 {
@@ -1112,6 +1185,20 @@ where
                 } else {
                     self.push_command_line(message.to_string());
                 }
+            }
+        }
+    }
+
+    fn clear_implicit_loading(&mut self, streamed_agent_ids: &BTreeSet<AgentId>) {
+        for agent_id in streamed_agent_ids {
+            let Some(count) = self.implicit_loading_agents.get_mut(agent_id) else {
+                continue;
+            };
+            if *count > 1 {
+                *count -= 1;
+            } else {
+                self.implicit_loading_agents.remove(agent_id);
+                self.set_session_loading(agent_id, None);
             }
         }
     }
@@ -1574,6 +1661,7 @@ enum WorkerEvent {
     Stream {
         agent_id: AgentId,
         text: String,
+        first_for_worker: bool,
     },
     Usage {
         agent_id: AgentId,
@@ -1582,19 +1670,28 @@ enum WorkerEvent {
     Complete {
         agent_id: Option<AgentId>,
         result: CommandChatResult,
+        streamed_agent_ids: BTreeSet<AgentId>,
     },
     Error {
         agent_id: Option<AgentId>,
         message: String,
+        streamed_agent_ids: BTreeSet<AgentId>,
     },
     ReviewError {
         reviewer_id: AgentId,
         reviewed_agent_id: AgentId,
         message: String,
+        streamed_agent_ids: BTreeSet<AgentId>,
     },
     WorkerPanicked {
         agent_id: Option<AgentId>,
     },
+}
+
+fn tracked_streamed_agent_ids(
+    streamed_agent_ids: &Arc<Mutex<BTreeSet<AgentId>>>,
+) -> BTreeSet<AgentId> {
+    streamed_agent_ids.lock().unwrap().clone()
 }
 
 fn send_worker_stream_event(
@@ -1602,6 +1699,7 @@ fn send_worker_stream_event(
     agent_id: &AgentId,
     event: AgentStreamEvent,
     agent_display_name: &str,
+    first_for_worker: bool,
 ) {
     match event {
         AgentStreamEvent::Usage(usage) => {
@@ -1614,6 +1712,7 @@ fn send_worker_stream_event(
             let _ = sender.send(WorkerEvent::Stream {
                 agent_id: agent_id.clone(),
                 text: stream_event_text(event, agent_display_name),
+                first_for_worker,
             });
         }
     }

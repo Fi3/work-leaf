@@ -116,6 +116,36 @@ fn prompt_policy_injects_launch_project_agent_instructions() {
 }
 
 #[test]
+fn prompt_policy_translates_project_instructions_for_concurrent_patch_agents() {
+    let root = temp_dir("prompt-policy-concurrent-project-instructions");
+    fs::write(
+        root.join("AGENTS.md"),
+        "## Required Checks\n1. `project-wide check`\n\nFollow project-specific APIs.\n",
+    )
+    .unwrap();
+    let policy = PromptPolicy::for_project(&root).unwrap();
+
+    let wrapped = policy.inject(
+        &AgentId::new("user-1").unwrap(),
+        "feature flags",
+        "implement the flag parser",
+    );
+
+    assert!(wrapped.contains("Repository instructions from the launch project"));
+    assert!(wrapped.contains("Follow project-specific APIs."));
+    assert!(wrapped.contains("Concurrent Work Leaf interpretation"));
+    assert!(wrapped.contains("preserve the repository-specific intent"));
+    assert!(wrapped.contains("Do not repeatedly rerun the same broad check"));
+    assert!(wrapped.contains("If a broad required check is blocked only by another patch agent"));
+    assert!(
+        wrapped
+            .to_ascii_lowercase()
+            .contains("report the blocker once")
+    );
+    assert!(wrapped.contains("@work-leaf done"));
+}
+
+#[test]
 fn codex_backend_builds_exec_invocation_for_project_directory() {
     let config = CodexCommandConfig::new(PathBuf::from("/repo"))
         .with_binary("codex")

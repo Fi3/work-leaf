@@ -1566,6 +1566,41 @@ fn controller_interrupt_clears_visible_agent_loading_immediately() {
     assert!(controller.wait_for_idle(Duration::from_secs(1)));
 }
 
+#[test]
+fn controller_marks_secondary_follow_up_streams_as_waiting_until_worker_finishes() {
+    let backend = SecondaryFollowUpBackend::default();
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut controller = WorkLeafController::new(chat);
+
+    let first = controller.create_agent("first task").unwrap();
+    let second = controller.create_agent("second task").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+
+    controller.send_message(&first, "route follow-up").unwrap();
+
+    assert!(controller.wait_for_session_line(
+        &second,
+        "secondary follow-up started",
+        Duration::from_secs(1)
+    ));
+    let active = controller.snapshot();
+    assert_eq!(
+        active.session(&second).expect("second session").loading,
+        Some(WorkLeafLoading::WaitingForReply)
+    );
+
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    let idle = controller.snapshot();
+    assert_eq!(idle.session(&second).expect("second session").loading, None);
+    assert!(
+        idle.session(&second)
+            .expect("second session")
+            .lines
+            .iter()
+            .any(|line| line == "secondary follow-up complete")
+    );
+}
+
 #[derive(Clone, Debug)]
 struct FakeBackend {
     state: Arc<Mutex<FakeBackendState>>,
@@ -1585,6 +1620,11 @@ struct ConcurrentBackend;
 #[derive(Clone, Debug, Default)]
 struct InterruptibleBackend {
     interrupted: Arc<Mutex<bool>>,
+}
+
+#[derive(Clone, Debug, Default)]
+struct SecondaryFollowUpBackend {
+    sessions: Arc<Mutex<BTreeMap<AgentId, AgentSession>>>,
 }
 
 #[derive(Clone, Debug)]
@@ -1788,6 +1828,52 @@ impl AgentBackend for ConcurrentBackend {
             return Ok(ChatMessage::new(MessageRole::Agent, "slow reply"));
         }
         Ok(ChatMessage::new(MessageRole::Agent, "quick reply"))
+    }
+}
+
+impl AgentBackend for SecondaryFollowUpBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        let mut session = AgentSession::new(request);
+        session.push_message(MessageRole::Agent, "ready");
+        self.sessions
+            .lock()
+            .unwrap()
+            .insert(session.id.clone(), session.clone());
+        Ok(session)
+    }
+
+    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        let reply = if agent_id.as_str() == "user-1" {
+            "@work-leaf send user-2 follow-up work"
+        } else if prompt.contains("follow-up work") {
+            "secondary follow-up complete"
+        } else {
+            "ordinary reply"
+        };
+        Ok(ChatMessage::new(MessageRole::Agent, reply))
+    }
+
+    fn send_streaming(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+    ) -> Result<ChatMessage, AgentError> {
+        if agent_id.as_str() == "user-2" && prompt.contains("follow-up work") {
+            sink(AgentStreamEvent::AgentMessage(
+                "secondary follow-up started".to_string(),
+            ));
+            thread::sleep(Duration::from_millis(150));
+            return Ok(ChatMessage::new(
+                MessageRole::Agent,
+                "secondary follow-up complete",
+            ));
+        }
+        self.send(agent_id, prompt)
+    }
+
+    fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
+        self.sessions.lock().unwrap().get(agent_id).cloned()
     }
 }
 

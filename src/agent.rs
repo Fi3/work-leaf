@@ -278,13 +278,18 @@ impl PromptPolicy {
     }
 
     pub fn inject(&self, agent_id: &AgentId, feature: &str, prompt: &str) -> String {
-        let mut text = if is_linearize_agent(agent_id) {
+        let linearize_agent = is_linearize_agent(agent_id);
+        let mut text = if linearize_agent {
             linearize_preamble()
         } else {
             self.preamble.clone()
         };
         if !self.project_instructions.is_empty() {
             text.push_str("\n\nRepository instructions from the launch project:");
+            if !linearize_agent {
+                text.push_str("\n\n");
+                text.push_str(concurrent_work_leaf_interpretation());
+            }
             for instructions in &self.project_instructions {
                 text.push_str("\n\n--- ");
                 text.push_str(&instructions.path.display().to_string());
@@ -300,6 +305,16 @@ impl PromptPolicy {
         ));
         text
     }
+}
+
+fn concurrent_work_leaf_interpretation() -> &'static str {
+    "Concurrent Work Leaf interpretation:\n\
+- preserve the repository-specific intent of the instructions below; use the repo's architecture, APIs, naming, style, and checks.\n\
+- Apply broad repository check requirements in a shared-worktree way. Prefer focused checks for files you touched, checks that existed before your patch, and checks you added yourself.\n\
+- Avoid write-producing broad formatters over the whole repository while other patch agents are active. Prefer check-only formatter commands or formatter commands scoped to files you touched.\n\
+- If a broad required check is blocked only by another patch agent's owned files or focused tests, do not take over that agent's work. Report the blocker once with the concrete failing file/test and stop retrying the same broad check.\n\
+- Do not repeatedly rerun the same broad check after it fails for the same external integration blocker. After your focused checks pass and any external blocker is reported, use `@work-leaf done` and leave cross-agent reconciliation to review or linearize.\n\
+- Treat compact file refreshes and repeated-read digests as authoritative. Use `@work-leaf read --force` only when the diff or digest response is insufficient for a specific patch."
 }
 
 fn is_linearize_agent(agent_id: &AgentId) -> bool {

@@ -99,6 +99,13 @@ temporary checkout before exit.
   filesystem reads while keeping writes mediated by patches.
 - `AgentError` is the shared error type for launch, send, and prompt policy failures.
 
+For non-linearizer project agents, `PromptPolicy` adds a concurrent Work Leaf interpretation before
+the loaded project instruction files. This interpretation preserves the repository-specific intent
+of those files while adapting broad validation and formatter requirements to a shared-worktree
+orchestrator: patch agents prefer focused checks they touched or introduced, report blockers caused
+only by another patch agent's owned files once, and leave cross-agent reconciliation to review or
+linearization. Linearize agents receive the direct-workspace linearizer policy instead.
+
 Patch-agent prompts keep documentation and prose-only files out of patch-agent scope. Patch agents
 work on code, tests, configuration, and other feature files through orchestrator patches; docs,
 README, changelog, markdown, txt, and other prose-only updates are handled during linearization when
@@ -246,8 +253,11 @@ path. Rapidly created launches wait until the active launch emits its first back
 finishes, which prevents multiple backend child-process startups from piling up while still allowing
 the agents to run concurrently after startup. The first backend stream event changes that session's
 loading state from launch startup to waiting for a reply, so frontends can distinguish provider
-startup from an active agent turn without relying on provider-specific status text. A user-agent
-session becomes review-ready when that agent has an unreviewed
+startup from an active agent turn without relying on provider-specific status text. Routed
+orchestrator follow-up turns that stream output into a different session mark that target session as
+waiting for a reply until the worker that owns the follow-up finishes, and the completed follow-up
+reply is appended to the target session transcript. A user-agent session becomes review-ready when
+that agent has an unreviewed
 provisional commit in git history and the agent emits `@work-leaf done`; the patch commit and the
 done directive may come from different turns in the same session. Successful patch application
 returns a continuation prompt to the patch agent when the agent has not reported done, so the agent

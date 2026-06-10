@@ -581,6 +581,7 @@ where
 
             append_orchestrator_events(&mut text, &run.events);
             append_follow_ups(&mut text, &run.follow_up_replies);
+            stream_secondary_follow_ups(agent_id, &run.follow_up_replies, stream);
 
             if run.completed && current.agent_id == *agent_id {
                 break;
@@ -893,6 +894,22 @@ fn append_follow_ups(text: &mut String, follow_ups: &[AgentFollowUp]) {
         text.push_str(follow_up.agent_id.as_str());
         text.push_str(":\n");
         text.push_str(&follow_up.text);
+    }
+}
+
+fn stream_secondary_follow_ups(
+    primary_agent_id: &AgentId,
+    follow_ups: &[AgentFollowUp],
+    stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+) {
+    for follow_up in follow_ups {
+        if follow_up.agent_id == *primary_agent_id || follow_up.text.is_empty() {
+            continue;
+        }
+        stream(
+            &follow_up.agent_id,
+            AgentStreamEvent::AgentMessage(follow_up.text.clone()),
+        );
     }
 }
 
