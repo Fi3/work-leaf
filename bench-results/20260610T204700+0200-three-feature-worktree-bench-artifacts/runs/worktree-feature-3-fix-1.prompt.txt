@@ -1,0 +1,20 @@
+You are continuing the same direct Codex feature task.
+
+Request 3:
+when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it
+
+The reviewer reported the findings below. Fix only the reviewed feature behavior and tests needed to
+resolve those findings. Leave changes uncommitted; the benchmark driver will commit them.
+
+Reviewer findings:
+I’ll review the patch against `c92a0b7060a36eac6db2d869b85e589a7a9480f9`, then trace the affected UI and review-flow behavior through the existing controller/harness code before deciding whether docs or tests are missing.
+The patch touches the controller, terminal adapter, UI harness, documentation, and focused tests. I’m going to read the actual diff plus the surrounding symbols now so I can verify the input routing and highlight state rather than just trusting the test names.
+The controller adds two explicit state sets for pending and closed feature-completion prompts, while the terminal adapter suppresses the left-pane ready highlight after a `yes`. I’m checking whether all event paths update the local UI cache consistently, because remote terminal behavior depends on incremental `WorkLeafEvent` handling.
+The added tests cover the controller, terminal adapter, and scripted UI harness, including “yes does not send to the agent” and later typing resumes the agent. I’m tracing the lower-level event ordering next, especially whether `AgentSelected` plus appended prompt lines are enough for both in-process and remote terminal adapters.
+The implementation treats a clean review (`ReviewResult::findings_resolved`) as the trigger, appends the question to the patch-agent transcript, then selects that chat. I’m checking the review result semantics and HTTP/event DTOs now to make sure the new local completion state is neither triggered on unresolved findings nor lost through the daemon transport.
+The diff includes documentation updates for both the architecture and orchestrator workflow, and the tests cover the new local prompt path. I’m doing one last pass over the complete patch and line numbers for edge cases introduced by the event/state changes.
+The new completion state is local to the controller and rendered through existing session lines/events, so it avoids adding public DTO fields. I’m checking whether that choice creates stale-state problems on full snapshots or remote terminal startup after a prompt has already been answered.
+I found a concrete edge case in the state encoding: the controller allows duplicate question prompts but still deduplicates the answer/state marker lines, while the terminal derives “closed” from the latest marker in the transcript. I’m grabbing exact line references before finalizing the review.
+FINDINGS
+
+- [src/workspace.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-3/src/workspace.rs:753): repeated clean-review cycles do not close correctly. After first `yes`, then typing to reopen, a second clean review appends another prompt, but the second `FEATURE_MARKED_DONE` is dropped as a duplicate. The terminal derives closed state from transcript markers in [src/terminal_app.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-3/src/terminal_app.rs:996), so the latest marker remains the second prompt and the patch chat stays highlighted instead of closing. Add coverage for two prompt/yes cycles and allow completion state markers to repeat or expose state explicitly.

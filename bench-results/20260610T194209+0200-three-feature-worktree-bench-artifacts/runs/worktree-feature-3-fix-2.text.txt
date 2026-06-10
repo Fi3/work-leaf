@@ -1,0 +1,20 @@
+I’ll add a focused regression test for the unresolved-review round-limit path first, verify it fails, then gate the completion prompt on `findings_resolved`.
+The controller currently calls `ask_feature_completion` unconditionally for `ReviewComplete`. I’m adding a workspace test where the reviewer still reports findings at the configured round limit and asserting that the yes/no prompt is absent.
+This unresolved path can be reproduced with `with_max_review_rounds(1)`: the first reviewer response is `FINDINGS`, the loop stops, and `ReviewResult::findings_resolved` is false. I’m adding that test now.
+I’m running the new regression test before changing the implementation to confirm it fails on the reviewed bug.
+The new test fails as expected because unresolved review results still emit the completion question. I’m gating the prompt on `ReviewResult::findings_resolved` now.
+The controller now only asks the completion question for resolved reviews. I’m rerunning the focused regression and existing success-path tests.
+The regression and the existing resolved-review path both pass. I’m running formatting and the required full check set next.
+Formatting completed. I’m running clippy with warnings denied.
+Clippy is clean. I’m running the full test suite now.
+The required automated checks are green. Because this changes review completion behavior, I’m running the bounded real Codex smoke check again and will report the exact result.
+The real Codex smoke check reached `thread.started` and returned `WORK_LEAF_REAL_AGENT_OK`. I’m doing the final diff/status check now.
+Fixed the unresolved-review edge case.
+
+`WorkLeafController` now only asks the patch-agent “Is this feature done?” question when `ReviewResult::findings_resolved` is true: [src/workspace.rs](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-3/src/workspace.rs:717). I added a regression test that reproduces the round-limit `FINDINGS` path and verifies no close prompt is emitted: [tests/workspace.rs](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-3/tests/workspace.rs:345). The new test failed before the fix and passes now.
+
+Validation passed:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- Real Codex smoke returned `WORK_LEAF_REAL_AGENT_OK` after `thread.started`.

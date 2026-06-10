@@ -1,0 +1,45 @@
+You are a normal direct Codex review agent. Do not modify files.
+
+Review only the changes for request 3 since commit bd59834a9b7ad16d2679cbb7f2e73fb90d891569:
+when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it
+
+Inspect the repository and the diff from bd59834a9b7ad16d2679cbb7f2e73fb90d891569..HEAD. Report only bugs, regressions,
+missing tests for the changed behavior, or required documentation gaps introduced by this request.
+
+Additional author response and verification evidence from the previous fix turn:
+I’ll fix the stale reconnect/snapshot state first with a failing test, then update the workflow doc sections that still describe the old review-chat completion flow.
+I found the stale-state path in `TerminalAppCore::new`: it treats any historical prompt line as pending. I’m adding a unit test that builds a reconnect snapshot with a prompt followed by later chat lines, then verifies `yes` is sent to the agent instead of consumed locally.
+The reconnect regression test is in place. I’ll run just that test to confirm it fails against the reviewer-reported bug before changing the logic.
+The failing test confirms the bug. I’m changing pending detection to mean “the latest session line is the feature-done prompt,” and clearing pending state on any later line for that agent.
+The stale snapshot logic is fixed. I’ll rerun the regression and the original terminal close/reopen tests.
+The stale reconnect bug is covered and fixed. I’m updating the workflow doc sections called out by the reviewer so they describe the patch-agent yes/no decision point instead of the old review-chat done step.
+I’ll replace the stale “mark review chat done” wording with the current patch-agent decision prompt behavior, without turning the doc into a changelog.
+The workflow doc wording is updated. I’ll scan for the stale review-chat phrasing the reviewer called out.
+No stale “review chat done” phrasing remains in that workflow doc. I’m running formatting, then the required checks.
+Formatting completed. I’m running clippy with all targets and features.
+Clippy is clean. I’m running the full test suite now.
+The required Rust checks are green. Because this remains review/terminal agent workflow behavior, I’m running the bounded real Codex smoke check again.
+The real Codex smoke returned the expected marker. I’ll do a final status and diff check, including whitespace, before wrapping up.
+Only the targeted terminal stale-state fix and workflow doc edits remain changed. I’m grabbing line numbers for the final summary.
+Fixed both reviewer findings.
+
+In [src/terminal_app.rs](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/src/terminal_app.rs:699), feature-done confirmation state is cleared when any later session line arrives, and reconnect/snapshot restore only treats the prompt as pending when it is the latest line. Added the regression test at [src/terminal_app.rs](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/src/terminal_app.rs:1382); it failed before the fix and passes now.
+
+Updated stale workflow docs in [docs/orchestrator-file-workflow.md](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/docs/orchestrator-file-workflow.md:84) to describe the patch-agent yes/no prompt instead of marking the review chat done.
+
+Verification:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- Real Codex smoke returned `WORK_LEAF_REAL_AGENT_OK`
+
+Changes are uncommitted.
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

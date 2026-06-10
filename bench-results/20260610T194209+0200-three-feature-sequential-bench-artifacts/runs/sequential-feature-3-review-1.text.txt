@@ -1,0 +1,13 @@
+I’ll review the requested range only, then check the affected behavior against tests and docs so the findings stay scoped to request 3.
+The patch touches the controller, terminal adapter, renderer, harness, and docs. I’m going to read the exact diff and relevant call paths next, then inspect the tests for the new review-completion prompt flow.
+The worktree is clean, so I’m using the committed diff range directly. My previous path-limited diff omitted the range; I’m rerunning it with the base commit included.
+The implementation adds a controller prompt event and terminal-side local yes/no handling. I’m checking whether the behavior matches the requested “yes closes, typing again reopens” path across selection, hidden rows, and docs that describe the review workflow.
+There is at least one workflow doc that still describes the old “mark the review chat done” step, so I’m checking whether that is merely wording or conflicts with the new terminal behavior. I’m also checking the controller event order around review completion to see if the row is actually highlighted when the prompt arrives.
+The terminal hides the row locally on `yes` and reuses `selected_agent` to allow another message to reveal it and send. I’m reading the UI navigation helpers now because hidden-but-selected state is where regressions often show up.
+The stale-state path is concrete: the app rebuilds pending confirmation state from any historical prompt line, even if later messages show the prompt was already answered or bypassed. I’m grabbing exact line numbers and checking whether the stale docs are still present in workflow documentation.
+I’m also checking the commit metadata for any recorded verification note, since this repo treats real-agent verification as part of readiness for terminal/review workflow changes.
+FINDINGS
+
+- `src/terminal_app.rs:361` rebuilds confirmation state from the snapshot, and `src/terminal_app.rs:805` marks an agent pending if *any* historical line equals `FEATURE_DONE_PROMPT`. After the user has already typed a follow-up, the snapshot still contains the old prompt plus later lines, so reconnecting/restarting the terminal re-arms stale yes/no handling. The next `yes`/`no` is then consumed locally by `src/terminal_app.rs:647` instead of being sent to the agent. This needs last-unresolved-prompt logic and a reconnect/snapshot test.
+
+- `docs/orchestrator-file-workflow.md:87`, `docs/orchestrator-file-workflow.md:409`, `docs/orchestrator-file-workflow.md:437`, and `docs/orchestrator-file-workflow.md:538` still describe the old “mark the review chat done” flow. The changed controller path in `src/workspace.rs:717` appends the yes/no prompt to the patch-agent chat and selects that patch-agent session, so this workflow doc is stale.

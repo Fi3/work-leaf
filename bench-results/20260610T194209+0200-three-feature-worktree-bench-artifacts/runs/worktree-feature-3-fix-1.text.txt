@@ -1,0 +1,16 @@
+I’ll update only the stale workflow documentation the reviewer identified, keeping it current-state rather than change-log style, then run the required checks again.
+The stale references are all in `docs/orchestrator-file-workflow.md`, and they describe the old reviewer-chat completion point. I’m replacing them with the patch-agent yes/no completion flow.
+The workflow doc now describes the patch-agent completion question at each reviewed location. I’m scanning for remaining contradictory reviewer-chat completion wording before validation.
+The scan shows no remaining reviewer-chat completion wording. I’m running the required check set again, even though this follow-up is documentation-only.
+Formatting completed. I’m running clippy next.
+Clippy is clean. I’m running the full test suite now.
+All required checks are green. I’m doing the final status and whitespace check for the documentation follow-up.
+Updated [docs/orchestrator-file-workflow.md](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-3/docs/orchestrator-file-workflow.md:84) so the review lifecycle, developer path, and example session all describe the patch-agent yes/no completion prompt instead of marking the reviewer chat done.
+
+Validation passed:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- `git diff --check`
+
+No additional real-agent workflow was affected by this follow-up; it only corrects documentation.

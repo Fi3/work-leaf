@@ -1,0 +1,21 @@
+You are continuing the same direct Codex feature task.
+
+Request 2:
+implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt.
+
+The reviewer reported the findings below. Fix only the reviewed feature behavior and tests needed to
+resolve those findings. Leave changes uncommitted; the benchmark driver will commit them.
+
+Reviewer findings:
+I’ll inspect the requested diff and the architecture/docs surfaces first, then trace the selected-agent command path and tests against the request. No file writes.
+The patch touches the provider contract, controller routing, Codex backend, architecture docs, and terminal-app tests. I’m going to trace the new slash-command path end to end and compare it with the exact `/status` and `/fork` coverage requested.
+One potentially important detail is that the controller deliberately bypasses the existing “agent is still working” guard for backend commands. I’m checking whether that creates a state-loss or routing issue in the cloned `CommandChat` worker model.
+The quick concatenated reads had some noisy overlap, so I’m switching to line-numbered slices around the changed symbols. That will give exact review references if there’s a finding.
+The slash routing itself is in `CommandChat::send_to_agent_streaming_with_ids`, with the UI/controller path feeding selected-agent chat through that method. I’m checking the repository docs inventory and the changed tests before deciding whether there’s a documentation or coverage gap.
+The architecture doc has been updated for the new provider hook and terminal behavior. I’m scanning the other markdown files for user-facing slash-command descriptions that may now be stale.
+The changed Codex backend maps `/fork` to a distinct CLI invocation rather than `exec resume`. I’m checking the local Codex CLI shape, because a wrong subcommand or option order would make the new command fail despite the routing tests.
+Local `codex fork --help` exposes `fork` as a top-level interactive-session command, not an `exec --json` subcommand. I’m doing a bounded dry run with an invalid session id to see whether the invocation shape fails fast or enters an interactive path.
+I found one concrete runtime issue in the Codex `/fork` path: the implemented invocation uses the interactive top-level `codex fork`, while Work Leaf launches backend commands with piped stdio. I’m doing one last pass for any additional request-scoped issues before I return the review marker.
+FINDINGS
+
+- `src/codex.rs:277` builds `/fork` as top-level `codex fork`, but `src/codex.rs:374` runs backend commands with piped stdio. Local Codex exits that path with `Error: stdin is not a terminal`, so selected-agent `/fork` fails instead of appending backend output. Current `/fork` coverage misses this because `tests/terminal_app.rs:47` uses `FakeBackend`, and `src/codex.rs:765` only asserts the argv shape rather than executing the spawned Codex path.

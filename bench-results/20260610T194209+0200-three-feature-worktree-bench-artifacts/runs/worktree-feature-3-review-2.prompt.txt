@@ -1,0 +1,34 @@
+You are a normal direct Codex review agent. Do not modify files.
+
+Review only the changes for request 3 since commit c92a0b7060a36eac6db2d869b85e589a7a9480f9:
+when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it
+
+Inspect the repository and the diff from c92a0b7060a36eac6db2d869b85e589a7a9480f9..HEAD. Report only bugs, regressions,
+missing tests for the changed behavior, or required documentation gaps introduced by this request.
+
+Additional author response and verification evidence from the previous fix turn:
+I’ll update only the stale workflow documentation the reviewer identified, keeping it current-state rather than change-log style, then run the required checks again.
+The stale references are all in `docs/orchestrator-file-workflow.md`, and they describe the old reviewer-chat completion point. I’m replacing them with the patch-agent yes/no completion flow.
+The workflow doc now describes the patch-agent completion question at each reviewed location. I’m scanning for remaining contradictory reviewer-chat completion wording before validation.
+The scan shows no remaining reviewer-chat completion wording. I’m running the required check set again, even though this follow-up is documentation-only.
+Formatting completed. I’m running clippy next.
+Clippy is clean. I’m running the full test suite now.
+All required checks are green. I’m doing the final status and whitespace check for the documentation follow-up.
+Updated [docs/orchestrator-file-workflow.md](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-3/docs/orchestrator-file-workflow.md:84) so the review lifecycle, developer path, and example session all describe the patch-agent yes/no completion prompt instead of marking the reviewer chat done.
+
+Validation passed:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- `git diff --check`
+
+No additional real-agent workflow was affected by this follow-up; it only corrects documentation.
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

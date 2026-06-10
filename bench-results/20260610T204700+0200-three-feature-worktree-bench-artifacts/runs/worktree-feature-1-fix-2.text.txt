@@ -1,0 +1,45 @@
+I’ll add a regression that renders right-pane content with a multiline chat draft (`chat> first\nsecond`) and proves visual yank excludes the whole input block. Then I’ll change the prompt stripping to truncate from the last `chat> ` marker instead of checking only the final line.
+Inspect terminal app test helpers for multiline draft coverage
+Add failing multiline-prompt visual yank regression
+Fix right-pane prompt-block filtering
+Run required checks and real-agent verification
+I’m checking existing `TerminalApp` test helpers and input sequences now; if there’s already a clean way to enter Shift+Enter or bracketed paste, I’ll use that instead of adding a lower-level-only test.
+`TerminalApp` has a clean Shift+Enter path (`ESC [ 13 ; 2 u`) that appends a chat-buffer newline without sending. I’ll use that in a regression so the test covers the production app path the reviewer called out.
+I’m adding the production-path regression to `tests/terminal_app.rs`: launch a chat, create a multiline draft with Shift+Enter, leave insert mode, run `Vky`, and assert only the transcript reply is yanked.
+The multiline-draft regression is in place. I’m running it alone now to verify it fails before the filtering change.
+The new test reproduces the reviewer’s case: the yank is `chat> first draft\nsecond draft\n`. I’m changing the helper to truncate from the last `chat> ` marker, which removes the full multiline input block.
+I’m also updating the right-pane visibility splitter for the same multiline prompt shape. That keeps the chat prompt block treated as prompt content during rendering/caching, not as ordinary transcript history.
+The prompt splitter now finds the last `chat> ` line and treats everything from there to the end as the prompt block. I’m rerunning the multiline regression and the harness prompt-exclusion test.
+Both prompt-exclusion regressions pass now. I’m running the required checks again.
+Inspect terminal app test helpers for multiline draft coverage
+Add failing multiline-prompt visual yank regression
+Fix right-pane prompt-block filtering
+Run required checks and real-agent verification
+`cargo fmt` is clean. Clippy is next.
+Clippy is clean with warnings denied. I’m running the full test suite now.
+The full required test suite is green, including the new `terminal_app` regression. I’m running the bounded real-Codex smoke check one more time for terminal-interaction coverage.
+Real Codex verification passed. I’m collecting final status and line references, then I’ll hand off the reviewed fix.
+Only `src/ui.rs` and `tests/terminal_app.rs` are modified in this follow-up. I’m marking the plan complete.
+Inspect terminal app test helpers for multiline draft coverage
+Add failing multiline-prompt visual yank regression
+Fix right-pane prompt-block filtering
+Run required checks and real-agent verification
+I’m checking the prompt splitter line reference once so the final handoff points to the full fix, not only the selectable-line helper.
+The prompt splitter is at `src/ui.rs:1828`; I have all final references now.
+Fixed the multiline chat-draft edge case.
+
+`TerminalUi` now removes the full right-pane input block from selectable/yankable lines by truncating from the last `chat> ` marker, so `chat> first draft\nsecond draft` is excluded as a unit. I also updated the right-pane prompt splitter so multiline drafts are treated as prompt content for visibility/caching. See [src/ui.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui.rs:1237), [src/ui.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui.rs:1645), and [src/ui.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui.rs:1828).
+
+Added a production-path regression in [tests/terminal_app.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/tests/terminal_app.rs:420). It failed first with `chat> first draft\nsecond draft\n`, then passed after the fix.
+
+Validation:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- Real Codex smoke succeeded: `thread.started`, then `WORK_LEAF_REAL_AGENT_OK`.
+
+Changes are uncommitted.
+Inspect terminal app test helpers for multiline draft coverage
+Add failing multiline-prompt visual yank regression
+Fix right-pane prompt-block filtering
+Run required checks and real-agent verification

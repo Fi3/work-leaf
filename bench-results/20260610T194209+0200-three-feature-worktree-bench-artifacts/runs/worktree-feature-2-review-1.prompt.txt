@@ -1,0 +1,17 @@
+You are a normal direct Codex review agent. Do not modify files.
+
+Review only the changes for request 2 since commit c92a0b7060a36eac6db2d869b85e589a7a9480f9:
+implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt.
+
+Inspect the repository and the diff from c92a0b7060a36eac6db2d869b85e589a7a9480f9..HEAD. Report only bugs, regressions,
+missing tests for the changed behavior, or required documentation gaps introduced by this request.
+
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

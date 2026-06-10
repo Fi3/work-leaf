@@ -1,0 +1,20 @@
+You are a normal direct Codex linearizer for a parallel worktree benchmark.
+
+This integration checkout is at base commit c92a0b7060a36eac6db2d869b85e589a7a9480f9. Three reviewed feature branches exist in
+the same Git repository:
+
+- bench-20260610T204700+0200-feature-1: add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select
+- bench-20260610T204700+0200-feature-2: implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt.
+- bench-20260610T204700+0200-feature-3: when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it
+
+Merge those reviewed branches into this checkout, resolve conflicts, minimize the final diff, and
+rewrite history if needed into the smallest clear set of final commits that preserves the reviewed
+behavior. Update documentation required by the resulting system and follow this repository's
+commit-message rules. You may use git show, diff, cherry-pick, reset, rebase, and commit directly.
+
+After rewriting, run the required repository checks from AGENTS.md:
+1. cargo fmt
+2. cargo clippy --all-targets --all-features -- -D warnings
+3. cargo test --all-targets --all-features
+
+Leave the repository clean and summarize the final commit messages and verification.

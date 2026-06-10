@@ -1,0 +1,69 @@
+I’ll inspect the architecture docs and the relevant review/patch agent UI flow first, then I’ll add a focused failing test before touching the implementation.
+The architecture doc says review completion is owned by `src/workspace.rs::WorkLeafController`, and terminal rendering goes through `src/ui.rs` / `src/ui_harness.rs`. I’m narrowing this to controller state plus terminal UI selection/rendering, because the request is about what happens after the review worker finishes.
+The existing UI already has a “ready” flag that reverses a row and rings the bell, but it is not connected to review completion. I’m checking how terminal events sync controller sessions into that list so the new “done?” state can travel through the same DTO path instead of becoming a terminal-only hack.
+I found the current ready state is too broad: every idle session is marked READY. The requested behavior needs a narrower state: review-done patch chats should be emphasized and prompt for closure, while normal idle chats should not all look like completed features.
+The product spec already says ready agents are highlighted, and the review docs currently say the user marks the review chat done. This request changes that handoff: the patch agent should become the decision point after a clean review, so I’ll update the documented review state as part of the implementation, not as a separate doc churn.
+I’m going to add tests at two levels: a controller test that proves clean review creates a pending completion prompt on the patch session, and a terminal UI/harness test that proves the highlighted prompt can be answered yes and reopened by typing. I’ll run those before implementation to make sure they fail for the intended reason.
+There’s a public API constraint: adding new public fields to `WorkLeafSession` would break external struct literals. I’m going to keep the state on existing session lines and terminal-side row state, with controller events appending the explicit prompt line. That keeps the UI-neutral surface compatible while still making the behavior visible over HTTP snapshots.
+I’m adding the failing tests first now. They target existing public behavior: controller session lines and the UI harness command flow, so the failure should be an assertion about the missing prompt rather than an unrelated compile break.
+The controller test is in place. I’m adding the UI harness expectation next by driving `:review`, because the harness is the repo’s automatic terminal UI state-machine fixture.
+I’m running the two new focused tests now to confirm they fail against the current implementation before making the code changes.
+The new tests fail where expected: the controller only appends the review summary today, and the harness `review` command does not activate a yes/no completion prompt. I’m implementing the state now in the controller and then wiring the terminal/harness rendering to the same prompt text.
+One detail: the fixture’s first agent starts as ready, so I’m making the review completion path explicitly cycle the ready flag to produce the bell and then using “feature marked done” as the UI’s closed state. That keeps the old ready behavior intact for normal idle replies while allowing yes to clear the reviewed-feature highlight.
+I’m editing the controller first: it will append a stable `work-leaf: Is this feature done? yes/no` line to the patch agent after a clean review, select that patch chat, intercept yes/no locally, and reopen on later real chat text without sending the yes/no answer to the backend.
+The first controller patch missed one exact context line, so nothing was applied. I’m splitting the controller changes into smaller patches against the current file positions.
+I’m keeping the controller state private and using existing `AgentLineAppended`/`AgentSelected` events. The prompt is deliberately a transcript line so remote clients and tests see the same resulting session state.
+The controller now records the pending prompt and handles yes/no responses. I’m adding the small shared helpers for line-based closed-state detection so terminal rendering can clear READY after a feature is marked done.
+The prompt constants and helpers are being added next to the controller rather than the terminal UI, because the controller owns review completion and appends the transcript lines that make the state true.
+I’m wiring terminal rendering now. The terminal cache will recompute a row’s ready state when transcript lines arrive, so `feature marked done` clears the highlighted READY row immediately after the yes answer.
+The terminal app now re-applies row state after line events. I’m adding a tiny helper so the rule is explicit: idle sessions are ready unless their latest feature-completion state is marked done.
+The next edit is the UI harness fixture. I’m making its `review` command simulate the clean-review handoff into the selected patch chat, then handling yes/no in insert mode the same way the controller does.
+The harness patch also hit a nearby context mismatch, so I’m applying it in smaller chunks.
+The harness starts `user-1` as already ready for other tests, so the simulated review prompt briefly clears and restores readiness to make the bell behavior deterministic for this new scenario.
+The harness enter-key path now gives the yes/no prompt first chance to consume answers. Regular text after a closed feature falls through to the normal fixture reply after recording that the feature reopened.
+I’m adding the same yes/no parsing helpers to the harness fixture. They’re local because the controller helpers are private implementation details, while the shared transcript strings come from `workspace.rs`.
+The core implementation is in place. I’m formatting now, then I’ll run the focused tests and fix any compile or behavioral issues they expose.
+Formatting completed cleanly. I’m rerunning the focused controller and UI harness tests now.
+The focused tests pass. I’m adding one terminal-app integration test as well, because the production terminal path has a cache layer that the standalone UI harness does not exercise.
+The integration test is added. I’m formatting and then running the three focused tests together.
+Now I’m running the controller, harness, and terminal-app focused tests together so the full path is covered before broader checks.
+The focused tests pass. I’m updating the existing review workflow docs where they currently describe marking the review chat done; the resulting state is that clean review prompts the patch chat for yes/no completion instead.
+The doc edits will describe the steady-state workflow, not the patch history: clean review highlights the patch chat, asks the user for yes/no, yes marks it done, and later typed work reopens that patch chat.
+One of the later doc contexts differed slightly, so I’m applying the documentation changes in smaller hunks.
+I’m replacing each old “mark the review chat done” reference with the actual yes/no prompt flow.
+There is one example section with the old wording left; I’m patching that to show the same prompt text.
+I’m updating `docs/architecture.md` only where it describes controller-owned review behavior, so it stays aligned with the new controller state without changing architecture boundaries.
+The docs now describe the prompt flow. I’m scanning for stale “mark review chat done” wording before moving to the required checks.
+The implementation and docs are in place, and the focused tests are green. I’m starting the required repo checks now; first `cargo fmt`, then clippy, then the full test suite.
+`cargo fmt` is clean. I’m running clippy with all targets and features next, with warnings denied as required by the repo instructions.
+`cargo clippy --all-targets --all-features -- -D warnings` is clean. I’m running the full test suite now.
+The full test suite hit one `terminal_app` failure in a large-output prompt visibility test. I’m rerunning that test alone to see whether this is an interaction from the changes or a timing/order issue.
+That test passes on its own, so the failure looks like a parallel test timing artifact rather than a deterministic regression. I’m rerunning the full suite once to confirm the required check status.
+The full suite exposed a harness interaction: making the fixture enter insert mode after `:review` broke unrelated prompt-history tests that reuse `:review` as a command-history entry. I’m keeping the patch chat selected/highlighted in the harness but leaving it in command mode there; the production terminal app still enters insert mode via the controller event and is covered by the terminal-app integration test.
+I also need to adjust the new harness test to enter insert mode explicitly before answering, matching the harness convention while preserving the old command prompt history behavior.
+I’m formatting that small harness adjustment and rerunning the full UI harness target before restarting the required full suite.
+The UI harness target is clean again. I’m rerunning clippy after the harness tweak, then the full test suite.
+Clippy remains clean. I’m rerunning `cargo test --all-targets --all-features` now.
+All required automated checks are green now. Because this touches terminal chat/review workflow, I’m running the bounded real Codex smoke check from the repo instructions next.
+The real Codex smoke check succeeded and returned `WORK_LEAF_REAL_AGENT_OK` without file modifications. I’m doing a final status/diff sanity pass now.
+`git diff --check` is clean. I’m reviewing the final diff shape for accidental broad changes before wrapping up.
+The final diff matches the intended scope. I’m rerunning the real Codex smoke once more after the last harness adjustment so the verification reflects the final tree.
+The final real-agent smoke succeeded. I’m checking status once more and then I’ll summarize the change and verification.
+Implemented the review-done confirmation flow.
+
+What changed:
+- Clean review now appends `work-leaf: Is this feature done? yes/no` to the patch agent chat, selects/highlights that patch chat, and keeps the answer local in [src/workspace.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-3/src/workspace.rs).
+- Answering `yes` marks the feature done without sending `yes` to the agent.
+- Sending later chat text to that patch agent reopens the feature and resumes the normal agent-send path.
+- Terminal rendering clears the READY highlight after the feature is marked done and restores it when reopened in [src/terminal_app.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-3/src/terminal_app.rs).
+- Added focused controller, terminal app, and UI harness tests.
+- Updated review workflow docs to describe the resulting behavior.
+
+Verification:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- `git diff --check`
+- Real Codex smoke: ran the repo-prescribed read-only `codex exec --json` check and received `WORK_LEAF_REAL_AGENT_OK`.
+
+Changes are left uncommitted.

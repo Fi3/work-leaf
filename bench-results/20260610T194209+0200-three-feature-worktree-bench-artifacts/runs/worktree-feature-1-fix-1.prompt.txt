@@ -1,0 +1,23 @@
+You are continuing the same direct Codex feature task.
+
+Request 1:
+add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select
+
+The reviewer reported the findings below. Fix only the reviewed feature behavior and tests needed to
+resolve those findings. Leave changes uncommitted; the benchmark driver will commit them.
+
+Reviewer findings:
+I’ll inspect the architecture/docs context and the request diff only, then verify whether the changed UI behavior is covered and whether any regression is visible from the patch.
+The request touches terminal UI state, public surface, and docs. I’m narrowing the diff to the changed symbols and the automatic tests that claim coverage.
+I’ve got the changed files. Next I’m reading the concrete implementation paths around visual selection, terminal byte parsing, copy emission, and the new tests so any findings stay tied to introduced behavior.
+The patch adds public `VisualSelectionMode`, `TerminalUi::handle_key_with_right_content`, yanked-text plumbing, OSC 52 output, and tests. I’m checking for mismatches between what is selected/rendered and what the terminal app actually copies.
+One likely issue is around terminal escape parsing, so I’m comparing the Ctrl-V path with the existing Ctrl-W/arrow paths and checking whether tests exercise the actual terminal byte sequence users press.
+I’m also checking the existing viewport helper because right-pane selection operates on the currently visible text, not the full transcript. That can expose copy/render divergence around scrolling or wrapping.
+The selected text pipeline is consistent for simple right/left cases. I’m now looking for edge cases the implementation introduced, especially where new visual state interacts with existing prompt/chat routing and documented terminal behavior.
+The commit only contains the implementation commit, not a ready report. I’m checking the remaining docs and terminal end-to-end tests for whether the new visible keybindings and copy behavior are represented where this repo expects terminal workflows to be documented/tested.
+The repo already has pty coverage for raw terminal behavior, but this patch only adds unit/harness coverage for visual selection. I’m going to verify whether there is any implemented path that fails outright before deciding whether the review is findings or clean.
+FINDINGS
+
+- `Spec.md:3-19` documents the terminal UI vim key workflow but was not updated for the new visual-mode controls. The patch updates `docs/architecture.md:291-295`, but `Spec.md` remains the user-facing terminal key list and now omits `v`, `V`, `Ctrl-V`, `y`, and `Y`.
+
+- Missing real-terminal coverage for the new raw terminal workflow. The patch adds `tests/ui_harness.rs:537` and `tests/terminal_ui.rs:297`, but no `tests/terminal_pty.rs` scenario drives the actual binary through a pty with `Ctrl-V`/visual yank and verifies the OSC 52 output path implemented in `src/terminal_app.rs:486-499` and `src/terminal_app.rs:1184-1185`.

@@ -1,0 +1,98 @@
+The architecture file already documents `/` on a selected agent as chat input that submits through the selected-agent chat path. Since the requested behavior changes that public UI/controller path, I’ll update that description only where it is inaccurate after the fix.
+There are existing tests that deliberately assert the old raw pass-through behavior for `/status`. I’ll replace those with stricter command-execution assertions and add lower-level coverage so the backend send path is provably bypassed for selected-agent commands.
+I’m going to inspect the local Codex CLI help before wiring the provider method, because this feature needs a command execution path distinct from normal `exec resume` prompt delivery.
+The local CLI exposes interactive `codex fork` separately from `codex exec resume`; there is no separate `exec` slash-command API visible in help. I’ll model this as a provider-neutral backend command hook, with Codex using a command invocation path that is separate from `send_streaming`, and tests will assert that separation.
+I found two implementation options. The least invasive one is to add a provider hook for selected-agent commands and route only messages like `/status` or `/fork` through it; ordinary chat, `/ status`, and `/` continue through the existing prompt path. I’m checking the local Codex binary shape now so the Codex hook can avoid the normal model prompt path.
+The existing Codex test proves only that `/status` is handed to `exec resume` as stdin, which is exactly the behavior the request rejects. I’ll add failing tests against a new command hook first, then wire the controller/command-chat flow to use it.
+Add focused failing tests for selected-agent /status and /fork command routing
+Implement provider-neutral backend command hook and route strict slash messages through it
+Implement Codex command output without using normal send/resume prompt path
+Update architecture docs for current slash-command behavior
+Run required formatting, clippy, tests, and real-agent verification
+I’m going to make the regression tests assert the new contract first: `/status` and `/fork` still show command output in the selected chat, but the backend’s ordinary send log must stay empty for `/status`. That should fail on the current implementation.
+The regression tests are in place. I’m running the targeted terminal test now to confirm the old raw prompt path fails the new expectation before implementing the fix.
+Add focused failing tests for selected-agent /status and /fork command routing
+Implement provider-neutral backend command hook and route strict slash messages through it
+Implement Codex command output without using normal send/resume prompt path
+Update architecture docs for current slash-command behavior
+Run required formatting, clippy, tests, and real-agent verification
+I’m adding the command hook at the provider boundary and routing the slash decision in `CommandChat`, where all selected-agent message paths already converge before hitting the backend. This keeps terminal, HTTP, and controller callers on the same behavior.
+Next I’m changing `CommandChat::send_to_agent_streaming_with_ids` so strict slash commands never enter `AgentBackend::send_streaming`. The helper only matches `/` immediately followed by a non-whitespace token, so `/ status` and `/` remain ordinary chat text.
+The routing is in place, but the test backend needs to model command output instead of relying on `send`. I’m updating the fake backend to consume the same reply queue through `execute_command` and record command calls for assertions.
+I added command recording to the fake backend, so I’ll assert the command hook was actually called. That gives the `/status` test both halves: command path receives it, normal send path does not.
+The selected-agent routing tests now check both `/status` and `/fork`. I’m running them before moving on to the Codex-specific behavior so any generic routing issues show up early.
+The first test command used two name filters, which Cargo does not accept. I’ll rerun with a shared filter so both new tests execute.
+The generic route passes with the fake backend. I’m replacing the old Codex raw-pass-through expectation with tests that require `/status` to be answered by the Codex command path, using the recorded thread instead of sending `/status` through `exec resume`.
+I’m also adding direct Codex backend tests for `/status` and `/fork`, so the provider behavior is covered without relying only on terminal rendering.
+The direct Codex test should check the command entries at the end of the session history rather than assuming the launch reply shape. I’m tightening that before using it as the failing provider test.
+I’m running the new Codex provider tests now; at this point they should fail because `CodexBackend` still inherits the generic unsupported-command default.
+Cargo again only accepts one test-name filter, so I’ll use a shared substring for the two Codex command tests.
+I’m implementing Codex command output as backend-local command handling: `/status` reports the recorded Codex thread/session state, and `/fork` returns the recorded source thread needed for an interactive fork. Neither path calls `build_send_invocation` or sends a model prompt.
+The Codex helpers are in place. I’m now hooking them into the `AgentBackend` implementation so selected-agent commands record a user command and backend output in the Codex session history.
+Codex now has a concrete command path. I’m rerunning the provider tests that previously failed to confirm `/status` and `/fork` are no longer using the unsupported default.
+The direct provider tests pass. I’m checking the terminal/Codex regression next, which ensures the UI path does not fall back to `exec resume` with `/status` as stdin.
+Add focused failing tests for selected-agent /status and /fork command routing
+Implement provider-neutral backend command hook and route strict slash messages through it
+Implement Codex command output without using normal send/resume prompt path
+Update architecture docs for current slash-command behavior
+Run required formatting, clippy, tests, and real-agent verification
+I’m updating the architecture doc only where the public behavior and provider surface changed: the `AgentBackend` command hook, the `CommandChat` routing rule, and the terminal `/` behavior. The wording will describe the resulting system, not the patch.
+I’m also adding a Codex-provider note because `/status` and `/fork` are implemented there from recorded session/thread state rather than by constructing a resume prompt.
+The docs now describe the new runtime and terminal behavior directly. I’m doing a quick diff review before formatting and the full required checks.
+The diff is scoped to the runtime trait, command routing, Codex handling, focused terminal tests, and the architecture lines that describe those surfaces. I’m marking implementation/docs done and starting the required validation sequence.
+Add focused failing tests for selected-agent /status and /fork command routing
+Implement provider-neutral backend command hook and route strict slash messages through it
+Implement Codex command output without using normal send/resume prompt path
+Update architecture docs for current slash-command behavior
+Run required formatting, clippy, tests, and real-agent verification
+I’m running `cargo fmt` first, then I’ll run clippy and the full test suite.
+Formatting completed. I’m running the required clippy invocation with all targets/features and warnings denied.
+Clippy is clean. I’m running the full required test suite now.
+The full automated suite is green. Because this touches slash commands and agent send routing, I’m running the required real Codex smoke check next and will report the exact scenario/result.
+The direct Codex smoke passed. To verify the actual Work Leaf slash path against the real backend, I’m going to run a temporary integration test that launches a real Codex-backed controller, sends `/status` to the selected agent, checks the status output is appended, and then remove that temporary test file.
+To keep the real smoke bounded, I’ll verify the `CommandChat` selected-agent send path directly with a real `CodexBackend`; that is the shared path the controller uses before appending output to chat.
+The temporary real-backend test is written. I’m running only that test now, then I’ll delete the file so it doesn’t become part of the patch.
+The temporary real Work Leaf/Codex test failed before any agent thread started with `failed to initialize in-process app-server client: Read-only file system`. Per the repo’s troubleshooting rule, I’m running `codex doctor` once and then I’ll remove the temporary test file.
+`codex doctor` completed without failures, but the temporary Work Leaf/Codex launch remains blocked by Codex initialization inside the cargo test process. I’m deleting the temporary test file now so the patch stays focused.
+The temporary file is gone. I’m checking the final worktree state and diff one more time before wrapping up.
+The final diff contains only the intended five files. I’m running a quick `cargo fmt --check` after the temporary verification cleanup, then I’ll summarize the validation results.
+The Work Leaf/Codex verification failed only under the cargo test harness, while the direct Codex smoke succeeded. I’m going to try the same Work Leaf `CommandChat` scenario as a temporary example binary, which avoids libtest and still exercises the real `CodexBackend` path.
+The temporary example is ready. I’m running it with a 60-second shell timeout so it cannot hang indefinitely.
+The temporary example hit the same pre-agent Codex initialization error. I’m deleting it now; the final report will include the successful direct Codex smoke and the blocked Work Leaf real-backend slash attempt with the exact error.
+Before settling on “blocked,” I’m checking one likely difference: Work Leaf starts Codex in its own process group for lifecycle cleanup. I’ll try the same direct smoke under `setsid` to see whether that reproduces the app-server initialization failure.
+That reproduced it: Codex fails only when launched in a separate process group, which is how Work Leaf manages agent lifecycles. I’ll try a temporary `CODEX_HOME` under `/tmp` without copying credentials; if it fails on auth or succeeds, I’ll report that exact result.
+The first temporary-home attempt failed because the directory did not exist. I’m creating the empty temp home and trying the same bounded smoke once more.
+The temporary CODEX_HOME did not reach `thread.started`; Codex exited after refusing to create helper binaries under `/tmp`. I’m not copying credentials or changing repo state for this.
+I’m doing one last status check to make sure the temporary verification artifacts are gone and only the intended files remain modified.
+Final status is clean apart from the intended five modified files. Automated checks are green; the Work Leaf real-backend slash verification is blocked by local Codex initialization before an agent thread starts, and I’ll include the exact commands/results in the final report.
+Add focused failing tests for selected-agent /status and /fork command routing
+Implement provider-neutral backend command hook and route strict slash messages through it
+Implement Codex command output without using normal send/resume prompt path
+Update architecture docs for current slash-command behavior
+Run required formatting, clippy, tests, and real-agent verification
+I’m grabbing exact line references for the final summary so the behavior is grounded in the changed symbols.
+Implemented strict selected-agent slash command routing.
+
+Changes:
+- Added `AgentBackend::execute_command` / `execute_command_streaming` in [src/agent_runtime.rs](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-2/src/agent_runtime.rs:9).
+- Routed selected-agent messages like `/status` and `/fork` through the backend command path, not `send_streaming`, in [src/cli.rs](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-2/src/cli.rs:442).
+- Added strict parsing so only `/` followed immediately by a non-whitespace token is treated as a command in [src/cli.rs](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-2/src/cli.rs:916).
+- Implemented Codex backend command output for `/status` and `/fork` from recorded session/thread state in [src/codex.rs](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-2/src/codex.rs:196).
+- Replaced the old raw slash pass-through test with coverage proving `/status` and `/fork` bypass normal send, plus Codex coverage proving `/status` is not sent through resume stdin in [tests/terminal_app.rs](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-2/tests/terminal_app.rs:47).
+- Updated architecture docs for the current provider and terminal behavior.
+
+Verification:
+- Confirmed the new `/status` regression test failed before the fix: normal send received `/status`.
+- `cargo fmt`
+- `cargo fmt --check`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+
+Real-agent verification:
+- Direct real Codex smoke passed with `WORK_LEAF_REAL_AGENT_OK` using the required command.
+- Real Work Leaf/Codex selected-agent slash verification was attempted with temporary test/example runners, but Codex failed before `thread.started` when launched in Work Leaf’s separate process group: `failed to initialize in-process app-server client: Read-only file system`. `codex doctor` was run once and reported 0 failures. Automated tests cover the slash routing and non-send behavior.
+Add focused failing tests for selected-agent /status and /fork command routing
+Implement provider-neutral backend command hook and route strict slash messages through it
+Implement Codex command output without using normal send/resume prompt path
+Update architecture docs for current slash-command behavior
+Run required formatting, clippy, tests, and real-agent verification

@@ -1,0 +1,6 @@
+2026-06-10T17:50:50.491060Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-2/src/codex.rs:
+fn parse_codex_output(output: &str) -> ParsedCodexOutput {
+    let mut thread_id = None;
+    let mut replies = Vec::new();
+    for line in output.lines() {
+        if thread_id.is_none() {

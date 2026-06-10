@@ -1,0 +1,67 @@
+You are a normal direct Codex review agent. Do not modify files.
+
+Review only the changes for request 1 since commit c92a0b7060a36eac6db2d869b85e589a7a9480f9:
+add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select
+
+Inspect the repository and the diff from c92a0b7060a36eac6db2d869b85e589a7a9480f9..HEAD. Report only bugs, regressions,
+missing tests for the changed behavior, or required documentation gaps introduced by this request.
+
+Additional author response and verification evidence from the previous fix turn:
+I’ll add a regression test that uses the harness’ real right-pane content shape, including the trailing `chat> ` prompt, and verifies visual line yank does not copy that prompt. Then I’ll adjust `TerminalUi` so right-pane visual selection operates on selectable transcript/output lines, not the chat input prompt.
+Inspect Spec and current right-pane selection code
+Add failing regression test for right-pane prompt exclusion
+Fix right-pane visual selection and update Spec docs
+Run required checks and real-agent verification
+I’ll inspect `Spec.md` and the relevant selection helpers before editing so the documentation and code changes stay narrowly scoped to the reviewer’s findings.
+I’m adding the regression test first. It will drive `Ctrl-W l`, render the harness frame so the right-pane cache contains transcript plus `chat> `, then run `Vky`; on the current code it should fail because the yank includes the prompt.
+The regression test is in place. I’m running that single test now to confirm it reproduces the reviewer’s first finding before applying the fix.
+The new test fails exactly as reported: the yank is `Esc command...\nchat> \n`. I’m changing right-pane visual selection to build its selectable line list from the visible transcript/output lines with the trailing chat prompt removed.
+Inspect Spec and current right-pane selection code
+Add failing regression test for right-pane prompt exclusion
+Fix right-pane visual selection and update Spec docs
+Run required checks and real-agent verification
+The fix is intentionally local: `pane_line_texts(PaneFocus::Right)` will still use the cached visible right-pane content, but it will drop a trailing `chat> ...` line before visual anchoring, movement, and yank extraction. Rendering still receives the full pane text, so the prompt remains visible and unselected.
+The right-pane anchor now starts at column 0 when the visible content ends in the chat prompt, and the selectable right-line list excludes that prompt. I’m adding the small helper functions below the existing line-splitting helper.
+The code fix is in. I’m updating `Spec.md` next so its terminal keybinding section includes the visual selection workflow the feature exposes.
+`Spec.md` now documents the current visual selection keys without changelog wording. I’m rerunning the failing regression and the existing visual-mode tests.
+The new regression passes. One targeted test command used two positional filters, which Cargo rejects; I’m switching to the full `ui_harness` target so the visual harness coverage runs correctly.
+The full harness target is green with the new prompt-exclusion regression. I’m running the repository-required checks again now.
+Inspect Spec and current right-pane selection code
+Add failing regression test for right-pane prompt exclusion
+Fix right-pane visual selection and update Spec docs
+Run required checks and real-agent verification
+`cargo fmt` is clean. I’m running clippy with all targets and features next.
+Clippy is clean. I’m running the full test suite again, including terminal pseudo-terminal coverage.
+The full required test suite is green. I’m running the bounded real-Codex smoke check again because this still touches terminal interaction behavior.
+The real Codex smoke check succeeded again with `WORK_LEAF_REAL_AGENT_OK`. I’m collecting the final diff/status and line references for the handoff.
+Only the reviewed fix files are modified now: `src/ui.rs`, `tests/ui_harness.rs`, and `Spec.md`. I’m marking the review-fix plan complete.
+Inspect Spec and current right-pane selection code
+Add failing regression test for right-pane prompt exclusion
+Fix right-pane visual selection and update Spec docs
+Run required checks and real-agent verification
+Fixed both reviewer findings.
+
+The right-pane visual selection now excludes the trailing `chat> ...` input prompt from selection/yank text. The chain is: `TerminalApp`/`UiHarness` passes visible right content into `TerminalUi::handle_key_with_context`; `TerminalUi::pane_line_texts` now uses `selectable_right_text_lines` for `PaneFocus::Right`, and `focus_cursor_text_position` anchors at column 0 when a chat prompt is present. See [src/ui.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui.rs:1215) and [src/ui.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui.rs:1645).
+
+Added a regression test that initially failed with `Esc command...\nchat> \n` and now passes: [tests/ui_harness.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/tests/ui_harness.rs:536). Updated the stale terminal controls section in [Spec.md](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/Spec.md:15).
+
+Validation:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- Real Codex smoke succeeded: `thread.started`, then `WORK_LEAF_REAL_AGENT_OK`.
+
+Changes are uncommitted.
+Inspect Spec and current right-pane selection code
+Add failing regression test for right-pane prompt exclusion
+Fix right-pane visual selection and update Spec docs
+Run required checks and real-agent verification
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

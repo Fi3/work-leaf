@@ -1,0 +1,40 @@
+You are a normal direct Codex review agent. Do not modify files.
+
+Review only the changes for request 1 since commit c92a0b7060a36eac6db2d869b85e589a7a9480f9:
+add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select
+
+Inspect the repository and the diff from c92a0b7060a36eac6db2d869b85e589a7a9480f9..HEAD. Report only bugs, regressions,
+missing tests for the changed behavior, or required documentation gaps introduced by this request.
+
+Additional author response and verification evidence from the previous fix turn:
+I’ll address the two reviewer findings directly: update the user-facing key list in `Spec.md`, and add a `terminal_pty` scenario that drives the real binary through a pseudo-terminal, presses `v`/`y` and Ctrl-V, and observes the OSC 52 copy sequence.
+The pty helper keeps the raw transcript, so the new test can assert the OSC 52 escape sequence in the full output while still using the rendered frame for the visible copy notice. I’ll add the spec bullet and the pty scenario now.
+`Spec.md` now lists the visual-mode keys in the terminal key workflow. I’m adding the pty test that uses the actual binary and raw Ctrl-V byte next.
+The pty test now covers both `v ... y` and the actual raw Ctrl-V byte `22` for block selection, and waits for a second OSC 52 sequence. I’ll format and run the terminal pty target.
+The new pty scenario passes. I’m running the full required checks again after the reviewer fixes.
+Clippy is clean. I’m running the full test suite now.
+The full required test suite is green after the reviewer fixes. Since the overall patch still concerns terminal behavior, I’m rerunning the bounded real Codex smoke check for the ready report.
+The real Codex smoke check succeeded again with `WORK_LEAF_REAL_AGENT_OK`. I’m checking the final status and diff for the reviewer-only changes.
+Fixed both reviewer findings.
+
+Updated [Spec.md](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-1/Spec.md:12) to include the visual-mode key workflow: `v`, `V`, `ctrl-v`, movement keys, and `y`/`Y`.
+
+Added real terminal pty coverage in [tests/terminal_pty.rs](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-1/tests/terminal_pty.rs:103). The test drives the actual `work-leaf` binary through a pty, uses `v ... y`, sends raw Ctrl-V byte `22` for block selection, and verifies OSC 52 clipboard output.
+
+Verification:
+- `cargo fmt`
+- `cargo test --test terminal_pty real_terminal_pty_visual_yank_emits_clipboard_sequence`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- Real Codex smoke returned `WORK_LEAF_REAL_AGENT_OK`
+
+Changes are uncommitted.
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

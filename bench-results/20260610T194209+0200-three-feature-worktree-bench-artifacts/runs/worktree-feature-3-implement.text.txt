@@ -1,0 +1,47 @@
+I’ll inspect the repository’s architecture and the review/chat flow first so the implementation stays inside the documented boundaries and existing UI patterns.
+The architecture doc says the UI should stay behind `WorkLeafController` DTOs, with review routing and reviewed-commit bookkeeping already owned in `src/workspace.rs`. I’m going to trace the existing review completion and terminal rendering paths before editing.
+The current architecture already has a terminal “ready” marker, but it appears to mean “not loading” rather than this new review-complete confirmation state. I’m checking how sessions, events, and insert-mode submissions are wired so the prompt can live in controller state and render consistently.
+I found the review-completion hook in `WorkLeafController::apply_agent_result`: after a `ReviewComplete`, it records the review and appends a `review: ...` line to the original patch agent chat. The feature can build on that point by adding a controller-visible completion prompt state instead of inventing terminal-only workflow state.
+The terminal adapter translates `WorkLeafSession.loading` into `AgentListEntry.ready`, and the renderer marks ready rows in reverse video. I’m checking whether the HTTP DTOs need to carry a more precise “confirmation pending” state so remote CLI sessions see the same prompt and highlight.
+There is already an `AgentListEntry.hidden` field used by the UI visibility list, so “closes it” likely maps to hiding the patch agent row/chat rather than deleting session history. I’m checking existing hidden-row behavior and tests before deciding the exact controller event shape.
+The spec describes the review process as handing reviewed chats into later linearization decisions, but it does not define the new yes/no close behavior. I’m going to cover this in controller and terminal tests, and only touch architecture docs if the public DTO semantics actually change.
+I’m going to add failing tests first: one controller test for the review-done yes/no state and one terminal test for the highlighted prompt, close, and reopen path. I’ll also add a small UI harness test around closing and reopening an agent row because this is terminal UI behavior.
+The tests are in place and reference the intended visible strings and close/reopen behavior. Next I’ll run the focused tests to confirm they fail for the missing implementation before editing the code.
+I’ve added the failing coverage. I’m running just those tests now so the failure is narrow and confirms the missing behavior.
+The tests fail in the expected places: the controller does not emit the completion question, the terminal does not close/reopen the row, and the harness lacks close/reopen helpers. I’m implementing that by keeping the completion state in `WorkLeafController`, using existing transcript line events as the UI signal, and adding small terminal UI helpers for attention and hidden rows.
+The controller now owns the yes/no state and emits explicit system lines for prompt, close, and reopen. I’m wiring those lines into the terminal adapter so the row rings/highlights on the prompt, hides on yes, and becomes visible again when the chat is used.
+The terminal adapter now recognizes the controller’s completion lines, but it needs small UI helpers for “attention” and row visibility. I’m adding those helpers in `TerminalUi` and exposing matching harness methods for the required UI harness coverage.
+I’m adding the small helper functions the terminal adapter uses to interpret the latest completion state from a session transcript, which keeps reconnect/snapshot behavior consistent with live events.
+The helper insertion point differed from the harness parser. I’m locating the exact parser boundary in `src/terminal_app.rs` and applying the helper patch there.
+The helper belongs just before the input enum in `terminal_app.rs`. I’m applying it there now.
+I’m adding the harness close/reopen methods used by the new UI harness test; they delegate to the same `TerminalUi` hidden-row state the terminal app uses.
+The implementation is wired. I’m rerunning the focused tests now, then I’ll broaden validation if these pass.
+Two focused failures surfaced details in the UI layer. The prompt is being appended to the patch agent, but the terminal stays on the reviewer chat, so I’m switching focus to the patch chat when the prompt event arrives; the harness assertion also needs to check the hidden row rather than dependency text that still mentions the id.
+The terminal now focuses the patch chat when the completion question arrives, so the user can answer immediately. I’m tightening the harness assertion to check that the row is hidden while linked metadata may still mention the same agent id.
+I’m rerunning the two focused UI tests after those adjustments.
+The remaining terminal assertion is too broad because the reviewer row is `review-user-1`, which still contains `user-1`. I’m narrowing it to the patch-agent row text.
+I’m making the hidden-row check independent of the generated title, so it identifies the patch row by the ` user-1  working` pattern and does not match the reviewer row.
+The reopen assertion gets the same treatment so it proves the patch row is visible again, not just the reviewer id.
+I’m rerunning the terminal focused test once more.
+The focused feature tests now pass. I’m going to run the broader controller and terminal suites next because this touched review completion, terminal event application, and UI row state.
+The broader controller and terminal suites are green. Because this changes the documented review/terminal workflow, I’m updating the architecture doc in current-state language before running the required checks.
+The docs describe the resulting controller and terminal behavior without change-log phrasing. I’m formatting the Rust code next, then I’ll run the required check set.
+Formatting completed. I’m reviewing the diff for accidental churn and then I’ll run clippy and the full test suite.
+The diff is scoped to controller review completion, terminal row state, tests, and the architecture description. I’m running the required clippy invocation now.
+Clippy is clean. I’m running the full required test command next.
+The required automated checks are green. This change touches review and terminal chat behavior, so I’m running the repository’s bounded real Codex smoke check and will report the exact outcome.
+The real Codex smoke check reached `thread.started` and returned `WORK_LEAF_REAL_AGENT_OK` without file changes. I’m doing a final status/diff check now.
+The final status is clean apart from the intended uncommitted edits, and `git diff --check` reports no whitespace problems. I’m collecting line references for the close-out summary.
+Implemented the review-done confirmation flow and left it uncommitted.
+
+Key changes:
+- [src/workspace.rs](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-3/src/workspace.rs:253): after review completion, the patch agent gets `Is this feature done? yes/no`; `yes`/`y` marks done without sending to backend, later typing reopens and sends normally.
+- [src/terminal_app.rs](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-3/src/terminal_app.rs:693): terminal highlights/focuses the patch chat for the prompt, hides the row on close, and restores it on reopen.
+- Added focused coverage in [tests/workspace.rs](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-3/tests/workspace.rs:270), [tests/terminal_app.rs](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-3/tests/terminal_app.rs:950), and [tests/ui_harness.rs](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-3/tests/ui_harness.rs:37).
+- Updated current-state architecture docs in [docs/architecture.md](/tmp/work-leaf-3feature-worktree-bench.I4zIug/worktrees/feature-3/docs/architecture.md:209).
+
+Validation:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- Real Codex smoke: `codex --cd "$PWD" --sandbox read-only --ask-for-approval never exec --color never --json -` returned `thread.started` and `WORK_LEAF_REAL_AGENT_OK`.

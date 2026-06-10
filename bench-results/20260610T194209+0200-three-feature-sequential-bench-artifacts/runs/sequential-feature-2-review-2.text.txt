@@ -1,0 +1,8 @@
+I’ll re-check the current diff from `20bc15d71efd8965602b76d84c9f9bc9269f3b88..HEAD`, focusing on the busy-session slash-command fix and its tests.
+The busy-session path now parses slash commands before the loading guard and adds a regression test. I’m checking whether the new synchronous controller path changes command output routing, loading state, or docs in a way that creates a new regression.
+`git diff --check` is clean. I noticed a duplicated line in one numbered output chunk, so I’m verifying the raw file around that assertion to rule out a display artifact.
+The regression test is present and the raw file is fine. I’m doing a final focused pass over the Codex command implementation and docs before returning the review marker.
+I don’t see a code-path or documentation regression in the current diff. I’m running the focused busy-session workspace test with an external target dir if the sandbox allows it.
+The focused busy-session regression test passes locally. I’m running the slash-related terminal/workspace tests next to catch integration regressions.
+Those combined `cargo test` invocations used multiple test-name filters, which Cargo does not accept. I’m rerunning them with broader single filters.
+NO_FINDINGS

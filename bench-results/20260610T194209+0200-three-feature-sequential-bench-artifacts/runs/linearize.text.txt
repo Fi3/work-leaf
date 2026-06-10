@@ -1,0 +1,51 @@
+I’ll first inspect the current branch state, the post-base commit stack, and the architecture doc so the rewrite keeps the repo’s documented boundaries intact.
+The branch is detached and clean at six post-base commits: each feature has an ADD commit followed by a review FIX commit. I’m reading the actual diffs now so I can decide whether the final history should be one combined commit or one polished commit per feature.
+The final diff touches agent runtime/provider behavior, controller/UI paths, and docs. I’m mapping each reviewed fix back to its feature so the squashed commits keep the same behavior without review-only commit noise.
+Feature 1 is terminal UI behavior plus harness coverage; feature 2 is backend slash-command routing and controller bookkeeping. I’m checking feature 3 and then I’ll rewrite from the base into polished commits.
+I’ve confirmed the natural cleanup shape is three final commits, one per benchmark request, with each review fix folded into its feature. I’m reading the resulting symbols and tests now so the commit messages explain the behavior rather than just naming files.
+I’m going to rewrite in place using the existing reviewed commits as inputs: reset to the base, cherry-pick each feature plus its review fix without committing, then make one final commit for that feature. This keeps the reviewed tree intact while removing the intermediate review commits.
+Feature 3 is the reviewed-work completion prompt: after review the patch-agent chat gets selected, asks `yes/no`, and the terminal can hide or reopen the row without resuming the agent. The documentation changes match that resulting workflow.
+Inspect post-base reviewed commits and architecture/doc constraints
+Rewrite six reviewed commits into final feature commits
+Run required repository checks
+Confirm clean history and summarize verification
+I’m starting the actual history rewrite now. I’ll keep the old commit hashes as cherry-pick inputs and rebuild the stack from `c92a0b7060a36eac6db2d869b85e589a7a9480f9`.
+The branch is back at the requested base. I’m applying feature 1 and its review fix together, then committing that single finalized change.
+Feature 1 applied cleanly. I’m committing it with a final message that describes the terminal behavior and why it exists, rather than carrying the benchmark/review wording forward.
+Feature 1 is now one final commit. I’m applying feature 2 plus its review fix next; this should bring in provider-level slash commands and the controller path that handles them immediately.
+Feature 2 applied cleanly. I’m committing it as a provider/runtime feature: selected-agent slash commands route to the backend command hook instead of becoming normal prompts.
+Feature 2 is now one final commit. I’m applying the final feature and review fix, including the workflow documentation for the completed review prompt.
+Feature 3 applied cleanly. I’m committing it as the review-completion workflow so the final stack has one commit per user-facing feature.
+The rewrite produced three commits. I’m checking that the new HEAD tree is byte-for-byte equivalent to the reviewed old HEAD before running the required checks.
+The new HEAD tree matches the reviewed old HEAD exactly, and the post-base history is now three commits. I’m moving into validation: `cargo fmt`, then clippy, then the full test suite.
+Inspect post-base reviewed commits and architecture/doc constraints
+Rewrite six reviewed commits into final feature commits
+Run required repository checks
+Confirm clean history and summarize verification
+Running `cargo fmt` first; if it changes anything I’ll inspect the diff before continuing.
+`cargo fmt` completed without changing the tree. I’m running clippy with all targets and features now.
+Clippy is clean. I’m running the full test suite next with all targets and features.
+The required cargo checks are green. Because the rewritten behavior includes agent-facing launch/send surfaces, I’m also running the repository’s bounded real-Codex smoke check before marking the patch ready.
+The real-Codex smoke check succeeded and returned the exact expected marker. I’m doing final status/history checks now to confirm the repository is clean.
+Inspect post-base reviewed commits and architecture/doc constraints
+Rewrite six reviewed commits into final feature commits
+Run required repository checks
+Confirm clean history and summarize verification
+Rewrote the six reviewed commits since `c92a0b7` into three final commits. The new HEAD tree matches the reviewed old HEAD `e142bd3` with an empty diff, and the repository is clean.
+
+Final commits, oldest to newest:
+
+- `b9b8eea` `ADD pane-focused terminal controls for agent chat navigation`
+- `7e97147` `ADD selected-agent backend commands to keep slash controls local`
+- `4c92ab9` `ADD reviewed-feature completion prompts to close finished chats`
+
+Verification passed:
+
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- Real-agent smoke: ran the bounded Codex check with read-only sandbox; Codex emitted `WORK_LEAF_REAL_AGENT_OK` and did not modify files.
+Inspect post-base reviewed commits and architecture/doc constraints
+Rewrite six reviewed commits into final feature commits
+Run required repository checks
+Confirm clean history and summarize verification

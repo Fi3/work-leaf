@@ -1,0 +1,14 @@
+You are continuing the same direct Codex feature task.
+
+Request 1:
+add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select
+
+The reviewer reported the findings below. Fix only the reviewed feature behavior and tests needed to
+resolve those findings. Leave changes uncommitted; the benchmark driver will commit them.
+
+Reviewer findings:
+I’ll re-review the updated `c92a0b7..HEAD` diff, focusing on the multiline prompt fix, its regression test, and any new behavior introduced in the same request scope.
+The range now adds a `terminal_app` regression as expected. I’m reading the exact prompt-block splitter and selectable-line helper to check whether rendering and yanking stay aligned.
+FINDINGS
+
+- `src/ui.rs:1645` identifies the right-pane prompt by truncating at the last line that starts with `chat> `, but `src/cli.rs:1199` appends raw `chat_buffer` after the real prompt marker. If a multiline draft contains a later line beginning with `chat> `, the helper treats that user-entered line as the prompt start and leaves earlier draft lines selectable/yankable. The new regression at `tests/terminal_app.rs:420` covers a multiline draft, but not this user-controlled sentinel case.

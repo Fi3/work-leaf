@@ -1,0 +1,97 @@
+I’ll inspect the architecture and the existing agent/chat command path first, then add the failing coverage before changing behavior. After that I’ll run the required checks and the real-agent verification if this touches the agent-facing flow, which it likely does.
+The architecture points to the selected-agent send path as `TerminalApp::send_chat_buffer` → controller `send_message` → `CommandChat::send_to_agent_streaming_with_ids` → `AgentBackend::send_streaming`. I’m narrowing in on where backend commands should be intercepted so the UI and HTTP controller share one behavior.
+I found the current selected-agent chat path trims and immediately schedules a worker that calls `send_to_agent_streaming_with_ids`; that is where `/status` is currently indistinguishable from any other prompt. I’m checking the provider contract now, because strict slash commands need a backend API instead of piggybacking on `send`.
+There is already a Codex unit test claiming `/status` stdin is raw, but that only proves the old pass-through behavior. I’m going to replace that assumption with tests around a separate backend-command call and wire `/status`/`/fork` through it.
+The existing tests currently assert raw slash pass-through in the terminal path, so they need to change. I’m also checking the installed Codex CLI help to confirm the command invocation shape instead of guessing it from old resume behavior.
+Codex’s public help shows `fork` as a CLI command and `resume` as the current non-interactive send path, while `/status` is an interactive slash command rather than a top-level CLI subcommand. I’m checking the installed CLI metadata just enough to model the backend command path without relying on the old send prompt route.
+The terminal test suite already has a focused path for selected-agent `/status`; it currently checks the wrong thing by asserting it went through `send`. I’m going to add provider-neutral command recording in those fakes first, so the failure is explicit.
+I’m going to stage the test intent first: fake backends will record backend commands separately from ordinary sends, and the selected-agent slash tests will assert `/status` and `/fork` hit that command lane. That should fail against the current implementation because it only calls `send`.
+The terminal test now distinguishes ordinary sends from backend commands and covers both `/status` and `/fork`. I’m running just that test to confirm it fails for the current behavior before touching production code.
+The failing test confirms the current code routes `/status` and `/fork` through `AgentBackend::send`. I’m adding a provider-neutral command hook now, then the controller can route selected-agent slash messages to that hook without changing command-agent behavior.
+Next I’m changing the backend trait itself. The default implementation will reject unsupported commands instead of falling back to `send`, so providers that do not implement command execution cannot accidentally treat slash commands as prompts.
+With the trait in place, I’m routing selected-agent messages that begin with a real slash token through `execute_command_streaming`. The result is returned as chat output and skips orchestrator directive handling, since this is backend command output rather than an agent reply.
+I’m updating the controller separately because selected-agent slash commands should not rename a chat from `/status`, should not be blocked by the normal “agent is still working” prompt guard, and should not clear an existing loading state when they complete.
+For Codex, I’m adding a distinct command invocation builder. It resumes the selected session with the slash command as the resume prompt argument and empty stdin, which makes it visibly different from the normal `send` path that pipes a model prompt through stdin.
+I’m also centralizing Codex session history recording so both normal sends and backend commands preserve the same selected-agent transcript state without duplicating the bookkeeping.
+The Codex unit test still documents the old raw-stdin behavior, so I’m changing it to assert the new backend-command invocation instead: slash commands are passed as command arguments with no stdin payload.
+The terminal fake backend now needs to implement the command hook, otherwise the new test will correctly report that backend commands are unsupported. I’m adding only the recording needed by the focused slash-command tests.
+I’m updating the spawned-Codex integration test so it would fail if Work Leaf simply piped `/status` into stdin again. The fake Codex binary will only return the expected output when `/status` arrives on the backend-command argument path.
+The production path and fakes are wired. I’m rerunning the previously failing focused test first, then I’ll expand to the related terminal/Codex slash tests before the full required checks.
+That test command used two cargo filters, which Cargo does not accept in that form. I’m rerunning with a broader slash-command filter.
+The focused slash-command tests are green now. I’m adding one small boundary test for `/ status`, because the requested trigger requires a non-whitespace command token after the slash.
+That boundary test is in place. I’m running the slash-focused terminal tests again so the parser behavior is covered before moving to broader checks.
+Because this extends the documented public agent-provider surface, I’m updating `docs/architecture.md` to describe the resulting behavior directly: provider command hooks, Codex command invocation, and selected-agent slash routing.
+The architecture doc text has slightly different wrapping than the patch context. I’m reading the exact sections and will apply the documentation update with tighter anchors.
+The provider and command-chat architecture notes are updated. I’m finishing the terminal/UI section with the exact selected-agent slash behavior and the `/ status` boundary case.
+One more architecture sentence still describes the old provider implementation set, so I’m aligning it with the new command hook rather than leaving contradictory guidance.
+The code and docs are updated. I’m running formatting now so any syntax or style issues surface before broader tests.
+Formatting completed cleanly. I’m checking the diff shape now, then I’ll run the focused unit/integration tests before the full required suite.
+The focused tests pass and the diff is limited to the backend contract, controller routing, Codex invocation, documentation, and slash tests. I’m doing a quick sanity check of the installed Codex wrapper before the full suite, mainly to avoid encoding a command invocation that contradicts the local CLI surface.
+The installed `codex` is a Node wrapper around the platform binary; the help output remains the useful contract here. I’m not digging further into bundled internals, and I’m moving on to the repository-required checks.
+`cargo clippy --all-targets --all-features -- -D warnings` is clean. I’m running the full test suite next; after that I’ll run the real Codex smoke check required for agent-facing changes.
+All automated required checks are clean. This change affects selected-agent send/command behavior, so I’m running the repository’s required real Codex smoke check exactly in the documented bounded form.
+The base real Codex smoke check succeeded and returned `WORK_LEAF_REAL_AGENT_OK`. I’m doing one bounded real `/status` resume using the same command shape Work Leaf now builds, so the ready report can name the actual agent-facing scenario.
+The real `/status` check exposed an important issue: `codex exec resume ... /status` is still treated as a model prompt by Codex, so it does not satisfy the request. I’m correcting the Codex backend to use a genuinely separate backend command mechanism instead of the resume prompt argument.
+The local CLI has an app-server/proxy protocol, which is likely where interactive slash commands live. I’m inspecting the generated protocol/schema surface rather than guessing from the non-interactive prompt interface.
+The generated app-server schema should show whether slash commands have a first-class request. I’m generating it under `/tmp` and reading only the relevant method names and message shapes.
+The combined schema-generation shell command was blocked by the command policy because it included cleanup. I’ll create the temp directory and generate the schema with simple separate commands.
+The schema generated successfully. I’m searching it for slash-command and command-dispatch method names now.
+The schema shows first-class `thread/fork` and `thread/resume` requests but no obvious generic slash-command request in the first search. I’m extracting the request method list and the thread metadata fields to see how `/status` can be answered without a model turn.
+The protocol has `thread/read`, `thread/fork`, and `thread/resume` as direct requests. I’m reading those request/response schemas; for `/status`, a metadata read is likely the correct no-turn equivalent, while `/fork` maps to `thread/fork`.
+The app-server read/fork APIs are explicit JSON-RPC requests. I’m checking whether the CLI exposes a simple debug sender or whether Work Leaf should invoke the app-server proxy directly for these two commands.
+The app-server protocol gives enough to implement `/status` from `thread/read` and `/fork` from `thread/fork`. I’m checking the JSON-RPC handshake shape so Work Leaf can run these commands through Codex’s backend API instead of a model turn.
+I’m testing the app-server transport with a single initialize request to confirm framing. If it accepts newline-delimited JSON, implementation stays simple; if not, I’ll use the protocol framing it expects.
+The app-server process cannot initialize in this sandbox because its sqlite state database is read-only. For the Codex backend I’m avoiding app-server dependency for `/status`: the backend can report known session/thread state directly. I’m checking whether `/fork` can use the existing top-level `codex fork` command without entering the model prompt path.
+I’m going to keep `/status` entirely inside `CodexBackend` so it cannot trigger a model turn. For `/fork`, Codex exposes a first-class `thread/fork` backend API, but wiring a full app-server JSON-RPC client is larger and locally blocked by the read-only sqlite state; I’m checking the exact schema values before deciding whether to include that path or report it as unsupported for Codex.
+I’m changing Codex `/status` to be a true backend command: it renders the backend’s known session/thread state directly and never invokes `codex exec resume`. `/fork` remains a distinct backend command hook and is not routed through `send`.
+I’m adding the actual Codex command dispatch now: `/status` returns the synthetic backend status, `/fork` uses the separate fork invocation, and unknown slash commands return an unsupported-command backend error instead of reaching the model prompt path.
+The dispatch references a tiny parser for the slash token and any trailing argument text. I’m adding that helper next, keeping it local to the Codex backend.
+The old Codex unit test asserted `/status` was an invocation. I’m updating it so `/status` is verified as synthetic backend output, while `/fork` is verified as a separate Codex fork command rather than an ordinary send/resume prompt.
+The architecture doc needs to reflect the corrected Codex behavior: `/status` is local backend state, and `/fork` is a Codex fork command, not `exec resume`.
+The spawned-Codex terminal test also needs to stop expecting fake Codex output for `/status`, because `/status` should not spawn a Codex model turn at all. I’m changing it to assert the backend status text appears and the fake resume-prompt marker does not.
+The tests now match the corrected semantics. I’m formatting and running the focused slash/Codex tests again before repeating the full checks, because the previous real check exposed a genuine semantic gap.
+Formatting is clean. I’m running the focused slash tests plus the Codex unit path now.
+The corrected focused tests are green. I’m rerunning the required checks now: format is already applied, then clippy and the full test suite.
+Clippy is clean. The diff is still focused, though `src/codex.rs` grew because it now contains backend-command dispatch and status rendering. I’m running the full test suite once more.
+The full automated suite is clean. For real-agent verification, I’m going beyond the base Codex smoke: I’ll start the real Work Leaf orchestrator with the configured Codex backend, create a real agent, then send `/status` through the HTTP selected-agent message endpoint and verify the chat shows backend status without launching another model turn.
+The real orchestrator is running on `http://127.0.0.1:34485`. I’m launching one real Codex-backed agent through the HTTP controller now.
+The launch request was accepted. I’m waiting for that real agent launch to go idle, then I’ll post `/status` to `user-1`.
+The real agent is idle. I’m sending `/status` through the selected-agent HTTP message route and then checking the snapshot for the backend status text.
+The real Work Leaf HTTP scenario reached the selected-agent `/status` path and appended backend status, but the real Codex launch itself failed before `thread.started` with the documented local app-server read-only initialization error. Per repo instructions, I’m running `codex doctor` once and then shutting the test orchestrator down.
+`codex doctor` reports the local state databases are healthy, but the Work Leaf orchestrator launch still hit the read-only app-server initialization error before `thread.started`. I’m confirming the temporary orchestrator has exited.
+The temporary orchestrator exited cleanly. I’m rerunning the bounded direct Codex smoke after `codex doctor` so the final verification notes distinguish the healthy direct backend from the Work Leaf launch blocker.
+The direct Codex smoke is green after doctor. I’m retrying the real Work Leaf HTTP scenario once, because the earlier failure may have been caused by the transient app-server state from probing the protocol.
+The retry orchestrator is on `http://127.0.0.1:41707`. I’m launching the same minimal real agent and watching for completion.
+The launch was accepted. I’m waiting up to a minute for the real Codex-backed worker again.
+The retry also went idle immediately, so I’m checking the snapshot before sending `/status` to see whether Codex launched or failed at startup again.
+The retry confirms the real Work Leaf launch is blocked before `thread.started` by the same local Codex app-server initialization error, even though direct `codex exec` smoke succeeds. I’m shutting down this retry orchestrator and will report the real verification split precisely.
+I posted `/status` before shutdown on the retry as well; it uses the selected-agent backend path even after the failed launch, but the real model launch remains blocked by local Codex initialization. I’m confirming the server process has stopped and then I’ll gather final status.
+The retry orchestrator stopped cleanly. I’m doing a final repository status check and scanning the final diff for any accidental churn.
+The final diff is scoped to the intended agent command path. I’m doing one last focused read of the new Codex helper area for obvious edge cases, then I’ll summarize.
+Everything needed is checked. I’ll include the real-verification caveat clearly: direct Codex works, but real Work Leaf launch is blocked locally before `thread.started`; the selected-agent `/status` route itself appended backend status in that HTTP scenario, and automated tests cover the strict command routing.
+Implemented strict selected-agent slash command routing.
+
+What changed:
+- Added `AgentBackend::execute_command` / `execute_command_streaming`.
+- `CommandChat::send_to_agent_streaming_with_ids` detects trimmed messages starting with `/` plus a non-whitespace token and routes them to the backend command path, not `send`.
+- `WorkLeafController::send_message` avoids title generation and normal busy/send handling for backend commands.
+- Codex `/status` is handled from backend session/thread state without invoking `codex exec resume`.
+- Codex `/fork` builds a distinct `codex fork <thread>` invocation.
+- Updated architecture docs for the new provider surface and selected-agent slash behavior.
+
+Tests added/updated:
+- `/status` and `/fork` selected-agent terminal coverage.
+- Assertion that `/status` does not hit the ordinary backend send path.
+- `/ status` remains ordinary chat.
+- Spawned Codex fake proves `/status` is not sent through prompt stdin.
+
+Checks:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+
+All passed.
+
+Real-agent verification:
+- Direct Codex smoke succeeded with `WORK_LEAF_REAL_AGENT_OK`.
+- Real Work Leaf HTTP orchestrator scenario was attempted twice. The selected-agent `/status` route appended backend status, but the real Codex launch failed before `thread.started` with `failed to initialize in-process app-server client: Read-only file system (os error 30)`. Ran `codex doctor` once; it reported state DBs healthy.

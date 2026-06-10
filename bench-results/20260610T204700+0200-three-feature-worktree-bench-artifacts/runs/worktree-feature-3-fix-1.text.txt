@@ -1,0 +1,26 @@
+I’ll reproduce the reviewer’s duplicate-marker case with a focused test first, then change only the transcript deduplication logic needed for repeated completion cycles.
+The bug is exactly in the transcript-marker dedup path. I’m extending the terminal-app coverage to run two clean-review/yes cycles on the same patch agent, because that is the path that currently leaves the row highlighted after the second `yes`.
+I’m running the extended terminal-app test now; it should fail before the dedup fix if the reviewer’s edge case is reproduced.
+The extended test fails on the second `yes`, matching the reviewer’s finding. I’m fixing the dedup rule so all feature-completion control lines, not just the question prompt, can appear once per review cycle.
+I’m applying the same duplicate allowance to the terminal adapter cache; otherwise a remote/incremental UI could still ignore repeated state lines even when the controller emits them.
+The fix is in place. I’m formatting and rerunning the reproducer to confirm the second completion cycle now closes correctly.
+The reproducer is green. I’m running the required checks again because the fix touches controller and terminal adapter behavior.
+The focused controller and harness tests still pass. I’m running `cargo fmt`, clippy, and then the full test suite.
+`cargo fmt` and clippy are clean. I’m running the full test suite now.
+The full suite is green. I’m running the bounded real Codex smoke check again for the final controller/terminal behavior change.
+The real-agent smoke succeeded. I’m doing the final status and whitespace checks now.
+Only the reviewer-fix files are currently modified: controller dedup, terminal cache dedup, and the extended terminal-app regression test. I’m reviewing that small final diff before closing.
+Fixed the reviewer finding.
+
+The issue was the transcript dedup rule: only the question prompt was allowed to repeat, so a second `work-leaf: feature marked done` line was dropped. I changed both the controller and terminal cache to allow all feature-completion control lines to repeat per review cycle.
+
+Added regression coverage in `tests/terminal_app.rs` for two clean-review/yes cycles on the same patch agent. The test failed before the fix and passes now.
+
+Verification:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- `git diff --check`
+- Real Codex smoke returned `WORK_LEAF_REAL_AGENT_OK`
+
+Changes remain uncommitted.

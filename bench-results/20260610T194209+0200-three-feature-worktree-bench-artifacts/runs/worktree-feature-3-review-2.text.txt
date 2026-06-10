@@ -1,0 +1,8 @@
+I’ll re-check the same commit range, focusing on the previously stale workflow doc plus the changed controller/UI/test paths.
+The architecture guide still matches the intended controller and terminal boundaries. I’m checking the workflow doc diff and scanning for any remaining old reviewer-chat completion wording.
+The stale wording is gone. I noticed the multi-range preview was clipped by range boundaries, so I’m reading those sections with line numbers once more to verify the current text is coherent.
+The documentation sections now consistently point at the patch-agent completion prompt. I’m doing the final source/test diff pass to make sure no behavior or coverage issue was missed.
+One behavioral edge case remains: the docs now describe prompting only after no findings, so I’m checking whether the controller gates the new prompt on `ReviewResult::findings_resolved`.
+FINDINGS
+
+- `src/workspace.rs:717-720` asks the patch-agent completion question for every `ReviewComplete` result without checking `ReviewResult::findings_resolved` (`src/review.rs:167-172`, set in `src/cli.rs:802-805`). If review hits the round limit with unresolved `FINDINGS`, the patch agent still gets “Is this feature done?” and `yes` can close it. The new docs and workflow describe this prompt only after no findings, and the added tests only cover `NO_FINDINGS`, so this unresolved-review path is untested and behaves incorrectly.

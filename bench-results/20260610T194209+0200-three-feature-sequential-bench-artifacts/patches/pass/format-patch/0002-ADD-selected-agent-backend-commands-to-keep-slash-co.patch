@@ -1,0 +1,859 @@
+From 7e97147b8ff42d41f1b7fe3a6b535eadaf6d9de5 Mon Sep 17 00:00:00 2001
+From: Work Leaf Bench <bench@example.com>
+Date: Wed, 10 Jun 2026 20:45:14 +0200
+Subject: [PATCH 2/3] ADD selected-agent backend commands to keep slash
+ controls local
+
+Route selected-agent chat messages like /status and /fork through AgentBackend::command_streaming so provider controls can inspect session state without sending slash-command text through the normal agent prompt and orchestrator directive path.
+---
+ docs/architecture.md              |  16 ++-
+ src/agent_runtime.rs              |  23 +++-
+ src/cli.rs                        |  38 ++++++
+ src/codex.rs                      | 105 +++++++++++----
+ src/workspace.rs                  |  34 ++++-
+ tests/agent_core.rs               |  67 ++++++++++
+ tests/agent_provider_interface.rs |   7 +
+ tests/terminal_app.rs             |  55 +++++++-
+ tests/workspace.rs                | 212 ++++++++++++++++++++++++++++++
+ 9 files changed, 524 insertions(+), 33 deletions(-)
+
+diff --git a/docs/architecture.md b/docs/architecture.md
+index 96283d1..054c880 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -95,8 +95,12 @@ port when the requested address is unavailable.
+ 
+ - `AgentBackend::launch` starts an agent session from an `AgentLaunch`.
+ - `AgentBackend::send` sends a prompt to an existing agent session.
++- `AgentBackend::command` executes a provider command against an existing agent session. The default
++  implementation returns an unsupported-command chat message, so external providers can opt in to
++  command handling without changing their basic launch/send implementation.
+ - `AgentBackend::launch_streaming` and `AgentBackend::send_streaming` provide real-time output to a
+-  sink of `AgentStreamEvent` values. Their default implementations call the non-streaming methods.
++  sink of `AgentStreamEvent` values. `AgentBackend::command_streaming` is the matching streaming
++  command hook. Their default implementations call the non-streaming methods.
+ - `AgentBackend::shutdown_handle` returns an `AgentShutdownHandle` for terminating active provider
+   processes.
+ - `AgentStreamEvent` carries status text, streamed agent messages, and streamed errors.
+@@ -127,6 +131,10 @@ public lifecycle extension is required before external child processes can parti
+   `codex exec` and `codex exec resume` calls. Launch invocations include the injected
+   `PromptPolicy`; resumed invocations for known sessions pass only the follow-up message because the
+   Codex thread already contains the launch-time policy and repository instructions.
++- `CodexBackend` handles backend commands without sending slash-command text through the normal
++  resume prompt path. `/status` renders the selected session's known Codex thread id, feature,
++  activity state, and message count from backend state. `/fork` reports the selected source thread
++  and optional fork prompt as backend command output.
+ - `CodexBackend::record_launch_reply`, `record_launch_output`, and `session` maintain in-memory
+   session state.
+ - `CodexBackend` parses Codex `--json` event lines from stdout to capture `thread.started`
+@@ -167,6 +175,12 @@ The primary public methods are:
+ `CommandChat` uses the active `AgentProfile` when launching user agents, reviewers, and linearizers.
+ Workflow code must not hard-code `AgentKind::Codex` when the active profile supplies the provider.
+ 
++Selected-agent chat text that starts with `/` followed by a non-whitespace command token is a backend
++command for that selected agent. `CommandChat::send_to_agent_streaming_with_ids` routes that input to
++`AgentBackend::command_streaming` and returns the backend command output as the agent chat reply; it
++does not send the slash command through the normal prompt/resume path and does not process the output
++as orchestrator directives.
++
+ ## UI-Neutral Controller
+ 
+ `src/workspace.rs::WorkLeafController<B>` is the preferred API for frontends. It owns UI-neutral
+diff --git a/src/agent_runtime.rs b/src/agent_runtime.rs
+index c3ea84d..cd201da 100644
+--- a/src/agent_runtime.rs
++++ b/src/agent_runtime.rs
+@@ -4,11 +4,22 @@ use std::sync::{Arc, Mutex};
+ use std::thread;
+ use std::time::{Duration, Instant};
+ 
+-use crate::agent::{AgentError, AgentId, AgentLaunch, AgentSession, ChatMessage};
++use crate::agent::{AgentError, AgentId, AgentLaunch, AgentSession, ChatMessage, MessageRole};
+ 
+ pub trait AgentBackend {
+     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError>;
+     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError>;
++    fn command(
++        &mut self,
++        _agent_id: &AgentId,
++        command: &str,
++        _arguments: &str,
++    ) -> Result<ChatMessage, AgentError> {
++        Ok(ChatMessage::new(
++            MessageRole::Agent,
++            format!("backend command /{command} is not supported by this provider"),
++        ))
++    }
+     fn interrupt(&mut self, _agent_id: &AgentId) -> Result<(), AgentError> {
+         Ok(())
+     }
+@@ -33,6 +44,16 @@ pub trait AgentBackend {
+     ) -> Result<ChatMessage, AgentError> {
+         self.send(agent_id, prompt)
+     }
++
++    fn command_streaming(
++        &mut self,
++        agent_id: &AgentId,
++        command: &str,
++        arguments: &str,
++        _sink: &mut dyn FnMut(AgentStreamEvent),
++    ) -> Result<ChatMessage, AgentError> {
++        self.command(agent_id, command, arguments)
++    }
+ }
+ 
+ #[derive(Clone, Debug, Default)]
+diff --git a/src/cli.rs b/src/cli.rs
+index 24584e4..408be18 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -445,6 +445,26 @@ where
+         message: &str,
+         stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+     ) -> Result<CommandChatResult, CliError> {
++        if let Some(command) = agent_backend_command(message) {
++            let mut command_stream = |event| stream(agent_id, event);
++            let reply = self
++                .backend
++                .as_mut()
++                .expect("command chat backend is present")
++                .command_streaming(
++                    agent_id,
++                    command.name,
++                    command.arguments,
++                    &mut command_stream,
++                )
++                .map_err(CliError::Agent)?
++                .text;
++            return Ok(CommandChatResult::AgentMessage {
++                agent_id: agent_id.clone(),
++                reply,
++            });
++        }
++
+         let feature = self
+             .agents
+             .get(agent_id)
+@@ -902,6 +922,24 @@ fn reviewer_id_for(agent_id: &AgentId) -> Result<AgentId, CliError> {
+     AgentId::new(format!("review-{}", agent_id.as_str())).map_err(CliError::Agent)
+ }
+ 
++#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++pub(crate) struct AgentBackendCommand<'a> {
++    pub name: &'a str,
++    pub arguments: &'a str,
++}
++
++pub(crate) fn agent_backend_command(message: &str) -> Option<AgentBackendCommand<'_>> {
++    let rest = message.trim().strip_prefix('/')?;
++    let name_end = rest.find(char::is_whitespace).unwrap_or(rest.len());
++    if name_end == 0 {
++        return None;
++    }
++    Some(AgentBackendCommand {
++        name: &rest[..name_end],
++        arguments: rest[name_end..].trim_start(),
++    })
++}
++
+ #[derive(Clone, Debug, Eq, PartialEq)]
+ pub enum CommandChatResult {
+     Noop,
+diff --git a/src/codex.rs b/src/codex.rs
+index 0b4f118..d7843f8 100644
+--- a/src/codex.rs
++++ b/src/codex.rs
+@@ -186,6 +186,35 @@ impl CodexBackend {
+             .cloned()
+     }
+ 
++    fn run_backend_command(
++        &mut self,
++        agent_id: &AgentId,
++        command: &str,
++        arguments: &str,
++    ) -> Result<String, AgentError> {
++        let mut state = self
++            .state
++            .lock()
++            .expect("codex backend state mutex poisoned");
++        if !state.sessions.contains_key(agent_id) {
++            return Err(AgentError::UnknownSession(agent_id.clone()));
++        }
++
++        let output = match command {
++            "status" => render_codex_status(&state, agent_id),
++            "fork" => render_codex_fork(&state, agent_id, arguments),
++            other => format!("backend command /{other} is not supported by Codex"),
++        };
++        let command_line = render_backend_command_line(command, arguments);
++        let session = state
++            .sessions
++            .get_mut(agent_id)
++            .ok_or_else(|| AgentError::UnknownSession(agent_id.clone()))?;
++        session.push_message(MessageRole::User, command_line);
++        session.push_message(MessageRole::Agent, output.clone());
++        Ok(output)
++    }
++
+     fn exec_invocation(&self, stdin: String) -> CodexInvocation {
+         let mut args = vec![
+             "--cd".to_string(),
+@@ -366,6 +395,16 @@ impl AgentBackend for CodexBackend {
+         Ok(message)
+     }
+ 
++    fn command(
++        &mut self,
++        agent_id: &AgentId,
++        command: &str,
++        arguments: &str,
++    ) -> Result<ChatMessage, AgentError> {
++        let output = self.run_backend_command(agent_id, command, arguments)?;
++        Ok(ChatMessage::new(MessageRole::Agent, output))
++    }
++
+     fn shutdown_handle(&self) -> AgentShutdownHandle {
+         self.shutdown.clone()
+     }
+@@ -430,6 +469,50 @@ impl AgentBackend for CodexBackend {
+     }
+ }
+ 
++fn render_backend_command_line(command: &str, arguments: &str) -> String {
++    if arguments.trim().is_empty() {
++        format!("/{command}")
++    } else {
++        format!("/{command} {}", arguments.trim())
++    }
++}
++
++fn render_codex_status(state: &CodexBackendState, agent_id: &AgentId) -> String {
++    let session = state
++        .sessions
++        .get(agent_id)
++        .expect("status command checked that the session exists");
++    let thread_id = state
++        .thread_ids
++        .get(agent_id)
++        .map(String::as_str)
++        .unwrap_or_else(|| agent_id.as_str());
++    let runtime_state = if state.active_processes.contains_key(agent_id) {
++        "active"
++    } else {
++        "idle"
++    };
++    format!(
++        "Codex session status\nagent: {agent_id}\nthread: {thread_id}\nfeature: {}\nstate: {runtime_state}\nmessages: {}",
++        session.feature,
++        session.messages.len()
++    )
++}
++
++fn render_codex_fork(state: &CodexBackendState, agent_id: &AgentId, arguments: &str) -> String {
++    let thread_id = state
++        .thread_ids
++        .get(agent_id)
++        .map(String::as_str)
++        .unwrap_or_else(|| agent_id.as_str());
++    let prompt = arguments.trim();
++    if prompt.is_empty() {
++        format!("Codex fork requested\nsource thread: {thread_id}")
++    } else {
++        format!("Codex fork requested\nsource thread: {thread_id}\nprompt: {prompt}")
++    }
++}
++
+ #[derive(Clone, Debug, Default, Eq, PartialEq)]
+ struct ParsedCodexOutput {
+     thread_id: Option<String>,
+@@ -592,26 +675,4 @@ mod tests {
+             Some(AgentStreamEvent::Status("Codex is working".to_string()))
+         );
+     }
+-
+-    #[test]
+-    fn slash_command_resume_invocation_uses_raw_command_stdin() {
+-        let mut backend = CodexBackend::new(
+-            CodexCommandConfig::new(PathBuf::from("/repo")),
+-            PromptPolicy::for_restricted_agents(),
+-        );
+-        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+-        backend
+-            .record_launch_output(
+-                AgentLaunch::new(agent_id.clone(), AgentKind::Codex, "user-agent", "start"),
+-                r#"{"type":"thread.started","thread_id":"thread-user-1"}"#.to_string(),
+-            )
+-            .expect("test launch output records the thread id");
+-
+-        let invocation = backend
+-            .build_send_invocation(&agent_id, "/status")
+-            .expect("slash command invocation is built");
+-
+-        assert_eq!(invocation.stdin, "/status");
+-        assert!(invocation.args.iter().any(|arg| arg == "thread-user-1"));
+-    }
+ }
+diff --git a/src/workspace.rs b/src/workspace.rs
+index 8fc3e6f..3828966 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -10,8 +10,8 @@ use crate::agent::{
+ };
+ use crate::chat_title::{ChatTitleAgent, fallback_chat_title_from_prompt};
+ use crate::cli::{
+-    CliError, CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
+-    render_command_chat_help,
++    CliError, CommandChat, CommandChatResult, agent_backend_command, command_chat_error_text,
++    command_result_text, render_command_chat_help,
+ };
+ use crate::review::{AgentCommit, GitHistory, ReviewResult};
+ 
+@@ -246,6 +246,10 @@ where
+         if message.is_empty() {
+             return Ok(());
+         }
++        if agent_backend_command(message).is_some() {
++            self.send_agent_backend_command(agent_id, message);
++            return Ok(());
++        }
+         if self
+             .sessions
+             .get(agent_id)
+@@ -294,6 +298,32 @@ where
+         Ok(())
+     }
+ 
++    fn send_agent_backend_command(&mut self, agent_id: &AgentId, message: &str) {
++        self.append_agent_line(agent_id, format!("user: {message}"));
++        let display_name = self.agent_display_name();
++        let mut stream_lines = Vec::new();
++        let result = {
++            let chat = self
++                .chat
++                .as_mut()
++                .expect("work-leaf controller command chat is present");
++            let mut stream = |event_agent_id: &AgentId, event| {
++                stream_lines.push((
++                    event_agent_id.clone(),
++                    stream_event_text(event, &display_name),
++                ));
++            };
++            chat.send_to_agent_streaming_with_ids(agent_id, message, &mut stream)
++        };
++        for (event_agent_id, line) in stream_lines {
++            self.append_agent_line(&event_agent_id, line);
++        }
++        match result {
++            Ok(result) => self.apply_agent_result(agent_id, &result),
++            Err(error) => self.append_agent_line(agent_id, command_chat_error_text(&error)),
++        }
++    }
++
+     pub fn start_review(&mut self) -> Result<Vec<AgentId>, CliError> {
+         self.start_review_for_agent(None)
+     }
+diff --git a/tests/agent_core.rs b/tests/agent_core.rs
+index 3464d62..3762dfd 100644
+--- a/tests/agent_core.rs
++++ b/tests/agent_core.rs
+@@ -231,6 +231,73 @@ fn codex_backend_resume_invocation_uses_raw_follow_up_after_launch_context() {
+     assert!(!invocation.stdin.contains("Project-specific rule"));
+ }
+ 
++#[test]
++fn codex_backend_status_command_reports_selected_session_state() {
++    let config = CodexCommandConfig::new(PathBuf::from("/repo")).with_binary("codex");
++    let mut backend = CodexBackend::new(config, PromptPolicy::for_restricted_agents());
++    let agent_id = AgentId::new("chat-a").unwrap();
++    backend
++        .record_launch_output(
++            AgentLaunch::new(
++                agent_id.clone(),
++                AgentKind::Codex,
++                "parser",
++                "implement parser",
++            ),
++            r#"{"type":"thread.started","thread_id":"thread-123"}"#.to_string()
++                + "\n"
++                + r#"{"type":"item.completed","item":{"type":"agent_message","text":"ready"}}"#,
++        )
++        .unwrap();
++
++    let reply = backend.command(&agent_id, "status", "").unwrap();
++
++    assert!(reply.text.contains("Codex session status"));
++    assert!(reply.text.contains("agent: chat-a"));
++    assert!(reply.text.contains("thread: thread-123"));
++    assert!(reply.text.contains("feature: parser"));
++    assert!(reply.text.contains("state: idle"));
++    let session = backend.session(&agent_id).unwrap();
++    assert_eq!(
++        session.messages[session.messages.len() - 2].role,
++        MessageRole::User
++    );
++    assert_eq!(session.messages[session.messages.len() - 2].text, "/status");
++    assert_eq!(session.messages.last().unwrap().text, reply.text);
++}
++
++#[test]
++fn codex_backend_fork_command_reports_source_thread_and_prompt() {
++    let config = CodexCommandConfig::new(PathBuf::from("/repo")).with_binary("codex");
++    let mut backend = CodexBackend::new(config, PromptPolicy::for_restricted_agents());
++    let agent_id = AgentId::new("chat-a").unwrap();
++    backend
++        .record_launch_output(
++            AgentLaunch::new(
++                agent_id.clone(),
++                AgentKind::Codex,
++                "parser",
++                "implement parser",
++            ),
++            r#"{"type":"thread.started","thread_id":"thread-123"}"#.to_string(),
++        )
++        .unwrap();
++
++    let reply = backend
++        .command(&agent_id, "fork", "try another parser design")
++        .unwrap();
++
++    assert!(reply.text.contains("Codex fork requested"));
++    assert!(reply.text.contains("source thread: thread-123"));
++    assert!(reply.text.contains("prompt: try another parser design"));
++    let session = backend.session(&agent_id).unwrap();
++    assert_eq!(
++        session.messages[session.messages.len() - 2].text,
++        "/fork try another parser design"
++    );
++    assert_eq!(session.messages.last().unwrap().text, reply.text);
++}
++
+ #[test]
+ fn codex_backend_process_failure_reports_stdout_when_stderr_is_empty() {
+     let root = temp_dir("codex-failure-stdout");
+diff --git a/tests/agent_provider_interface.rs b/tests/agent_provider_interface.rs
+index 7275329..d6869d5 100644
+--- a/tests/agent_provider_interface.rs
++++ b/tests/agent_provider_interface.rs
+@@ -27,6 +27,9 @@ fn external_agent_provider_implements_backend_through_agent_interface() {
+     let reply = backend
+         .send_streaming(&agent_id, "continue", &mut |event| stream.push(event))
+         .unwrap();
++    let command_reply = backend
++        .command_streaming(&agent_id, "status", "", &mut |event| stream.push(event))
++        .unwrap();
+     backend.shutdown_handle().shutdown();
+ 
+     assert_eq!(session.id, agent_id);
+@@ -34,6 +37,10 @@ fn external_agent_provider_implements_backend_through_agent_interface() {
+     assert_eq!(session.feature, "local-agent");
+     assert_eq!(session.messages[1].text, "local launch reply");
+     assert_eq!(reply.text, "local send reply");
++    assert_eq!(
++        command_reply.text,
++        "backend command /status is not supported by this provider"
++    );
+     assert_eq!(
+         stream,
+         vec![
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index c312a5b..8c9e26f 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -45,7 +45,7 @@ fn terminal_app_new_and_chat_message_use_real_command_chat_backend() {
+ 
+ #[test]
+ fn terminal_app_slash_command_from_chat_view_sends_agent_command() {
+-    let backend = FakeBackend::new(["launch reply", "status reply"]);
++    let backend = FakeBackend::new(["launch reply"]).with_command_outputs(["status reply"]);
+     let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+     let mut app = TerminalApp::new(chat, 100, 24);
+ 
+@@ -61,13 +61,19 @@ fn terminal_app_slash_command_from_chat_view_sends_agent_command() {
+ 
+     let backend = app.into_chat().into_backend();
+     let sends = backend.sends();
+-    assert_eq!(sends.len(), 1);
+-    assert_eq!(sends[0].0.as_str(), "user-1");
+-    assert_eq!(sends[0].1, "/status");
++    assert!(sends.is_empty());
++    assert_eq!(
++        backend.commands(),
++        vec![(
++            AgentId::new("user-1").unwrap(),
++            "status".to_string(),
++            String::new()
++        )]
++    );
+ }
+ 
+ #[test]
+-fn terminal_app_sends_spawned_codex_slash_command_as_raw_command() {
++fn terminal_app_sends_spawned_codex_slash_command_as_backend_command() {
+     let root = temp_dir("terminal-app-codex-slash-command");
+     let fake_bin = root.join("bin");
+     fs::create_dir_all(&fake_bin).unwrap();
+@@ -85,7 +91,7 @@ done
+ input=$(cat)
+ if [ \"$seen_resume\" = \"1\" ]; then
+   if [ \"$input\" = \"/status\" ]; then
+-    printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"status\",\"type\":\"agent_message\",\"text\":\"status command output\"}}'
++    printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"status\",\"type\":\"agent_message\",\"text\":\"raw pass-through bug\"}}'
+   else
+     printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"wrapped\",\"type\":\"agent_message\",\"text\":\"slash command was wrapped as prompt\"}}'
+   fi
+@@ -112,7 +118,9 @@ fi
+ 
+     let frame = app.render_frame();
+     assert!(frame.contains("user: /status"));
+-    assert!(frame.contains("status command output"));
++    assert!(frame.contains("Codex session status"));
++    assert!(frame.contains("thread: thread-slash-command"));
++    assert!(!frame.contains("raw pass-through bug"), "{frame}");
+     assert!(
+         !frame.contains("slash command was wrapped as prompt"),
+         "{frame}"
+@@ -997,8 +1005,10 @@ struct FakeBackend {
+ #[derive(Debug)]
+ struct FakeBackendState {
+     replies: VecDeque<String>,
++    command_outputs: VecDeque<String>,
+     launches: Vec<AgentLaunch>,
+     sends: Vec<(AgentId, String)>,
++    commands: Vec<(AgentId, String, String)>,
+ }
+ 
+ #[derive(Clone, Debug)]
+@@ -1068,12 +1078,20 @@ impl FakeBackend {
+         Self {
+             state: Arc::new(Mutex::new(FakeBackendState {
+                 replies,
++                command_outputs: VecDeque::new(),
+                 launches: Vec::new(),
+                 sends: Vec::new(),
++                commands: Vec::new(),
+             })),
+         }
+     }
+ 
++    fn with_command_outputs<const N: usize>(self, outputs: [&str; N]) -> Self {
++        self.state.lock().unwrap().command_outputs =
++            outputs.into_iter().map(String::from).collect();
++        self
++    }
++
+     fn launches(&self) -> Vec<AgentLaunch> {
+         self.state.lock().unwrap().launches.clone()
+     }
+@@ -1081,6 +1099,10 @@ impl FakeBackend {
+     fn sends(&self) -> Vec<(AgentId, String)> {
+         self.state.lock().unwrap().sends.clone()
+     }
++
++    fn commands(&self) -> Vec<(AgentId, String, String)> {
++        self.state.lock().unwrap().commands.clone()
++    }
+ }
+ 
+ impl AgentBackend for FakeBackend {
+@@ -1110,6 +1132,25 @@ impl AgentBackend for FakeBackend {
+             state.replies.pop_front().expect("missing fake reply"),
+         ))
+     }
++
++    fn command(
++        &mut self,
++        agent_id: &AgentId,
++        command: &str,
++        arguments: &str,
++    ) -> Result<ChatMessage, AgentError> {
++        let mut state = self.state.lock().unwrap();
++        state
++            .commands
++            .push((agent_id.clone(), command.to_string(), arguments.to_string()));
++        Ok(ChatMessage::new(
++            MessageRole::Agent,
++            state
++                .command_outputs
++                .pop_front()
++                .expect("missing fake command output"),
++        ))
++    }
+ }
+ 
+ impl AgentBackend for SlowBackend {
+diff --git a/tests/workspace.rs b/tests/workspace.rs
+index 5724d95..6fecdb2 100644
+--- a/tests/workspace.rs
++++ b/tests/workspace.rs
+@@ -620,6 +620,125 @@ fn controller_does_not_run_project_required_checks_after_agent_reply() {
+     assert!(backend.sends().is_empty());
+ }
+ 
++#[test]
++fn controller_routes_status_slash_command_to_selected_agent_backend_command() {
++    let backend = FakeBackend::new(["launch reply"]).with_command_outputs(["status: idle"]);
++    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
++    let mut controller = WorkLeafController::new(chat);
++
++    let agent_id = controller.create_agent("inspect status").unwrap();
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    controller.send_message(&agent_id, "/status").unwrap();
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    let snapshot = controller.snapshot();
++    let session = snapshot.session(&agent_id).expect("session exists");
++    assert!(session.lines.iter().any(|line| line == "user: /status"));
++    assert!(session.lines.iter().any(|line| line == "status: idle"));
++    assert_eq!(
++        backend.commands(),
++        vec![(agent_id.clone(), "status".to_string(), String::new())]
++    );
++    assert!(
++        !backend
++            .sends()
++            .iter()
++            .any(|(_, prompt)| prompt == "/status"),
++        "/status must not be delivered through the normal backend send path"
++    );
++}
++
++#[test]
++fn controller_routes_fork_slash_command_to_selected_agent_backend_command() {
++    let backend =
++        FakeBackend::new(["launch reply"]).with_command_outputs(["forked session thread-fork"]);
++    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
++    let mut controller = WorkLeafController::new(chat);
++
++    let agent_id = controller.create_agent("prepare fork").unwrap();
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    controller
++        .send_message(&agent_id, "/fork explore another approach")
++        .unwrap();
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    let snapshot = controller.snapshot();
++    let session = snapshot.session(&agent_id).expect("session exists");
++    assert!(
++        session
++            .lines
++            .iter()
++            .any(|line| line == "user: /fork explore another approach")
++    );
++    assert!(
++        session
++            .lines
++            .iter()
++            .any(|line| line == "forked session thread-fork")
++    );
++    assert_eq!(
++        backend.commands(),
++        vec![(
++            agent_id,
++            "fork".to_string(),
++            "explore another approach".to_string()
++        )]
++    );
++}
++
++#[test]
++fn controller_routes_status_slash_command_while_selected_agent_is_busy() {
++    let backend = BusyCommandBackend::default();
++    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
++    let mut controller = WorkLeafController::new(chat);
++
++    let agent_id = controller.create_agent("").unwrap();
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    controller.send_message(&agent_id, "slow question").unwrap();
++    assert_eq!(
++        controller
++            .snapshot()
++            .session(&agent_id)
++            .expect("session exists")
++            .loading,
++        Some(WorkLeafLoading::WaitingForReply)
++    );
++
++    controller.send_message(&agent_id, "/status").unwrap();
++
++    let snapshot = controller.snapshot();
++    let session = snapshot.session(&agent_id).expect("session exists");
++    assert!(session.lines.iter().any(|line| line == "user: /status"));
++    assert!(session.lines.iter().any(|line| line == "status while busy"));
++    assert!(
++        !session
++            .lines
++            .iter()
++            .any(|line| line.contains("still working"))
++    );
++    assert_eq!(session.loading, Some(WorkLeafLoading::WaitingForReply));
++    assert_eq!(
++        backend.commands(),
++        vec![(agent_id.clone(), "status".to_string(), String::new())]
++    );
++    assert!(
++        !backend
++            .sends()
++            .iter()
++            .any(|(_, prompt)| prompt == "/status"),
++        "/status must not be delivered through the normal backend send path"
++    );
++
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++    let snapshot = controller.snapshot();
++    let session = snapshot.session(&agent_id).expect("session exists");
++    assert!(session.lines.iter().any(|line| line == "slow reply"));
++    assert_eq!(session.loading, None);
++}
++
+ #[test]
+ fn controller_keeps_agent_loading_scoped_to_the_active_session() {
+     let backend = ConcurrentBackend;
+@@ -662,24 +781,45 @@ struct FakeBackend {
+ #[derive(Debug)]
+ struct FakeBackendState {
+     replies: VecDeque<String>,
++    command_outputs: VecDeque<String>,
+     launches: Vec<AgentLaunch>,
+     sends: Vec<(AgentId, String)>,
++    commands: Vec<(AgentId, String, String)>,
+ }
+ 
+ #[derive(Clone, Debug)]
+ struct ConcurrentBackend;
+ 
++#[derive(Clone, Debug, Default)]
++struct BusyCommandBackend {
++    state: Arc<Mutex<BusyCommandState>>,
++}
++
++#[derive(Debug, Default)]
++struct BusyCommandState {
++    sends: Vec<(AgentId, String)>,
++    commands: Vec<(AgentId, String, String)>,
++}
++
+ impl FakeBackend {
+     fn new<const N: usize>(replies: [&str; N]) -> Self {
+         Self {
+             state: Arc::new(Mutex::new(FakeBackendState {
+                 replies: replies.into_iter().map(String::from).collect(),
++                command_outputs: VecDeque::new(),
+                 launches: Vec::new(),
+                 sends: Vec::new(),
++                commands: Vec::new(),
+             })),
+         }
+     }
+ 
++    fn with_command_outputs<const N: usize>(self, outputs: [&str; N]) -> Self {
++        self.state.lock().unwrap().command_outputs =
++            outputs.into_iter().map(String::from).collect();
++        self
++    }
++
+     fn launches(&self) -> Vec<AgentLaunch> {
+         self.state.lock().unwrap().launches.clone()
+     }
+@@ -688,6 +828,10 @@ impl FakeBackend {
+         self.state.lock().unwrap().sends.clone()
+     }
+ 
++    fn commands(&self) -> Vec<(AgentId, String, String)> {
++        self.state.lock().unwrap().commands.clone()
++    }
++
+     fn next_reply(&self) -> String {
+         self.state
+             .lock()
+@@ -697,11 +841,30 @@ impl FakeBackend {
+             .expect("missing fake reply")
+     }
+ 
++    fn next_command_output(&self) -> String {
++        self.state
++            .lock()
++            .unwrap()
++            .command_outputs
++            .pop_front()
++            .expect("missing fake command output")
++    }
++
+     fn title_reply(&self, prompt: &str) -> String {
+         fake_title_from_title_prompt(prompt)
+     }
+ }
+ 
++impl BusyCommandBackend {
++    fn sends(&self) -> Vec<(AgentId, String)> {
++        self.state.lock().unwrap().sends.clone()
++    }
++
++    fn commands(&self) -> Vec<(AgentId, String, String)> {
++        self.state.lock().unwrap().commands.clone()
++    }
++}
++
+ impl AgentBackend for FakeBackend {
+     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+         self.state.lock().unwrap().launches.push(request.clone());
+@@ -723,6 +886,55 @@ impl AgentBackend for FakeBackend {
+             .push((agent_id.clone(), prompt.to_string()));
+         Ok(ChatMessage::new(MessageRole::Agent, self.next_reply()))
+     }
++
++    fn command(
++        &mut self,
++        agent_id: &AgentId,
++        command: &str,
++        arguments: &str,
++    ) -> Result<ChatMessage, AgentError> {
++        self.state.lock().unwrap().commands.push((
++            agent_id.clone(),
++            command.to_string(),
++            arguments.to_string(),
++        ));
++        Ok(ChatMessage::new(
++            MessageRole::Agent,
++            self.next_command_output(),
++        ))
++    }
++}
++
++impl AgentBackend for BusyCommandBackend {
++    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
++        let mut session = AgentSession::new(request);
++        session.push_message(MessageRole::Agent, "ready");
++        Ok(session)
++    }
++
++    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
++        self.state
++            .lock()
++            .unwrap()
++            .sends
++            .push((agent_id.clone(), prompt.to_string()));
++        thread::sleep(Duration::from_millis(350));
++        Ok(ChatMessage::new(MessageRole::Agent, "slow reply"))
++    }
++
++    fn command(
++        &mut self,
++        agent_id: &AgentId,
++        command: &str,
++        arguments: &str,
++    ) -> Result<ChatMessage, AgentError> {
++        self.state.lock().unwrap().commands.push((
++            agent_id.clone(),
++            command.to_string(),
++            arguments.to_string(),
++        ));
++        Ok(ChatMessage::new(MessageRole::Agent, "status while busy"))
++    }
+ }
+ 
+ impl AgentBackend for ConcurrentBackend {

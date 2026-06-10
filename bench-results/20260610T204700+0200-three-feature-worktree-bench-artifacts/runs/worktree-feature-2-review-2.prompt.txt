@@ -1,0 +1,46 @@
+You are a normal direct Codex review agent. Do not modify files.
+
+Review only the changes for request 2 since commit c92a0b7060a36eac6db2d869b85e589a7a9480f9:
+implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt.
+
+Inspect the repository and the diff from c92a0b7060a36eac6db2d869b85e589a7a9480f9..HEAD. Report only bugs, regressions,
+missing tests for the changed behavior, or required documentation gaps introduced by this request.
+
+Additional author response and verification evidence from the previous fix turn:
+I’ll fix the reviewed `/fork` runtime issue specifically. The problem is not slash routing anymore; it is the Codex backend invoking an interactive top-level command through piped stdio, so I’m going to make `/fork` produce backend output without that broken piped interactive path and add a spawned-Codex regression test for it.
+The reviewer’s concrete failure is the spawned Codex `/fork` path, so I’m checking whether the repo already has a non-interactive fork concept separate from Codex’s TUI command before choosing the smallest safe fix.
+The repo’s existing “fork” UI action is only a UI action placeholder, not a backend implementation. Since top-level Codex fork is interactive/stateful and unsuitable for Work Leaf’s piped backend command runner, I’m going to make Codex `/fork` a non-model backend response that reports the selected thread and explains that non-interactive fork is unavailable instead of spawning the broken command.
+I’m removing the Codex top-level fork invocation entirely. `/fork` will be handled as backend command output from `CodexBackend` state, so it cannot hit the interactive CLI path under piped stdio.
+Next I’m changing the command dispatch so `/fork` renders that non-interactive backend output and records it as a normal agent command result, rather than building any process invocation.
+The dispatch now uses an `unsupported_backend_command` helper for unknown slash tokens. I’m adding that helper locally so unknown commands still fail as backend commands without falling back to prompts.
+I’m updating the Codex unit test so it proves `/fork` returns backend output instead of proving the old broken argv shape. Then I’ll add the spawned-Codex regression test for “do not invoke top-level fork.”
+The spawned-Codex test will now send both `/status` and `/fork`. The fake Codex binary emits a failure marker if either command reaches `exec resume` or top-level `fork`, which catches the reviewed regression.
+The architecture doc still says `/fork` uses a Codex fork invocation. I’m correcting that to describe the non-interactive backend output behavior.
+The behavior, tests, and docs are updated for the `/fork` fix. I’m formatting before running the focused regression tests.
+Formatting completed. I’m running the Codex slash unit test and the terminal slash tests that now cover the spawned-Codex `/fork` regression.
+The targeted regression tests pass. I’m rerunning the required checks after this fix: clippy and the full all-targets test suite.
+Clippy is clean. The remaining diff is just the reviewed `/fork` fix on top of the existing feature work. I’m running the full tests now.
+All required automated checks are green. Since this is still agent-facing behavior, I’m rerunning the bounded real Codex smoke and recording the local `/fork` dry-run failure that this fix avoids.
+The real Codex smoke succeeded. I’m doing a final status/diff check before the closeout.
+Implemented the reviewer fix.
+
+`/fork` no longer invokes the interactive top-level `codex fork` path through piped stdio. In [src/codex.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-2/src/codex.rs), Codex backend slash handling now renders non-interactive backend fork output for the selected agent/thread, matching the chat-command execution model.
+
+I also tightened coverage in [tests/terminal_app.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-2/tests/terminal_app.rs) so `/fork` would fail if it reached the interactive fake `codex fork` path, and updated the Codex backend unit test to assert the rendered fork output.
+
+Verification passed:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- Real Codex smoke command succeeded and returned `WORK_LEAF_REAL_AGENT_OK`
+
+Changes are left uncommitted.
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

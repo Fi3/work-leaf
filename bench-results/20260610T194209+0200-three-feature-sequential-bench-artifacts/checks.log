@@ -1,0 +1,323 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.03s
+     Running unittests src/lib.rs (target/debug/deps/work_leaf-04559f4fd6ff98fc)
+
+running 13 tests
+test chat_title::tests::empty_llm_title_falls_back_to_first_prompt ... ok
+test chat_title::tests::fallback_title_uses_first_prompt_and_caps_long_names ... ok
+test chat_title::tests::llm_title_reply_is_sanitized_to_kebab_case_with_eighty_character_limit ... ok
+test cli::tests::launched_agent_result_selects_chat_and_enters_insert_mode ... ok
+test terminal_app::tests::answered_feature_done_prompt_in_snapshot_does_not_rearm_local_close ... ok
+test codex::tests::codex_parsing_accepts_json_field_whitespace ... ok
+test terminal_app::tests::pasted_command_prompt_input_polls_controller_once_per_chunk ... ok
+test ui::tests::ready_agent_row_is_reversed_across_the_tui_left_pane ... ok
+test terminal_app::tests::command_surface_insert_mode_renders_chat_buffer ... ok
+test ui::tests::setting_agent_ready_queues_one_bell_for_next_render ... ok
+test terminal_app::tests::rendering_uses_cached_snapshot_instead_of_refetching_full_transcripts ... ok
+test terminal_app::tests::clearing_agent_loading_marks_chat_ready_in_left_pane ... ok
+test terminal_app::tests::command_surface_chat_uses_command_agent_to_spawn_codex_agent ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/bin/work-leaf.rs (target/debug/deps/work_leaf-008ad4527fa69461)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/work-leaf-orchestrator.rs (target/debug/deps/work_leaf_orchestrator-79930a8d9329d2b1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/agent_core.rs (target/debug/deps/agent_core-62fe51b3fd3e0dae)
+
+running 12 tests
+test codex_backend_builds_exec_invocation_for_project_directory ... ok
+test codex_backend_records_agent_replies_in_session_history ... ok
+test codex_backend_fork_command_reports_source_thread_and_prompt ... ok
+test codex_backend_preserves_multiple_agent_messages_from_one_jsonl_turn ... ok
+test codex_backend_can_build_resume_invocation_without_in_memory_session ... ok
+test codex_backend_records_json_thread_id_for_follow_up_messages ... ok
+test codex_backend_status_command_reports_selected_session_state ... ok
+test codex_backend_resume_invocation_uses_raw_follow_up_after_launch_context ... ok
+test prompt_policy_injects_launch_project_agent_instructions ... ok
+test prompt_policy_can_allow_direct_filesystem_reads ... ok
+test prompt_policy_wraps_every_agent_prompt_with_file_access_rules ... ok
+test codex_backend_process_failure_reports_stdout_when_stderr_is_empty ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/agent_provider_interface.rs (target/debug/deps/agent_provider_interface-1d8b9974c557c65a)
+
+running 2 tests
+test codex_backend_implements_the_same_provider_neutral_trait ... ok
+test external_agent_provider_implements_backend_through_agent_interface ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/cli.rs (target/debug/deps/cli-6a6835d1365ab060)
+
+running 22 tests
+test command_chat_launches_agents_inside_the_orchestrator ... ok
+test command_chat_new_without_prompt_opens_interactive_agent_session ... ok
+test no_read_permission_allows_direct_filesystem_reads ... ok
+test no_args_launches_orchestrator_from_current_project_directory ... ok
+test binary_help_describes_launching_orchestrator_not_internal_operations ... ok
+test process_args_accept_model_and_no_read_permission_together ... ok
+test top_level_internal_commands_are_rejected ... ok
+test process_help_mentions_internal_actions_as_in_app_commands_only ... ok
+test command_chat_corrects_agents_that_treat_work_leaf_as_a_shell_command ... ok
+test restricted_agent_prompt_advertises_completion_signal ... ok
+test failed_agent_launch_does_not_consume_user_agent_id ... ok
+test command_chat_continues_past_old_round_cutoff_until_agent_reports_done ... ok
+test command_chat_processes_agent_orchestrator_requests_automatically ... ok
+test command_chat_reports_non_convergence_when_emergency_guard_trips ... ok
+test command_chat_sends_malformed_patch_feedback_instead_of_erroring ... ok
+test command_chat_processes_reviewer_orchestrator_directives_before_findings ... ok
+test command_chat_applies_agent_patch_requests_automatically ... ok
+test command_chat_reuses_reviewer_for_later_commit_from_same_patch_agent ... ok
+test command_chat_proactively_updates_agents_with_stale_file_reads ... ok
+test command_chat_spawned_codex_handles_read_classify_patch_and_route_directives ... ok
+test command_chat_times_out_long_locked_command_runs ... ok
+test scripted_command_chat_reports_agent_launch_error_without_exiting ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running tests/file_locking.rs (target/debug/deps/file_locking-626f3c4707142d1d)
+
+running 5 tests
+test command_policy_covers_common_language_build_and_test_tools ... ok
+test command_policy_marks_known_build_commands_as_write_intents ... ok
+test file_paths_cannot_escape_project_root ... ok
+test orchestrator_reads_files_through_shared_read_locks ... ok
+test write_lock_waits_until_existing_readers_release_file ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running tests/http_orchestrator.rs (target/debug/deps/http_orchestrator-c88239164826dd71)
+
+running 1 test
+test localhost_http_controller_preserves_terminal_workflow_state ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running tests/linearize.rs (target/debug/deps/linearize-d14a6508d7d79679)
+
+running 3 tests
+test interactive_linearize_prompt_requires_user_accepted_plan_before_rewrite ... ok
+test linearize_questions_cover_each_reviewed_chat_id ... ok
+test linearize_handoff_launches_codex_agent_with_decisions_groups_and_tests ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/orchestrator_flow.rs (target/debug/deps/orchestrator_flow-c8975a2195cdb5e3)
+
+running 1 test
+test non_ui_agent_patch_review_and_linearize_flow_works_end_to_end ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/orchestrator_protocol.rs (target/debug/deps/orchestrator_protocol-307e9232681aa8f6)
+
+running 15 tests
+test orchestrator_protocol_batches_consecutive_file_reads_into_one_agent_follow_up ... ok
+test orchestrator_protocol_reads_files_and_classifies_commands_for_agents ... ok
+test orchestrator_protocol_sends_malformed_patch_feedback_back_to_the_agent ... ok
+test orchestrator_protocol_sends_patch_conflicts_back_to_the_agent ... ok
+test orchestrator_protocol_runs_command_under_requested_write_locks ... ok
+test orchestrator_protocol_returns_failing_command_output_to_agent ... ok
+test orchestrator_protocol_does_not_update_readers_after_done ... ok
+test orchestrator_protocol_sends_compact_patch_conflict_refresh_for_previously_read_files ... ok
+test orchestrator_protocol_applies_agent_patch_and_routes_messages_between_agents ... ok
+test orchestrator_protocol_sends_compact_stale_updates_to_other_agents ... ok
+test orchestrator_protocol_proactively_sends_updated_files_to_stale_readers ... ok
+test orchestrator_protocol_blocks_done_until_command_changes_are_committed ... ok
+test orchestrator_protocol_applies_patch_without_running_project_required_checks ... ok
+test orchestrator_protocol_commits_already_applied_command_diff_before_done ... ok
+test orchestrator_protocol_times_out_long_locked_command_runs ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/patching.rs (target/debug/deps/patching-7a798effeff4074c)
+
+running 9 tests
+test patch_coordinator_sends_no_file_header_diagnostics_back_to_agent ... ok
+test patch_coordinator_sends_conflict_diagnostics_back_to_agent ... ok
+test patcher_rejects_multi_file_conflict_without_partially_applying_clean_hunks ... ok
+test patcher_rejects_conflicting_patch_and_keeps_worktree_clean ... ok
+test patcher_applies_indented_fenced_unified_diff_from_agent_reply ... ok
+test patcher_does_not_run_language_specific_fallback_checks ... ok
+test patcher_applies_unified_diff_and_creates_metadata_commit ... ok
+test patch_coordinator_applies_patch_without_running_project_required_checks ... ok
+test patcher_applies_patch_without_running_project_required_checks ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/reviews.rs (target/debug/deps/reviews-8766b0fb4ad27184)
+
+running 3 tests
+test review_coordinator_loops_until_reviewer_reports_no_findings ... ok
+test git_history_finds_latest_commit_for_each_agent_id ... ok
+test git_history_builds_agent_review_scope_since_baseline ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/start_script.rs (target/debug/deps/start_script-7b3a6c767dd31b2c)
+
+running 2 tests
+test start_script_uses_default_daemon_port_and_fails_when_unavailable ... ok
+test start_script_builds_release_binaries_and_stops_daemon_after_cli_exit ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running tests/terminal_app.rs (target/debug/deps/terminal_app-a6e3d1e4364dd5af)
+
+running 36 tests
+test terminal_app_command_prompt_arrows_keep_visible_cursor_at_edit_position ... ok
+test terminal_app_quits_only_from_prompt_q ... ok
+test terminal_app_ctrl_c_shows_quit_notice ... ok
+test terminal_app_command_mode_typing_shows_insert_mode_notice ... ok
+test terminal_app_keeps_visible_cursor_on_chat_input ... ok
+[master (root-commit) a8293da] ADD initial readme fixture
+ 1 file changed, 1 insertion(+)
+ create mode 100644 README.md
+[master (root-commit) b482f28] UPDATE apply parser patch from user-1
+ 1 file changed, 4 insertions(+)
+ create mode 100644 README.md
+test terminal_app_prompt_history_down_restores_in_progress_command ... ok
+test terminal_app_slash_command_from_chat_view_sends_agent_command ... ok
+test terminal_app_chat_arrows_keep_visible_cursor_at_edit_position ... ok
+test terminal_app_does_not_clear_screen_on_each_render_or_drop_fast_input ... ok
+test terminal_app_keeps_chat_prompt_visible_after_large_agent_output ... ok
+test terminal_app_answers_agent_file_requests_even_when_one_requested_path_is_missing ... ok
+test terminal_app_names_user_session_from_first_prompt_immediately ... ok
+test terminal_app_sends_spawned_codex_slash_command_as_backend_command ... ok
+test terminal_app_does_not_run_project_required_checks_outside_agent ... ok
+test terminal_app_command_agent_opens_multiple_patch_agents_from_chat_request ... ok
+test terminal_app_spawned_codex_processes_directive_message_before_later_prose_message ... ok
+test terminal_app_names_interactive_chat_from_first_inserted_prompt_immediately ... ok
+test terminal_app_review_adds_reviewer_chat_and_streams_output_immediately ... ok
+test terminal_app_comma_collapses_left_pane_and_keeps_selected_chat_visible ... ok
+test terminal_app_chat_focus_arrows_edit_buffer_while_command_mode_is_active ... ok
+test terminal_app_sgr_mouse_release_on_left_agent_row_selects_that_chat ... ok
+test terminal_app_bytewise_arrow_prefix_keeps_focused_chat_in_insert_mode ... ok
+test terminal_app_sgr_mouse_click_on_left_agent_row_selects_that_chat ... ok
+test terminal_app_left_pane_keyboard_selection_switches_the_visible_chat ... ok
+test terminal_app_new_and_chat_message_use_real_command_chat_backend ... ok
+test terminal_app_new_and_chat_work_through_spawned_codex_backend ... ok
+test terminal_app_chat_history_down_restores_in_progress_message ... ok
+test terminal_app_mouse_wheel_scrolls_chat_history ... ok
+test terminal_app_sends_to_one_chat_while_another_chat_is_waiting_for_codex ... ok
+test terminal_app_chat_focus_arrows_recall_history_while_command_mode_is_active ... ok
+test terminal_app_prompts_to_close_reviewed_patch_chat_and_reopens_on_typing ... ok
+test terminal_app_chat_pane_shows_only_the_selected_agent_session ... ok
+test terminal_app_new_adds_agent_immediately_while_backend_is_loading ... ok
+test terminal_app_ctrl_c_never_quits_and_only_right_focus_interrupts_agent ... ok
+test terminal_app_streams_automatic_agent_follow_up_output ... ok
+test terminal_app_streams_spawned_codex_output_before_process_finishes ... ok
+
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.02s
+
+     Running tests/terminal_pty.rs (target/debug/deps/terminal_pty-73727fc728fbab8a)
+
+running 3 tests
+test real_terminal_pty_handles_file_read_left_toggle_and_chat_switching ... ok
+test real_terminal_pty_keeps_chat_prompt_visible_after_large_agent_output ... ok
+test real_terminal_pty_ignores_ctrl_c_and_exits_on_colon_q ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.48s
+
+     Running tests/terminal_ui.rs (target/debug/deps/terminal_ui-644160366e9cd1a3)
+
+running 16 tests
+test colon_enters_command_prompt_only_from_command_mode ... ok
+test activating_agent_chat_moves_cursor_to_right_insert_mode ... ok
+test comma_does_not_hide_the_right_chat_while_chat_focus_is_active ... ok
+test mouse_clicking_a_left_pane_agent_row_opens_that_agent_chat ... ok
+test left_pane_includes_command_interface_and_agent_introspection ... ok
+test agent_list_actions_expose_split_window_fork_and_ready_highlight ... ok
+test terminal_layout_reserves_left_fifth_for_agents ... ok
+test visual_mode_highlights_selected_right_pane_text ... ok
+test vim_style_keys_drive_mode_focus_visibility_and_tabs ... ok
+test raw_mode_screen_uses_crlf_so_frame_fills_terminal_width ... ok
+test screen_renderer_draws_left_fifth_right_pane_and_status_line ... ok
+test prompt_mode_renders_colon_command_line_and_cursor_on_bottom_row ... ok
+test selecting_agent_changes_right_surface_to_agent_chat ... ok
+test focus_cursor_stays_inside_left_or_right_pane ... ok
+test left_pane_can_hide_selected_agents_from_control_list ... ok
+test left_pane_navigation_moves_cursor_to_selected_agent_row_and_opens_chat ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/ui_harness.rs (target/debug/deps/ui_harness-d63edc97834cfe7b)
+
+running 34 tests
+test scripted_harness_arrow_keys_edit_focused_chat_without_switching_to_command ... ok
+test scripted_harness_arrow_keys_move_left_pane_selection_like_j_k ... ok
+test scripted_harness_arrow_keys_recall_chat_history ... ok
+test scripted_harness_bytewise_arrow_keys_edit_focused_chat_without_switching_to_command ... ok
+test scripted_harness_chat_history_down_restores_in_progress_message ... ok
+test scripted_harness_bytewise_prompt_arrow_keys_edit_without_leaving_prompt ... ok
+test scripted_harness_ctrl_c_never_quits_and_only_right_focus_interrupts_agent ... ok
+test scripted_harness_insert_mode_records_chat_text_and_literal_colons ... ok
+test scripted_harness_prompt_arrow_keys_recall_prompt_history ... ok
+test scripted_harness_quits_only_through_colon_q ... ok
+test scripted_harness_left_right_arrows_move_left_pane_selection_like_j_k ... ok
+test scripted_harness_names_new_chat_from_first_inserted_prompt ... ok
+test scripted_harness_slash_command_starts_agent_chat_command_from_chat_view ... ok
+test scripted_harness_prompt_history_down_restores_in_progress_prompt ... ok
+test scripted_harness_long_prompt_arrows_keep_rendered_cursor_at_edit_position ... ok
+test scripted_harness_bytewise_arrow_prefix_keeps_focused_chat_in_insert_mode ... ok
+test scripted_harness_ctrl_c_shows_quit_notice ... ok
+test scripted_harness_command_mode_typing_shows_insert_mode_notice ... ok
+test scripted_harness_left_pane_navigation_does_not_show_typing_notice ... ok
+test scripted_harness_new_commands_select_new_agent_chat ... ok
+test scripted_harness_command_mode_shift_y_yanks_focused_line ... ok
+test scripted_harness_closes_reviewed_chat_on_yes_and_reopens_on_typing ... ok
+test scripted_harness_visual_line_mode_yanks_left_pane_lines ... ok
+test scripted_harness_prompt_arrow_keys_move_visible_cursor ... ok
+test scripted_harness_drives_ctrl_w_navigation_and_left_toggle ... ok
+test scripted_harness_visual_mode_yanks_right_pane_text ... ok
+test scripted_harness_insert_arrow_keys_move_visible_chat_cursor ... ok
+test scripted_harness_structural_command_keys_do_not_show_typing_notice ... ok
+test scripted_harness_renders_full_width_crlf_frame ... ok
+test scripted_harness_visual_block_mode_yanks_right_pane_columns ... ok
+test scripted_harness_visual_mode_shift_y_yanks_selected_lines ... ok
+test scripted_harness_mouse_wheel_scrolls_chat_history ... ok
+test scripted_harness_switches_modes_without_enter ... ok
+test scripted_harness_rings_and_highlights_ready_chat ... ok
+
+test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/workspace.rs (target/debug/deps/workspace-48aed3aa4cc9e302)
+
+running 18 tests
+test controller_line_events_do_not_resend_full_session_transcripts ... ok
+test controller_uses_backend_agent_to_name_chat_from_first_prompt ... ok
+test controller_routes_status_slash_command_to_selected_agent_backend_command ... ok
+test controller_routes_fork_slash_command_to_selected_agent_backend_command ... ok
+test controller_does_not_start_review_until_patch_agent_reports_done ... ok
+test controller_exposes_ui_neutral_events_and_snapshot_without_terminal_ui ... ok
+test controller_does_not_run_project_required_checks_after_agent_reply ... ok
+test controller_keeps_agent_loading_scoped_to_the_active_session ... ok
+test controller_status_events_do_not_resend_existing_large_transcripts ... ok
+test controller_uses_agent_profile_for_non_codex_launches_and_reviews ... ok
+test controller_starts_review_after_patch_agent_done_and_loops_until_clean ... ok
+test controller_review_prompt_covers_all_agent_commits_since_launch ... ok
+test controller_auto_review_ignores_historical_agents_outside_current_patch_agent ... ok
+test controller_linearize_uses_only_commits_reviewed_in_this_session ... ok
+test controller_reuses_one_reviewer_for_repeated_patch_agent_iterations ... ok
+test controller_reviews_only_unreviewed_patch_agent_commits ... ok
+test controller_linearize_keeps_multiple_reviewed_commits_from_same_agent ... ok
+test controller_routes_status_slash_command_while_selected_agent_is_busy ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s
+
+     Running unittests examples/ui_harness.rs (target/debug/examples/ui_harness-606c04fe58fa34aa)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

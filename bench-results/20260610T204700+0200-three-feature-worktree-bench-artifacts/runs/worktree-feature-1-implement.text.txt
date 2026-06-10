@@ -1,0 +1,73 @@
+I’ll inspect the UI architecture and existing harness tests first, then add a focused failing test for visual selection before touching implementation. After that I’ll wire the feature through the same UI paths the terminal uses.
+Inspect architecture and UI input/rendering paths
+Add focused visual-mode regression tests and confirm they fail
+Implement pane-scoped visual, line, and block selection with yank behavior
+Run required checks and real-agent applicability review
+The architecture document keeps terminal behavior in `src/ui.rs`, `src/ui_harness.rs`, and `src/terminal_app.rs`, with frontend state driven through `WorkLeafController` DTOs. I’m going into those files and the existing UI tests now so the new mode stays inside the terminal frontend boundary.
+I found the relevant contract: `TerminalApp` and `UiHarness` both delegate key handling to `TerminalUi`, and `UiHarness::render_frame` renders through `TerminalUi::render_screen_with_cursors`. That gives a single implementation point plus harness coverage for both pane focus states.
+There is no clipboard abstraction yet in the UI layer, so I’m checking how public terminal state is exported before choosing the narrowest surface for tests. The feature likely needs a small public getter for the latest yanked text so harness and terminal-app tests can verify `y` and `Y` without depending on the host clipboard.
+The terminal app already renders the exact text for both panes through `TerminalUi`, so I can keep selection as terminal presentation state instead of involving controller/workspace. I’m going to add tests at the `TerminalUi` level for text extraction and at `UiHarness` for actual byte sequences, including `Ctrl-V`.
+Before editing, I’m adding tests that describe the intended behavior rather than only checking internal state: visual line yank should emit an OSC 52 clipboard sequence, and the harness should accept raw `Ctrl-V` for block selection. These will fail on the current implementation.
+The focused tests are in place. I’m running just those test targets now to capture the expected failure before implementing the UI state and yank path.
+The new tests fail as expected on the missing yank surface. I’m implementing the terminal-side selection state now: cached pane text for yanks, visual movement, reverse-video selection rendering, and OSC 52 emission on yank.
+Inspect architecture and UI input/rendering paths
+Add focused visual-mode regression tests and confirm they fail
+Implement pane-scoped visual, line, and block selection with yank behavior
+Run required checks and real-agent applicability review
+One implementation detail: I’m avoiding a new `UiMode` enum variant because `UiMode` is part of the public crate surface. The visual state stays inside `TerminalUi`, and the status line reports `mode=visual`, so the feature is visible without making external exhaustive matches on `UiMode` fail.
+The left-pane block test’s expected text needs to match the actual cursor row: the harness starts with `user-1` selected, so block selection begins on that agent row, not on the command row. I’m tightening that expected value while implementing the selection logic.
+I’m about to edit `src/ui.rs`, `src/ui_harness.rs`, and `src/terminal_app.rs`. The important wiring is that `TerminalApp` and `UiHarness` will pass their current right-pane content into `TerminalUi` before key handling, so `y` copies the same text the user is looking at.
+The first broad patch was too large for the current file context, so I’m splitting it into smaller edits. That keeps the changes reviewable and avoids accidentally moving unrelated rendering code.
+The state scaffolding is in `TerminalUi`: it has an internal visual selection, a visible right-pane cache, and a yank buffer. Next I’m wiring key handling so `v`, `V`, raw `Ctrl-V`, `y`, `Y`, and movement keys operate while leaving existing command and insert modes intact.
+Selection rendering is being added to the TUI widgets rather than by post-processing ANSI output. That means the same `tui` buffer path used by tests, the harness, and the real terminal gets reverse-video styling for selected text.
+The render methods now cache the visible right-pane text and prepend pending clipboard data exactly once on the next frame. I’m adding the selection/yank helpers next, including text extraction for character-wise, line-wise, and block-wise selections.
+The copy behavior uses OSC 52 (`ESC ] 52 ; c ; base64 BEL`) because this is a terminal UI. The same selected text is also kept in `TerminalUi::yank_buffer()` so tests and embedders can verify it without relying on terminal clipboard support.
+The core `TerminalUi` helpers are in place. I’m updating the harness and real terminal app adapters so all non-editing keys go through the context-aware UI handler, and so arrow keys are no longer stolen by chat-history editing while a visual selection is active.
+The adapter routing is partially updated. I’m adding the matching terminal-app helper now, then I’ll run formatting/checks to catch borrow or lifetime issues in the new span-building code.
+The raw `Ctrl-V` path is now parsed in both the harness and terminal app as a control character routed to `TerminalUi`. I’m formatting and compiling the focused tests next; that will surface any lifetime issues in the styled spans or cached-pane handling.
+Formatting completed. I’m running the two new focused tests now; if they pass I’ll broaden to the UI-related targets before the full required check set.
+The initial focused tests pass. I’m adding one more narrow harness check for lowercase `v` character selection, because the earlier tests cover `V` and `Ctrl-V` but not the primary visual-mode entry key.
+The file was formatted after the previous patch, so I’m inserting the extra test against the formatted context.
+The lowercase `v` harness test is in place. I’m formatting again and then I’ll run the full UI harness and terminal UI test files to catch regressions around navigation, cursor placement, and ready-row styling.
+The UI-related test targets are green, including `TerminalApp`, so the same key path works through the real app adapter. I’m updating the architecture doc’s Terminal UI section because this is a user-facing terminal workflow and the repo asks docs to describe current behavior when that changes.
+The doc context has shifted from the earlier read, so I’m locating the Terminal UI paragraph and patching that exact spot.
+I found the exact Terminal UI section. The update will describe the feature as current behavior, not as a changelog.
+The documentation update is done and stays system-oriented. I’m moving into the required checks now: `cargo fmt`, then clippy with all targets/features, then the full test suite.
+Inspect architecture and UI input/rendering paths
+Add focused visual-mode regression tests and confirm they fail
+Implement pane-scoped visual, line, and block selection with yank behavior
+Run required checks and real-agent applicability review
+`cargo fmt` is clean. I’m running clippy with the repository’s required flags now; this is the pass most likely to catch API/lifetime rough edges in the new selection helpers.
+Clippy is clean with `-D warnings`. I’m running the full test suite now, including the UI harness and pseudo-terminal tests required for terminal behavior.
+The full required Rust test suite is green. Because this touches terminal interaction, I’m doing the repo’s bounded real-Codex smoke check next; if local Codex setup blocks before an agent starts, I’ll record the exact pre-agent failure as instructed.
+The real Codex smoke check succeeded and returned `WORK_LEAF_REAL_AGENT_OK` after `thread.started`. I’m doing a final diff/status review now to make sure only the intended files changed and to collect precise file references for the handoff.
+There is one untracked `refcell_eq` binary from my quick local Rust check; it is unrelated generated output from this turn. I’m removing that and then I’ll re-check status.
+The unrelated generated binary is gone. I’m collecting the final status and line references now; after that I’ll provide the concise implementation summary and validation results.
+The final status contains only the intended six modified files: terminal UI/app/harness code, two UI test files, and the architecture doc. I’m marking the plan complete and then I’ll hand off the changes and validation results.
+Inspect architecture and UI input/rendering paths
+Add focused visual-mode regression tests and confirm they fail
+Implement pane-scoped visual, line, and block selection with yank behavior
+Run required checks and real-agent applicability review
+Implemented vim-like visual selection for terminal panes, left uncommitted.
+
+Key points:
+- [src/ui.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui.rs:391): `TerminalUi::handle_key_with_context` caches visible right-pane content before key handling.
+- [src/ui.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui.rs:472): command mode maps `v`, `V`, raw `Ctrl-V`, `y`, and `Y`.
+- [src/ui.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui.rs:1031): visual mode handles `h/j/k/l`, arrows, `0`, `$`, `gg`, `G`, `y`, and `Y`.
+- [src/ui.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui.rs:1180): yanks store selected text and emit OSC 52 clipboard output on the next render.
+- [src/terminal_app.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/terminal_app.rs:794) and [src/ui_harness.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui_harness.rs:418): terminal app and harness route keys through the context-aware UI path.
+- [docs/architecture.md](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/docs/architecture.md:290): terminal visual-selection behavior is documented as current system behavior.
+
+Tests added:
+- [tests/terminal_ui.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/tests/terminal_ui.rs:296): right-pane `V` line selection yanks via OSC 52.
+- [tests/ui_harness.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/tests/ui_harness.rs:536): left-pane `Ctrl-V` block selection and lowercase `v` character selection.
+
+Validation:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- Real Codex smoke: `printf ... | codex --cd "$PWD" --sandbox read-only --ask-for-approval never exec --color never --json -` started a thread and returned `WORK_LEAF_REAL_AGENT_OK`.
+Inspect architecture and UI input/rendering paths
+Add focused visual-mode regression tests and confirm they fail
+Implement pane-scoped visual, line, and block selection with yank behavior
+Run required checks and real-agent applicability review

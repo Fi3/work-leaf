@@ -1,0 +1,107 @@
+I’ll first inspect the integration state, branch tips, and the documented architecture so the merge work stays inside the repo’s stated boundaries. After that I’ll bring the reviewed branches in one at a time and collapse the result into the smallest coherent commit set.
+The checkout is detached and clean at the integration point. The three feature refs are present, and the architecture doc confirms UI changes should stay through `WorkLeafController`/terminal adapters while backend behavior belongs in `CommandChat` and provider-neutral runtime paths.
+Each feature branch already includes tests and architecture documentation updates. I’m going to squash each reviewed branch’s net diff from the shared base into this checkout so the final history is clear and does not preserve the intermediate review-fix commits.
+Inspect branch deltas and relevant ownership docs
+Apply feature 1 as a squashed integration commit and resolve conflicts
+Apply feature 2 as a squashed integration commit and resolve conflicts
+Apply feature 3 as a squashed integration commit and resolve conflicts
+Run formatting, clippy, tests, and real-agent verification as required
+Leave a clean worktree and summarize commits plus verification
+I’m applying feature 1 first because it owns most of the terminal input/rendering surface. That gives later slash-command and review-completion work a stable UI base to merge against.
+Feature 1 applied cleanly as a squash. I’ll format before committing it so the commit itself is in the repository’s normal Rust style rather than relying on a later cleanup commit.
+The formatter made no visible noise, so I’m committing the feature 1 integration with a message that describes the user-visible behavior and the UI state-machine approach.
+Feature 1 is committed. I’m moving to feature 2 next, which crosses `CommandChat`, backend command execution, controller routing, and terminal selected-agent chat input.
+Inspect branch deltas and relevant ownership docs
+Apply feature 1 as a squashed integration commit and resolve conflicts
+Apply feature 2 as a squashed integration commit and resolve conflicts
+Apply feature 3 as a squashed integration commit and resolve conflicts
+Run formatting, clippy, tests, and real-agent verification as required
+Leave a clean worktree and summarize commits plus verification
+I’ll apply feature 2 as a squash and then inspect any conflicts in the shared terminal tests and architecture doc before committing.
+Feature 2 conflicts only in `docs/architecture.md`; the shared terminal test changes merged automatically. I’m reading the conflict now and will keep the architecture text descriptive rather than patch-oriented.
+The feature 2 text extends the public `AgentBackend` surface with backend command execution, and the Codex provider handles `/status` and `/fork` without sending those strings to `codex exec resume`. The remaining doc conflict is in the terminal UI paragraph where feature 1 added visual mode and feature 2 added `/` chat focus behavior.
+I’m resolving the doc paragraph by keeping both current behaviors: `/` opens a selected-agent command-capable chat path, and command mode also supports visual selection/yank in the focused pane.
+The conflict is resolved in the architecture doc. I’m formatting the Rust changes and then I’ll check the index before committing feature 2.
+No conflict markers or whitespace errors remain in the feature 2 merge. Next I’m running the formatter and staging the resolved doc.
+The formatter ran, but `git add` hit a sandbox-level `.git/index.lock` write error even though the first commit succeeded. I’m checking the gitdir layout and current index state before choosing the least invasive recovery path.
+`.git` is mounted read-only in this sandbox now, which prevents resolving the unmerged index through normal `git add`. I’ll test whether this is a transient lock/mount issue; if it persists, I’ll continue by preparing the exact tree state and report the git write blocker explicitly.
+The write test and retry succeeded, so the earlier `index.lock` error was transient. The unmerged index is resolved; I’ll remove the temporary probe file and commit feature 2.
+The sandbox policy blocked removing the temporary `.git` probe with `rm`; it is not part of the worktree or index. I’m continuing with normal git status and commit checks.
+The staged feature 2 diff is clean. I’m committing it as a provider-neutral backend command path, with Codex implementing the selected-agent `/status` and `/fork` outputs.
+Feature 2 is committed. I’m applying feature 3 now, which touches review completion state in the controller and the terminal prompt/selection behavior around reviewed patch agents.
+Inspect branch deltas and relevant ownership docs
+Apply feature 1 as a squashed integration commit and resolve conflicts
+Apply feature 2 as a squashed integration commit and resolve conflicts
+Apply feature 3 as a squashed integration commit and resolve conflicts
+Run formatting, clippy, tests, and real-agent verification as required
+Leave a clean worktree and summarize commits plus verification
+I’ll squash-merge feature 3 and then reconcile any controller/UI conflicts against the two already-integrated behaviors.
+Feature 3 conflicts in `src/workspace.rs` and `src/ui_harness.rs`. I’m reading the conflict hunks with the existing feature 1/2 changes in view so the final behavior composes rather than overwriting either side.
+The conflicting controller area is exactly where feature 2 added backend slash-command routing and feature 3 added yes/no feature completion gating. The final `send_message` path needs to check completion replies first, then route slash commands without treating them as ordinary prompts.
+I’m resolving `send_message` so completion yes/no handling composes with slash commands: pending completion replies are consumed, non-reply text reopens the feature, and real slash commands still run through the backend command worker without setting normal reply loading.
+For the harness conflict, feature 1’s visual-mode line counting and feature 3’s yes/no helpers are independent, so I’m keeping both helper blocks.
+Both conflicts are resolved. I’m checking for remaining conflict markers and then I’ll format and stage the feature 3 integration.
+No conflict markers remain. I’m formatting and staging the resolved controller and harness files so the merge index is clean.
+The same transient `.git/index.lock` write error reappeared after formatting. I’m retrying the git index operation separately, since the previous occurrence cleared on retry without changing the working tree.
+The retry succeeded and feature 3 is staged. Before committing I’m checking the documentation text for the repo’s system-oriented style rule and confirming there are no whitespace errors.
+The documentation reads as current-system behavior and the staged diff has no whitespace errors. I’m committing feature 3 with the completion prompt semantics in the message.
+All three feature integrations are committed. I’m moving into validation: first formatter/status, then clippy, full tests, and the real-agent smoke check required for agent-facing behavior.
+Inspect branch deltas and relevant ownership docs
+Apply feature 1 as a squashed integration commit and resolve conflicts
+Apply feature 2 as a squashed integration commit and resolve conflicts
+Apply feature 3 as a squashed integration commit and resolve conflicts
+Run formatting, clippy, tests, and real-agent verification as required
+Leave a clean worktree and summarize commits plus verification
+I’m running `cargo fmt` as the first required check and will amend if it changes anything.
+`cargo fmt` completed and the worktree stayed clean. I’m running the full clippy gate next.
+Clippy is clean with `-D warnings`. I’m running the full test suite now.
+The full Rust test suite is green. Because these changes affect selected-agent backend command routing and terminal chat behavior, I’m running the bounded real Codex smoke check from the repo instructions next.
+The Codex CLI itself answered correctly, so the configured backend is usable. I’m going one step closer to the changed behavior by running a tiny temporary Work Leaf program against the real `CodexBackend`: launch a real session, send `/status` through `WorkLeafController::send_message`, and verify the status output appears without needing an ordinary resume prompt.
+The public exports include `CodexBackend`, `CommandChat`, `PromptPolicy`, and `WorkLeafController`, so the temporary smoke can use the same public integration surface documented in `docs/architecture.md`.
+I’m checking the exact `/status` rendering so the smoke verifies the behavior by text the backend actually produces, rather than relying on a loose match.
+The backend command output starts with `Codex backend status`, so the real smoke can verify that exact line after a real launch and selected-agent `/status` send.
+To avoid extra hidden title-agent traffic in the smoke, I’m using `CommandChat` directly: it is the command orchestration surface that detects `/status` via `src/cli.rs::agent_backend_command_text` and calls `AgentBackend::execute_command_streaming`.
+I’m writing the temporary smoke program under `/tmp` so the repository history and working tree remain untouched.
+The temporary smoke program is ready. It will fail unless a real Codex launch returns the requested marker and the subsequent `/status` send returns `Codex backend status` for `user-1`.
+The real launch streamed the expected `WORK_LEAF_REAL_AGENT_OK`, but my temporary smoke matched the wrong `CommandChatResult` variant. I’m adjusting the smoke to accept the actual launch result shape while still verifying the streamed real-agent output and `/status` backend command result.
+`launch_prepared_agent_streaming_with_ids` returns `AgentLaunched` for a launch, so I’m correcting the temporary smoke and rerunning only the smoke.
+The temporary smoke is fixed. It still verifies the same real launch marker and then checks selected-agent `/status` output from the backend command path.
+The real Work Leaf smoke passed: a real Codex session launched, and selected-agent `/status` returned `Codex backend status` from the backend command path. I’m doing a final repository status/log check now.
+The temporary `.git` write probe cannot be removed through `apply_patch` because `.git` is outside the editable project surface. I’m trying a direct `unlink` for that single probe file; if policy blocks it, it still will not affect `git status` or the committed tree.
+The sandbox currently presents `.git` as read-only for removal, so the zero-byte probe file remains inside `.git` but outside the worktree/index. I’m verifying the committed tree and worktree status now.
+The committed worktree is clean and whitespace checks are clean. I’m making one more attempt to remove the zero-byte `.git` probe now that normal git reads are succeeding; this is housekeeping only and does not affect the committed tree.
+The probe file is removed. I’m doing the final status check and then I’ll summarize the three commits and verification results.
+Final status is clean at detached `HEAD`, with three integration commits on top of the requested base.
+Inspect branch deltas and relevant ownership docs
+Apply feature 1 as a squashed integration commit and resolve conflicts
+Apply feature 2 as a squashed integration commit and resolve conflicts
+Apply feature 3 as a squashed integration commit and resolve conflicts
+Run formatting, clippy, tests, and real-agent verification as required
+Leave a clean worktree and summarize commits plus verification
+Inspect branch deltas and relevant ownership docs
+Apply feature 1 as a squashed integration commit and resolve conflicts
+Apply feature 2 as a squashed integration commit and resolve conflicts
+Apply feature 3 as a squashed integration commit and resolve conflicts
+Run formatting, clippy, tests, and real-agent verification as required
+Leave a clean worktree and summarize commits plus verification
+Integrated the three reviewed branches as three squashed commits on detached `HEAD`:
+
+- `50c9d14 ADD vim-style visual selection for terminal pane copying`
+- `c920b2d ADD selected-agent slash commands for backend-only execution`
+- `4f8bdb8 ADD review-completion prompts for patch-agent done decisions`
+
+Verification passed:
+
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- Real Codex smoke: `codex --cd "$PWD" --sandbox read-only --ask-for-approval never exec --color never --json -` returned `WORK_LEAF_REAL_AGENT_OK`.
+- Real Work Leaf slash-command smoke: launched a real Codex-backed `CommandChat`, then sent selected-agent `/status`; it returned `Codex backend status` for `user-1` with the real Codex thread id.
+
+Final status is clean: `git diff --quiet HEAD --` passed and `git status --short --branch` shows only detached `HEAD`.
+Inspect branch deltas and relevant ownership docs
+Apply feature 1 as a squashed integration commit and resolve conflicts
+Apply feature 2 as a squashed integration commit and resolve conflicts
+Apply feature 3 as a squashed integration commit and resolve conflicts
+Run formatting, clippy, tests, and real-agent verification as required
+Leave a clean worktree and summarize commits plus verification

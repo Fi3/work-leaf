@@ -1,0 +1,22 @@
+You are continuing the same direct Codex feature task.
+
+Request 1:
+add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select
+
+The reviewer reported the findings below. Fix only the reviewed feature behavior and tests needed to
+resolve those findings. Leave changes uncommitted; the benchmark driver will commit them.
+
+Reviewer findings:
+I’ll review the requested range only and keep this in code-review mode. I’m going to inspect the diff, relevant UI/input code, tests, and docs for behavior or coverage gaps introduced by the visual-mode request.
+The touched files are all terminal UI/harness/doc related. I’m drilling into the actual diff next, then I’ll cross-check the input paths and tests against the requested Vim visual-mode behavior.
+The diff adds visual state and OSC 52 yanking inside `TerminalUi`, with app/harness wrappers passing the current right-pane content into the key handler. I’m checking whether the visual cursor and clipboard behavior actually matches both panes and the requested Vim-like keys.
+One thing stands out already: the right-pane selection works from a cached render view, not the full transcript. I’m checking whether that is intentional for “focused panes” or whether scrolling/movement makes selected text diverge from what the user sees.
+The test additions cover a narrow happy path: left-pane character/block yanks and right-pane line yanks. I’m now validating edge cases introduced by the change, especially the interaction between key parsing and the existing modal input/router.
+The architecture doc was updated with the new terminal selection behavior. I’m also scanning the rest of the documentation for existing keybinding/user-flow sections that would now be stale.
+There is a `Readme.md` rather than `README.md`; the keybinding search only found the new architecture note and the harness fixture banner. I’m opening the repo docs that exist to confirm whether any user-facing keybinding docs were missed.
+The production right pane is built by `TerminalAppCore::right_content`, which calls `terminal_right_content` and always appends `chat> ...`. I’m checking that helper because the new right-pane visual start point is derived from the last cached line.
+FINDINGS
+
+- `src/ui.rs:1220` anchors right-pane visual mode at `lines.len() - 1`, while `src/terminal_app.rs:930` -> `src/cli.rs:1199` always appends `chat> ...` as the last right-pane line. In the real terminal/harness path, `Vky` from the focused right pane yanks the previous transcript line plus `chat> `, not just pane output. The only right-pane test in `tests/terminal_ui.rs:297` bypasses this path by rendering `"alpha\nbeta"` without the chat prompt, so the regression is not covered.
+
+- `Spec.md:1` documents the terminal Vim-style controls but does not mention visual selection, `v`, `V`, `Ctrl-V`, or `y`/`Y`. This request changes the documented terminal workflow, so `Spec.md` is now stale even though `docs/architecture.md` was updated.

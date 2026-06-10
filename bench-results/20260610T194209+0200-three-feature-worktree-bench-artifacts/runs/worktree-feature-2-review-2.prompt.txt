@@ -1,0 +1,57 @@
+You are a normal direct Codex review agent. Do not modify files.
+
+Review only the changes for request 2 since commit c92a0b7060a36eac6db2d869b85e589a7a9480f9:
+implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt.
+
+Inspect the repository and the diff from c92a0b7060a36eac6db2d869b85e589a7a9480f9..HEAD. Report only bugs, regressions,
+missing tests for the changed behavior, or required documentation gaps introduced by this request.
+
+Additional author response and verification evidence from the previous fix turn:
+I’ll address the reviewer’s single finding by producing a real-agent verification run for the selected-agent slash path. Since Work Leaf’s normal Codex child launch is blocked in this sandbox by Codex app-server initialization under a separate process group, I’m going to seed the Work Leaf Codex backend with a real Codex thread created by the configured CLI, then exercise the actual `CommandChat::send_to_agent("/status")` command route against that real thread state.
+The checkout is clean, so there is no code diff to adjust for this finding. I’m running a fresh real Codex launch now and capturing the thread id for the Work Leaf slash-command verification.
+The real Codex launch produced thread `019eb2b2-1da8-7421-8a55-5bc79a66d49a` and the expected `WORK_LEAF_REAL_AGENT_OK`. I’m adding a temporary example that seeds `CodexBackend` with that real thread and then exercises `CommandChat::send_to_agent("/status")`, which is the reviewed slash-command route.
+The temporary verifier is in place. I’m running it with the captured real thread id, then I’ll delete the file so the repo remains clean.
+The real-thread Work Leaf slash verifier passed and printed the expected Codex status output. I’m deleting the temporary example now.
+I’m checking the worktree again after removing the temporary verifier.
+No files are modified after the temporary verifier cleanup. Since the reviewer finding was verification-specific, I’ll run the standard checks once more against the current checkout so the ready report is complete.
+Format and clippy are clean. I’m running the full test suite now.
+All required checks passed. I’m doing a final worktree check before the response.
+No source changes were needed for this follow-up; the checkout is clean. I resolved the reviewer’s process finding by running and recording real-agent verification.
+
+Real-agent verification run:
+
+1. Created a real Codex thread with the configured backend:
+
+```sh
+printf 'Reply exactly with WORK_LEAF_REAL_AGENT_OK and do not modify files.\n' | \
+  codex --cd "$PWD" --sandbox read-only --ask-for-approval never exec --color never --json -
+```
+
+Result: `thread_id=019eb2b2-1da8-7421-8a55-5bc79a66d49a`, reply `WORK_LEAF_REAL_AGENT_OK`.
+
+2. Exercised Work Leaf’s selected-agent slash route against that real Codex thread state with a temporary example calling `CommandChat::send_to_agent(&user_1, "/status")`.
+
+Result:
+
+```text
+Codex status for user-1
+thread: 019eb2b2-1da8-7421-8a55-5bc79a66d49a
+state: ready
+feature: user-agent
+```
+
+The temporary verifier was deleted afterward.
+
+Checks passed:
+- `cargo fmt --check`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

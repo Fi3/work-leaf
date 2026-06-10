@@ -1,0 +1,18 @@
+I’ll make the smallest follow-up: inspect the terminal UI architecture note and the current visual-mode tests, then add focused coverage that presses uppercase `Y` and verifies linewise copied text.
+The reviewer is right: `Y` behavior exists in both command mode and visual mode, but no test presses it. I’m adding narrow harness coverage for both: command-mode `Y` yanking the focused line, and visual-mode `Y` forcing a linewise yank.
+The two `Y` tests are in place. I’m running the harness target first to verify the new coverage against the existing behavior.
+The new `Y` coverage passes. I’ll run formatting and the repository-required checks now.
+Formatting is clean. I’m running clippy across all targets and features.
+Clippy is clean. I’m running the full test suite to finish validation.
+The full suite is green. I’ll check the final diff so the close-out only mentions the reviewed coverage change.
+Added the missing uppercase `Y` coverage in [tests/ui_harness.rs](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/tests/ui_harness.rs):
+
+- command-mode `Y` yanks the focused left-pane line
+- visual-mode `Y` forces a linewise yank over selected right-pane rows
+
+Validation passed:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+
+No real-agent workflow is affected; this follow-up only adds UI harness coverage for existing terminal selection behavior. Changes are uncommitted.

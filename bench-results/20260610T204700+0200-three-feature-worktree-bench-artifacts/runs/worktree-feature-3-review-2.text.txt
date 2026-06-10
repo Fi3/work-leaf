@@ -1,0 +1,6 @@
+I’ll re-review the current tree, including any uncommitted reviewer-fix changes, because the author response says the fix was left uncommitted. I’ll compare both `c92a0b7..HEAD` and the working-tree delta before deciding.
+The worktree is clean, so the reviewer fix has been incorporated into `HEAD`. I’m reading the updated diff and the affected symbols now, with attention to the repeated completion cycle and event-cache behavior.
+The previous duplicate-marker bug is fixed in both the controller and the terminal cache, and the terminal-app regression now exercises two clean-review confirmations. I’m checking the remaining changed harness/docs/tests for any new mismatch with the requested behavior.
+The updated patch now allows repeated completion control lines in both places that deduplicate transcript events, and the regression covers the second clean-review close path through the real terminal adapter. I’m doing a final repository-wide search for any remaining changed behavior that lacks docs or coverage.
+I don’t see a remaining behavior defect in the updated implementation: the pending/closed controller state, transcript events, and terminal ready-state derivation now line up across repeated review cycles. I’m checking the fake backend behavior once more because the second-cycle test should not accidentally pass by making the agent busy.
+NO_FINDINGS

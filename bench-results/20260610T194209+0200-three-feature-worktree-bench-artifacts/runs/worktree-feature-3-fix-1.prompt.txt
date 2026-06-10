@@ -1,0 +1,22 @@
+You are continuing the same direct Codex feature task.
+
+Request 3:
+when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it
+
+The reviewer reported the findings below. Fix only the reviewed feature behavior and tests needed to
+resolve those findings. Leave changes uncommitted; the benchmark driver will commit them.
+
+Reviewer findings:
+I’ll inspect the architecture guide, the requested commit range, and the touched tests/docs so the review is limited to behavior introduced by this patch.
+The patch touches controller, terminal app, UI rendering, harness, tests, and architecture docs. I’m reading the exact diff and the changed call paths next, with focus on the review-complete question and reopen behavior.
+One important thing in this repo is that the shipped CLI uses the remote terminal adapter, while `TerminalApp` is mostly the in-process test/embedder path. I’m checking whether the new UI state is applied through both adapters or only one.
+The controller-side state and docs are present, but I need to verify the render/input edge cases around hidden selected chats and whether snapshots can restore the same state in the remote client.
+I’m checking the review result semantics now. The completion prompt should appear when the review process is actually finished, not merely whenever a review worker returns a result if that can include findings requiring another patch.
+The review coordinator can return `ReviewComplete` with `findings_resolved=false` when max rounds are exhausted, so I’m checking whether this patch distinguishes a clean completed review from an unresolved one.
+The architecture doc was updated in system-oriented language. I’m scanning the other docs that describe review/orchestrator workflows to see if this new user-facing terminal behavior needs to be reflected elsewhere.
+The only stale documentation I see outside the architecture guide is the workflow doc’s review lifecycle, which still describes marking the review/reviewer chat done rather than the patch-agent chat. I’m doing one last pass over the changed UI/cache logic for regressions before finalizing.
+The HTTP controller carries the same event stream to the remote app, so the live CLI path uses the same terminal core. I’m not seeing a remote-specific code split, but there is a separate workflow doc that still contradicts the new patch-agent completion flow.
+There is one commit in the review range and no verification artifact in the tree. I’m checking the commit body once, then I’ll report only concrete issues from the diff.
+FINDINGS
+
+- `docs/orchestrator-file-workflow.md:87`, `:409`, `:437`, and `:538` still describe the user marking the review/reviewer chat done after `NO_FINDINGS`. The patch changes the workflow to prompt and close/reopen the patch-agent chat via `WorkLeafController::ask_feature_completion` in `src/workspace.rs:717-720`, so this doc now contradicts the implemented user-facing review completion flow.

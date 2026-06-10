@@ -1,0 +1,87 @@
+I’ll inspect the documented architecture and the terminal UI/harness code first so the visual-mode behavior lands in the existing UI path and gets covered by focused tests.
+The architecture keeps terminal behavior in `src/ui.rs`, `src/ui_harness.rs`, and `src/terminal_app.rs`, with tests already driving the same frame path through `UiHarness`. I’m going to add the failing coverage there first, then implement the UI state and rendering in that layer only.
+I found no clipboard implementation yet, so the feature will need an internal yank register exposed by the UI/harness tests rather than relying on a platform clipboard dependency. The selection can be represented in `TerminalUi` and rendered with the existing reversed style that the tests already assert for ready rows.
+I’m adding tests that assert the user-visible mechanics: `v` character selection, `V` line selection, Ctrl-V block selection, reverse-video highlighting, and the yank register contents after `y`. These should fail until the UI selection state and Ctrl-V parsing are implemented.
+The harness tests are in place and target the public `TerminalUi` state through `UiHarness`, including byte `22` for Ctrl-V. I’m adding one renderer-level test next so selection highlighting is covered independently of the harness transcript fixture.
+The initial tests intentionally reference behavior that does not exist yet. I’ll run the focused UI tests now to confirm they fail for the expected missing API/behavior before changing implementation.
+The focused test run fails at the expected boundary: `TerminalUi` has no yank/visual-selection API yet, so the tests compile-fail before behavior assertions. The implementation plan is: add private visual-selection state to `TerminalUi`, render selected spans in both panes, map visual-mode keys and Ctrl-V through both input adapters, expose the current yank register for tests, then run the UI targets and full required checks.
+Add TerminalUi visual-selection state and yank register
+Render selected ranges in left and right panes
+Route visual-mode keys and Ctrl-V through harness and app input
+Update architecture docs only for the changed terminal UI behavior
+Run focused UI tests and required cargo checks
+I’m going to keep `UiMode` unchanged to avoid a breaking public enum variant. Visual mode will be private `TerminalUi` state, shown in the status line as `mode=visual`, with a public yank-register getter for tests and integrations.
+The basic state and key entry points are in `TerminalUi`. Next I’m replacing the plain text widgets with span-based rendering so selected character, line, and block ranges can be drawn without changing the controller or backend layers.
+The rendering path now has the hooks for styled spans; I’m filling in the selection math and yank behavior. This is all local to `src/ui.rs`, using the text that each pane already renders.
+The selection math now supports character, line, and rectangular block yanks over the current pane text. I’m wiring cursor placement and status text so visual mode is visible while active and returns to the normal status or yank notice after copy.
+The UI can now display visual mode without changing the public `UiMode`. I’m adding the small text helpers and then I’ll connect the raw input adapters so Ctrl-V reaches this state machine in the real terminal and harness paths.
+The core UI code is mostly in place. Now I’m updating `UiHarness` and `TerminalApp` so visual-mode keys are routed to `TerminalUi` instead of being mistaken for chat editing, and mapping raw Ctrl-V byte `22` to the new key.
+Ctrl-V now reaches the same `UiKey` path in both input adapters, and visual mode blocks chat-arrow routing while active. I’ll run the focused tests to catch compile and behavior issues before touching documentation.
+The focused run shows the feature path works, with one fixture expectation off: visual cursor movement does not change the left-pane control row marker, so the copied agent row keeps its leading space. I’m tightening that test to the actual rendered-pane text.
+I’ve corrected the expected left-pane line text. I’ll rerun the focused visual tests, then run the broader UI harness to catch regressions in existing keyboard paths.
+The focused tests now pass. Since the terminal control surface is documented, I’m updating the existing terminal UI docs in current-state wording to include visual selection and yanking, without adding a changelog-style note.
+The architecture doc paragraph has slightly different wrapping than the patch context. I’ll read that section and apply a tighter edit against the exact text.
+The doc wording is unchanged and current-state oriented. I’m applying the update against the exact lines now.
+`Spec.md` is the user-facing terminal-control summary, so I’m adding the visual selection controls there as current behavior too.
+Add TerminalUi visual-selection state and yank register
+Render selected ranges in left and right panes
+Route visual-mode keys and Ctrl-V through harness and app input
+Update architecture docs only for the changed terminal UI behavior
+Run focused UI tests and required cargo checks
+The implementation and docs are patched. I’m running formatting first, then the focused UI targets, clippy, and the full test suite required by the repo instructions.
+Formatting completed cleanly. I’ll run the UI harness and terminal UI tests next, since those cover the changed state machine and renderer paths.
+The focused UI targets pass. I’m moving to the required repository checks now, starting with clippy across all targets and features.
+Clippy found one local issue in the new selection loop: it wants the character selection code to iterate with `enumerate()` instead of indexing by range. I’ll fix that directly and rerun formatting/clippy.
+That loop now uses iterator enumeration, which keeps the same behavior without the clippy warning. I’m reformatting and rerunning clippy.
+Formatting is clean after the clippy fix. I’m rerunning the full clippy command now.
+Clippy is clean. I’m running the full `cargo test --all-targets --all-features` suite now.
+The full test suite passed. I’m checking the final diff and status now so I can summarize exactly what changed and confirm no unrelated files were touched.
+One API governance issue is worth tightening: adding a public `UiKey::CtrlV` enum variant would be a breaking change for downstream exhaustive matches. I’m switching Ctrl-V to the existing `UiKey::Char('\u{16}')` representation so the feature stays within the current public enum shape.
+The public enum shape is back to its original variants. I’m updating the two raw input adapters to send Ctrl-V as a control character through the existing `UiKey::Char` path.
+The harness adapter now preserves Ctrl-V without a new `UiKey` variant. I’m making the same adjustment in the terminal app adapter.
+The Ctrl-V representation is now internal and backward-compatible for the public enum. I’m checking for any leftover `CtrlV` references, then rerunning formatting and validation.
+`cargo fmt` completed; the search pattern used an invalid escape, so I’ll rerun that search with fixed patterns before validation.
+No `CtrlV` variant references remain. I’ll use fixed-string search for the control-character literal, then rerun clippy and tests.
+The Ctrl-V literals are only in the intended input and state-machine spots. I’m running clippy again, then the full test suite once more after the API-compatible adjustment.
+Clippy is still clean. I’m rerunning `cargo test --all-targets --all-features` to verify the final code.
+The final full test run passed. I’m doing one last status/diff check and then I’ll report the result, including the real-agent verification note required by the repo policy.
+I’m going to make the yank user-visible, not just test-visible: after `y`/`Y`, the next frame will emit an OSC 52 clipboard sequence while also keeping the internal yank register. That gives terminal copy behavior without adding a platform clipboard dependency.
+The render path now has a pending clipboard prefix. I’m adding the small base64 encoder for OSC 52 and a test assertion so this stays covered.
+The OSC 52 helper is dependency-free and only emits after a yank. I’ll extend the right-pane visual-mode harness test to assert the copy sequence for the selected text.
+Since copy now reaches the terminal clipboard path through OSC 52 as well as the internal register, I’m making the architecture wording precise.
+The docs now describe the clipboard behavior as current terminal UI behavior. I’m reformatting and rerunning the focused UI tests before the required full checks.
+Formatting completed. I’ll rerun the UI harness and terminal UI targets to check the visual selection and OSC 52 assertions.
+The focused UI tests pass with the clipboard sequence covered. I’m running the required clippy command again.
+Clippy is clean. I’m running the full test suite one final time after the OSC 52 addition.
+All required tests are green after the clipboard change. I’m collecting the final status and diff summary now.
+The final diff is limited to the terminal UI, input adapters, focused tests, and matching docs. I noticed one grammar slip in the spec line I added, so I’m correcting that before the final status.
+That was documentation-only. I’ll run `cargo fmt` once more for completeness and then check final status.
+Formatting is still clean. I’m doing the final status check now, then I’ll close with the checks and verification note.
+Add TerminalUi visual-selection state and yank register
+Render selected ranges in left and right panes
+Route visual-mode keys and Ctrl-V through harness and app input
+Update architecture docs only for the changed terminal UI behavior
+Run focused UI tests and required cargo checks
+Implemented visual selection for both panes.
+
+What changed:
+- Added Vim-style visual character, line, and block selection in [src/ui.rs](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/src/ui.rs).
+- `v`, `V`, and Ctrl-V enter character, line, and block selection.
+- `h/j/k/l` and arrow keys extend the selection.
+- `y` copies the selected range; `Y` copies selected lines/current line.
+- Copy stores text in the UI yank register and emits an OSC 52 clipboard sequence.
+- Wired Ctrl-V and visual-mode routing through [src/ui_harness.rs](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/src/ui_harness.rs) and [src/terminal_app.rs](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/src/terminal_app.rs).
+- Added focused coverage in [tests/ui_harness.rs](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/tests/ui_harness.rs) and [tests/terminal_ui.rs](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/tests/terminal_ui.rs).
+- Updated current-state docs in [docs/architecture.md](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/docs/architecture.md) and [Spec.md](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/Spec.md).
+
+Validation passed:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+
+Real-agent verification: no real-agent workflow is affected. This change is local terminal selection/rendering/copy behavior and does not alter agent launch, send/resume, provider integration, or orchestrator protocol behavior. Changes are left uncommitted.
+Add TerminalUi visual-selection state and yank register
+Render selected ranges in left and right panes
+Route visual-mode keys and Ctrl-V through harness and app input
+Update architecture docs only for the changed terminal UI behavior
+Run focused UI tests and required cargo checks

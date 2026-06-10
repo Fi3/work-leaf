@@ -1,0 +1,7 @@
+I’ll re-check the full `c92a0b7..HEAD` range again, now focusing on the new prompt-start metadata path and whether the app, harness, rendering, and selection caches stay consistent.
+The final range now has larger `TerminalUi` changes. I’m reading the new context structs/helpers first, then the app/harness call sites and regressions.
+The metadata now flows through app and harness render/key calls, and the selectable-line helper uses the cached visible prompt line when present. I’m checking line-counting and scroll/visibility edge cases next, because those determine whether the cached prompt line points at the same rendered line after trimming.
+The prompt metadata fix addresses the sentinel issue for yanking. I found one remaining issue in the same visible-content path: the splitter now treats the whole multiline draft as the prompt block, but the row-count helper still counts it as a single logical line for viewport sizing.
+FINDINGS
+
+- `src/ui.rs:1877` now passes the full multiline prompt block into `visual_row_count` at `src/ui.rs:1895`, but `visual_row_count` (`src/ui.rs:1865`) counts characters in a single string and does not account for embedded `\n`. Since `src/terminal_app.rs:549` allows chat drafts with line breaks, `history_height` is too large for multiline drafts; the right pane can render more history than fits and clip prompt/draft lines instead of keeping the full prompt block visible. The new tests cover yanking with multiline drafts, but not rendering/visibility for that prompt-block path.

@@ -1,0 +1,45 @@
+You are a normal direct Codex review agent. Do not modify files.
+
+Review only the changes for request 2 since commit 20bc15d71efd8965602b76d84c9f9bc9269f3b88:
+implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt.
+
+Inspect the repository and the diff from 20bc15d71efd8965602b76d84c9f9bc9269f3b88..HEAD. Report only bugs, regressions,
+missing tests for the changed behavior, or required documentation gaps introduced by this request.
+
+Additional author response and verification evidence from the previous fix turn:
+I’ll address only the reviewer’s busy-session slash command issue. First I’m rereading the architecture note and the current controller worker path, then I’ll add a failing busy-session test before changing the implementation.
+The current test backend can already record command calls. I’m adding a busy selected-agent regression test next; it should fail by showing “still working” instead of recording `/status`.
+The controller keeps a cloned `CommandChat` available while workers run, so the fix can route slash commands synchronously through the backend command hook without disturbing the active loading state. I’m adding the busy-session regression test now.
+I’m editing only `tests/workspace.rs` for the failing regression case first.
+The busy-session regression test is in place. I’m running it now to confirm it fails against the reviewed behavior.
+The new test fails for the intended reason. I’m moving slash-command handling ahead of the busy guard and executing it through the controller’s available `CommandChat` clone without changing the session’s existing loading state.
+The controller now handles backend slash commands before the busy check and leaves loading untouched. I’m formatting and rerunning the regression test.
+The busy-session regression now passes. I’m running the focused workspace and terminal slash tests before the full required checks.
+Focused tests are clean. I’m running the required full checks again.
+Clippy is clean. I’m running the full test suite now.
+Automated checks are green. I’m rerunning the bounded real Codex smoke; I won’t retry the Work Leaf controller-level smoke that already hit the local app-server read-only initialization failure.
+The real Codex smoke reached `thread.started` and returned the expected token. I’m doing a final diff/status check.
+Fixed the reviewer finding.
+
+`WorkLeafController::send_message` now routes selected-agent slash commands before the busy-session guard, executes them through the backend command path synchronously, appends the command output, and preserves the existing loading state for the active normal agent turn.
+
+Added regression coverage in `tests/workspace.rs` proving `/status` runs while the selected agent is busy, does not append “still working”, does not hit normal backend `send`, and leaves the active reply loading until the slow send completes.
+
+Validation:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- `git diff --check`
+
+Real-agent smoke:
+- Ran the required bounded Codex command; it reached `thread.started` and returned `WORK_LEAF_REAL_AGENT_OK`.
+- I did not retry the Work Leaf controller-level real smoke because the earlier attempt was blocked pre-agent by Codex local app-server initialization: `Read-only file system (os error 30)`.
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

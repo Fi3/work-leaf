@@ -1,0 +1,5 @@
+I’ll re-review the current diff from `c92a0b7..HEAD`, focusing only on the slash-command behavior and the `/fork` fix described in the author response. No file writes.
+The current diff includes the documented `/fork` adjustment. I’m tracing the current Codex command dispatch and the tests around `/status`/`/fork` to check for remaining request-scoped failures.
+The remaining `/fork` implementation is now a rendered backend response, not a spawned Codex command. I’m checking line-numbered slices and the docs inventory for any remaining gaps before deciding the marker.
+The tests now cover `/status` and `/fork` through both the fake backend routing path and a spawned fake-Codex path that fails if either command reaches `exec resume` or top-level `fork`. I’m scanning the rest of the docs for stale slash-command statements.
+NO_FINDINGS

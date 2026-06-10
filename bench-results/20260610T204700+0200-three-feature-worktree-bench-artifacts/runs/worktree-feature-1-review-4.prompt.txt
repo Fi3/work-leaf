@@ -1,0 +1,86 @@
+You are a normal direct Codex review agent. Do not modify files.
+
+Review only the changes for request 1 since commit c92a0b7060a36eac6db2d869b85e589a7a9480f9:
+add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select
+
+Inspect the repository and the diff from c92a0b7060a36eac6db2d869b85e589a7a9480f9..HEAD. Report only bugs, regressions,
+missing tests for the changed behavior, or required documentation gaps introduced by this request.
+
+Additional author response and verification evidence from the previous fix turn:
+The remaining issue cannot be solved reliably from the text alone: user draft lines can also start with `chat> `. I’m adding a failing production-path test for that sentinel case first, then I’ll pass explicit prompt-start metadata from the app/harness into `TerminalUi` so it can distinguish the real prompt marker from user-entered text.
+Add failing regression for draft line starting with chat prompt marker
+Pass prompt-start metadata through terminal app and harness contexts
+Use prompt metadata for visible-content splitting and yank filtering
+Run required checks and real-agent verification
+I’ll add the sentinel regression beside the multiline draft test in `tests/terminal_app.rs` so both cases use the same production input path.
+The sentinel regression is in place. I’m running it alone now to confirm it fails on the current `rposition("chat> ")` logic.
+The test fails as expected: the fake prompt marker inside the draft shifts the truncation point. I’m adding explicit prompt-start-line metadata through the app/harness render and key paths now.
+Add failing regression for draft line starting with chat prompt marker
+Pass prompt-start metadata through terminal app and harness contexts
+Use prompt metadata for visible-content splitting and yank filtering
+Run required checks and real-agent verification
+First I’m adding a cached `right_prompt_start_line` to `TerminalUi` and extending the crate-internal context methods. Public render methods will keep their current signatures and fall back to heuristic parsing for direct tests.
+Now I’m threading the prompt-start line into key handling. This is crate-internal, so it won’t affect the public `TerminalUi::handle_key` API.
+I’m adding the visible-content metadata struct next, then I’ll update rendering so the cache remains correct while a visual selection is displayed.
+The render path is being split into a shared internal method so `TerminalApp` and `UiHarness` can render with exact prompt metadata, while existing public render calls still work.
+Rendering now preserves prompt metadata in the cache. Next I’m changing `visible_right_content` into a metadata-returning helper and updating selection/yank filtering to use the cached prompt line.
+I found the remaining cache helper. I’m adding the prompt-start parameter there and then switching the right-pane line helpers to use the cached exact line.
+The cache now stores the visible prompt-start line. I’m switching `focus_cursor_text_position` and `pane_line_texts` to use that exact cached line instead of scanning for `chat> ` text.
+Now I’m changing the selectable-line helper itself: with metadata it truncates at the exact prompt line; without metadata it keeps the old heuristic fallback for direct `TerminalUi` callers.
+The filtering helper is metadata-aware. I’m updating `visible_content` so it computes the visible prompt-start line after scroll/tail trimming, and adding a line-index splitter for the exact prompt line.
+I need the lower helper section, so I’m opening the `visible_content` area and patching it directly.
+The UI helper now returns both visible text and the visible prompt-start line. I’m updating `UiHarness` to provide prompt metadata in both render and key paths.
+That patch duplicated `render_frame` instead of replacing it cleanly. I’m correcting that immediately.
+I’m replacing the duplicated block with the intended single render method.
+I’m applying a focused patch to keep only the context-aware `render_frame`.
+The duplicate is fixed. I’m adding `right_content_context` in the harness and updating key handling to pass the prompt-start line.
+The harness now passes exact prompt metadata. I’m doing the same in `TerminalAppCore`, where the prompt-start line is derived from the transcript lines before `terminal_right_content` appends `chat> `.
+`TerminalAppCore` now computes and passes the prompt line. I’m adding a small transcript line counter so embedded newlines in transcript entries are counted the same way `terminal_right_content` renders them.
+All context calls are updated. I’m formatting and rerunning the sentinel regression plus the prior multiline tests.
+`cargo fmt` is clean. I’m running the focused regressions now.
+The focused tests pass, but the new context helpers made the old private `right_content` wrappers unused. I’m removing those two private wrappers so clippy stays clean.
+The harness wrapper is removed. I’m removing the matching private wrapper in `TerminalAppCore`.
+The unused wrappers are gone. I’m formatting again and then moving to the required checks.
+`cargo fmt` is clean. I’m running clippy and the full test suite now.
+Add failing regression for draft line starting with chat prompt marker
+Pass prompt-start metadata through terminal app and harness contexts
+Use prompt metadata for visible-content splitting and yank filtering
+Run required checks and real-agent verification
+Clippy is clean. I’m running `cargo test --all-targets --all-features`.
+The full suite is green. I’m running the bounded real-Codex smoke check again for the terminal-interaction change.
+Real Codex verification passed. I’m collecting final status and references for the handoff.
+The references are gathered. One helper line range missed the selectable helper, so I’m checking that exact line once for the final note.
+The exact selectable helper is at `src/ui.rs:1714`; the final summary will point there.
+The reviewed fix is complete; I’m marking the plan done.
+Add failing regression for draft line starting with chat prompt marker
+Pass prompt-start metadata through terminal app and harness contexts
+Use prompt metadata for visible-content splitting and yank filtering
+Run required checks and real-agent verification
+Fixed the sentinel case where a user-entered draft line starts with `chat> `.
+
+The fix no longer guesses the prompt from the last `chat> ` text line. `TerminalAppCore` and `UiHarness` now pass the real prompt-start line into `TerminalUi`, and `TerminalUi` carries that through visible-content caching and right-pane yank filtering. See [src/terminal_app.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/terminal_app.rs:483), [src/ui_harness.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui_harness.rs:120), and [src/ui.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui.rs:399).
+
+`selectable_right_text_lines` now truncates at the cached prompt line when available, and `visible_content` preserves the visible prompt line after scrolling/trimming. See [src/ui.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui.rs:1714) and [src/ui.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui.rs:1877).
+
+Added a failing-first regression for `first draft\nchat> quoted draft` at [tests/terminal_app.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/tests/terminal_app.rs:439).
+
+Validation:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- Real Codex smoke succeeded: `thread.started`, then `WORK_LEAF_REAL_AGENT_OK`.
+
+Changes are uncommitted.
+Add failing regression for draft line starting with chat prompt marker
+Pass prompt-start metadata through terminal app and harness contexts
+Use prompt metadata for visible-content splitting and yank filtering
+Run required checks and real-agent verification
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

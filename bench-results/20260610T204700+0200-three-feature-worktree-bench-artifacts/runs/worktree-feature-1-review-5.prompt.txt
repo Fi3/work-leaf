@@ -1,0 +1,48 @@
+You are a normal direct Codex review agent. Do not modify files.
+
+Review only the changes for request 1 since commit c92a0b7060a36eac6db2d869b85e589a7a9480f9:
+add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select
+
+Inspect the repository and the diff from c92a0b7060a36eac6db2d869b85e589a7a9480f9..HEAD. Report only bugs, regressions,
+missing tests for the changed behavior, or required documentation gaps introduced by this request.
+
+Additional author response and verification evidence from the previous fix turn:
+I’ll add a rendering regression first: a small terminal, large agent output, and a multiline chat draft. The expected behavior is that both `chat> first draft` and the continuation line stay visible. Then I’ll adjust row counting to treat embedded newlines as separate visual rows.
+Add failing multiline prompt visibility regression
+Fix visual row counting for embedded newlines
+Run required checks and real-agent verification
+I’m placing the visibility regression near the existing large-output prompt tests in `tests/terminal_app.rs`, since this is the same right-pane prompt visibility path.
+I’m continuing from the row-count finding and keeping the scope tight: one regression around multiline prompt visibility, then the minimal counting fix in the UI helper.
+I found the current helper exactly as reported: `visual_row_count` treats the whole prompt string as one line, and `visible_content` feeds it the multiline prompt block. I’m adding the regression beside the existing large-output prompt test so it exercises the app render path, not a private helper.
+I’m going to make the test deliberately tight vertically, with enough transcript lines that the off-by-one prompt row count matters. It asserts the whole two-line draft is visible after rendering.
+The regression is in place. I’m running just that test now to confirm it reproduces the reviewer’s reported clipping before touching the helper.
+The focused test fails before the fix: the rendered frame shows `chat> first draft` but clips `second draft`. I’m changing the shared visual row helper to sum wrapped rows per embedded line break, preserving the existing wrap math for each line.
+The helper is patched. I’m rerunning the focused regression first, then I’ll run formatting and the required full validation set.
+The regression now passes. I’m moving through the repo-required checks next, starting with formatting.
+Formatting completed cleanly. I’m running clippy with the repository’s strict flags now.
+Clippy is clean. I’m running the full test suite now because the helper affects shared terminal rendering row math.
+The full automated suite is green. Because this patch affects terminal chat rendering, I’m also running the repository’s bounded real Codex smoke check required by AGENTS.
+Real Codex verification returned the expected `WORK_LEAF_REAL_AGENT_OK`. I’m doing one final diff/status pass so the closeout is grounded in the exact files changed.
+Implemented the reviewed fix and left changes uncommitted.
+
+Changed [src/ui.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/src/ui.rs:1865) so `visual_row_count` counts embedded `\n` as separate visual rows before computing right-pane history height. Added a regression in [tests/terminal_app.rs](/home/user/src/work-leaf/.bench-tmp/work-leaf-3feature-worktree-bench.if2eWj/worktrees/feature-1/tests/terminal_app.rs:593) that failed before the fix by clipping the second draft line, then passed after.
+
+Validation run:
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- Real Codex smoke check returned `WORK_LEAF_REAL_AGENT_OK`
+
+Docs were not changed because this fixes the existing visual prompt rendering behavior without changing the documented workflow.
+Add failing multiline prompt visibility regression
+Fix visual row counting for embedded newlines
+Run required checks and real-agent verification
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

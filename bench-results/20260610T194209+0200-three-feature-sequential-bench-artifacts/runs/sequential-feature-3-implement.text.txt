@@ -1,0 +1,55 @@
+I’ll inspect the documented architecture first, then trace the review/patch chat flow and existing UI harness tests so the change stays inside the repo’s intended boundaries.
+The architecture puts this in the controller/UI boundary: `WorkLeafController` owns review completion events and `TerminalApp`/`TerminalUi` own selection, highlighting, and prompt behavior. I’m narrowing in on those state transitions and the existing harness tests now.
+The current terminal highlight is tied to `loading == None` for every session, so it cannot distinguish “ready for more input” from “reviewed and awaiting a done decision.” I’m going to add an explicit review-decision state at the controller DTO layer and have the terminal app render/respond to it.
+I found the event model: terminal frontends consume `WorkLeafEvent`, so the new yes/no prompt needs to travel as session state instead of being inferred from transcript text. I’m checking serialization/HTTP next because these DTOs cross the daemon boundary.
+The existing hide behavior is `x` in the left pane (`src/ui.rs::hide_control_selection`), so I’ll reuse that concept for “close” rather than inventing another lifecycle. The controller will mark a patch session as awaiting a completion decision after review; the terminal will answer `yes` locally by hiding it, and any non-yes typed response will clear the decision and go back through normal chat.
+I’m going to add the regression test first and run it by itself to confirm the requested behavior is currently missing. Then I’ll implement the smallest controller/UI changes needed to make that test pass.
+I’m adding one integration-style terminal test around the existing automatic review path, because that’s the path where the controller knows the review is complete and the terminal can prove the yes/typing behavior end to end.
+The failing test is in place. I’ll run just that test now to make sure it fails for the expected missing prompt/selection behavior before changing code.
+The initial failure is exactly the existing behavior: after automatic review the reviewer chat remains selected and no yes/no decision exists. I’m patching the controller to append and select the reviewed patch chat, then adding terminal-local handling for the decision.
+The controller now emits the review decision prompt on the patch agent transcript and selects that patch chat after `ReviewComplete`, which keeps workflow ownership in `src/workspace.rs`. Next I’m adding terminal presentation helpers for hiding/showing a closed chat row.
+The UI helper is intentionally terminal-local: it hides or reveals the agent row without changing the controller’s sessions. I’m wiring that into the terminal app’s chat submit path now.
+The terminal app now keeps a small set of sessions awaiting the feature-done answer. `yes` is consumed locally and hides the row; `no` consumes the decision and leaves the chat open; any other typed message clears the decision, reveals the row, and resumes the agent normally.
+The new behavior is mostly active; the remaining test assertion was too broad because `review-user-1` still contains the substring `user-1`. I’m tightening it to check the patch-agent row shape specifically.
+I’ll rerun the focused regression now with the corrected row check.
+Because this is terminal UI behavior, I’m also adding a `UiHarness` regression that exercises the same close/reopen interaction through the harness path required by the repo instructions.
+The harness has the same local decision behavior now, so the harness test can verify the terminal row closes on `yes` and returns when the user types a follow-up.
+I’ll run the focused terminal app regression plus the new harness regression before touching broader checks.
+The harness assertion had the same substring issue: the fixture’s dependency line can still mention `user-1` after the row is hidden. I’m tightening that row check too.
+I’ll rerun the harness regression with the corrected row match.
+The focused app and harness regressions are green. I’m doing a diff pass now to catch API/docs implications before running the required checks.
+The code path looks scoped: no public DTO shape changed, and the behavior rides on existing transcript/selection events. I’m updating the architecture doc because the review-to-terminal workflow is documented there and this changes that workflow.
+I noticed the doc patch split a code-formatted prompt across a line break, so I’m cleaning that wording before running formatting and checks.
+The implementation and docs are in place. I’ll run `cargo fmt` next, then the required clippy and full test suite.
+Formatting completed cleanly. I’m starting the required clippy run with all targets and features.
+Clippy is clean. I’m running the full required test suite now.
+The required Rust checks are green. Since this touches review/patch chat behavior, I’m running the repo’s bounded real Codex smoke command so the ready report can include the real-agent verification status.
+The real Codex smoke succeeded and returned `WORK_LEAF_REAL_AGENT_OK`. I’m doing a final status/diff check to make sure only intended files changed and no generated artifacts were left behind.
+One edge in the diff matters for repeated review cycles: the controller can append the same yes/no prompt again, but the terminal cache was still deduplicating identical lines. I’m adjusting that cache path so a later review prompt appears at the bottom again.
+That repeat-prompt cache fix is in. I’m rerunning formatting and the required checks after the final code change.
+Formatting is still clean. I’m rerunning clippy.
+Clippy remains green. I’m rerunning the full test suite once more.
+All required Rust checks are green after the final change. I’m rerunning the bounded real Codex smoke once after the last edit so the verification is fresh.
+The fresh real-agent smoke also succeeded. I’ll take one last status snapshot, then I’ll summarize the changed files and verification results.
+I’m grabbing line numbers for the main changes so the final summary can point to concrete locations instead of vague file names.
+Implemented the reviewed-patch completion prompt flow.
+
+Changes:
+- [src/workspace.rs](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/src/workspace.rs:18): review completion appends `work-leaf: is this feature done? yes/no` to the patch-agent chat and reselects that patch chat.
+- [src/terminal_app.rs](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/src/terminal_app.rs:816): terminal chat consumes `yes` locally to hide the patch row, consumes `no` to keep it open, and sends any other typed text normally while revealing the row again.
+- [src/ui.rs](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/src/ui.rs:369): added terminal-local hide/show helpers for agent rows.
+- [src/ui_harness.rs](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/src/ui_harness.rs:76): harness mirrors the close/reopen behavior.
+- [docs/architecture.md](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/docs/architecture.md:221): documented the resulting review and terminal behavior.
+
+Tests added:
+- [tests/terminal_app.rs](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/tests/terminal_app.rs:959)
+- [tests/ui_harness.rs](/tmp/work-leaf-3feature-sequential-bench.fBdycP/repo/tests/ui_harness.rs:38)
+
+Verification:
+- Confirmed the new terminal app regression failed before implementation.
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- Real Codex smoke: `codex --cd "$PWD" --sandbox read-only --ask-for-approval never exec --color never --json -` returned `WORK_LEAF_REAL_AGENT_OK`.
+
+Changes are uncommitted as requested.

@@ -1,0 +1,5 @@
+I’ll re-read the current working tree against the base commit, including any uncommitted reviewer-fix changes, and verify the two prior gaps plus any new issues introduced by the fixes.
+The working tree is clean, so the fixes are in `HEAD`; the base-to-HEAD diff now includes `Spec.md` and `tests/terminal_pty.rs`. I’m reading those updated areas and the visual-selection implementation paths for regressions.
+The previous documentation and pty coverage gaps are now represented in the diff. I’m doing a final pass over the exact current line-numbered implementation and test paths before deciding whether anything remains.
+I don’t see the prior gaps remaining: `Spec.md` has the key list, `docs/architecture.md` describes the terminal behavior, and the pty test now exercises the real binary plus OSC 52 output. I’m doing one last check for uncommitted state and then I’ll return the review marker.
+NO_FINDINGS

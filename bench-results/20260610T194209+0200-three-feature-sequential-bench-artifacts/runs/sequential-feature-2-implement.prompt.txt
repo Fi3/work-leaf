@@ -1,0 +1,10 @@
+You are running as a normal direct Codex coding agent in this repository.
+
+Request 2:
+implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt.
+
+Work directly in the checkout using the repository's normal AGENTS.md instructions.
+Do not use Work Leaf orchestrator directives. Do not create or use extra Git worktrees.
+Implement the feature with focused tests. Leave the changes uncommitted; the benchmark driver will
+make the commit after your turn. Avoid unrelated refactors and avoid documentation-only churn unless
+the behavior genuinely requires documentation.

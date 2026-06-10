@@ -1,0 +1,17 @@
+You are continuing the same direct Codex feature task.
+
+Request 1:
+add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select
+
+The reviewer reported the findings below. Fix only the reviewed feature behavior and tests needed to
+resolve those findings. Leave changes uncommitted; the benchmark driver will commit them.
+
+Reviewer findings:
+I’ll re-check the current `c92a0b7..HEAD` diff against the previous findings and the request scope, without modifying files.
+The updated range now includes `Spec.md` and an extra `tests/ui_harness.rs` regression. I’m checking the right-pane line filtering, rendering path, and docs wording now.
+The prompt-exclusion fix handles the empty/single-line prompt case. I’m checking the existing multiline chat-buffer path because this UI already supports chat prompt line breaks, and that affects whether the prompt is always the trailing `chat> ...` line.
+There is a remaining edge case in the prompt stripping logic: the chat buffer can contain embedded newlines, so the appended input prompt is no longer just the final line. I’m checking whether tests cover that path before I decide the final finding.
+The existing tests cover keeping the prompt visible and the new empty-buffer right-pane yank, but I don’t see coverage for visual selection while the chat draft is multiline. That path matters because the app explicitly supports chat prompt line breaks.
+FINDINGS
+
+- `src/ui.rs:1645` only removes the right-pane prompt when the final cached line starts with `chat> `. But `src/terminal_app.rs:549` allows multiline chat drafts, and `src/cli.rs:1199` renders those as `chat> first line\nsecond line`; in that case the final line no longer starts with `chat> `, so `pane_line_texts(PaneFocus::Right)` at `src/ui.rs:1237` includes the chat input draft as selectable/yankable text. A right-pane visual yank with a multiline draft can still copy prompt/input text instead of transcript/output, and the new regression test only covers the empty single-line prompt case.
