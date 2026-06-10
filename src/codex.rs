@@ -252,46 +252,54 @@ impl CodexSdkSidecar {
 
         let mut output = CodexSdkTurnOutput::default();
         let mut streamed_messages = Vec::new();
-        let mut interrupt_requested = false;
         loop {
             let inbound = self.next_message(request_id)?;
             if let Some(event) = inbound.event {
                 match event {
                     CodexSdkEvent::Status { text } => {
+                        if output.thread_id.is_empty()
+                            && let Some(thread_id) = codex_sdk_session_id_from_status(&text)
+                        {
+                            output.thread_id = thread_id.to_string();
+                        }
                         let event = AgentStreamEvent::Status(text);
                         sink(event.clone());
-                        if !interrupt_requested
-                            && should_interrupt
-                                .as_deref_mut()
-                                .is_some_and(|detector| detector(&event))
+                        if should_interrupt
+                            .as_deref_mut()
+                            .is_some_and(|detector| detector(&event))
                         {
-                            interrupt_requested = true;
                             self.interrupt(turn.agent_id, shutdown)?;
+                            self.unregister_request(request_id);
+                            output.reply = streamed_messages.join("\n\n");
+                            return Ok(output);
                         }
                     }
                     CodexSdkEvent::Message { text } => {
                         streamed_messages.push(text.clone());
                         let event = AgentStreamEvent::AgentMessage(text);
                         sink(event.clone());
-                        if !interrupt_requested
-                            && should_interrupt
-                                .as_deref_mut()
-                                .is_some_and(|detector| detector(&event))
+                        if should_interrupt
+                            .as_deref_mut()
+                            .is_some_and(|detector| detector(&event))
                         {
-                            interrupt_requested = true;
                             self.interrupt(turn.agent_id, shutdown)?;
+                            self.unregister_request(request_id);
+                            output.reply = streamed_messages.join("\n\n");
+                            return Ok(output);
                         }
                     }
                     CodexSdkEvent::Usage { usage } => {
+                        output.usage = Some(usage);
                         let event = AgentStreamEvent::Usage(usage);
                         sink(event.clone());
-                        if !interrupt_requested
-                            && should_interrupt
-                                .as_deref_mut()
-                                .is_some_and(|detector| detector(&event))
+                        if should_interrupt
+                            .as_deref_mut()
+                            .is_some_and(|detector| detector(&event))
                         {
-                            interrupt_requested = true;
                             self.interrupt(turn.agent_id, shutdown)?;
+                            self.unregister_request(request_id);
+                            output.reply = streamed_messages.join("\n\n");
+                            return Ok(output);
                         }
                     }
                 }
@@ -681,6 +689,9 @@ fn route_sdk_inbound(
     let request_id = inbound.id.unwrap_or(0);
     let (lock, condvar) = &**router;
     let mut state = lock.lock().expect("codex sdk router mutex poisoned");
+    if request_id != 0 && !state.queues.contains_key(&request_id) {
+        return;
+    }
     state
         .queues
         .entry(request_id)
@@ -705,6 +716,12 @@ fn is_broken_pipe(error: &AgentError) -> bool {
 fn is_codex_slash_command(prompt: &str) -> bool {
     let mut chars = prompt.trim_start().chars();
     matches!(chars.next(), Some('/')) && chars.next().is_some_and(|ch| !ch.is_whitespace())
+}
+
+fn codex_sdk_session_id_from_status(text: &str) -> Option<&str> {
+    text.strip_prefix("Codex session ")
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
 }
 
 fn is_linearize_agent(agent_id: &AgentId) -> bool {

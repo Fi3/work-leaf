@@ -1,7 +1,9 @@
 use std::fs;
 use std::path::PathBuf;
+use std::sync::mpsc;
 use std::sync::{Arc, Barrier, Mutex};
 use std::thread;
+use std::time::Duration;
 
 use work_leaf::{
     AgentBackend, AgentId, AgentKind, AgentLaunch, AgentStreamEvent, AgentTokenUsage, CodexBackend,
@@ -738,6 +740,168 @@ done
     )));
     let requests = fs::read_to_string(fake_bin.join("requests.log")).unwrap();
     assert!(requests.contains(r#""op":"interrupt""#), "{requests}");
+}
+
+#[test]
+fn codex_backend_sdk_transport_returns_after_interrupt_ack_without_waiting_for_turn_completion() {
+    let root = temp_dir("codex-sdk-interrupt-returns-before-turn-completion");
+    let fake_bin = root.join("bin");
+    fs::create_dir_all(&fake_bin).unwrap();
+    let fake_python = fake_bin.join("python");
+    fs::write(
+        &fake_python,
+        r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$line" in
+    *'"op":"launch"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-1","reply":"ready"}\n' "$id"
+      ;;
+    *'"op":"send"'*)
+      patch='@work-leaf patch update readme\ndiff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end'
+      printf '{"id":%s,"event":{"type":"message","text":"%s"}}\n' "$id" "$patch"
+      IFS= read -r interrupt_line
+      interrupt_id=$(printf '%s' "$interrupt_line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+      printf '{"id":%s,"ok":true}\n' "$interrupt_id"
+      sleep 2
+      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-1","reply":"late completion"}\n' "$id"
+      ;;
+    *'"op":"interrupt"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      ;;
+    *'"op":"shutdown"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      exit 0
+      ;;
+    *)
+      printf '{"id":%s,"ok":false,"error":"unexpected request"}\n' "$id"
+      ;;
+  esac
+done
+"#,
+    )
+    .unwrap();
+    make_executable(&fake_python);
+
+    let mut backend = CodexBackend::new(
+        CodexCommandConfig::new(root)
+            .with_binary("/usr/bin/codex")
+            .with_sdk_transport()
+            .with_sdk_python(&fake_python),
+        PromptPolicy::for_restricted_agents(),
+    );
+    let agent_id = AgentId::new("chat-a").unwrap();
+    backend
+        .launch_streaming(
+            AgentLaunch::new(agent_id.clone(), AgentKind::Codex, "sdk", "launch"),
+            &mut |_| {},
+        )
+        .unwrap();
+
+    let (sender, receiver) = mpsc::channel();
+    let worker = thread::spawn(move || {
+        let mut events = Vec::new();
+        let mut should_interrupt = |event: &AgentStreamEvent| matches!(event, AgentStreamEvent::AgentMessage(text) if text.contains("@work-leaf end"));
+        let result = backend
+            .send_streaming_interruptible(
+                &agent_id,
+                "continue",
+                &mut |event| events.push(event),
+                &mut should_interrupt,
+            )
+            .map(|reply| (reply.text, events))
+            .map_err(|error| error.to_string());
+        sender.send(result).unwrap();
+        backend.shutdown();
+    });
+
+    let immediate = receiver.recv_timeout(Duration::from_millis(500));
+    let _ = worker.join();
+    let (reply, events) = immediate
+        .expect("streaming send should return as soon as the directive interrupt is acknowledged")
+        .expect("streaming send should succeed");
+    assert!(reply.contains("@work-leaf patch update readme"));
+    assert!(events.iter().any(|event| matches!(
+        event,
+        AgentStreamEvent::AgentMessage(text) if text.contains("@work-leaf end")
+    )));
+}
+
+#[test]
+fn codex_backend_sdk_transport_keeps_thread_id_when_launch_returns_after_interrupt_ack() {
+    let root = temp_dir("codex-sdk-launch-interrupt-keeps-thread-id");
+    let fake_bin = root.join("bin");
+    fs::create_dir_all(&fake_bin).unwrap();
+    let fake_python = fake_bin.join("python");
+    fs::write(
+        &fake_python,
+        r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$line" in
+    *'"op":"launch"'*)
+      patch='@work-leaf patch update readme\ndiff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end'
+      printf '{"id":%s,"event":{"type":"status","text":"Codex session sdk-thread-1"}}\n' "$id"
+      printf '{"id":%s,"event":{"type":"message","text":"%s"}}\n' "$id" "$patch"
+      IFS= read -r interrupt_line
+      interrupt_id=$(printf '%s' "$interrupt_line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+      printf '{"id":%s,"ok":true}\n' "$interrupt_id"
+      sleep 1
+      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-1","reply":"late completion"}\n' "$id"
+      ;;
+    *'"op":"interrupt"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      ;;
+    *'"op":"shutdown"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      exit 0
+      ;;
+    *)
+      printf '{"id":%s,"ok":false,"error":"unexpected request"}\n' "$id"
+      ;;
+  esac
+done
+"#,
+    )
+    .unwrap();
+    make_executable(&fake_python);
+
+    let mut backend = CodexBackend::new(
+        CodexCommandConfig::new(root)
+            .with_binary("/usr/bin/codex")
+            .with_sdk_transport()
+            .with_sdk_python(&fake_python),
+        PromptPolicy::for_restricted_agents(),
+    );
+    let agent_id = AgentId::new("chat-a").unwrap();
+    let mut events = Vec::new();
+    let mut should_interrupt = |event: &AgentStreamEvent| matches!(event, AgentStreamEvent::AgentMessage(text) if text.contains("@work-leaf end"));
+
+    let session = backend
+        .launch_streaming_interruptible(
+            AgentLaunch::new(agent_id.clone(), AgentKind::Codex, "sdk", "launch"),
+            &mut |event| events.push(event),
+            &mut should_interrupt,
+        )
+        .unwrap();
+
+    assert!(
+        session.messages[1]
+            .text
+            .contains("@work-leaf patch update readme")
+    );
+    assert!(events.iter().any(|event| matches!(
+        event,
+        AgentStreamEvent::Status(text) if text == "Codex session sdk-thread-1"
+    )));
+    let invocation = backend
+        .build_send_invocation(&agent_id, "continue")
+        .expect("resume invocation is built from the SDK status thread id");
+    assert_eq!(invocation.stdin, "continue");
+    assert!(invocation.args.iter().any(|arg| arg == "sdk-thread-1"));
+    backend.shutdown();
 }
 
 #[test]

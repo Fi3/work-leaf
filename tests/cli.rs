@@ -693,9 +693,15 @@ fn command_chat_processes_sdk_streamed_directives_before_final_reply() {
 printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
   id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
-  printf '%s\n' "{\"id\":$id,\"event\":{\"type\":\"message\",\"text\":\"@work-leaf patch return value two\\ndiff --git a/src/lib.rs b/src/lib.rs\\n--- a/src/lib.rs\\n+++ b/src/lib.rs\\n@@ -1 +1 @@\\n-pub fn value() -> u8 { 1 }\\n+pub fn value() -> u8 { 2 }\\n@work-leaf end\"}}"
-  printf '%s\n' "{\"id\":$id,\"event\":{\"type\":\"message\",\"text\":\"@work-leaf done\"}}"
-  printf '%s\n' "{\"id\":$id,\"ok\":true,\"thread_id\":\"sdk-thread-1\",\"reply\":\"@work-leaf done\"}"
+  case "$line" in
+    *'"op":"interrupt"'*)
+      printf '%s\n' "{\"id\":$id,\"ok\":true}"
+      ;;
+    *)
+      printf '%s\n' "{\"id\":$id,\"event\":{\"type\":\"message\",\"text\":\"@work-leaf patch return value two\\ndiff --git a/src/lib.rs b/src/lib.rs\\n--- a/src/lib.rs\\n+++ b/src/lib.rs\\n@@ -1 +1 @@\\n-pub fn value() -> u8 { 1 }\\n+pub fn value() -> u8 { 2 }\\n@work-leaf end\\n@work-leaf done\"}}"
+      printf '%s\n' "{\"id\":$id,\"ok\":true,\"thread_id\":\"sdk-thread-1\",\"reply\":\"late final reply\"}"
+      ;;
+  esac
 done
 "#,
     )
