@@ -268,7 +268,7 @@ impl CodexSdkSidecar {
                             .as_deref_mut()
                             .is_some_and(|detector| detector(&event))
                         {
-                            self.interrupt(turn.agent_id, shutdown)?;
+                            self.request_interrupt(turn.agent_id, shutdown)?;
                             self.unregister_request(request_id);
                             output.reply = streamed_messages.join("\n\n");
                             return Ok(output);
@@ -282,7 +282,7 @@ impl CodexSdkSidecar {
                             .as_deref_mut()
                             .is_some_and(|detector| detector(&event))
                         {
-                            self.interrupt(turn.agent_id, shutdown)?;
+                            self.request_interrupt(turn.agent_id, shutdown)?;
                             self.unregister_request(request_id);
                             output.reply = streamed_messages.join("\n\n");
                             return Ok(output);
@@ -296,7 +296,7 @@ impl CodexSdkSidecar {
                             .as_deref_mut()
                             .is_some_and(|detector| detector(&event))
                         {
-                            self.interrupt(turn.agent_id, shutdown)?;
+                            self.request_interrupt(turn.agent_id, shutdown)?;
                             self.unregister_request(request_id);
                             output.reply = streamed_messages.join("\n\n");
                             return Ok(output);
@@ -365,6 +365,21 @@ impl CodexSdkSidecar {
                 None => {}
             }
         }
+    }
+
+    fn request_interrupt(
+        &self,
+        agent_id: &AgentId,
+        shutdown: &AgentShutdownHandle,
+    ) -> Result<(), AgentError> {
+        self.ensure_started(shutdown)?;
+        let request_id = self.next_request_id.fetch_add(1, Ordering::Relaxed);
+        let request = json!({
+            "id": request_id,
+            "op": "interrupt",
+            "agent_id": agent_id.as_str(),
+        });
+        self.write_request(&request)
     }
 
     fn ensure_started(&self, shutdown: &AgentShutdownHandle) -> Result<(), AgentError> {

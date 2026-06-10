@@ -738,12 +738,21 @@ done
         event,
         AgentStreamEvent::AgentMessage(text) if text.contains("@work-leaf end")
     )));
-    let requests = fs::read_to_string(fake_bin.join("requests.log")).unwrap();
+    let requests_path = fake_bin.join("requests.log");
+    let mut requests = String::new();
+    for _ in 0..20 {
+        requests = fs::read_to_string(&requests_path).unwrap();
+        if requests.contains(r#""op":"interrupt""#) {
+            break;
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
     assert!(requests.contains(r#""op":"interrupt""#), "{requests}");
 }
 
 #[test]
-fn codex_backend_sdk_transport_returns_after_interrupt_ack_without_waiting_for_turn_completion() {
+fn codex_backend_sdk_transport_returns_after_requesting_interrupt_without_waiting_for_ack_or_turn_completion()
+ {
     let root = temp_dir("codex-sdk-interrupt-returns-before-turn-completion");
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
@@ -763,8 +772,8 @@ while IFS= read -r line; do
       printf '{"id":%s,"event":{"type":"message","text":"%s"}}\n' "$id" "$patch"
       IFS= read -r interrupt_line
       interrupt_id=$(printf '%s' "$interrupt_line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
-      printf '{"id":%s,"ok":true}\n' "$interrupt_id"
       sleep 2
+      printf '{"id":%s,"ok":true}\n' "$interrupt_id"
       printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-1","reply":"late completion"}\n' "$id"
       ;;
     *'"op":"interrupt"'*)
@@ -819,7 +828,7 @@ done
     let immediate = receiver.recv_timeout(Duration::from_millis(500));
     let _ = worker.join();
     let (reply, events) = immediate
-        .expect("streaming send should return as soon as the directive interrupt is acknowledged")
+        .expect("streaming send should return as soon as the directive interrupt is requested")
         .expect("streaming send should succeed");
     assert!(reply.contains("@work-leaf patch update readme"));
     assert!(events.iter().any(|event| matches!(
