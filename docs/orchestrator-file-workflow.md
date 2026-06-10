@@ -395,13 +395,16 @@ orchestrator mediation. Commands run through an explicit lock directive:
 ```
 
 `src/orchestrator.rs::handle_agent_directives_streaming` parses the directive, normalizes and
-deduplicates the supplied paths, acquires the corresponding write locks, and runs the command in the
-project root. Locked command runs have a five-minute default timeout. When a locked command exceeds
-that timeout, the orchestrator terminates it, releases the locks, returns a timed-out command result to
-the agent, and requires user authorization before a longer lock-holding command is run. The
-orchestrator sends the command status, stdout, stderr, timeout state, and locked paths back to the
-same agent as `work-leaf command result`. The command output is agent context; manual feature edits
-still use the unified-diff patch flow.
+deduplicates the supplied paths, rejects common shell patterns that force a successful status, acquires
+the corresponding write locks, and runs the command in the project root. Rejected commands include
+failure-masking forms such as `|| true`, trailing `; true`, `set +e`, and `set +o errexit`, including
+those forms inside a shell `-c` script argument. Locked command runs have a five-minute default
+timeout. When a locked command exceeds that timeout, the orchestrator terminates it, releases the
+locks, returns a timed-out command result to the agent, and requires user
+authorization before a longer lock-holding command is run. The orchestrator sends the command status,
+compacted stdout/stderr, timeout state, and locked paths back to the same agent as
+`work-leaf command result`; command-run events keep the captured output for integrations. The command
+output is agent context; manual feature edits still use the unified-diff patch flow.
 
 The patch-ownership ledger blocks locked commands that directly target another patch agent's focused
 test path. Broad validation commands can still run when their broad lock paths include a directory

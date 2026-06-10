@@ -1027,8 +1027,15 @@ where
                 if self.stopped_for_linearize.contains(&agent_id) {
                     return;
                 }
-                if text.contains("Codex is working") {
-                    self.launch_starting.remove(&agent_id);
+                if self
+                    .sessions
+                    .get(&agent_id)
+                    .and_then(|session| session.loading)
+                    == Some(WorkLeafLoading::Launching)
+                {
+                    self.set_session_loading(&agent_id, Some(WorkLeafLoading::WaitingForReply));
+                }
+                if self.launch_starting.remove(&agent_id) {
                     self.start_next_pending_launch();
                 }
                 self.append_agent_line(&agent_id, text);

@@ -243,6 +243,22 @@ fn controller_queues_rapid_agent_launches_until_startup_stream() {
 }
 
 #[test]
+fn controller_marks_launch_as_waiting_after_first_backend_stream() {
+    let backend = LaunchTimingBackend::default();
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("streaming launch").unwrap();
+
+    assert!(controller.wait_for_session_line(&agent_id, "backend startup", Duration::from_secs(1)));
+    let snapshot = controller.snapshot();
+    let session = snapshot.session(&agent_id).expect("session exists");
+    assert_eq!(session.loading, Some(WorkLeafLoading::WaitingForReply));
+
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+}
+
+#[test]
 fn controller_reports_worker_panic_without_panicking() {
     let backend = PanicLaunchBackend;
     let chat = CommandChat::new(PathBuf::from("/repo"), backend);
@@ -298,7 +314,7 @@ impl AgentBackend for LaunchTimingBackend {
     ) -> Result<AgentSession, AgentError> {
         self.starts.lock().unwrap().push(Instant::now());
         thread::sleep(Duration::from_millis(100));
-        sink(AgentStreamEvent::Status("Codex is working".to_string()));
+        sink(AgentStreamEvent::Status("backend startup".to_string()));
         thread::sleep(Duration::from_millis(100));
         let mut session = AgentSession::new(request);
         session.push_message(MessageRole::Agent, "launch reply");

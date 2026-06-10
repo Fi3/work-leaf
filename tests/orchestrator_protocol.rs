@@ -342,6 +342,104 @@ fn orchestrator_protocol_scopes_locked_command_tmpdir_without_daemon_tmpdir() {
 }
 
 #[test]
+fn orchestrator_protocol_rejects_locked_commands_that_mask_failures() {
+    let root = temp_git_repo("protocol-command-masks-failure");
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root, backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "checks",
+            "@work-leaf locks run target -- sh -c 'false || true'",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, OrchestratorEvent::CommandRun { .. })),
+        "masked commands must not be executed"
+    );
+    assert_eq!(backend.sends.len(), 1);
+    assert!(backend.sends[0].1.contains("work-leaf command rejected"));
+    assert!(backend.sends[0].1.contains("masks command failures"));
+    assert!(backend.sends[0].1.contains("false || true"));
+}
+
+#[test]
+fn orchestrator_protocol_allows_locked_commands_that_preserve_failures() {
+    let root = temp_git_repo("protocol-command-preserves-failure");
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root, backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "checks",
+            "@work-leaf locks run target -- sh -c 'false && true'",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::CommandRun {
+                status: Some(1),
+                ..
+            }
+        )
+    }));
+    assert_eq!(backend.sends.len(), 1);
+    assert!(backend.sends[0].1.contains("work-leaf command result"));
+    assert!(backend.sends[0].1.contains("status: 1"));
+    assert!(!backend.sends[0].1.contains("work-leaf command rejected"));
+}
+
+#[test]
+fn orchestrator_protocol_compacts_large_locked_command_output() {
+    let root = temp_git_repo("protocol-command-output-compaction");
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root, backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "checks",
+            "@work-leaf locks run target -- sh -c 'printf start; i=0; while [ $i -lt 400 ]; do printf \"        \\n\"; i=$((i + 1)); done; printf end'",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            OrchestratorEvent::CommandRun {
+                status: Some(0),
+                stdout,
+                ..
+            } if stdout.contains("start") && stdout.contains("end")
+        )
+    }));
+    assert_eq!(backend.sends.len(), 1);
+    let prompt = &backend.sends[0].1;
+    assert!(prompt.contains("work-leaf command result"));
+    assert!(prompt.contains("start"));
+    assert!(prompt.contains("end"));
+    assert!(prompt.contains("work-leaf compacted"));
+    assert!(
+        prompt.len() < 6_000,
+        "compacted command output should stay small, got {} bytes",
+        prompt.len()
+    );
+}
+
+#[test]
 fn orchestrator_protocol_blocks_done_until_command_changes_are_committed() {
     let root = temp_git_repo("protocol-command-dirty-blocks-done");
     fs::write(root.join("README.md"), "before\n").unwrap();

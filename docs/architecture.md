@@ -242,18 +242,25 @@ The controller owns:
 
 When an agent worker finishes, the controller records the agent output and clears that session's
 loading state. Launch requests are queued by command handling and started from the controller polling
-path. Rapidly created launches wait until the active launch reports backend startup progress or
+path. Rapidly created launches wait until the active launch emits its first backend stream event or
 finishes, which prevents multiple backend child-process startups from piling up while still allowing
-the agents to run concurrently after startup. A user-agent session becomes review-ready when that
-agent has an unreviewed
+the agents to run concurrently after startup. The first backend stream event changes that session's
+loading state from launch startup to waiting for a reply, so frontends can distinguish provider
+startup from an active agent turn without relying on provider-specific status text. A user-agent
+session becomes review-ready when that agent has an unreviewed
 provisional commit in git history and the agent emits `@work-leaf done`; the patch commit and the
 done directive may come from different turns in the same session. Successful patch application
 returns a continuation prompt to the patch agent when the agent has not reported done, so the agent
 can run repository-required checks through locked command directives, provide follow-up patches, or
 signal review readiness. Repository build, test, format, and required-check commands run only
 through agent-emitted orchestrator directives that name the command and the write-lock paths the
-command may touch. Locked command runs have a five-minute default timeout, after which the command is
-terminated, locks are released, and a longer run requires user authorization. `PromptPolicy` injects
+command may touch. Locked command requests that use common shell constructs to force a successful
+status, such as `|| true`, trailing `; true`, `set +e`, or `set +o errexit`, are
+rejected before execution so validation failures remain visible. Locked command runs have a
+five-minute default timeout, after which the command is terminated, locks are released, and a longer
+run requires user authorization. The command-result prompt sent back to the agent includes status,
+timeout state, locked paths, and compacted stdout/stderr when output is large; controller command-run
+events retain the captured command output for integrations that need it. `PromptPolicy` injects
 project instruction files into agent prompts, and the active backend agent is responsible for
 choosing and requesting the repository checks required by those instructions before reporting work
 done.

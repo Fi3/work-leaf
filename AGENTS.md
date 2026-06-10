@@ -13,6 +13,23 @@ When you describe behavior, you must point to:
 If uncertain, do more repo inspection until certain. Only leave TODOs if the repo truly lacks
 information, and then state exactly what you searched and where.
 
+## Generality policy (do not overfit)
+Work Leaf is a general-purpose orchestrator. Do not solve bugs, benchmarks, tests, or reviews by
+recognizing this repository's current smoke-test features, temporary paths, exact filenames, exact
+command output, local model names, or one-off run artifacts.
+
+When implementing patches, be specific to the repository you are editing: follow its architecture,
+public APIs, naming, style, instructions, and required checks as closely as possible. Ground changes
+in the actual files and behavior of that repository.
+
+When changing Work Leaf itself, keep orchestrator mechanisms provider-neutral and project-neutral
+unless the relevant module is explicitly provider-specific. Tests for orchestrator behavior should
+assert durable protocol rules, state transitions, invariants, and user-visible behavior that would
+still make sense for a different repository using Work Leaf.
+
+If a proposed fix only works because it knows the current benchmark scenario, stop and redesign it
+before coding.
+
 ## Large deliverables (especially documentation)
 For any request that produces a large artifact (multi-thousand-line docs, specs, runbooks):
 1) Work iteratively: write in chunks to the file; do NOT attempt a single huge response.

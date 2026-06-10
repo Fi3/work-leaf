@@ -955,6 +955,15 @@ where
         return Ok(());
     }
 
+    if let Some(diagnostic) = masked_command_diagnostic(command) {
+        let prompt = render_command_rejected(command, &locked_paths, &diagnostic);
+        let mut sink = |event| stream(agent_id, event);
+        let reply = backend.send_streaming(agent_id, &prompt, &mut sink)?;
+        run.follow_up_replies
+            .push(follow_up(agent_id.clone(), reply));
+        return Ok(());
+    }
+
     let dirty_before = tracked_changed_files(services.locks.root());
     let output = services.locks.with_write_locks(&locked_paths, || {
         run_shell_command(
@@ -1399,6 +1408,193 @@ fn parse_locked_run(rest: &str) -> Result<(Vec<PathBuf>, String), OrchestratorEr
     Ok((lock_paths, command.to_string()))
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum ShellToken {
+    Word(String),
+    OrIf,
+    AndIf,
+    Semi,
+}
+
+fn masked_command_diagnostic(command: &str) -> Option<String> {
+    masked_command_diagnostic_inner(command, 0)
+}
+
+fn masked_command_diagnostic_inner(command: &str, depth: usize) -> Option<String> {
+    if depth > 4 {
+        return None;
+    }
+    let tokens = shell_tokens(command);
+    if let Some(diagnostic) = masked_tokens_diagnostic(&tokens) {
+        return Some(diagnostic);
+    }
+    for script in shell_script_arguments(&tokens) {
+        if let Some(diagnostic) = masked_command_diagnostic_inner(&script, depth + 1) {
+            return Some(format!("{diagnostic} inside a shell script argument"));
+        }
+    }
+    None
+}
+
+fn shell_tokens(command: &str) -> Vec<ShellToken> {
+    let mut tokens = Vec::new();
+    let mut word = String::new();
+    let mut chars = command.chars().peekable();
+    let mut quote = None;
+
+    let flush_word = |word: &mut String, tokens: &mut Vec<ShellToken>| {
+        if !word.is_empty() {
+            tokens.push(ShellToken::Word(std::mem::take(word)));
+        }
+    };
+
+    while let Some(character) = chars.next() {
+        if let Some(quote_character) = quote {
+            if character == quote_character {
+                quote = None;
+            } else if quote_character == '"' && character == '\\' {
+                if let Some(next) = chars.next() {
+                    word.push(next);
+                }
+            } else {
+                word.push(character);
+            }
+            continue;
+        }
+
+        match character {
+            '\'' | '"' => quote = Some(character),
+            '\\' => {
+                if let Some(next) = chars.next() {
+                    word.push(next);
+                }
+            }
+            character if character.is_whitespace() => flush_word(&mut word, &mut tokens),
+            '|' if chars.peek() == Some(&'|') => {
+                chars.next();
+                flush_word(&mut word, &mut tokens);
+                tokens.push(ShellToken::OrIf);
+            }
+            '&' if chars.peek() == Some(&'&') => {
+                chars.next();
+                flush_word(&mut word, &mut tokens);
+                tokens.push(ShellToken::AndIf);
+            }
+            ';' => {
+                flush_word(&mut word, &mut tokens);
+                tokens.push(ShellToken::Semi);
+            }
+            _ => word.push(character),
+        }
+    }
+    flush_word(&mut word, &mut tokens);
+    tokens
+}
+
+fn masked_tokens_diagnostic(tokens: &[ShellToken]) -> Option<String> {
+    for (index, token) in tokens.iter().enumerate() {
+        match token {
+            ShellToken::Word(word) if word == "set" => {
+                let next = word_token(tokens.get(index + 1));
+                let after_next = word_token(tokens.get(index + 2));
+                if next == Some("+e") {
+                    return Some("uses `set +e` to ignore command failures".to_string());
+                }
+                if next == Some("+o") && after_next == Some("errexit") {
+                    return Some("uses `set +o errexit` to ignore command failures".to_string());
+                }
+            }
+            ShellToken::OrIf => {
+                if let Some(word) = word_token(tokens.get(index + 1))
+                    && is_success_literal(word)
+                {
+                    return Some(format!("uses `|| {word}` to mask command failures"));
+                }
+            }
+            ShellToken::Semi => {
+                if let Some(word) = word_token(tokens.get(index + 1))
+                    && is_success_literal(word)
+                    && tokens[index + 2..].iter().all(is_control_token)
+                {
+                    return Some(format!(
+                        "ends with `; {word}`, which can hide the check result"
+                    ));
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn word_token(token: Option<&ShellToken>) -> Option<&str> {
+    match token {
+        Some(ShellToken::Word(word)) => Some(word.as_str()),
+        _ => None,
+    }
+}
+
+fn is_success_literal(word: &str) -> bool {
+    matches!(word, "true" | ":")
+}
+
+fn is_control_token(token: &ShellToken) -> bool {
+    !matches!(token, ShellToken::Word(_))
+}
+
+fn shell_script_arguments(tokens: &[ShellToken]) -> Vec<String> {
+    let mut scripts = Vec::new();
+    let mut index = 0;
+    while index < tokens.len() {
+        let Some(word) = word_token(tokens.get(index)) else {
+            index += 1;
+            continue;
+        };
+        if !is_shell_program(word) {
+            index += 1;
+            continue;
+        }
+
+        index += 1;
+        while index < tokens.len() {
+            let Some(flag) = word_token(tokens.get(index)) else {
+                break;
+            };
+            if is_shell_command_flag(flag) {
+                if let Some(script) = word_token(tokens.get(index + 1)) {
+                    scripts.push(script.to_string());
+                }
+                break;
+            }
+            if !flag.starts_with('-') {
+                break;
+            }
+            index += 1;
+        }
+    }
+    scripts
+}
+
+fn is_shell_command_flag(flag: &str) -> bool {
+    flag.strip_prefix('-')
+        .is_some_and(|options| !options.starts_with('-') && options.contains('c'))
+}
+
+fn is_shell_program(word: &str) -> bool {
+    let name = Path::new(word)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or(word);
+    matches!(name, "sh" | "bash" | "dash" | "zsh" | "ksh")
+}
+
+const COMMAND_OUTPUT_MAX_CHARS: usize = 12_000;
+const COMMAND_OUTPUT_HEAD_CHARS: usize = 6_000;
+const COMMAND_OUTPUT_TAIL_CHARS: usize = 4_000;
+const COMMAND_OUTPUT_LONG_LINE_CHARS: usize = 4_096;
+const COMMAND_OUTPUT_LONG_LINE_EDGE_CHARS: usize = 1_600;
+const COMMAND_OUTPUT_BLANK_RUN_INLINE: usize = 8;
+
 fn render_file_read_response(
     context_bundles: &ContextBundleStore,
     file_reads: &FileReadTracker,
@@ -1753,24 +1949,115 @@ fn render_command_result(
         );
     }
     text.push_str("\nstdout:\n");
-    if output.stdout.is_empty() {
-        text.push_str("<empty>\n");
-    } else {
-        text.push_str(&output.stdout);
-        if !output.stdout.ends_with('\n') {
-            text.push('\n');
-        }
-    }
+    text.push_str(&render_command_output(&output.stdout));
     text.push_str("stderr:\n");
-    if output.stderr.is_empty() {
-        text.push_str("<empty>\n");
-    } else {
-        text.push_str(&output.stderr);
-        if !output.stderr.ends_with('\n') {
-            text.push('\n');
+    text.push_str(&render_command_output(&output.stderr));
+    text
+}
+
+fn render_command_rejected(command: &str, locked_paths: &[PathBuf], diagnostic: &str) -> String {
+    format!(
+        "work-leaf command rejected\ncommand: {command}\nlocked paths: {}\nreason: {diagnostic}; this masks command failures, so Work Leaf did not run the command.\nRun the check normally and let Work Leaf capture the non-zero status, stdout, and stderr.",
+        display_paths(locked_paths)
+    )
+}
+
+fn render_command_output(output: &str) -> String {
+    if output.is_empty() {
+        return "<empty>\n".to_string();
+    }
+
+    let mut rendered = compact_blank_runs(output);
+    rendered = compact_long_lines(&rendered);
+    rendered = compact_total_chars(&rendered);
+    if !rendered.ends_with('\n') {
+        rendered.push('\n');
+    }
+    rendered
+}
+
+fn compact_blank_runs(output: &str) -> String {
+    let mut compacted = String::new();
+    let mut blank_run = 0_usize;
+    for line in output.split_inclusive('\n') {
+        if line.trim().is_empty() {
+            blank_run += 1;
+            if blank_run <= COMMAND_OUTPUT_BLANK_RUN_INLINE {
+                compacted.push_str(line);
+            }
+            continue;
+        }
+        if blank_run > COMMAND_OUTPUT_BLANK_RUN_INLINE {
+            compacted.push_str(&format!(
+                "[work-leaf compacted {} whitespace-only output lines]\n",
+                blank_run - COMMAND_OUTPUT_BLANK_RUN_INLINE
+            ));
+        }
+        blank_run = 0;
+        compacted.push_str(line);
+    }
+    if blank_run > COMMAND_OUTPUT_BLANK_RUN_INLINE {
+        compacted.push_str(&format!(
+            "[work-leaf compacted {} whitespace-only output lines]\n",
+            blank_run - COMMAND_OUTPUT_BLANK_RUN_INLINE
+        ));
+    }
+    compacted
+}
+
+fn compact_long_lines(output: &str) -> String {
+    let mut compacted = String::new();
+    for line in output.split_inclusive('\n') {
+        let had_newline = line.ends_with('\n');
+        let content = line.strip_suffix('\n').unwrap_or(line);
+        let content_chars = content.chars().count();
+        if content_chars <= COMMAND_OUTPUT_LONG_LINE_CHARS {
+            compacted.push_str(line);
+            continue;
+        }
+
+        let omitted = content_chars.saturating_sub(COMMAND_OUTPUT_LONG_LINE_EDGE_CHARS * 2);
+        compacted.push_str(&take_start_chars(
+            content,
+            COMMAND_OUTPUT_LONG_LINE_EDGE_CHARS,
+        ));
+        compacted.push_str(&format!(
+            "\n[work-leaf compacted {omitted} characters from one long output line]\n"
+        ));
+        compacted.push_str(&take_end_chars(
+            content,
+            COMMAND_OUTPUT_LONG_LINE_EDGE_CHARS,
+        ));
+        if had_newline {
+            compacted.push('\n');
         }
     }
-    text
+    compacted
+}
+
+fn compact_total_chars(output: &str) -> String {
+    let output_chars = output.chars().count();
+    if output_chars <= COMMAND_OUTPUT_MAX_CHARS {
+        return output.to_string();
+    }
+
+    let omitted =
+        output_chars.saturating_sub(COMMAND_OUTPUT_HEAD_CHARS + COMMAND_OUTPUT_TAIL_CHARS);
+    format!(
+        "{}\n[work-leaf compacted {omitted} characters from command output]\n{}",
+        take_start_chars(output, COMMAND_OUTPUT_HEAD_CHARS),
+        take_end_chars(output, COMMAND_OUTPUT_TAIL_CHARS)
+    )
+}
+
+fn take_start_chars(text: &str, count: usize) -> String {
+    text.chars().take(count).collect()
+}
+
+fn take_end_chars(text: &str, count: usize) -> String {
+    let mut chars = text.chars().rev().take(count).collect::<Vec<_>>();
+    chars.reverse();
+    chars.into_iter().collect()
 }
 
 fn render_patch_conflict_prompt(
