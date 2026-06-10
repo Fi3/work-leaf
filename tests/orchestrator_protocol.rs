@@ -683,6 +683,52 @@ diff --git a/README.md b/README.md
 }
 
 #[test]
+fn orchestrator_protocol_applies_structured_edit_directive_and_commits() {
+    let root = temp_git_repo("protocol-structured-edit");
+    fs::write(root.join("README.md"), "before\nsecond line\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "docs",
+            "\
+@work-leaf edit update readme
+*** Begin Patch
+*** Update File: README.md
+@@
+-before
++after
+ second line
+*** End Patch
+@work-leaf end",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "after\nsecond line\n"
+    );
+    assert!(events.iter().any(|event| matches!(
+        event,
+        OrchestratorEvent::PatchApplied {
+            agent_id: id,
+            reason,
+            files,
+            ..
+        } if id == &agent_id && reason == "update readme" && files == &vec![PathBuf::from("README.md")]
+    )));
+    assert_eq!(backend.sends.len(), 1);
+    assert_eq!(backend.sends[0].0, agent_id);
+    assert!(backend.sends[0].1.contains("work-leaf patch applied"));
+}
+
+#[test]
 fn orchestrator_protocol_times_out_long_locked_command_runs() {
     let root = temp_git_repo("protocol-locked-command-timeout");
     fs::write(root.join("README.md"), "before\n").unwrap();

@@ -42,7 +42,7 @@ for the user's request.
 A patch agent is created by the user, usually through the command agent, to add a feature, fix a bug,
 or make another concrete code change. Patch agents request file text through the orchestrator in the
 default read-permission mode, or inspect files directly in direct-read mode. Patch agents request
-writes by sending unified diff patches to the orchestrator.
+manual writes by sending structured exact-block edit patches to the orchestrator.
 
 A patch agent does not write files directly. In default read-permission mode, it emits:
 
@@ -53,16 +53,22 @@ A patch agent does not write files directly. In default read-permission mode, it
 to receive file text. In all read-permission modes, it emits:
 
 ```text
-@work-leaf patch <reason>
-<unified diff>
+@work-leaf edit <reason>
+*** Begin Patch
+*** Update File: path/to/file
+@@
+ unchanged context
+-old text
++new text
+*** End Patch
 @work-leaf end
 ```
 
-to request a repository modification.
+to request a repository modification. The legacy `@work-leaf patch <reason>` directive is accepted
+for complete valid unified diffs with real hunk ranges.
 
-The orchestrator applies the patch atomically as one diff, not file by file. If any touched file or
-hunk prevents the diff from applying, the whole patch is rejected and no clean hunk is applied as a
-partial result.
+The orchestrator applies the patch atomically. If any touched file or hunk prevents the edit from
+applying, the whole patch is rejected and no clean hunk is applied as a partial result.
 
 ### Review Agent
 
@@ -104,7 +110,7 @@ reviewed baseline. An explicit `review` command is the history-wide review entry
 
 An inspection agent has read-only access. It can request file text from the orchestrator in the
 default read-permission mode, or inspect repository files directly in direct-read mode. It cannot
-request writes and cannot submit `@work-leaf patch` directives.
+request writes and cannot submit `@work-leaf edit` or `@work-leaf patch` directives.
 
 Inspection agents are useful for planning, debugging, architecture review, log inspection, and
 answering questions about the repository without creating code changes.
@@ -148,7 +154,7 @@ With `ReadPermission::Orchestrator`, prompts tell agents:
 - do not read files directly;
 - ask the orchestrator for file text;
 - do not write files directly;
-- provide unified diff patches for requested writes;
+- provide structured exact-block edits for requested writes;
 - use `@work-leaf locks classify <command>` when the agent is unsure whether a command writes
   project files;
 - use `@work-leaf locks run <path> <path...> -- <command>` to run commands while the orchestrator
@@ -164,7 +170,7 @@ With `ReadPermission::DirectFilesystem`, prompts tell agents:
 - read repository files directly from the filesystem;
 - use read-only inspection commands for repository context instead of `@work-leaf read`;
 - do not write files directly;
-- provide unified diff patches for requested writes;
+- provide structured exact-block edits for requested writes;
 - use `@work-leaf locks classify <command>` when the agent is unsure whether a command writes
   project files;
 - use `@work-leaf locks run <path> <path...> -- <command>` to run commands while the orchestrator
@@ -350,35 +356,44 @@ enough for long-running agent sessions.
 
 ## Writes And Atomic Patches
 
-Patch agents request writes with a unified diff. The patch path is:
+Patch agents request manual writes with structured exact-block edits. The structured edit path is:
 
-1. `src/orchestrator.rs::parse_agent_directives` parses `@work-leaf patch <reason>` until
+1. `src/orchestrator.rs::parse_agent_directives` parses `@work-leaf edit <reason>` until
    `@work-leaf end`.
 2. `src/orchestrator.rs::handle_agent_directives_streaming` creates a `src/patch.rs::GitPatcher`.
-3. `GitPatcher::apply` extracts the unified diff and parses all touched files.
+3. `GitPatcher::apply_edit` extracts the structured edit body and parses all touched files.
 4. All touched files are normalized, sorted, and deduplicated, and the repository root lock is added
    to the lock set.
 5. `src/locks.rs::FileLockTable::with_write_locks` acquires exclusive write locks for all touched
    files and the repository root path. The root lock serializes git index operations across
    concurrent patch agents.
-6. `GitPatcher::apply_with_locks` runs `git apply --check -` for the entire diff.
-7. If the check passes, it runs `git apply -` for the entire diff.
-8. Passing patches are staged with `git add -- <files>` and committed as provisional agent commits.
+6. `GitPatcher::apply_edit_with_locks` reads the current UTF-8 file text and matches each old block
+   exactly once in memory. Missing or ambiguous blocks reject the patch before any file is written.
+7. If every operation is valid, the patcher writes the resulting files, stages them with
+   `git add -- <files>`, and commits the provisional agent patch.
 
-The atomicity rule is strict: `git apply --check` and `git apply` happen for the patch as one unit.
+The atomicity rule is strict: every target file and hunk is validated before any file write occurs.
 The orchestrator does not apply one file, then another file, then ask the agent to repair the rest.
-A patch either applies as a coherent diff or is rejected as a coherent diff.
+A patch either applies as a coherent edit set or is rejected as a coherent edit set.
 
-If `git apply --check` fails, no part of the diff is applied. The orchestrator sends the patch agent:
+If structured edit matching fails, no part of the edit is applied. The orchestrator sends the patch
+agent:
 
 - the touched file list;
-- the git diagnostic;
+- the exact-block diagnostic;
 - a compact file refresh for the touched files when the agent has a prior orchestrator snapshot;
-- instructions to rebase the patch against that refresh, with explicit `@work-leaf read` guidance
+- instructions to rebase the edit against that refresh, with explicit `@work-leaf read` guidance
   when a full file reread is necessary.
 
-Malformed patch bodies that do not contain recognizable unified diff file headers are rejected with a
-protocol prompt asking the agent to resend a complete unified diff.
+Malformed edit bodies that do not contain recognizable structured edit file headers are rejected with
+a protocol prompt asking the agent to resend a complete `@work-leaf edit` body.
+
+The legacy `@work-leaf patch <reason>` path accepts complete valid unified diffs. It uses the same
+file/root lock set, validates the entire diff with `git apply --recount --check`, applies the entire
+diff with `git apply --recount`, stages the touched files, and commits the provisional agent patch.
+Malformed unified diffs are rejected with unified-diff repair guidance. Matching already-applied
+unified diffs are accepted when a locked command has already produced the tracked working-tree
+change.
 
 ## Command Write Classification
 
@@ -412,7 +427,7 @@ locks, returns a timed-out command result to the agent, and requires user
 authorization before a longer lock-holding command is run. The orchestrator sends the command status,
 compacted stdout/stderr, timeout state, and locked paths back to the same agent as
 `work-leaf command result`; command-run events keep the captured output for integrations. The command
-output is agent context; manual feature edits still use the unified-diff patch flow.
+output is agent context; manual feature edits use the structured edit patch flow.
 
 The patch-ownership ledger blocks locked commands that directly target another patch agent's focused
 test path. Broad validation commands can still run when their broad lock paths include a directory
@@ -468,10 +483,11 @@ A normal development session in default read-permission mode follows this shape:
 4. The patch agent asks for file text with `@work-leaf read`.
 5. The orchestrator normalizes paths, takes shared read locks, snapshots file text, records the read
    context, and sends the text back to the patch agent.
-6. The patch agent reasons over the snapshot and sends one unified diff through `@work-leaf patch`.
+6. The patch agent reasons over the snapshot and sends one structured edit through
+   `@work-leaf edit`.
 7. The orchestrator parses all touched files, takes exclusive write locks for the touched set and the
-   repository root path, checks the entire diff, applies the entire diff, stages, and commits the
-   provisional patch.
+   repository root path, matches every old block against current file text, writes the resulting
+   files, stages, and commits the provisional patch.
 8. If another agent read any touched file and has not cleared that context, the orchestrator sends
    that agent a proactive `work-leaf file update` with fresh file text.
 9. The orchestrator returns a patch-applied continuation prompt when the patch agent has not reported
@@ -533,17 +549,15 @@ work-leaf file text
 The patch agent submits one coherent patch:
 
 ```text
-@work-leaf patch add JSON config parsing
-diff --git a/src/config.rs b/src/config.rs
---- a/src/config.rs
-+++ b/src/config.rs
-@@ ...
-...
-diff --git a/Cargo.toml b/Cargo.toml
---- a/Cargo.toml
-+++ b/Cargo.toml
-@@ ...
-...
+@work-leaf edit add JSON config parsing
+*** Begin Patch
+*** Update File: src/config.rs
+@@
+ <exact old context and lines>
+*** Update File: Cargo.toml
+@@
+ <exact old context and lines>
+*** End Patch
 @work-leaf end
 ```
 
@@ -604,14 +618,14 @@ The important source symbols for this workflow are:
 - `src/http_controller.rs::HttpControllerClient`: sends CLI controller requests to the daemon and
   decodes the same snapshots and events used by local frontends.
 - `src/orchestrator.rs::parse_agent_directives`: parses `@work-leaf` protocol directives.
-- `src/orchestrator.rs::handle_agent_directives_streaming`: handles reads, patches, command
+- `src/orchestrator.rs::handle_agent_directives_streaming`: handles reads, edits, patches, command
   classification, sends, done, stale updates, and follow-up routing.
 - `src/orchestrator.rs::FileReadTracker`: tracks which agents have outstanding file snapshots.
 - `src/orchestrator.rs::read_requested_files`: snapshots file text under read locks.
 - `src/locks.rs::FileLockTable`: owns per-path read/write locks and root-safe path normalization.
 - `src/locks.rs::CommandWritePolicy`: classifies commands that write project files.
-- `src/patch.rs::GitPatcher`: applies whole unified diffs under write locks and creates provisional
-  metadata commits.
+- `src/patch.rs::GitPatcher`: applies structured edits and whole unified diffs under write locks and
+  creates provisional metadata commits.
 - `src/review.rs::ReviewCoordinator`: runs reviewer conversations over agent patch commits.
 - `src/review.rs::GitHistory`: finds latest agent commits from git history and builds cumulative
   review targets since launch or latest reviewed baselines.

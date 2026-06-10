@@ -58,7 +58,7 @@ fn interactive_linearize_prompt_requires_user_accepted_plan_before_rewrite() {
     assert!(prompt.contains("Update documentation and plain-text files directly"));
     assert!(
         prompt.contains(
-            "do not use `@work-leaf read`, `@work-leaf patch`, or `@work-leaf locks run`"
+            "do not use `@work-leaf read`, `@work-leaf edit`, `@work-leaf patch`, or `@work-leaf locks run`"
         )
     );
     assert!(prompt.contains("Agent-ID: chat-a"));

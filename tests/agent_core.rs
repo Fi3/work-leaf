@@ -30,14 +30,16 @@ fn prompt_policy_wraps_every_agent_prompt_with_file_access_rules() {
     assert!(wrapped.contains("temporary context bundle files"));
     assert!(wrapped.contains("orchestrator-provided file text"));
     assert!(wrapped.contains("not allowed to write files directly"));
-    assert!(wrapped.contains("provide a unified diff patch"));
+    assert!(wrapped.contains("submit a structured edit patch"));
     assert!(wrapped.contains("Do not modify documentation or plain-text files"));
     assert!(wrapped.contains("leave those updates for the linearize agent after review"));
     assert!(wrapped.contains("Do not run `@work-leaf` in a shell"));
     assert!(wrapped.contains("@work-leaf read <path>"));
     assert!(wrapped.contains("@work-leaf read --force <path>"));
     assert!(wrapped.contains("@work-leaf read <path> <path...>"));
-    assert!(wrapped.contains("@work-leaf patch <reason>"));
+    assert!(wrapped.contains("@work-leaf edit <reason>"));
+    assert!(wrapped.contains("exact unchanged context lines"));
+    assert!(wrapped.contains("legacy `@work-leaf patch <reason>`"));
     assert!(wrapped.contains("@work-leaf locks classify <command>"));
     assert!(wrapped.contains("@work-leaf locks run <path> <path...> -- <command>"));
     assert!(wrapped.contains("language- and tool-agnostic"));
@@ -67,7 +69,7 @@ fn prompt_policy_can_allow_direct_filesystem_reads() {
     assert!(!wrapped.contains("@work-leaf read <path>"));
     assert!(wrapped.contains("not allowed to write files directly"));
     assert!(wrapped.contains("Do not modify documentation or plain-text files"));
-    assert!(wrapped.contains("@work-leaf patch <reason>"));
+    assert!(wrapped.contains("@work-leaf edit <reason>"));
     assert!(wrapped.contains("@work-leaf locks run <path> <path...> -- <command>"));
     assert!(wrapped.contains("language- and tool-agnostic"));
     assert!(wrapped.contains("checks that existed before your patch"));
@@ -90,7 +92,7 @@ fn prompt_policy_gives_linearize_agent_direct_workspace_access() {
     assert!(wrapped.contains("allowed to read repository files directly"));
     assert!(wrapped.contains("allowed to write repository files"));
     assert!(wrapped.contains(
-        "without using `@work-leaf read`, `@work-leaf patch`, or `@work-leaf locks run`"
+        "without using `@work-leaf read`, `@work-leaf edit`, `@work-leaf patch`, or `@work-leaf locks run`"
     ));
     assert!(wrapped.contains("Documentation and plain-text updates deferred by patch agents"));
     assert!(!wrapped.contains("not allowed to write files directly"));

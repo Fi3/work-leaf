@@ -11,6 +11,7 @@ use crate::agent::{AgentBackend, AgentError, AgentId, AgentStreamEvent, ChatMess
 use crate::locks::{CommandWriteIntent, CommandWritePolicy, FileAccessError, FileLockTable};
 use crate::patch::{
     GitPatcher, PatchError, PatchRequest, is_already_applied_diagnostic, render_no_files_prompt,
+    render_structured_edit_no_files_prompt, structured_edit_format_guidance,
     unified_diff_format_guidance,
 };
 
@@ -277,7 +278,7 @@ impl ContextBundleStore {
         fs::create_dir_all(&self.inner.dir).ok()?;
         let path = self.inner.dir.join(format!("bundle-{counter}.md"));
         let mut text = String::from("# Work Leaf Context Bundle\n\n");
-        text.push_str("This file contains orchestrator-mediated read output. Use it as read-only context; submit project changes through `@work-leaf patch`.\n");
+        text.push_str("This file contains orchestrator-mediated read output. Use it as read-only context; submit project changes through `@work-leaf edit`.\n");
         for snapshot in snapshots {
             text.push_str("\n----- BEGIN FILE ");
             text.push_str(&snapshot.path.display().to_string());
@@ -807,6 +808,83 @@ where
                     Err(error) => return Err(OrchestratorError::Patch(error)),
                 }
             }
+            AgentDirective::Edit { reason, body } => {
+                let patcher =
+                    GitPatcher::new(services.locks.root().to_path_buf(), services.locks.clone());
+                let request =
+                    PatchRequest::new(agent_id.clone(), feature.to_string(), reason.clone(), body);
+                match patcher.apply_edit(request) {
+                    Ok(outcome) => {
+                        let files = outcome.files.clone();
+                        services.file_reads.clear_files(agent_id, &files);
+                        services.command_changes.clear_files_for_all(&files);
+                        services
+                            .patch_ownership
+                            .record_patch(agent_id, &outcome.commit, &files);
+                        applied_patch_files.extend(files.iter().cloned());
+                        run.events.push(OrchestratorEvent::PatchApplied {
+                            agent_id: agent_id.clone(),
+                            feature: feature.to_string(),
+                            reason,
+                            commit: outcome.commit,
+                            files: outcome.files,
+                        });
+                        send_stale_file_updates(
+                            backend, services, agent_id, &files, stream, &mut run,
+                        )?;
+                    }
+                    Err(PatchError::Conflict { files, diagnostic }) => {
+                        let prompt = if is_already_applied_diagnostic(&diagnostic) {
+                            render_already_applied_patch_prompt(&files)
+                        } else if files.is_empty() {
+                            format!(
+                                "The orchestrator could not apply your edit.\n\nDiagnostic:\n{diagnostic}\n\n{}",
+                                structured_edit_format_guidance()
+                            )
+                        } else {
+                            let response = read_requested_files(services.locks, &files)?;
+                            let prompt = render_structured_edit_conflict_prompt(
+                                agent_id,
+                                services.file_reads,
+                                &files,
+                                &diagnostic,
+                                &response,
+                            );
+                            services
+                                .file_reads
+                                .record_snapshots(agent_id, &response.snapshots);
+                            prompt
+                        };
+                        let reply =
+                            send_agent_streaming_interruptible(backend, agent_id, &prompt, stream)?;
+                        run.follow_up_replies
+                            .push(follow_up(agent_id.clone(), reply));
+                        run.events.push(OrchestratorEvent::PatchRejected {
+                            agent_id: agent_id.clone(),
+                            files,
+                            diagnostic,
+                        });
+                    }
+                    Err(PatchError::NoFiles) => {
+                        let reply = send_agent_streaming_interruptible(
+                            backend,
+                            agent_id,
+                            &render_structured_edit_no_files_prompt(),
+                            stream,
+                        )?;
+                        run.follow_up_replies
+                            .push(follow_up(agent_id.clone(), reply));
+                        run.events.push(OrchestratorEvent::PatchRejected {
+                            agent_id: agent_id.clone(),
+                            files: Vec::new(),
+                            diagnostic:
+                                "edit body did not include recognizable structured edit file headers"
+                                    .to_string(),
+                        });
+                    }
+                    Err(error) => return Err(OrchestratorError::Patch(error)),
+                }
+            }
             AgentDirective::Send { target, message } => {
                 let reply = send_agent_streaming_interruptible(
                     backend,
@@ -1294,6 +1372,10 @@ enum AgentDirective {
         reason: String,
         diff: String,
     },
+    Edit {
+        reason: String,
+        body: String,
+    },
     Send {
         target: AgentId,
         message: String,
@@ -1361,6 +1443,32 @@ fn parse_agent_directives(text: &str) -> Result<Vec<AgentDirective>, Orchestrato
                 reason: reason.to_string(),
                 diff,
             });
+        } else if let Some(rest) = directive_rest(body, "edit") {
+            let reason = rest.trim();
+            if reason.is_empty() {
+                return Err(OrchestratorError::Usage(
+                    "edit requires a reason".to_string(),
+                ));
+            }
+            let mut body = String::new();
+            while let Some(next) = lines.peek().copied() {
+                if directive_body(next).is_some_and(|body| body == "end") {
+                    lines.next();
+                    break;
+                }
+                body.push_str(next);
+                body.push('\n');
+                lines.next();
+            }
+            if body.trim().is_empty() {
+                return Err(OrchestratorError::Usage(
+                    "edit requires a structured edit body".to_string(),
+                ));
+            }
+            directives.push(AgentDirective::Edit {
+                reason: reason.to_string(),
+                body,
+            });
         } else if let Some(rest) = directive_rest(body, "send") {
             let mut parts = rest.trim().splitn(2, char::is_whitespace);
             let target = parts
@@ -1402,7 +1510,7 @@ fn should_interrupt_after_streamed_directive(text: &str) -> bool {
         if body == "done" {
             return true;
         }
-        if directive_rest(body, "patch").is_some() {
+        if directive_rest(body, "patch").is_some() || directive_rest(body, "edit").is_some() {
             in_patch = true;
             continue;
         }
@@ -1821,7 +1929,7 @@ fn render_bundled_file_read_response(
     text.push_str("Context bundle: ");
     text.push_str(&bundle_path.display().to_string());
     text.push('\n');
-    text.push_str("You may read this temporary bundle file for the exact mediated file text. Do not edit the bundle; project writes still require `@work-leaf patch`.\n");
+    text.push_str("You may read this temporary bundle file for the exact mediated file text. Do not edit the bundle; project writes still require `@work-leaf edit`.\n");
     text.push_str("Bundled files:\n");
     for snapshot in snapshots {
         text.push_str("- ");
@@ -2029,7 +2137,7 @@ fn render_command_result(
         );
     }
     text.push_str(
-        "\nnext: Reply with the next Work Leaf directive, such as `@work-leaf done`, `@work-leaf patch`, `@work-leaf read`, or another `@work-leaf locks run`. Keep any non-directive explanation brief.",
+        "\nnext: Reply with the next Work Leaf directive, such as `@work-leaf done`, `@work-leaf edit`, `@work-leaf read`, or another `@work-leaf locks run`. Keep any non-directive explanation brief.",
     );
     text.push_str("\nstdout:\n");
     text.push_str(&render_command_output(&output.stdout));
@@ -2160,6 +2268,23 @@ fn render_patch_conflict_prompt(
     text
 }
 
+fn render_structured_edit_conflict_prompt(
+    agent_id: &AgentId,
+    file_reads: &FileReadTracker,
+    files: &[PathBuf],
+    diagnostic: &str,
+    response: &FileReadResponse,
+) -> String {
+    let mut text = format!(
+        "The orchestrator could not apply your edit.\nFiles: {}\n\nDiagnostic:\n{}\n\nRebase your exact edit blocks against the compact file refresh below.\n{}",
+        display_paths(files),
+        diagnostic,
+        structured_edit_format_guidance()
+    );
+    append_file_refresh_response(&mut text, agent_id, file_reads, response);
+    text
+}
+
 fn render_already_applied_patch_prompt(files: &[PathBuf]) -> String {
     let mut text = format!(
         "work-leaf patch already applied\nfiles: {}\n",
@@ -2177,7 +2302,7 @@ fn render_patch_applied_prompt(files: &[PathBuf]) -> String {
     text.push_str("Keep the shared worktree usable for the other patch agents: do not submit known-red, compile-breaking, or deliberately failing intermediate patches. If you prepared failing coverage first, include the test and the implementation needed for the shared tree to build in the same provisional patch.\n");
     text.push_str("Run any required or relevant checks through `@work-leaf locks run <path>... -- <command>` when the command may write files.\n");
     text.push_str("Keep locked command runs within five minutes unless the user authorizes a longer lock-holding command.\n");
-    text.push_str("Provide additional patches if checks fail or more work is needed; emit `@work-leaf done` only when this patch is ready for review.");
+    text.push_str("Provide additional edits if checks fail or more work is needed; emit `@work-leaf done` only when this patch is ready for review.");
     text
 }
 
@@ -2224,7 +2349,7 @@ fn render_file_update_prompt(
     let mut text = [
         "work-leaf file update",
         "Another agent changed files you previously read before you submitted a patch.",
-        "Rebase any pending patch against the compact file refresh below.",
+        "Rebase any pending edit against the compact file refresh below.",
     ]
     .join("\n");
     append_file_refresh_response(&mut text, agent_id, file_reads, response);
@@ -2327,5 +2452,25 @@ impl From<AgentError> for OrchestratorError {
 impl From<FileAccessError> for OrchestratorError {
     fn from(error: FileAccessError) -> Self {
         Self::FileAccess(error)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_interrupt_after_streamed_directive;
+
+    #[test]
+    fn streamed_directive_interrupts_after_complete_edit_block() {
+        let partial = "\
+@work-leaf edit update value
+*** Begin Patch
+*** Update File: src/lib.rs
+@@
+-old
++new";
+        assert!(!should_interrupt_after_streamed_directive(partial));
+
+        let complete = format!("{partial}\n*** End Patch\n@work-leaf end");
+        assert!(should_interrupt_after_streamed_directive(&complete));
     }
 }

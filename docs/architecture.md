@@ -293,7 +293,9 @@ temporary context bundle in a per-orchestrator system-temp directory and sends t
 manifest with the bundle path, file names, digests, and byte counts. The bundle directory is removed
 when the owning orchestrator state is dropped. Agents in orchestrator-read mode may read only those
 orchestrator-provided bundle paths directly; repository file reads remain mediated by
-`@work-leaf read`, and repository writes still require `@work-leaf patch`. The orchestrator tracks
+`@work-leaf read`, and manual repository writes use the structured `@work-leaf edit` protocol. The
+legacy `@work-leaf patch` protocol remains available for complete valid unified diffs and for
+tracked command diffs. The orchestrator tracks
 per-agent file snapshots with digests. A repeated read for unchanged text returns only the matching
 digest; a repeated read for changed text returns a diff from that agent's last mediated snapshot
 instead of re-sending full file text. The `@work-leaf read --force <path>` form is accepted for
@@ -476,14 +478,18 @@ command runs execute in the project root while `FileLockTable` holds write locks
 lock paths supplied by the agent. File paths are normalized relative to the project root and cannot
 escape that root.
 
-`src/patch.rs::GitPatcher` validates and applies unified diffs under write locks and creates
-metadata commits for accepted patches. Patch application locks the touched files and the repository
-root path in `FileLockTable`; the root lock serializes git index operations such as `git add` and
-`git commit` while agents can still reason and produce patches concurrently. It also accepts a
-matching already-applied diff when a locked command has produced the tracked working-tree change, so
-the command output can be saved as the agent's provisional patch. `PatchCoordinator<B>` connects
-patch conflicts and malformed patch diagnostics back to the active agent backend. `PatchRequest`,
-`PatchOutcome`, and `PatchError` are the public patch workflow types.
+`src/patch.rs::GitPatcher` applies structured exact-block edits and complete unified diffs under
+write locks, then creates metadata commits for accepted patches. Structured edits match old blocks
+against current UTF-8 file text, reject missing or ambiguous matches before writing, write the
+resulting files, and let Git compute the final diff from the working tree. Unified diffs are
+validated through `git apply --recount --check` before application. Patch application locks the
+touched files and the repository root path in `FileLockTable`; the root lock serializes git index
+operations such as `git add` and `git commit` while agents can still reason and produce patches
+concurrently. The unified-diff path also accepts a matching already-applied diff when a locked
+command has produced the tracked working-tree change, so the command output can be saved as the
+agent's provisional patch. `PatchCoordinator<B>` connects patch conflicts and malformed patch
+diagnostics back to the active agent backend. `PatchRequest`, `PatchOutcome`, and `PatchError` are
+the public patch workflow types.
 
 `src/review.rs::GitHistory` reads latest agent commits from repository history, builds cumulative
 review targets for a patch agent since a launch or reviewed baseline, and resolves agent metadata

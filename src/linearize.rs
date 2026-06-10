@@ -199,7 +199,7 @@ fn build_interactive_linearize_prompt(commits: &[AgentCommit]) -> String {
 6. Keep the diff against main/master as small as possible while preserving reviewed behavior.\n\
 7. Run the checks required by the repository instructions and iterate until they pass.\n\
 8. Report the final commit messages, removed provisional messages, grouping decisions, documentation/plain-text decisions, and verification results.\n\
-\nYou are a direct workspace agent for linearization. Read files, write files, run commands, and rewrite git history directly; do not use `@work-leaf read`, `@work-leaf patch`, or `@work-leaf locks run`.\n",
+\nYou are a direct workspace agent for linearization. Read files, write files, run commands, and rewrite git history directly; do not use `@work-leaf read`, `@work-leaf edit`, `@work-leaf patch`, or `@work-leaf locks run`.\n",
     );
     prompt
 }
@@ -263,7 +263,7 @@ fn build_linearize_prompt(plan: &LinearizePlan) -> String {
         }
     }
 
-    prompt.push_str("\nUse direct workspace reads, writes, commands, and git history rewrites; do not use `@work-leaf read`, `@work-leaf patch`, or `@work-leaf locks run`. Iterate until the verification commands pass. Keep the resulting history minimal and coherent for human review.\n");
+    prompt.push_str("\nUse direct workspace reads, writes, commands, and git history rewrites; do not use `@work-leaf read`, `@work-leaf edit`, `@work-leaf patch`, or `@work-leaf locks run`. Iterate until the verification commands pass. Keep the resulting history minimal and coherent for human review.\n");
     prompt
 }
 

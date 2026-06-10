@@ -221,7 +221,7 @@ impl PromptPolicy {
             ReadPermission::Orchestrator => lines.extend([
                 "You are not allowed to read files directly; ask the orchestrator to provide file text.",
                 "You may read temporary context bundle files only when the orchestrator gives you their exact paths in a Work Leaf response; those bundles are orchestrator-provided file text, not project files.",
-                "You are not allowed to write files directly; provide a unified diff patch for every file you want to change.",
+                "You are not allowed to write files directly; submit a structured edit patch for every file you want to change.",
                 "Commands that create, update, delete, format, build, test, or otherwise write files require orchestrator mediation.",
                 "Keep every patch focused on the current feature and explain the specific reason for the patch.",
                 "Do not modify documentation or plain-text files in patch-agent work. Do not touch `docs/**`, `README*`, `CHANGELOG*`, `*.md`, `*.txt`, or other prose-only files; leave those updates for the linearize agent after review.",
@@ -236,7 +236,7 @@ impl PromptPolicy {
             ReadPermission::DirectFilesystem => lines.extend([
                 "You may read repository files directly from the filesystem.",
                 "Use direct filesystem reads and read-only inspection commands for repository context instead of `@work-leaf read`.",
-                "You are not allowed to write files directly; provide a unified diff patch for every file you want to change.",
+                "You are not allowed to write files directly; submit a structured edit patch for every file you want to change.",
                 "Commands that create, update, delete, format, build, test, or otherwise write files require orchestrator mediation.",
                 "Keep every patch focused on the current feature and explain the specific reason for the patch.",
                 "Do not modify documentation or plain-text files in patch-agent work. Do not touch `docs/**`, `README*`, `CHANGELOG*`, `*.md`, `*.txt`, or other prose-only files; leave those updates for the linearize agent after review.",
@@ -245,7 +245,10 @@ impl PromptPolicy {
             ]),
         }
         lines.extend([
-            "Use `@work-leaf patch <reason>` followed by a unified diff and `@work-leaf end` to request a write.",
+            "Use `@work-leaf edit <reason>` followed by an apply-patch-style exact edit body and `@work-leaf end` to request a write.",
+            "Structured edit bodies use `*** Begin Patch`, `*** Update File: path`, `@@` separators without line numbers, exact unchanged context lines prefixed with a space, old lines prefixed with `-`, new lines prefixed with `+`, and `*** End Patch`.",
+            "Do not invent unified-diff line numbers for manual edits. Include enough unchanged context around each old block so it matches exactly one place in the current file.",
+            "The legacy `@work-leaf patch <reason>` unified-diff directive is still accepted only when you already have a complete valid unified diff with real hunk ranges; prefer `@work-leaf edit` for manual code, configuration, and test changes.",
             "Use `@work-leaf locks classify <command>` only when you are unsure whether a command writes project files.",
             "Use `@work-leaf locks run <path> <path...> -- <command>` to run a command while the orchestrator holds write locks for every path the command may write.",
             "This command-lock rule is language- and tool-agnostic: use it for any formatter, build, test, code generator, package manager, installer, cache-producing tool, or repository-required check that may write files.",
@@ -253,7 +256,7 @@ impl PromptPolicy {
             "Run checks that existed before your patch or checks you added yourself. Do not run another patch agent's focused tests as local validation; report those as integration conflicts unless your own source change clearly caused them.",
             "Keep the shared worktree usable for the other patch agents: do not submit known-red, compile-breaking, or deliberately failing intermediate patches. Design tests before implementation when required, but submit a cohesive patch that includes the test and the implementation needed for the shared tree to build.",
             "Locked command runs are limited to five minutes; user authorization is required for longer lock-holding commands.",
-            "Do not use command locks for manual feature edits; manual code, configuration, and test changes must still be submitted with the unified-diff patch directive.",
+            "Do not use command locks for manual feature edits; manual code, configuration, and test changes must still be submitted with the structured edit directive.",
             "Use `@work-leaf send <agent-id> <message>` to route context to another agent.",
             "You are responsible for following the project instructions, including running the repository's required checks before you submit a patch or report work done.",
             "Use `@work-leaf done` when no more orchestrator work is required.",
@@ -357,7 +360,7 @@ fn concurrent_instruction_translation(instructions: &ProjectInstructionFile) -> 
     }
     if topics.commits {
         lines.push(
-            "- Commit-message rules remain mandatory. Patch agents express intent through the `@work-leaf patch <reason>` reason; final commit-message compliance is enforced through patch reason and final linearized commits.".to_string(),
+            "- Commit-message rules remain mandatory. Patch agents express intent through the `@work-leaf edit <reason>` reason; final commit-message compliance is enforced through patch reason and final linearized commits.".to_string(),
         );
     }
     if topics.reviews {
@@ -468,7 +471,7 @@ fn linearize_preamble() -> String {
     [
         "You are running as the work-leaf linearize agent.",
         "You are allowed to read repository files directly.",
-        "You are allowed to write repository files, run commands, and rewrite git history directly inside the workspace without using `@work-leaf read`, `@work-leaf patch`, or `@work-leaf locks run`.",
+        "You are allowed to write repository files, run commands, and rewrite git history directly inside the workspace without using `@work-leaf read`, `@work-leaf edit`, `@work-leaf patch`, or `@work-leaf locks run`.",
         "Use direct workspace tools for code, documentation, plain-text files, checks, and git operations.",
         "Documentation and plain-text updates deferred by patch agents are part of your responsibility when they are required by the final reviewed behavior.",
         "Keep the final history minimal, preserve reviewed behavior, follow repository commit-message and verification instructions, and report the final commits and checks.",

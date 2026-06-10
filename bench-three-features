@@ -22,6 +22,8 @@ Environment:
   WORK_LEAF_BENCH_MODEL         optional Codex model passed to the daemon
   WORK_LEAF_BENCH_NO_READ_PERMISSION set to 1 to pass --no-read-permission
   WORK_LEAF_BENCH_OPERATOR_NOTES optional human notes saved in the report
+  WORK_LEAF_BENCH_WEB_UI       set to 0 to skip the local web UI helper
+  WORK_LEAF_BENCH_WEB_LISTEN   web UI listen address, default 127.0.0.1:0
   WORK_LEAF_CODEX_SDK_PYTHON    optional Python with openai-codex installed
 USAGE
 }
@@ -58,6 +60,8 @@ bench_model="$requested_bench_model"
 bench_model_source="requested"
 no_read_permission="${WORK_LEAF_BENCH_NO_READ_PERMISSION:-0}"
 run_id="${WORK_LEAF_BENCH_RUN_ID:-$(date +%Y%m%dT%H%M%S%z)}"
+web_ui_enabled="${WORK_LEAF_BENCH_WEB_UI:-1}"
+web_ui_listen="${WORK_LEAF_BENCH_WEB_LISTEN:-127.0.0.1:0}"
 mkdir -p "$tmp_parent" "$results_dir"
 results_dir="$(cd "$results_dir" && pwd)"
 
@@ -114,7 +118,7 @@ launch_tmux_supervisor_if_needed() {
   for name in WORK_LEAF_BENCH_BASE WORK_LEAF_BENCH_TMPDIR WORK_LEAF_BENCH_RESULTS_DIR \
     WORK_LEAF_BENCH_SKIP_BUILD WORK_LEAF_BENCH_BIN_DIR WORK_LEAF_BENCH_LISTEN \
     WORK_LEAF_BENCH_TIMEOUT_SECS WORK_LEAF_BENCH_STALL_SECS WORK_LEAF_BENCH_MODEL \
-    WORK_LEAF_BENCH_NO_READ_PERMISSION \
+    WORK_LEAF_BENCH_NO_READ_PERMISSION WORK_LEAF_BENCH_WEB_UI WORK_LEAF_BENCH_WEB_LISTEN \
     WORK_LEAF_CODEX_SDK_PYTHON WORK_LEAF_CODEX_BACKEND; do
     if [[ -n "${!name+x}" ]]; then
       command_text+="$name=$(shell_quote "${!name}") "
@@ -152,6 +156,8 @@ report_path="$results_dir/${run_id}-three-feature-bench.md"
 index_path="$results_dir/three-feature-bench.jsonl"
 daemon_pid=""
 url=""
+web_ui_pid=""
+web_ui_url="unavailable"
 start_epoch="$(date +%s)"
 review_completed="no"
 linearize_completed="no"
@@ -192,6 +198,10 @@ cleanup() {
   if [[ -n "${url:-}" ]]; then
     curl -fsS -X POST -H 'Content-Type: application/json' --data '{}' "$url/shutdown" >/dev/null 2>&1 || true
   fi
+  if [[ -n "${web_ui_pid:-}" ]] && kill -0 "$web_ui_pid" 2>/dev/null; then
+    kill "$web_ui_pid" 2>/dev/null || true
+    wait "$web_ui_pid" 2>/dev/null || true
+  fi
   if [[ -n "${daemon_pid:-}" ]] && kill -0 "$daemon_pid" 2>/dev/null; then
     kill "$daemon_pid" 2>/dev/null || true
     wait "$daemon_pid" 2>/dev/null || true
@@ -204,7 +214,7 @@ trap cleanup EXIT INT TERM
 
 copy_artifacts() {
   mkdir -p "$artifact_dir"
-  for file in state.json final-state.json daemon.out daemon.err daemon-env.txt daemon-ps.txt final-status.txt final-log.txt checks.log sdk-install.log codex-sdk-python.txt; do
+  for file in state.json final-state.json daemon.out daemon.err daemon-env.txt daemon-ps.txt web-ui.out web-ui.err web-ui-url.txt final-status.txt final-log.txt checks.log sdk-install.log codex-sdk-python.txt; do
     if [[ -f "$tmp_root/$file" ]]; then
       cp "$tmp_root/$file" "$artifact_dir/$file"
     fi
@@ -387,6 +397,7 @@ write_report() {
 - sdk_python: ${sdk_python:-unavailable}
 - no_read_permission: $no_read_permission
 - read_permission_mode: $read_permission_mode
+- web_ui_url: $web_ui_url
 - base_commit: $base_commit
 - temp_checkout: $tmp_root
 - temp_checkout_kept: 0
@@ -437,6 +448,7 @@ EOF
     --arg sdk_python "${sdk_python:-unavailable}" \
     --arg no_read_permission "$no_read_permission" \
     --arg read_permission_mode "$read_permission_mode" \
+    --arg web_ui_url "$web_ui_url" \
     --arg base_commit "$base_commit" \
     --arg report "$report_path" \
     --arg review_completed "$review_completed" \
@@ -453,7 +465,7 @@ EOF
     --argjson changed_lines_added "$changed_lines_added" \
     --argjson changed_lines_deleted "$changed_lines_deleted" \
     --argjson changed_lines_total "$changed_lines_total" \
-    '{run_id:$run_id,result:$result,benched_binary_commit:$benched_binary_commit,benched_binary_dirty:$benched_binary_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,agent_model:$agent_model,agent_model_source:$agent_model_source,requested_agent_model:$requested_agent_model,sdk_python:$sdk_python,no_read_permission:$no_read_permission,read_permission_mode:$read_permission_mode,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
+    '{run_id:$run_id,result:$result,benched_binary_commit:$benched_binary_commit,benched_binary_dirty:$benched_binary_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,agent_model:$agent_model,agent_model_source:$agent_model_source,requested_agent_model:$requested_agent_model,sdk_python:$sdk_python,no_read_permission:$no_read_permission,read_permission_mode:$read_permission_mode,web_ui_url:$web_ui_url,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
     >> "$index_path"
   reported=1
   log "bench report: $report_path"
@@ -500,6 +512,41 @@ post_agent() {
   local message="$2"
   jq -n --arg agent_id "$agent_id" --arg message "$message" '{agent_id:$agent_id,message:$message}' |
     curl -fsS -H 'Content-Type: application/json' --data-binary @- "$url/agent/message" >/dev/null
+}
+
+start_web_ui() {
+  case "$web_ui_enabled" in
+    0|false|False|no|No)
+      log "web UI helper disabled"
+      return
+      ;;
+  esac
+  if ! command -v python3 >/dev/null 2>&1; then
+    log "web UI helper skipped: python3 not found"
+    return
+  fi
+
+  python3 "$repo_root/web-ui/serve.py" --listen "$web_ui_listen" --api "$url" >"$tmp_root/web-ui.out" 2>"$tmp_root/web-ui.err" &
+  web_ui_pid=$!
+  local line
+  for _ in $(seq 1 100); do
+    if [[ -s "$tmp_root/web-ui.out" ]]; then
+      line="$(sed -n 's/^WORK_LEAF_WEB_UI_URL=//p' "$tmp_root/web-ui.out" | head -n1)"
+      if [[ -n "$line" ]]; then
+        web_ui_url="$line"
+        printf '%s\n' "$web_ui_url" > "$tmp_root/web-ui-url.txt"
+        log "web UI URL: $web_ui_url"
+        return
+      fi
+    fi
+    if ! kill -0 "$web_ui_pid" 2>/dev/null; then
+      log "web UI helper exited before printing a URL; see web-ui.err"
+      web_ui_pid=""
+      return
+    fi
+    sleep 0.1
+  done
+  log "web UI helper did not print a URL before timeout; continuing without it"
 }
 
 log "WORK_LEAF_BENCH_TEMP=$tmp_root"
@@ -558,6 +605,7 @@ for _ in $(seq 1 200); do
 done
 [[ -n "$url" ]] || fail_bench "timed out waiting for orchestrator URL"
 log "daemon URL: $url"
+start_web_ui
 
 post_command 'new add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select' || fail_bench "failed to post first patch-agent command"
 post_command 'new implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt.' || fail_bench "failed to post second patch-agent command"

@@ -1,6 +1,8 @@
+use std::collections::BTreeSet;
 use std::fmt;
+use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
 use crate::agent::{AgentBackend, AgentError, AgentId};
@@ -72,6 +74,19 @@ impl GitPatcher {
         outcome.expect("patch operation runs while locks are held")
     }
 
+    pub fn apply_edit(&self, request: PatchRequest) -> Result<PatchOutcome, PatchError> {
+        let body = extract_structured_edit_patch(&request.diff);
+        let patch = StructuredEditPatch::parse(&body, &self.locks)?;
+        let files = patch.files.clone();
+        let lock_paths = patch_lock_paths(&files);
+        let mut outcome = None;
+        self.locks.with_write_locks(&lock_paths, || {
+            outcome = Some(self.apply_edit_with_locks(request.with_diff(body), patch));
+            Ok(())
+        })?;
+        outcome.expect("patch operation runs while locks are held")
+    }
+
     fn apply_with_locks(
         &self,
         request: PatchRequest,
@@ -130,6 +145,114 @@ impl GitPatcher {
             .map_err(PatchError::Git)?;
 
         Ok(PatchOutcome { commit, files })
+    }
+
+    fn apply_edit_with_locks(
+        &self,
+        request: PatchRequest,
+        patch: StructuredEditPatch,
+    ) -> Result<PatchOutcome, PatchError> {
+        let files = patch.files.clone();
+        let changes = self.compute_structured_edit_changes(&patch)?;
+        for change in changes {
+            let path = self.root.join(&change.path);
+            match change.content {
+                Some(content) => {
+                    if let Some(parent) = path.parent() {
+                        fs::create_dir_all(parent).map_err(PatchError::Git)?;
+                    }
+                    fs::write(path, content).map_err(PatchError::Git)?;
+                }
+                None => {
+                    fs::remove_file(path).map_err(PatchError::Git)?;
+                }
+            }
+        }
+
+        self.git_add(&files).map_err(PatchError::Git)?;
+        if !self.has_staged_diff(&files).map_err(PatchError::Git)? {
+            return Err(PatchError::Conflict {
+                files,
+                diagnostic: ALREADY_APPLIED_PATCH_DIAGNOSTIC.to_string(),
+            });
+        }
+        self.git_commit(&request, &files).map_err(PatchError::Git)?;
+        let commit = self
+            .git_output(["rev-parse", "HEAD"])
+            .map_err(PatchError::Git)?;
+
+        Ok(PatchOutcome { commit, files })
+    }
+
+    fn compute_structured_edit_changes(
+        &self,
+        patch: &StructuredEditPatch,
+    ) -> Result<Vec<StructuredFileChange>, PatchError> {
+        let mut changes = Vec::new();
+        for operation in &patch.operations {
+            match operation {
+                StructuredEditOperation::Add { path, content } => {
+                    let absolute = self.root.join(path);
+                    if absolute.exists() {
+                        return Err(PatchError::Conflict {
+                            files: vec![path.clone()],
+                            diagnostic: format!(
+                                "structured edit cannot add {} because it already exists",
+                                path.display()
+                            ),
+                        });
+                    }
+                    changes.push(StructuredFileChange {
+                        path: path.clone(),
+                        content: Some(content.clone()),
+                    });
+                }
+                StructuredEditOperation::Delete { path } => {
+                    let absolute = self.root.join(path);
+                    if !absolute.exists() {
+                        return Err(PatchError::Conflict {
+                            files: vec![path.clone()],
+                            diagnostic: format!(
+                                "structured edit cannot delete {} because it does not exist",
+                                path.display()
+                            ),
+                        });
+                    }
+                    changes.push(StructuredFileChange {
+                        path: path.clone(),
+                        content: None,
+                    });
+                }
+                StructuredEditOperation::Update { path, hunks } => {
+                    let absolute = self.root.join(path);
+                    let mut content =
+                        fs::read_to_string(&absolute).map_err(|error| PatchError::Conflict {
+                            files: vec![path.clone()],
+                            diagnostic: format!(
+                                "structured edit cannot read {} as UTF-8 text: {error}",
+                                path.display()
+                            ),
+                        })?;
+                    for (index, hunk) in hunks.iter().enumerate() {
+                        content = apply_structured_hunk(&content, hunk).map_err(|diagnostic| {
+                            PatchError::Conflict {
+                                files: vec![path.clone()],
+                                diagnostic: format!(
+                                    "structured edit hunk {} for {} failed: {diagnostic}",
+                                    index + 1,
+                                    path.display()
+                                ),
+                            }
+                        })?;
+                    }
+                    changes.push(StructuredFileChange {
+                        path: path.clone(),
+                        content: Some(content),
+                    });
+                }
+            }
+        }
+        Ok(changes)
     }
 
     fn parse_patch_files(&self, diff: &str) -> Result<Vec<PathBuf>, PatchError> {
@@ -264,6 +387,297 @@ fn patch_lock_paths(files: &[PathBuf]) -> Vec<PathBuf> {
     paths
 }
 
+#[derive(Clone, Debug)]
+struct StructuredEditPatch {
+    operations: Vec<StructuredEditOperation>,
+    files: Vec<PathBuf>,
+}
+
+#[derive(Clone, Debug)]
+enum StructuredEditOperation {
+    Add {
+        path: PathBuf,
+        content: String,
+    },
+    Update {
+        path: PathBuf,
+        hunks: Vec<StructuredEditHunk>,
+    },
+    Delete {
+        path: PathBuf,
+    },
+}
+
+#[derive(Clone, Debug)]
+struct StructuredEditHunk {
+    old: String,
+    new: String,
+}
+
+#[derive(Clone, Debug)]
+struct StructuredFileChange {
+    path: PathBuf,
+    content: Option<String>,
+}
+
+impl StructuredEditPatch {
+    fn parse(raw: &str, locks: &FileLockTable) -> Result<Self, PatchError> {
+        let lines = raw
+            .lines()
+            .map(|line| line.trim_end_matches('\r'))
+            .collect::<Vec<_>>();
+        let Some(begin) = lines
+            .iter()
+            .position(|line| line.trim() == "*** Begin Patch")
+        else {
+            return Err(PatchError::NoFiles);
+        };
+        let Some(end) = lines
+            .iter()
+            .rposition(|line| line.trim() == "*** End Patch")
+        else {
+            return Err(PatchError::Conflict {
+                files: Vec::new(),
+                diagnostic: "structured edit is missing `*** End Patch`".to_string(),
+            });
+        };
+        if end <= begin {
+            return Err(PatchError::NoFiles);
+        }
+
+        let mut operations = Vec::new();
+        let mut files = BTreeSet::new();
+        let mut index = begin + 1;
+        while index < end {
+            let line = lines[index];
+            if line.trim().is_empty() {
+                index += 1;
+                continue;
+            }
+            if let Some(path) = line.strip_prefix("*** Add File: ") {
+                let path = normalize_structured_edit_path(locks, path)?;
+                insert_structured_edit_file(&mut files, &path)?;
+                index += 1;
+                let mut content = String::new();
+                while index < end && !lines[index].starts_with("*** ") {
+                    let next = lines[index];
+                    let Some(rest) = next.strip_prefix('+') else {
+                        return Err(PatchError::Conflict {
+                            files: vec![path],
+                            diagnostic: "structured add-file lines must start with `+`".to_string(),
+                        });
+                    };
+                    content.push_str(rest);
+                    content.push('\n');
+                    index += 1;
+                }
+                operations.push(StructuredEditOperation::Add { path, content });
+                continue;
+            }
+            if let Some(path) = line.strip_prefix("*** Delete File: ") {
+                let path = normalize_structured_edit_path(locks, path)?;
+                insert_structured_edit_file(&mut files, &path)?;
+                operations.push(StructuredEditOperation::Delete { path });
+                index += 1;
+                continue;
+            }
+            if let Some(path) = line.strip_prefix("*** Update File: ") {
+                let path = normalize_structured_edit_path(locks, path)?;
+                insert_structured_edit_file(&mut files, &path)?;
+                index += 1;
+                let mut hunks = Vec::new();
+                while index < end && !lines[index].starts_with("*** ") {
+                    if lines[index].trim().is_empty() {
+                        index += 1;
+                        continue;
+                    }
+                    if !lines[index].starts_with("@@") {
+                        return Err(PatchError::Conflict {
+                            files: vec![path.clone()],
+                            diagnostic: "structured update sections must contain `@@` hunk headers"
+                                .to_string(),
+                        });
+                    }
+                    index += 1;
+                    let mut old = String::new();
+                    let mut new = String::new();
+                    while index < end
+                        && !lines[index].starts_with("@@")
+                        && !lines[index].starts_with("*** ")
+                    {
+                        let next = lines[index];
+                        if next.starts_with("\\ ") {
+                            return Err(PatchError::Conflict {
+                                files: vec![path.clone()],
+                                diagnostic: "structured edits do not support no-newline markers"
+                                    .to_string(),
+                            });
+                        }
+                        let Some((prefix, rest)) = split_structured_hunk_line(next) else {
+                            return Err(PatchError::Conflict {
+                                files: vec![path.clone()],
+                                diagnostic:
+                                    "structured hunk lines must start with space, `-`, or `+`"
+                                        .to_string(),
+                            });
+                        };
+                        match prefix {
+                            ' ' => {
+                                old.push_str(rest);
+                                old.push('\n');
+                                new.push_str(rest);
+                                new.push('\n');
+                            }
+                            '-' => {
+                                old.push_str(rest);
+                                old.push('\n');
+                            }
+                            '+' => {
+                                new.push_str(rest);
+                                new.push('\n');
+                            }
+                            _ => unreachable!("split_structured_hunk_line returns known prefixes"),
+                        }
+                        index += 1;
+                    }
+                    if old.is_empty() {
+                        return Err(PatchError::Conflict {
+                            files: vec![path.clone()],
+                            diagnostic:
+                                "structured update hunk must include context or removed text"
+                                    .to_string(),
+                        });
+                    }
+                    hunks.push(StructuredEditHunk { old, new });
+                }
+                if hunks.is_empty() {
+                    return Err(PatchError::Conflict {
+                        files: vec![path.clone()],
+                        diagnostic: "structured update must contain at least one hunk".to_string(),
+                    });
+                }
+                operations.push(StructuredEditOperation::Update { path, hunks });
+                continue;
+            }
+
+            return Err(PatchError::Conflict {
+                files: Vec::new(),
+                diagnostic: format!("unknown structured edit header `{line}`"),
+            });
+        }
+
+        if operations.is_empty() {
+            return Err(PatchError::NoFiles);
+        }
+        Ok(Self {
+            operations,
+            files: files.into_iter().collect(),
+        })
+    }
+}
+
+fn normalize_structured_edit_path(locks: &FileLockTable, raw: &str) -> Result<PathBuf, PatchError> {
+    let path = raw.trim();
+    if path.is_empty() {
+        return Err(PatchError::NoFiles);
+    }
+    locks
+        .normalize_path(&PathBuf::from(path))
+        .map_err(PatchError::FileAccess)
+}
+
+fn insert_structured_edit_file(
+    files: &mut BTreeSet<PathBuf>,
+    path: &Path,
+) -> Result<(), PatchError> {
+    if files.insert(path.to_path_buf()) {
+        Ok(())
+    } else {
+        Err(PatchError::Conflict {
+            files: vec![path.to_path_buf()],
+            diagnostic:
+                "structured edit touches the same file more than once; combine hunks under one file header"
+                    .to_string(),
+        })
+    }
+}
+
+fn split_structured_hunk_line(line: &str) -> Option<(char, &str)> {
+    let mut chars = line.chars();
+    let prefix = chars.next()?;
+    if matches!(prefix, ' ' | '-' | '+') {
+        Some((prefix, chars.as_str()))
+    } else {
+        None
+    }
+}
+
+fn apply_structured_hunk(content: &str, hunk: &StructuredEditHunk) -> Result<String, String> {
+    let matches = content.match_indices(&hunk.old).collect::<Vec<_>>();
+    match matches.as_slice() {
+        [] => Err("old block was not found in current file text".to_string()),
+        [single] => {
+            let start = single.0;
+            let end = start + hunk.old.len();
+            let mut updated = String::with_capacity(
+                content.len() + hunk.new.len().saturating_sub(hunk.old.len()),
+            );
+            updated.push_str(&content[..start]);
+            updated.push_str(&hunk.new);
+            updated.push_str(&content[end..]);
+            Ok(updated)
+        }
+        many => Err(format!(
+            "ambiguous old block matched {} locations; include more unchanged context lines",
+            many.len()
+        )),
+    }
+}
+
+fn extract_structured_edit_patch(raw: &str) -> String {
+    let lines = raw.lines().collect::<Vec<_>>();
+    let Some((start, prefix)) = lines
+        .iter()
+        .enumerate()
+        .find_map(|(index, line)| structured_edit_line_prefix(line).map(|prefix| (index, prefix)))
+    else {
+        return raw.to_string();
+    };
+
+    let mut body = String::new();
+    for line in &lines[start..] {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("```") {
+            continue;
+        }
+        if let Some(stripped) = line.strip_prefix(&prefix) {
+            body.push_str(stripped);
+        } else {
+            body.push_str(line);
+        }
+        body.push('\n');
+    }
+    body
+}
+
+fn structured_edit_line_prefix(line: &str) -> Option<String> {
+    if line.starts_with("*** Begin Patch") {
+        return Some(String::new());
+    }
+    let trimmed = line.trim_start();
+    if trimmed.starts_with("*** Begin Patch") {
+        let indent_len = line.len() - trimmed.len();
+        return Some(line[..indent_len].to_string());
+    }
+    let quote_trimmed = line.trim_start_matches([' ', '\t']);
+    if quote_trimmed.starts_with("> *** Begin Patch") {
+        let quote_start = line.len() - quote_trimmed.len();
+        let prefix_len = quote_start + 2;
+        return Some(line[..prefix_len].to_string());
+    }
+    None
+}
+
 fn extract_unified_diff(raw: &str) -> String {
     let lines = raw.lines().collect::<Vec<_>>();
     let Some((start, prefix)) = lines
@@ -336,9 +750,14 @@ fn render_patch_context(request: &PatchRequest, files: &[PathBuf]) -> String {
         .lines()
         .filter(|line| line.starts_with('-') && !line.starts_with("---"))
         .count();
+    let mechanism = if request.diff.contains("*** Begin Patch") {
+        "The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why."
+    } else {
+        "The orchestrator validated with `git apply --recount --check`, applied the submitted unified diff under the repository write locks, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why."
+    };
     format!(
-        "The orchestrator applied this provisional patch for {} while the agent was working on feature `{}`. The agent stated the reason as `{}`. The patch touched {} and changed the working tree with {} added line(s) and {} removed line(s). The orchestrator validated with `git apply --recount --check`, applied the submitted unified diff under the repository write locks, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.",
-        request.agent_id, request.feature, request.reason, files, additions, removals
+        "The orchestrator applied this provisional patch for {} while the agent was working on feature `{}`. The agent stated the reason as `{}`. The patch touched {} and changed the working tree with {} added line(s) and {} removed line(s). {}",
+        request.agent_id, request.feature, request.reason, files, additions, removals, mechanism
     )
 }
 
@@ -406,6 +825,17 @@ pub(crate) fn render_no_files_prompt() -> String {
 
 pub(crate) fn unified_diff_format_guidance() -> &'static str {
     "Resend the complete unified diff through `@work-leaf patch <reason>` followed by the patch body and `@work-leaf end`. Do not use placeholder `@@` hunk headers. Every hunk must use real unified-diff line ranges such as `@@ -old_start,old_count +new_start,new_count @@` from the current file text."
+}
+
+pub(crate) fn render_structured_edit_no_files_prompt() -> String {
+    format!(
+        "The orchestrator could not apply your edit because the body did not include a structured edit file header such as `*** Update File: path`, `*** Add File: path`, or `*** Delete File: path`.\n\n{}",
+        structured_edit_format_guidance()
+    )
+}
+
+pub(crate) fn structured_edit_format_guidance() -> &'static str {
+    "Resend the complete edit through `@work-leaf edit <reason>` followed by an apply-patch-style body and `@work-leaf end`. Use `*** Begin Patch`, one or more `*** Update File: path` sections, `@@` hunk separators without line numbers, exact unchanged context lines prefixed with a space, old lines prefixed with `-`, new lines prefixed with `+`, and `*** End Patch`. Include enough unchanged context for each old block to match exactly one place in the current file."
 }
 
 fn malformed_hunk_header_diagnostic(diff: &str) -> Option<String> {

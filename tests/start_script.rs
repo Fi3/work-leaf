@@ -254,6 +254,8 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains("bench-results"));
     assert!(script.contains("results_dir=\"$(cd \"$results_dir\" && pwd)\""));
     assert!(script.contains("three-feature-bench.jsonl"));
+    assert!(script.contains("WORK_LEAF_BENCH_WEB_UI"));
+    assert!(script.contains("web-ui/serve.py"));
     assert!(script.contains("WORK_LEAF_BENCH_SUPERVISED=1"));
     assert!(script.contains("WORK_LEAF_BENCH_RUN_ID"));
     assert!(script.contains("tmux new-session -d -s"));
@@ -293,6 +295,8 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains("final-state.next.json"));
     assert!(script.contains("daemon-env.txt"));
     assert!(script.contains("daemon-ps.txt"));
+    assert!(script.contains("web-ui.out"));
+    assert!(script.contains("web-ui.err"));
     assert!(script.contains("/proc/$daemon_pid/environ"));
     assert!(script.contains("abort-reason"));
     assert!(script.contains("work-leaf-codex-wrapper"));

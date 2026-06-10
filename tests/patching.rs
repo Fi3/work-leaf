@@ -53,6 +53,113 @@ diff --git a/src/lib.rs b/src/lib.rs
 }
 
 #[test]
+fn patcher_applies_structured_edit_patch_without_hunk_line_numbers() {
+    let root = git_repo("patch-applies-structured-edit");
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(
+        root.join("src/lib.rs"),
+        "\
+pub fn value() -> u8 { 1 }
+pub fn label() -> &'static str { \"old\" }
+",
+    )
+    .unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial library fixture"]);
+
+    let patcher = GitPatcher::new(root.clone(), FileLockTable::new(root.clone()));
+    let outcome = patcher
+        .apply_edit(PatchRequest::new(
+            AgentId::new("chat-1").unwrap(),
+            "parser",
+            "return the parsed label",
+            "\
+*** Begin Patch
+*** Update File: src/lib.rs
+@@
+ pub fn value() -> u8 { 1 }
+-pub fn label() -> &'static str { \"old\" }
++pub fn label() -> &'static str { \"new\" }
+*** End Patch
+",
+        ))
+        .unwrap();
+
+    assert_eq!(
+        fs::read_to_string(root.join("src/lib.rs")).unwrap(),
+        "\
+pub fn value() -> u8 { 1 }
+pub fn label() -> &'static str { \"new\" }
+"
+    );
+    assert_eq!(outcome.files, vec![PathBuf::from("src/lib.rs")]);
+    assert_eq!(outcome.commit.len(), 40);
+
+    let message = git_output(&root, ["log", "-1", "--pretty=%B"]);
+    assert!(message.starts_with("UPDATE apply parser patch from chat-1"));
+    assert!(message.contains("matched exact edit blocks"));
+}
+
+#[test]
+fn patcher_rejects_ambiguous_structured_edit_without_writing() {
+    let root = git_repo("patch-structured-edit-ambiguous");
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(
+        root.join("src/lib.rs"),
+        "\
+pub fn one() -> u8 {
+    1
+}
+
+pub fn two() -> u8 {
+    1
+}
+",
+    )
+    .unwrap();
+    git(&root, ["add", "."]);
+    git(&root, ["commit", "-m", "ADD initial library fixture"]);
+
+    let patcher = GitPatcher::new(root.clone(), FileLockTable::new(root.clone()));
+    let error = patcher
+        .apply_edit(PatchRequest::new(
+            AgentId::new("chat-1").unwrap(),
+            "parser",
+            "return a new value",
+            "\
+*** Begin Patch
+*** Update File: src/lib.rs
+@@
+-    1
++    2
+*** End Patch
+",
+        ))
+        .unwrap_err();
+
+    match error {
+        PatchError::Conflict { files, diagnostic } => {
+            assert_eq!(files, vec![PathBuf::from("src/lib.rs")]);
+            assert!(diagnostic.contains("ambiguous"));
+        }
+        other => panic!("unexpected error: {other:?}"),
+    }
+    assert_eq!(
+        fs::read_to_string(root.join("src/lib.rs")).unwrap(),
+        "\
+pub fn one() -> u8 {
+    1
+}
+
+pub fn two() -> u8 {
+    1
+}
+"
+    );
+    assert!(git_output(&root, ["status", "--short"]).is_empty());
+}
+
+#[test]
 fn patcher_applies_unified_diff_with_incorrect_hunk_counts() {
     let root = git_repo("patch-recount-hunks");
     fs::create_dir_all(root.join("src")).unwrap();
