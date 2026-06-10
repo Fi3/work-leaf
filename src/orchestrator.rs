@@ -833,6 +833,13 @@ where
                         .push(follow_up(agent_id.clone(), reply));
                     break;
                 }
+                if run
+                    .follow_up_replies
+                    .iter()
+                    .any(|follow_up| follow_up.agent_id == *agent_id)
+                {
+                    break;
+                }
                 services.file_reads.clear_agent(agent_id);
                 services.command_changes.clear_agent(agent_id);
                 run.completed = true;

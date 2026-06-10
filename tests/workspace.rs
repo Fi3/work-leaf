@@ -108,10 +108,11 @@ fn controller_does_not_append_streamed_agent_messages_again_on_completion() {
         "{session:?}"
     );
     assert!(
-        session
+        !session
             .lines
             .iter()
-            .any(|line| line.contains("agent user-1 reported done"))
+            .any(|line| line.contains("agent user-1 reported done")),
+        "done in the same streamed turn as a read waits for the read follow-up"
     );
 }
 

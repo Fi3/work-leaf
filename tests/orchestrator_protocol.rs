@@ -497,6 +497,39 @@ fn orchestrator_protocol_blocks_done_until_command_changes_are_committed() {
 }
 
 #[test]
+fn orchestrator_protocol_ignores_done_until_same_turn_read_follow_up_is_answered() {
+    let root = temp_git_repo("protocol-read-and-done-same-turn");
+    fs::write(root.join("README.md"), "readme\n").unwrap();
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root, backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "parser",
+            "@work-leaf read README.md\n@work-leaf done",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(events.iter().any(|event| matches!(
+        event,
+        OrchestratorEvent::FileTextSent { agent_id: id, .. } if id == &agent_id
+    )));
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, OrchestratorEvent::AgentDone { .. })),
+        "done in the same turn as a read should wait for the read follow-up"
+    );
+    assert_eq!(backend.sends.len(), 1);
+    assert_eq!(backend.sends[0].0, agent_id);
+    assert!(backend.sends[0].1.contains("README.md"));
+    assert!(backend.sends[0].1.contains("readme"));
+}
+
+#[test]
 fn orchestrator_protocol_commits_already_applied_command_diff_before_done() {
     let root = temp_git_repo("protocol-command-dirty-already-applied-patch");
     fs::write(root.join("README.md"), "before\n").unwrap();
