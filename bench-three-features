@@ -673,6 +673,11 @@ while true; do
       code_quality="not run; final repository was dirty"
       fail_bench "linearize finished with a dirty repository"
     fi
+    commits_after_base="$(git -C "$checkout_dir" rev-list --count HEAD ^"$base_commit" 2>/dev/null || printf '0')"
+    if [[ "$commits_after_base" != "3" ]]; then
+      code_quality="not run; linearize produced ${commits_after_base} commits instead of 3"
+      fail_bench "linearize produced ${commits_after_base} commits after base; expected 3 one-per-feature final commits"
+    fi
     log "running final code quality checks"
     (
       cd "$checkout_dir"

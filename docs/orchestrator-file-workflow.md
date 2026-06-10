@@ -505,8 +505,10 @@ A normal development session in default read-permission mode follows this shape:
 14. If the review agent reports findings, the orchestrator sends them to the patch agent and the patch
     agent keeps patching.
 15. If the review agent reports no findings, the user can mark the review chat as done.
-16. Reviewed work from the current command-chat or controller instance can then be linearized into the
-    final history.
+16. Reviewed work from the current command-chat or controller instance can then be linearized into
+    the final history. Linearization keeps one final target per accepted patch-agent feature unless
+    the user explicitly accepts a different grouping; support, validation, test-hygiene, and
+    documentation updates needed for that feature are folded into that feature's final commit.
 
 In direct-read mode, steps 4 and 5 are replaced by direct filesystem inspection from the agent. The
 write, review, and linearization steps remain orchestrator-controlled.

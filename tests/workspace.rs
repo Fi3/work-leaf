@@ -1333,7 +1333,7 @@ fn controller_linearize_uses_only_commits_reviewed_in_this_session() {
 }
 
 #[test]
-fn controller_linearize_keeps_multiple_reviewed_commits_from_same_agent() {
+fn controller_linearize_compacts_multiple_reviewed_commits_from_same_agent() {
     let root = git_repo("workspace-linearize-same-agent-multiple-reviewed");
     fs::write(root.join("README.md"), "before\n").unwrap();
     git(&root, ["add", "README.md"]);
@@ -1382,8 +1382,9 @@ fn controller_linearize_keeps_multiple_reviewed_commits_from_same_agent() {
     );
     assert_eq!(
         linearize_launch.prompt.matches("Agent-ID: user-1").count(),
-        2
+        1
     );
+    assert!(linearize_launch.prompt.contains("exactly 1 final commit"));
 }
 
 #[test]

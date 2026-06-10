@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
-use std::fmt;
+use std::collections::BTreeSet;
+use std::fmt::{self, Write};
 
 use crate::agent::{AgentBackend, AgentError, AgentId, AgentLaunch, AgentProfile};
 use crate::review::AgentCommit;
@@ -112,13 +113,13 @@ where
     }
 
     pub fn questions_for(commits: &[AgentCommit]) -> Vec<LinearizeQuestion> {
-        commits
+        compact_linearize_targets(commits)
             .iter()
             .map(|commit| LinearizeQuestion {
                 agent_id: commit.agent_id.clone(),
                 feature: commit.feature.clone(),
                 prompt: format!(
-                    "For Agent-ID {} ({}) should this patch keep a final commit, integrate into another commit, or be grouped with other reviewed chat ids?",
+                    "For Agent-ID {} ({}) should this patch keep a final commit as its one final commit, integrate into another commit, or be grouped with other reviewed chat ids?",
                     commit.agent_id, commit.feature
                 ),
             })
@@ -155,7 +156,7 @@ where
     }
 
     fn validate_plan(&self, plan: &LinearizePlan) -> Result<(), LinearizeError> {
-        for commit in &plan.commits {
+        for commit in compact_linearize_targets(&plan.commits) {
             if !plan.decisions.contains_key(&commit.agent_id) {
                 return Err(LinearizeError::MissingDecision(commit.agent_id.clone()));
             }
@@ -165,10 +166,12 @@ where
 }
 
 fn build_interactive_linearize_prompt(commits: &[AgentCommit]) -> String {
+    let targets = compact_linearize_targets(commits);
+    let final_count = final_commit_count_phrase(targets.len());
     let mut prompt = String::new();
     prompt.push_str("You are the work-leaf linearizer for reviewed agent patches.\n\n");
-    prompt.push_str("Reviewed commits:\n");
-    for commit in commits {
+    prompt.push_str(&format!("Final patch targets ({}):\n", targets.len()));
+    for commit in &targets {
         prompt.push_str(&format!(
             "- Agent-ID: {}\n  Commit: {}\n  Feature: {}\n  Reason: {}\n  Subject: {}\n  Context: {}\n",
             commit.agent_id,
@@ -183,11 +186,16 @@ fn build_interactive_linearize_prompt(commits: &[AgentCommit]) -> String {
     prompt.push_str(
         "\nScope and commit-shaping rules:\n\
 - Only the reviewed commits listed in this prompt are in scope for this linearization run. Ignore other provisional work-leaf commits in git history unless the user explicitly adds them.\n\
-- Default to one final commit per listed patch agent. If one listed patch agent produced multiple provisional commits, compact that agent's provisional commits into one final commit.\n\
+- Default to one final commit per listed patch agent target. If one listed patch agent produced multiple reviewed provisional commits, compact that agent's provisional commits into one final commit.\n\
+- Produce exactly the number of final commits stated in this prompt unless the user explicitly accepts a different grouping.\n\
+- Do not keep or create separate support, test-hygiene, review-fix, validation-fix, or documentation-only commits; fold necessary support changes into the closest reviewed feature commit.\n\
 - Merge work from multiple listed patch agents only when they implemented the same feature or behavior.\n\
 - The repository's AGENTS.md commit message rules have priority over all linearizer examples and must be followed exactly.\n\
 - Keep each final commit's diff against main/master as small as possible while preserving the reviewed behavior.\n",
     );
+    prompt.push_str(&format!(
+        "\nFinal history contract: after acceptance, rewrite the reviewed provisional history into {final_count}. The final history must not contain extra Work Leaf support commits unless the user explicitly asks for them.\n",
+    ));
 
     prompt.push_str(
         "\nRequired workflow:\n\
@@ -205,17 +213,21 @@ fn build_interactive_linearize_prompt(commits: &[AgentCommit]) -> String {
 }
 
 fn build_linearize_prompt(plan: &LinearizePlan) -> String {
+    let targets = compact_linearize_targets(&plan.commits);
+    let expected_count = expected_final_commit_count(plan, &targets);
+    let final_count = final_commit_count_phrase(expected_count);
     let mut prompt = String::new();
     prompt.push_str("You are the work-leaf linearizer for reviewed agent patches.\n");
     prompt.push_str(
         "Rewrite the provisional git history into clean final commits using the decisions below.\n",
     );
     prompt.push_str("Only the reviewed commits listed below are in scope. Ignore other provisional work-leaf commits in git history unless the user explicitly adds them.\n");
-    prompt.push_str("Default to one final commit per listed patch agent, compact multiple provisional commits from that agent into that final commit, and merge multiple listed patch agents only when they implemented the same feature or behavior.\n");
+    prompt.push_str("Default to one final commit per listed patch agent target, compact multiple provisional commits from that agent into that final commit, and merge multiple listed patch agents only when they implemented the same feature or behavior.\n");
+    prompt.push_str(&format!("Produce {final_count} according to the decisions below. Do not keep or create separate support, test-hygiene, review-fix, validation-fix, or documentation-only commits; fold necessary support changes into the closest reviewed feature commit.\n"));
     prompt.push_str("The repository's AGENTS.md commit message rules have priority over all linearizer examples, and make the diff against master/main as small as possible for each final commit. Documentation and plain-text files intentionally deferred by patch agents are updated directly by the linearizer when the final reviewed behavior requires them.\n\n");
 
-    prompt.push_str("Reviewed commits:\n");
-    for commit in &plan.commits {
+    prompt.push_str("Final patch targets:\n");
+    for commit in &targets {
         prompt.push_str(&format!(
             "- {} {} feature={} reason={}\n",
             commit.agent_id, commit.hash, commit.feature, commit.reason
@@ -223,7 +235,7 @@ fn build_linearize_prompt(plan: &LinearizePlan) -> String {
     }
 
     prompt.push_str("\nDecisions:\n");
-    for commit in &plan.commits {
+    for commit in &targets {
         let Some(action) = plan.decisions.get(&commit.agent_id) else {
             continue;
         };
@@ -265,6 +277,94 @@ fn build_linearize_prompt(plan: &LinearizePlan) -> String {
 
     prompt.push_str("\nUse direct workspace reads, writes, commands, and git history rewrites; do not use `@work-leaf read`, `@work-leaf edit`, `@work-leaf patch`, or `@work-leaf locks run`. Iterate until the verification commands pass. Keep the resulting history minimal and coherent for human review.\n");
     prompt
+}
+
+fn compact_linearize_targets(commits: &[AgentCommit]) -> Vec<AgentCommit> {
+    let mut groups: Vec<Vec<AgentCommit>> = Vec::new();
+    for commit in commits {
+        if let Some(group) = groups
+            .iter_mut()
+            .find(|group| group[0].agent_id == commit.agent_id)
+        {
+            group.push(commit.clone());
+        } else {
+            groups.push(vec![commit.clone()]);
+        }
+    }
+    groups
+        .into_iter()
+        .filter_map(compact_linearize_target)
+        .collect()
+}
+
+fn compact_linearize_target(mut commits: Vec<AgentCommit>) -> Option<AgentCommit> {
+    if commits.len() <= 1 {
+        return commits.pop();
+    }
+
+    let latest = commits.last()?.clone();
+    let mut context = format!(
+        "Linearize target includes {} reviewed provisional commits for patch agent {}. Fold every listed reviewed commit into one final feature commit.",
+        commits.len(),
+        latest.agent_id
+    );
+    for commit in &commits {
+        let _ = write!(
+            context,
+            "\n\nReviewed commit: {}\nSubject: {}\nFeature: {}\nReason: {}\nContext: {}",
+            commit.hash, commit.subject, commit.feature, commit.reason, commit.context
+        );
+    }
+
+    let mut body = String::new();
+    for commit in &commits {
+        let _ = write!(
+            body,
+            "\n\n--- reviewed commit {} ---\n{}",
+            commit.hash, commit.body
+        );
+    }
+
+    Some(AgentCommit {
+        hash: latest.hash.clone(),
+        agent_id: latest.agent_id,
+        feature: latest.feature,
+        reason: format!(
+            "Linearize {} reviewed commits through {}",
+            commits.len(),
+            short_hash(&latest.hash)
+        ),
+        context,
+        subject: latest.subject,
+        body: body.trim().to_string(),
+    })
+}
+
+fn expected_final_commit_count(plan: &LinearizePlan, targets: &[AgentCommit]) -> usize {
+    let mut final_agents = BTreeSet::new();
+    for target in targets {
+        match plan.decisions.get(&target.agent_id) {
+            Some(LinearizeAction::IntegrateInto(agent_id)) => {
+                final_agents.insert(agent_id.clone());
+            }
+            Some(LinearizeAction::KeepFinalCommit) | None => {
+                final_agents.insert(target.agent_id.clone());
+            }
+        }
+    }
+    final_agents.len()
+}
+
+fn final_commit_count_phrase(count: usize) -> String {
+    if count == 1 {
+        "exactly 1 final commit".to_string()
+    } else {
+        format!("exactly {count} final commits")
+    }
+}
+
+fn short_hash(hash: &str) -> &str {
+    hash.get(..12).unwrap_or(hash)
 }
 
 #[derive(Debug)]

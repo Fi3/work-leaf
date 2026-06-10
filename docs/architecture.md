@@ -336,10 +336,11 @@ Review bookkeeping has three scopes. The controller records a launch-time review
 patch agent, tracks the latest reviewed hash for that patch agent so the same agent head is not
 reviewed twice, and asks reviewers to inspect every provisional commit from the active baseline
 through the latest patch-agent commit. `CommandChat` also keeps the ordered exact review targets that
-completed review during the active instance, including their cumulative review scope text, and those
-targets form the linearizer handoff. This lets one patch-agent session complete more than one
-reviewed patch without a later hash replacing earlier reviewed work or dropping earlier commits from
-the linearizer prompt.
+completed review during the active instance, including their cumulative review scope text. The
+linearizer handoff compacts multiple reviewed hashes from the same patch agent into one final patch
+target while preserving the individual hashes, reasons, and context inside that target. This keeps
+the final history shaped as one commit per accepted patch-agent feature unless the user explicitly
+accepts a different grouping.
 When review resolves with no findings, the controller marks the patch-agent session as needing a
 user completion decision and appends a yes/no question to that session. `yes` closes the feature,
 `no` keeps it open, and a later message in a closed chat clears the closed state before sending the
@@ -530,10 +531,14 @@ linearization workflow types. `CommandChat` and `WorkLeafController` launch line
 exact commits recorded as reviewed in the current command-chat or controller instance; unrelated
 historical agent metadata commits are outside the linearizer scope unless the user explicitly reviews
 or adds them in that session. When one patch-agent id completes multiple reviewed commits in one
-active instance, each reviewed hash is listed independently for the linearizer. The linearizer owns
-documentation and plain-text updates deferred by patch agents, uses direct workspace access instead of
-orchestrator mediation, and rewrites provisional work-leaf commits into final commits after the user
-accepts its proposed plan.
+active instance, the linearizer receives one final target for that patch agent and the target context
+lists every reviewed hash that must be preserved. The linearizer owns documentation and plain-text
+updates deferred by patch agents, uses direct workspace access instead of orchestrator mediation, and
+rewrites provisional work-leaf commits into final commits after the user accepts its proposed plan.
+The resulting history contains exactly one final commit per linearize target unless the accepted
+plan explicitly groups targets together; support, test-hygiene, review-fix, validation-fix, and
+documentation-only work is folded into the relevant feature commit rather than kept as extra final
+commits.
 
 `src/instructions.rs` is crate-private. It loads project instruction files used by `PromptPolicy`
 for agent launch prompts.

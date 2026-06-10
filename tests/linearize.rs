@@ -36,6 +36,30 @@ fn linearize_questions_cover_each_reviewed_chat_id() {
 }
 
 #[test]
+fn linearize_questions_compact_multiple_reviewed_hashes_from_one_patch_agent() {
+    let commits = vec![
+        agent_commit(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "chat-a",
+            "parser",
+            "first fix",
+        ),
+        agent_commit(
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "chat-a",
+            "parser",
+            "second fix",
+        ),
+    ];
+
+    let questions = LinearizePlanner::<FakeBackend>::questions_for(&commits);
+
+    assert_eq!(questions.len(), 1);
+    assert_eq!(questions[0].agent_id.as_str(), "chat-a");
+    assert!(questions[0].prompt.contains("one final commit"));
+}
+
+#[test]
 fn interactive_linearize_prompt_requires_user_accepted_plan_before_rewrite() {
     let commits = vec![agent_commit(
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -63,6 +87,39 @@ fn interactive_linearize_prompt_requires_user_accepted_plan_before_rewrite() {
     );
     assert!(prompt.contains("Agent-ID: chat-a"));
     assert!(prompt.contains("Subject: UPDATE apply parser patch from chat-a"));
+}
+
+#[test]
+fn interactive_linearize_prompt_keeps_one_final_target_per_patch_agent() {
+    let commits = vec![
+        agent_commit(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "chat-a",
+            "parser",
+            "first fix",
+        ),
+        agent_commit(
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "chat-a",
+            "parser",
+            "second fix",
+        ),
+        agent_commit(
+            "cccccccccccccccccccccccccccccccccccccccc",
+            "chat-b",
+            "slash",
+            "slash commands",
+        ),
+    ];
+
+    let prompt = LinearizePlanner::<FakeBackend>::interactive_prompt(&commits);
+
+    assert_eq!(prompt.matches("Agent-ID: chat-a").count(), 1);
+    assert_eq!(prompt.matches("Agent-ID: chat-b").count(), 1);
+    assert!(prompt.contains("first fix"));
+    assert!(prompt.contains("second fix"));
+    assert!(prompt.contains("exactly 2 final commits"));
+    assert!(prompt.contains("Do not keep or create separate support, test-hygiene"));
 }
 
 #[test]
