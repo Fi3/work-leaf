@@ -61,8 +61,8 @@
 * this information are passed to a new agent that will merge all commits from the
     chat-ids that we want to keep into only one, and it will merge all commits of chat-ids that
     we do not want to keep into the ones that make most sense. It will then iterate trhoug test
-    (or whatver is defined in the repo instruction) and try to make the diff with master/main as
-    small as possible.
+    (or whatver is defined in the repo instruction) and keep the final stack rooted at the reviewed
+    commits' base while making the resulting diff as small as possible.
 
 ## command chat
 

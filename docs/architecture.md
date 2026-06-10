@@ -535,6 +535,9 @@ active instance, the linearizer receives one final target for that patch agent a
 lists every reviewed hash that must be preserved. The linearizer owns documentation and plain-text
 updates deferred by patch agents, uses direct workspace access instead of orchestrator mediation, and
 rewrites provisional work-leaf commits into final commits after the user accepts its proposed plan.
+The rewritten stack stays rooted at the parent or common base of the reviewed commits unless the user
+explicitly requests retargeting to another branch tip; branch names such as `main` or `master` are
+context for discovering that base, not automatic rewrite targets.
 The resulting history contains exactly one final commit per linearize target unless the accepted
 plan explicitly groups targets together; support, test-hygiene, review-fix, validation-fix, and
 documentation-only work is folded into the relevant feature commit rather than kept as extra final

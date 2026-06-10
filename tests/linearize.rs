@@ -77,7 +77,8 @@ fn interactive_linearize_prompt_requires_user_accepted_plan_before_rewrite() {
     assert!(prompt.contains("Only the reviewed commits listed in this prompt are in scope"));
     assert!(prompt.contains("one final commit per listed patch agent"));
     assert!(prompt.contains("AGENTS.md commit message rules"));
-    assert!(prompt.contains("diff against main/master as small as possible"));
+    assert!(prompt.contains("parent/common base of the listed reviewed commits"));
+    assert!(prompt.contains("Do not retarget the final commits onto main/master"));
     assert!(prompt.contains("Run the checks required by the repository instructions"));
     assert!(prompt.contains("Update documentation and plain-text files directly"));
     assert!(
@@ -182,7 +183,8 @@ fn linearize_handoff_launches_codex_agent_with_decisions_groups_and_tests() {
     assert!(prompt.contains("chat-b: integrate into chat-a"));
     assert!(prompt.contains("Group parser-and-cli: chat-a, chat-c"));
     assert!(prompt.contains("cargo test"));
-    assert!(prompt.contains("make the diff against master/main as small as possible"));
+    assert!(prompt.contains("parent/common base of the listed reviewed commits"));
+    assert!(prompt.contains("Do not retarget onto main/master"));
     assert!(
         prompt
             .contains("Documentation and plain-text files intentionally deferred by patch agents")

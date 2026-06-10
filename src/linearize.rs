@@ -191,7 +191,8 @@ fn build_interactive_linearize_prompt(commits: &[AgentCommit]) -> String {
 - Do not keep or create separate support, test-hygiene, review-fix, validation-fix, or documentation-only commits; fold necessary support changes into the closest reviewed feature commit.\n\
 - Merge work from multiple listed patch agents only when they implemented the same feature or behavior.\n\
 - The repository's AGENTS.md commit message rules have priority over all linearizer examples and must be followed exactly.\n\
-- Keep each final commit's diff against main/master as small as possible while preserving the reviewed behavior.\n",
+- The rewrite base is the parent/common base of the listed reviewed commits. Do not retarget the final commits onto main/master or another branch tip unless the user explicitly asks for that retarget.\n\
+- Keep each final commit's diff against the reviewed stack base and the other final commits as small as possible while preserving the reviewed behavior.\n",
     );
     prompt.push_str(&format!(
         "\nFinal history contract: after acceptance, rewrite the reviewed provisional history into {final_count}. The final history must not contain extra Work Leaf support commits unless the user explicitly asks for them.\n",
@@ -199,12 +200,12 @@ fn build_interactive_linearize_prompt(commits: &[AgentCommit]) -> String {
 
     prompt.push_str(
         "\nRequired workflow:\n\
-1. Inspect git history, the current branch, and the merge base with main or master before proposing a rewrite.\n\
+1. Inspect git history and identify the parent/common base of the listed reviewed commits before proposing a rewrite. In a detached or historical checkout, keep the final rewritten stack on that reviewed base.\n\
 2. Propose the solution before changing history. For each reviewed patch, state which final commit message should be kept, which provisional commit message should be removed, and whether related work should be grouped or merged.\n\
 3. Ask the user to accept the solution or request changes. Do not rewrite history until the user accepts.\n\
 4. After acceptance, rewrite provisional work-leaf commits into coherent final commits and remove provisional agent commits.\n\
 5. Update documentation and plain-text files directly when the final reviewed behavior requires it; patch agents intentionally defer docs, README, changelog, markdown, txt, and other prose-only updates to this linearize step.\n\
-6. Keep the diff against main/master as small as possible while preserving reviewed behavior.\n\
+6. Keep the diff against the reviewed stack base as small as possible while preserving reviewed behavior.\n\
 7. Run the checks required by the repository instructions and iterate until they pass.\n\
 8. Report the final commit messages, removed provisional messages, grouping decisions, documentation/plain-text decisions, and verification results.\n\
 \nYou are a direct workspace agent for linearization. Read files, write files, run commands, and rewrite git history directly; do not use `@work-leaf read`, `@work-leaf edit`, `@work-leaf patch`, or `@work-leaf locks run`.\n",
@@ -224,7 +225,7 @@ fn build_linearize_prompt(plan: &LinearizePlan) -> String {
     prompt.push_str("Only the reviewed commits listed below are in scope. Ignore other provisional work-leaf commits in git history unless the user explicitly adds them.\n");
     prompt.push_str("Default to one final commit per listed patch agent target, compact multiple provisional commits from that agent into that final commit, and merge multiple listed patch agents only when they implemented the same feature or behavior.\n");
     prompt.push_str(&format!("Produce {final_count} according to the decisions below. Do not keep or create separate support, test-hygiene, review-fix, validation-fix, or documentation-only commits; fold necessary support changes into the closest reviewed feature commit.\n"));
-    prompt.push_str("The repository's AGENTS.md commit message rules have priority over all linearizer examples, and make the diff against master/main as small as possible for each final commit. Documentation and plain-text files intentionally deferred by patch agents are updated directly by the linearizer when the final reviewed behavior requires them.\n\n");
+    prompt.push_str("The repository's AGENTS.md commit message rules have priority over all linearizer examples. The rewrite base is the parent/common base of the listed reviewed commits. Do not retarget onto main/master or another branch tip unless the user explicitly asks for that retarget; make each final commit's diff against the reviewed stack base and the other final commits as small as possible. Documentation and plain-text files intentionally deferred by patch agents are updated directly by the linearizer when the final reviewed behavior requires them.\n\n");
 
     prompt.push_str("Final patch targets:\n");
     for commit in &targets {
@@ -275,7 +276,7 @@ fn build_linearize_prompt(plan: &LinearizePlan) -> String {
         }
     }
 
-    prompt.push_str("\nUse direct workspace reads, writes, commands, and git history rewrites; do not use `@work-leaf read`, `@work-leaf edit`, `@work-leaf patch`, or `@work-leaf locks run`. Iterate until the verification commands pass. Keep the resulting history minimal and coherent for human review.\n");
+    prompt.push_str("\nUse direct workspace reads, writes, commands, and git history rewrites; do not use `@work-leaf read`, `@work-leaf edit`, `@work-leaf patch`, or `@work-leaf locks run`. Iterate until the verification commands pass. Keep the resulting history minimal and coherent for human review, rooted at the reviewed stack base unless the user explicitly requests a different target branch.\n");
     prompt
 }
 
