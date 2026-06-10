@@ -418,6 +418,12 @@ fn direct_codex_three_feature_bench_scripts_describe_sequential_and_worktree_mod
     assert!(common.contains("three-feature-sequential-bench.jsonl"));
     assert!(common.contains("three-feature-worktree-bench.jsonl"));
     assert!(common.contains("agent_transport: direct-codex-cli"));
+    assert!(common.contains("agent_conversation_mode: persistent-codex-resume-threads"));
+    assert!(common.contains("extract_thread_id()"));
+    assert!(common.contains("run_codex_resume()"));
+    assert!(common.contains("resume --json \"$thread_id\" -"));
+    assert!(common.contains("implementation_thread_id"));
+    assert!(common.contains("reviewer_thread_id"));
     assert!(common.contains("review_completed"));
     assert!(common.contains("linearize_completed"));
     assert!(common.contains(

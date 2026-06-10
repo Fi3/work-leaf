@@ -290,6 +290,7 @@ write_report() {
 - bench_driver_dirty: $driver_dirty
 - agent_backend: codex
 - agent_transport: direct-codex-cli
+- agent_conversation_mode: persistent-codex-resume-threads
 - codex_version: $codex_version
 - agent_model: $bench_model
 - agent_model_source: $bench_model_source
@@ -339,6 +340,7 @@ EOF
     --arg bench_driver_dirty "$driver_dirty" \
     --arg agent_backend "codex" \
     --arg agent_transport "direct-codex-cli" \
+    --arg agent_conversation_mode "persistent-codex-resume-threads" \
     --arg codex_version "$codex_version" \
     --arg agent_model "$bench_model" \
     --arg agent_model_source "$bench_model_source" \
@@ -364,7 +366,7 @@ EOF
     --argjson changed_lines_added "$changed_lines_added" \
     --argjson changed_lines_deleted "$changed_lines_deleted" \
     --argjson changed_lines_total "$changed_lines_total" \
-    '{run_id:$run_id,result:$result,bench_mode:$bench_mode,benched_binary_commit:$benched_binary_commit,bench_driver_commit:$bench_driver_commit,bench_driver_dirty:$bench_driver_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,codex_version:$codex_version,agent_model:$agent_model,agent_model_source:$agent_model_source,requested_agent_model:$requested_agent_model,sdk_python:$sdk_python,no_read_permission:$no_read_permission,web_ui_url:$web_ui_url,read_permission_mode:$read_permission_mode,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,review_round_limit:$review_round_limit,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
+    '{run_id:$run_id,result:$result,bench_mode:$bench_mode,benched_binary_commit:$benched_binary_commit,bench_driver_commit:$bench_driver_commit,bench_driver_dirty:$bench_driver_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,agent_conversation_mode:$agent_conversation_mode,codex_version:$codex_version,agent_model:$agent_model,agent_model_source:$agent_model_source,requested_agent_model:$requested_agent_model,sdk_python:$sdk_python,no_read_permission:$no_read_permission,web_ui_url:$web_ui_url,read_permission_mode:$read_permission_mode,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,review_round_limit:$review_round_limit,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
     >> "$index_path"
   reported=1
   log "bench report: $report_path"
@@ -485,6 +487,29 @@ print("\n".join(parts))
 PY
 }
 
+extract_thread_id() {
+  local jsonl="$1"
+  python3 - "$jsonl" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8", errors="replace") as handle:
+    for line in handle:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        thread_id = event.get("thread_id")
+        if isinstance(thread_id, str) and thread_id:
+            print(thread_id)
+            sys.exit(0)
+sys.exit(1)
+PY
+}
+
 run_codex() {
   local label="$1"
   local cwd="$2"
@@ -526,6 +551,54 @@ run_codex() {
   set -e
   printf '%s\n' "$status" > "$status_file"
   extract_text_from_jsonl "$jsonl" "$text_file" || true
+  extract_thread_id "$jsonl" > "$run_dir/${label}.thread_id" 2>/dev/null || true
+  return "$status"
+}
+
+run_codex_resume() {
+  local label="$1"
+  local cwd="$2"
+  local sandbox="$3"
+  local thread_id="$4"
+  local prompt="$5"
+  local run_dir jsonl stderr_file prompt_file text_file status_file
+  run_dir="$tmp_root/runs"
+  mkdir -p "$run_dir"
+  jsonl="$run_dir/${label}.jsonl"
+  stderr_file="$run_dir/${label}.stderr"
+  prompt_file="$run_dir/${label}.prompt.txt"
+  text_file="$run_dir/${label}.text.txt"
+  status_file="$run_dir/${label}.status"
+  printf '%s\n' "$prompt" > "$prompt_file"
+  printf '%s\n' "$thread_id" > "$run_dir/${label}.resume_thread_id"
+  log "codex $label resume $thread_id in $cwd"
+
+  # Keep follow-up turns in the same Codex conversation a human would keep open.
+  # codex --disable apps --cd "$cwd" --sandbox "$sandbox" --ask-for-approval never exec --color never resume --json "$thread_id" -
+  local args=(--disable apps --cd "$cwd" --sandbox "$sandbox" --ask-for-approval never)
+  if [[ -n "${WORK_LEAF_CODEX_BENCH_MODEL:-}" ]]; then
+    args+=(--model "$WORK_LEAF_CODEX_BENCH_MODEL")
+  fi
+  args+=(exec --color never resume --json "$thread_id" -)
+  local now remaining
+  now="$(date +%s)"
+  remaining=$((deadline - now))
+  if (( remaining <= 0 )); then
+    printf 'timed out before starting %s\n' "$label" > "$stderr_file"
+    printf '124\n' > "$status_file"
+    return 124
+  fi
+  set +e
+  if command -v timeout >/dev/null 2>&1; then
+    timeout --foreground "${remaining}s" "$codex_bin" "${args[@]}" < "$prompt_file" > "$jsonl" 2> "$stderr_file"
+  else
+    "$codex_bin" "${args[@]}" < "$prompt_file" > "$jsonl" 2> "$stderr_file"
+  fi
+  local status=$?
+  set -e
+  printf '%s\n' "$status" > "$status_file"
+  extract_text_from_jsonl "$jsonl" "$text_file" || true
+  extract_thread_id "$jsonl" > "$run_dir/${label}.thread_id" 2>/dev/null || true
   return "$status"
 }
 
@@ -676,16 +749,23 @@ run_feature_cycle() {
   local label_prefix="$3"
   local feature_base="$4"
   local round review_label review_text fix_label previous_evidence_file review_result_file
+  local implementation_thread_id reviewer_thread_id
   previous_evidence_file=""
   review_result_file="$tmp_root/worktree-results/${label_prefix}.review"
   run_codex "${label_prefix}-implement" "$repo" "$patch_sandbox" "$(implementation_prompt "$feature_index")" \
     || return 1
+  implementation_thread_id="$(cat "$tmp_root/runs/${label_prefix}-implement.thread_id" 2>/dev/null || true)"
+  if [[ -z "$implementation_thread_id" ]]; then
+    printf 'feature=%s\nresult=missing implementation thread id\n' "$feature_index" > "$review_result_file"
+    return 1
+  fi
   commit_if_changed \
     "$repo" \
     "ADD direct-Codex baseline feature $feature_index for review" \
     "Record the direct Codex implementation for benchmark request $feature_index so a separate Codex reviewer can evaluate exactly that behavior." \
     || return 1
 
+  reviewer_thread_id=""
   round=1
   while true; do
     if [[ "$review_rounds" != "0" && "$round" -gt "$review_rounds" ]]; then
@@ -693,15 +773,25 @@ run_feature_cycle() {
       return 1
     fi
     review_label="${label_prefix}-review-${round}"
-    run_codex "$review_label" "$repo" "$review_sandbox" "$(review_prompt "$feature_index" "$feature_base" "$previous_evidence_file")" \
-      || return 1
+    if [[ -z "$reviewer_thread_id" ]]; then
+      run_codex "$review_label" "$repo" "$review_sandbox" "$(review_prompt "$feature_index" "$feature_base" "$previous_evidence_file")" \
+        || return 1
+      reviewer_thread_id="$(cat "$tmp_root/runs/${review_label}.thread_id" 2>/dev/null || true)"
+      if [[ -z "$reviewer_thread_id" ]]; then
+        printf 'feature=%s\nround=%s\nresult=missing reviewer thread id\n' "$feature_index" "$round" >> "$review_result_file"
+        return 1
+      fi
+    else
+      run_codex_resume "$review_label" "$repo" "$review_sandbox" "$reviewer_thread_id" "$(review_prompt "$feature_index" "$feature_base" "$previous_evidence_file")" \
+        || return 1
+    fi
     review_text="$tmp_root/runs/${review_label}.text.txt"
     if review_is_clean "$review_text"; then
       printf 'feature=%s\nrounds=%s\nresult=clean\n' "$feature_index" "$round" > "$review_result_file"
       return 0
     fi
     fix_label="${label_prefix}-fix-${round}"
-    run_codex "$fix_label" "$repo" "$patch_sandbox" "$(fix_prompt "$feature_index" "$review_text")" \
+    run_codex_resume "$fix_label" "$repo" "$patch_sandbox" "$implementation_thread_id" "$(fix_prompt "$feature_index" "$review_text")" \
       || return 1
     previous_evidence_file="$tmp_root/runs/${fix_label}.text.txt"
     if commit_if_changed \
