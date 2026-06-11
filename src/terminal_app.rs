@@ -510,6 +510,14 @@ where
                 self.request_quit();
             }
             TerminalAppInput::Interrupt => {
+                if self.ui.mode() == UiMode::Prompt {
+                    self.clear_prompt_edit_state();
+                    let actions = self.handle_ui_key(UiKey::Esc);
+                    self.record_actions(actions);
+                    self.ui.show_ctrl_c_exit_notice();
+                    self.dirty = true;
+                    return;
+                }
                 self.ui.show_ctrl_c_exit_notice();
                 if self.ui.focus() == PaneFocus::Right
                     && let Some(agent_id) = self.ui.selected_agent().cloned()
@@ -533,16 +541,11 @@ where
             }
             TerminalAppInput::Enter if self.ui.mode() == UiMode::Prompt => {
                 let line = self.prompt_buffer.trimmed_string();
-                self.prompt_buffer.clear();
+                self.clear_prompt_edit_state();
                 self.handle_ui_key(UiKey::Esc);
                 if !line.is_empty() {
                     self.prompt_history.push(line.clone());
-                    self.prompt_history_index = None;
-                    self.prompt_history_draft = None;
                     self.handle_command_line(&line);
-                } else {
-                    self.prompt_history_index = None;
-                    self.prompt_history_draft = None;
                 }
                 self.dirty = true;
             }
@@ -612,7 +615,7 @@ where
                 self.dirty = true;
             }
             TerminalAppInput::Key(UiKey::Esc) => {
-                self.prompt_buffer.clear();
+                self.clear_prompt_edit_state();
                 let actions = self.handle_ui_key(UiKey::Esc);
                 self.record_actions(actions);
                 self.dirty = true;
@@ -852,6 +855,12 @@ where
 
     fn should_start_agent_slash_command(&self) -> bool {
         self.ui.mode() == UiMode::Command && self.ui.selected_agent().is_some()
+    }
+
+    fn clear_prompt_edit_state(&mut self) {
+        self.prompt_buffer.clear();
+        self.prompt_history_index = None;
+        self.prompt_history_draft = None;
     }
 
     fn start_agent_slash_command(&mut self) {
@@ -1410,6 +1419,28 @@ mod tests {
         app.handle_bytes(b"itype in command agent");
 
         assert!(app.render_frame().contains("type in command agent"));
+    }
+
+    #[test]
+    fn prompt_ctrl_c_discards_history_navigation_draft() {
+        let chat = CommandChat::new(PathBuf::from("."), NoopBackend);
+        let mut app = TerminalApp::new(chat, 80, 24);
+
+        app.handle_bytes(b":help\n:draft command\x1b[A");
+        assert_eq!(app.inner.prompt_buffer.as_str(), "help");
+
+        app.handle_byte(3);
+        assert_eq!(app.inner.prompt_buffer.as_str(), "");
+        assert_eq!(app.ui().mode(), UiMode::Command);
+
+        app.handle_bytes(b"\x1b[B\n");
+
+        assert_eq!(app.inner.prompt_buffer.as_str(), "");
+        assert!(
+            !app.transcript()
+                .iter()
+                .any(|line| line.contains("draft command"))
+        );
     }
 
     #[test]

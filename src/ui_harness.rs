@@ -130,6 +130,13 @@ impl UiHarness {
         match input {
             HarnessInput::Quit => self.quit = true,
             HarnessInput::Interrupt => {
+                if self.ui.mode() == UiMode::Prompt {
+                    self.clear_prompt_edit_state();
+                    let actions = self.handle_ui_key(UiKey::Esc);
+                    self.record_actions(actions);
+                    self.ui.show_ctrl_c_exit_notice();
+                    return;
+                }
                 self.ui.show_ctrl_c_exit_notice();
                 if self.ui.focus() == PaneFocus::Right
                     && let Some(agent_id) = self.ui.selected_agent()
@@ -146,10 +153,7 @@ impl UiHarness {
             }
             HarnessInput::Enter if self.ui.mode() == UiMode::Prompt => {
                 let line = self.prompt_buffer.trim().to_string();
-                self.prompt_buffer.clear();
-                self.prompt_cursor = 0;
-                self.prompt_history_index = None;
-                self.prompt_history_draft = None;
+                self.clear_prompt_edit_state();
                 self.handle_ui_key(UiKey::Esc);
                 if !line.is_empty() {
                     self.prompt_history.push(line.clone());
@@ -212,10 +216,7 @@ impl UiHarness {
                 self.recall_chat_history(1);
             }
             HarnessInput::Key(UiKey::Esc) => {
-                self.prompt_buffer.clear();
-                self.prompt_cursor = 0;
-                self.prompt_history_index = None;
-                self.prompt_history_draft = None;
+                self.clear_prompt_edit_state();
                 let actions = self.handle_ui_key(UiKey::Esc);
                 self.record_actions(actions);
             }
@@ -278,6 +279,13 @@ impl UiHarness {
         }
         let title = fallback_chat_title_from_prompt(prompt);
         let _ = self.ui.set_agent_feature(agent_id, title);
+    }
+
+    fn clear_prompt_edit_state(&mut self) {
+        self.prompt_buffer.clear();
+        self.prompt_cursor = 0;
+        self.prompt_history_index = None;
+        self.prompt_history_draft = None;
     }
 
     fn insert_prompt_char(&mut self, ch: char) {

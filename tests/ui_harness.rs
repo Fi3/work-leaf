@@ -134,6 +134,27 @@ fn scripted_harness_prompt_history_down_restores_in_progress_prompt() {
 }
 
 #[test]
+fn scripted_harness_ctrl_c_discards_prompt_history_draft() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(b":review\n:draft command\x1b[A");
+    assert!(harness.render_frame().contains(":review"));
+
+    assert!(harness.handle_byte(3));
+    assert!(!harness.is_quit());
+    assert_eq!(harness.ui().mode(), UiMode::Command);
+
+    harness.handle_bytes(b"\x1b[B\n");
+
+    assert!(
+        !harness
+            .transcript()
+            .iter()
+            .any(|line| line == "unknown fixture command: draft command")
+    );
+}
+
+#[test]
 fn scripted_harness_bytewise_prompt_arrow_keys_edit_without_leaving_prompt() {
     let mut harness = UiHarness::new(80, 24);
     harness.handle_byte(b':');
