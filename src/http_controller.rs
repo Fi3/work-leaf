@@ -231,13 +231,25 @@ impl From<serde_json::Error> for OrchestratorHttpError {
 #[derive(Debug)]
 pub struct HttpControllerServer {
     listener: TcpListener,
+    serve_web_ui: bool,
 }
 
 impl HttpControllerServer {
     pub fn bind(address: &str) -> Result<Self, OrchestratorHttpError> {
+        Self::bind_with_web_ui(address, true)
+    }
+
+    pub(crate) fn bind_api_only(address: &str) -> Result<Self, OrchestratorHttpError> {
+        Self::bind_with_web_ui(address, false)
+    }
+
+    fn bind_with_web_ui(address: &str, serve_web_ui: bool) -> Result<Self, OrchestratorHttpError> {
         let listener = TcpListener::bind(address)?;
         listener.set_nonblocking(true)?;
-        Ok(Self { listener })
+        Ok(Self {
+            listener,
+            serve_web_ui,
+        })
     }
 
     pub fn local_url(&self) -> Result<String, OrchestratorHttpError> {
@@ -261,6 +273,7 @@ impl HttpControllerServer {
     {
         let controller = Arc::new(Mutex::new(controller));
         let shutdown = Arc::new(AtomicBool::new(false));
+        let serve_web_ui = self.serve_web_ui;
         while !shutdown.load(Ordering::SeqCst) {
             if parent_pid.is_some_and(|pid| !process_is_alive(pid)) {
                 break;
@@ -270,7 +283,7 @@ impl HttpControllerServer {
                     let controller = Arc::clone(&controller);
                     let shutdown = Arc::clone(&shutdown);
                     thread::spawn(move || {
-                        let _ = handle_connection(stream, controller, shutdown);
+                        let _ = handle_connection(stream, controller, shutdown, serve_web_ui);
                     });
                 }
                 Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
@@ -281,6 +294,43 @@ impl HttpControllerServer {
         }
         if let Ok(mut controller) = controller.lock() {
             controller.shutdown();
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct WebUiServer {
+    listener: TcpListener,
+}
+
+impl WebUiServer {
+    pub(crate) fn bind(address: &str) -> Result<Self, OrchestratorHttpError> {
+        let listener = TcpListener::bind(address)?;
+        listener.set_nonblocking(true)?;
+        Ok(Self { listener })
+    }
+
+    pub(crate) fn local_url(&self) -> Result<String, OrchestratorHttpError> {
+        Ok(format!("http://{}", self.listener.local_addr()?))
+    }
+
+    pub(crate) fn serve_until_shutdown(
+        self,
+        shutdown: Arc<AtomicBool>,
+    ) -> Result<(), OrchestratorHttpError> {
+        while !shutdown.load(Ordering::SeqCst) {
+            match self.listener.accept() {
+                Ok((stream, _)) => {
+                    thread::spawn(move || {
+                        let _ = handle_web_ui_connection(stream);
+                    });
+                }
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(error) => return Err(OrchestratorHttpError::Io(error)),
+            }
         }
         Ok(())
     }
@@ -381,6 +431,24 @@ where
         ProcessCommand::Launch {
             model,
             read_permission,
+            cli_url,
+        } => {
+            if cli_url.is_some() {
+                return Err(crate::CliError::Usage(
+                    "work-leaf-orchestrator cannot connect to an existing HTTP API; use work-leaf --cli <url>".to_string(),
+                ));
+            }
+            Ok(OrchestratorProcessCommand::Launch(
+                OrchestratorProcessConfig {
+                    listen,
+                    model,
+                    read_permission,
+                },
+            ))
+        }
+        ProcessCommand::Daemon {
+            model,
+            read_permission,
         } => Ok(OrchestratorProcessCommand::Launch(
             OrchestratorProcessConfig {
                 listen,
@@ -402,6 +470,7 @@ fn handle_connection<B>(
     mut stream: TcpStream,
     controller: Arc<Mutex<WorkLeafController<B>>>,
     shutdown: Arc<AtomicBool>,
+    serve_web_ui: bool,
 ) -> Result<(), OrchestratorHttpError>
 where
     B: AgentBackend + Clone + Send + 'static,
@@ -409,7 +478,16 @@ where
     let Some(request) = read_http_request(&mut stream)? else {
         return Ok(());
     };
-    let reply = route_request(request, controller, shutdown);
+    let reply = route_request(request, controller, shutdown, serve_web_ui);
+    write_http_reply(&mut stream, reply)?;
+    Ok(())
+}
+
+fn handle_web_ui_connection(mut stream: TcpStream) -> Result<(), OrchestratorHttpError> {
+    let Some(request) = read_http_request(&mut stream)? else {
+        return Ok(());
+    };
+    let reply = route_web_ui_request(request);
     write_http_reply(&mut stream, reply)?;
     Ok(())
 }
@@ -418,6 +496,7 @@ fn route_request<B>(
     request: HttpRequest,
     controller: Arc<Mutex<WorkLeafController<B>>>,
     shutdown: Arc<AtomicBool>,
+    serve_web_ui: bool,
 ) -> HttpReply
 where
     B: AgentBackend + Clone + Send + 'static,
@@ -427,19 +506,13 @@ where
         .split('?')
         .next()
         .unwrap_or(request.path.as_str());
+    if request.method == "OPTIONS" {
+        return cors_preflight_reply();
+    }
+    if serve_web_ui && let Some(reply) = web_ui_reply(request.method.as_str(), path) {
+        return reply;
+    }
     match (request.method.as_str(), path) {
-        ("GET", "/") | ("GET", "/web-ui") | ("GET", "/web-ui/") => static_reply(
-            "text/html; charset=utf-8",
-            include_bytes!("../web-ui/index.html"),
-        ),
-        ("GET", "/styles.css") | ("GET", "/web-ui/styles.css") => static_reply(
-            "text/css; charset=utf-8",
-            include_bytes!("../web-ui/styles.css"),
-        ),
-        ("GET", "/app.js") | ("GET", "/web-ui/app.js") => static_reply(
-            "text/javascript; charset=utf-8",
-            include_bytes!("../web-ui/app.js"),
-        ),
         ("GET", "/health") => json_reply(200, &OkResponse { ok: true }),
         ("GET", "/snapshot") => with_controller(&controller, |controller| controller.snapshot()),
         ("GET", "/state") => with_controller(&controller, |controller| {
@@ -519,6 +592,36 @@ where
             json_reply(200, &OkResponse { ok: true })
         }
         _ => error_reply(404, "not found"),
+    }
+}
+
+fn route_web_ui_request(request: HttpRequest) -> HttpReply {
+    let path = request
+        .path
+        .split('?')
+        .next()
+        .unwrap_or(request.path.as_str());
+    if request.method == "OPTIONS" {
+        return cors_preflight_reply();
+    }
+    web_ui_reply(request.method.as_str(), path).unwrap_or_else(|| error_reply(404, "not found"))
+}
+
+fn web_ui_reply(method: &str, path: &str) -> Option<HttpReply> {
+    match (method, path) {
+        ("GET", "/") | ("GET", "/web-ui") | ("GET", "/web-ui/") => Some(static_reply(
+            "text/html; charset=utf-8",
+            include_bytes!("../web-ui/index.html"),
+        )),
+        ("GET", "/styles.css") | ("GET", "/web-ui/styles.css") => Some(static_reply(
+            "text/css; charset=utf-8",
+            include_bytes!("../web-ui/styles.css"),
+        )),
+        ("GET", "/app.js") | ("GET", "/web-ui/app.js") => Some(static_reply(
+            "text/javascript; charset=utf-8",
+            include_bytes!("../web-ui/app.js"),
+        )),
+        _ => None,
     }
 }
 
@@ -677,7 +780,7 @@ fn write_http_reply(stream: &mut TcpStream, reply: HttpReply) -> Result<(), Orch
     let status_text = status_text(reply.status);
     write!(
         stream,
-        "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type, Accept\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
         reply.status,
         status_text,
         reply.content_type,
@@ -708,6 +811,10 @@ fn static_reply(content_type: &'static str, body: &'static [u8]) -> HttpReply {
         content_type,
         body: body.to_vec(),
     }
+}
+
+fn cors_preflight_reply() -> HttpReply {
+    json_reply(200, &OkResponse { ok: true })
 }
 
 fn error_reply(status: u16, error: &str) -> HttpReply {

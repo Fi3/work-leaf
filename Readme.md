@@ -10,7 +10,9 @@ have the smallest diff possible and not too many commit, review again agent/huma
 
 `./start` builds the `work-leaf` binary in release mode and renders the terminal CLI. Set
 `WORK_LEAF_START_SKIP_BUILD=1` to reuse an existing binary, and set `WORK_LEAF_START_BIN_DIR` to run
-`work-leaf` from a different binary directory.
+`work-leaf` from a different binary directory. Pass `-d` or `--daemon` to run only the localhost HTTP
+API and web UI daemon, or pass `-c` or `--cli` with an API URL to attach the terminal CLI to an
+existing daemon.
 
 `./start --bench` lists saved benchmark artifact directories that contain executable Work Leaf
 binaries, newest first by the timestamped artifact name, and prompts for the benchmark to run. The

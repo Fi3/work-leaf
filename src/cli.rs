@@ -5,6 +5,10 @@ use std::fmt;
 use std::io::{self, BufRead, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{self, Command, Stdio};
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 use std::thread;
 use std::time::Duration;
 
@@ -46,9 +50,14 @@ where
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ProcessCommand {
     Help,
+    Daemon {
+        model: Option<String>,
+        read_permission: ReadPermission,
+    },
     Launch {
         model: Option<String>,
         read_permission: ReadPermission,
+        cli_url: Option<String>,
     },
 }
 
@@ -58,7 +67,10 @@ where
     S: Into<String>,
 {
     let mut args = args.into_iter().map(Into::into).collect::<Vec<_>>();
-    if args.first().is_some_and(|arg| arg.ends_with("work-leaf")) {
+    if args
+        .first()
+        .is_some_and(|arg| arg.ends_with("work-leaf") || arg.ends_with("work-leaf.exe"))
+    {
         args.remove(0);
     }
 
@@ -66,15 +78,29 @@ where
         return Ok(ProcessCommand::Launch {
             model: None,
             read_permission: ReadPermission::Orchestrator,
+            cli_url: None,
         });
     }
 
     let mut model = None;
     let mut read_permission = ReadPermission::Orchestrator;
+    let mut daemon = false;
+    let mut cli_url = None;
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
             "--help" | "-h" | "help" => return Ok(ProcessCommand::Help),
+            "-d" | "--deamon" | "--daemon" => {
+                daemon = true;
+                index += 1;
+            }
+            "-c" | "--cli" => {
+                if index + 1 >= args.len() {
+                    return Err(CliError::Usage(format!("{} requires a value", args[index])));
+                }
+                cli_url = Some(args[index + 1].clone());
+                index += 2;
+            }
             "--no-read-permission" => {
                 read_permission = ReadPermission::DirectFilesystem;
                 index += 1;
@@ -101,9 +127,22 @@ where
         }
     }
 
+    if daemon {
+        if cli_url.is_some() {
+            return Err(CliError::Usage(
+                "-d/--deamon cannot be combined with -c/--cli".to_string(),
+            ));
+        }
+        return Ok(ProcessCommand::Daemon {
+            model,
+            read_permission,
+        });
+    }
+
     Ok(ProcessCommand::Launch {
         model,
         read_permission,
+        cli_url,
     })
 }
 
@@ -124,13 +163,26 @@ pub fn run_cli_from_env() -> ! {
         ProcessCommand::Launch {
             model,
             read_permission,
+            cli_url,
         } => {
-            let result = if env::var_os("WORK_LEAF_IN_PROCESS").is_some() {
+            let result = if let Some(cli_url) = cli_url {
+                run_http_cli_with_url(cli_url)
+            } else if env::var_os("WORK_LEAF_IN_PROCESS").is_some() {
                 run_in_process_cli(model, read_permission)
             } else {
                 run_http_cli(model, read_permission)
             };
             if let Err(error) = result {
+                eprintln!("{error}");
+                process::exit(1);
+            }
+            process::exit(0);
+        }
+        ProcessCommand::Daemon {
+            model,
+            read_permission,
+        } => {
+            if let Err(error) = run_daemon_cli(model, read_permission) {
                 eprintln!("{error}");
                 process::exit(1);
             }
@@ -158,6 +210,56 @@ fn run_http_cli(model: Option<String>, read_permission: ReadPermission) -> Resul
 
     let daemon = ManagedInProcessOrchestrator::start(project_dir.clone(), model, read_permission)?;
     run_http_command_chat(daemon.client(), project_dir)
+}
+
+fn run_http_cli_with_url(url: String) -> Result<(), CliError> {
+    let project_dir = env::current_dir()?;
+    let client = HttpControllerClient::connect(url).map_err(http_cli_error)?;
+    run_http_command_chat(client, project_dir)
+}
+
+fn run_daemon_cli(model: Option<String>, read_permission: ReadPermission) -> Result<(), CliError> {
+    let project_dir = env::current_dir()?;
+    let backend = codex_backend(project_dir.clone(), model, read_permission)?;
+    let chat = CommandChat::new(project_dir, backend);
+    let controller = crate::WorkLeafController::new(chat);
+    let api_server = crate::http_controller::HttpControllerServer::bind_api_only("127.0.0.1:0")
+        .map_err(http_cli_error)?;
+    let web_server =
+        crate::http_controller::WebUiServer::bind("127.0.0.1:0").map_err(http_cli_error)?;
+    let api_url = api_server.local_url().map_err(http_cli_error)?;
+    let web_url = web_server.local_url().map_err(http_cli_error)?;
+    let web_ui_url = daemon_web_ui_url(&web_url, &api_url);
+    let web_shutdown = Arc::new(AtomicBool::new(false));
+    let web_thread_shutdown = Arc::clone(&web_shutdown);
+    let web_thread = thread::spawn(move || web_server.serve_until_shutdown(web_thread_shutdown));
+
+    print!("{}", render_split_daemon_startup(&api_url, &web_ui_url));
+    io::stdout().flush()?;
+    let api_result = api_server.serve(controller).map_err(http_cli_error);
+    web_shutdown.store(true, Ordering::SeqCst);
+    let web_result = web_thread
+        .join()
+        .map_err(|_| CliError::Io(io::Error::other("web UI server thread panicked")))?;
+    api_result?;
+    web_result.map_err(http_cli_error)
+}
+
+pub fn render_daemon_startup(api_url: &str) -> String {
+    let api_url = api_url.trim_end_matches('/');
+    render_split_daemon_startup(api_url, &format!("{api_url}/web-ui"))
+}
+
+fn render_split_daemon_startup(api_url: &str, web_ui_url: &str) -> String {
+    let api_url = api_url.trim_end_matches('/');
+    let web_ui_url = web_ui_url.trim_end_matches('/');
+    format!("http api at: {api_url}\nweb-ui at: {web_ui_url}\n")
+}
+
+fn daemon_web_ui_url(web_url: &str, api_url: &str) -> String {
+    let web_url = web_url.trim_end_matches('/');
+    let api_url = api_url.trim_end_matches('/');
+    format!("{web_url}?api={api_url}")
 }
 
 struct ManagedInProcessOrchestrator {
@@ -961,12 +1063,15 @@ fn stream_secondary_follow_ups(
 
 pub fn render_process_help() -> String {
     [
-        "Usage: work-leaf [--model <model>] [--no-read-permission]",
+        "Usage: work-leaf [--model <model>] [--no-read-permission] [-d|--deamon] [-c|--cli <http-api-url>]",
         "",
         "launches the orchestrator from the current project directory.",
         "Agents are created inside the command chat. Patches, file locks, review routing, and linearization handoff are orchestrator-controlled workflows, not top-level process commands.",
         "",
         "Options:",
+        "  -d, --deamon           run only the localhost HTTP API and web UI daemon",
+        "      --daemon           alias for --deamon",
+        "  -c, --cli <url>        connect the CLI to an existing localhost HTTP API",
         "  --model <model>          select the Codex model",
         "  --no-read-permission     allow agents to read project files directly; writes still require orchestrator patches",
         "",
@@ -1660,6 +1765,97 @@ mod tests {
         assert_eq!(ui.selected_agent(), Some(&agent_id));
         assert_eq!(ui.focus(), PaneFocus::Right);
         assert_eq!(ui.mode(), UiMode::Insert);
+    }
+
+    #[test]
+    fn process_args_parse_daemon_mode() {
+        assert_eq!(
+            parse_process_args(["work-leaf", "-d"]).unwrap(),
+            ProcessCommand::Daemon {
+                model: None,
+                read_permission: ReadPermission::Orchestrator,
+            }
+        );
+        assert_eq!(
+            parse_process_args(["work-leaf.exe", "-d"]).unwrap(),
+            ProcessCommand::Daemon {
+                model: None,
+                read_permission: ReadPermission::Orchestrator,
+            }
+        );
+        assert_eq!(
+            parse_process_args(["work-leaf", "--deamon", "--model", "gpt-test"]).unwrap(),
+            ProcessCommand::Daemon {
+                model: Some("gpt-test".to_string()),
+                read_permission: ReadPermission::Orchestrator,
+            }
+        );
+    }
+
+    #[test]
+    fn process_args_parse_remote_cli_url() {
+        assert_eq!(
+            parse_process_args(["work-leaf", "--cli", "http://127.0.0.1:7878"]).unwrap(),
+            ProcessCommand::Launch {
+                model: None,
+                read_permission: ReadPermission::Orchestrator,
+                cli_url: Some("http://127.0.0.1:7878".to_string()),
+            }
+        );
+        assert_eq!(
+            parse_process_args(["work-leaf", "-c", "http://localhost:7878"]).unwrap(),
+            ProcessCommand::Launch {
+                model: None,
+                read_permission: ReadPermission::Orchestrator,
+                cli_url: Some("http://localhost:7878".to_string()),
+            }
+        );
+        assert_eq!(
+            parse_process_args(["work-leaf.exe", "--cli", "http://127.0.0.1:7878"]).unwrap(),
+            ProcessCommand::Launch {
+                model: None,
+                read_permission: ReadPermission::Orchestrator,
+                cli_url: Some("http://127.0.0.1:7878".to_string()),
+            }
+        );
+    }
+
+    #[test]
+    fn process_args_reject_missing_remote_cli_url() {
+        assert!(matches!(
+            parse_process_args(["work-leaf", "--cli"]),
+            Err(CliError::Usage(message)) if message.contains("--cli requires a value")
+        ));
+    }
+
+    #[test]
+    fn process_args_reject_combined_daemon_and_remote_cli_modes() {
+        assert!(matches!(
+            parse_process_args(["work-leaf", "-d", "-c", "http://127.0.0.1:7878"]),
+            Err(CliError::Usage(message)) if message.contains("cannot be combined")
+        ));
+    }
+
+    #[test]
+    fn daemon_startup_text_reports_distinct_http_api_and_web_ui_urls() {
+        let web_ui_url = daemon_web_ui_url("http://127.0.0.1:49153/", "http://127.0.0.1:49152/");
+
+        assert_eq!(
+            web_ui_url,
+            "http://127.0.0.1:49153?api=http://127.0.0.1:49152"
+        );
+        assert_ne!(
+            web_ui_url.split('?').next().unwrap(),
+            "http://127.0.0.1:49152"
+        );
+        assert_eq!(
+            render_split_daemon_startup("http://127.0.0.1:49152/", &web_ui_url),
+            "http api at: http://127.0.0.1:49152\nweb-ui at: http://127.0.0.1:49153?api=http://127.0.0.1:49152\n"
+        );
+        assert_eq!(
+            render_daemon_startup("http://127.0.0.1:49152/"),
+            "http api at: http://127.0.0.1:49152\nweb-ui at: http://127.0.0.1:49152/web-ui\n"
+        );
     }
 
     #[test]

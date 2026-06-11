@@ -22,7 +22,7 @@ pub use agent::{
 };
 pub use cli::{
     CliError, CommandChat, CommandChatResult, ProcessCommand, parse_process_args,
-    render_command_chat_help, render_process_help, run_cli_from_env,
+    render_command_chat_help, render_daemon_startup, render_process_help, run_cli_from_env,
 };
 pub use codex::{CodexBackend, CodexCommandConfig, SandboxMode};
 pub use http_controller::{

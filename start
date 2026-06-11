@@ -4,13 +4,28 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 bench_mode=0
+remote_cli_mode=0
 start_args=()
-for arg in "$@"; do
-  if [[ "$arg" == "--bench" ]]; then
-    bench_mode=1
-  else
-    start_args+=("$arg")
-  fi
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --bench)
+      bench_mode=1
+      shift
+      ;;
+    -c|--cli)
+      remote_cli_mode=1
+      start_args+=("$1")
+      if [[ "$#" -lt 2 ]]; then
+        break
+      fi
+      start_args+=("$2")
+      shift 2
+      ;;
+    *)
+      start_args+=("$1")
+      shift
+      ;;
+  esac
 done
 
 select_bench_bin_dir() {
@@ -94,7 +109,9 @@ else
 fi
 
 cli_bin="$bin_dir/work-leaf"
-ensure_codex_sdk_python
+if [[ "$remote_cli_mode" != "1" ]]; then
+  ensure_codex_sdk_python
+fi
 
 set -- "${start_args[@]}"
 exec "$cli_bin" "$@"

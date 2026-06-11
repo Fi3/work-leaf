@@ -39,7 +39,8 @@ fn no_args_launches_orchestrator_from_current_project_directory() {
         command,
         ProcessCommand::Launch {
             model: None,
-            read_permission: ReadPermission::Orchestrator
+            read_permission: ReadPermission::Orchestrator,
+            cli_url: None,
         }
     );
 }
@@ -52,7 +53,8 @@ fn no_read_permission_allows_direct_filesystem_reads() {
         command,
         ProcessCommand::Launch {
             model: None,
-            read_permission: ReadPermission::DirectFilesystem
+            read_permission: ReadPermission::DirectFilesystem,
+            cli_url: None,
         }
     );
 }
@@ -66,7 +68,8 @@ fn process_args_accept_model_and_no_read_permission_together() {
         command,
         ProcessCommand::Launch {
             model: Some("gpt-5".to_string()),
-            read_permission: ReadPermission::DirectFilesystem
+            read_permission: ReadPermission::DirectFilesystem,
+            cli_url: None,
         }
     );
 }

@@ -64,11 +64,13 @@ embedders that construct a `CommandChat<B>` directly.
 
 The project-root `start` script builds the `work-leaf` binary in release mode unless
 `WORK_LEAF_START_SKIP_BUILD=1`, resolves the CLI binary from `WORK_LEAF_START_BIN_DIR` or
-`target/release`, and executes it with the remaining arguments. With `--bench`, the script searches
-`WORK_LEAF_START_BENCH_RESULTS_DIR` or `bench-results` for timestamped `*-artifacts` directories
-that contain executable `bin/work-leaf` and `bin/work-leaf-orchestrator` files. It lists those saved
-benchmark binary sets newest first by artifact name, prompts for a selection, skips the release
-build, and executes the selected artifact's `bin/work-leaf`.
+`target/release`, and executes it with the remaining arguments. `-d`/`--daemon` starts the packaged
+binary in daemon mode, and `-c`/`--cli <http-api-url>` attaches the terminal CLI to an existing HTTP
+API endpoint. With `--bench`, the script searches `WORK_LEAF_START_BENCH_RESULTS_DIR` or
+`bench-results` for timestamped `*-artifacts` directories that contain executable `bin/work-leaf`
+and `bin/work-leaf-orchestrator` files. It lists those saved benchmark binary sets newest first by
+artifact name, prompts for a selection, skips the release build, and executes the selected
+artifact's `bin/work-leaf`.
 
 The project-root `build-target` script packages the user-facing `work-leaf` binary for the Rust host
 target reported by `rustc -vV`. `WORK_LEAF_BUILD_TARGETS` accepts an explicit whitespace-separated
