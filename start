@@ -3,11 +3,75 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [[ "${WORK_LEAF_START_SKIP_BUILD:-}" != "1" ]]; then
+bench_mode=0
+start_args=()
+for arg in "$@"; do
+  if [[ "$arg" == "--bench" ]]; then
+    bench_mode=1
+  else
+    start_args+=("$arg")
+  fi
+done
+
+select_bench_bin_dir() {
+  local results_dir="${WORK_LEAF_START_BENCH_RESULTS_DIR:-$repo_root/bench-results}"
+  if [[ ! -d "$results_dir" ]]; then
+    echo "no bench results directory found: $results_dir" >&2
+    exit 1
+  fi
+
+  local artifact_dirs=()
+  local orchestrator_bin="work-leaf-"
+  orchestrator_bin+="orchestrator"
+  while IFS= read -r artifact_dir; do
+    if [[ -x "$artifact_dir/bin/work-leaf" && -x "$artifact_dir/bin/$orchestrator_bin" ]]; then
+      artifact_dirs+=("$artifact_dir")
+    fi
+  done < <(
+    find "$results_dir" -mindepth 1 -maxdepth 1 -type d -name '*-artifacts' -print | sort -r
+  )
+
+  if [[ "${#artifact_dirs[@]}" -eq 0 ]]; then
+    echo "no bench artifacts with saved Work Leaf binaries found in $results_dir" >&2
+    exit 1
+  fi
+
+  echo "Available bench binaries:"
+  local index=1
+  local artifact_name
+  local display_name
+  for artifact_dir in "${artifact_dirs[@]}"; do
+    artifact_name="$(basename "$artifact_dir")"
+    display_name="${artifact_name%-artifacts}"
+    printf '  %d) %s\n' "$index" "$display_name"
+    index=$((index + 1))
+  done
+
+  local choice
+  printf 'Choose a bench to run [1-%d]: ' "${#artifact_dirs[@]}"
+  if ! read -r choice; then
+    echo "no bench selection received" >&2
+    exit 1
+  fi
+  if [[ ! "$choice" =~ ^[0-9]+$ ]] || (( choice < 1 || choice > ${#artifact_dirs[@]} )); then
+    echo "invalid bench selection: $choice" >&2
+    exit 1
+  fi
+
+  bin_dir="${artifact_dirs[$((choice - 1))]}/bin"
+  echo "Running Work Leaf binaries from $bin_dir"
+}
+
+if [[ "$bench_mode" == "1" ]]; then
+  select_bench_bin_dir
+elif [[ "${WORK_LEAF_START_SKIP_BUILD:-}" != "1" ]]; then
   (cd "$repo_root" && cargo build --release --bin work-leaf)
+  bin_dir="${WORK_LEAF_START_BIN_DIR:-$repo_root/target/release}"
+else
+  bin_dir="${WORK_LEAF_START_BIN_DIR:-$repo_root/target/release}"
 fi
 
-bin_dir="${WORK_LEAF_START_BIN_DIR:-$repo_root/target/release}"
 cli_bin="$bin_dir/work-leaf"
 
+set -- "${start_args[@]}"
 exec "$cli_bin" "$@"

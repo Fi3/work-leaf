@@ -8,10 +8,15 @@ have the smallest diff possible and not too many commit, review again agent/huma
 
 ## Running
 
-`./start` builds the `work-leaf` and `work-leaf-orchestrator` binaries in release mode, starts the
-orchestrator daemon on `127.0.0.1:7878`, and renders the terminal CLI. When the CLI exits, the script
-stops the daemon process. Set `WORK_LEAF_START_LISTEN` to choose a different listen address; the
-script fails when the requested address is unavailable.
+`./start` builds the `work-leaf` binary in release mode and renders the terminal CLI. Set
+`WORK_LEAF_START_SKIP_BUILD=1` to reuse an existing binary, and set `WORK_LEAF_START_BIN_DIR` to run
+`work-leaf` from a different binary directory.
+
+`./start --bench` lists saved benchmark artifact directories that contain executable Work Leaf
+binaries, newest first by the timestamped artifact name, and prompts for the benchmark to run. The
+selected artifact's `bin/work-leaf` is executed with any remaining arguments, so the session uses the
+binaries saved by that benchmark instead of binaries built from the current checkout. Set
+`WORK_LEAF_START_BENCH_RESULTS_DIR` to search a results directory other than `bench-results`.
 
 `./smoke-three-features` builds the current release binaries, creates a temporary checkout at the
 three-feature smoke-test base commit, and runs `./start` from that temporary checkout. The script
@@ -42,4 +47,4 @@ checkout and worktrees.
 `work-leaf-orchestrator` owns the controller, agent backend, locks, review routing, and patch
 workflow. It prints `WORK_LEAF_ORCHESTRATOR_URL=http://...` after binding its localhost HTTP API.
 `work-leaf` connects to that URL through `WORK_LEAF_ORCHESTRATOR_URL`; when the variable is absent,
-the CLI starts the sibling daemon on an ephemeral localhost port and connects to it.
+the CLI starts an embedded localhost controller on an ephemeral port and connects to it.

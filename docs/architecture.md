@@ -55,19 +55,20 @@ The package has two binary targets. `src/bin/work-leaf-orchestrator.rs` calls
 machine-readable `WORK_LEAF_ORCHESTRATOR_URL=http://...` startup line after binding.
 
 `src/bin/work-leaf.rs` calls `work_leaf::run_cli_from_env()`. The CLI connects to
-`WORK_LEAF_ORCHESTRATOR_URL` when that environment variable is present; otherwise it starts the
-sibling `work-leaf-orchestrator` binary on `127.0.0.1:0`, reads the printed URL, and connects to that
-daemon. A CLI-managed daemon receives `WORK_LEAF_PARENT_PID`, does not inherit the terminal file
-descriptors, and exits when that parent process is gone. The terminal frontend renders through
-`src/terminal_app.rs::RemoteTerminalApp`, which drives `src/http_controller.rs::HttpControllerClient`.
-The in-process `src/terminal_app.rs::TerminalApp<B>` remains the local controller adapter used by
-tests and embedders that construct a `CommandChat<B>` directly.
+`WORK_LEAF_ORCHESTRATOR_URL` when that environment variable is present; otherwise it starts an
+embedded localhost controller on `127.0.0.1:0` and connects to it through
+`src/http_controller.rs::HttpControllerClient`. The terminal frontend renders through
+`src/terminal_app.rs::RemoteTerminalApp`. The in-process
+`src/terminal_app.rs::TerminalApp<B>` remains the local controller adapter used by tests and
+embedders that construct a `CommandChat<B>` directly.
 
-The project-root `start` script builds both binary targets in release mode, starts
-`work-leaf-orchestrator` on `127.0.0.1:7878` by default, exports the printed URL for `work-leaf`,
-and terminates the daemon when the CLI process exits. `WORK_LEAF_START_LISTEN` selects a different
-listen address when a caller needs an explicit override; the script does not fall back to another
-port when the requested address is unavailable.
+The project-root `start` script builds the `work-leaf` binary in release mode unless
+`WORK_LEAF_START_SKIP_BUILD=1`, resolves the CLI binary from `WORK_LEAF_START_BIN_DIR` or
+`target/release`, and executes it with the remaining arguments. With `--bench`, the script searches
+`WORK_LEAF_START_BENCH_RESULTS_DIR` or `bench-results` for timestamped `*-artifacts` directories
+that contain executable `bin/work-leaf` and `bin/work-leaf-orchestrator` files. It lists those saved
+benchmark binary sets newest first by artifact name, prompts for a selection, skips the release
+build, and executes the selected artifact's `bin/work-leaf`.
 
 The project-root `smoke-three-features` script runs the current Work Leaf binaries against a
 temporary Git checkout at the three-feature smoke-test base commit. It builds release binaries from
