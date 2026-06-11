@@ -239,7 +239,8 @@ enum LeftPaneAgentSection {
     NewPatches,
     ReadyPatches,
     WorkingPatches,
-    Reviews,
+    Reviewing,
+    Reviewed,
     Reads,
     Linearize,
 }
@@ -251,19 +252,21 @@ impl LeftPaneAgentSection {
             Self::NewPatches => "new",
             Self::ReadyPatches => "ready",
             Self::WorkingPatches => "working",
-            Self::Reviews => "reviews",
+            Self::Reviewing => "reviewing",
+            Self::Reviewed => "reviewed",
             Self::Reads => "reads",
             Self::Linearize => "linearize",
         }
     }
 }
 
-const LEFT_PANE_AGENT_SECTIONS: [LeftPaneAgentSection; 7] = [
+const LEFT_PANE_AGENT_SECTIONS: [LeftPaneAgentSection; 8] = [
     LeftPaneAgentSection::ClosedPatches,
     LeftPaneAgentSection::NewPatches,
     LeftPaneAgentSection::ReadyPatches,
     LeftPaneAgentSection::WorkingPatches,
-    LeftPaneAgentSection::Reviews,
+    LeftPaneAgentSection::Reviewing,
+    LeftPaneAgentSection::Reviewed,
     LeftPaneAgentSection::Reads,
     LeftPaneAgentSection::Linearize,
 ];
@@ -349,6 +352,7 @@ pub struct TerminalUi {
     left_visible: bool,
     agents: Vec<AgentListEntry>,
     agent_patch_states: BTreeMap<AgentId, AgentListPatchState>,
+    review_no_findings: BTreeSet<AgentId>,
     selected_agent: Option<AgentId>,
     control_selected: usize,
     split_chats: Vec<AgentId>,
@@ -376,6 +380,7 @@ impl TerminalUi {
             left_visible: true,
             agents: Vec::new(),
             agent_patch_states: BTreeMap::new(),
+            review_no_findings: BTreeSet::new(),
             selected_agent: None,
             control_selected: 0,
             split_chats: Vec::new(),
@@ -501,6 +506,24 @@ impl TerminalUi {
                 closed,
             },
         );
+        self.restore_control_selection(control_agent.as_ref());
+        Ok(())
+    }
+
+    pub(crate) fn set_agent_review_no_findings(
+        &mut self,
+        agent_id: &AgentId,
+        no_findings: bool,
+    ) -> Result<(), String> {
+        let control_agent = self.control_selected_agent_id();
+        if !self.agents.iter().any(|agent| &agent.id == agent_id) {
+            return Err(format!("unknown agent `{agent_id}`"));
+        }
+        if no_findings {
+            self.review_no_findings.insert(agent_id.clone());
+        } else {
+            self.review_no_findings.remove(agent_id);
+        }
         self.restore_control_selection(control_agent.as_ref());
         Ok(())
     }
@@ -1938,7 +1961,11 @@ impl TerminalUi {
     fn agent_left_pane_section(&self, agent: &AgentListEntry) -> LeftPaneAgentSection {
         let id = agent.id.as_str();
         if id.starts_with("review-") {
-            LeftPaneAgentSection::Reviews
+            if self.review_no_findings.contains(&agent.id) {
+                LeftPaneAgentSection::Reviewed
+            } else {
+                LeftPaneAgentSection::Reviewing
+            }
         } else if id == "linearize" || id.starts_with("linearize-") {
             LeftPaneAgentSection::Linearize
         } else if id == "read" || id.starts_with("read-") || id.starts_with("reads-") {
@@ -1966,7 +1993,8 @@ impl TerminalUi {
             self.agent_left_pane_section(agent),
             LeftPaneAgentSection::ClosedPatches
                 | LeftPaneAgentSection::NewPatches
-                | LeftPaneAgentSection::Reviews
+                | LeftPaneAgentSection::Reviewing
+                | LeftPaneAgentSection::Reviewed
         )
     }
 
@@ -2177,11 +2205,7 @@ fn detailed_agent_row(agent: &AgentListEntry, selected: bool, ready: bool) -> St
 
 fn compact_agent_row(agent: &AgentListEntry, selected: bool, width: usize, ready: bool) -> String {
     let prefix = if selected { ">" } else { " " };
-    let status = if ready {
-        " READY"
-    } else {
-        ""
-    };
+    let status = if ready { " READY" } else { "" };
     let id = agent.id.as_str();
     let width = width.max(1);
 
@@ -2537,13 +2561,8 @@ fn visible_content_lines(
         return tail_visible_lines(&plain_display_lines(content), width, height, scroll_rows);
     };
 
-    let history = chat_history_display_lines(
-        history,
-        width,
-        fold_all,
-        folded_messages,
-        unfolded_messages,
-    );
+    let history =
+        chat_history_display_lines(history, width, fold_all, folded_messages, unfolded_messages);
     let prompt_rows = visual_block_row_count(prompt, width);
     let history_height = height.saturating_sub(prompt_rows).max(1);
     let mut visible_history = tail_visible_lines(&history, width, history_height, scroll_rows);
@@ -2577,13 +2596,8 @@ fn max_scroll_rows(
         return 0;
     }
 
-    let history = chat_history_display_lines(
-        history,
-        width,
-        fold_all,
-        folded_messages,
-        unfolded_messages,
-    );
+    let history =
+        chat_history_display_lines(history, width, fold_all, folded_messages, unfolded_messages);
     let prompt_rows = visual_block_row_count(prompt, width);
     let history_height = height.saturating_sub(prompt_rows).max(1);
     display_lines_row_count(&history, width).saturating_sub(history_height)
@@ -2690,12 +2704,8 @@ fn chat_history_display_lines(
                 message_key: None,
             });
         }
-        let folded = chat_message_is_folded(
-            &message.key,
-            fold_all,
-            folded_messages,
-            unfolded_messages,
-        );
+        let folded =
+            chat_message_is_folded(&message.key, fold_all, folded_messages, unfolded_messages);
         for (index, line) in message.lines.iter().enumerate() {
             if folded && index > 0 {
                 continue;
@@ -2851,7 +2861,8 @@ mod tests {
         let new_id = AgentId::new("user-2").expect("test agent id is valid");
         let ready_id = AgentId::new("user-3").expect("test agent id is valid");
         let working_id = AgentId::new("user-4").expect("test agent id is valid");
-        let review_id = AgentId::new("review-user-4").expect("test agent id is valid");
+        let reviewing_id = AgentId::new("review-user-4").expect("test agent id is valid");
+        let reviewed_id = AgentId::new("review-user-5").expect("test agent id is valid");
         let read_id = AgentId::new("read-user-4").expect("test agent id is valid");
         let linearize_id = AgentId::new("linearize").expect("test agent id is valid");
         ui.add_agent(AgentListEntry::new(
@@ -2869,7 +2880,10 @@ mod tests {
         ui.add_agent(AgentListEntry::new(working_id.clone(), "working parser"));
         ui.set_agent_patch_lifecycle(&working_id, true, false)
             .expect("working patch agent is registered");
-        ui.add_agent(AgentListEntry::new(review_id, "review parser").with_ready(true));
+        ui.add_agent(AgentListEntry::new(reviewing_id, "reviewing parser").with_ready(true));
+        ui.add_agent(AgentListEntry::new(reviewed_id.clone(), "reviewed parser").with_ready(true));
+        ui.set_agent_review_no_findings(&reviewed_id, true)
+            .expect("reviewed agent is registered");
         ui.add_agent(AgentListEntry::new(read_id, "read parser"));
         ui.add_agent(AgentListEntry::new(linearize_id, "linearize"));
         ui.select_agent(&working_id)
@@ -2883,8 +2897,15 @@ mod tests {
         let closed = left_pane.find("[closed]").expect("closed section renders");
         let new = left_pane.find("[new]").expect("new section renders");
         let ready = left_pane.find("[ready]").expect("ready section renders");
-        let working = left_pane.find("[working]").expect("working section renders");
-        let reviews = left_pane.find("[reviews]").expect("review section renders");
+        let working = left_pane
+            .find("[working]")
+            .expect("working section renders");
+        let reviewing = left_pane
+            .find("[reviewing]")
+            .expect("reviewing section renders");
+        let reviewed = left_pane
+            .find("[reviewed]")
+            .expect("reviewed section renders");
         let reads = left_pane.find("[reads]").expect("read section renders");
         let linearize = left_pane
             .find("[linearize]")
@@ -2893,16 +2914,19 @@ mod tests {
         assert!(closed < new);
         assert!(new < ready);
         assert!(ready < working);
-        assert!(working < reviews);
-        assert!(reviews < reads);
+        assert!(working < reviewing);
+        assert!(reviewing < reviewed);
+        assert!(reviewed < reads);
         assert!(reads < linearize);
         assert!(left_pane.contains(" closed parser CLOSED user-1  working: closed parser CLOSED"));
         assert!(left_pane.contains(" new parser user-2  working: new parser"));
         assert!(!left_pane.contains("new parser  READY"));
         assert!(left_pane.contains(" ready parser user-3  working: ready parser  READY"));
         assert!(left_pane.contains(">working parser user-4  working: working parser"));
-        assert!(left_pane.contains(" review-user-4 review parser  working: review parser"));
-        assert!(!left_pane.contains("review parser  READY"));
+        assert!(left_pane.contains(" review-user-4 reviewing parser  working: reviewing parser"));
+        assert!(left_pane.contains(" review-user-5 reviewed parser  working: reviewed parser"));
+        assert!(!left_pane.contains("reviewing parser  READY"));
+        assert!(!left_pane.contains("reviewed parser  READY"));
     }
 
     #[test]

@@ -27,13 +27,47 @@ fn scripted_harness_left_pane_groups_command_and_patch_chats() {
         .find("[command]")
         .expect("command section renders");
     let ready = left_pane.find("[ready]").expect("ready section renders");
-    let working = left_pane.find("[working]").expect("working section renders");
+    let working = left_pane
+        .find("[working]")
+        .expect("working section renders");
 
     assert!(command < ready);
     assert!(ready < working);
     assert!(left_pane.contains("[command]\n  work-leaf  command"));
     assert!(left_pane.contains("[ready]\n>parser user-1  working: parser  READY"));
     assert!(left_pane.contains("[working]\n tests user-2  working: tests"));
+}
+
+#[test]
+fn scripted_harness_left_pane_splits_review_chats_by_state() {
+    let mut harness = UiHarness::new(100, 24);
+    harness
+        .add_review_agent("review-user-1", "review parser", false)
+        .expect("reviewing fixture agent is registered");
+    harness
+        .add_review_agent("review-user-2", "review tests", true)
+        .expect("reviewed fixture agent is registered");
+
+    let left_pane = strip_ansi(&harness.ui().render_left_pane());
+
+    let working = left_pane
+        .find("[working]")
+        .expect("working section renders");
+    let reviewing = left_pane
+        .find("[reviewing]")
+        .expect("reviewing section renders");
+    let reviewed = left_pane
+        .find("[reviewed]")
+        .expect("reviewed section renders");
+
+    assert!(working < reviewing);
+    assert!(reviewing < reviewed);
+    assert!(
+        left_pane.contains("[reviewing]\n review-user-1 review parser  working: review parser")
+    );
+    assert!(left_pane.contains("[reviewed]\n review-user-2 review tests  working: review tests"));
+    assert!(!left_pane.contains("review parser  READY"));
+    assert!(!left_pane.contains("review tests  READY"));
 }
 
 #[test]
@@ -894,9 +928,7 @@ fn scripted_harness_chat_cursor_stays_at_right_edge_when_prompt_fills_line() {
 
     let wrapped_frame = harness.render_frame();
     let expected_wrapped_column = layout.left_width + 3;
-    assert!(wrapped_frame.ends_with(&format!(
-        "\u{1b}[6;{expected_wrapped_column}H"
-    )));
+    assert!(wrapped_frame.ends_with(&format!("\u{1b}[6;{expected_wrapped_column}H")));
 }
 
 #[test]

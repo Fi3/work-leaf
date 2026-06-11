@@ -67,6 +67,18 @@ impl UiHarness {
         self.ui.set_agent_ready_state(&agent_id, true)
     }
 
+    pub fn add_review_agent(
+        &mut self,
+        agent_id: &str,
+        feature: &str,
+        no_findings: bool,
+    ) -> Result<(), String> {
+        let agent_id = AgentId::new(agent_id).map_err(|error| error.to_string())?;
+        self.ui
+            .add_agent(AgentListEntry::new(agent_id.clone(), feature));
+        self.ui.set_agent_review_no_findings(&agent_id, no_findings)
+    }
+
     pub fn is_quit(&self) -> bool {
         self.quit
     }

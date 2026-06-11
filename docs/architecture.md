@@ -456,14 +456,18 @@ path. Selected-agent chat messages whose first token is a slash command are rout
 backend rather than the Work Leaf command parser. Slash-prefixed colon-prompt input also routes to
 the selected agent chat when an agent is selected.
 
-The terminal app renders the left pane as command, patch, review, read, and linearize sections.
-Keyboard selection and mouse targets follow that grouped section order while preserving each visible
-agent's chat selection behavior. The terminal app maps a patch or read session to a left-pane
-`READY` marker when the controller exposes no loading state for that session. Review sessions do not
-show the ready marker after review output completes. Sessions waiting for a completion answer show
-`DONE?` in the row title, and closed sessions show `CLOSED` without the ready marker. `TerminalUi`
-queues one terminal bell when a chat transitions into a ready-highlighted state and renders ready
-rows in reverse video so they remain highlighted until the chat becomes busy or closed.
+The terminal app renders the left pane as command, patch lifecycle, review lifecycle, read, and
+linearize sections. Patch chats are grouped as closed, new, ready, and working rows. Review chats are
+grouped as reviewing or reviewed based on the controller-recorded review outcome order. Keyboard
+selection and mouse targets follow the grouped section order while preserving each visible agent's
+chat selection behavior. Pressing Enter while the left pane is focused opens the selected chat and
+enters insert mode; pressing comma from a right-pane command-mode chat focuses the visible left pane.
+The terminal app maps a patch or read session to a left-pane `READY` marker when the controller
+exposes no loading state for that session. Review sessions do not show the ready marker after review
+output completes. Sessions waiting for a completion answer show `DONE?` in the row title, and closed
+sessions show `CLOSED` without the ready marker. `TerminalUi` queues one terminal bell when a chat
+transitions into a ready-highlighted state and renders ready rows in reverse video so they remain
+highlighted until the chat becomes busy or closed.
 
 `src/ui.rs::TerminalUi` owns terminal-specific presentation state:
 
@@ -474,7 +478,10 @@ rows in reverse video so they remain highlighted until the chat becomes busy or 
   visual selections, and terminal navigation actions. The right pane keeps the chat prompt visible
   while scroll offsets reveal earlier transcript rows. Command-mode `v`, `V`, and `Ctrl-V` start
   character, line, and block selection in the focused pane; `y` and `Y` yank selected text through
-  the terminal OSC 52 clipboard sequence.
+  the terminal OSC 52 clipboard sequence. Agent-chat panes support message folds: command mode
+  `zM` folds all message bodies, `zR` unfolds them, and visual-mode `zc`, `zo`, and `za` close,
+  open, or toggle the message under the visual cursor. Fold state belongs to the active terminal
+  window, so split chat windows can show different fold states for the same transcript.
 
 `src/ui_harness.rs::UiHarness` is the test harness for terminal behavior. It exercises the same
 `TerminalUi` frame path used by the interactive example. UI tests should drive

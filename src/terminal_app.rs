@@ -8,8 +8,9 @@ use crate::cli::{CommandChat, terminal_right_content, ui_action_text};
 use crate::http_controller::HttpControllerClient;
 use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode};
 use crate::workspace::{
-    WorkLeafCompletion, WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession,
-    WorkLeafSnapshot,
+    REVIEW_FAILED_MESSAGE, REVIEW_FINISHED_NO_FINDINGS_MESSAGE,
+    REVIEW_FINISHED_WITH_FINDINGS_MESSAGE, WorkLeafCompletion, WorkLeafController, WorkLeafEvent,
+    WorkLeafLoading, WorkLeafSession, WorkLeafSnapshot,
 };
 
 #[derive(Debug)]
@@ -832,19 +833,22 @@ where
         session
     }
 
-    fn append_cached_agent_line(&mut self, agent_id: &AgentId, line: String) -> Option<WorkLeafSession> {
+    fn append_cached_agent_line(
+        &mut self,
+        agent_id: &AgentId,
+        line: String,
+    ) -> Option<WorkLeafSession> {
         if line.is_empty() {
             return None;
         }
-        let Some(session) = self
+        let session = self
             .snapshot
             .sessions
             .iter_mut()
-            .find(|session| &session.id == agent_id)
-        else {
-            return None;
-        };
-        if !session.lines.iter().any(|existing| existing == &line) {
+            .find(|session| &session.id == agent_id)?;
+        let preserves_review_state =
+            session.id.as_str().starts_with("review-") && review_completion_state(&line).is_some();
+        if preserves_review_state || !session.lines.iter().any(|existing| existing == &line) {
             session.lines.push(line);
         }
         Some(session.clone())
@@ -873,6 +877,9 @@ where
             session_has_user_message(session),
             session.completion == Some(WorkLeafCompletion::Closed),
         );
+        let _ = self
+            .ui
+            .set_agent_review_no_findings(&session.id, session_review_has_no_findings(session));
         let _ = self
             .ui
             .set_agent_ready_state(&session.id, session_is_ready_for_ui(session));
@@ -1123,6 +1130,25 @@ fn session_is_ready_for_ui(session: &WorkLeafSession) -> bool {
     session.loading.is_none()
         && session.completion != Some(WorkLeafCompletion::Closed)
         && !session.id.as_str().starts_with("review-")
+}
+
+fn session_review_has_no_findings(session: &WorkLeafSession) -> bool {
+    session.id.as_str().starts_with("review-")
+        && session.loading.is_none()
+        && session
+            .lines
+            .iter()
+            .rev()
+            .find_map(|line| review_completion_state(line))
+            .unwrap_or(false)
+}
+
+fn review_completion_state(line: &str) -> Option<bool> {
+    match line.trim() {
+        REVIEW_FINISHED_NO_FINDINGS_MESSAGE => Some(true),
+        REVIEW_FINISHED_WITH_FINDINGS_MESSAGE | REVIEW_FAILED_MESSAGE => Some(false),
+        _ => None,
+    }
 }
 
 fn is_agent_slash_command_line(line: &str) -> bool {
@@ -1997,11 +2023,15 @@ mod tests {
         let closed = left_pane.find("[closed]").expect("closed section renders");
         let new = left_pane.find("[new]").expect("new section renders");
         let ready = left_pane.find("[ready]").expect("ready section renders");
-        let working = left_pane.find("[working]").expect("working section renders");
+        let working = left_pane
+            .find("[working]")
+            .expect("working section renders");
         assert!(closed < new);
         assert!(new < ready);
         assert!(ready < working);
-        assert!(left_pane.contains(" closed feature CLOSED user-1  working: closed feature CLOSED"));
+        assert!(
+            left_pane.contains(" closed feature CLOSED user-1  working: closed feature CLOSED")
+        );
         assert!(left_pane.contains(" new feature user-2  working: new feature"));
         assert!(!left_pane.contains("new feature  READY"));
         assert!(left_pane.contains(" ready feature user-3  working: ready feature  READY"));
@@ -2050,7 +2080,7 @@ mod tests {
     }
 
     #[test]
-    fn completed_review_session_does_not_highlight_left_pane() {
+    fn completed_review_session_uses_reviewed_left_pane_without_highlight() {
         let snapshot_calls = Arc::new(AtomicUsize::new(0));
         let drain_calls = Arc::new(AtomicUsize::new(0));
         let reviewer_id = AgentId::new("review-user-1").expect("test agent id is valid");
@@ -2059,6 +2089,72 @@ mod tests {
                 command_transcript: Vec::new(),
                 sessions: vec![WorkLeafSession {
                     id: reviewer_id,
+                    kind: AgentKind::Codex,
+                    title: "review parser".to_string(),
+                    feature: "review parser".to_string(),
+                    lines: vec![REVIEW_FINISHED_NO_FINDINGS_MESSAGE.to_string()],
+                    loading: None,
+                    completion: None,
+                    token_usage: None,
+                    depends_on: Vec::new(),
+                    depended_on_by: Vec::new(),
+                }],
+            },
+            snapshot_calls,
+            drain_calls,
+        );
+        let app = TerminalAppCore::new(controller, 80, 24);
+
+        let left_pane = app.ui.render_left_pane();
+        assert!(left_pane.contains("[reviewed]"));
+        assert!(left_pane.contains("review-user-1 review parser"));
+        assert!(!left_pane.contains("READY"));
+        assert!(!left_pane.contains("\u{1b}[7m"));
+    }
+
+    #[test]
+    fn review_session_with_findings_stays_in_reviewing_left_pane() {
+        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+        let drain_calls = Arc::new(AtomicUsize::new(0));
+        let reviewer_id = AgentId::new("review-user-1").expect("test agent id is valid");
+        let controller = CountingController::new(
+            crate::WorkLeafSnapshot {
+                command_transcript: Vec::new(),
+                sessions: vec![WorkLeafSession {
+                    id: reviewer_id,
+                    kind: AgentKind::Codex,
+                    title: "review parser".to_string(),
+                    feature: "review parser".to_string(),
+                    lines: vec![REVIEW_FINISHED_WITH_FINDINGS_MESSAGE.to_string()],
+                    loading: None,
+                    completion: None,
+                    token_usage: None,
+                    depends_on: Vec::new(),
+                    depended_on_by: Vec::new(),
+                }],
+            },
+            snapshot_calls,
+            drain_calls,
+        );
+        let app = TerminalAppCore::new(controller, 80, 24);
+
+        let left_pane = app.ui.render_left_pane();
+        assert!(left_pane.contains("[reviewing]"));
+        assert!(!left_pane.contains("[reviewed]"));
+        assert!(left_pane.contains("review-user-1 review parser"));
+        assert!(!left_pane.contains("READY"));
+    }
+
+    #[test]
+    fn repeated_review_completion_markers_update_reused_review_row() {
+        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+        let drain_calls = Arc::new(AtomicUsize::new(0));
+        let reviewer_id = AgentId::new("review-user-1").expect("test agent id is valid");
+        let controller = CountingController::new(
+            crate::WorkLeafSnapshot {
+                command_transcript: Vec::new(),
+                sessions: vec![WorkLeafSession {
+                    id: reviewer_id.clone(),
                     kind: AgentKind::Codex,
                     title: "review parser".to_string(),
                     feature: "review parser".to_string(),
@@ -2073,13 +2169,35 @@ mod tests {
             snapshot_calls,
             drain_calls,
         );
-        let app = TerminalAppCore::new(controller, 80, 24);
+        let mut app = TerminalAppCore::new(controller, 80, 24);
 
+        for marker in [
+            REVIEW_FINISHED_NO_FINDINGS_MESSAGE,
+            REVIEW_FINISHED_WITH_FINDINGS_MESSAGE,
+            REVIEW_FINISHED_NO_FINDINGS_MESSAGE,
+        ] {
+            let session = app
+                .append_cached_agent_line(&reviewer_id, marker.to_string())
+                .expect("reviewer session exists");
+            app.apply_session_to_ui(&session);
+        }
+
+        let reviewer = app
+            .snapshot
+            .session(&reviewer_id)
+            .expect("reviewer session remains cached");
+        assert_eq!(
+            reviewer
+                .lines
+                .iter()
+                .filter(|line| line.as_str() == REVIEW_FINISHED_NO_FINDINGS_MESSAGE)
+                .count(),
+            2
+        );
         let left_pane = app.ui.render_left_pane();
-        assert!(left_pane.contains("[reviews]"));
+        assert!(left_pane.contains("[reviewed]"));
+        assert!(!left_pane.contains("[reviewing]"));
         assert!(left_pane.contains("review-user-1 review parser"));
-        assert!(!left_pane.contains("READY"));
-        assert!(!left_pane.contains("\u{1b}[7m"));
     }
 
     #[test]

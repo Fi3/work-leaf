@@ -24,6 +24,12 @@ const FEATURE_DONE_QUESTION: &str = "work-leaf: is this feature done? [yes/no]";
 const FEATURE_CLOSED_MESSAGE: &str = "work-leaf: feature marked closed";
 const FEATURE_OPEN_MESSAGE: &str = "work-leaf: feature remains open";
 const FEATURE_DONE_ANSWER_MESSAGE: &str = "work-leaf: answer yes or no to close this feature";
+pub(crate) const REVIEW_FINISHED_NO_FINDINGS_MESSAGE: &str =
+    "work-leaf: review finished with no findings";
+pub(crate) const REVIEW_FINISHED_WITH_FINDINGS_MESSAGE: &str =
+    "work-leaf: review finished with findings remaining";
+pub(crate) const REVIEW_FAILED_MESSAGE: &str =
+    "work-leaf: review failed before findings were resolved";
 
 #[derive(Debug)]
 pub struct WorkLeafController<B>
@@ -1276,6 +1282,10 @@ where
                 self.review_commits_in_progress.remove(&reviewed_agent_id);
                 self.set_session_loading(&reviewer_id, None);
                 self.append_agent_line(&reviewer_id, message);
+                self.append_agent_line_allow_duplicate(
+                    &reviewer_id,
+                    REVIEW_FAILED_MESSAGE.to_string(),
+                );
                 self.start_next_queued_agent_prompt(&reviewer_id);
                 self.start_next_queued_agent_prompts(&cleared_implicit_agent_ids);
             }
@@ -1382,6 +1392,15 @@ where
                 self.push_command_line(text.clone());
                 for review in results {
                     self.record_review_result(review);
+                    let review_status = if review.findings_resolved {
+                        REVIEW_FINISHED_NO_FINDINGS_MESSAGE
+                    } else {
+                        REVIEW_FINISHED_WITH_FINDINGS_MESSAGE
+                    };
+                    self.append_agent_line_allow_duplicate(
+                        &review.reviewer_id,
+                        review_status.to_string(),
+                    );
                     self.append_agent_line(&review.commit.agent_id, format!("review: {text}"));
                     if review.findings_resolved {
                         self.ask_feature_done(&review.commit.agent_id);
@@ -2546,6 +2565,16 @@ mod tests {
                 line.contains("chat-9 reviewed by review-chat-9: rounds=1 resolved=yes")
             }),
             "{patch_agent:?}"
+        );
+        let reviewer = snapshot
+            .session(&reviewer_id)
+            .expect("reviewer session exists");
+        assert!(
+            reviewer
+                .lines
+                .iter()
+                .any(|line| line == REVIEW_FINISHED_NO_FINDINGS_MESSAGE),
+            "{reviewer:?}"
         );
     }
 
