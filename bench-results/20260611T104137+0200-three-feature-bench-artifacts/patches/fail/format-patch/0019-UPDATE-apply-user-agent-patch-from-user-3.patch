@@ -1,0 +1,60 @@
+From 76050095f99ceac717a686f380d3de82885608aa Mon Sep 17 00:00:00 2001
+From: fi3 <email@email.com>
+Date: Thu, 11 Jun 2026 11:18:16 +0200
+Subject: [PATCH 19/20] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: FIX chat submission to use the visible agent chat when terminal selection metadata is absent
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `FIX chat submission to use the visible agent chat when terminal selection metadata is absent`. The patch touched src/terminal_app.rs and changed the working tree with 20 added line(s) and 2 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs | 22 ++++++++++++++++++++--
+ 1 file changed, 20 insertions(+), 2 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index ce73d5d..f597693 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -6,7 +6,7 @@ use rustyline::line_buffer::{ChangeListener, DeleteListener, Direction, LineBuff
+ use crate::agent::{AgentBackend, AgentId};
+ use crate::cli::{CommandChat, terminal_right_content, ui_action_text};
+ use crate::http_controller::HttpControllerClient;
+-use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode};
++use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode, UiSurface};
+ use crate::workspace::{
+     WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession, WorkLeafSnapshot,
+ };
+@@ -652,7 +652,7 @@ where
+         }
+ 
+         self.chat_history.push(message.clone());
+-        if let Some(agent_id) = self.ui.selected_agent().cloned() {
++        if let Some(agent_id) = self.chat_target_agent() {
+             if self.handle_feature_completion_reply(&agent_id, &message) {
+                 self.apply_controller_events();
+                 self.dirty = true;
+@@ -666,6 +666,24 @@ where
+         self.dirty = true;
+     }
+ 
++    fn chat_target_agent(&self) -> Option<AgentId> {
++        self.ui.selected_agent().cloned().or_else(|| {
++            (self.ui.layout().right_surface == Some(UiSurface::AgentChat))
++                .then(|| {
++                    self.snapshot
++                        .sessions
++                        .iter()
++                        .filter(|session| session.id.as_str().starts_with("user-"))
++                        .map(|session| session.id.clone())
++                        .collect::<Vec<_>>()
++                })
++                .and_then(|agents| match agents.as_slice() {
++                    [agent_id] => Some(agent_id.clone()),
++                    _ => None,
++                })
++        })
++    }
++
+     #[cfg(test)]
+     fn clear_agent_loading(&mut self, agent_id: &AgentId) {
+         self.set_agent_loading(agent_id, None);

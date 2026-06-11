@@ -1,0 +1,49 @@
+From 35eb12d9dc199530f1b65bb98316eae384086426 Mon Sep 17 00:00:00 2001
+From: fi3 <email@email.com>
+Date: Thu, 11 Jun 2026 11:08:24 +0200
+Subject: [PATCH 13/20] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: FIX slash commands to target the agent chat active before deferred escape handling
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `FIX slash commands to target the agent chat active before deferred escape handling`. The patch touched src/terminal_app.rs and changed the working tree with 8 added line(s) and 3 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 02f8f1c..1646f29 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -473,6 +473,7 @@ where
+             self.escape_sequence = Some(PendingEscapeSequence {
+                 bytes: Vec::new(),
+                 mode_before: self.ui.mode(),
++                agent_before_escape: self.ui.selected_agent().cloned(),
+                 escape_dispatched: !defer_escape,
+             });
+             if !defer_escape {
+@@ -1018,10 +1019,13 @@ where
+                 .take()
+                 .expect("escape sequence is present");
+             let mode_before = sequence.mode_before;
++            let agent_before_escape = sequence.agent_before_escape.clone();
+             self.dispatch_pending_escape_if_needed(&sequence);
+-            if byte == b'/' && mode_before == UiMode::Insert && self.ui.selected_agent().is_some()
++            if byte == b'/'
++                && mode_before == UiMode::Insert
++                && let Some(agent_id) = agent_before_escape
+             {
+-                self.start_agent_slash_command();
++                self.start_agent_slash_command_for(&agent_id);
+                 return true;
+             }
+             return false;
+@@ -1062,6 +1066,7 @@ type LoadingKind = WorkLeafLoading;
+ struct PendingEscapeSequence {
+     bytes: Vec<u8>,
+     mode_before: UiMode,
++    agent_before_escape: Option<AgentId>,
+     escape_dispatched: bool,
+ }
+ 

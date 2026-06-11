@@ -1,0 +1,27 @@
+From 42fd885f022ae1eacb4f19dddb6033de5db8042c Mon Sep 17 00:00:00 2001
+From: fi3 <email@email.com>
+Date: Thu, 11 Jun 2026 10:59:59 +0200
+Subject: [PATCH 10/20] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: FIX terminal escape reprocessing so slash commands after Esc keep their leading slash
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `FIX terminal escape reprocessing so slash commands after Esc keep their leading slash`. The patch touched src/terminal_app.rs and changed the working tree with 2 added line(s) and 1 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index e71bea8..c051840 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -1018,7 +1018,8 @@ where
+                 .take()
+                 .expect("escape sequence is present");
+             self.dispatch_pending_escape_if_needed(&sequence);
+-            return false;
++            let _ = self.handle_byte_without_poll(byte);
++            return true;
+         }
+ 
+         sequence.bytes.push(byte);

@@ -1,0 +1,66 @@
+From a3dfb3a16d380ea18b97def9423dbee6d2143f55 Mon Sep 17 00:00:00 2001
+From: fi3 <email@email.com>
+Date: Thu, 11 Jun 2026 10:46:49 +0200
+Subject: [PATCH 02/20] UPDATE apply user-agent patch from user-2
+
+Agent-ID: user-2
+Feature: user-agent
+Reason: FIX selected-agent slash command tests so /status and /fork coverage exercises the backend command path without warnings
+Context: The orchestrator applied this provisional patch for user-2 while the agent was working on feature `user-agent`. The agent stated the reason as `FIX selected-agent slash command tests so /status and /fork coverage exercises the backend command path without warnings`. The patch touched tests/workspace.rs and changed the working tree with 42 added line(s) and 0 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ tests/workspace.rs | 42 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 42 insertions(+)
+
+diff --git a/tests/workspace.rs b/tests/workspace.rs
+index dda8f1a..6beb392 100644
+--- a/tests/workspace.rs
++++ b/tests/workspace.rs
+@@ -45,6 +45,48 @@ fn controller_exposes_ui_neutral_events_and_snapshot_without_terminal_ui() {
+     assert!(session.lines.iter().any(|line| line == "follow reply"));
+ }
+ 
++#[test]
++fn controller_routes_selected_agent_status_slash_command_to_backend_command() {
++    let backend = FakeBackend::new(["launch reply", "status output"]);
++    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
++    let mut controller = WorkLeafController::new(chat);
++
++    let agent_id = controller.create_agent("inspect status").unwrap();
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    controller.send_message(&agent_id, "/status").unwrap();
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    assert_eq!(backend.commands(), vec![(agent_id.clone(), "/status".to_string())]);
++    assert!(
++        backend.sends().is_empty(),
++        "/status must not be delivered as an ordinary selected-agent prompt"
++    );
++    let snapshot = controller.snapshot();
++    let session = snapshot.session(&agent_id).expect("session exists");
++    assert!(session.lines.iter().any(|line| line == "user: /status"));
++    assert!(session.lines.iter().any(|line| line == "status output"));
++}
++
++#[test]
++fn controller_routes_selected_agent_fork_slash_command_to_backend_command() {
++    let backend = FakeBackend::new(["launch reply", "fork output"]);
++    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
++    let mut controller = WorkLeafController::new(chat);
++
++    let agent_id = controller.create_agent("forkable work").unwrap();
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    controller.send_message(&agent_id, "/fork").unwrap();
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    assert_eq!(backend.commands(), vec![(agent_id.clone(), "/fork".to_string())]);
++    let snapshot = controller.snapshot();
++    let session = snapshot.session(&agent_id).expect("session exists");
++    assert!(session.lines.iter().any(|line| line == "user: /fork"));
++    assert!(session.lines.iter().any(|line| line == "fork output"));
++}
++
+ #[test]
+ fn controller_line_events_do_not_resend_full_session_transcripts() {
+     let backend = FakeBackend::new(["launch reply"]);

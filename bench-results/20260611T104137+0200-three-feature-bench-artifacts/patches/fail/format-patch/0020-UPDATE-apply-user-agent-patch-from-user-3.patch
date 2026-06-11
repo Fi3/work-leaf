@@ -1,0 +1,91 @@
+From 4b580dadfaafba681970e472e2ddf2bf1524d15e Mon Sep 17 00:00:00 2001
+From: fi3 <email@email.com>
+Date: Thu, 11 Jun 2026 11:23:27 +0200
+Subject: [PATCH 20/20] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: FIX preserve the selected agent target for pending terminal chat input
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `FIX preserve the selected agent target for pending terminal chat input`. The patch touched src/terminal_app.rs and changed the working tree with 13 added line(s) and 3 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs | 16 +++++++++++++---
+ 1 file changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index f597693..afd1cb2 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -308,6 +308,7 @@ where
+     chat_history: Vec<String>,
+     chat_history_index: Option<usize>,
+     chat_history_draft: Option<String>,
++    chat_buffer_agent: Option<AgentId>,
+     escape_sequence: Option<PendingEscapeSequence>,
+     paste_mode: bool,
+     skip_next_paste_lf: bool,
+@@ -347,6 +348,7 @@ where
+             chat_history: Vec::new(),
+             chat_history_index: None,
+             chat_history_draft: None,
++            chat_buffer_agent: None,
+             escape_sequence: None,
+             paste_mode: false,
+             skip_next_paste_lf: false,
+@@ -558,6 +560,9 @@ where
+                 self.dirty = true;
+             }
+             TerminalAppInput::LineBreak if self.ui.mode() == UiMode::Insert => {
++                if self.chat_buffer_agent.is_none() {
++                    self.chat_buffer_agent = self.chat_target_agent();
++                }
+                 self.chat_buffer.push('\n');
+                 self.chat_history_index = None;
+                 self.chat_history_draft = None;
+@@ -578,6 +583,9 @@ where
+                 self.dirty = true;
+             }
+             TerminalAppInput::Char(ch) if self.ui.mode() == UiMode::Insert => {
++                if self.chat_buffer_agent.is_none() {
++                    self.chat_buffer_agent = self.chat_target_agent();
++                }
+                 self.chat_buffer.push(ch);
+                 self.chat_history_index = None;
+                 self.chat_history_draft = None;
+@@ -646,13 +654,14 @@ where
+         self.chat_buffer.clear();
+         self.chat_history_index = None;
+         self.chat_history_draft = None;
++        let target_agent = self.chat_buffer_agent.take().or_else(|| self.chat_target_agent());
+         if message.is_empty() {
+             self.dirty = true;
+             return;
+         }
+ 
+         self.chat_history.push(message.clone());
+-        if let Some(agent_id) = self.chat_target_agent() {
++        if let Some(agent_id) = target_agent {
+             if self.handle_feature_completion_reply(&agent_id, &message) {
+                 self.apply_controller_events();
+                 self.dirty = true;
+@@ -875,11 +884,11 @@ where
+     fn should_start_agent_slash_command(&self) -> bool {
+         self.ui.mode() == UiMode::Command
+             && !self.ui.is_visual_active()
+-            && self.ui.selected_agent().is_some()
++            && self.chat_target_agent().is_some()
+     }
+ 
+     fn start_agent_slash_command(&mut self) {
+-        let Some(agent_id) = self.ui.selected_agent().cloned() else {
++        let Some(agent_id) = self.chat_target_agent() else {
+             return;
+         };
+         self.start_agent_slash_command_for(&agent_id);
+@@ -887,6 +896,7 @@ where
+ 
+     fn start_agent_slash_command_for(&mut self, agent_id: &AgentId) {
+         if self.ui.activate_agent_chat(&agent_id).is_ok() {
++            self.chat_buffer_agent = Some(agent_id.clone());
+             self.chat_buffer.push('/');
+             self.chat_history_index = None;
+             self.chat_history_draft = None;

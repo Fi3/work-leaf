@@ -1,0 +1,49 @@
+From 245a7b005779053bdd36647b68b52d5747cb951b Mon Sep 17 00:00:00 2001
+From: fi3 <email@email.com>
+Date: Thu, 11 Jun 2026 10:57:11 +0200
+Subject: [PATCH 08/20] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: FIX terminal wait helpers to poll and drain worker events before checking rendered chat replies
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `FIX terminal wait helpers to poll and drain worker events before checking rendered chat replies`. The patch touched src/terminal_app.rs and changed the working tree with 7 added line(s) and 3 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 4d42677..e71bea8 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -400,25 +400,29 @@ where
+     fn wait_for_idle(&mut self, timeout: Duration) -> bool {
+         let start = Instant::now();
+         while start.elapsed() < timeout {
++            let busy = self.controller.is_busy();
+             self.apply_controller_events();
+-            if !self.controller.is_busy() {
++            if !busy {
+                 return true;
+             }
+             thread::sleep(Duration::from_millis(10));
+         }
++        let busy = self.controller.is_busy();
+         self.apply_controller_events();
+-        !self.controller.is_busy()
++        !busy
+     }
+ 
+     fn wait_for_frame_contains(&mut self, needle: &str, timeout: Duration) -> bool {
+         let start = Instant::now();
+         while start.elapsed() < timeout {
++            let _ = self.controller.is_busy();
+             self.apply_controller_events();
+             if self.render_frame().contains(needle) {
+                 return true;
+             }
+             thread::sleep(Duration::from_millis(10));
+         }
++        let _ = self.controller.is_busy();
+         self.apply_controller_events();
+         self.render_frame().contains(needle)
+     }

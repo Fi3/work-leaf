@@ -1,0 +1,27 @@
+From 19cdfb91ace172c59308ecb22d4ad9eae78afdcc Mon Sep 17 00:00:00 2001
+From: fi3 <email@email.com>
+Date: Thu, 11 Jun 2026 11:16:17 +0200
+Subject: [PATCH 18/20] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: FIX terminal slash command test to explicitly focus the launched agent chat
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `FIX terminal slash command test to explicitly focus the launched agent chat`. The patch touched tests/terminal_app.rs and changed the working tree with 3 added line(s) and 0 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ tests/terminal_app.rs | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index f724f0e..e2c9f60 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -51,6 +51,9 @@ fn terminal_app_slash_command_from_chat_view_sends_agent_command() {
+ 
+     app.handle_bytes(b":new status command\n");
+     app.wait_for_idle(Duration::from_secs(1));
++    app.handle_bytes(b"\x1b");
++    app.handle_bytes(&[23, b'h']);
++    app.handle_bytes(b"jl");
+     app.handle_bytes(b"/status\n");
+     assert_eq!(app.ui().mode(), UiMode::Insert);
+     assert_eq!(app.ui().focus(), PaneFocus::Right);

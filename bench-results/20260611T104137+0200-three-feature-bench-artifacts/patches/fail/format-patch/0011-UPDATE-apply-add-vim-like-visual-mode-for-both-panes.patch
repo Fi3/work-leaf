@@ -1,0 +1,97 @@
+From acf733fb026d22b8e9216ad3aefa98a22ddf930a Mon Sep 17 00:00:00 2001
+From: fi3 <email@email.com>
+Date: Thu, 11 Jun 2026 11:03:03 +0200
+Subject: [PATCH 11/20] UPDATE apply
+ add-vim-like-visual-mode-for-both-panes-when-i-do-v-i-can-select-the-text-in-foc
+ patch from user-1
+
+Agent-ID: user-1
+Feature: add-vim-like-visual-mode-for-both-panes-when-i-do-v-i-can-select-the-text-in-foc
+Reason: FIX left-pane visual selection to anchor on rendered rows when agent metadata expands the pane
+Context: The orchestrator applied this provisional patch for user-1 while the agent was working on feature `add-vim-like-visual-mode-for-both-panes-when-i-do-v-i-can-select-the-text-in-foc`. The agent stated the reason as `FIX left-pane visual selection to anchor on rendered rows when agent metadata expands the pane`. The patch touched src/ui.rs, tests/ui_harness.rs and changed the working tree with 51 added line(s) and 1 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/ui.rs           | 33 ++++++++++++++++++++++++++++++++-
+ tests/ui_harness.rs | 19 +++++++++++++++++++
+ 2 files changed, 51 insertions(+), 1 deletion(-)
+
+diff --git a/src/ui.rs b/src/ui.rs
+index e14c30d..d8874de 100644
+--- a/src/ui.rs
++++ b/src/ui.rs
+@@ -1351,7 +1351,7 @@ impl TerminalUi {
+ 
+     fn visual_start_position(&self, pane: PaneFocus, lines: &[String]) -> TextPosition {
+         let row = match pane {
+-            PaneFocus::Left => self.control_selected,
++            PaneFocus::Left => self.left_visual_start_row(),
+             PaneFocus::Right => lines.len().saturating_sub(1),
+         };
+         let column = match pane {
+@@ -1365,6 +1365,37 @@ impl TerminalUi {
+         clamp_position(TextPosition { row, column }, lines)
+     }
+ 
++    fn left_visual_start_row(&self) -> usize {
++        if self.control_selected == 0 {
++            return 0;
++        }
++
++        let selected_visible_position = self.control_selected.saturating_sub(1);
++        let mut row = 1;
++        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
++            if visible_position == selected_visible_position {
++                return row;
++            }
++
++            let agent = &self.agents[*agent_index];
++            row += 1;
++            if !agent.modified_files.is_empty() {
++                row += 1;
++            }
++            for linked_agents in [
++                &agent.conflicting_agents,
++                &agent.depends_on,
++                &agent.depended_on_by,
++            ] {
++                if !linked_agents.is_empty() {
++                    row += 1;
++                }
++            }
++        }
++
++        0
++    }
++
+     fn styled_line_spans(
+         &self,
+         pane: PaneFocus,
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index 6e76115..054be5a 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -603,6 +603,25 @@ fn scripted_harness_visual_character_mode_yanks_left_pane_text() {
+     assert!(copied_frame.contains("copied 2 chars"));
+ }
+ 
++#[test]
++fn scripted_harness_visual_character_mode_anchors_on_expanded_left_agent_row() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_byte(b'j');
++    assert_eq!(
++        harness.ui().selected_agent().map(|id| id.as_str()),
++        Some("user-2")
++    );
++
++    harness.handle_byte(b'v');
++    harness.handle_byte(b'l');
++    harness.handle_byte(b'y');
++
++    let copied_frame = harness.render_frame();
++    assert!(copied_frame.starts_with("\u{1b}]52;c;PnQ=\u{7}\u{1b}[H"));
++    assert!(copied_frame.contains("copied 2 chars"));
++}
++
+ #[test]
+ fn scripted_harness_visual_line_mode_yanks_right_pane_line() {
+     let mut harness = UiHarness::new(80, 24);

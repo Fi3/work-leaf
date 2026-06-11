@@ -1,0 +1,418 @@
+From 1f439bdc03801aed397ad01ebfa995a8e23b7ef3 Mon Sep 17 00:00:00 2001
+From: fi3 <email@email.com>
+Date: Thu, 11 Jun 2026 10:47:41 +0200
+Subject: [PATCH 03/20] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: ADD reviewed feature completion prompt so terminal users can close or resume reviewed patch chats
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `ADD reviewed feature completion prompt so terminal users can close or resume reviewed patch chats`. The patch touched src/terminal_app.rs, src/ui.rs, src/ui_harness.rs, src/workspace.rs, tests/terminal_app.rs, tests/ui_harness.rs, tests/workspace.rs and changed the working tree with 207 added line(s) and 11 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs   | 73 ++++++++++++++++++++++++++++++++++++-------
+ src/ui.rs             | 27 ++++++++++++++++
+ src/ui_harness.rs     | 39 +++++++++++++++++++++++
+ src/workspace.rs      |  3 ++
+ tests/terminal_app.rs | 15 +++++++++
+ tests/ui_harness.rs   | 51 ++++++++++++++++++++++++++++++
+ tests/workspace.rs    | 10 ++++++
+ 7 files changed, 207 insertions(+), 11 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 0fc8a53..e66c301 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -1,4 +1,4 @@
+-use std::thread;
++use std::{collections::BTreeSet, thread};
+ use std::time::{Duration, Instant};
+ 
+ use rustyline::line_buffer::{ChangeListener, DeleteListener, Direction, LineBuffer};
+@@ -314,6 +314,7 @@ where
+     spinner: usize,
+     snapshot: WorkLeafSnapshot,
+     loading_text: [(WorkLeafLoading, String); 2],
++    feature_completion_prompts: BTreeSet<AgentId>,
+     dirty: bool,
+     quit: bool,
+ }
+@@ -351,6 +352,7 @@ where
+             spinner: 0,
+             snapshot,
+             loading_text,
++            feature_completion_prompts: BTreeSet::new(),
+             dirty: true,
+             quit: false,
+         };
+@@ -642,6 +644,11 @@ where
+ 
+         self.chat_history.push(message.clone());
+         if let Some(agent_id) = self.ui.selected_agent().cloned() {
++            if self.handle_feature_completion_reply(&agent_id, &message) {
++                self.apply_controller_events();
++                self.dirty = true;
++                return;
++            }
+             self.controller.send_message(&agent_id, &message);
+         } else {
+             self.controller.send_command_agent_message(&message);
+@@ -685,8 +692,12 @@ where
+                     feature,
+                     loading,
+                 } => {
++                    let busy = loading.is_some();
+                     let session =
+                         self.upsert_cached_session_status(agent_id, kind, title, feature, loading);
++                    if busy {
++                        self.feature_completion_prompts.remove(&session.id);
++                    }
+                     self.apply_session_to_ui(&session);
+                 }
+                 WorkLeafEvent::AgentLineAppended { agent_id, line } => {
+@@ -762,16 +773,22 @@ where
+         if line.is_empty() {
+             return;
+         }
+-        let Some(session) = self
+-            .snapshot
+-            .sessions
+-            .iter_mut()
+-            .find(|session| &session.id == agent_id)
+-        else {
+-            return;
+-        };
+-        if !session.lines.iter().any(|existing| existing == &line) {
+-            session.lines.push(line);
++        let review_completed = is_feature_completion_review_line(agent_id, &line);
++        {
++            let Some(session) = self
++                .snapshot
++                .sessions
++                .iter_mut()
++                .find(|session| &session.id == agent_id)
++            else {
++                return;
++            };
++            if !session.lines.iter().any(|existing| existing == &line) {
++                session.lines.push(line);
++            }
++        }
++        if review_completed {
++            self.mark_feature_completion_prompt(agent_id);
+         }
+     }
+ 
+@@ -789,6 +806,31 @@ where
+         let _ = self
+             .ui
+             .set_agent_ready_state(&session.id, session.loading.is_none());
++        if session
++            .lines
++            .iter()
++            .any(|line| is_feature_completion_review_line(&session.id, line))
++        {
++            self.mark_feature_completion_prompt(&session.id);
++        }
++    }
++
++    fn mark_feature_completion_prompt(&mut self, agent_id: &AgentId) {
++        if self.feature_completion_prompts.insert(agent_id.clone()) {
++            let _ = self.ui.mark_agent_attention(agent_id);
++        }
++    }
++
++    fn handle_feature_completion_reply(&mut self, agent_id: &AgentId, message: &str) -> bool {
++        if !self.feature_completion_prompts.contains(agent_id) {
++            return false;
++        }
++        self.feature_completion_prompts.remove(agent_id);
++        if message.eq_ignore_ascii_case("yes") {
++            let _ = self.ui.hide_agent(agent_id);
++            return true;
++        }
++        false
+     }
+ 
+     fn should_start_agent_slash_command(&self) -> bool {
+@@ -926,6 +968,8 @@ where
+                     self.cached_loading_text(loading),
+                     SPINNER[self.spinner]
+                 ));
++            } else if self.feature_completion_prompts.contains(agent_id) {
++                lines.push(FEATURE_COMPLETION_PROMPT.to_string());
+             }
+             return terminal_right_content(self.chat_buffer.as_str(), &lines);
+         }
+@@ -993,9 +1037,16 @@ struct PendingEscapeSequence {
+ }
+ 
+ const SPINNER: [&str; 4] = ["|", "/", "-", "\\"];
++const FEATURE_COMPLETION_PROMPT: &str = "work-leaf: is this feature done? yes/no";
+ 
+ const MAX_ESCAPE_SEQUENCE: usize = 64;
+ 
++fn is_feature_completion_review_line(agent_id: &AgentId, line: &str) -> bool {
++    line.trim_start().starts_with("review: ")
++        && line.contains(&format!("{agent_id} reviewed by "))
++        && line.contains("resolved=yes")
++}
++
+ fn is_complete_control_sequence(sequence: &[u8]) -> bool {
+     sequence.len() > 1
+         && sequence
+diff --git a/src/ui.rs b/src/ui.rs
+index 537c9b0..f80d029 100644
+--- a/src/ui.rs
++++ b/src/ui.rs
+@@ -329,6 +329,33 @@ impl TerminalUi {
+         self.reset_right_scroll();
+     }
+ 
++    pub(crate) fn hide_agent(&mut self, agent_id: &AgentId) -> Result<(), String> {
++        let Some(agent_index) = self.agents.iter().position(|agent| &agent.id == agent_id) else {
++            return Err(format!("unknown agent `{agent_id}`"));
++        };
++        self.agents[agent_index].hidden = true;
++        if self
++            .selected_agent
++            .as_ref()
++            .is_some_and(|selected| selected == agent_id)
++        {
++            self.select_command_interface();
++            self.focus = PaneFocus::Right;
++        }
++        self.clamp_control_selection();
++        Ok(())
++    }
++
++    pub(crate) fn mark_agent_attention(&mut self, agent_id: &AgentId) -> Result<(), String> {
++        let Some(agent) = self.agents.iter_mut().find(|agent| &agent.id == agent_id) else {
++            return Err(format!("unknown agent `{agent_id}`"));
++        };
++        agent.hidden = false;
++        agent.ready = true;
++        self.pending_bell.set(true);
++        Ok(())
++    }
++
+     pub fn handle_key(&mut self, key: UiKey) -> Vec<UiAction> {
+         let command_mode_text_key = self.command_mode_text_key_control_status(key);
+         let actions = self.handle_key_inner(key);
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index b9bdcb9..ec7e5e5 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -1,3 +1,5 @@
++use std::collections::BTreeSet;
++
+ use crate::{
+     AgentId, AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode,
+     chat_title::{ChatTitleAgent, fallback_chat_title_from_prompt},
+@@ -18,6 +20,7 @@ pub struct UiHarness {
+     chat_history_draft: Option<String>,
+     escape_sequence: Option<PendingEscapeSequence>,
+     transcript: Vec<String>,
++    feature_completion_prompts: BTreeSet<AgentId>,
+     chat_title_agent: ChatTitleAgent,
+     next_agent: usize,
+     quit: bool,
+@@ -49,6 +52,7 @@ impl UiHarness {
+                 "Esc command, i insert, : prompt, Ctrl-W h/j/k/l focus, , toggle right, q quit"
+                     .to_string(),
+             ],
++            feature_completion_prompts: BTreeSet::new(),
+             chat_title_agent,
+             next_agent: 3,
+             quit: false,
+@@ -68,6 +72,14 @@ impl UiHarness {
+         self.ui.set_agent_ready_state(&agent_id, true)
+     }
+ 
++    pub fn mark_agent_review_complete(&mut self, agent_id: &str) -> Result<(), String> {
++        let agent_id = AgentId::new(agent_id).map_err(|error| error.to_string())?;
++        self.feature_completion_prompts.insert(agent_id.clone());
++        self.ui.mark_agent_attention(&agent_id)?;
++        self.ui.activate_agent_chat(&agent_id)?;
++        Ok(())
++    }
++
+     pub fn is_quit(&self) -> bool {
+         self.quit
+     }
+@@ -166,6 +178,11 @@ impl UiHarness {
+                 if !message.is_empty() {
+                     self.chat_history.push(message.clone());
+                     let target_agent = self.ui.selected_agent().cloned();
++                    if let Some(agent_id) = target_agent.as_ref()
++                        && self.handle_feature_completion_reply(agent_id, &message)
++                    {
++                        return;
++                    }
+                     if let Some(agent_id) = target_agent.as_ref() {
+                         self.name_chat_from_first_prompt(agent_id, &message);
+                     }
+@@ -410,6 +427,19 @@ impl UiHarness {
+     fn chat_cursor_column(&self) -> usize {
+         CHAT_PROMPT.chars().count() + cursor_char_count(&self.chat_buffer, self.chat_cursor)
+     }
++
++    fn handle_feature_completion_reply(&mut self, agent_id: &AgentId, message: &str) -> bool {
++        if !self.feature_completion_prompts.contains(agent_id) {
++            return false;
++        }
++        self.feature_completion_prompts.remove(agent_id);
++        if message.eq_ignore_ascii_case("yes") {
++            let _ = self.ui.hide_agent(agent_id);
++            return true;
++        }
++        false
++    }
++
+     fn record_actions(&mut self, actions: Vec<crate::UiAction>) {
+         self.transcript
+             .extend(actions.into_iter().map(|action| format!("{action:?}")));
+@@ -501,6 +531,14 @@ impl UiHarness {
+ 
+     fn right_content(&self) -> String {
+         let mut content = self.transcript.join("\n");
++        if let Some(agent_id) = self.ui.selected_agent()
++            && self.feature_completion_prompts.contains(agent_id)
++        {
++            if !content.is_empty() {
++                content.push('\n');
++            }
++            content.push_str(FEATURE_COMPLETION_PROMPT);
++        }
+         if !content.is_empty() {
+             content.push('\n');
+         }
+@@ -518,6 +556,7 @@ struct PendingEscapeSequence {
+ }
+ 
+ const CHAT_PROMPT: &str = "chat> ";
++const FEATURE_COMPLETION_PROMPT: &str = "work-leaf: is this feature done? yes/no";
+ const MAX_ESCAPE_SEQUENCE: usize = 64;
+ 
+ fn parse_key_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
+diff --git a/src/workspace.rs b/src/workspace.rs
+index b139204..31bc1eb 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -690,6 +690,9 @@ where
+                 for review in results {
+                     self.record_review_result(review);
+                     self.append_agent_line(&review.commit.agent_id, format!("review: {text}"));
++                    self.pending_events.push(WorkLeafEvent::AgentSelected {
++                        agent_id: review.commit.agent_id.clone(),
++                    });
+                 }
+             }
+             other => {
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index c312a5b..2dbb2af 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -945,6 +945,21 @@ fn terminal_app_review_adds_reviewer_chat_and_streams_output_immediately() {
+         "reviewer streamed before finishing",
+         Duration::from_millis(150)
+     ));
++    assert_eq!(
++        app.ui().selected_agent().map(AgentId::as_str),
++        Some("user-1")
++    );
++    assert!(
++        app.render_frame()
++            .contains("work-leaf: is this feature done? yes/no")
++    );
++
++    app.handle_bytes(b"no\n");
++
++    assert!(app.wait_for_frame_contains("user: no", Duration::from_millis(150)));
++    let reopened_frame = app.render_frame();
++    assert!(reopened_frame.contains("summary"));
++    assert!(!reopened_frame.contains("work-leaf: is this feature done? yes/no"));
+ }
+ 
+ #[test]
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index dd7a280..d9e6b51 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -34,6 +34,57 @@ fn scripted_harness_rings_and_highlights_ready_chat() {
+     assert!(!harness.render_frame().starts_with('\u{7}'));
+ }
+ 
++#[test]
++fn scripted_harness_review_completion_prompt_closes_or_reopens_patch_chat() {
++    let mut harness = UiHarness::new(100, 24);
++
++    harness
++        .mark_agent_review_complete("user-1")
++        .expect("fixture user-1 agent is registered");
++
++    let prompt_frame = harness.render_frame();
++    assert!(prompt_frame.starts_with('\u{7}'));
++    assert!(prompt_frame.contains("work-leaf: is this feature done? yes/no"));
++
++    harness.handle_bytes(b"yes\n");
++
++    assert!(harness.ui().selected_agent().is_none());
++    assert!(
++        !harness
++            .ui()
++            .render_left_pane()
++            .contains("parser user-1  working: parser")
++    );
++
++    let mut reopen = UiHarness::new(100, 24);
++    reopen
++        .mark_agent_review_complete("user-1")
++        .expect("fixture user-1 agent is registered");
++    reopen.handle_bytes(b"no, continue\n");
++
++    assert_eq!(
++        reopen.ui().selected_agent().map(|agent_id| agent_id.as_str()),
++        Some("user-1")
++    );
++    assert!(
++        reopen
++            .ui()
++            .render_left_pane()
++            .contains("parser user-1  working: parser")
++    );
++    assert!(
++        reopen
++            .transcript()
++            .iter()
++            .any(|line| line == "user-1> no, continue")
++    );
++    assert!(
++        !reopen
++            .render_frame()
++            .contains("work-leaf: is this feature done? yes/no")
++    );
++}
++
+ #[test]
+ fn scripted_harness_switches_modes_without_enter() {
+     let mut harness = UiHarness::new(80, 24);
+diff --git a/tests/workspace.rs b/tests/workspace.rs
+index 6beb392..36b13ec 100644
+--- a/tests/workspace.rs
++++ b/tests/workspace.rs
+@@ -307,6 +307,16 @@ fn controller_starts_review_after_patch_agent_done_and_loops_until_clean() {
+             && prompt.contains("The original agent has responded to the findings")
+             && prompt.contains("Please check the patch again")
+     }));
++
++    let selected_agents = controller
++        .drain_events()
++        .into_iter()
++        .filter_map(|event| match event {
++            WorkLeafEvent::AgentSelected { agent_id } => Some(agent_id),
++            _ => None,
++        })
++        .collect::<Vec<_>>();
++    assert_eq!(selected_agents.last(), Some(&agent_id));
+ }
+ 
+ #[test]

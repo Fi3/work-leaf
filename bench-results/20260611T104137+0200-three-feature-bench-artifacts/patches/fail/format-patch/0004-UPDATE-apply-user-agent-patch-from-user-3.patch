@@ -1,0 +1,49 @@
+From 01d0c0e4c94b31d1eec9e882c45df3d2ad2c18a5 Mon Sep 17 00:00:00 2001
+From: fi3 <email@email.com>
+Date: Thu, 11 Jun 2026 10:49:57 +0200
+Subject: [PATCH 04/20] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: FIX reviewed feature prompt selection after asynchronous review completion
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `FIX reviewed feature prompt selection after asynchronous review completion`. The patch touched src/terminal_app.rs, src/ui_harness.rs, tests/terminal_app.rs and changed the working tree with 5 added line(s) and 4 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs   | 1 +
+ tests/terminal_app.rs | 8 ++++----
+ 2 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index e66c301..6c6422d 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -818,6 +818,7 @@ where
+     fn mark_feature_completion_prompt(&mut self, agent_id: &AgentId) {
+         if self.feature_completion_prompts.insert(agent_id.clone()) {
+             let _ = self.ui.mark_agent_attention(agent_id);
++            let _ = self.ui.activate_agent_chat(agent_id);
+         }
+     }
+ 
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index 2dbb2af..9c23ac5 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -945,14 +945,14 @@ fn terminal_app_review_adds_reviewer_chat_and_streams_output_immediately() {
+         "reviewer streamed before finishing",
+         Duration::from_millis(150)
+     ));
++    assert!(app.wait_for_frame_contains(
++        "work-leaf: is this feature done? yes/no",
++        Duration::from_secs(1)
++    ));
+     assert_eq!(
+         app.ui().selected_agent().map(AgentId::as_str),
+         Some("user-1")
+     );
+-    assert!(
+-        app.render_frame()
+-            .contains("work-leaf: is this feature done? yes/no")
+-    );
+ 
+     app.handle_bytes(b"no\n");
+ 

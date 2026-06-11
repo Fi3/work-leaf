@@ -1,0 +1,34 @@
+From 9300c18d17ecfe0eeb47cf6bfc08cb44220660e5 Mon Sep 17 00:00:00 2001
+From: fi3 <email@email.com>
+Date: Thu, 11 Jun 2026 11:04:48 +0200
+Subject: [PATCH 12/20] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: FIX slash command startup after deferred escape before routing following chat text
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `FIX slash command startup after deferred escape before routing following chat text`. The patch touched src/terminal_app.rs and changed the working tree with 7 added line(s) and 2 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index c051840..02f8f1c 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -1017,9 +1017,14 @@ where
+                 .escape_sequence
+                 .take()
+                 .expect("escape sequence is present");
++            let mode_before = sequence.mode_before;
+             self.dispatch_pending_escape_if_needed(&sequence);
+-            let _ = self.handle_byte_without_poll(byte);
+-            return true;
++            if byte == b'/' && mode_before == UiMode::Insert && self.ui.selected_agent().is_some()
++            {
++                self.start_agent_slash_command();
++                return true;
++            }
++            return false;
+         }
+ 
+         sequence.bytes.push(byte);

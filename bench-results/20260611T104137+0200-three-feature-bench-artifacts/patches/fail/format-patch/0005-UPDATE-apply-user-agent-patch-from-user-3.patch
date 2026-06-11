@@ -1,0 +1,110 @@
+From aa09d1ae0e42ae1439a72ccbf0ceac30fbecbd82 Mon Sep 17 00:00:00 2001
+From: fi3 <email@email.com>
+Date: Thu, 11 Jun 2026 10:52:05 +0200
+Subject: [PATCH 05/20] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: FIX reviewed completion prompts to be one-shot so resumed chats show follow-up replies
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `FIX reviewed completion prompts to be one-shot so resumed chats show follow-up replies`. The patch touched src/terminal_app.rs, tests/terminal_app.rs and changed the working tree with 19 added line(s) and 10 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs   | 24 ++++++++++++++++--------
+ tests/terminal_app.rs |  5 +++--
+ 2 files changed, 19 insertions(+), 10 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 6c6422d..0e842c2 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -315,6 +315,7 @@ where
+     snapshot: WorkLeafSnapshot,
+     loading_text: [(WorkLeafLoading, String); 2],
+     feature_completion_prompts: BTreeSet<AgentId>,
++    handled_feature_completion_reviews: BTreeSet<(AgentId, String)>,
+     dirty: bool,
+     quit: bool,
+ }
+@@ -353,6 +354,7 @@ where
+             snapshot,
+             loading_text,
+             feature_completion_prompts: BTreeSet::new(),
++            handled_feature_completion_reviews: BTreeSet::new(),
+             dirty: true,
+             quit: false,
+         };
+@@ -774,6 +776,7 @@ where
+             return;
+         }
+         let review_completed = is_feature_completion_review_line(agent_id, &line);
++        let mut inserted = false;
+         {
+             let Some(session) = self
+                 .snapshot
+@@ -784,11 +787,12 @@ where
+                 return;
+             };
+             if !session.lines.iter().any(|existing| existing == &line) {
+-                session.lines.push(line);
++                session.lines.push(line.clone());
++                inserted = true;
+             }
+         }
+-        if review_completed {
+-            self.mark_feature_completion_prompt(agent_id);
++        if review_completed && inserted {
++            self.mark_feature_completion_prompt(agent_id, &line);
+         }
+     }
+ 
+@@ -806,17 +810,21 @@ where
+         let _ = self
+             .ui
+             .set_agent_ready_state(&session.id, session.loading.is_none());
+-        if session
++        if let Some(line) = session
+             .lines
+             .iter()
+-            .any(|line| is_feature_completion_review_line(&session.id, line))
++            .find(|line| is_feature_completion_review_line(&session.id, line))
+         {
+-            self.mark_feature_completion_prompt(&session.id);
++            self.mark_feature_completion_prompt(&session.id, line);
+         }
+     }
+ 
+-    fn mark_feature_completion_prompt(&mut self, agent_id: &AgentId) {
+-        if self.feature_completion_prompts.insert(agent_id.clone()) {
++    fn mark_feature_completion_prompt(&mut self, agent_id: &AgentId, review_line: &str) {
++        if self
++            .handled_feature_completion_reviews
++            .insert((agent_id.clone(), review_line.to_string()))
++        {
++            self.feature_completion_prompts.insert(agent_id.clone());
+             let _ = self.ui.mark_agent_attention(agent_id);
+             let _ = self.ui.activate_agent_chat(agent_id);
+         }
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index 9c23ac5..111e481 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -52,8 +52,8 @@ fn terminal_app_slash_command_from_chat_view_sends_agent_command() {
+     app.handle_bytes(b":new status command\n");
+     app.wait_for_idle(Duration::from_secs(1));
+     app.handle_bytes(b"\x1b/status\n");
+-    app.wait_for_idle(Duration::from_secs(1));
+ 
++    assert!(app.wait_for_frame_contains("status reply", Duration::from_secs(1)));
+     assert_eq!(app.ui().mode(), UiMode::Insert);
+     assert_eq!(app.ui().focus(), PaneFocus::Right);
+     assert!(app.render_frame().contains("user: /status"));
+@@ -956,8 +956,9 @@ fn terminal_app_review_adds_reviewer_chat_and_streams_output_immediately() {
+ 
+     app.handle_bytes(b"no\n");
+ 
+-    assert!(app.wait_for_frame_contains("user: no", Duration::from_millis(150)));
++    assert!(app.wait_for_frame_contains("summary", Duration::from_secs(1)));
+     let reopened_frame = app.render_frame();
++    assert!(reopened_frame.contains("user: no"));
+     assert!(reopened_frame.contains("summary"));
+     assert!(!reopened_frame.contains("work-leaf: is this feature done? yes/no"));
+ }

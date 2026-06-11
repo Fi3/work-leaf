@@ -1,0 +1,28 @@
+From 0d1da14da546b74863c4824417257cd1b1a18bf8 Mon Sep 17 00:00:00 2001
+From: fi3 <email@email.com>
+Date: Thu, 11 Jun 2026 11:09:10 +0200
+Subject: [PATCH 14/20] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: FIX slash command helper for deferred escape replay
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `FIX slash command helper for deferred escape replay`. The patch touched src/terminal_app.rs and changed the working tree with 4 added line(s) and 0 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 1646f29..ce73d5d 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -864,6 +864,10 @@ where
+         let Some(agent_id) = self.ui.selected_agent().cloned() else {
+             return;
+         };
++        self.start_agent_slash_command_for(&agent_id);
++    }
++
++    fn start_agent_slash_command_for(&mut self, agent_id: &AgentId) {
+         if self.ui.activate_agent_chat(&agent_id).is_ok() {
+             self.chat_buffer.push('/');
+             self.chat_history_index = None;
