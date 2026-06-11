@@ -1292,7 +1292,9 @@ fn fake_title_from_title_prompt(prompt: &str) -> String {
     if first_prompt.contains("parser combinator") {
         "parser-combinator".to_string()
     } else if first_prompt.contains("OAuth redirect handler") {
-        "oauth-redirect-handler".to_string()
+        "please-fix-the-oauth-redirect-handler".to_string()
+    } else if first_prompt.contains("break compile") {
+        "break-compile".to_string()
     } else if first_prompt.contains("patch") {
         "patch".to_string()
     } else if first_prompt.contains("cursor render") {
@@ -1301,6 +1303,24 @@ fn fake_title_from_title_prompt(prompt: &str) -> String {
         "chat-history".to_string()
     } else {
         "chat-title".to_string()
+    }
+}
+
+fn fake_command_agent_reply(prompt: &str) -> String {
+    if prompt.contains("open 4 pacth agents") || prompt.contains("open 4 patch agents") {
+        [
+            "COMMAND: new patch",
+            "COMMAND: new patch",
+            "COMMAND: new patch",
+            "COMMAND: new patch",
+            "REPLY: launching 4 Codex user agents for patch",
+        ]
+        .join("\n")
+    } else if prompt.contains("patch agent that uses codex") {
+        "COMMAND: new patch agent that uses codex\nREPLY: launching Codex user agent for patch agent that uses codex".to_string()
+    } else {
+        "REPLY: I can run help, new [prompt...], review, linearize, force-linearize, or quit."
+            .to_string()
     }
 }
 
@@ -1337,6 +1357,17 @@ impl AgentBackend for FakeBackend {
             session.push_message(MessageRole::Agent, title);
             return Ok(session);
         }
+        if request.id.as_str() == "command-agent" {
+            let mut session = AgentSession::new(request);
+            let reply = fake_command_agent_reply(&session.messages[0].text);
+            session.push_message(MessageRole::Agent, reply);
+            self.state
+                .lock()
+                .unwrap()
+                .sessions
+                .insert(session.id.clone(), session.clone());
+            return Ok(session);
+        }
 
         let mut state = self.state.lock().unwrap();
         state.launches.push(request.clone());
@@ -1351,6 +1382,21 @@ impl AgentBackend for FakeBackend {
     }
 
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        if agent_id.as_str().starts_with("title-") {
+            return Ok(ChatMessage::new(
+                MessageRole::Agent,
+                fake_title_from_title_prompt(prompt),
+            ));
+        }
+        if agent_id.as_str() == "command-agent" {
+            let reply = fake_command_agent_reply(prompt);
+            let mut state = self.state.lock().unwrap();
+            if let Some(session) = state.sessions.get_mut(agent_id) {
+                session.push_message(MessageRole::User, prompt);
+                session.push_message(MessageRole::Agent, reply.clone());
+            }
+            return Ok(ChatMessage::new(MessageRole::Agent, reply));
+        }
         let mut state = self.state.lock().unwrap();
         state.sends.push((agent_id.clone(), prompt.to_string()));
         let reply = state.replies.pop_front().expect("missing fake reply");
@@ -1381,7 +1427,13 @@ impl AgentBackend for SlowBackend {
         Ok(session)
     }
 
-    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        if agent_id.as_str().starts_with("title-") {
+            return Ok(ChatMessage::new(
+                MessageRole::Agent,
+                fake_title_from_title_prompt(prompt),
+            ));
+        }
         thread::sleep(Duration::from_millis(250));
         Ok(ChatMessage::new(MessageRole::Agent, "slow send reply"))
     }
@@ -1401,7 +1453,13 @@ impl AgentBackend for StreamingDirectiveBackend {
         Ok(session)
     }
 
-    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        if agent_id.as_str().starts_with("title-") {
+            return Ok(ChatMessage::new(
+                MessageRole::Agent,
+                fake_title_from_title_prompt(prompt),
+            ));
+        }
         Ok(ChatMessage::new(
             MessageRole::Agent,
             "final answer from directive follow-up",
@@ -1441,6 +1499,9 @@ impl AgentBackend for ConcurrentChatBackend {
     }
 
     fn send(&mut self, agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+        if agent_id.as_str().starts_with("title-") {
+            return Ok(ChatMessage::new(MessageRole::Agent, "chat-title"));
+        }
         if agent_id.as_str() == "user-2" {
             thread::sleep(Duration::from_millis(350));
             return Ok(ChatMessage::new(
@@ -1469,7 +1530,13 @@ impl AgentBackend for ReviewStreamingBackend {
         Ok(session)
     }
 
-    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        if agent_id.as_str().starts_with("title-") {
+            return Ok(ChatMessage::new(
+                MessageRole::Agent,
+                fake_title_from_title_prompt(prompt),
+            ));
+        }
         Ok(ChatMessage::new(MessageRole::Agent, "summary"))
     }
 

@@ -43,8 +43,51 @@ impl ChatTitleAgent {
     }
 }
 
+pub(crate) fn chat_title_prompt(first_prompt: &str) -> String {
+    format!(
+        "Name this Work Leaf chat from the user's first prompt.\n\
+Rules:\n\
+- Return only the chat name, no prose and no quotes.\n\
+- Derive the name from the first prompt only.\n\
+- Use at most 40 characters.\n\
+- Use lowercase words separated by hyphens.\n\
+- Do not use spaces.\n\n\
+First prompt:\n{first_prompt}"
+    )
+}
+
+pub(crate) fn chat_title_from_agent_reply(reply: &str, first_prompt: &str) -> String {
+    sanitized_chat_title(reply).unwrap_or_else(|| compact_chat_title(first_prompt))
+}
+
 fn compact_chat_title(first_prompt: &str) -> String {
     compact_title_words(first_prompt).unwrap_or_else(|| "chat".to_string())
+}
+
+fn sanitized_chat_title(raw: &str) -> Option<String> {
+    const MAX_TITLE_CHARS: usize = 40;
+
+    let words = title_words(raw);
+    if words.is_empty() {
+        return None;
+    }
+
+    let mut title = String::new();
+    for word in words {
+        let separator_len = usize::from(!title.is_empty());
+        if title.len() + separator_len + word.len() > MAX_TITLE_CHARS {
+            if title.is_empty() {
+                title.push_str(&word[..MAX_TITLE_CHARS.min(word.len())]);
+            }
+            break;
+        }
+        if !title.is_empty() {
+            title.push('-');
+        }
+        title.push_str(&word);
+    }
+
+    if title.is_empty() { None } else { Some(title) }
 }
 
 fn compact_title_words(raw: &str) -> Option<String> {
@@ -189,7 +232,7 @@ fn is_low_signal_title_word(word: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::ChatTitleAgent;
+    use super::{ChatTitleAgent, chat_title_from_agent_reply};
     use crate::agent::AgentId;
 
     fn title_agent() -> (ChatTitleAgent, AgentId) {
@@ -247,5 +290,17 @@ mod tests {
             title_agent.assign_first_prompt_title(&agent_id, "add cookie coverage"),
             None
         );
+    }
+
+    #[test]
+    fn title_agent_reply_is_sanitized_before_display() {
+        let title = chat_title_from_agent_reply(
+            "OAuth Redirect Handler With Cookie Coverage And Callback Retry Audit Trail",
+            "fallback prompt",
+        );
+
+        assert_eq!(title, "oauth-redirect-handler-with-cookie");
+        assert!(title.len() <= 40);
+        assert!(!title.contains(' '));
     }
 }

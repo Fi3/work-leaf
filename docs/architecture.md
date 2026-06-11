@@ -254,9 +254,9 @@ The controller owns:
 
 - session selection and session snapshots,
 - per-session loading state,
-- deterministic chat titles derived locally from the first user prompt, with
-  `src/chat_title.rs::ChatTitleAgent` tracking first-prompt naming state and
-  `src/chat_title.rs::fallback_chat_title_from_prompt` filtering low-signal prompt wording,
+- provisional chat titles derived from the first user prompt and finalized through the hidden
+  persistent `title-agent` backend system agent, with `src/chat_title.rs::ChatTitleAgent` tracking
+  first-prompt naming state,
 - command transcripts,
 - background launch/send/review workers,
 - stream routing from `AgentStreamEvent` into the selected session,
@@ -360,11 +360,13 @@ stopped sessions. This keeps stale patch or review workers from appending findin
 dependent work, or starting new reviews after the linearizer has taken ownership of the reviewed
 work.
 
-The command transcript is also the conversation history for the persistent `command-agent`. That
-system agent interprets chat sent to the Work Leaf command surface. It recognizes literal command
-lines and common natural-language requests for help, review, linearization, quitting, and launching
-one or more user agents. Multi-agent launch requests dispatch `new [prompt...]` once per requested
-agent through the same controller paths used by command-mode input.
+The command transcript is also the context for the persistent hidden `command-agent`. That backend
+system agent interprets chat sent to the Work Leaf command surface and replies with a strict
+`COMMAND:`/`REPLY:` protocol. The controller passes a bounded recent transcript window on every
+command-agent turn, renders the reply line, and dispatches returned command lines through the same
+`execute_command_line` path used by command-mode input. A single command-agent reply may return
+multiple `COMMAND:` lines, which lets natural-language requests such as opening several agents
+dispatch one `new [prompt...]` command per requested agent.
 
 Frontend code should use these methods:
 
@@ -560,9 +562,10 @@ commits.
 `src/instructions.rs` is crate-private. It loads project instruction files used by `PromptPolicy`
 for agent launch prompts.
 
-`src/chat_title.rs` is crate-private. It derives lowercase hyphenated chat titles from first prompts,
-filters low-signal prompt wording around the salient task words, caps titles at 40 characters, and
-tracks which sessions have already been named.
+`src/chat_title.rs` is crate-private. It builds prompts for the hidden persistent `title-agent`,
+sanitizes title-agent replies to lowercase hyphenated names capped at 40 characters, derives
+provisional fallback titles from first prompts, and tracks which sessions have already requested
+title generation.
 
 ## Extension Rules
 
@@ -587,6 +590,10 @@ New agent-provider support follows this path:
 4. Return an `AgentShutdownHandle` when the provider owns child processes.
 5. Pass the profile through `CommandChat::with_agent_profile`.
 6. Use `WorkLeafController` or `CommandChat` without modifying terminal UI code.
+
+`AgentBackend::session` is an optional session snapshot hook. Work Leaf tracks hidden system-agent
+initialization itself, so provider implementations do not need to override `session` for persistent
+`command-agent` or `title-agent` turns to use launch once and send thereafter.
 
 New core workflow behavior belongs in the workflow module that owns the behavior. UI adapters should
 only translate user input into controller calls and render controller snapshots. Agent providers

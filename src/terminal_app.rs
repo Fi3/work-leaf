@@ -1415,7 +1415,14 @@ mod tests {
 
     impl AgentBackend for NoopBackend {
         fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
-            Ok(AgentSession::new(request))
+            let mut session = AgentSession::new(request);
+            if session.id.as_str() == "command-agent" {
+                session.push_message(
+                    MessageRole::Agent,
+                    "COMMAND: new patch agent that uses codex\nREPLY: launching Codex user agent for patch agent that uses codex",
+                );
+            }
+            Ok(session)
         }
 
         fn send(&mut self, _agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {

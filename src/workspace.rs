@@ -15,8 +15,8 @@ use crate::agent::{
 };
 use crate::chat_title::ChatTitleAgent;
 use crate::cli::{
-    CliError, CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
-    patch_promotion_prompt, render_command_chat_help,
+    COMMAND_AGENT_TRANSCRIPT_LIMIT, CliError, CommandAgentDecision, CommandChat, CommandChatResult,
+    command_chat_error_text, command_result_text, patch_promotion_prompt, render_command_chat_help,
 };
 use crate::review::{AgentCommit, GitHistory, ReviewResult};
 
@@ -46,6 +46,7 @@ where
     pending_agent_prompts: BTreeMap<AgentId, VecDeque<String>>,
     launch_starting: BTreeSet<AgentId>,
     implicit_loading_agents: BTreeMap<AgentId, usize>,
+    pending_title_prompts: BTreeMap<AgentId, String>,
     command_transcript: Vec<String>,
     sessions: BTreeMap<AgentId, WorkLeafSession>,
     title_agent: ChatTitleAgent,
@@ -74,6 +75,7 @@ where
             pending_agent_prompts: BTreeMap::new(),
             launch_starting: BTreeSet::new(),
             implicit_loading_agents: BTreeMap::new(),
+            pending_title_prompts: BTreeMap::new(),
             command_transcript: vec![render_command_chat_help()],
             sessions: BTreeMap::new(),
             title_agent: ChatTitleAgent::new(),
@@ -194,33 +196,7 @@ where
         }
 
         self.push_command_line(format!("user: {message}"));
-        let display_name = self.agent_display_name();
-        if literal_command_line(message).is_none()
-            && let Some(request) = command_agent_new_request(message)
-        {
-            self.push_command_line(format!(
-                "command-agent: {}",
-                command_agent_launch_reply(&display_name, &request)
-            ));
-            let command_line = command_agent_new_command_line(&request.prompt);
-            for _ in 0..request.count {
-                self.execute_command_line(&command_line);
-            }
-            return;
-        }
-
-        match command_agent_response(message, &display_name) {
-            CommandAgentResponse::Execute {
-                command_line,
-                reply,
-            } => {
-                self.push_command_line(format!("command-agent: {reply}"));
-                self.execute_command_line(&command_line);
-            }
-            CommandAgentResponse::Reply(reply) => {
-                self.push_command_line(format!("command-agent: {reply}"));
-            }
-        }
+        self.start_command_agent_worker(message.to_string());
     }
 
     pub fn interrupt_agent(&mut self, agent_id: &AgentId) {
@@ -318,9 +294,7 @@ where
         if let Some(title) = &first_chat_title {
             self.apply_agent_title(agent_id, title.clone());
         }
-        if !is_agent_slash_command
-            && self.set_pending_dependent_launch_prompt(agent_id, message, first_chat_title)
-        {
+        if !is_agent_slash_command && self.set_pending_dependent_launch_prompt(agent_id, message) {
             self.append_agent_line(agent_id, format!("user: {message}"));
             return Ok(());
         }
@@ -416,6 +390,8 @@ where
             self.title_agent.mark_named(&agent_id);
             format!("{} fork", source.title)
         } else {
+            self.pending_title_prompts
+                .insert(agent_id.clone(), fork_prompt.clone());
             self.title_agent
                 .assign_title_from_prompt(&agent_id, &fork_prompt)
         };
@@ -673,6 +649,8 @@ where
         if title_pending {
             None
         } else {
+            self.pending_title_prompts
+                .insert(launch.id.clone(), launch.prompt.clone());
             Some(
                 self.title_agent
                     .assign_title_from_prompt(&launch.id, &launch.prompt),
@@ -710,7 +688,12 @@ where
         if !agent_id.as_str().starts_with("user-") {
             return None;
         }
-        self.title_agent.assign_first_prompt_title(agent_id, prompt)
+        let title = self
+            .title_agent
+            .assign_first_prompt_title(agent_id, prompt)?;
+        self.pending_title_prompts
+            .insert(agent_id.clone(), prompt.to_string());
+        Some(title)
     }
 
     fn remember_agent_review_baseline(&mut self, agent_id: &AgentId) {
@@ -840,12 +823,7 @@ where
         );
     }
 
-    fn set_pending_dependent_launch_prompt(
-        &mut self,
-        agent_id: &AgentId,
-        prompt: &str,
-        feature: Option<String>,
-    ) -> bool {
+    fn set_pending_dependent_launch_prompt(&mut self, agent_id: &AgentId, prompt: &str) -> bool {
         let Some(pending) = self.pending_dependent_launches.get_mut(agent_id) else {
             return false;
         };
@@ -853,9 +831,6 @@ where
             return false;
         }
         pending.launch.prompt = prompt.to_string();
-        if let Some(feature) = feature {
-            pending.launch.feature = feature;
-        }
         pending.prompt_pending = false;
         true
     }
@@ -1152,6 +1127,50 @@ where
         });
     }
 
+    fn start_title_worker(&mut self, agent_id: AgentId, first_prompt: String) {
+        self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
+            if let Ok(title) = chat.generate_chat_title(&agent_id, &first_prompt) {
+                let _ = sender.send(WorkerEvent::TitleGenerated { agent_id, title });
+            }
+        });
+    }
+
+    fn start_pending_title_worker(&mut self, agent_id: &AgentId) {
+        if let Some(first_prompt) = self.pending_title_prompts.remove(agent_id) {
+            self.start_title_worker(agent_id.clone(), first_prompt);
+        }
+    }
+
+    fn start_command_agent_worker(&mut self, message: String) {
+        let command_transcript = self.recent_command_transcript();
+        self.start_worker(None, move |mut chat, sender| {
+            match chat.interpret_command_agent_message(&message, &command_transcript) {
+                Ok(decision) => {
+                    let _ = sender.send(WorkerEvent::CommandAgentDecision { decision });
+                }
+                Err(error) => {
+                    let _ = sender.send(WorkerEvent::Error {
+                        agent_id: None,
+                        message: command_chat_error_text(&error),
+                        streamed_agent_ids: BTreeSet::new(),
+                    });
+                }
+            }
+        });
+    }
+
+    fn recent_command_transcript(&self) -> Vec<String> {
+        self.command_transcript
+            .iter()
+            .rev()
+            .take(COMMAND_AGENT_TRANSCRIPT_LIMIT)
+            .cloned()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect()
+    }
+
     fn start_worker<F>(&mut self, agent_id: Option<AgentId>, operation: F)
     where
         F: FnOnce(CommandChat<B>, Sender<WorkerEvent>) + Send + 'static,
@@ -1204,6 +1223,12 @@ where
                 }
                 self.record_agent_usage(&agent_id, usage);
             }
+            WorkerEvent::TitleGenerated { agent_id, title } => {
+                self.apply_agent_title(&agent_id, title);
+            }
+            WorkerEvent::CommandAgentDecision { decision } => {
+                self.apply_command_agent_decision(decision);
+            }
             WorkerEvent::Complete {
                 agent_id,
                 result,
@@ -1223,6 +1248,7 @@ where
                     self.launch_starting.remove(&agent_id);
                     self.set_session_loading(&agent_id, None);
                     self.apply_agent_result(&agent_id, &result);
+                    self.start_pending_title_worker(&agent_id);
                     let queued_prompt_started = self.start_next_queued_agent_prompt(&agent_id);
                     self.start_next_queued_agent_prompts(&cleared_implicit_agent_ids);
                     self.start_next_pending_launch();
@@ -1414,6 +1440,14 @@ where
     }
 
     fn apply_agent_title(&mut self, agent_id: &AgentId, title: String) {
+        for launch in &mut self.pending_launches {
+            if &launch.id == agent_id {
+                launch.feature = title.clone();
+            }
+        }
+        if let Some(pending) = self.pending_dependent_launches.get_mut(agent_id) {
+            pending.launch.feature = title.clone();
+        }
         if let Some(session) = self.sessions.get_mut(agent_id) {
             session.title = title.clone();
             session.feature = title.clone();
@@ -1427,6 +1461,23 @@ where
             });
         }
         self.register_agent_feature(agent_id.clone(), title);
+    }
+
+    fn apply_command_agent_decision(&mut self, decision: CommandAgentDecision) {
+        match decision {
+            CommandAgentDecision::Execute {
+                command_lines,
+                reply,
+            } => {
+                self.push_command_line(format!("command-agent: {reply}"));
+                for command_line in command_lines {
+                    self.execute_command_line(&command_line);
+                }
+            }
+            CommandAgentDecision::Reply(reply) => {
+                self.push_command_line(format!("command-agent: {reply}"));
+            }
+        }
     }
 
     fn append_agent_line(&mut self, agent_id: &AgentId, line: String) {
@@ -1873,6 +1924,13 @@ enum WorkerEvent {
         agent_id: AgentId,
         usage: AgentTokenUsage,
     },
+    TitleGenerated {
+        agent_id: AgentId,
+        title: String,
+    },
+    CommandAgentDecision {
+        decision: CommandAgentDecision,
+    },
     Complete {
         agent_id: Option<AgentId>,
         result: CommandChatResult,
@@ -1993,12 +2051,6 @@ fn stream_event_text(event: AgentStreamEvent, agent_display_name: &str) -> Strin
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-enum CommandAgentResponse {
-    Execute { command_line: String, reply: String },
-    Reply(String),
-}
-
 fn is_agent_slash_command_message(message: &str) -> bool {
     message.strip_prefix('/').is_some_and(|rest| {
         rest.chars()
@@ -2098,277 +2150,6 @@ fn append_history_message(text: &mut String, message: &ChatMessage) {
     text.push_str(role);
     text.push_str(": ");
     text.push_str(&message.text);
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct CommandAgentNewRequest {
-    count: usize,
-    prompt: String,
-}
-
-fn command_agent_response(message: &str, agent_display_name: &str) -> CommandAgentResponse {
-    if let Some(command_line) = literal_command_line(message) {
-        return CommandAgentResponse::Execute {
-            reply: format!("running `{command_line}`"),
-            command_line,
-        };
-    }
-
-    let lower = message.to_ascii_lowercase();
-    if asks_for_new_agent(&lower) {
-        let prompt = command_agent_new_prompt(message);
-        let command_line = if prompt.is_empty() {
-            "new".to_string()
-        } else {
-            format!("new {prompt}")
-        };
-        let reply = if prompt.is_empty() {
-            format!("launching {agent_display_name} user agent")
-        } else {
-            format!("launching {agent_display_name} user agent for {prompt}")
-        };
-        return CommandAgentResponse::Execute {
-            command_line,
-            reply,
-        };
-    }
-
-    for (needle, command_line) in [
-        ("force-linearize", "force-linearize"),
-        ("force linearize", "force-linearize"),
-        ("force-linearise", "force-linearize"),
-        ("force linearise", "force-linearize"),
-        ("linearize", "linearize"),
-        ("linearise", "linearize"),
-        ("review", "review"),
-        ("help", "help"),
-        ("quit", "quit"),
-        ("exit", "quit"),
-    ] {
-        if lower.contains(needle) {
-            return CommandAgentResponse::Execute {
-                command_line: command_line.to_string(),
-                reply: format!("running `{command_line}`"),
-            };
-        }
-    }
-
-    CommandAgentResponse::Reply(
-        "I can run help, new [prompt...], review, linearize, force-linearize, or quit.".to_string(),
-    )
-}
-
-fn literal_command_line(message: &str) -> Option<String> {
-    let command = split_command_line(message).into_iter().next()?;
-    matches!(
-        command.as_str(),
-        "help" | "?" | "new" | "review" | "linearize" | "force-linearize" | "quit" | "exit" | "q"
-    )
-    .then(|| message.to_string())
-}
-
-fn asks_for_new_agent(lower: &str) -> bool {
-    lower.contains("agent")
-        && ["new", "spawn", "create", "start", "launch"]
-            .iter()
-            .any(|verb| lower.contains(verb))
-}
-
-fn command_agent_new_request(message: &str) -> Option<CommandAgentNewRequest> {
-    let lower = message.to_ascii_lowercase();
-    if !asks_for_agent_launch_request(&lower) {
-        return None;
-    }
-
-    let prompt = command_agent_launch_prompt(message);
-    let count = agent_launch_count(&prompt).unwrap_or(1);
-    let prompt = strip_agent_launch_count_and_noun(&prompt);
-    Some(CommandAgentNewRequest {
-        count,
-        prompt: normalize_common_agent_typos(&prompt),
-    })
-}
-
-fn asks_for_agent_launch_request(lower: &str) -> bool {
-    lower.contains("agent")
-        && ["new", "spawn", "create", "start", "launch", "open", "make"]
-            .iter()
-            .any(|verb| lower.contains(verb))
-}
-
-fn command_agent_launch_prompt(message: &str) -> String {
-    let trimmed = strip_polite_prefix(message.trim());
-    [
-        "open a new ",
-        "open new ",
-        "open an ",
-        "open a ",
-        "open ",
-        "spawn a new ",
-        "spawn new ",
-        "spawn an ",
-        "spawn a ",
-        "spawn ",
-        "create a new ",
-        "create new ",
-        "create an ",
-        "create a ",
-        "create ",
-        "start a new ",
-        "start new ",
-        "start an ",
-        "start a ",
-        "start ",
-        "launch a new ",
-        "launch new ",
-        "launch an ",
-        "launch a ",
-        "launch ",
-        "make a new ",
-        "make new ",
-        "make an ",
-        "make a ",
-        "make ",
-        "new an ",
-        "new a ",
-        "new ",
-    ]
-    .iter()
-    .find_map(|prefix| strip_ascii_prefix_case_insensitive(trimmed, prefix))
-    .unwrap_or(trimmed)
-    .to_string()
-}
-
-fn command_agent_new_command_line(prompt: &str) -> String {
-    if prompt.is_empty() {
-        "new".to_string()
-    } else {
-        format!("new {prompt}")
-    }
-}
-
-fn command_agent_launch_reply(
-    agent_display_name: &str,
-    request: &CommandAgentNewRequest,
-) -> String {
-    let count_prefix = if request.count > 1 {
-        format!("{} ", request.count)
-    } else {
-        String::new()
-    };
-    let agent_label = if request.count == 1 {
-        "user agent"
-    } else {
-        "user agents"
-    };
-
-    if request.prompt.is_empty() {
-        format!("launching {count_prefix}{agent_display_name} {agent_label}")
-    } else {
-        format!(
-            "launching {count_prefix}{agent_display_name} {agent_label} for {}",
-            request.prompt
-        )
-    }
-}
-
-fn agent_launch_count(text: &str) -> Option<usize> {
-    text.split_whitespace().next().and_then(agent_count_word)
-}
-
-fn strip_agent_launch_count_and_noun(prompt: &str) -> String {
-    let words = prompt.split_whitespace().collect::<Vec<_>>();
-    let mut start = 0;
-    let mut end = words.len();
-    if words
-        .first()
-        .and_then(|word| agent_count_word(word))
-        .is_some()
-    {
-        start = 1;
-    }
-    if words.last().is_some_and(|word| is_agent_noun(word)) {
-        end -= 1;
-    }
-    words[start..end].join(" ")
-}
-
-fn agent_count_word(word: &str) -> Option<usize> {
-    let clean = clean_agent_word(word);
-    if let Ok(count) = clean.parse::<usize>() {
-        return (count > 0).then_some(count);
-    }
-
-    match clean.as_str() {
-        "a" | "an" | "one" => Some(1),
-        "two" => Some(2),
-        "three" => Some(3),
-        "four" => Some(4),
-        "five" => Some(5),
-        "six" => Some(6),
-        "seven" => Some(7),
-        "eight" => Some(8),
-        "nine" => Some(9),
-        "ten" => Some(10),
-        _ => None,
-    }
-}
-
-fn is_agent_noun(word: &str) -> bool {
-    matches!(clean_agent_word(word).as_str(), "agent" | "agents")
-}
-
-fn normalize_common_agent_typos(text: &str) -> String {
-    text.split_whitespace()
-        .map(|word| {
-            if clean_agent_word(word) == "pacth" {
-                "patch"
-            } else {
-                word
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
-fn clean_agent_word(word: &str) -> String {
-    word.trim_matches(|ch: char| !ch.is_ascii_alphanumeric())
-        .to_ascii_lowercase()
-}
-
-fn command_agent_new_prompt(message: &str) -> String {
-    let trimmed = strip_polite_prefix(message.trim());
-    [
-        "spawn a new ",
-        "spawn new ",
-        "create a new ",
-        "create new ",
-        "start a new ",
-        "start new ",
-        "launch a new ",
-        "launch new ",
-        "make a new ",
-        "make new ",
-        "new ",
-    ]
-    .iter()
-    .find_map(|prefix| strip_ascii_prefix_case_insensitive(trimmed, prefix))
-    .unwrap_or(trimmed)
-    .to_string()
-}
-
-fn strip_polite_prefix(message: &str) -> &str {
-    ["please ", "can you ", "could you ", "would you "]
-        .iter()
-        .find_map(|prefix| strip_ascii_prefix_case_insensitive(message, prefix))
-        .unwrap_or(message)
-}
-
-fn strip_ascii_prefix_case_insensitive<'a>(message: &'a str, prefix: &str) -> Option<&'a str> {
-    message
-        .to_ascii_lowercase()
-        .starts_with(prefix)
-        .then(|| message[prefix.len()..].trim())
 }
 
 fn split_command_line(line: &str) -> Vec<String> {

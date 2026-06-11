@@ -219,7 +219,7 @@ fn controller_status_events_do_not_resend_existing_large_transcripts() {
 }
 
 #[test]
-fn controller_names_chat_from_first_prompt_without_backend_title_agent() {
+fn controller_names_chat_from_backend_title_system_agent() {
     let backend = FakeBackend::new(["launch reply"]);
     let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
     let mut controller = WorkLeafController::new(chat);
@@ -231,12 +231,161 @@ fn controller_names_chat_from_first_prompt_without_backend_title_agent() {
     assert!(controller.wait_for_idle(Duration::from_secs(1)));
     let snapshot = controller.snapshot();
     let session = snapshot.session(&agent_id).expect("session exists");
-    assert_eq!(session.title, "please-fix-login-callback");
+    assert_eq!(session.title, "oauth-redirect-handler");
     assert!(session.lines.iter().any(|line| line == "launch reply"));
 
-    let launches = backend.launches();
-    assert_eq!(launches.len(), 1);
-    assert_eq!(launches[0].id.as_str(), "user-1");
+    let launches = backend.all_launches();
+    assert!(
+        launches
+            .iter()
+            .any(|launch| launch.id.as_str() == "title-agent"
+                && launch.feature == "chat-title"
+                && launch
+                    .prompt
+                    .contains("First prompt:\nplease fix login callback")),
+        "{launches:?}"
+    );
+    assert!(
+        launches.iter().any(|launch| launch.id.as_str() == "user-1"),
+        "{launches:?}"
+    );
+}
+
+#[test]
+fn controller_reuses_one_backend_title_system_agent_for_multiple_chats() {
+    let backend = FakeBackend::new(["first launch reply", "second launch reply"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    let first_agent_id = controller
+        .create_agent("please fix login callback")
+        .unwrap();
+    let second_agent_id = controller
+        .create_agent("implement parser combinator")
+        .unwrap();
+
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    let snapshot = controller.snapshot();
+    assert_eq!(
+        snapshot
+            .session(&first_agent_id)
+            .expect("first session exists")
+            .title,
+        "oauth-redirect-handler"
+    );
+    assert_eq!(
+        snapshot
+            .session(&second_agent_id)
+            .expect("second session exists")
+            .title,
+        "implement-parser-combinator"
+    );
+
+    let launches = backend.all_launches();
+    assert_eq!(
+        launches
+            .iter()
+            .filter(|launch| launch.id.as_str() == "title-agent")
+            .count(),
+        1,
+        "{launches:?}"
+    );
+    let sends = backend.all_sends();
+    assert_eq!(
+        sends
+            .iter()
+            .filter(|(agent_id, _)| agent_id.as_str() == "title-agent")
+            .count(),
+        1,
+        "{sends:?}"
+    );
+}
+
+#[test]
+fn command_surface_chat_uses_backend_command_system_agent_to_parse_requests() {
+    let backend = FakeBackend::new(["COMMAND: force-linearize\nREPLY: running `force-linearize`"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    controller.send_command_agent_message("start a forced linearization");
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+
+    let launches = backend.all_launches();
+    assert!(
+        launches
+            .iter()
+            .any(|launch| launch.id.as_str() == "command-agent"
+                && launch.feature == "command-agent"
+                && launch.prompt.contains("start a forced linearization")),
+        "{launches:?}"
+    );
+    assert!(
+        controller
+            .transcript()
+            .iter()
+            .any(|line| line == "work-leaf> force-linearize"),
+        "{:?}",
+        controller.transcript()
+    );
+}
+
+#[test]
+fn command_agent_follow_up_receives_recent_command_transcript() {
+    let backend = FakeBackend::new([
+        "REPLY: ready",
+        "launch reply",
+        "COMMAND: review\nREPLY: starting review",
+    ]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    controller.send_command_agent_message("hello");
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    controller.execute_command_line("new implement parser");
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+
+    controller.send_command_agent_message("review the agent I just opened");
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+
+    let sends = backend.all_sends();
+    assert!(
+        sends.iter().any(|(agent_id, prompt)| {
+            agent_id.as_str() == "command-agent"
+                && prompt.contains("work-leaf> new implement parser")
+                && prompt.contains("review the agent I just opened")
+        }),
+        "{sends:?}"
+    );
+}
+
+#[test]
+fn command_agent_persistence_does_not_depend_on_backend_session_lookup() {
+    let backend = SessionlessSystemBackend::new(["REPLY: ready", "COMMAND: help\nREPLY: helping"]);
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    controller.send_command_agent_message("hello");
+    controller.send_command_agent_message("show help");
+
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    assert_eq!(
+        backend.command_agent_launches(),
+        1,
+        "command-agent should be launched once even when session() uses the trait default"
+    );
+    assert_eq!(
+        backend.command_agent_sends(),
+        1,
+        "second command-agent turn should be a send follow-up"
+    );
+    assert!(
+        controller
+            .transcript()
+            .iter()
+            .any(|line| line == "work-leaf> help"),
+        "{:?}",
+        controller.transcript()
+    );
 }
 
 #[test]
@@ -315,6 +464,68 @@ fn controller_reports_worker_panic_without_panicking() {
 }
 
 #[derive(Clone, Debug)]
+struct SessionlessSystemBackend {
+    state: Arc<Mutex<SessionlessSystemBackendState>>,
+}
+
+#[derive(Debug)]
+struct SessionlessSystemBackendState {
+    replies: VecDeque<String>,
+    launches: Vec<AgentLaunch>,
+    sends: Vec<(AgentId, String)>,
+}
+
+impl SessionlessSystemBackend {
+    fn new<const N: usize>(replies: [&str; N]) -> Self {
+        Self {
+            state: Arc::new(Mutex::new(SessionlessSystemBackendState {
+                replies: replies.into_iter().map(String::from).collect(),
+                launches: Vec::new(),
+                sends: Vec::new(),
+            })),
+        }
+    }
+
+    fn command_agent_launches(&self) -> usize {
+        self.state
+            .lock()
+            .unwrap()
+            .launches
+            .iter()
+            .filter(|launch| launch.id.as_str() == "command-agent")
+            .count()
+    }
+
+    fn command_agent_sends(&self) -> usize {
+        self.state
+            .lock()
+            .unwrap()
+            .sends
+            .iter()
+            .filter(|(agent_id, _)| agent_id.as_str() == "command-agent")
+            .count()
+    }
+}
+
+impl AgentBackend for SessionlessSystemBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        let mut state = self.state.lock().unwrap();
+        state.launches.push(request.clone());
+        let mut session = AgentSession::new(request);
+        let reply = state.replies.pop_front().expect("missing fake reply");
+        session.push_message(MessageRole::Agent, reply);
+        Ok(session)
+    }
+
+    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        let mut state = self.state.lock().unwrap();
+        state.sends.push((agent_id.clone(), prompt.to_string()));
+        let reply = state.replies.pop_front().expect("missing fake reply");
+        Ok(ChatMessage::new(MessageRole::Agent, reply))
+    }
+}
+
+#[derive(Clone, Debug)]
 struct PanicLaunchBackend;
 
 impl AgentBackend for PanicLaunchBackend {
@@ -348,6 +559,11 @@ impl AgentBackend for LaunchTimingBackend {
         request: AgentLaunch,
         sink: &mut dyn FnMut(AgentStreamEvent),
     ) -> Result<AgentSession, AgentError> {
+        if is_system_agent_launch(&request) {
+            let mut session = AgentSession::new(request);
+            session.push_message(MessageRole::Agent, "timed-title");
+            return Ok(session);
+        }
         self.starts.lock().unwrap().push(Instant::now());
         thread::sleep(Duration::from_millis(100));
         sink(AgentStreamEvent::Status("backend startup".to_string()));
@@ -2158,10 +2374,34 @@ impl FakeBackend {
     }
 
     fn launches(&self) -> Vec<AgentLaunch> {
+        self.state
+            .lock()
+            .unwrap()
+            .launches
+            .iter()
+            .filter(|launch| !is_system_agent_launch(launch))
+            .cloned()
+            .collect()
+    }
+
+    fn all_launches(&self) -> Vec<AgentLaunch> {
         self.state.lock().unwrap().launches.clone()
     }
 
     fn sends(&self) -> Vec<(AgentId, String)> {
+        self.state
+            .lock()
+            .unwrap()
+            .sends
+            .iter()
+            .filter(|(agent_id, _)| {
+                agent_id.as_str() != "command-agent" && !agent_id.as_str().starts_with("title-")
+            })
+            .cloned()
+            .collect()
+    }
+
+    fn all_sends(&self) -> Vec<(AgentId, String)> {
         self.state.lock().unwrap().sends.clone()
     }
 
@@ -2187,6 +2427,10 @@ impl FakeBackend {
     fn title_reply(&self, prompt: &str) -> String {
         fake_title_from_title_prompt(prompt)
     }
+}
+
+fn is_system_agent_launch(launch: &AgentLaunch) -> bool {
+    launch.id.as_str() == "command-agent" || launch.id.as_str().starts_with("title-")
 }
 
 impl ThreeFeatureBackend {
@@ -2255,6 +2499,17 @@ impl AgentBackend for FakeBackend {
     }
 
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        if agent_id.as_str().starts_with("title-") {
+            let reply = self.title_reply(prompt);
+            let mut state = self.state.lock().unwrap();
+            state.sends.push((agent_id.clone(), prompt.to_string()));
+            if let Some(session) = state.sessions.get_mut(agent_id) {
+                session.push_message(MessageRole::User, prompt);
+                session.push_message(MessageRole::Agent, reply.clone());
+            }
+            return Ok(ChatMessage::new(MessageRole::Agent, reply));
+        }
+
         let mut state = self.state.lock().unwrap();
         state.sends.push((agent_id.clone(), prompt.to_string()));
         let reply = state.replies.pop_front().expect("missing fake reply");
@@ -2321,6 +2576,12 @@ impl AgentBackend for ThreeFeatureBackend {
     }
 
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        if agent_id.as_str().starts_with("title-") {
+            return Ok(ChatMessage::new(
+                MessageRole::Agent,
+                fake_title_from_title_prompt(prompt),
+            ));
+        }
         self.state
             .lock()
             .unwrap()
@@ -2345,7 +2606,13 @@ impl AgentBackend for ConcurrentBackend {
         Ok(session)
     }
 
-    fn send(&mut self, agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        if agent_id.as_str().starts_with("title-") {
+            return Ok(ChatMessage::new(
+                MessageRole::Agent,
+                fake_title_from_title_prompt(prompt),
+            ));
+        }
         if agent_id.as_str() == "user-2" {
             thread::sleep(Duration::from_millis(350));
             return Ok(ChatMessage::new(MessageRole::Agent, "slow reply"));
@@ -2379,6 +2646,12 @@ impl AgentBackend for QueuedPromptBackend {
     }
 
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        if agent_id.as_str().starts_with("title-") {
+            return Ok(ChatMessage::new(
+                MessageRole::Agent,
+                fake_title_from_title_prompt(prompt),
+            ));
+        }
         self.sends
             .lock()
             .unwrap()
@@ -2405,6 +2678,12 @@ impl AgentBackend for SecondaryFollowUpBackend {
     }
 
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        if agent_id.as_str().starts_with("title-") {
+            return Ok(ChatMessage::new(
+                MessageRole::Agent,
+                fake_title_from_title_prompt(prompt),
+            ));
+        }
         self.record_send(agent_id, prompt);
         let reply = if agent_id.as_str() == "user-1" {
             "@work-leaf send user-2 follow-up work"
@@ -2461,7 +2740,13 @@ impl AgentBackend for InterruptibleBackend {
         Ok(session)
     }
 
-    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        if agent_id.as_str().starts_with("title-") {
+            return Ok(ChatMessage::new(
+                MessageRole::Agent,
+                fake_title_from_title_prompt(prompt),
+            ));
+        }
         loop {
             if *self.interrupted.lock().unwrap() {
                 return Ok(ChatMessage::new(MessageRole::Agent, "interrupted"));
@@ -2513,7 +2798,7 @@ fn fake_title_from_title_prompt(prompt: &str) -> String {
         .map(|(_, first_prompt)| first_prompt)
         .unwrap_or(prompt);
     if first_prompt.contains("parser combinator") {
-        "parser-combinator".to_string()
+        "implement-parser-combinator".to_string()
     } else if first_prompt.contains("login callback")
         || first_prompt.contains("OAuth redirect handler")
     {

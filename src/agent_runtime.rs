@@ -12,6 +12,11 @@ use crate::agent::{AgentError, AgentId, AgentLaunch, AgentSession, ChatMessage};
 pub trait AgentBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError>;
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError>;
+
+    /// Optional snapshot lookup for providers that keep local session metadata.
+    ///
+    /// Work Leaf does not require providers to override this method for persistent hidden
+    /// system-agent turns; `CommandChat` tracks whether those agents have been launched.
     fn session(&self, _agent_id: &AgentId) -> Option<AgentSession> {
         None
     }

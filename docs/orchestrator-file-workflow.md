@@ -133,9 +133,12 @@ orchestrator is doing.
 
 The current source already has system-style internal behavior:
 
-- `src/chat_title.rs::ChatTitleAgent` tracks which chats have been named from their first prompt so
-  chat titles are derived locally without a backend launch, with low-signal prompt wording filtered
-  out of the generated title.
+- the hidden persistent `title-agent` backend session generates final chat titles from first
+  prompts; `src/chat_title.rs::ChatTitleAgent` tracks which chats have requested title generation
+  and provides provisional fallback titles while visible agent work continues.
+- the hidden persistent `command-agent` backend session interprets chat sent to the Work Leaf
+  command surface, receives a bounded recent command transcript on each turn, and returns
+  `COMMAND:`/`REPLY:` protocol lines that the controller dispatches through the normal command path.
 - `src/workspace.rs::WorkLeafController` tracks sessions, loading state, pending events, and
   transcript output.
 - `src/ui.rs::AgentListEntry` carries visible agent metadata such as readiness, modified files,

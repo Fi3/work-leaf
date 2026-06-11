@@ -6,7 +6,7 @@ use std::io::{self, BufRead, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{self, Command, Stdio};
 use std::sync::{
-    Arc,
+    Arc, Condvar, Mutex,
     atomic::{AtomicBool, Ordering},
 };
 use std::thread;
@@ -16,6 +16,7 @@ use crate::agent::{
     AgentBackend, AgentId, AgentLaunch, AgentProfile, AgentSession, AgentShutdownHandle,
     AgentStreamEvent, PromptPolicy, ReadPermission,
 };
+use crate::chat_title::{chat_title_from_agent_reply, chat_title_prompt};
 use crate::codex::{CodexBackend, CodexCommandConfig, SandboxMode};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::locks::{CommandWritePolicy, FileLockTable};
@@ -31,6 +32,9 @@ use crate::ui::{UiAction, chat_content_from_transcript};
 use crate::{HttpControllerClient, OrchestratorHttpError, WorkLeafSnapshot};
 
 const DEFAULT_NEW_AGENT_PROMPT: &str = "Start a new work-leaf user-agent session. Ask the user what to work on if the task is not already clear, then report the broad feature before proposing patches.";
+const COMMAND_AGENT_ID: &str = "command-agent";
+const TITLE_AGENT_ID: &str = "title-agent";
+pub(crate) const COMMAND_AGENT_TRANSCRIPT_LIMIT: usize = 40;
 
 fn launch_agent_streaming_interruptible<B>(
     backend: &mut B,
@@ -325,12 +329,101 @@ pub struct CommandChat<B> {
     max_review_rounds: usize,
     locked_command_timeout: Duration,
     next_user_agent: usize,
+    system_agents: SystemAgentRegistry,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct ProcessedAgentReply {
     transcript: String,
     final_reply: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum CommandAgentDecision {
+    Execute {
+        command_lines: Vec<String>,
+        reply: String,
+    },
+    Reply(String),
+}
+
+#[derive(Clone, Debug)]
+struct SystemAgentRegistry {
+    state: Arc<(Mutex<SystemAgentState>, Condvar)>,
+}
+
+impl Default for SystemAgentRegistry {
+    fn default() -> Self {
+        Self {
+            state: Arc::new((Mutex::new(SystemAgentState::default()), Condvar::new())),
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+struct SystemAgentState {
+    initialized: BTreeSet<AgentId>,
+    active: BTreeSet<AgentId>,
+}
+
+#[derive(Debug)]
+struct SystemAgentTurn {
+    registry: SystemAgentRegistry,
+    agent_id: AgentId,
+    initialized: bool,
+}
+
+impl SystemAgentRegistry {
+    fn begin_turn(&self, agent_id: &AgentId) -> SystemAgentTurn {
+        let (lock, condvar) = &*self.state;
+        let mut state = lock.lock().expect("system agent registry mutex poisoned");
+        while state.active.contains(agent_id) {
+            state = condvar
+                .wait(state)
+                .expect("system agent registry mutex poisoned");
+        }
+        let initialized = state.initialized.contains(agent_id);
+        state.active.insert(agent_id.clone());
+        SystemAgentTurn {
+            registry: self.clone(),
+            agent_id: agent_id.clone(),
+            initialized,
+        }
+    }
+
+    fn mark_initialized(&self, agent_id: &AgentId) {
+        let (lock, _) = &*self.state;
+        lock.lock()
+            .expect("system agent registry mutex poisoned")
+            .initialized
+            .insert(agent_id.clone());
+    }
+
+    fn finish_turn(&self, agent_id: &AgentId) {
+        let (lock, condvar) = &*self.state;
+        lock.lock()
+            .expect("system agent registry mutex poisoned")
+            .active
+            .remove(agent_id);
+        condvar.notify_all();
+    }
+}
+
+impl SystemAgentTurn {
+    fn initialized(&self) -> bool {
+        self.initialized
+    }
+
+    fn mark_initialized(&mut self) {
+        self.registry.mark_initialized(&self.agent_id);
+        self.initialized = true;
+    }
+}
+
+impl Drop for SystemAgentTurn {
+    fn drop(&mut self) {
+        self.registry.finish_turn(&self.agent_id);
+    }
 }
 
 impl<B> Clone for CommandChat<B>
@@ -357,6 +450,7 @@ where
             max_review_rounds: self.max_review_rounds,
             locked_command_timeout: self.locked_command_timeout,
             next_user_agent: self.next_user_agent,
+            system_agents: self.system_agents.clone(),
         }
     }
 }
@@ -386,6 +480,7 @@ where
             max_review_rounds: 80_000_000,
             locked_command_timeout: Duration::from_secs(5 * 60),
             next_user_agent: 1,
+            system_agents: SystemAgentRegistry::default(),
         }
     }
 
@@ -459,6 +554,70 @@ where
             .expect("command chat backend is present")
             .interrupt(agent_id)
             .map_err(CliError::Agent)
+    }
+
+    pub(crate) fn generate_chat_title(
+        &mut self,
+        _source_agent_id: &AgentId,
+        first_prompt: &str,
+    ) -> Result<String, CliError> {
+        let title_agent_id = AgentId::new(TITLE_AGENT_ID).map_err(CliError::Agent)?;
+        let prompt = chat_title_prompt(first_prompt);
+        let reply =
+            self.run_system_agent_turn(title_agent_id, "chat-title", prompt.clone(), prompt)?;
+        Ok(chat_title_from_agent_reply(&reply, first_prompt))
+    }
+
+    pub(crate) fn interpret_command_agent_message(
+        &mut self,
+        message: &str,
+        command_transcript: &[String],
+    ) -> Result<CommandAgentDecision, CliError> {
+        let command_agent_id = AgentId::new(COMMAND_AGENT_ID).map_err(CliError::Agent)?;
+        let reply = self.run_system_agent_turn(
+            command_agent_id,
+            "command-agent",
+            command_agent_launch_prompt(message, command_transcript),
+            command_agent_follow_up_prompt(message, command_transcript),
+        )?;
+        parse_command_agent_reply(&reply)
+    }
+
+    fn run_system_agent_turn(
+        &mut self,
+        agent_id: AgentId,
+        feature: &str,
+        launch_prompt: String,
+        follow_up_prompt: String,
+    ) -> Result<String, CliError> {
+        let mut turn = self.system_agents.begin_turn(&agent_id);
+        if turn.initialized() {
+            return self
+                .backend
+                .as_mut()
+                .expect("command chat backend is present")
+                .send(&agent_id, &follow_up_prompt)
+                .map(|message| message.text)
+                .map_err(CliError::Agent);
+        }
+
+        let session = self
+            .backend
+            .as_mut()
+            .expect("command chat backend is present")
+            .launch(AgentLaunch::new(
+                agent_id,
+                self.agent_profile.kind.clone(),
+                feature,
+                launch_prompt,
+            ))
+            .map_err(CliError::Agent)?;
+        turn.mark_initialized();
+        Ok(session
+            .messages
+            .last()
+            .map(|message| message.text.clone())
+            .unwrap_or_default())
     }
 
     pub fn handle_line(&mut self, line: &str) -> Result<CommandChatResult, CliError> {
@@ -1097,6 +1256,109 @@ pub fn render_command_chat_help() -> String {
         "Patches and file locks are triggered automatically when agents interact with the orchestrator.",
     ]
     .join("\n")
+}
+
+fn command_agent_launch_prompt(message: &str, command_transcript: &[String]) -> String {
+    let recent_transcript = recent_command_transcript_text(command_transcript);
+    format!(
+        "You are the Work Leaf command-agent, a hidden system agent used only to interpret chat sent to the Work Leaf command surface.\n\
+Return exactly one of these protocols:\n\
+COMMAND: <one Work Leaf command line>\n\
+REPLY: <short visible reply>\n\
+\n\
+or:\n\
+COMMAND: <first Work Leaf command line>\n\
+COMMAND: <second Work Leaf command line>\n\
+REPLY: <short visible reply>\n\
+\n\
+or:\n\
+REPLY: <short visible reply>\n\
+\n\
+Allowed command lines are help, new [prompt...], review, linearize, force-linearize, promote <agent-id> [prompt...], quit.\n\
+Use force-linearize when the user asks for forced linearization, forced linearisation, or bypassing the linearize gate.\n\
+Do not use shell commands. Do not modify files. Do not include markdown fences or extra prose.\n\n\
+Recent command transcript:\n{recent_transcript}\n\n\
+User command-surface message:\n{message}"
+    )
+}
+
+fn command_agent_follow_up_prompt(message: &str, command_transcript: &[String]) -> String {
+    let recent_transcript = recent_command_transcript_text(command_transcript);
+    format!(
+        "Interpret this Work Leaf command-surface message using the same protocol as before.\n\
+Return only COMMAND/REPLY protocol lines.\n\n\
+Recent command transcript:\n{recent_transcript}\n\n\
+User command-surface message:\n{message}"
+    )
+}
+
+fn recent_command_transcript_text(command_transcript: &[String]) -> String {
+    command_transcript
+        .iter()
+        .rev()
+        .take(COMMAND_AGENT_TRANSCRIPT_LIMIT)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .map(String::as_str)
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn parse_command_agent_reply(reply: &str) -> Result<CommandAgentDecision, CliError> {
+    let mut command_lines = Vec::new();
+    let mut visible_reply = None;
+
+    for line in reply.lines() {
+        let trimmed = line.trim();
+        if let Some(value) = strip_ascii_prefix_case_insensitive(trimmed, "COMMAND:") {
+            let value = value
+                .trim()
+                .trim_matches('`')
+                .trim_start_matches(':')
+                .trim();
+            if !value.is_empty() {
+                command_lines.push(value.to_string());
+            }
+        } else if let Some(value) = strip_ascii_prefix_case_insensitive(trimmed, "REPLY:") {
+            let value = value.trim();
+            if !value.is_empty() {
+                visible_reply = Some(value.to_string());
+            }
+        }
+    }
+
+    if !command_lines.is_empty() {
+        let reply = visible_reply.unwrap_or_else(|| {
+            if command_lines.len() == 1 {
+                format!("running `{}`", command_lines[0])
+            } else {
+                format!("running {} commands", command_lines.len())
+            }
+        });
+        return Ok(CommandAgentDecision::Execute {
+            command_lines,
+            reply,
+        });
+    }
+
+    let reply = visible_reply.unwrap_or_else(|| {
+        let trimmed = reply.trim();
+        if trimmed.is_empty() {
+            "I can run help, new [prompt...], review, linearize, force-linearize, or quit."
+                .to_string()
+        } else {
+            trimmed.to_string()
+        }
+    });
+    Ok(CommandAgentDecision::Reply(reply))
+}
+
+fn strip_ascii_prefix_case_insensitive<'a>(value: &'a str, prefix: &str) -> Option<&'a str> {
+    value
+        .to_ascii_lowercase()
+        .starts_with(&prefix.to_ascii_lowercase())
+        .then(|| &value[prefix.len()..])
 }
 
 pub(crate) fn patch_promotion_prompt(prompt: &str) -> String {

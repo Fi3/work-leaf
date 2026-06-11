@@ -105,6 +105,12 @@ printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
   id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
   case "$line" in
+    *'"agent_id":"title-'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-title","reply":"multiline"}\n' "$id"
+      ;;
+    *'"agent_id":"command-agent"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-command-agent","reply":"REPLY: I can run help, new [prompt...], review, linearize, force-linearize, or quit."}\n' "$id"
+      ;;
     *'"op":"send"'*)
       printf '{"id":%s,"ok":true,"thread_id":"thread-multiline","reply":"multiline prompt received"}\n' "$id"
       ;;
@@ -419,6 +425,15 @@ printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
   id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
   case "$line" in
+    *'"agent_id":"title-agent"'*"second"*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-title-agent","reply":"second"}\n' "$id"
+      ;;
+    *'"agent_id":"title-agent"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-title-agent","reply":"patch-ui"}\n' "$id"
+      ;;
+    *'"agent_id":"command-agent"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-command-agent","reply":"REPLY: I can run help, new [prompt...], review, linearize, force-linearize, or quit."}\n' "$id"
+      ;;
     *'"op":"send"'*"work-leaf file text"*)
       printf '{"id":%s,"ok":true,"thread_id":"thread-first","reply":"first follow-up answer after file text"}\n' "$id"
       ;;
@@ -444,6 +459,12 @@ printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
   id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
   case "$line" in
+    *'"agent_id":"title-'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-title","reply":"large"}\n' "$id"
+      ;;
+    *'"agent_id":"command-agent"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-command-agent","reply":"REPLY: I can run help, new [prompt...], review, linearize, force-linearize, or quit."}\n' "$id"
+      ;;
     *'"op":"send"'*)
       printf '{"id":%s,"ok":true,"thread_id":"thread-big-output","reply":"resume reply after large output"}\n' "$id"
       ;;
