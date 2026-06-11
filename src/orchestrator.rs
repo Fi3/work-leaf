@@ -479,6 +479,16 @@ impl PatchOwnershipTracker {
             .map(|(path, owner)| (path.clone(), owner.clone()))
             .collect()
     }
+
+    fn other_agent_owned_tests(&self, agent_id: &AgentId) -> Vec<(PathBuf, OwnedPatchPath)> {
+        self.inner
+            .lock()
+            .expect("patch ownership tracker mutex poisoned")
+            .iter()
+            .filter(|(_, owner)| &owner.agent_id != agent_id)
+            .map(|(path, owner)| (path.clone(), owner.clone()))
+            .collect()
+    }
 }
 
 fn should_block_owned_test_lock(
@@ -1099,8 +1109,13 @@ where
     services
         .command_changes
         .record_diffs(agent_id, &command_changed_diffs);
+    let other_agent_owned_tests = if command_failed(&output) {
+        services.patch_ownership.other_agent_owned_tests(agent_id)
+    } else {
+        Vec::new()
+    };
     let prompt = if command_changed_files.is_empty() {
-        render_command_result(command, &locked_paths, &output)
+        render_command_result(command, &locked_paths, &output, &other_agent_owned_tests)
     } else {
         let diff = command_changed_diffs
             .values()
@@ -1111,6 +1126,7 @@ where
             command,
             &locked_paths,
             &output,
+            &other_agent_owned_tests,
             &command_changed_files,
             &diff,
         )
@@ -2277,6 +2293,7 @@ fn render_command_result(
     command: &str,
     locked_paths: &[PathBuf],
     output: &CommandRunOutput,
+    other_agent_owned_tests: &[(PathBuf, OwnedPatchPath)],
 ) -> String {
     let mut text = format!(
         "work-leaf command result\ncommand: {command}\nstatus: {}\nlocked paths: {}",
@@ -2289,6 +2306,9 @@ fn render_command_result(
         text.push_str(
             "\nuser authorization is required to rerun locked commands for longer than this limit.",
         );
+    }
+    if command_failed(output) {
+        append_cross_agent_validation_guard(&mut text, other_agent_owned_tests);
     }
     text.push_str(
         "\nnext: Reply with the next Work Leaf directive, such as `@work-leaf done`, `@work-leaf edit`, `@work-leaf read`, or another `@work-leaf locks run`. Keep any non-directive explanation brief.",
@@ -2304,10 +2324,11 @@ fn render_command_result_with_pending_changes(
     command: &str,
     locked_paths: &[PathBuf],
     output: &CommandRunOutput,
+    other_agent_owned_tests: &[(PathBuf, OwnedPatchPath)],
     files: &[PathBuf],
     diff: &str,
 ) -> String {
-    let mut text = render_command_result(command, locked_paths, output);
+    let mut text = render_command_result(command, locked_paths, output, other_agent_owned_tests);
     text.push('\n');
     text.push_str("tracked command changes: captured and reverted from the shared checkout\n");
     text.push_str(
@@ -2315,6 +2336,32 @@ fn render_command_result_with_pending_changes(
     );
     text.push_str(&render_pending_command_changes_prompt(files, diff));
     text
+}
+
+fn append_cross_agent_validation_guard(
+    text: &mut String,
+    other_agent_owned_tests: &[(PathBuf, OwnedPatchPath)],
+) {
+    if other_agent_owned_tests.is_empty() {
+        return;
+    }
+
+    text.push_str("\ncross-agent validation guard\n");
+    text.push_str("The command failed while other patch agents have owned focused tests in this shared worktree. Do not edit another patch agent's owned tests or unrelated implementation just to make this command pass. If the failure names one of these paths or behavior outside your current feature, report the exact blocker once and continue with `@work-leaf done` after your own focused validation passes. Edit only when your own patch clearly caused the failure.\n");
+    text.push_str("Other-agent owned tests:\n");
+    for (path, owner) in other_agent_owned_tests {
+        text.push_str("- ");
+        text.push_str(&path.display().to_string());
+        text.push_str(" owned by ");
+        text.push_str(&owner.agent_id.to_string());
+        text.push_str(" at ");
+        text.push_str(&short_commit(&owner.commit));
+        text.push('\n');
+    }
+}
+
+fn command_failed(output: &CommandRunOutput) -> bool {
+    output.timed_out || output.status != Some(0)
 }
 
 fn render_command_rejected(command: &str, locked_paths: &[PathBuf], diagnostic: &str) -> String {
@@ -2489,6 +2536,7 @@ fn render_patch_applied_prompt(files: &[PathBuf]) -> String {
     text.push_str("The orchestrator has already saved this patch as a provisional git commit. Do not resend this patch, do not rebase this same diff, and do not restate the patch body.\n");
     text.push_str("Next step: run at most one focused validation step that is relevant to files you touched or checks you added. Use `@work-leaf locks run <path>... -- <command>` when that command may write files.\n");
     text.push_str("Do not run another patch agent's focused tests as local validation. If a broad check is blocked only by another patch agent's owned files or tests, report that exact blocker once.\n");
+    text.push_str("If validation fails in another feature's test or behavior, do not edit that test or unrelated implementation unless your patch clearly caused the failure.\n");
     text.push_str("After the focused validation passes, or after you report an external blocker, emit a top-level `@work-leaf done` so review can start. Send another edit only if validation found a concrete issue in your own patch.");
     text
 }

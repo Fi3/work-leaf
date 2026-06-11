@@ -46,6 +46,7 @@ fn prompt_policy_wraps_every_agent_prompt_with_file_access_rules() {
     assert!(wrapped.contains("formatter, build, test, code generator, package manager"));
     assert!(wrapped.contains("checks that existed before your patch"));
     assert!(wrapped.contains("Do not run another patch agent's focused tests"));
+    assert!(wrapped.contains("do not edit that other agent's tests"));
     assert!(wrapped.contains("do not submit known-red"));
     assert!(wrapped.contains("submit a cohesive patch"));
     assert!(wrapped.contains("Choose the command from the repository instructions"));
@@ -74,6 +75,7 @@ fn prompt_policy_can_allow_direct_filesystem_reads() {
     assert!(wrapped.contains("language- and tool-agnostic"));
     assert!(wrapped.contains("checks that existed before your patch"));
     assert!(wrapped.contains("Do not run another patch agent's focused tests"));
+    assert!(wrapped.contains("do not edit that other agent's tests"));
     assert!(wrapped.contains("do not submit known-red"));
     assert!(wrapped.contains("submit a cohesive patch"));
     assert!(wrapped.contains("implement the flag parser"));
@@ -141,6 +143,7 @@ fn prompt_policy_translates_project_instructions_for_concurrent_patch_agents() {
     assert!(wrapped.contains("preserve the repository-specific intent"));
     assert!(wrapped.contains("Do not repeatedly rerun the same broad check"));
     assert!(wrapped.contains("If a broad required check is blocked only by another patch agent"));
+    assert!(wrapped.contains("If a failing test or assertion belongs to another feature"));
     assert!(
         wrapped
             .to_ascii_lowercase()
