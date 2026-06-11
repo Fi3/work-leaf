@@ -1279,17 +1279,23 @@ where
 
     fn handle_completion_answer(&mut self, agent_id: &AgentId, message: &str) {
         self.append_agent_line(agent_id, format!("user: {message}"));
-        match message.to_ascii_lowercase().as_str() {
-            "yes" => {
+        match parse_feature_done_answer(message) {
+            FeatureDoneAnswer::Yes => {
                 self.set_session_completion(agent_id, Some(WorkLeafCompletion::Closed));
                 self.append_agent_line(agent_id, FEATURE_CLOSED_MESSAGE.to_string());
                 self.release_dependents(agent_id);
             }
-            "no" => {
+            FeatureDoneAnswer::No { follow_up } => {
                 self.set_session_completion(agent_id, None);
                 self.append_agent_line(agent_id, FEATURE_OPEN_MESSAGE.to_string());
+                if let Some(follow_up) = follow_up {
+                    self.start_send_worker_without_user_line(
+                        agent_id.clone(),
+                        user_follow_up_fix_prompt(follow_up),
+                    );
+                }
             }
-            _ => {
+            FeatureDoneAnswer::Unknown => {
                 self.append_agent_line(agent_id, FEATURE_DONE_ANSWER_MESSAGE.to_string());
             }
         }
@@ -1424,6 +1430,9 @@ where
         self.implicit_loading_agents.remove(agent_id);
         self.set_session_loading(agent_id, None);
         self.set_session_completion(agent_id, Some(WorkLeafCompletion::NeedsDecision));
+        self.pending_events.push(WorkLeafEvent::AgentSelected {
+            agent_id: agent_id.clone(),
+        });
         self.append_agent_line_allow_duplicate(agent_id, FEATURE_DONE_QUESTION.to_string());
     }
 
@@ -1827,6 +1836,65 @@ enum WorkerEvent {
     WorkerPanicked {
         agent_id: Option<AgentId>,
     },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum FeatureDoneAnswer<'a> {
+    Yes,
+    No { follow_up: Option<&'a str> },
+    Unknown,
+}
+
+fn parse_feature_done_answer(message: &str) -> FeatureDoneAnswer<'_> {
+    let message = message.trim();
+    if message.eq_ignore_ascii_case("yes") {
+        return FeatureDoneAnswer::Yes;
+    }
+
+    let Some(rest) = strip_no_answer_prefix(message) else {
+        return FeatureDoneAnswer::Unknown;
+    };
+    if rest.is_empty() {
+        return FeatureDoneAnswer::No { follow_up: None };
+    }
+    let rest = rest.trim_start();
+    if rest
+        .chars()
+        .next()
+        .is_none_or(|ch| !is_no_follow_up_punctuation(ch))
+    {
+        return FeatureDoneAnswer::Unknown;
+    }
+
+    let follow_up = rest.trim_start_matches(no_follow_up_separator).trim();
+    FeatureDoneAnswer::No {
+        follow_up: (!follow_up.is_empty()).then_some(follow_up),
+    }
+}
+
+fn strip_no_answer_prefix(message: &str) -> Option<&str> {
+    let bytes = message.as_bytes();
+    if bytes.len() < 2
+        || !bytes[0].eq_ignore_ascii_case(&b'n')
+        || !bytes[1].eq_ignore_ascii_case(&b'o')
+    {
+        return None;
+    }
+    Some(&message[2..])
+}
+
+fn no_follow_up_separator(ch: char) -> bool {
+    ch.is_ascii_whitespace() || is_no_follow_up_punctuation(ch)
+}
+
+fn is_no_follow_up_punctuation(ch: char) -> bool {
+    matches!(ch, ',' | '.' | ':' | ';' | '-' | '!' | '?')
+}
+
+fn user_follow_up_fix_prompt(follow_up: &str) -> String {
+    format!(
+        "The user answered that the feature is not done and asked for follow-up fixes:\n{follow_up}\n\nMake the requested fixes through the orchestrator patch flow. When no more orchestrator work is required for this follow-up, emit `@work-leaf done` again so Work Leaf can start another review round before asking the user whether the feature is done."
+    )
 }
 
 fn tracked_streamed_agent_ids(

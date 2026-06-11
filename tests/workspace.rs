@@ -537,6 +537,36 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
     );
     assert_eq!(backend.sends().len(), sends_after_review + 1);
 
+    controller.send_message(&agent_id, "no thanks").unwrap();
+    let snapshot = controller.snapshot();
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert_eq!(
+        patch_agent.completion,
+        Some(WorkLeafCompletion::NeedsDecision)
+    );
+    assert!(
+        patch_agent
+            .lines
+            .iter()
+            .any(|line| line == "user: no thanks")
+    );
+    assert_eq!(backend.sends().len(), sends_after_review + 1);
+
+    controller.send_message(&agent_id, "no /status").unwrap();
+    let snapshot = controller.snapshot();
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert_eq!(
+        patch_agent.completion,
+        Some(WorkLeafCompletion::NeedsDecision)
+    );
+    assert!(
+        patch_agent
+            .lines
+            .iter()
+            .any(|line| line == "user: no /status")
+    );
+    assert_eq!(backend.sends().len(), sends_after_review + 1);
+
     controller.send_message(&agent_id, "yes").unwrap();
     let snapshot = controller.snapshot();
     let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
@@ -1238,6 +1268,89 @@ fn controller_reuses_one_reviewer_for_repeated_patch_agent_iterations() {
             && prompt.contains("Review the full patch scope")
             && prompt.contains("after second")
     }));
+}
+
+#[test]
+fn controller_routes_no_follow_up_fix_to_same_reviewer_and_asks_again() {
+    let root = git_repo("workspace-no-follow-up-review");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "first patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after first\n@work-leaf end\n@work-leaf done",
+        "summary: README changes to after first",
+        "NO_FINDINGS",
+        "second patch\n@work-leaf patch update readme again\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-after first\n+after second\n@work-leaf end\n@work-leaf done",
+        "summary: README changes to after second",
+        "NO_FINDINGS",
+    ]);
+    let chat = CommandChat::new(root.clone(), backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("update readme").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    controller.drain_events();
+
+    controller
+        .send_message(&agent_id, "no, make the second update")
+        .unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    let events = controller.drain_events();
+
+    assert_eq!(
+        fs::read_to_string(root.join("README.md")).unwrap(),
+        "after second\n"
+    );
+    let reviewer_id = AgentId::new("review-user-1").unwrap();
+    let snapshot = controller.snapshot();
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert_eq!(
+        patch_agent.completion,
+        Some(WorkLeafCompletion::NeedsDecision)
+    );
+    assert_eq!(
+        patch_agent
+            .lines
+            .iter()
+            .filter(|line| line.as_str() == "work-leaf: is this feature done? [yes/no]")
+            .count(),
+        2
+    );
+    assert!(events.iter().any(|event| {
+        matches!(event, WorkLeafEvent::AgentSelected { agent_id: selected } if selected == &agent_id)
+    }));
+    assert_eq!(
+        backend
+            .launches()
+            .iter()
+            .filter(|launch| launch.id == reviewer_id)
+            .count(),
+        1
+    );
+    let sends = backend.sends();
+    assert!(sends.iter().any(|(target, prompt)| {
+        target == &agent_id
+            && prompt.contains("feature is not done")
+            && prompt.contains("make the second update")
+            && prompt.contains("emit `@work-leaf done` again")
+            && prompt.contains("another review round")
+    }));
+    assert!(sends.iter().any(|(target, prompt)| {
+        target == &reviewer_id
+            && prompt.contains("Review the full patch scope")
+            && prompt.contains("after second")
+    }));
+
+    controller.send_message(&agent_id, "yes").unwrap();
+    let snapshot = controller.snapshot();
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert_eq!(patch_agent.completion, Some(WorkLeafCompletion::Closed));
+    assert!(
+        patch_agent
+            .lines
+            .iter()
+            .any(|line| line == "work-leaf: feature marked closed")
+    );
 }
 
 #[test]

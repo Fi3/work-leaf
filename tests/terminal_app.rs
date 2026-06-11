@@ -1067,7 +1067,7 @@ fn terminal_app_marks_reviewed_patch_agent_done_and_closed_visibly() {
     let left_pane = app.ui().render_left_pane();
     assert!(left_pane.contains("DONE?"));
     assert!(left_pane.contains("READY"));
-    app.handle_bytes(&[27, 23, b'h', b'k', b'l']);
+    app.handle_bytes(&[27, 23, b'h', b'l']);
     let frame = app.render_frame();
     assert!(frame.contains("work-leaf: is this feature done? [yes/no]"));
     let sends_after_review = backend.sends().len();
@@ -1151,7 +1151,7 @@ fn terminal_app_delays_dependent_new_until_dependency_closes() {
         "dependent launch must not reach the backend before the parent closes"
     );
 
-    app.handle_bytes(&[27, 23, b'h', b'k', b'k', b'l']);
+    app.handle_bytes(&[27, 23, b'h', b'k', b'l']);
     app.handle_bytes(b"iyes\n");
     assert!(app.wait_for_idle(Duration::from_secs(2)));
 

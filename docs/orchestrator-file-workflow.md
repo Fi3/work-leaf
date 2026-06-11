@@ -90,7 +90,7 @@ The intended lifecycle is:
 5. The orchestrator runs a review agent for that patch.
 6. If the review agent emits `@work-leaf` directives, the orchestrator resolves those directives for
    the review agent before treating reviewer output as findings.
-7. If there are no findings, the user can mark the review-agent chat as done.
+7. If there are no findings, the patch-agent chat asks whether the feature is done.
 8. If there are findings, the orchestrator sends those findings to the corresponding patch agent.
 9. The patch agent keeps patching through the orchestrator until the review agent reports no
    findings.
@@ -471,8 +471,13 @@ Reviewer `@work-leaf` directives are resolved in the reviewer conversation befor
 interpreted as findings. If the reviewer finds issues, the orchestrator sends those findings to the
 patch agent. The patch agent then continues through the configured read path and patch protocol. When
 the reviewer reports no findings, the patch-agent chat asks whether the feature is done. `yes` marks
-that patch-agent chat closed, `no` keeps it open, and a later user message in a closed chat reopens
-it before the message is sent to the agent.
+that patch-agent chat closed. A bare `no` keeps it open. A `no` followed by punctuation and
+follow-up text sends the patch agent a structured follow-up prompt, and the patch agent must submit
+the requested fixes through the patch protocol and report `@work-leaf done` before review runs
+again. After that review resolves with no findings, the patch-agent chat is selected and asks the
+completion question again. Messages that are not accepted yes/no answers leave the completion
+question active. A later user message in a closed chat reopens it before the message is sent to the
+agent.
 
 ## Developer Path
 
@@ -504,8 +509,9 @@ A normal development session in default read-permission mode follows this shape:
 13. The review agent can request file text through the orchestrator before reporting findings.
 14. If the review agent reports findings, the orchestrator sends them to the patch agent and the patch
     agent keeps patching.
-15. If the review agent reports no findings, the user can mark the reviewed patch-agent chat as
-    closed.
+15. If the review agent reports no findings, the patch-agent chat asks whether the feature is done.
+    A `yes` answer closes the chat, and a `no` answer with follow-up text routes the requested fixes
+    back through another patch and review cycle before the completion question is asked again.
 16. Reviewed work from the current command-chat or controller instance can then be linearized into
     the final history. The normal `linearize` command requires reviewed patch-agent chats to be
     closed, and `force-linearize` launches the same handoff without that closed-chat gate for

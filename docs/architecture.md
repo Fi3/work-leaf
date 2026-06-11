@@ -317,12 +317,18 @@ target while preserving the individual hashes, reasons, and context inside that 
 the final history shaped as one commit per accepted patch-agent feature unless the user explicitly
 accepts a different grouping.
 When review resolves with no findings, the controller marks the patch-agent session as needing a
-user completion decision and appends a yes/no question to that session. `yes` closes the feature,
-`no` keeps it open, and a later message in a closed chat clears the closed state before sending the
-message to the agent backend. The normal `linearize` command requires every reviewed patch-agent
-chat in the current instance to be closed before launching the linearizer. `force-linearize` launches
-the same linearizer handoff without that closed-chat gate for automation and direct command-chat
-flows that intentionally bypass the completion decision.
+user completion decision and appends a yes/no question to that session. `yes` closes the feature. A
+bare `no` keeps the feature open. A `no` followed by punctuation and follow-up text, such as
+`no, handle the remaining case`, keeps the feature open and sends the patch agent a structured
+follow-up prompt that asks for the requested fixes through the patch flow and another
+`@work-leaf done` before the controller starts a new review pass. After the new review resolves with
+no findings, the controller selects the patch-agent chat and asks the completion question again.
+Messages that are not accepted yes/no answers keep the completion question active and are not sent to
+the backend. A later message in a closed chat clears the closed state before sending the message to
+the agent backend. The normal `linearize` command requires every reviewed patch-agent chat in the
+current instance to be closed before launching the linearizer. `force-linearize` launches the same
+linearizer handoff without that closed-chat gate for automation and direct command-chat flows that
+intentionally bypass the completion decision.
 
 Agent dependency options are validated before dependent work is registered. A dependency target from
 `--depends-on <agent-id>` must name an existing, different session. When the dependency is still
