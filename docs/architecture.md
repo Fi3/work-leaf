@@ -239,7 +239,8 @@ The controller owns:
 - session selection and session snapshots,
 - per-session loading state,
 - deterministic chat titles derived locally from the first user prompt, with
-  `src/chat_title.rs::ChatTitleAgent` tracking first-prompt naming state,
+  `src/chat_title.rs::ChatTitleAgent` tracking first-prompt naming state and
+  `src/chat_title.rs::fallback_chat_title_from_prompt` filtering low-signal prompt wording,
 - command transcripts,
 - background launch/send/review workers,
 - stream routing from `AgentStreamEvent` into the selected session,
@@ -526,7 +527,8 @@ commits.
 for agent launch prompts.
 
 `src/chat_title.rs` is crate-private. It derives lowercase hyphenated chat titles from first prompts,
-caps titles at 80 characters, and tracks which sessions have already been named.
+filters low-signal prompt wording around the salient task words, caps titles at 80 characters, and
+tracks which sessions have already been named.
 
 ## Extension Rules
 

@@ -374,6 +374,20 @@ fn scripted_harness_names_new_chat_from_first_inserted_prompt() {
 }
 
 #[test]
+fn scripted_harness_summarizes_noisy_chat_title_from_first_inserted_prompt() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(b":new\n");
+    harness.handle_bytes(b"it looks like that we there have been a bad regression chat name for patch agents is not created by the system agent but it has to summarize it\n");
+
+    let named_left_pane = harness.ui().render_left_pane();
+    assert!(named_left_pane.contains(
+        ">bad-regression-chat-name-patch-agents user-3  working: bad-regression-chat-name-patch-agents"
+    ));
+    assert!(!named_left_pane.contains("it-looks-like"));
+}
+
+#[test]
 fn scripted_harness_insert_mode_records_chat_text_and_literal_colons() {
     let mut harness = UiHarness::new(80, 24);
 

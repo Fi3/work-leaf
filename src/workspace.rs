@@ -2310,4 +2310,45 @@ mod tests {
         assert_eq!(session.loading, None);
         assert!(!controller.implicit_loading_agents.contains_key(&agent_id));
     }
+
+    #[test]
+    fn inline_patch_agent_title_summarizes_verbose_prompt() {
+        let chat = CommandChat::new(PathBuf::from("/repo"), EmptyBackend);
+        let mut controller = WorkLeafController::new(chat);
+
+        let agent_id = controller
+            .create_agent("it looks like that we there have been a bad regression chat name for patch agents is not created by the system agent but it has to summarize it")
+            .expect("agent launch is prepared");
+
+        let snapshot = controller.snapshot();
+        let session = snapshot
+            .session(&agent_id)
+            .expect("created patch agent session exists");
+        assert_eq!(session.title, "bad-regression-chat-name-patch-agents");
+        assert_eq!(session.feature, "bad-regression-chat-name-patch-agents");
+    }
+
+    #[test]
+    fn empty_new_session_uses_first_task_summary_for_chat_title() {
+        let chat = CommandChat::new(PathBuf::from("/repo"), EmptyBackend);
+        let mut controller = WorkLeafController::new(chat);
+        let agent_id = controller
+            .create_agent("")
+            .expect("empty agent launch is prepared");
+
+        controller.wait_for_idle(Duration::from_secs(1));
+        controller
+            .send_message(
+                &agent_id,
+                "it looks like that we there have been a bad regression chat name for patch agents is not created by the system agent but it has to summarize it",
+            )
+            .expect("first task message is accepted");
+
+        let snapshot = controller.snapshot();
+        let session = snapshot
+            .session(&agent_id)
+            .expect("created patch agent session exists");
+        assert_eq!(session.title, "bad-regression-chat-name-patch-agents");
+        assert_eq!(session.feature, "bad-regression-chat-name-patch-agents");
+    }
 }

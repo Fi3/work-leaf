@@ -130,7 +130,8 @@ orchestrator is doing.
 The current source already has system-style internal behavior:
 
 - `src/chat_title.rs::ChatTitleAgent` tracks which chats have been named from their first prompt so
-  chat titles are derived locally without a backend launch.
+  chat titles are derived locally without a backend launch, with low-signal prompt wording filtered
+  out of the fallback title.
 - `src/workspace.rs::WorkLeafController` tracks sessions, loading state, pending events, and
   transcript output.
 - `src/ui.rs::AgentListEntry` carries visible agent metadata such as readiness, modified files,
