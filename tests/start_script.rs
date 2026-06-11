@@ -160,6 +160,46 @@ fn start_script_delegates_daemon_lifecycle_to_single_binary() {
 }
 
 #[test]
+fn start_script_bench_mode_lists_available_benchs_binaries() {
+    let root = temp_dir("start-script-bench-mode");
+    let results_dir = root.path().join("bench-results");
+    let bin_dir = results_dir.join("20260101T000000-artifacts/bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    write_executable(
+        &bin_dir.join("work-leaf"),
+        "#!/usr/bin/env bash\necho fake work-leaf \"$@\"\n",
+    );
+    write_executable(
+        &bin_dir.join("work-leaf-orchestrator"),
+        "#!/usr/bin/env bash\necho fake orchestrator\n",
+    );
+
+    let mut child = Command::new(Path::new(env!("CARGO_MANIFEST_DIR")).join("start"))
+        .arg("--bench")
+        .arg("--from-test")
+        .env("WORK_LEAF_START_BENCH_RESULTS_DIR", &results_dir)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child.stdin.take().unwrap().write_all(b"1\n").unwrap();
+    let output = child.wait_with_output().unwrap();
+
+    assert!(
+        output.status.success(),
+        "bench launch should succeed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Available benchs binaries:"));
+    assert!(!stdout.contains("Available bench binaries:"));
+    assert!(stdout.contains("  1) 20260101T000000"));
+    assert!(stdout.contains("fake work-leaf --from-test"));
+}
+
+#[test]
 fn three_feature_smoke_script_describes_head_binary_old_base_workflow() {
     let script =
         fs::read_to_string("smoke-three-features").expect("three-feature smoke script exists");
@@ -540,6 +580,13 @@ fn temp_dir(name: &str) -> TempProject {
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
     TempProject { root }
+}
+
+fn write_executable(path: &Path, contents: &str) {
+    fs::write(path, contents).unwrap();
+    let mut permissions = fs::metadata(path).unwrap().permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(path, permissions).unwrap();
 }
 
 fn smoke_temp_root(stdout: &[u8]) -> PathBuf {
