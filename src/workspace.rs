@@ -173,11 +173,8 @@ where
                     self.push_command_line(command_chat_error_text(&error));
                 }
             }
-            "linearize" => {
-                if let Err(error) = self.start_linearize() {
-                    self.push_command_line(command_chat_error_text(&error));
-                }
-            }
+            "linearize" => self.execute_linearize_command(true),
+            "force-linearize" => self.execute_linearize_command(false),
             _ => self.start_command_worker(trimmed.to_string()),
         }
     }
@@ -607,6 +604,33 @@ where
         });
         self.queue_or_start_launch_worker(launch);
         Ok(Some(agent_id))
+    }
+
+    fn execute_linearize_command(&mut self, require_closed_patch_chats: bool) {
+        if require_closed_patch_chats && !self.reviewed_patch_chats_are_closed_for_linearize() {
+            return;
+        }
+        if let Err(error) = self.start_linearize() {
+            self.push_command_line(command_chat_error_text(&error));
+        }
+    }
+
+    fn reviewed_patch_chats_are_closed_for_linearize(&mut self) -> bool {
+        let unclosed_agent_ids = self
+            .reviewed_agent_commits
+            .keys()
+            .filter(|agent_id| self.session_completion(agent_id) != Some(WorkLeafCompletion::Closed))
+            .map(|agent_id| agent_id.as_str().to_string())
+            .collect::<Vec<_>>();
+        if unclosed_agent_ids.is_empty() {
+            return true;
+        }
+
+        self.push_command_line(format!(
+            "work-leaf: reviewed patch chats must be classified as closed before linearize: {}. Use force-linearize to bypass.",
+            unclosed_agent_ids.join(", ")
+        ));
+        false
     }
 
     pub fn loading_text(&self, loading: WorkLeafLoading) -> String {
@@ -1936,6 +1960,10 @@ fn command_agent_response(message: &str, agent_display_name: &str) -> CommandAge
     }
 
     for (needle, command_line) in [
+        ("force-linearize", "force-linearize"),
+        ("force linearize", "force-linearize"),
+        ("force-linearise", "force-linearize"),
+        ("force linearise", "force-linearize"),
         ("linearize", "linearize"),
         ("linearise", "linearize"),
         ("review", "review"),
@@ -1952,7 +1980,8 @@ fn command_agent_response(message: &str, agent_display_name: &str) -> CommandAge
     }
 
     CommandAgentResponse::Reply(
-        "I can run help, new [prompt...], review, linearize, or quit.".to_string(),
+        "I can run help, new [prompt...], review, linearize, force-linearize, or quit."
+            .to_string(),
     )
 }
 
@@ -1960,7 +1989,7 @@ fn literal_command_line(message: &str) -> Option<String> {
     let command = split_command_line(message).into_iter().next()?;
     matches!(
         command.as_str(),
-        "help" | "?" | "new" | "review" | "linearize" | "quit" | "exit" | "q"
+        "help" | "?" | "new" | "review" | "linearize" | "force-linearize" | "quit" | "exit" | "q"
     )
     .then(|| message.to_string())
 }

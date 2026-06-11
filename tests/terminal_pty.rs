@@ -19,7 +19,7 @@ fn real_terminal_pty_handles_file_read_left_toggle_and_chat_switching() {
     let fake_bin = write_fake_sdk_sidecar(root.path(), WORKFLOW_SDK_SIDECAR);
     let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 120, 30);
 
-    app.wait_for_output_contains("Command chat:", Duration::from_secs(2));
+    app.wait_for_output_contains("force-linearize", Duration::from_secs(2));
     app.send(b":new patch ui\n");
     app.wait_for_output_contains(
         "sent file text to user-1: Readme.md",
@@ -70,7 +70,7 @@ fn real_terminal_pty_keeps_chat_prompt_visible_after_large_agent_output() {
     let fake_bin = write_fake_sdk_sidecar(root.path(), LARGE_OUTPUT_SDK_SIDECAR);
     let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 80, 12);
 
-    app.wait_for_output_contains("Command chat:", Duration::from_secs(2));
+    app.wait_for_output_contains("force-linearize", Duration::from_secs(2));
     app.send(b":new large\n");
     app.wait_for_frame(Duration::from_secs(5), |frame| {
         frame.contains("agent-output-line-39") && frame.contains("chat> ")
@@ -94,7 +94,7 @@ fn real_terminal_pty_ignores_ctrl_c_and_exits_on_colon_q() {
     let fake_bin = write_fake_sdk_sidecar(root.path(), LARGE_OUTPUT_SDK_SIDECAR);
     let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 80, 12);
 
-    app.wait_for_output_contains("Command chat:", Duration::from_secs(2));
+    app.wait_for_output_contains("force-linearize", Duration::from_secs(2));
     app.send(&[3]);
     thread::sleep(Duration::from_millis(100));
     assert_pty_running(&mut app);

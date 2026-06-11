@@ -86,7 +86,13 @@ where
                 model = Some(args[index + 1].clone());
                 index += 2;
             }
-            "new" | "patch" | "review" | "linearize" | "linearize-questions" | "locks" => {
+            "new"
+            | "patch"
+            | "review"
+            | "linearize"
+            | "force-linearize"
+            | "linearize-questions"
+            | "locks" => {
                 return Err(CliError::Usage(
                     "work-leaf does not accept top-level workflow commands; start work-leaf and use the command chat".to_string(),
                 ));
@@ -365,7 +371,10 @@ where
             "new" => self.launch_agent(&parts[1..]),
             "promote" | "escalate" => self.promote_agent(&parts[1..]),
             "review" => self.review(),
-            "linearize" => self.linearize(),
+            "linearize" => Err(CliError::Usage(
+                "reviewed patch chats must be classified as closed before linearize; use force-linearize to bypass this direct command-chat gate".to_string(),
+            )),
+            "force-linearize" => self.linearize(),
             "linearize-questions" => self.linearize_questions(),
             "patch" | "locks" => Err(CliError::Usage(format!(
                 "`{command}` is automatic orchestrator machinery, not a command chat command"
@@ -974,6 +983,7 @@ pub fn render_process_help() -> String {
         "  new [prompt...]",
         "  review",
         "  linearize",
+        "  force-linearize",
         "  quit",
         "",
     ]
@@ -986,6 +996,7 @@ pub fn render_command_chat_help() -> String {
         "  new [prompt...]",
         "  review",
         "  linearize",
+        "  force-linearize",
         "  quit",
         "",
         "Patches and file locks are triggered automatically when agents interact with the orchestrator.",

@@ -218,8 +218,8 @@ The primary public methods are:
 
 - `CommandChat::new` for constructing command chat state with a backend.
 - `CommandChat::with_agent_profile` for selecting a non-default provider profile.
-- `CommandChat::handle_line` for processing command lines such as `new`, `chat`, `review`, and
-  `linearize`.
+- `CommandChat::handle_line` for processing command lines such as `new`, `chat`, `review`,
+  `linearize`, and `force-linearize`.
 - `CommandChat::prepare_agent_launch`, `launch_prepared_agent_streaming`, and
   `launch_prepared_agent_streaming_with_ids` for UI-driven launch flows.
 - `CommandChat::send_to_agent`, `send_to_agent_streaming`, and
@@ -318,7 +318,10 @@ accepts a different grouping.
 When review resolves with no findings, the controller marks the patch-agent session as needing a
 user completion decision and appends a yes/no question to that session. `yes` closes the feature,
 `no` keeps it open, and a later message in a closed chat clears the closed state before sending the
-message to the agent backend.
+message to the agent backend. The normal `linearize` command requires every reviewed patch-agent
+chat in the current instance to be closed before launching the linearizer. `force-linearize` launches
+the same linearizer handoff without that closed-chat gate for automation and direct command-chat
+flows that intentionally bypass the completion decision.
 
 Agent dependency options are validated before dependent work is registered. A dependency target from
 `--depends-on <agent-id>` must name an existing, different session. When the dependency is still

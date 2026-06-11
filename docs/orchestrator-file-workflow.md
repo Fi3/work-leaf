@@ -503,13 +503,16 @@ A normal development session in default read-permission mode follows this shape:
 13. The review agent can request file text through the orchestrator before reporting findings.
 14. If the review agent reports findings, the orchestrator sends them to the patch agent and the patch
     agent keeps patching.
-15. If the review agent reports no findings, the user can mark the review chat as done.
+15. If the review agent reports no findings, the user can mark the reviewed patch-agent chat as
+    closed.
 16. Reviewed work from the current command-chat or controller instance can then be linearized into
-    the final history. Linearization keeps one final target per accepted patch-agent feature unless
-    the user explicitly accepts a different grouping; support, validation, test-hygiene, and
-    documentation updates needed for that feature are folded into that feature's final commit. The
-    rewritten final stack stays on the parent or common base of the reviewed commits unless the user
-    explicitly requests a different target branch.
+    the final history. The normal `linearize` command requires reviewed patch-agent chats to be
+    closed, and `force-linearize` launches the same handoff without that closed-chat gate for
+    automation. Linearization keeps one final target per accepted patch-agent feature unless the user
+    explicitly accepts a different grouping; support, validation, test-hygiene, and documentation
+    updates needed for that feature are folded into that feature's final commit. The rewritten final
+    stack stays on the parent or common base of the reviewed commits unless the user explicitly
+    requests a different target branch.
 
 In direct-read mode, steps 4 and 5 are replaced by direct filesystem inspection from the agent. The
 write, review, and linearization steps remain orchestrator-controlled.
@@ -606,7 +609,7 @@ If the review agent reports:
 NO_FINDINGS
 ```
 
-the user can mark the review chat as done and proceed toward linearization.
+the user can mark the reviewed patch-agent chat as closed and proceed toward linearization.
 
 ## Source Anchors
 

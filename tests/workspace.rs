@@ -860,6 +860,54 @@ fn controller_starts_review_when_done_directive_has_trailing_whitespace() {
 }
 
 #[test]
+fn controller_command_linearize_requires_closed_patch_chats_unless_forced() {
+    let root = git_repo("workspace-linearize-force-command");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+        "summary: README changes from before to after",
+        "NO_FINDINGS",
+        "linearizer ready",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("update readme").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    let snapshot = controller.snapshot();
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert_eq!(
+        patch_agent.completion,
+        Some(WorkLeafCompletion::NeedsDecision)
+    );
+
+    controller.execute_command_line("linearize");
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    let launches = backend.launches();
+    assert!(
+        !launches
+            .iter()
+            .any(|launch| launch.id.as_str() == "linearize"),
+        "{launches:?}"
+    );
+    assert!(controller.transcript().iter().any(|line| {
+        line == "work-leaf: reviewed patch chats must be classified as closed before linearize: user-1. Use force-linearize to bypass."
+    }));
+
+    controller.execute_command_line("force-linearize");
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    let launches = backend.launches();
+    assert!(
+        launches
+            .iter()
+            .any(|launch| launch.id.as_str() == "linearize"),
+        "{launches:?}"
+    );
+}
+
+#[test]
 fn controller_linearize_preserves_cumulative_review_scope_for_one_done() {
     let root = git_repo("workspace-linearize-cumulative-review-scope");
     fs::write(root.join("README.md"), "before\n").unwrap();

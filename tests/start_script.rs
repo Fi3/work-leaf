@@ -347,7 +347,7 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(!script.contains(".feature|test(\"review\""));
     assert!(!script.contains(".title|test(\"review\""));
     assert!(script.contains("linearize_completed"));
-    assert!(script.contains("post_command 'linearize' || fail_bench \"failed to post linearize command\"\n    linearize_started=1\n    sleep 5\n    continue"));
+    assert!(script.contains("post_command 'force-linearize' || fail_bench \"failed to post force-linearize command\"\n    linearize_started=1\n    sleep 5\n    continue"));
     assert!(script.contains("post_agent 'linearize' 'Accept the proposed linearization plan."));
     assert!(script.contains("accepted_linearize=1\n    sleep 5\n    continue"));
     assert!(script.contains("token_usage"));

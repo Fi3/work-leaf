@@ -498,6 +498,38 @@ fn command_chat_reuses_reviewer_for_later_commit_from_same_patch_agent() {
 }
 
 #[test]
+fn command_chat_requires_force_linearize_for_direct_linearize_launch() {
+    let root = temp_git_repo("command-chat-force-linearize");
+    fs::write(root.join("README.md"), "first\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(
+        &root,
+        [
+            "commit",
+            "-m",
+            "UPDATE apply docs patch from user-1",
+            "-m",
+            "Agent-ID: user-1\nFeature: docs\nReason: first pass\nContext: docs context",
+        ],
+    );
+    let backend = FakeBackend::new(["summary: docs pass", "NO_FINDINGS", "linearizer ready"]);
+    let mut chat = CommandChat::new(root, backend);
+
+    let review = chat.handle_line("review").unwrap();
+    assert!(matches!(review, CommandChatResult::ReviewComplete(_)));
+
+    let error = chat.handle_line("linearize").unwrap_err().to_string();
+    assert!(error.contains("reviewed patch chats must be classified as closed"));
+    assert!(error.contains("force-linearize"));
+
+    let result = chat.handle_line("force-linearize").unwrap();
+    assert!(matches!(
+        result,
+        CommandChatResult::AgentLaunched { agent_id, .. } if agent_id.as_str() == "linearize"
+    ));
+}
+
+#[test]
 fn command_chat_processes_reviewer_orchestrator_directives_before_findings() {
     let root = temp_git_repo("command-chat-reviewer-directives");
     fs::write(root.join("README.md"), "review target\n").unwrap();

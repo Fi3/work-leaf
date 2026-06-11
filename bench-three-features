@@ -648,8 +648,8 @@ while true; do
 
   if [[ "$linearize_started" == "0" && "$ready_users" == "3" && "$reviews" -ge 3 && "$busy" == "false" ]]; then
     review_completed="yes"
-    log "all patch agents reviewed; launching linearize"
-    post_command 'linearize' || fail_bench "failed to post linearize command"
+    log "all patch agents reviewed; launching force-linearize"
+    post_command 'force-linearize' || fail_bench "failed to post force-linearize command"
     linearize_started=1
     sleep 5
     continue
