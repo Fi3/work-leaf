@@ -229,7 +229,7 @@ fn prompt_mode_renders_colon_command_line_and_cursor_on_bottom_row() {
 fn focus_cursor_stays_inside_left_or_right_pane() {
     let mut ui = TerminalUi::new(100, 20);
     let left = ui.render_screen("command chat");
-    assert!(left.ends_with("\u{1b}[2;2H"));
+    assert!(left.ends_with("\u{1b}[3;2H"));
 
     ui.handle_key(UiKey::CtrlW);
     ui.handle_key(UiKey::Char('l'));
@@ -245,10 +245,10 @@ fn left_pane_navigation_moves_cursor_to_selected_agent_row_and_opens_chat() {
     ui.add_agent(AgentListEntry::new(chat_a.clone(), "parser"));
     ui.add_agent(AgentListEntry::new(chat_b.clone(), "docs"));
 
-    assert!(ui.render_screen("command chat").ends_with("\u{1b}[2;2H"));
+    assert!(ui.render_screen("command chat").ends_with("\u{1b}[3;2H"));
 
     ui.handle_key(UiKey::Char('j'));
-    assert!(ui.render_screen("command chat").ends_with("\u{1b}[3;2H"));
+    assert!(ui.render_screen("command chat").ends_with("\u{1b}[5;2H"));
     assert_eq!(ui.selected_agent(), Some(&chat_a));
     assert_eq!(ui.focus(), PaneFocus::Left);
     assert!(ui.render_screen("agent chat").contains("chat-a"));
@@ -261,6 +261,22 @@ fn left_pane_navigation_moves_cursor_to_selected_agent_row_and_opens_chat() {
 }
 
 #[test]
+fn left_pane_navigation_follows_grouped_chat_section_order() {
+    let mut ui = TerminalUi::new(100, 20);
+    let review = AgentId::new("review-chat-a").unwrap();
+    let patch = AgentId::new("chat-a").unwrap();
+    let read = AgentId::new("read-chat-a").unwrap();
+    ui.add_agent(AgentListEntry::new(review, "review parser"));
+    ui.add_agent(AgentListEntry::new(read, "read parser"));
+    ui.add_agent(AgentListEntry::new(patch.clone(), "parser"));
+
+    ui.handle_key(UiKey::Char('j'));
+
+    assert_eq!(ui.selected_agent(), Some(&patch));
+    assert!(ui.render_screen("agent chat").contains("chat-a"));
+}
+
+#[test]
 fn mouse_clicking_a_left_pane_agent_row_opens_that_agent_chat() {
     let mut ui = TerminalUi::new(100, 20);
     let chat_a = AgentId::new("chat-a").unwrap();
@@ -269,7 +285,7 @@ fn mouse_clicking_a_left_pane_agent_row_opens_that_agent_chat() {
     ui.add_agent(AgentListEntry::new(chat_b.clone(), "docs"));
     ui.select_agent(&chat_a).unwrap();
 
-    ui.handle_key(UiKey::MouseClick { column: 4, row: 4 });
+    ui.handle_key(UiKey::MouseClick { column: 4, row: 6 });
 
     assert_eq!(ui.selected_agent(), Some(&chat_b));
     assert_eq!(ui.focus(), PaneFocus::Right);
@@ -290,7 +306,7 @@ fn left_pane_can_hide_selected_agents_from_control_list() {
     let rendered = ui.render_left_pane();
     assert!(!rendered.contains("chat-a"));
     assert!(rendered.contains("chat-b"));
-    assert!(ui.render_screen("command chat").ends_with("\u{1b}[3;2H"));
+    assert!(ui.render_screen("command chat").ends_with("\u{1b}[5;2H"));
 }
 
 #[test]
@@ -311,10 +327,7 @@ fn visual_mode_yanks_left_pane_line_and_block_selections() {
 
     ui.handle_key(UiKey::Char('y'));
 
-    assert_eq!(
-        ui.copied_text(),
-        Some("> work-leaf  command\n parser chat-a")
-    );
+    assert_eq!(ui.copied_text(), Some("[command]\n> work-leaf  command"));
     assert!(!ui.visual_selection_active());
     assert!(ui.render_screen("right pane").starts_with("\u{1b}]52;c;"));
 
@@ -328,7 +341,7 @@ fn visual_mode_yanks_left_pane_line_and_block_selections() {
     );
     ui.handle_key(UiKey::Char('y'));
 
-    assert_eq!(ui.copied_text(), Some("> w\n pa"));
+    assert_eq!(ui.copied_text(), Some("[co\n> w"));
 }
 
 #[test]
@@ -359,6 +372,8 @@ fn visual_mode_v_enters_cursor_mode_before_selecting_text() {
     ui.handle_key(UiKey::Esc);
 
     ui.handle_key(UiKey::Char('v'));
+    ui.handle_key(UiKey::Char('j'));
+    ui.handle_key(UiKey::Char('j'));
     ui.handle_key(UiKey::Char('j'));
     ui.handle_key(UiKey::Char('V'));
     ui.handle_key(UiKey::Char('y'));

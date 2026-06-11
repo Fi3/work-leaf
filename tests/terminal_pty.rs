@@ -55,7 +55,7 @@ fn real_terminal_pty_handles_file_read_left_toggle_and_chat_switching() {
         frame.contains(">second user-2") && frame.contains("second launch ready")
     });
 
-    app.send(b"\x1b[<0;4;3M");
+    app.send(b"\x1b[<0;4;5M");
     app.wait_for_frame(Duration::from_secs(2), |frame| {
         frame.contains(">patch-ui user-1")
             && frame.contains("first follow-up answer after file text")

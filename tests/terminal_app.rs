@@ -795,7 +795,7 @@ fn terminal_app_sgr_mouse_click_on_left_agent_row_selects_that_chat() {
         Some("user-2")
     );
 
-    app.handle_bytes(b"\x1b[<0;4;3M");
+    app.handle_bytes(b"\x1b[<0;4;5M");
 
     assert_eq!(
         app.ui().selected_agent().map(AgentId::as_str),
@@ -816,7 +816,7 @@ fn terminal_app_sgr_mouse_release_on_left_agent_row_selects_that_chat() {
     app.handle_bytes(b"\x1b:new second\n");
     app.wait_for_idle(Duration::from_secs(1));
 
-    app.handle_bytes(b"\x1b[<0;4;3m");
+    app.handle_bytes(b"\x1b[<0;4;5m");
 
     assert_eq!(
         app.ui().selected_agent().map(AgentId::as_str),

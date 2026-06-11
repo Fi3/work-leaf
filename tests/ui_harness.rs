@@ -19,6 +19,21 @@ fn scripted_harness_renders_full_width_crlf_frame() {
 }
 
 #[test]
+fn scripted_harness_left_pane_groups_command_and_patch_chats() {
+    let harness = UiHarness::new(80, 24);
+    let left_pane = strip_ansi(&harness.ui().render_left_pane());
+
+    let command = left_pane
+        .find("[command]")
+        .expect("command section renders");
+    let patches = left_pane.find("[patches]").expect("patch section renders");
+
+    assert!(command < patches);
+    assert!(left_pane.contains("[command]\n  work-leaf  command"));
+    assert!(left_pane.contains("[patches]\n>parser user-1  working: parser  READY"));
+}
+
+#[test]
 fn scripted_harness_rings_and_highlights_ready_chat() {
     let mut harness = UiHarness::new(100, 24);
 
@@ -202,7 +217,7 @@ fn scripted_harness_drives_ctrl_w_navigation_and_left_toggle() {
 
     harness.handle_bytes(&[23, b'h']);
     assert_eq!(harness.ui().focus(), PaneFocus::Left);
-    assert!(harness.render_frame().ends_with("\u{1b}[3;2H"));
+    assert!(harness.render_frame().ends_with("\u{1b}[5;2H"));
 
     harness.handle_byte(b',');
     assert_eq!(harness.ui().layout().left_width, 0);

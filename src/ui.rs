@@ -159,7 +159,85 @@ struct VisualCursor {
 struct LeftPaneLine {
     text: String,
     ready: bool,
+    click_target: Option<LeftPaneClickTarget>,
+    control_target: Option<LeftPaneClickTarget>,
 }
+
+impl LeftPaneLine {
+    fn section(title: &str, format: LeftPaneLineFormat) -> Self {
+        Self {
+            text: match format {
+                LeftPaneLineFormat::Detailed => format!("[{title}]"),
+                LeftPaneLineFormat::Compact { inner_width } => {
+                    truncate_to_width(&format!("[{title}]"), inner_width.max(1))
+                }
+            },
+            ready: false,
+            click_target: None,
+            control_target: None,
+        }
+    }
+
+    fn command(text: String) -> Self {
+        Self {
+            text,
+            ready: false,
+            click_target: Some(LeftPaneClickTarget::Command),
+            control_target: Some(LeftPaneClickTarget::Command),
+        }
+    }
+
+    fn agent_row(agent: &AgentListEntry, text: String) -> Self {
+        let target = LeftPaneClickTarget::Agent(agent.id.clone());
+        Self {
+            text,
+            ready: agent_ready_visible(agent),
+            click_target: Some(target.clone()),
+            control_target: Some(target),
+        }
+    }
+
+    fn agent_detail(text: String, target: Option<LeftPaneClickTarget>) -> Self {
+        Self {
+            text,
+            ready: false,
+            click_target: target,
+            control_target: None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum LeftPaneLineFormat {
+    Detailed,
+    Compact { inner_width: usize },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum LeftPaneAgentSection {
+    Patches,
+    Reviews,
+    Reads,
+    Linearize,
+}
+
+impl LeftPaneAgentSection {
+    fn title(self) -> &'static str {
+        match self {
+            Self::Patches => "patches",
+            Self::Reviews => "reviews",
+            Self::Reads => "reads",
+            Self::Linearize => "linearize",
+        }
+    }
+}
+
+const LEFT_PANE_AGENT_SECTIONS: [LeftPaneAgentSection; 4] = [
+    LeftPaneAgentSection::Patches,
+    LeftPaneAgentSection::Reviews,
+    LeftPaneAgentSection::Reads,
+    LeftPaneAgentSection::Linearize,
+];
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct StatusNotice {
@@ -357,7 +435,7 @@ impl TerminalUi {
         let Some(agent) = self.agents.iter_mut().find(|agent| &agent.id == agent_id) else {
             return Err(format!("unknown agent `{agent_id}`"));
         };
-        if ready && !agent.ready {
+        if ready && !agent.ready && agent_allows_ready_highlight(agent) {
             self.pending_bell.set(true);
         }
         agent.ready = ready;
@@ -558,50 +636,15 @@ impl TerminalUi {
 
     pub fn render_left_pane(&self) -> String {
         let mut rendered = String::new();
-        if self.control_selected == 0 {
-            rendered.push_str("> work-leaf  command\n");
-        } else {
-            rendered.push_str("  work-leaf  command\n");
-        }
-        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
-            let agent = &self.agents[*agent_index];
-            let mut row = String::new();
-            row.push(if self.control_selected == visible_position + 1 {
-                '>'
-            } else {
-                ' '
-            });
-            let (primary, secondary) = agent_list_labels(agent);
-            row.push_str(primary);
-            row.push(' ');
-            row.push_str(secondary);
-            row.push_str("  working: ");
-            row.push_str(&agent.feature);
-            if agent.ready {
-                row.push_str("  READY");
+        for line in self.left_pane_detail_lines() {
+            if line.ready {
                 rendered.push_str("\u{1b}[7m");
-                rendered.push_str(&row);
+                rendered.push_str(&line.text);
                 rendered.push_str("\u{1b}[0m");
             } else {
-                rendered.push_str(&row);
+                rendered.push_str(&line.text);
             }
             rendered.push('\n');
-            if !agent.modified_files.is_empty() {
-                rendered.push_str("    ");
-                rendered.push_str("files: ");
-                rendered.push_str(
-                    &agent
-                        .modified_files
-                        .iter()
-                        .map(|path| path.display().to_string())
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                );
-                rendered.push('\n');
-            }
-            self.render_agent_links("conflicts", &agent.conflicting_agents, &mut rendered);
-            self.render_agent_links("depends-on", &agent.depends_on, &mut rendered);
-            self.render_agent_links("depended-on-by", &agent.depended_on_by, &mut rendered);
         }
         rendered
     }
@@ -1058,53 +1101,76 @@ impl TerminalUi {
         }
     }
 
+    fn left_pane_detail_lines(&self) -> Vec<LeftPaneLine> {
+        self.left_pane_lines_with_format(LeftPaneLineFormat::Detailed)
+    }
+
     fn left_pane_lines(&self, inner_width: usize) -> Vec<LeftPaneLine> {
-        let mut lines = vec![LeftPaneLine {
-            text: if self.control_selected == 0 {
-                "> work-leaf  command".to_string()
-            } else {
-                "  work-leaf  command".to_string()
-            },
-            ready: false,
-        }];
-        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
-            let agent = &self.agents[*agent_index];
-            let selected = self.control_selected == visible_position + 1;
-            lines.push(LeftPaneLine {
-                text: compact_agent_row(agent, selected, inner_width),
-                ready: agent.ready,
-            });
-            if !agent.modified_files.is_empty() {
-                lines.push(LeftPaneLine {
-                    text: format!(
-                        "    files: {}",
-                        agent
-                            .modified_files
-                            .iter()
-                            .map(|path| path.display().to_string())
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    ),
-                    ready: false,
-                });
-            }
-            for (label, agents) in [
-                ("conflicts", &agent.conflicting_agents),
-                ("depends-on", &agent.depends_on),
-                ("depended-on-by", &agent.depended_on_by),
-            ] {
-                if !agents.is_empty() {
-                    lines.push(LeftPaneLine {
-                        text: format!(
-                            "    {label}: {}",
-                            agents
+        self.left_pane_lines_with_format(LeftPaneLineFormat::Compact { inner_width })
+    }
+
+    fn left_pane_lines_with_format(&self, format: LeftPaneLineFormat) -> Vec<LeftPaneLine> {
+        let mut lines = Vec::new();
+        let command_row = if self.control_selected == 0 {
+            "> work-leaf  command".to_string()
+        } else {
+            "  work-leaf  command".to_string()
+        };
+        lines.push(LeftPaneLine::section("command", format));
+        lines.push(LeftPaneLine::command(command_row));
+
+        let visible_agent_indices = self.visible_agent_indices();
+        for section in LEFT_PANE_AGENT_SECTIONS {
+            let mut section_started = false;
+            for (visible_position, agent_index) in visible_agent_indices.iter().enumerate() {
+                let agent = &self.agents[*agent_index];
+                if agent_left_pane_section(agent) != section {
+                    continue;
+                }
+                if !section_started {
+                    lines.push(LeftPaneLine::section(section.title(), format));
+                    section_started = true;
+                }
+                let selected = self.control_selected == visible_position + 1;
+                let row = match format {
+                    LeftPaneLineFormat::Detailed => detailed_agent_row(agent, selected),
+                    LeftPaneLineFormat::Compact { inner_width } => {
+                        compact_agent_row(agent, selected, inner_width)
+                    }
+                };
+                lines.push(LeftPaneLine::agent_row(agent, row));
+                if !agent.modified_files.is_empty() {
+                    lines.push(LeftPaneLine::agent_detail(
+                        format!(
+                            "    files: {}",
+                            agent
+                                .modified_files
                                 .iter()
-                                .map(AgentId::as_str)
+                                .map(|path| path.display().to_string())
                                 .collect::<Vec<_>>()
                                 .join(", ")
                         ),
-                        ready: false,
-                    });
+                        Some(LeftPaneClickTarget::Agent(agent.id.clone())),
+                    ));
+                }
+                for (label, agents) in [
+                    ("conflicts", &agent.conflicting_agents),
+                    ("depends-on", &agent.depends_on),
+                    ("depended-on-by", &agent.depended_on_by),
+                ] {
+                    if !agents.is_empty() {
+                        lines.push(LeftPaneLine::agent_detail(
+                            format!(
+                                "    {label}: {}",
+                                agents
+                                    .iter()
+                                    .map(AgentId::as_str)
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            ),
+                            agents.first().cloned().map(LeftPaneClickTarget::Agent),
+                        ));
+                    }
                 }
             }
         }
@@ -1422,11 +1488,13 @@ impl TerminalUi {
     }
 
     fn visible_agent_indices(&self) -> Vec<usize> {
-        self.agents
-            .iter()
-            .enumerate()
-            .filter_map(|(index, agent)| (!agent.hidden).then_some(index))
-            .collect()
+        let mut indices = Vec::new();
+        for section in LEFT_PANE_AGENT_SECTIONS {
+            indices.extend(self.agents.iter().enumerate().filter_map(|(index, agent)| {
+                (!agent.hidden && agent_left_pane_section(agent) == section).then_some(index)
+            }));
+        }
+        indices
     }
 
     fn control_selected_agent_index(&self) -> Option<usize> {
@@ -1448,47 +1516,30 @@ impl TerminalUi {
         if row < 2 {
             return None;
         }
-        if list_row == 0 {
-            self.control_selected = 0;
-            return Some(LeftPaneClickTarget::Command);
-        }
+        let inner_width = usize::from(self.layout().left_width.saturating_sub(2).max(1));
+        let target = self
+            .left_pane_lines(inner_width)
+            .get(list_row)
+            .and_then(|line| line.click_target.clone())?;
+        self.select_left_pane_click_target(&target);
+        Some(target)
+    }
 
-        let mut current_row = 1;
-        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
-            let agent = &self.agents[*agent_index];
-            if list_row == current_row {
-                self.control_selected = visible_position + 1;
-                return Some(LeftPaneClickTarget::Agent(agent.id.clone()));
+    fn select_left_pane_click_target(&mut self, target: &LeftPaneClickTarget) {
+        match target {
+            LeftPaneClickTarget::Command => {
+                self.control_selected = 0;
             }
-            current_row += 1;
-
-            if !agent.modified_files.is_empty() {
-                if list_row == current_row {
-                    self.control_selected = visible_position + 1;
-                    return Some(LeftPaneClickTarget::Agent(agent.id.clone()));
-                }
-                current_row += 1;
-            }
-
-            for linked_agents in [
-                &agent.conflicting_agents,
-                &agent.depends_on,
-                &agent.depended_on_by,
-            ] {
-                if !linked_agents.is_empty() {
-                    if list_row == current_row {
-                        self.control_selected = visible_position + 1;
-                        return linked_agents
-                            .first()
-                            .cloned()
-                            .map(LeftPaneClickTarget::Agent);
-                    }
-                    current_row += 1;
+            LeftPaneClickTarget::Agent(agent_id) => {
+                if let Some(position) = self
+                    .visible_agent_indices()
+                    .iter()
+                    .position(|index| self.agents[*index].id == *agent_id)
+                {
+                    self.control_selected = position + 1;
                 }
             }
         }
-
-        None
     }
 
     fn action_agent_id(&self) -> Option<AgentId> {
@@ -1497,7 +1548,20 @@ impl TerminalUi {
     }
 
     fn control_cursor_row(&self) -> u16 {
-        (self.control_selected + 2).min(usize::from(u16::MAX)) as u16
+        let target = if self.control_selected == 0 {
+            LeftPaneClickTarget::Command
+        } else {
+            let Some(agent_id) = self.control_selected_agent_id() else {
+                return 2;
+            };
+            LeftPaneClickTarget::Agent(agent_id)
+        };
+        let inner_width = usize::from(self.layout().left_width.saturating_sub(2).max(1));
+        self.left_pane_lines(inner_width)
+            .iter()
+            .position(|line| line.control_target.as_ref() == Some(&target))
+            .map(|row| (row + 2).min(usize::from(u16::MAX)) as u16)
+            .unwrap_or(2)
     }
 
     fn right_cursor_position_with_cursor(
@@ -1550,22 +1614,6 @@ impl TerminalUi {
                 self.active_window - 1
             };
         }
-    }
-
-    fn render_agent_links(&self, label: &str, agents: &[AgentId], rendered: &mut String) {
-        if agents.is_empty() {
-            return;
-        }
-        rendered.push_str("    ");
-        rendered.push_str(label);
-        rendered.push_str(": ");
-        for (index, agent_id) in agents.iter().enumerate() {
-            if index > 0 {
-                rendered.push_str(", ");
-            }
-            rendered.push_str(agent_id.as_str());
-        }
-        rendered.push('\n');
     }
 
     fn render_status_line(&self) -> String {
@@ -1639,9 +1687,28 @@ fn agent_list_labels(agent: &AgentListEntry) -> (&str, &str) {
     }
 }
 
+fn detailed_agent_row(agent: &AgentListEntry, selected: bool) -> String {
+    let mut row = String::new();
+    row.push(if selected { '>' } else { ' ' });
+    let (primary, secondary) = agent_list_labels(agent);
+    row.push_str(primary);
+    row.push(' ');
+    row.push_str(secondary);
+    row.push_str("  working: ");
+    row.push_str(&agent.feature);
+    if agent_ready_visible(agent) {
+        row.push_str("  READY");
+    }
+    row
+}
+
 fn compact_agent_row(agent: &AgentListEntry, selected: bool, width: usize) -> String {
     let prefix = if selected { ">" } else { " " };
-    let status = if agent.ready { " READY" } else { "" };
+    let status = if agent_ready_visible(agent) {
+        " READY"
+    } else {
+        ""
+    };
     let id = agent.id.as_str();
     let width = width.max(1);
 
@@ -1651,6 +1718,27 @@ fn compact_agent_row(agent: &AgentListEntry, selected: bool, width: usize) -> St
         compact_fixed_last(prefix, &agent.feature, id, status, width)
     };
     truncate_to_width(&row, width)
+}
+
+fn agent_ready_visible(agent: &AgentListEntry) -> bool {
+    agent.ready && agent_allows_ready_highlight(agent)
+}
+
+fn agent_allows_ready_highlight(agent: &AgentListEntry) -> bool {
+    agent_left_pane_section(agent) != LeftPaneAgentSection::Reviews
+}
+
+fn agent_left_pane_section(agent: &AgentListEntry) -> LeftPaneAgentSection {
+    let id = agent.id.as_str();
+    if id.starts_with("review-") {
+        LeftPaneAgentSection::Reviews
+    } else if id == "linearize" || id.starts_with("linearize-") {
+        LeftPaneAgentSection::Linearize
+    } else if id == "read" || id.starts_with("read-") || id.starts_with("reads-") {
+        LeftPaneAgentSection::Reads
+    } else {
+        LeftPaneAgentSection::Patches
+    }
 }
 
 fn compact_fixed_first(
@@ -2028,9 +2116,43 @@ mod tests {
 
         for column in 1..left_width.saturating_sub(1) {
             assert!(
-                buffer.get(column, 2).modifier.contains(Modifier::REVERSED),
+                buffer.get(column, 4).modifier.contains(Modifier::REVERSED),
                 "column {column} on the ready agent row should be reversed"
             );
         }
+    }
+
+    #[test]
+    fn left_pane_groups_agent_rows_by_chat_kind() {
+        let mut ui = TerminalUi::new(100, 24);
+        let patch_id = AgentId::new("user-1").expect("test agent id is valid");
+        let review_id = AgentId::new("review-user-1").expect("test agent id is valid");
+        let read_id = AgentId::new("read-user-1").expect("test agent id is valid");
+        let linearize_id = AgentId::new("linearize").expect("test agent id is valid");
+        ui.add_agent(AgentListEntry::new(patch_id.clone(), "parser"));
+        ui.add_agent(AgentListEntry::new(review_id, "review parser").with_ready(true));
+        ui.add_agent(AgentListEntry::new(read_id, "read parser"));
+        ui.add_agent(AgentListEntry::new(linearize_id, "linearize"));
+        ui.select_agent(&patch_id)
+            .expect("test patch agent is registered");
+
+        let left_pane = ui.render_left_pane();
+
+        let command = left_pane
+            .find("[command]")
+            .expect("command section renders");
+        let patches = left_pane.find("[patches]").expect("patch section renders");
+        let reviews = left_pane.find("[reviews]").expect("review section renders");
+        let reads = left_pane.find("[reads]").expect("read section renders");
+        let linearize = left_pane
+            .find("[linearize]")
+            .expect("linearize section renders");
+        assert!(command < patches);
+        assert!(patches < reviews);
+        assert!(reviews < reads);
+        assert!(reads < linearize);
+        assert!(left_pane.contains(">parser user-1  working: parser"));
+        assert!(left_pane.contains(" review-user-1 review parser  working: review parser"));
+        assert!(!left_pane.contains("review parser  READY"));
     }
 }

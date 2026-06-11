@@ -1065,7 +1065,9 @@ fn session_display_title(session: &WorkLeafSession) -> String {
 }
 
 fn session_is_ready_for_ui(session: &WorkLeafSession) -> bool {
-    session.loading.is_none() && session.completion != Some(WorkLeafCompletion::Closed)
+    session.loading.is_none()
+        && session.completion != Some(WorkLeafCompletion::Closed)
+        && !session.id.as_str().starts_with("review-")
 }
 
 fn is_agent_slash_command_line(line: &str) -> bool {
@@ -1697,6 +1699,39 @@ mod tests {
         assert!(closed_left_pane.contains("feature CLOSED"));
         assert!(!closed_left_pane.contains("READY"));
         assert!(!closed_left_pane.contains("\u{1b}[7m"));
+    }
+
+    #[test]
+    fn completed_review_session_does_not_highlight_left_pane() {
+        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+        let drain_calls = Arc::new(AtomicUsize::new(0));
+        let reviewer_id = AgentId::new("review-user-1").expect("test agent id is valid");
+        let controller = CountingController::new(
+            crate::WorkLeafSnapshot {
+                command_transcript: Vec::new(),
+                sessions: vec![WorkLeafSession {
+                    id: reviewer_id,
+                    kind: AgentKind::Codex,
+                    title: "review parser".to_string(),
+                    feature: "review parser".to_string(),
+                    lines: Vec::new(),
+                    loading: None,
+                    completion: None,
+                    token_usage: None,
+                    depends_on: Vec::new(),
+                    depended_on_by: Vec::new(),
+                }],
+            },
+            snapshot_calls,
+            drain_calls,
+        );
+        let app = TerminalAppCore::new(controller, 80, 24);
+
+        let left_pane = app.ui.render_left_pane();
+        assert!(left_pane.contains("[reviews]"));
+        assert!(left_pane.contains("review-user-1 review parser"));
+        assert!(!left_pane.contains("READY"));
+        assert!(!left_pane.contains("\u{1b}[7m"));
     }
 
     #[test]
