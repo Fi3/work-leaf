@@ -352,9 +352,11 @@ Frontend code should use these methods:
 - `create_agent` to reserve, select, and launch an agent session from a prompt.
 - `send_command_agent_message` to route chat from the Work Leaf command surface to `command-agent`.
 - `send_message` to send a prompt to one session while other sessions may still be busy.
-  Messages that start with `/` followed by a non-empty command token are routed to the selected
-  backend instead of being interpreted as Work Leaf commands. The slash command output visible in
-  the chat is the selected backend's response to the raw slash-prefixed message.
+  When the target session is already waiting for a backend reply, the controller appends the user's
+  text immediately and queues the backend send until that session is available. Messages that start
+  with `/` followed by a non-empty command token are routed to the selected backend instead of being
+  interpreted as Work Leaf commands. The slash command output visible in the chat is the selected
+  backend's response to the raw slash-prefixed message.
 - `start_review` to create or resume reviewer sessions for explicit history-wide review and stream
   reviewer output.
 - `is_busy`, `wait_for_idle`, and `wait_for_session_line` for tests and event loops.

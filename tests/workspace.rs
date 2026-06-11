@@ -1621,6 +1621,74 @@ fn controller_keeps_agent_loading_scoped_to_the_active_session() {
 }
 
 #[test]
+fn controller_queues_same_agent_prompts_while_the_chat_is_working() {
+    let backend = QueuedPromptBackend::default();
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("queued prompt task").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    controller.drain_events();
+
+    controller
+        .send_message(&agent_id, "first slow prompt")
+        .unwrap();
+    assert!(backend.wait_for_send_count(1, Duration::from_secs(1)));
+
+    controller
+        .send_message(&agent_id, "second queued prompt")
+        .unwrap();
+
+    let queued = controller.snapshot();
+    let session = queued.session(&agent_id).expect("session exists");
+    assert!(
+        session
+            .lines
+            .iter()
+            .any(|line| line == "user: second queued prompt")
+    );
+    assert!(
+        !session
+            .lines
+            .iter()
+            .any(|line| line.contains("still working"))
+    );
+    assert_eq!(
+        backend.sends(),
+        vec![(agent_id.clone(), "first slow prompt".to_string())]
+    );
+
+    thread::sleep(Duration::from_millis(50));
+    assert_eq!(
+        backend.sends(),
+        vec![(agent_id.clone(), "first slow prompt".to_string())]
+    );
+
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    assert_eq!(
+        backend.sends(),
+        vec![
+            (agent_id.clone(), "first slow prompt".to_string()),
+            (agent_id.clone(), "second queued prompt".to_string()),
+        ]
+    );
+    let replied = controller.snapshot();
+    let session = replied.session(&agent_id).expect("session exists");
+    assert!(
+        session
+            .lines
+            .iter()
+            .any(|line| line == "reply to first slow prompt")
+    );
+    assert!(
+        session
+            .lines
+            .iter()
+            .any(|line| line == "reply to second queued prompt")
+    );
+}
+
+#[test]
 fn controller_interrupt_clears_visible_agent_loading_immediately() {
     let backend = InterruptibleBackend::default();
     let chat = CommandChat::new(PathBuf::from("/repo"), backend);
@@ -1688,6 +1756,63 @@ fn controller_marks_secondary_follow_up_streams_as_waiting_until_worker_finishes
     );
 }
 
+#[test]
+fn controller_drains_queued_prompts_for_secondary_streamed_sessions() {
+    let backend = SecondaryFollowUpBackend::default();
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+    let mut controller = WorkLeafController::new(chat);
+
+    let first = controller.create_agent("first task").unwrap();
+    let second = controller.create_agent("second task").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+
+    controller.send_message(&first, "route follow-up").unwrap();
+    assert!(controller.wait_for_session_line(
+        &second,
+        "secondary follow-up started",
+        Duration::from_secs(1)
+    ));
+
+    controller
+        .send_message(&second, "queued secondary prompt")
+        .unwrap();
+
+    let queued = controller.snapshot();
+    let second_session = queued.session(&second).expect("second session");
+    assert!(
+        second_session
+            .lines
+            .iter()
+            .any(|line| line == "user: queued secondary prompt")
+    );
+    let sends = backend.sends();
+    assert_eq!(sends.len(), 2);
+    assert_eq!(sends[0], (first.clone(), "route follow-up".to_string()));
+    assert_eq!(sends[1].0, second);
+    assert!(sends[1].1.contains("follow-up work"));
+    assert!(!sends[1].1.contains("queued secondary prompt"));
+
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    let sends = backend.sends();
+    assert_eq!(sends.len(), 3);
+    assert_eq!(sends[0], (first, "route follow-up".to_string()));
+    assert_eq!(sends[1].0, second);
+    assert!(sends[1].1.contains("follow-up work"));
+    assert_eq!(
+        sends[2],
+        (second.clone(), "queued secondary prompt".to_string())
+    );
+    let idle = controller.snapshot();
+    let second_session = idle.session(&second).expect("second session");
+    assert_eq!(second_session.loading, None);
+    assert!(
+        second_session
+            .lines
+            .iter()
+            .any(|line| line == "ordinary reply")
+    );
+}
+
 #[derive(Clone, Debug)]
 struct FakeBackend {
     state: Arc<Mutex<FakeBackendState>>,
@@ -1705,6 +1830,11 @@ struct FakeBackendState {
 struct ConcurrentBackend;
 
 #[derive(Clone, Debug, Default)]
+struct QueuedPromptBackend {
+    sends: Arc<Mutex<Vec<(AgentId, String)>>>,
+}
+
+#[derive(Clone, Debug, Default)]
 struct InterruptibleBackend {
     interrupted: Arc<Mutex<bool>>,
 }
@@ -1712,6 +1842,7 @@ struct InterruptibleBackend {
 #[derive(Clone, Debug, Default)]
 struct SecondaryFollowUpBackend {
     sessions: Arc<Mutex<BTreeMap<AgentId, AgentSession>>>,
+    sends: Arc<Mutex<Vec<(AgentId, String)>>>,
 }
 
 #[derive(Clone, Debug)]
@@ -1918,6 +2049,45 @@ impl AgentBackend for ConcurrentBackend {
     }
 }
 
+impl QueuedPromptBackend {
+    fn sends(&self) -> Vec<(AgentId, String)> {
+        self.sends.lock().unwrap().clone()
+    }
+
+    fn wait_for_send_count(&self, expected: usize, timeout: Duration) -> bool {
+        let start = Instant::now();
+        while start.elapsed() < timeout {
+            if self.sends.lock().unwrap().len() >= expected {
+                return true;
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        self.sends.lock().unwrap().len() >= expected
+    }
+}
+
+impl AgentBackend for QueuedPromptBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        let mut session = AgentSession::new(request);
+        session.push_message(MessageRole::Agent, "ready");
+        Ok(session)
+    }
+
+    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        self.sends
+            .lock()
+            .unwrap()
+            .push((agent_id.clone(), prompt.to_string()));
+        if prompt == "first slow prompt" {
+            thread::sleep(Duration::from_millis(250));
+        }
+        Ok(ChatMessage::new(
+            MessageRole::Agent,
+            format!("reply to {prompt}"),
+        ))
+    }
+}
+
 impl AgentBackend for SecondaryFollowUpBackend {
     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
         let mut session = AgentSession::new(request);
@@ -1930,6 +2100,7 @@ impl AgentBackend for SecondaryFollowUpBackend {
     }
 
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        self.record_send(agent_id, prompt);
         let reply = if agent_id.as_str() == "user-1" {
             "@work-leaf send user-2 follow-up work"
         } else if prompt.contains("follow-up work") {
@@ -1947,6 +2118,7 @@ impl AgentBackend for SecondaryFollowUpBackend {
         sink: &mut dyn FnMut(AgentStreamEvent),
     ) -> Result<ChatMessage, AgentError> {
         if agent_id.as_str() == "user-2" && prompt.contains("follow-up work") {
+            self.record_send(agent_id, prompt);
             sink(AgentStreamEvent::AgentMessage(
                 "secondary follow-up started".to_string(),
             ));
@@ -1961,6 +2133,19 @@ impl AgentBackend for SecondaryFollowUpBackend {
 
     fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
         self.sessions.lock().unwrap().get(agent_id).cloned()
+    }
+}
+
+impl SecondaryFollowUpBackend {
+    fn sends(&self) -> Vec<(AgentId, String)> {
+        self.sends.lock().unwrap().clone()
+    }
+
+    fn record_send(&self, agent_id: &AgentId, prompt: &str) {
+        self.sends
+            .lock()
+            .unwrap()
+            .push((agent_id.clone(), prompt.to_string()));
     }
 }
 

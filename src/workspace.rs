@@ -37,6 +37,7 @@ where
     pending_launches: VecDeque<AgentLaunch>,
     pending_dependent_launches: BTreeMap<AgentId, PendingDependentLaunch>,
     pending_dependent_sends: BTreeMap<AgentId, Vec<PendingDependentSend>>,
+    pending_agent_prompts: BTreeMap<AgentId, VecDeque<String>>,
     launch_starting: BTreeSet<AgentId>,
     implicit_loading_agents: BTreeMap<AgentId, usize>,
     command_transcript: Vec<String>,
@@ -64,6 +65,7 @@ where
             pending_launches: VecDeque::new(),
             pending_dependent_launches: BTreeMap::new(),
             pending_dependent_sends: BTreeMap::new(),
+            pending_agent_prompts: BTreeMap::new(),
             launch_starting: BTreeSet::new(),
             implicit_loading_agents: BTreeMap::new(),
             command_transcript: vec![render_command_chat_help()],
@@ -302,19 +304,6 @@ where
             self.handle_completion_answer(agent_id, message);
             return Ok(());
         }
-        if self
-            .sessions
-            .get(agent_id)
-            .and_then(|session| session.loading)
-            .is_some()
-        {
-            self.append_agent_line(
-                agent_id,
-                format!("work-leaf: {} is still working", self.agent_display_name()),
-            );
-            return Ok(());
-        }
-
         if self.session_completion(agent_id) == Some(WorkLeafCompletion::Closed) {
             self.set_session_completion(agent_id, None);
         }
@@ -322,42 +311,17 @@ where
         if let Some(title) = self.reserve_first_chat_title(agent_id, message) {
             self.apply_agent_title(agent_id, title);
         }
-        self.set_session_loading(agent_id, Some(WorkLeafLoading::WaitingForReply));
-        self.append_agent_line(agent_id, format!("user: {message}"));
-        let agent_id = agent_id.clone();
-        let message = message.to_string();
-        self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
-            let stream_sender = sender.clone();
-            let streamed_agent_ids = Arc::new(Mutex::new(BTreeSet::new()));
-            let stream_seen = Arc::clone(&streamed_agent_ids);
-            let display_name = chat.agent_profile().display_name.clone();
-            let mut stream = move |event_agent_id: &AgentId, event| {
-                let first_for_worker = stream_seen.lock().unwrap().insert(event_agent_id.clone());
-                send_worker_stream_event(
-                    &stream_sender,
-                    event_agent_id,
-                    event,
-                    &display_name,
-                    first_for_worker,
-                );
-            };
-            match chat.send_to_agent_streaming_with_ids(&agent_id, &message, &mut stream) {
-                Ok(result) => {
-                    let _ = sender.send(WorkerEvent::Complete {
-                        agent_id: Some(agent_id),
-                        result,
-                        streamed_agent_ids: tracked_streamed_agent_ids(&streamed_agent_ids),
-                    });
-                }
-                Err(error) => {
-                    let _ = sender.send(WorkerEvent::Error {
-                        agent_id: Some(agent_id),
-                        message: command_chat_error_text(&error),
-                        streamed_agent_ids: tracked_streamed_agent_ids(&streamed_agent_ids),
-                    });
-                }
-            }
-        });
+        if self
+            .sessions
+            .get(agent_id)
+            .and_then(|session| session.loading)
+            .is_some()
+        {
+            self.queue_agent_prompt(agent_id, message);
+            return Ok(());
+        }
+
+        self.start_send_worker(agent_id.clone(), message.to_string());
         Ok(())
     }
 
@@ -619,7 +583,9 @@ where
         let unclosed_agent_ids = self
             .reviewed_agent_commits
             .keys()
-            .filter(|agent_id| self.session_completion(agent_id) != Some(WorkLeafCompletion::Closed))
+            .filter(|agent_id| {
+                self.session_completion(agent_id) != Some(WorkLeafCompletion::Closed)
+            })
             .map(|agent_id| agent_id.as_str().to_string())
             .collect::<Vec<_>>();
         if unclosed_agent_ids.is_empty() {
@@ -905,6 +871,8 @@ where
         self.pending_launches
             .retain(|launch| is_linearize_agent_id(&launch.id));
         self.launch_starting.retain(is_linearize_agent_id);
+        self.pending_agent_prompts
+            .retain(|agent_id, _| is_linearize_agent_id(agent_id));
         self.review_commits_in_progress.clear();
         self.cancel_pending_dependents_for_linearize();
 
@@ -933,6 +901,53 @@ where
         }
         if let Some(launch) = self.pending_launches.pop_front() {
             self.start_launch_worker(launch);
+        }
+    }
+
+    fn queue_agent_prompt(&mut self, agent_id: &AgentId, message: &str) {
+        self.append_agent_line(agent_id, format!("user: {message}"));
+        self.pending_agent_prompts
+            .entry(agent_id.clone())
+            .or_default()
+            .push_back(message.to_string());
+    }
+
+    fn has_pending_agent_prompt(&self, agent_id: &AgentId) -> bool {
+        self.pending_agent_prompts
+            .get(agent_id)
+            .is_some_and(|prompts| !prompts.is_empty())
+    }
+
+    fn start_next_queued_agent_prompt(&mut self, agent_id: &AgentId) -> bool {
+        if self
+            .sessions
+            .get(agent_id)
+            .and_then(|session| session.loading)
+            .is_some()
+        {
+            return false;
+        }
+        let message = self
+            .pending_agent_prompts
+            .get_mut(agent_id)
+            .and_then(VecDeque::pop_front);
+        if self
+            .pending_agent_prompts
+            .get(agent_id)
+            .is_some_and(VecDeque::is_empty)
+        {
+            self.pending_agent_prompts.remove(agent_id);
+        }
+        let Some(message) = message else {
+            return false;
+        };
+        self.start_send_worker_without_user_line(agent_id.clone(), message);
+        true
+    }
+
+    fn start_next_queued_agent_prompts(&mut self, agent_ids: &BTreeSet<AgentId>) {
+        for agent_id in agent_ids {
+            self.start_next_queued_agent_prompt(agent_id);
         }
     }
 
@@ -975,8 +990,23 @@ where
     }
 
     fn start_send_worker(&mut self, agent_id: AgentId, message: String) {
+        self.start_send_worker_with_user_line(agent_id, message, true);
+    }
+
+    fn start_send_worker_without_user_line(&mut self, agent_id: AgentId, message: String) {
+        self.start_send_worker_with_user_line(agent_id, message, false);
+    }
+
+    fn start_send_worker_with_user_line(
+        &mut self,
+        agent_id: AgentId,
+        message: String,
+        append_user_line: bool,
+    ) {
         self.set_session_loading(&agent_id, Some(WorkLeafLoading::WaitingForReply));
-        self.append_agent_line(&agent_id, format!("user: {message}"));
+        if append_user_line {
+            self.append_agent_line(&agent_id, format!("user: {message}"));
+        }
         self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
             let stream_sender = sender.clone();
             let streamed_agent_ids = Arc::new(Mutex::new(BTreeSet::new()));
@@ -1136,20 +1166,26 @@ where
                 result,
                 streamed_agent_ids,
             } => {
-                self.clear_implicit_loading(&streamed_agent_ids);
+                let cleared_implicit_agent_ids = self.clear_implicit_loading(&streamed_agent_ids);
                 if let Some(agent_id) = agent_id {
                     if self.stopped_for_linearize.contains(&agent_id) {
                         self.launch_starting.remove(&agent_id);
+                        self.pending_agent_prompts.remove(&agent_id);
                         self.set_session_loading(&agent_id, None);
                         self.start_next_pending_launch();
                         return;
                     }
-                    let start_review = self.should_start_review(&agent_id, &result);
+                    let start_review = self.should_start_review(&agent_id, &result)
+                        && !self.has_pending_agent_prompt(&agent_id);
                     self.launch_starting.remove(&agent_id);
                     self.set_session_loading(&agent_id, None);
                     self.apply_agent_result(&agent_id, &result);
+                    let queued_prompt_started = self.start_next_queued_agent_prompt(&agent_id);
+                    self.start_next_queued_agent_prompts(&cleared_implicit_agent_ids);
                     self.start_next_pending_launch();
-                    if start_review && let Err(error) = self.start_review_for_patch_agent(&agent_id)
+                    if start_review
+                        && !queued_prompt_started
+                        && let Err(error) = self.start_review_for_patch_agent(&agent_id)
                     {
                         self.push_command_line(command_chat_error_text(&error));
                     }
@@ -1165,10 +1201,11 @@ where
                 message,
                 streamed_agent_ids,
             } => {
-                self.clear_implicit_loading(&streamed_agent_ids);
+                let cleared_implicit_agent_ids = self.clear_implicit_loading(&streamed_agent_ids);
                 if let Some(agent_id) = agent_id {
                     if self.stopped_for_linearize.contains(&agent_id) {
                         self.launch_starting.remove(&agent_id);
+                        self.pending_agent_prompts.remove(&agent_id);
                         self.set_session_loading(&agent_id, None);
                         self.start_next_pending_launch();
                         return;
@@ -1176,9 +1213,12 @@ where
                     self.launch_starting.remove(&agent_id);
                     self.set_session_loading(&agent_id, None);
                     self.append_agent_line(&agent_id, message);
+                    self.start_next_queued_agent_prompt(&agent_id);
+                    self.start_next_queued_agent_prompts(&cleared_implicit_agent_ids);
                     self.start_next_pending_launch();
                 } else {
                     self.push_command_line(message);
+                    self.start_next_queued_agent_prompts(&cleared_implicit_agent_ids);
                 }
             }
             WorkerEvent::ReviewError {
@@ -1187,17 +1227,20 @@ where
                 message,
                 streamed_agent_ids,
             } => {
-                self.clear_implicit_loading(&streamed_agent_ids);
+                let cleared_implicit_agent_ids = self.clear_implicit_loading(&streamed_agent_ids);
                 if self.stopped_for_linearize.contains(&reviewer_id)
                     || self.stopped_for_linearize.contains(&reviewed_agent_id)
                 {
                     self.review_commits_in_progress.remove(&reviewed_agent_id);
+                    self.pending_agent_prompts.remove(&reviewer_id);
                     self.set_session_loading(&reviewer_id, None);
                     return;
                 }
                 self.review_commits_in_progress.remove(&reviewed_agent_id);
                 self.set_session_loading(&reviewer_id, None);
                 self.append_agent_line(&reviewer_id, message);
+                self.start_next_queued_agent_prompt(&reviewer_id);
+                self.start_next_queued_agent_prompts(&cleared_implicit_agent_ids);
             }
             WorkerEvent::WorkerPanicked { agent_id } => {
                 let message = "work-leaf: worker panicked; see daemon stderr for details";
@@ -1205,6 +1248,7 @@ where
                     self.launch_starting.remove(&agent_id);
                     self.set_session_loading(&agent_id, None);
                     self.append_agent_line(&agent_id, message.to_string());
+                    self.start_next_queued_agent_prompt(&agent_id);
                     self.start_next_pending_launch();
                 } else {
                     self.push_command_line(message.to_string());
@@ -1213,7 +1257,11 @@ where
         }
     }
 
-    fn clear_implicit_loading(&mut self, streamed_agent_ids: &BTreeSet<AgentId>) {
+    fn clear_implicit_loading(
+        &mut self,
+        streamed_agent_ids: &BTreeSet<AgentId>,
+    ) -> BTreeSet<AgentId> {
+        let mut cleared = BTreeSet::new();
         for agent_id in streamed_agent_ids {
             let Some(count) = self.implicit_loading_agents.get_mut(agent_id) else {
                 continue;
@@ -1223,8 +1271,10 @@ where
             } else {
                 self.implicit_loading_agents.remove(agent_id);
                 self.set_session_loading(agent_id, None);
+                cleared.insert(agent_id.clone());
             }
         }
+        cleared
     }
 
     fn handle_completion_answer(&mut self, agent_id: &AgentId, message: &str) {
@@ -1980,8 +2030,7 @@ fn command_agent_response(message: &str, agent_display_name: &str) -> CommandAge
     }
 
     CommandAgentResponse::Reply(
-        "I can run help, new [prompt...], review, linearize, force-linearize, or quit."
-            .to_string(),
+        "I can run help, new [prompt...], review, linearize, force-linearize, or quit.".to_string(),
     )
 }
 
