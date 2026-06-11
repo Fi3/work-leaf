@@ -502,6 +502,91 @@ fn scripted_harness_insert_mode_records_chat_text_and_literal_colons() {
 }
 
 #[test]
+fn scripted_harness_folds_and_unfolds_all_chat_messages_from_command_mode() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(&[23, b'l']);
+    harness.handle_bytes(b"ifirst line\x1b[27;2;13~second line\n");
+
+    let expanded = strip_ansi(&harness.render_frame());
+    assert!(expanded.contains("user-1> first line"));
+    assert!(expanded.contains("second line"));
+    assert!(expanded.contains("fixture reply: message recorded"));
+
+    harness.handle_byte(27);
+    harness.handle_bytes(b"zM");
+
+    let folded = strip_ansi(&harness.render_frame());
+    assert!(folded.contains("user-1> first line"));
+    assert!(!folded.contains("second line"));
+    assert!(folded.contains("fixture reply: message recorded"));
+
+    harness.handle_bytes(b"zR");
+
+    let unfolded = strip_ansi(&harness.render_frame());
+    assert!(unfolded.contains("user-1> first line"));
+    assert!(unfolded.contains("second line"));
+}
+
+#[test]
+fn scripted_harness_visual_mode_folds_unfolds_and_toggles_cursor_message() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(&[23, b'l']);
+    harness.handle_bytes(b"ifirst line\x1b[27;2;13~second line\n");
+    harness.handle_byte(27);
+    harness.handle_byte(b'v');
+    harness.handle_byte(b'k');
+
+    harness.handle_bytes(b"zc");
+
+    let folded = strip_ansi(&harness.render_frame());
+    assert!(folded.contains("user-1> first line"));
+    assert!(!folded.contains("second line"));
+    assert!(folded.contains("fixture reply: message recorded"));
+
+    harness.handle_bytes(b"zo");
+
+    let unfolded = strip_ansi(&harness.render_frame());
+    assert!(unfolded.contains("second line"));
+
+    harness.handle_bytes(b"za");
+
+    let toggled_closed = strip_ansi(&harness.render_frame());
+    assert!(!toggled_closed.contains("second line"));
+
+    harness.handle_bytes(b"za");
+
+    let toggled_open = strip_ansi(&harness.render_frame());
+    assert!(toggled_open.contains("second line"));
+}
+
+#[test]
+fn scripted_harness_chat_folds_are_scoped_to_the_active_chat_window() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(&[23, b'l']);
+    harness.handle_bytes(b"ifirst line\x1b[27;2;13~second line\n");
+    harness.handle_byte(27);
+    harness.handle_bytes(b"zM");
+
+    let folded_user_one = strip_ansi(&harness.render_frame());
+    assert!(folded_user_one.contains("user-1> first line"));
+    assert!(!folded_user_one.contains("second line"));
+
+    harness.handle_bytes(&[23, b'h']);
+    harness.handle_byte(b'j');
+
+    let user_two = strip_ansi(&harness.render_frame());
+    assert_eq!(
+        harness.ui().selected_agent().map(|id| id.as_str()),
+        Some("user-2")
+    );
+    assert!(user_two.contains("user-1> first line"));
+    assert!(user_two.contains("second line"));
+}
+
+#[test]
 fn scripted_harness_shift_enter_keeps_insert_prompt_multiline_until_plain_enter() {
     let mut harness = UiHarness::new(80, 24);
 
@@ -632,7 +717,7 @@ fn scripted_harness_mouse_wheel_scrolls_chat_history() {
     assert!(!bottom_frame.contains("UI harness"));
     assert!(bottom_frame.contains("message-11"));
 
-    for _ in 0..8 {
+    for _ in 0..24 {
         harness.handle_bytes(b"\x1b[<64;20;3M");
     }
 
@@ -640,7 +725,7 @@ fn scripted_harness_mouse_wheel_scrolls_chat_history() {
     assert!(scrolled_frame.contains("UI harness"));
     assert!(scrolled_frame.contains("chat> "));
 
-    for _ in 0..8 {
+    for _ in 0..24 {
         harness.handle_bytes(b"\x1b[<65;20;3M");
     }
 
@@ -690,7 +775,7 @@ fn scripted_harness_visual_cursor_scrolls_and_jumps_chat_history_edges() {
     harness.handle_byte(27);
     harness.handle_byte(b'v');
 
-    for _ in 0..32 {
+    for _ in 0..96 {
         harness.handle_byte(b'k');
     }
 
@@ -736,7 +821,7 @@ fn scripted_harness_visual_selection_rebases_after_chat_history_jumps_and_scroll
     }
     scroll_harness.handle_byte(27);
     scroll_harness.handle_byte(b'V');
-    for _ in 0..32 {
+    for _ in 0..96 {
         scroll_harness.handle_byte(b'k');
     }
     scroll_harness.handle_byte(b'Y');

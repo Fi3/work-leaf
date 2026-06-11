@@ -27,7 +27,7 @@ use crate::orchestrator::{
 use crate::review::{AgentCommit, has_no_findings, render_review_source_context};
 use crate::review::{GitHistory, ReviewResult};
 use crate::terminal_app::{RemoteTerminalApp, TerminalApp};
-use crate::ui::UiAction;
+use crate::ui::{UiAction, chat_content_from_transcript};
 use crate::{HttpControllerClient, OrchestratorHttpError, WorkLeafSnapshot};
 
 const DEFAULT_NEW_AGENT_PROMPT: &str = "Start a new work-leaf user-agent session. Ask the user what to work on if the task is not already clear, then report the broad feature before proposing patches.";
@@ -1329,13 +1329,7 @@ where
 }
 
 pub(crate) fn terminal_right_content(chat_buffer: &str, transcript: &[String]) -> String {
-    let mut content = transcript.join("\n");
-    if !content.is_empty() {
-        content.push('\n');
-    }
-    content.push_str("chat> ");
-    content.push_str(chat_buffer);
-    content
+    chat_content_from_transcript(chat_buffer, transcript)
 }
 
 pub(crate) fn command_result_text(result: &CommandChatResult) -> String {

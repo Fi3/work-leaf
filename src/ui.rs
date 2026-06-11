@@ -1,5 +1,6 @@
 use std::{
     cell::{Cell, RefCell},
+    collections::{BTreeMap, BTreeSet},
     io::Write,
     path::PathBuf,
     process::{Command, Stdio},
@@ -126,6 +127,7 @@ impl AgentListEntry {
 enum PendingKey {
     CtrlW,
     G,
+    Z,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -147,6 +149,24 @@ struct VisualSelection {
     mode: VisualSelectionMode,
     anchor: VisualPoint,
     cursor: VisualPoint,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+struct ChatMessageFoldKey {
+    first_line: String,
+    occurrence: usize,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct ChatDisplayLine {
+    text: String,
+    message_key: Option<ChatMessageFoldKey>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct ChatHistoryMessage {
+    key: ChatMessageFoldKey,
+    lines: Vec<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -250,6 +270,7 @@ const COMMAND_MODE_TYPING_NOTICE_THRESHOLD: usize = 5;
 const COMMAND_MODE_TYPING_NOTICE: &str = "command mode: press i for insert mode before typing";
 const CTRL_C_EXIT_NOTICE: &str = "to exit, press Esc then :q then Enter";
 const CTRL_V: char = '\u{16}';
+const CHAT_TRANSCRIPT_MESSAGE_SEPARATOR: char = '\u{1e}';
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum LeftPaneClickTarget {
@@ -261,6 +282,7 @@ enum LeftPaneClickTarget {
 struct UiWindow {
     surface: UiSurface,
     agent_id: Option<AgentId>,
+    folds: ChatFoldState,
 }
 
 impl UiWindow {
@@ -268,6 +290,7 @@ impl UiWindow {
         Self {
             surface: UiSurface::WorkLeafCommand,
             agent_id: None,
+            folds: ChatFoldState::default(),
         }
     }
 
@@ -275,8 +298,16 @@ impl UiWindow {
         Self {
             surface: UiSurface::AgentChat,
             agent_id: Some(agent_id),
+            folds: ChatFoldState::default(),
         }
     }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+struct ChatFoldState {
+    fold_all_messages: bool,
+    folded_messages: BTreeSet<ChatMessageFoldKey>,
+    unfolded_messages: BTreeSet<ChatMessageFoldKey>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -584,6 +615,10 @@ impl TerminalUi {
                 self.yank_current_line(visible_right_content, right_cursor_column);
                 Vec::new()
             }
+            UiKey::Char('z') if self.mode == UiMode::Command && self.chat_folding_enabled() => {
+                self.pending = Some(PendingKey::Z);
+                Vec::new()
+            }
             UiKey::Char('i') if self.mode == UiMode::Command => {
                 self.clear_visual_selection();
                 self.mode = UiMode::Insert;
@@ -722,16 +757,32 @@ impl TerminalUi {
 
     fn scroll_right_pane_to_top(&mut self, right_content: &str) {
         let (inner_width, inner_height) = self.right_inner_size();
-        self.right_scroll_rows = max_scroll_rows(right_content, inner_width, inner_height);
+        let folds = self.active_chat_fold_state();
+        self.right_scroll_rows = max_scroll_rows(
+            right_content,
+            inner_width,
+            inner_height,
+            folds.fold_all_messages,
+            &folds.folded_messages,
+            &folds.unfolded_messages,
+        );
     }
 
     fn visible_right_content(&self, right_content: &str) -> String {
+        chat_display_lines_to_string(&self.visible_right_content_lines(right_content))
+    }
+
+    fn visible_right_content_lines(&self, right_content: &str) -> Vec<ChatDisplayLine> {
         let (inner_width, inner_height) = self.right_inner_size();
-        visible_content(
+        let folds = self.active_chat_fold_state();
+        visible_content_lines(
             right_content,
             inner_width,
             inner_height,
             self.right_scroll_rows,
+            folds.fold_all_messages,
+            &folds.folded_messages,
+            &folds.unfolded_messages,
         )
     }
 
@@ -893,6 +944,7 @@ impl TerminalUi {
             UiKey::Char('y') => self.yank_visual_selection(visible_right_content, false),
             UiKey::Char('Y') => self.yank_visual_selection(visible_right_content, true),
             UiKey::Char('g') => self.pending = Some(PendingKey::G),
+            UiKey::Char('z') if self.chat_folding_enabled() => self.pending = Some(PendingKey::Z),
             UiKey::Char('G') => self.jump_right_visual_cursor_to_bottom(right_content),
             UiKey::Char('h') | UiKey::Left => {
                 self.move_visual_cursor(0, -1, right_content, visible_right_content);
@@ -940,6 +992,7 @@ impl TerminalUi {
                 self.clear_visual_selection();
             }
             UiKey::Char('g') => self.pending = Some(PendingKey::G),
+            UiKey::Char('z') if self.chat_folding_enabled() => self.pending = Some(PendingKey::Z),
             UiKey::Char('G') => self.jump_right_visual_cursor_to_bottom(right_content),
             UiKey::Char('h') | UiKey::Left => {
                 self.move_visual_cursor(0, -1, right_content, visible_right_content);
@@ -1147,10 +1200,18 @@ impl TerminalUi {
         let previous_scroll_rows = self.right_scroll_rows;
         if up {
             let (inner_width, inner_height) = self.right_inner_size();
+            let folds = self.active_chat_fold_state();
             self.right_scroll_rows = self
                 .right_scroll_rows
                 .saturating_add(1)
-                .min(max_scroll_rows(right_content, inner_width, inner_height));
+                .min(max_scroll_rows(
+                    right_content,
+                    inner_width,
+                    inner_height,
+                    folds.fold_all_messages,
+                    &folds.folded_messages,
+                    &folds.unfolded_messages,
+                ));
         } else {
             self.right_scroll_rows = self.right_scroll_rows.saturating_sub(1);
         }
@@ -1429,6 +1490,32 @@ impl TerminalUi {
                 self.jump_right_visual_cursor_to_top(right_content);
                 Vec::new()
             }
+            (PendingKey::Z, UiKey::Char('M')) if self.chat_folding_enabled() => {
+                self.fold_all_chat_messages(right_content);
+                Vec::new()
+            }
+            (PendingKey::Z, UiKey::Char('R')) if self.chat_folding_enabled() => {
+                self.unfold_all_chat_messages(right_content);
+                Vec::new()
+            }
+            (PendingKey::Z, UiKey::Char('c'))
+                if self.chat_folding_enabled() && self.visual_mode_active() =>
+            {
+                self.set_visual_chat_message_folded(right_content, true);
+                Vec::new()
+            }
+            (PendingKey::Z, UiKey::Char('o'))
+                if self.chat_folding_enabled() && self.visual_mode_active() =>
+            {
+                self.set_visual_chat_message_folded(right_content, false);
+                Vec::new()
+            }
+            (PendingKey::Z, UiKey::Char('a'))
+                if self.chat_folding_enabled() && self.visual_mode_active() =>
+            {
+                self.toggle_visual_chat_message_fold(right_content);
+                Vec::new()
+            }
             _ => Vec::new(),
         }
     }
@@ -1446,8 +1533,134 @@ impl TerminalUi {
     fn is_command_control_char(&self, ch: char) -> bool {
         matches!(
             ch,
-            'i' | ':' | ',' | 's' | 't' | 'f' | 'g' | 'G' | 'v' | 'V' | 'Y' | CTRL_V
+            'i' | ':' | ',' | 's' | 't' | 'f' | 'g' | 'G' | 'v' | 'V' | 'Y' | 'z' | CTRL_V
         ) || (self.focus == PaneFocus::Left && matches!(ch, 'j' | 'k' | 'l' | 'x'))
+    }
+
+    fn chat_folding_enabled(&self) -> bool {
+        self.focus == PaneFocus::Right
+            && self.windows[self.active_window].surface == UiSurface::AgentChat
+    }
+
+    fn visual_mode_active(&self) -> bool {
+        self.visual_cursor.is_some() || self.visual_selection.is_some()
+    }
+
+    fn chat_message_is_folded(&self, key: &ChatMessageFoldKey) -> bool {
+        let folds = self.active_chat_fold_state();
+        chat_message_is_folded(
+            key,
+            folds.fold_all_messages,
+            &folds.folded_messages,
+            &folds.unfolded_messages,
+        )
+    }
+
+    fn fold_all_chat_messages(&mut self, right_content: &str) {
+        let folds = self.active_chat_fold_state_mut();
+        folds.fold_all_messages = true;
+        folds.folded_messages.clear();
+        folds.unfolded_messages.clear();
+        self.clamp_right_scroll(right_content);
+    }
+
+    fn unfold_all_chat_messages(&mut self, right_content: &str) {
+        let folds = self.active_chat_fold_state_mut();
+        folds.fold_all_messages = false;
+        folds.folded_messages.clear();
+        folds.unfolded_messages.clear();
+        self.clamp_right_scroll(right_content);
+    }
+
+    fn set_visual_chat_message_folded(&mut self, right_content: &str, folded: bool) {
+        let Some(key) = self.right_visual_message_key(right_content) else {
+            return;
+        };
+        self.set_chat_message_fold_state(key.clone(), folded);
+        self.clamp_right_scroll(right_content);
+        self.set_right_visual_cursor_to_message_key(right_content, &key);
+    }
+
+    fn toggle_visual_chat_message_fold(&mut self, right_content: &str) {
+        let Some(key) = self.right_visual_message_key(right_content) else {
+            return;
+        };
+        let folded = !self.chat_message_is_folded(&key);
+        self.set_chat_message_fold_state(key.clone(), folded);
+        self.clamp_right_scroll(right_content);
+        self.set_right_visual_cursor_to_message_key(right_content, &key);
+    }
+
+    fn set_chat_message_fold_state(&mut self, key: ChatMessageFoldKey, folded: bool) {
+        let folds = self.active_chat_fold_state_mut();
+        if folds.fold_all_messages {
+            if folded {
+                folds.unfolded_messages.remove(&key);
+            } else {
+                folds.unfolded_messages.insert(key);
+            }
+        } else if folded {
+            folds.folded_messages.insert(key);
+        } else {
+            folds.folded_messages.remove(&key);
+        }
+    }
+
+    fn right_visual_message_key(&self, right_content: &str) -> Option<ChatMessageFoldKey> {
+        let (pane, point) = self
+            .visual_selection
+            .as_ref()
+            .map(|selection| (selection.pane, selection.cursor))
+            .or_else(|| {
+                self.visual_cursor
+                    .as_ref()
+                    .map(|cursor| (cursor.pane, cursor.point))
+            })?;
+        if pane != PaneFocus::Right {
+            return None;
+        }
+        let visible_lines = self.visible_right_content_lines(right_content);
+        let row = point.row.min(visible_lines.len().saturating_sub(1));
+        visible_lines
+            .get(row)
+            .and_then(|line| line.message_key.clone())
+    }
+
+    fn set_right_visual_cursor_to_message_key(
+        &mut self,
+        right_content: &str,
+        key: &ChatMessageFoldKey,
+    ) {
+        let visible_lines = self.visible_right_content_lines(right_content);
+        let Some(row) = visible_lines
+            .iter()
+            .position(|line| line.message_key.as_ref() == Some(key))
+        else {
+            return;
+        };
+        let visible_right_content = chat_display_lines_to_string(&visible_lines);
+        self.set_right_visual_cursor_row(&visible_right_content, row);
+    }
+
+    fn clamp_right_scroll(&mut self, right_content: &str) {
+        let (inner_width, inner_height) = self.right_inner_size();
+        let folds = self.active_chat_fold_state();
+        self.right_scroll_rows = self.right_scroll_rows.min(max_scroll_rows(
+            right_content,
+            inner_width,
+            inner_height,
+            folds.fold_all_messages,
+            &folds.folded_messages,
+            &folds.unfolded_messages,
+        ));
+    }
+
+    fn active_chat_fold_state(&self) -> &ChatFoldState {
+        &self.windows[self.active_window].folds
+    }
+
+    fn active_chat_fold_state_mut(&mut self) -> &mut ChatFoldState {
+        &mut self.windows[self.active_window].folds
     }
 
     fn update_command_mode_typing_notice(&mut self, command_mode_text_key_control: Option<bool>) {
@@ -2181,23 +2394,59 @@ fn cursor_char_count(text: &str, cursor: usize) -> usize {
         .count()
 }
 
-fn visible_content(content: &str, width: u16, height: u16, scroll_rows: usize) -> String {
+pub(crate) fn chat_content_from_transcript(chat_buffer: &str, transcript: &[String]) -> String {
+    let mut content = String::new();
+    for message in transcript {
+        content.push_str(message);
+        content.push(CHAT_TRANSCRIPT_MESSAGE_SEPARATOR);
+        content.push('\n');
+    }
+    content.push_str("chat> ");
+    content.push_str(chat_buffer);
+    content
+}
+
+fn visible_content_lines(
+    content: &str,
+    width: u16,
+    height: u16,
+    scroll_rows: usize,
+    fold_all: bool,
+    folded_messages: &BTreeSet<ChatMessageFoldKey>,
+    unfolded_messages: &BTreeSet<ChatMessageFoldKey>,
+) -> Vec<ChatDisplayLine> {
     let height = usize::from(height);
     let Some((history, prompt)) = split_chat_prompt(content) else {
-        return tail_visible_content(content, width, height, scroll_rows);
+        return tail_visible_lines(&plain_display_lines(content), width, height, scroll_rows);
     };
 
+    let history = chat_history_display_lines(
+        history,
+        width,
+        fold_all,
+        folded_messages,
+        unfolded_messages,
+    );
     let prompt_rows = visual_block_row_count(prompt, width);
     let history_height = height.saturating_sub(prompt_rows).max(1);
-    let visible_history = tail_visible_content(history, width, history_height, scroll_rows);
+    let mut visible_history = tail_visible_lines(&history, width, history_height, scroll_rows);
+    let prompt_lines = plain_display_lines(prompt);
     if visible_history.is_empty() {
-        prompt.to_string()
+        prompt_lines
     } else {
-        format!("{visible_history}\n{prompt}")
+        visible_history.extend(prompt_lines);
+        visible_history
     }
 }
 
-fn max_scroll_rows(content: &str, width: u16, height: u16) -> usize {
+fn max_scroll_rows(
+    content: &str,
+    width: u16,
+    height: u16,
+    fold_all: bool,
+    folded_messages: &BTreeSet<ChatMessageFoldKey>,
+    unfolded_messages: &BTreeSet<ChatMessageFoldKey>,
+) -> usize {
     let height = usize::from(height);
     let Some((history, prompt)) = split_chat_prompt(content) else {
         return if content.is_empty() {
@@ -2211,9 +2460,16 @@ fn max_scroll_rows(content: &str, width: u16, height: u16) -> usize {
         return 0;
     }
 
+    let history = chat_history_display_lines(
+        history,
+        width,
+        fold_all,
+        folded_messages,
+        unfolded_messages,
+    );
     let prompt_rows = visual_block_row_count(prompt, width);
     let history_height = height.saturating_sub(prompt_rows).max(1);
-    visual_block_row_count(history, width).saturating_sub(history_height)
+    display_lines_row_count(&history, width).saturating_sub(history_height)
 }
 
 fn split_chat_prompt(content: &str) -> Option<(&str, &str)> {
@@ -2224,16 +2480,20 @@ fn split_chat_prompt(content: &str) -> Option<(&str, &str)> {
     Some((&content[..prompt_start], &content[prompt_start + 1..]))
 }
 
-fn tail_visible_content(content: &str, width: u16, height: usize, scroll_rows: usize) -> String {
-    if content.is_empty() || height == 0 {
-        return String::new();
+fn tail_visible_lines(
+    lines: &[ChatDisplayLine],
+    width: u16,
+    height: usize,
+    scroll_rows: usize,
+) -> Vec<ChatDisplayLine> {
+    if lines.is_empty() || height == 0 {
+        return Vec::new();
     }
 
-    let lines = content.lines().collect::<Vec<_>>();
     let rows_to_skip = scroll_rows.min(
         lines
             .iter()
-            .map(|line| visual_row_count(line, width))
+            .map(|line| visual_row_count(&line.text, width))
             .sum::<usize>()
             .saturating_sub(height),
     );
@@ -2241,22 +2501,198 @@ fn tail_visible_content(content: &str, width: u16, height: usize, scroll_rows: u
     let mut skipped_rows = 0_usize;
     let mut used_rows = 0_usize;
     for line in lines.iter().rev() {
-        let rows = visual_row_count(line, width);
+        let rows = visual_row_count(&line.text, width);
         if skipped_rows.saturating_add(rows) <= rows_to_skip {
             skipped_rows = skipped_rows.saturating_add(rows);
             continue;
         }
         if visible.is_empty() || used_rows.saturating_add(rows) <= height {
-            visible.push(*line);
+            visible.push(line.clone());
             used_rows = used_rows.saturating_add(rows);
         } else {
             break;
         }
     }
     visible.reverse();
-    visible.join("\n")
+    visible
 }
 
+fn plain_display_lines(content: &str) -> Vec<ChatDisplayLine> {
+    content_lines(content)
+        .into_iter()
+        .map(|text| ChatDisplayLine {
+            text,
+            message_key: None,
+        })
+        .collect()
+}
+
+fn chat_display_lines_to_string(lines: &[ChatDisplayLine]) -> String {
+    lines
+        .iter()
+        .map(|line| line.text.as_str())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn display_lines_row_count(lines: &[ChatDisplayLine], width: u16) -> usize {
+    lines
+        .iter()
+        .map(|line| visual_row_count(&line.text, width))
+        .sum()
+}
+
+fn chat_history_display_lines(
+    history: &str,
+    width: u16,
+    fold_all: bool,
+    folded_messages: &BTreeSet<ChatMessageFoldKey>,
+    unfolded_messages: &BTreeSet<ChatMessageFoldKey>,
+) -> Vec<ChatDisplayLine> {
+    if history.is_empty() {
+        return Vec::new();
+    }
+
+    let separator = chat_separator_line(width);
+    let mut lines = Vec::new();
+    for message in chat_history_messages(history) {
+        let Some(first_line) = message.lines.first() else {
+            continue;
+        };
+        if is_user_prompt_line(first_line) && !lines.is_empty() {
+            lines.push(ChatDisplayLine {
+                text: String::new(),
+                message_key: None,
+            });
+            lines.push(ChatDisplayLine {
+                text: separator.clone(),
+                message_key: None,
+            });
+            lines.push(ChatDisplayLine {
+                text: String::new(),
+                message_key: None,
+            });
+        }
+        let folded = chat_message_is_folded(
+            &message.key,
+            fold_all,
+            folded_messages,
+            unfolded_messages,
+        );
+        for (index, line) in message.lines.iter().enumerate() {
+            if folded && index > 0 {
+                continue;
+            }
+            lines.push(ChatDisplayLine {
+                text: line.to_string(),
+                message_key: Some(message.key.clone()),
+            });
+        }
+    }
+    lines
+}
+
+fn chat_message_is_folded(
+    key: &ChatMessageFoldKey,
+    fold_all: bool,
+    folded_messages: &BTreeSet<ChatMessageFoldKey>,
+    unfolded_messages: &BTreeSet<ChatMessageFoldKey>,
+) -> bool {
+    if fold_all {
+        !unfolded_messages.contains(key)
+    } else {
+        folded_messages.contains(key)
+    }
+}
+
+fn chat_history_messages(history: &str) -> Vec<ChatHistoryMessage> {
+    let texts = if history.contains(CHAT_TRANSCRIPT_MESSAGE_SEPARATOR) {
+        marked_chat_history_message_texts(history)
+    } else {
+        inferred_chat_history_message_texts(history)
+    };
+    keyed_chat_history_messages(texts)
+}
+
+fn marked_chat_history_message_texts(history: &str) -> Vec<String> {
+    history
+        .split(CHAT_TRANSCRIPT_MESSAGE_SEPARATOR)
+        .filter_map(|message| {
+            let message = message.strip_prefix('\n').unwrap_or(message);
+            (!message.is_empty()).then(|| message.to_string())
+        })
+        .collect()
+}
+
+fn inferred_chat_history_message_texts(history: &str) -> Vec<String> {
+    let mut messages = Vec::new();
+    let mut current = Vec::new();
+    let mut previous_line_was_user_prompt = false;
+    for line in history.lines() {
+        let starts_new_message = current.is_empty()
+            || is_user_prompt_line(line)
+            || (previous_line_was_user_prompt && !line.is_empty())
+            || is_labeled_chat_message_start(line);
+        if starts_new_message && !current.is_empty() {
+            messages.push(current.join("\n"));
+            current.clear();
+        }
+        current.push(line.to_string());
+        previous_line_was_user_prompt = is_user_prompt_line(line);
+    }
+    if !current.is_empty() {
+        messages.push(current.join("\n"));
+    }
+    messages
+}
+
+fn keyed_chat_history_messages(texts: Vec<String>) -> Vec<ChatHistoryMessage> {
+    let mut occurrences = BTreeMap::<String, usize>::new();
+    texts
+        .into_iter()
+        .filter_map(|text| {
+            let lines = content_lines(&text);
+            let first_line = lines.first()?.clone();
+            let occurrence = occurrences.entry(first_line.clone()).or_default();
+            let key = ChatMessageFoldKey {
+                first_line,
+                occurrence: *occurrence,
+            };
+            *occurrence = (*occurrence).saturating_add(1);
+            Some(ChatHistoryMessage { key, lines })
+        })
+        .collect()
+}
+
+fn is_labeled_chat_message_start(line: &str) -> bool {
+    line.starts_with("command-agent: ")
+        || line.starts_with("codex: ")
+        || line.starts_with("codex error: ")
+        || line.starts_with("fixture reply: ")
+        || line.starts_with("orchestrator:")
+        || line.starts_with("review: ")
+        || line.starts_with("work-leaf: ")
+}
+
+fn chat_separator_line(width: u16) -> String {
+    "-".repeat(usize::from(width.max(1)))
+}
+
+fn is_user_prompt_line(line: &str) -> bool {
+    line.starts_with("user: ")
+        || line.starts_with("chat> ")
+        || line.starts_with("work-leaf> ")
+        || prompt_prefix(line).is_some_and(|prefix| prefix.starts_with("user-"))
+}
+
+fn prompt_prefix(line: &str) -> Option<&str> {
+    let (prefix, _) = line.split_once("> ")?;
+    (!prefix.is_empty()
+        && prefix
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_'))
+    .then_some(prefix)
+}
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -579,13 +579,7 @@ impl UiHarness {
     }
 
     fn right_content(&self) -> String {
-        let mut content = self.transcript.join("\n");
-        if !content.is_empty() {
-            content.push('\n');
-        }
-        content.push_str(CHAT_PROMPT);
-        content.push_str(&self.chat_buffer);
-        content
+        crate::ui::chat_content_from_transcript(&self.chat_buffer, &self.transcript)
     }
 }
 
