@@ -754,7 +754,7 @@ fn terminal_app_left_pane_keyboard_selection_switches_the_visible_chat() {
 }
 
 #[test]
-fn terminal_app_comma_collapses_left_pane_and_keeps_selected_chat_visible() {
+fn terminal_app_comma_focuses_left_pane_before_collapsing_it() {
     let backend = FakeBackend::new(["launch reply"]);
     let chat = CommandChat::new(PathBuf::from("/repo"), backend);
     let mut app = TerminalApp::new(chat, 100, 24);
@@ -765,17 +765,17 @@ fn terminal_app_comma_collapses_left_pane_and_keeps_selected_chat_visible() {
     app.handle_bytes(b"\x1b,");
 
     let layout = app.ui().layout();
-    assert_eq!(layout.left_width, 0);
-    assert_eq!(layout.right_width, 100);
+    assert_eq!(app.ui().focus(), PaneFocus::Left);
+    assert_eq!(layout.left_width, 20);
+    assert_eq!(layout.right_width, 80);
     assert!(app.render_frame().contains("launch reply"));
     assert!(app.render_frame().contains("chat> "));
 
     app.handle_bytes(b",");
 
     let layout = app.ui().layout();
-    assert_eq!(layout.left_width, 20);
-    assert_eq!(layout.right_width, 80);
-    assert!(app.render_frame().contains("user-1"));
+    assert_eq!(layout.left_width, 0);
+    assert_eq!(layout.right_width, 100);
     assert!(app.render_frame().contains("launch reply"));
 }
 

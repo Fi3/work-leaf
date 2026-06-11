@@ -45,7 +45,7 @@ impl UiHarness {
             escape_sequence: None,
             transcript: vec![
                 "UI harness".to_string(),
-                "Esc command, i insert, : prompt, Ctrl-W h/j/k/l focus, , toggle right, q quit"
+                "Esc command, i insert, : prompt, Ctrl-W h/j/k/l focus, , focus/toggle left, q quit"
                     .to_string(),
             ],
             chat_title_agent,

@@ -72,15 +72,17 @@ fn comma_does_not_hide_the_right_chat_while_chat_focus_is_active() {
     ui.handle_key(UiKey::Esc);
     ui.handle_key(UiKey::Char(','));
 
+    assert_eq!(ui.focus(), PaneFocus::Left);
+    assert_eq!(ui.layout().left_width, 20);
+    assert_eq!(ui.layout().right_width, 80);
+    assert_eq!(ui.layout().right_surface, Some(UiSurface::AgentChat));
+
+    ui.handle_key(UiKey::Char(','));
+
     assert_eq!(ui.focus(), PaneFocus::Right);
     assert_eq!(ui.layout().left_width, 0);
     assert_eq!(ui.layout().right_width, 100);
     assert_eq!(ui.layout().right_surface, Some(UiSurface::AgentChat));
-
-    ui.handle_key(UiKey::CtrlW);
-    ui.handle_key(UiKey::Char('h'));
-
-    assert_eq!(ui.focus(), PaneFocus::Right);
 
     ui.handle_key(UiKey::Char(','));
 

@@ -631,12 +631,16 @@ impl TerminalUi {
             }
             UiKey::Char(',') if self.mode == UiMode::Command => {
                 self.clear_visual_selection();
-                self.left_visible = !self.left_visible;
-                self.focus = if self.left_visible {
-                    PaneFocus::Left
+                if self.focus == PaneFocus::Right && self.left_visible {
+                    self.focus = PaneFocus::Left;
                 } else {
-                    PaneFocus::Right
-                };
+                    self.left_visible = !self.left_visible;
+                    self.focus = if self.left_visible {
+                        PaneFocus::Left
+                    } else {
+                        PaneFocus::Right
+                    };
+                }
                 Vec::new()
             }
             UiKey::Char('j') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {

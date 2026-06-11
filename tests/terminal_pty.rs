@@ -32,6 +32,13 @@ fn real_terminal_pty_handles_file_read_left_toggle_and_chat_switching() {
 
     app.send(b"\x1b,");
     app.wait_for_frame(Duration::from_secs(2), |frame| {
+        frame.starts_with("┌work-leaf")
+            && frame.contains("focus=left")
+            && frame.contains("first follow-up answer after file text")
+    });
+
+    app.send(b",");
+    app.wait_for_frame(Duration::from_secs(2), |frame| {
         frame.starts_with("┌chat") && frame.contains("first follow-up answer after file text")
     });
 

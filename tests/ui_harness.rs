@@ -260,6 +260,13 @@ fn scripted_harness_drives_ctrl_w_navigation_and_left_toggle() {
     assert_eq!(harness.ui().focus(), PaneFocus::Right);
     assert!(harness.render_frame().ends_with("\u{1b}[5;24H"));
 
+    harness.handle_byte(b',');
+    assert_eq!(harness.ui().layout().left_width, 16);
+    assert_eq!(harness.ui().focus(), PaneFocus::Left);
+
+    harness.handle_bytes(&[23, b'l']);
+    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+
     harness.handle_bytes(&[23, b'h']);
     assert_eq!(harness.ui().focus(), PaneFocus::Left);
     assert!(harness.render_frame().ends_with("\u{1b}[5;2H"));
@@ -283,7 +290,8 @@ fn scripted_harness_drives_ctrl_w_navigation_and_left_toggle() {
 #[test]
 fn scripted_harness_visual_mode_yanks_right_pane_line_to_clipboard() {
     let mut harness = UiHarness::new(80, 24);
-    let expected = "Esc command, i insert, : prompt, Ctrl-W h/j/k/l focus, , toggle right, q quit";
+    let expected =
+        "Esc command, i insert, : prompt, Ctrl-W h/j/k/l focus, , focus/toggle left, q quit";
 
     harness.handle_bytes(&[23, b'l']);
     harness.handle_byte(b'V');
