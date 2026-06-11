@@ -1092,6 +1092,10 @@ fn is_complete_control_sequence(sequence: &[u8]) -> bool {
 }
 
 fn parse_control_sequence(sequence: &[u8]) -> Option<TerminalAppInput> {
+    if is_shift_modified_enter_sequence(sequence) {
+        return Some(TerminalAppInput::LineBreak);
+    }
+
     match sequence {
         [b'[', b'A'] => Some(TerminalAppInput::Key(UiKey::Up)),
         [b'[', b'B'] => Some(TerminalAppInput::Key(UiKey::Down)),
@@ -1099,13 +1103,44 @@ fn parse_control_sequence(sequence: &[u8]) -> Option<TerminalAppInput> {
         [b'[', b'D'] => Some(TerminalAppInput::Key(UiKey::Left)),
         [b'[', b'2', b'0', b'0', b'~'] => Some(TerminalAppInput::PasteStart),
         [b'[', b'2', b'0', b'1', b'~'] => Some(TerminalAppInput::PasteEnd),
-        [b'[', b'1', b'3', b';', b'2', b'u']
-        | [b'[', b'1', b'3', b';', b'2', b'~']
-        | [b'[', b'2', b'7', b';', b'2', b';', b'1', b'3', b'~'] => {
-            Some(TerminalAppInput::LineBreak)
-        }
         _ => parse_sgr_mouse_event(sequence).map(TerminalAppInput::Key),
     }
+}
+
+fn is_shift_modified_enter_sequence(sequence: &[u8]) -> bool {
+    let Some(final_byte) = sequence.last().copied() else {
+        return false;
+    };
+    if !sequence.starts_with(b"[") || !matches!(final_byte, b'u' | b'~') {
+        return false;
+    }
+
+    let Ok(body) = std::str::from_utf8(&sequence[1..sequence.len() - 1]) else {
+        return false;
+    };
+    let Ok(parameters) = body
+        .split(';')
+        .map(str::parse::<u16>)
+        .collect::<Result<Vec<_>, _>>()
+    else {
+        return false;
+    };
+
+    match (final_byte, parameters.as_slice()) {
+        (b'u', [key, modifiers]) => is_enter_code(*key) && modifier_has_shift(*modifiers),
+        (b'u' | b'~', [27, modifiers, key]) => {
+            is_enter_code(*key) && modifier_has_shift(*modifiers)
+        }
+        _ => false,
+    }
+}
+
+fn is_enter_code(key: u16) -> bool {
+    matches!(key, 10 | 13)
+}
+
+fn modifier_has_shift(modifiers: u16) -> bool {
+    modifiers > 1 && (modifiers - 1) & 1 == 1
 }
 
 fn parse_sgr_mouse_event(sequence: &[u8]) -> Option<UiKey> {
@@ -1271,6 +1306,8 @@ mod tests {
         snapshot: crate::WorkLeafSnapshot,
         snapshot_calls: Arc<AtomicUsize>,
         drain_calls: Arc<AtomicUsize>,
+        sent_messages: Vec<(AgentId, String)>,
+        sent_command_messages: Vec<String>,
     }
 
     impl CountingController {
@@ -1283,6 +1320,8 @@ mod tests {
                 snapshot,
                 snapshot_calls,
                 drain_calls,
+                sent_messages: Vec::new(),
+                sent_command_messages: Vec::new(),
             }
         }
     }
@@ -1300,9 +1339,14 @@ mod tests {
 
         fn execute_command_line(&mut self, _line: &str) {}
 
-        fn send_command_agent_message(&mut self, _message: &str) {}
+        fn send_command_agent_message(&mut self, message: &str) {
+            self.sent_command_messages.push(message.to_string());
+        }
 
-        fn send_message(&mut self, _agent_id: &AgentId, _message: &str) {}
+        fn send_message(&mut self, agent_id: &AgentId, message: &str) {
+            self.sent_messages
+                .push((agent_id.clone(), message.to_string()));
+        }
 
         fn interrupt_agent(&mut self, _agent_id: &AgentId) {}
 
@@ -1379,6 +1423,102 @@ mod tests {
             snapshot_calls.load(Ordering::Relaxed),
             0,
             "rendering and scrolling should use the local snapshot cache"
+        );
+    }
+
+    #[test]
+    fn shift_enter_keeps_insert_mode_chat_multiline_until_plain_enter() {
+        assert_shift_enter_sequence_inserts_line_break(b"\x1b[13;2u");
+    }
+
+    #[test]
+    fn xterm_shift_enter_keeps_insert_mode_chat_multiline_until_plain_enter() {
+        assert_shift_enter_sequence_inserts_line_break(b"\x1b[27;2;13~");
+    }
+
+    #[test]
+    fn xterm_csi_u_shift_enter_keeps_insert_mode_chat_multiline_until_plain_enter() {
+        assert_shift_enter_sequence_inserts_line_break(b"\x1b[27;2;13u");
+    }
+
+    #[test]
+    fn line_feed_shift_enter_keeps_insert_mode_chat_multiline_until_plain_enter() {
+        assert_shift_enter_sequence_inserts_line_break(b"\x1b[10;2u");
+    }
+
+    #[test]
+    fn modified_f3_tilde_sequence_does_not_insert_line_break() {
+        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+        let drain_calls = Arc::new(AtomicUsize::new(0));
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        let controller = CountingController::new(
+            crate::WorkLeafSnapshot {
+                command_transcript: Vec::new(),
+                sessions: vec![WorkLeafSession {
+                    id: agent_id,
+                    kind: AgentKind::Codex,
+                    title: "feature".to_string(),
+                    feature: "feature".to_string(),
+                    lines: Vec::new(),
+                    loading: None,
+                    completion: None,
+                    token_usage: None,
+                    depends_on: Vec::new(),
+                    depended_on_by: Vec::new(),
+                }],
+            },
+            snapshot_calls,
+            drain_calls,
+        );
+        let mut app = TerminalAppCore::new(controller, 80, 24);
+
+        assert!(app.handle_bytes(b"ifirst\x1b[13;2~second"));
+
+        assert_eq!(app.chat_buffer.as_str(), "firstsecond");
+    }
+
+    fn assert_shift_enter_sequence_inserts_line_break(sequence: &[u8]) {
+        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+        let drain_calls = Arc::new(AtomicUsize::new(0));
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        let controller = CountingController::new(
+            crate::WorkLeafSnapshot {
+                command_transcript: Vec::new(),
+                sessions: vec![WorkLeafSession {
+                    id: agent_id.clone(),
+                    kind: AgentKind::Codex,
+                    title: "feature".to_string(),
+                    feature: "feature".to_string(),
+                    lines: Vec::new(),
+                    loading: None,
+                    completion: None,
+                    token_usage: None,
+                    depends_on: Vec::new(),
+                    depended_on_by: Vec::new(),
+                }],
+            },
+            snapshot_calls,
+            drain_calls,
+        );
+        let mut app = TerminalAppCore::new(controller, 80, 24);
+        app.ui
+            .activate_agent_chat(&agent_id)
+            .expect("test agent is registered");
+
+        assert!(app.handle_bytes(b"first"));
+        assert!(app.handle_bytes(sequence));
+        assert!(app.handle_bytes(b"second"));
+
+        assert_eq!(app.chat_buffer.as_str(), "first\nsecond");
+        assert!(app.controller.sent_messages.is_empty());
+        assert!(app.render_frame().contains("chat> first"));
+        assert!(app.render_frame().contains("second"));
+
+        assert!(app.handle_bytes(b"\n"));
+
+        assert_eq!(
+            app.controller.sent_messages,
+            vec![(agent_id, "first\nsecond".to_string())]
         );
     }
 

@@ -75,8 +75,8 @@ impl UiHarness {
     pub fn handle_bytes(&mut self, bytes: &[u8]) -> bool {
         let mut index = 0;
         while index < bytes.len() {
-            if let Some((key, len)) = parse_key_sequence(&bytes[index..]) {
-                self.handle_input(HarnessInput::Key(key));
+            if let Some((input, len)) = parse_input_sequence(&bytes[index..]) {
+                self.handle_input(input);
                 index += len;
             } else if !self.handle_byte(bytes[index]) {
                 return false;
@@ -182,6 +182,9 @@ impl UiHarness {
                         .push("fixture reply: message recorded".to_string());
                 }
             }
+            HarnessInput::LineBreak if self.ui.mode() == UiMode::Insert => {
+                self.insert_chat_char('\n');
+            }
             HarnessInput::Char('/') if self.should_start_agent_slash_command() => {
                 self.start_agent_slash_command();
             }
@@ -228,7 +231,10 @@ impl UiHarness {
                 let actions = self.handle_ui_key(UiKey::Char(ch));
                 self.record_actions(actions);
             }
-            HarnessInput::Backspace | HarnessInput::Enter => {}
+            HarnessInput::Backspace
+            | HarnessInput::Enter
+            | HarnessInput::LineBreak
+            | HarnessInput::Ignored => {}
         }
     }
 
@@ -491,7 +497,7 @@ impl UiHarness {
         }
 
         sequence.bytes.push(byte);
-        if let Some((key, len)) = parse_key_sequence(&sequence.bytes) {
+        if let Some((input, len)) = parse_input_sequence(&sequence.bytes) {
             if len == sequence.bytes.len() {
                 let sequence = self
                     .escape_sequence
@@ -504,7 +510,7 @@ impl UiHarness {
                     let actions = self.handle_ui_key(UiKey::Char('i'));
                     self.record_actions(actions);
                 }
-                self.handle_input(HarnessInput::Key(key));
+                self.handle_input(input);
             }
         } else if sequence.bytes.len() > MAX_ESCAPE_SEQUENCE {
             let sequence = self
@@ -538,14 +544,77 @@ struct PendingEscapeSequence {
 const CHAT_PROMPT: &str = "chat> ";
 const MAX_ESCAPE_SEQUENCE: usize = 64;
 
-fn parse_key_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
-    match bytes {
-        [27, b'[', b'A', ..] => Some((UiKey::Up, 3)),
-        [27, b'[', b'B', ..] => Some((UiKey::Down, 3)),
-        [27, b'[', b'C', ..] => Some((UiKey::Right, 3)),
-        [27, b'[', b'D', ..] => Some((UiKey::Left, 3)),
-        _ => parse_sgr_mouse_sequence(bytes),
+fn parse_input_sequence(bytes: &[u8]) -> Option<(HarnessInput, usize)> {
+    if let Some(len) = parse_shift_modified_enter_sequence(bytes) {
+        return Some((HarnessInput::LineBreak, len));
     }
+
+    match bytes {
+        [27, b'[', b'A', ..] => Some((HarnessInput::Key(UiKey::Up), 3)),
+        [27, b'[', b'B', ..] => Some((HarnessInput::Key(UiKey::Down), 3)),
+        [27, b'[', b'C', ..] => Some((HarnessInput::Key(UiKey::Right), 3)),
+        [27, b'[', b'D', ..] => Some((HarnessInput::Key(UiKey::Left), 3)),
+        _ => parse_sgr_mouse_sequence(bytes)
+            .map(|(key, len)| (HarnessInput::Key(key), len))
+            .or_else(|| {
+                parse_complete_control_sequence(bytes).map(|len| (HarnessInput::Ignored, len))
+            }),
+    }
+}
+
+fn parse_complete_control_sequence(bytes: &[u8]) -> Option<usize> {
+    if !bytes.starts_with(b"\x1b[") {
+        return None;
+    }
+    bytes[2..]
+        .iter()
+        .position(|byte| (0x40..=0x7e).contains(byte))
+        .map(|index| index + 3)
+}
+
+fn parse_shift_modified_enter_sequence(bytes: &[u8]) -> Option<usize> {
+    if !bytes.starts_with(b"\x1b[") {
+        return None;
+    }
+    let final_index = bytes.iter().position(|byte| matches!(byte, b'u' | b'~'))?;
+    let sequence = &bytes[1..=final_index];
+    is_shift_modified_enter_sequence(sequence).then_some(final_index + 1)
+}
+
+fn is_shift_modified_enter_sequence(sequence: &[u8]) -> bool {
+    let Some(final_byte) = sequence.last().copied() else {
+        return false;
+    };
+    if !sequence.starts_with(b"[") || !matches!(final_byte, b'u' | b'~') {
+        return false;
+    }
+
+    let Ok(body) = std::str::from_utf8(&sequence[1..sequence.len() - 1]) else {
+        return false;
+    };
+    let Ok(parameters) = body
+        .split(';')
+        .map(str::parse::<u16>)
+        .collect::<Result<Vec<_>, _>>()
+    else {
+        return false;
+    };
+
+    match (final_byte, parameters.as_slice()) {
+        (b'u', [key, modifiers]) => is_enter_code(*key) && modifier_has_shift(*modifiers),
+        (b'u' | b'~', [27, modifiers, key]) => {
+            is_enter_code(*key) && modifier_has_shift(*modifiers)
+        }
+        _ => false,
+    }
+}
+
+fn is_enter_code(key: u16) -> bool {
+    matches!(key, 10 | 13)
+}
+
+fn modifier_has_shift(modifiers: u16) -> bool {
+    modifiers > 1 && (modifiers - 1) & 1 == 1
 }
 
 fn parse_sgr_mouse_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
@@ -582,6 +651,8 @@ enum HarnessInput {
     Char(char),
     Enter,
     Backspace,
+    LineBreak,
+    Ignored,
     Interrupt,
     Quit,
 }

@@ -1507,29 +1507,25 @@ impl TerminalUi {
     ) -> (u16, u16) {
         let layout = self.layout();
         let inner_width = layout.right_width.saturating_sub(2).max(1);
-        let lines = right_content.lines().collect::<Vec<_>>();
-        let Some(line) = lines.last().copied() else {
+        let Some((history, prompt)) = split_chat_prompt(right_content) else {
             return (2, layout.left_width.saturating_add(2));
         };
-        if !line.starts_with("chat> ") {
-            return (2, layout.left_width.saturating_add(2));
-        }
-        let previous_rows = lines[..lines.len() - 1]
-            .iter()
-            .map(|line| visual_rows(line, inner_width))
-            .sum::<u16>();
-        let line_chars = line.chars().count();
-        let line_len = cursor_column
-            .unwrap_or(line_chars)
-            .min(line_chars)
-            .min(usize::from(u16::MAX)) as u16;
+        let previous_rows = if history.is_empty() {
+            0
+        } else {
+            visual_block_row_count(history, inner_width).min(usize::from(u16::MAX)) as u16
+        };
+        let prompt_chars = prompt.chars().count();
+        let cursor_chars = cursor_column.unwrap_or(prompt_chars).min(prompt_chars);
+        let (prompt_row, prompt_column) =
+            visual_text_cursor_position(prompt, cursor_chars, inner_width);
         let row = 2_u16
             .saturating_add(previous_rows)
-            .saturating_add(line_len / inner_width);
+            .saturating_add(prompt_row);
         let column = layout
             .left_width
             .saturating_add(2)
-            .saturating_add(line_len % inner_width);
+            .saturating_add(prompt_column);
         (row, column)
     }
     fn right_inner_size(&self) -> (u16, u16) {
@@ -1907,14 +1903,38 @@ fn buffer_to_string(buffer: &Buffer) -> String {
     output
 }
 
-fn visual_rows(line: &str, width: u16) -> u16 {
-    visual_row_count(line, width).min(usize::from(u16::MAX)) as u16
-}
-
 fn visual_row_count(line: &str, width: u16) -> usize {
     let width = usize::from(width.max(1));
     let len = line.chars().count().min(usize::from(u16::MAX));
     (len / width).saturating_add(1)
+}
+
+fn visual_block_row_count(text: &str, width: u16) -> usize {
+    text.split('\n')
+        .map(|line| visual_row_count(line, width))
+        .sum()
+}
+
+fn visual_text_cursor_position(text: &str, cursor_chars: usize, width: u16) -> (u16, u16) {
+    let width = usize::from(width.max(1));
+    let mut row = 0_usize;
+    let mut column = 0_usize;
+    for ch in text.chars().take(cursor_chars) {
+        if ch == '\n' {
+            row = row.saturating_add(1);
+            column = 0;
+            continue;
+        }
+        column = column.saturating_add(1);
+        if column >= width {
+            row = row.saturating_add(1);
+            column = 0;
+        }
+    }
+    (
+        row.min(usize::from(u16::MAX)) as u16,
+        column.min(usize::from(u16::MAX)) as u16,
+    )
 }
 
 fn cursor_char_count(text: &str, cursor: usize) -> usize {
@@ -1929,7 +1949,7 @@ fn visible_content(content: &str, width: u16, height: u16, scroll_rows: usize) -
         return tail_visible_content(content, width, height, scroll_rows);
     };
 
-    let prompt_rows = visual_row_count(prompt, width);
+    let prompt_rows = visual_block_row_count(prompt, width);
     let history_height = height.saturating_sub(prompt_rows).max(1);
     let visible_history = tail_visible_content(history, width, history_height, scroll_rows);
     if visible_history.is_empty() {
@@ -1940,8 +1960,11 @@ fn visible_content(content: &str, width: u16, height: u16, scroll_rows: usize) -
 }
 
 fn split_chat_prompt(content: &str) -> Option<(&str, &str)> {
-    let (history, prompt) = content.rsplit_once('\n')?;
-    prompt.starts_with("chat> ").then_some((history, prompt))
+    if content.starts_with("chat> ") {
+        return Some(("", content));
+    }
+    let prompt_start = content.rfind("\nchat> ")?;
+    Some((&content[..prompt_start], &content[prompt_start + 1..]))
 }
 
 fn tail_visible_content(content: &str, width: u16, height: usize, scroll_rows: usize) -> String {

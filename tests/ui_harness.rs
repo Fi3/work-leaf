@@ -395,6 +395,47 @@ fn scripted_harness_insert_mode_records_chat_text_and_literal_colons() {
 }
 
 #[test]
+fn scripted_harness_shift_enter_keeps_insert_prompt_multiline_until_plain_enter() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(b"ifirst\x1b[27;2;13~second");
+
+    assert_eq!(harness.ui().mode(), UiMode::Insert);
+    assert!(
+        !harness
+            .transcript()
+            .iter()
+            .any(|line| line.starts_with("user-1>"))
+    );
+    let frame = harness.render_frame();
+    assert!(frame.contains("chat> first"));
+    assert!(frame.contains("second"));
+
+    harness.handle_byte(b'\n');
+
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| line == "user-1> first\nsecond")
+    );
+}
+
+#[test]
+fn scripted_harness_modified_f3_tilde_does_not_insert_line_break() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(b"ifirst\x1b[13;2~second\n");
+
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| line == "user-1> firstsecond")
+    );
+}
+
+#[test]
 fn scripted_harness_slash_command_starts_agent_chat_command_from_chat_view() {
     let mut harness = UiHarness::new(80, 24);
 

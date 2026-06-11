@@ -1354,7 +1354,7 @@ impl AlternateScreenMode {
     fn enter(output: &mut impl Write) -> Result<Self, CliError> {
         write!(
             output,
-            "\u{1b}[?1049h\u{1b}[?1000h\u{1b}[?1006h\u{1b}[?2004h\u{1b}[2J\u{1b}[H"
+            "\u{1b}[?1049h\u{1b}[?1000h\u{1b}[?1006h\u{1b}[?2004h\u{1b}[>1u\u{1b}[>4;2m\u{1b}[2J\u{1b}[H"
         )?;
         output.flush()?;
         Ok(Self)
@@ -1366,9 +1366,26 @@ impl Drop for AlternateScreenMode {
         let mut stdout = io::stdout();
         let _ = write!(
             stdout,
-            "\u{1b}[?2004l\u{1b}[?1006l\u{1b}[?1000l\u{1b}[?1049l\u{1b}[?25h"
+            "\u{1b}[>4;0m\u{1b}[<u\u{1b}[?2004l\u{1b}[?1006l\u{1b}[?1000l\u{1b}[?1049l\u{1b}[?25h"
         );
         let _ = stdout.flush();
+    }
+}
+
+#[cfg(test)]
+mod terminal_mode_tests {
+    use super::*;
+
+    #[test]
+    fn alternate_screen_enables_modified_enter_reporting() {
+        let mut output = Vec::new();
+        let mode = AlternateScreenMode::enter(&mut output).expect("alternate screen escape writes");
+        let output = String::from_utf8(output).expect("terminal escapes are utf-8");
+
+        assert!(output.contains("\u{1b}[>1u"));
+        assert!(output.contains("\u{1b}[>4;2m"));
+
+        std::mem::forget(mode);
     }
 }
 
