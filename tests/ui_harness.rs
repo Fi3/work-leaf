@@ -420,6 +420,22 @@ fn scripted_harness_summarizes_noisy_chat_title_from_first_inserted_prompt() {
 }
 
 #[test]
+fn scripted_harness_caps_chat_title_for_left_pane_space() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(b":new\n");
+    harness.handle_bytes(
+        b"fix authentication authorization migration workflow regressions before release\n",
+    );
+
+    let named_left_pane = harness.ui().render_left_pane();
+    assert!(named_left_pane.contains(
+        ">fix-authentication-authorization user-3  working: fix-authentication-authorization"
+    ));
+    assert!(!named_left_pane.contains("migration-workflow-regressions"));
+}
+
+#[test]
 fn scripted_harness_insert_mode_records_chat_text_and_literal_colons() {
     let mut harness = UiHarness::new(80, 24);
 

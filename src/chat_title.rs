@@ -23,14 +23,32 @@ impl ChatTitleAgent {
         self.named_agents.insert(agent_id.clone());
         true
     }
+
+    pub(crate) fn assign_title_from_prompt(
+        &mut self,
+        agent_id: &AgentId,
+        first_prompt: &str,
+    ) -> String {
+        self.named_agents.insert(agent_id.clone());
+        compact_chat_title(first_prompt)
+    }
+
+    pub(crate) fn assign_first_prompt_title(
+        &mut self,
+        agent_id: &AgentId,
+        first_prompt: &str,
+    ) -> Option<String> {
+        self.reserve_first_prompt_title(agent_id)
+            .then(|| compact_chat_title(first_prompt))
+    }
 }
 
-pub(crate) fn fallback_chat_title_from_prompt(first_prompt: &str) -> String {
-    summarized_chat_title(first_prompt).unwrap_or_else(|| "chat".to_string())
+fn compact_chat_title(first_prompt: &str) -> String {
+    compact_title_words(first_prompt).unwrap_or_else(|| "chat".to_string())
 }
 
-fn summarized_chat_title(raw: &str) -> Option<String> {
-    const MAX_TITLE_CHARS: usize = 80;
+fn compact_title_words(raw: &str) -> Option<String> {
+    const MAX_TITLE_CHARS: usize = 40;
     const MAX_TITLE_WORDS: usize = 6;
 
     let words = title_words(raw);
@@ -171,25 +189,63 @@ fn is_low_signal_title_word(word: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::fallback_chat_title_from_prompt;
+    use super::ChatTitleAgent;
+    use crate::agent::AgentId;
+
+    fn title_agent() -> (ChatTitleAgent, AgentId) {
+        (
+            ChatTitleAgent::new(),
+            AgentId::new("user-1").expect("test agent id is valid"),
+        )
+    }
 
     #[test]
-    fn fallback_title_uses_first_prompt_and_caps_long_names() {
-        let title = fallback_chat_title_from_prompt(
+    fn title_agent_uses_first_prompt_and_caps_long_names() {
+        let (mut title_agent, agent_id) = title_agent();
+        let title = title_agent.assign_title_from_prompt(
+            &agent_id,
             "implement a very long migration workflow with retries telemetry audit trail and rollback support",
         );
 
-        assert!(title.len() <= 80);
+        assert!(title.len() <= 40);
         assert!(!title.contains(' '));
         assert!(title.starts_with("implement-a-very-long"));
     }
 
     #[test]
-    fn fallback_title_summarizes_noisy_prompt_around_salient_words() {
-        let title = fallback_chat_title_from_prompt(
+    fn title_agent_keeps_titles_under_compact_budget() {
+        let (mut title_agent, agent_id) = title_agent();
+        let title = title_agent.assign_title_from_prompt(
+            &agent_id,
+            "fix authentication authorization migration workflow regressions before release",
+        );
+
+        assert_eq!(title, "fix-authentication-authorization");
+        assert!(title.len() <= 40);
+    }
+
+    #[test]
+    fn title_agent_filters_noisy_prompt_around_salient_words() {
+        let (mut title_agent, agent_id) = title_agent();
+        let title = title_agent.assign_title_from_prompt(
+            &agent_id,
             "it looks like that we there have been a BAD regression chat name for patch agents is not created by the system agent but it has to SUMMARIZE it",
         );
 
         assert_eq!(title, "bad-regression-chat-name-patch-agents");
+    }
+
+    #[test]
+    fn title_agent_assigns_first_prompt_once() {
+        let (mut title_agent, agent_id) = title_agent();
+
+        assert_eq!(
+            title_agent.assign_first_prompt_title(&agent_id, "fix login callback"),
+            Some("fix-login-callback".to_string())
+        );
+        assert_eq!(
+            title_agent.assign_first_prompt_title(&agent_id, "add cookie coverage"),
+            None
+        );
     }
 }

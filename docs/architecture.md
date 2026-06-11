@@ -538,7 +538,7 @@ commits.
 for agent launch prompts.
 
 `src/chat_title.rs` is crate-private. It derives lowercase hyphenated chat titles from first prompts,
-filters low-signal prompt wording around the salient task words, caps titles at 80 characters, and
+filters low-signal prompt wording around the salient task words, caps titles at 40 characters, and
 tracks which sessions have already been named.
 
 ## Extension Rules

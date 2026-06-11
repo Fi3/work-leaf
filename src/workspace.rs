@@ -13,7 +13,7 @@ use crate::agent::{
     AgentBackend, AgentId, AgentKind, AgentLaunch, AgentSession, AgentShutdownHandle,
     AgentStreamEvent, AgentTokenUsage, ChatMessage, MessageRole,
 };
-use crate::chat_title::{ChatTitleAgent, fallback_chat_title_from_prompt};
+use crate::chat_title::ChatTitleAgent;
 use crate::cli::{
     CliError, CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
     patch_promotion_prompt, render_command_chat_help,
@@ -399,11 +399,12 @@ where
         self.validate_dependency_target(&agent_id, depends_on.as_ref())?;
         self.remember_agent_review_baseline(&agent_id);
         let title = if fork_prompt.is_empty() {
+            self.title_agent.mark_named(&agent_id);
             format!("{} fork", source.title)
         } else {
-            fallback_chat_title_from_prompt(&fork_prompt)
+            self.title_agent
+                .assign_title_from_prompt(&agent_id, &fork_prompt)
         };
-        self.title_agent.mark_named(&agent_id);
         self.register_agent_feature(agent_id.clone(), title.clone());
         let mut lines = source.lines.clone();
         lines.push(format!("work-leaf: forked from {source_agent_id}"));
@@ -658,8 +659,10 @@ where
         if title_pending {
             None
         } else {
-            self.title_agent.mark_named(&launch.id);
-            Some(fallback_chat_title_from_prompt(&launch.prompt))
+            Some(
+                self.title_agent
+                    .assign_title_from_prompt(&launch.id, &launch.prompt),
+            )
         }
     }
 
@@ -693,10 +696,7 @@ where
         if !agent_id.as_str().starts_with("user-") {
             return None;
         }
-        if !self.title_agent.reserve_first_prompt_title(agent_id) {
-            return None;
-        }
-        Some(fallback_chat_title_from_prompt(prompt))
+        self.title_agent.assign_first_prompt_title(agent_id, prompt)
     }
 
     fn remember_agent_review_baseline(&mut self, agent_id: &AgentId) {
@@ -2380,7 +2380,7 @@ mod tests {
     }
 
     #[test]
-    fn inline_patch_agent_title_summarizes_verbose_prompt() {
+    fn inline_patch_agent_title_comes_from_title_agent() {
         let chat = CommandChat::new(PathBuf::from("/repo"), EmptyBackend);
         let mut controller = WorkLeafController::new(chat);
 
@@ -2397,7 +2397,7 @@ mod tests {
     }
 
     #[test]
-    fn empty_new_session_uses_first_task_summary_for_chat_title() {
+    fn empty_new_session_uses_title_agent_for_first_task() {
         let chat = CommandChat::new(PathBuf::from("/repo"), EmptyBackend);
         let mut controller = WorkLeafController::new(chat);
         let agent_id = controller
