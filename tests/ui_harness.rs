@@ -484,6 +484,60 @@ fn scripted_harness_shift_enter_keeps_insert_prompt_multiline_until_plain_enter(
 }
 
 #[test]
+fn scripted_harness_kitty_shift_enter_key_press_keeps_insert_prompt_multiline_until_plain_enter() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(b"ifirst\x1b[13;2:1usecond");
+
+    assert_eq!(harness.ui().mode(), UiMode::Insert);
+    assert!(
+        !harness
+            .transcript()
+            .iter()
+            .any(|line| line.starts_with("user-1>"))
+    );
+    let frame = harness.render_frame();
+    assert!(frame.contains("chat> first"));
+    assert!(frame.contains("second"));
+
+    harness.handle_byte(b'\n');
+
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| line == "user-1> first\nsecond")
+    );
+}
+
+#[test]
+fn scripted_harness_terminal_line_feed_keeps_insert_prompt_multiline_until_carriage_return() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_terminal_bytes(b"ifirst\nsecond");
+
+    assert_eq!(harness.ui().mode(), UiMode::Insert);
+    assert!(
+        !harness
+            .transcript()
+            .iter()
+            .any(|line| line.starts_with("user-1>"))
+    );
+    let frame = harness.render_frame();
+    assert!(frame.contains("chat> first"));
+    assert!(frame.contains("second"));
+
+    harness.handle_byte(b'\r');
+
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| line == "user-1> first\nsecond")
+    );
+}
+
+#[test]
 fn scripted_harness_modified_f3_tilde_does_not_insert_line_break() {
     let mut harness = UiHarness::new(80, 24);
 

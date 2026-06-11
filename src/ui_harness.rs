@@ -1,6 +1,5 @@
 use crate::{
-    AgentId, AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode,
-    chat_title::ChatTitleAgent,
+    AgentId, AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode, chat_title::ChatTitleAgent,
 };
 
 #[derive(Debug)]
@@ -73,12 +72,20 @@ impl UiHarness {
     }
 
     pub fn handle_bytes(&mut self, bytes: &[u8]) -> bool {
+        self.handle_bytes_inner(bytes, false)
+    }
+
+    pub fn handle_terminal_bytes(&mut self, bytes: &[u8]) -> bool {
+        self.handle_bytes_inner(bytes, true)
+    }
+
+    fn handle_bytes_inner(&mut self, bytes: &[u8], raw_lf_is_insert_line_break: bool) -> bool {
         let mut index = 0;
         while index < bytes.len() {
             if let Some((input, len)) = parse_input_sequence(&bytes[index..]) {
                 self.handle_input(input);
                 index += len;
-            } else if !self.handle_byte(bytes[index]) {
+            } else if !self.handle_byte_inner(bytes[index], raw_lf_is_insert_line_break) {
                 return false;
             } else {
                 index += 1;
@@ -89,6 +96,10 @@ impl UiHarness {
     }
 
     pub fn handle_byte(&mut self, byte: u8) -> bool {
+        self.handle_byte_inner(byte, false)
+    }
+
+    fn handle_byte_inner(&mut self, byte: u8, raw_lf_is_insert_line_break: bool) -> bool {
         if self.quit {
             return false;
         }
@@ -110,7 +121,13 @@ impl UiHarness {
             return !self.quit;
         }
 
-        let Some(input) = HarnessInput::from_byte(byte) else {
+        let input = if raw_lf_is_insert_line_break && byte == 10 && self.ui.mode() == UiMode::Insert
+        {
+            Some(HarnessInput::LineBreak)
+        } else {
+            HarnessInput::from_byte(byte)
+        };
+        let Some(input) = input else {
             return true;
         };
         self.handle_input(input);
@@ -601,21 +618,49 @@ fn is_shift_modified_enter_sequence(sequence: &[u8]) -> bool {
     let Ok(body) = std::str::from_utf8(&sequence[1..sequence.len() - 1]) else {
         return false;
     };
-    let Ok(parameters) = body
-        .split(';')
-        .map(str::parse::<u16>)
-        .collect::<Result<Vec<_>, _>>()
-    else {
-        return false;
-    };
+    let parameters = body.split(';').collect::<Vec<_>>();
 
     match (final_byte, parameters.as_slice()) {
-        (b'u', [key, modifiers]) => is_enter_code(*key) && modifier_has_shift(*modifiers),
-        (b'u' | b'~', [27, modifiers, key]) => {
-            is_enter_code(*key) && modifier_has_shift(*modifiers)
+        (b'u', [key, modifiers]) => {
+            parameter_number(key).is_some_and(is_enter_code)
+                && parameter_has_shift_modifier(modifiers)
+                && parameter_is_key_press_or_repeat(modifiers)
+        }
+        (b'u' | b'~', [escape, modifiers, key]) if parameter_number(escape) == Some(27) => {
+            parameter_number(key).is_some_and(is_enter_code)
+                && parameter_has_shift_modifier(modifiers)
+                && parameter_is_key_press_or_repeat(modifiers)
+        }
+        (b'u', [key, modifiers, event]) => {
+            parameter_number(key).is_some_and(is_enter_code)
+                && parameter_has_shift_modifier(modifiers)
+                && parameter_event_is_key_press_or_repeat(event)
         }
         _ => false,
     }
+}
+
+fn parameter_number(parameter: &str) -> Option<u16> {
+    parameter.split(':').next()?.parse().ok()
+}
+
+fn parameter_has_shift_modifier(parameter: &str) -> bool {
+    parameter_number(parameter).is_some_and(modifier_has_shift)
+}
+
+fn parameter_is_key_press_or_repeat(parameter: &str) -> bool {
+    match parameter
+        .split(':')
+        .nth(1)
+        .and_then(|event| event.parse().ok())
+    {
+        None | Some(1 | 2) => true,
+        Some(_) => false,
+    }
+}
+
+fn parameter_event_is_key_press_or_repeat(parameter: &str) -> bool {
+    matches!(parameter.parse::<u16>(), Ok(1 | 2))
 }
 
 fn is_enter_code(key: u16) -> bool {

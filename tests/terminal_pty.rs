@@ -81,9 +81,61 @@ fn real_terminal_pty_keeps_chat_prompt_visible_after_large_agent_output() {
         frame.contains("chat> hello after overflow")
     });
 
-    app.send(b"\n");
+    app.send(b"\r");
     app.wait_for_frame(Duration::from_secs(5), |frame| {
         frame.contains("resume reply after large output") && frame.contains("chat> ")
+    });
+}
+
+#[test]
+fn real_terminal_pty_line_feed_keeps_chat_prompt_multiline_until_carriage_return() {
+    let _guard = pty_test_lock();
+    let root = temp_dir("multiline-shift-enter");
+    let fake_bin = write_fake_sdk_sidecar(
+        root.path(),
+        r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$line" in
+    *'"op":"send"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-multiline","reply":"multiline prompt received"}\n' "$id"
+      ;;
+    *'"op":"launch"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-multiline","reply":"multiline launch ready"}\n' "$id"
+      ;;
+    *'"op":"shutdown"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      exit 0
+      ;;
+    *)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-multiline","reply":"unexpected SDK prompt"}\n' "$id"
+      ;;
+  esac
+done
+"#,
+    );
+    let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 80, 12);
+
+    app.wait_for_output_contains("force-linearize", Duration::from_secs(2));
+    app.send(b":new multiline\n");
+    app.wait_for_frame(Duration::from_secs(5), |frame| {
+        frame.contains("multiline launch ready") && frame.contains("chat> ")
+    });
+
+    app.send(b"first\nsecond");
+    thread::sleep(Duration::from_millis(100));
+    let frame = last_frame(&app.output());
+    assert!(frame.contains("chat> first"));
+    assert!(frame.contains("second"));
+    assert!(
+        !frame.contains("multiline prompt received"),
+        "Shift+Enter must only insert a prompt line break"
+    );
+
+    app.send(b"\r");
+    app.wait_for_frame(Duration::from_secs(5), |frame| {
+        frame.contains("multiline prompt received") && frame.contains("chat> ")
     });
 }
 

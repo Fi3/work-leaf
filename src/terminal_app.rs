@@ -427,7 +427,7 @@ where
     }
 
     fn handle_bytes(&mut self, bytes: &[u8]) -> bool {
-        if !self.handle_terminal_bytes(bytes) {
+        if !self.handle_input_bytes(bytes, false) {
             return false;
         }
         self.finish_pending_terminal_input();
@@ -435,9 +435,13 @@ where
     }
 
     fn handle_terminal_bytes(&mut self, bytes: &[u8]) -> bool {
+        self.handle_input_bytes(bytes, true)
+    }
+
+    fn handle_input_bytes(&mut self, bytes: &[u8], raw_lf_is_insert_line_break: bool) -> bool {
         self.apply_controller_events();
         for byte in bytes {
-            if !self.handle_byte_without_poll(*byte) {
+            if !self.handle_byte_without_poll(*byte, raw_lf_is_insert_line_break) {
                 self.apply_controller_events();
                 return false;
             }
@@ -448,7 +452,7 @@ where
 
     pub fn handle_byte(&mut self, byte: u8) -> bool {
         self.apply_controller_events();
-        let keep_running = self.handle_byte_without_poll(byte);
+        let keep_running = self.handle_byte_without_poll(byte, false);
         self.apply_controller_events();
         keep_running && !self.quit
     }
@@ -458,7 +462,7 @@ where
         self.apply_controller_events();
     }
 
-    fn handle_byte_without_poll(&mut self, byte: u8) -> bool {
+    fn handle_byte_without_poll(&mut self, byte: u8, raw_lf_is_insert_line_break: bool) -> bool {
         if self.quit {
             return false;
         }
@@ -480,7 +484,7 @@ where
             return !self.quit;
         }
 
-        let Some(input) = self.input_from_byte(byte) else {
+        let Some(input) = self.input_from_byte(byte, raw_lf_is_insert_line_break) else {
             return true;
         };
         self.handle_input(input);
@@ -910,7 +914,11 @@ where
         }
     }
 
-    fn input_from_byte(&mut self, byte: u8) -> Option<TerminalAppInput> {
+    fn input_from_byte(
+        &mut self,
+        byte: u8,
+        raw_lf_is_insert_line_break: bool,
+    ) -> Option<TerminalAppInput> {
         if self.paste_mode {
             match byte {
                 13 => {
@@ -926,6 +934,9 @@ where
                     self.skip_next_paste_lf = false;
                 }
             }
+        }
+        if raw_lf_is_insert_line_break && byte == 10 && self.ui.mode() == UiMode::Insert {
+            return Some(TerminalAppInput::LineBreak);
         }
         TerminalAppInput::from_byte(byte)
     }
@@ -1131,21 +1142,49 @@ fn is_shift_modified_enter_sequence(sequence: &[u8]) -> bool {
     let Ok(body) = std::str::from_utf8(&sequence[1..sequence.len() - 1]) else {
         return false;
     };
-    let Ok(parameters) = body
-        .split(';')
-        .map(str::parse::<u16>)
-        .collect::<Result<Vec<_>, _>>()
-    else {
-        return false;
-    };
+    let parameters = body.split(';').collect::<Vec<_>>();
 
     match (final_byte, parameters.as_slice()) {
-        (b'u', [key, modifiers]) => is_enter_code(*key) && modifier_has_shift(*modifiers),
-        (b'u' | b'~', [27, modifiers, key]) => {
-            is_enter_code(*key) && modifier_has_shift(*modifiers)
+        (b'u', [key, modifiers]) => {
+            parameter_number(key).is_some_and(is_enter_code)
+                && parameter_has_shift_modifier(modifiers)
+                && parameter_is_key_press_or_repeat(modifiers)
+        }
+        (b'u' | b'~', [escape, modifiers, key]) if parameter_number(escape) == Some(27) => {
+            parameter_number(key).is_some_and(is_enter_code)
+                && parameter_has_shift_modifier(modifiers)
+                && parameter_is_key_press_or_repeat(modifiers)
+        }
+        (b'u', [key, modifiers, event]) => {
+            parameter_number(key).is_some_and(is_enter_code)
+                && parameter_has_shift_modifier(modifiers)
+                && parameter_event_is_key_press_or_repeat(event)
         }
         _ => false,
     }
+}
+
+fn parameter_number(parameter: &str) -> Option<u16> {
+    parameter.split(':').next()?.parse().ok()
+}
+
+fn parameter_has_shift_modifier(parameter: &str) -> bool {
+    parameter_number(parameter).is_some_and(modifier_has_shift)
+}
+
+fn parameter_is_key_press_or_repeat(parameter: &str) -> bool {
+    match parameter
+        .split(':')
+        .nth(1)
+        .and_then(|event| event.parse().ok())
+    {
+        None | Some(1 | 2) => true,
+        Some(_) => false,
+    }
+}
+
+fn parameter_event_is_key_press_or_repeat(parameter: &str) -> bool {
+    matches!(parameter.parse::<u16>(), Ok(1 | 2))
 }
 
 fn is_enter_code(key: u16) -> bool {
@@ -1529,6 +1568,53 @@ mod tests {
     #[test]
     fn line_feed_shift_enter_keeps_insert_mode_chat_multiline_until_plain_enter() {
         assert_shift_enter_sequence_inserts_line_break(b"\x1b[10;2u");
+    }
+
+    #[test]
+    fn kitty_shift_enter_key_press_keeps_insert_mode_chat_multiline_until_plain_enter() {
+        assert_shift_enter_sequence_inserts_line_break(b"\x1b[13;2:1u");
+    }
+
+    #[test]
+    fn raw_line_feed_keeps_insert_mode_chat_multiline_until_carriage_return_enter() {
+        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+        let drain_calls = Arc::new(AtomicUsize::new(0));
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        let controller = CountingController::new(
+            crate::WorkLeafSnapshot {
+                command_transcript: Vec::new(),
+                sessions: vec![WorkLeafSession {
+                    id: agent_id.clone(),
+                    kind: AgentKind::Codex,
+                    title: "feature".to_string(),
+                    feature: "feature".to_string(),
+                    lines: Vec::new(),
+                    loading: None,
+                    completion: None,
+                    token_usage: None,
+                    depends_on: Vec::new(),
+                    depended_on_by: Vec::new(),
+                }],
+            },
+            snapshot_calls,
+            drain_calls,
+        );
+        let mut app = TerminalAppCore::new(controller, 80, 24);
+        app.ui
+            .activate_agent_chat(&agent_id)
+            .expect("test agent is registered");
+
+        assert!(app.handle_terminal_bytes(b"first\nsecond"));
+
+        assert_eq!(app.chat_buffer.as_str(), "first\nsecond");
+        assert!(app.controller.sent_messages.is_empty());
+
+        assert!(app.handle_terminal_bytes(b"\r"));
+
+        assert_eq!(
+            app.controller.sent_messages,
+            vec![(agent_id, "first\nsecond".to_string())]
+        );
     }
 
     #[test]
