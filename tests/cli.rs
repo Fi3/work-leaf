@@ -604,43 +604,50 @@ fn command_chat_spawned_codex_handles_read_classify_patch_and_route_directives()
     let codex = fake_bin.join("codex");
     fs::write(
         &codex,
-        "\
-#!/bin/sh
-seen_resume=0
-for arg in \"$@\"; do
-  if [ \"$arg\" = \"resume\" ]; then
-    seen_resume=1
-  fi
-done
-input=$(cat)
-if [ \"$seen_resume\" = \"1\" ]; then
-  case \"$input\" in
-    *\"work-leaf file text\"*)
-      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"read-follow-up\",\"type\":\"agent_message\",\"text\":\"read follow-up received src/lib.rs\"}}'
-      ;;
-	    *\"work-leaf command classification\"*)
-	      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"classify-follow-up\",\"type\":\"agent_message\",\"text\":\"classification follow-up received target lock\"}}'
-	      ;;
-	    *\"work-leaf command result\"*)
-	      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"run-follow-up\",\"type\":\"agent_message\",\"text\":\"command result follow-up received\"}}'
-	      ;;
-	    *\"Message from user-1\"*)
-	      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"route-follow-up\",\"type\":\"agent_message\",\"text\":\"routed follow-up received\"}}'
-	      ;;
-    *)
-      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"unexpected\",\"type\":\"agent_message\",\"text\":\"unexpected resume prompt\"}}'
-      ;;
-  esac
-else
-  printf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-protocol\"}'
-	  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"protocol\",\"type\":\"agent_message\",\"text\":\"@work-leaf read src/lib.rs\\n@work-leaf locks classify cargo test\\n@work-leaf locks run target -- sh -c \\\"printf command-run-ok\\\"\\n@work-leaf patch return value two\\ndiff --git a/src/lib.rs b/src/lib.rs\\n--- a/src/lib.rs\\n+++ b/src/lib.rs\\n@@ -1 +1 @@\\n-pub fn value() -> u8 { 1 }\\n+pub fn value() -> u8 { 2 }\\n@work-leaf end\\n@work-leaf send user-2 please check this patch\"}}'
-fi
-",
+        "#!/bin/sh\necho unexpected direct codex invocation >&2\nexit 97\n",
     )
     .unwrap();
     make_executable(&codex);
+    let fake_python = fake_bin.join("python");
+    fs::write(
+        &fake_python,
+        r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$line" in
+    *'"op":"send"'*"work-leaf file text"*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-protocol","reply":"read follow-up received src/lib.rs"}\n' "$id"
+      ;;
+    *'"op":"send"'*"work-leaf command classification"*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-protocol","reply":"classification follow-up received target lock"}\n' "$id"
+      ;;
+    *'"op":"send"'*"work-leaf command result"*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-protocol","reply":"command result follow-up received"}\n' "$id"
+      ;;
+    *'"op":"send"'*"Message from user-1"*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-protocol","reply":"routed follow-up received"}\n' "$id"
+      ;;
+    *'"op":"launch"'*)
+      printf '%s\n' "{\"id\":$id,\"ok\":true,\"thread_id\":\"thread-protocol\",\"reply\":\"@work-leaf read src/lib.rs\\n@work-leaf locks classify cargo test\\n@work-leaf locks run target -- sh -c \\\"printf command-run-ok\\\"\\n@work-leaf patch return value two\\ndiff --git a/src/lib.rs b/src/lib.rs\\n--- a/src/lib.rs\\n+++ b/src/lib.rs\\n@@ -1 +1 @@\\n-pub fn value() -> u8 { 1 }\\n+pub fn value() -> u8 { 2 }\\n@work-leaf end\\n@work-leaf send user-2 please check this patch\"}"
+      ;;
+    *'"op":"shutdown"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      exit 0
+      ;;
+    *)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-protocol","reply":"unexpected SDK prompt"}\n' "$id"
+      ;;
+  esac
+done
+"#,
+    )
+    .unwrap();
+    make_executable(&fake_python);
     let backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone()).with_binary(&codex),
+        CodexCommandConfig::new(root.clone())
+            .with_binary(&codex)
+            .with_sdk_python(&fake_python),
         PromptPolicy::for_restricted_agents(),
     );
     let mut chat = CommandChat::new(root.clone(), backend);
@@ -705,7 +712,6 @@ done
     let backend = CodexBackend::new(
         CodexCommandConfig::new(root.clone())
             .with_binary("/usr/bin/codex")
-            .with_sdk_transport()
             .with_sdk_python(&fake_python),
         PromptPolicy::for_restricted_agents(),
     );
@@ -784,14 +790,30 @@ fn scripted_command_chat_reports_agent_launch_error_without_exiting() {
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
     let codex = fake_bin.join("codex");
-    fs::write(&codex, "#!/bin/sh\necho codex launch failed >&2\nexit 42\n").unwrap();
+    fs::write(
+        &codex,
+        "#!/bin/sh\necho unexpected direct codex invocation >&2\nexit 97\n",
+    )
+    .unwrap();
     make_executable(&codex);
+    let fake_python = fake_bin.join("python");
+    fs::write(
+        &fake_python,
+        r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  printf '{"id":%s,"ok":false,"error":"codex launch failed"}\n' "$id"
+done
+"#,
+    )
+    .unwrap();
+    make_executable(&fake_python);
 
     let mut child = Command::new(env!("CARGO_BIN_EXE_work-leaf"))
         .env("PATH", format!("{}:{}", fake_bin.display(), current_path()))
         .env("WORK_LEAF_IN_PROCESS", "1")
-        .env("WORK_LEAF_CODEX_BACKEND", "exec")
-        .env_remove("WORK_LEAF_CODEX_SDK_PYTHON")
+        .env("WORK_LEAF_CODEX_SDK_PYTHON", &fake_python)
         .env_remove("WORK_LEAF_ORCHESTRATOR_URL")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

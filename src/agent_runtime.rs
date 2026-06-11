@@ -104,12 +104,8 @@ impl AgentShutdownHandle {
         let _ = self.wait_for_processes(Duration::from_millis(500));
     }
 
-    pub(crate) fn register(&self, pid: u32) -> ActiveAgentProcessGuard {
-        self.register_process(ActiveAgentProcess::new(pid))
-    }
-
     pub(crate) fn register_single_process(&self, pid: u32) -> ActiveAgentProcessGuard {
-        self.register_process(ActiveAgentProcess::new_single(pid))
+        self.register_process(ActiveAgentProcess::new(pid))
     }
 
     fn register_process(&self, process: ActiveAgentProcess) -> ActiveAgentProcessGuard {
@@ -149,22 +145,6 @@ impl AgentShutdownHandle {
             .collect()
     }
 
-    pub(crate) fn terminate_process(&self, pid: u32) -> bool {
-        let process = self
-            .registry
-            .lock()
-            .expect("agent process registry mutex poisoned")
-            .processes
-            .get(&pid)
-            .copied();
-        if let Some(process) = process {
-            process.terminate();
-            true
-        } else {
-            false
-        }
-    }
-
     fn wait_for_processes(&self, timeout: Duration) -> bool {
         let start = Instant::now();
         while start.elapsed() < timeout {
@@ -202,22 +182,11 @@ struct AgentProcessRegistry {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct ActiveAgentProcess {
     pid: u32,
-    kill_process_group: bool,
 }
 
 impl ActiveAgentProcess {
     fn new(pid: u32) -> Self {
-        Self {
-            pid,
-            kill_process_group: agent_children_use_process_group(),
-        }
-    }
-
-    fn new_single(pid: u32) -> Self {
-        Self {
-            pid,
-            kill_process_group: false,
-        }
+        Self { pid }
     }
 
     fn terminate(&self) {
@@ -275,49 +244,10 @@ impl AgentTokenUsage {
 }
 
 #[cfg(unix)]
-pub(crate) fn configure_agent_child_process(command: &mut Command) {
-    use std::os::unix::process::CommandExt;
-
-    command.process_group(0);
-    configure_parent_death_signal(command);
-}
-
-#[cfg(not(unix))]
-pub(crate) fn configure_agent_child_process(_command: &mut Command) {}
-
-#[cfg(unix)]
 pub(crate) fn configure_persistent_agent_child_process(_command: &mut Command) {}
 
 #[cfg(not(unix))]
 pub(crate) fn configure_persistent_agent_child_process(_command: &mut Command) {}
-
-#[cfg(target_os = "linux")]
-fn configure_parent_death_signal(command: &mut Command) {
-    use std::os::unix::process::CommandExt;
-
-    unsafe {
-        command.pre_exec(|| {
-            let _ = prctl(PR_SET_PDEATHSIG, SIGTERM as usize, 0, 0, 0);
-            if getppid() == 1 {
-                let _ = kill(getpid(), SIGTERM);
-            }
-            Ok(())
-        });
-    }
-}
-
-#[cfg(all(unix, not(target_os = "linux")))]
-fn configure_parent_death_signal(_command: &mut Command) {}
-
-#[cfg(unix)]
-fn agent_children_use_process_group() -> bool {
-    true
-}
-
-#[cfg(not(unix))]
-fn agent_children_use_process_group() -> bool {
-    false
-}
 
 #[cfg(unix)]
 fn signal_process(process: ActiveAgentProcess, signal: ProcessSignal) {
@@ -327,17 +257,12 @@ fn signal_process(process: ActiveAgentProcess, signal: ProcessSignal) {
         Ok(pid) => pid,
         Err(_) => return,
     };
-    let target = if process.kill_process_group {
-        -pid
-    } else {
-        pid
-    };
     let signal = match signal {
         ProcessSignal::Terminate => SIGTERM,
         ProcessSignal::Kill => SIGKILL,
     };
     unsafe {
-        let _ = kill(target, signal);
+        let _ = kill(pid, signal);
     }
 }
 
@@ -359,15 +284,5 @@ unsafe extern "C" {
     fn kill(pid: i32, sig: i32) -> i32;
 }
 
-#[cfg(target_os = "linux")]
-const PR_SET_PDEATHSIG: i32 = 1;
-
 #[cfg(unix)]
 const SIGTERM: i32 = 15;
-
-#[cfg(target_os = "linux")]
-unsafe extern "C" {
-    fn prctl(option: i32, arg2: usize, arg3: usize, arg4: usize, arg5: usize) -> i32;
-    fn getpid() -> i32;
-    fn getppid() -> i32;
-}

@@ -17,7 +17,7 @@ fn localhost_http_controller_preserves_terminal_workflow_state() {
         return;
     }
     let root = temp_dir("http-controller");
-    let fake_bin = write_fake_codex(root.path(), HTTP_CODEX);
+    let fake_bin = write_fake_sdk_sidecar(root.path(), HTTP_SDK_SIDECAR);
     let mut daemon = Daemon::spawn(root.path(), &fake_bin);
     let mut client = HttpControllerClient::connect(daemon.url()).unwrap();
 
@@ -63,7 +63,7 @@ fn localhost_http_controller_serves_static_web_ui_assets() {
         return;
     }
     let root = temp_dir("http-web-ui");
-    let fake_bin = write_fake_codex(root.path(), HTTP_CODEX);
+    let fake_bin = write_fake_sdk_sidecar(root.path(), HTTP_SDK_SIDECAR);
     let mut daemon = Daemon::spawn(root.path(), &fake_bin);
 
     let html = http_get(daemon.url(), "/web-ui/");
@@ -135,8 +135,7 @@ impl Daemon {
             .current_dir(project_dir)
             .env("PATH", path)
             .stdout(Stdio::piped())
-            .env("WORK_LEAF_CODEX_BACKEND", "exec")
-            .env_remove("WORK_LEAF_CODEX_SDK_PYTHON")
+            .env("WORK_LEAF_CODEX_SDK_PYTHON", fake_bin.join("python"))
             .stderr(Stdio::piped())
             .spawn()
             .unwrap();
@@ -210,12 +209,19 @@ fn temp_dir(name: &str) -> TempProject {
     TempProject { root }
 }
 
-fn write_fake_codex(root: &Path, script: &str) -> PathBuf {
+fn write_fake_sdk_sidecar(root: &Path, script: &str) -> PathBuf {
     let bin = root.join("bin");
     fs::create_dir_all(&bin).unwrap();
     let codex = bin.join("codex");
-    fs::write(&codex, script).unwrap();
+    fs::write(
+        &codex,
+        "#!/bin/sh\necho unexpected direct codex invocation >&2\nexit 97\n",
+    )
+    .unwrap();
     make_executable(&codex);
+    let python = bin.join("python");
+    fs::write(&python, script).unwrap();
+    make_executable(&python);
     bin
 }
 
@@ -227,18 +233,21 @@ fn make_executable(path: &Path) {
     fs::set_permissions(path, permissions).unwrap();
 }
 
-const HTTP_CODEX: &str = r#"#!/bin/sh
-seen_resume=0
-for arg in "$@"; do
-  if [ "$arg" = "resume" ]; then
-    seen_resume=1
-  fi
+const HTTP_SDK_SIDECAR: &str = r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$line" in
+    *'"op":"send"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-http","reply":"resume over http"}\n' "$id"
+      ;;
+    *'"op":"launch"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-http","reply":"launch over http"}\n' "$id"
+      ;;
+    *'"op":"shutdown"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      exit 0
+      ;;
+  esac
 done
-if [ "$seen_resume" = "1" ]; then
-  printf '%s\n' '{"type":"item.completed","item":{"id":"resume","type":"agent_message","text":"resume over http"}}'
-else
-  cat >/dev/null
-  printf '%s\n' '{"type":"thread.started","thread_id":"thread-http"}'
-  printf '%s\n' '{"type":"item.completed","item":{"id":"launch","type":"agent_message","text":"launch over http"}}'
-fi
 "#;

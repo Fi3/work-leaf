@@ -19,8 +19,10 @@ fn start_script_builds_release_binaries_and_stops_daemon_after_cli_exit() {
     assert!(script.contains("--bin work-leaf"));
     assert!(script.contains("exec \"$cli_bin\" \"$@\""));
     assert!(!script.contains("work-leaf-orchestrator"));
-    assert!(!script.contains("openai-codex"));
-    assert!(!script.contains("python -m venv"));
+    assert!(script.contains("ensure_codex_sdk_python"));
+    assert!(script.contains("openai-codex"));
+    assert!(script.contains("-m venv"));
+    assert!(script.contains("work-leaf-codex-sdk-venv"));
 
     let root = temp_dir("start-script");
     let mut app = PtyStart::spawn(root.path(), Path::new(env!("CARGO_BIN_EXE_work-leaf")));
@@ -54,8 +56,7 @@ impl PtyStart {
             .env("WORK_LEAF_START_BIN_DIR", bin_dir)
             .env("WORK_LEAF_START_LISTEN", "127.0.0.1:0")
             .env("WORK_LEAF_IN_PROCESS", "1")
-            .env("WORK_LEAF_CODEX_BACKEND", "exec")
-            .env_remove("WORK_LEAF_CODEX_SDK_PYTHON")
+            .env("WORK_LEAF_CODEX_SDK_PYTHON", "/bin/false")
             .stdin(stdin)
             .stdout(stdout)
             .stderr(stderr)
@@ -156,7 +157,7 @@ fn start_script_delegates_daemon_lifecycle_to_single_binary() {
     assert!(script.contains("cli_bin=\"$bin_dir/work-leaf\""));
     assert!(!script.contains("WORK_LEAF_START_LISTEN"));
     assert!(!script.contains("WORK_LEAF_ORCHESTRATOR_URL"));
-    assert!(!script.contains("WORK_LEAF_CODEX_SDK_PYTHON"));
+    assert!(script.contains("WORK_LEAF_CODEX_SDK_PYTHON"));
 }
 
 #[test]
@@ -321,7 +322,7 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains("WORK_LEAF_CODEX_TRACE=1"));
     assert!(
         script.contains(
-            "exec env WORK_LEAF_CODEX_BACKEND=sdk WORK_LEAF_CODEX_SDK_PYTHON=\"$sdk_python\" WORK_LEAF_CONTEXT_BUNDLE_DIR=\"$tmp_root/context-bundles\" WORK_LEAF_COMMAND_TMPDIR=\"$child_tmp_dir\" WORK_LEAF_CODEX_TRACE=1 WORK_LEAF_CODEX_LINEARIZE_SANDBOX=danger-full-access"
+            "exec env WORK_LEAF_CODEX_SDK_PYTHON=\"$sdk_python\" WORK_LEAF_CONTEXT_BUNDLE_DIR=\"$tmp_root/context-bundles\" WORK_LEAF_COMMAND_TMPDIR=\"$child_tmp_dir\" WORK_LEAF_CODEX_TRACE=1 WORK_LEAF_CODEX_LINEARIZE_SANDBOX=danger-full-access"
         )
     );
     assert!(script.contains("ensure_codex_sdk_python"));
@@ -420,138 +421,6 @@ fn three_feature_bench_script_cleans_temp_checkout_and_writes_dry_run_report() {
         "dry run should write a markdown bench report"
     );
     assert!(results.join("three-feature-bench.jsonl").exists());
-}
-
-#[test]
-fn direct_codex_three_feature_bench_scripts_describe_sequential_and_worktree_modes() {
-    let sequential = fs::read_to_string("bench-three-features-sequential")
-        .expect("sequential direct-Codex bench script exists");
-    let worktree = fs::read_to_string("bench-three-features-worktree")
-        .expect("worktree direct-Codex bench script exists");
-    let sequential_mode = fs::metadata("bench-three-features-sequential")
-        .expect("sequential direct-Codex bench script is statable")
-        .permissions()
-        .mode();
-    let worktree_mode = fs::metadata("bench-three-features-worktree")
-        .expect("worktree direct-Codex bench script is statable")
-        .permissions()
-        .mode();
-
-    assert_ne!(
-        sequential_mode & 0o111,
-        0,
-        "sequential direct-Codex bench script should be executable"
-    );
-    assert_ne!(
-        worktree_mode & 0o111,
-        0,
-        "worktree direct-Codex bench script should be executable"
-    );
-    assert!(sequential.contains("bench-three-features-codex-common"));
-    assert!(sequential.contains("sequential"));
-    assert!(worktree.contains("bench-three-features-codex-common"));
-    assert!(worktree.contains("worktree"));
-
-    let common = fs::read_to_string("bench-three-features-codex-common")
-        .expect("direct-Codex bench common runner exists");
-    assert!(common.contains("WORK_LEAF_CODEX_BENCH_BASE"));
-    assert!(common.contains("three-feature-sequential-bench.jsonl"));
-    assert!(common.contains("three-feature-worktree-bench.jsonl"));
-    assert!(common.contains("agent_transport: direct-codex-cli"));
-    assert!(common.contains("agent_conversation_mode: persistent-codex-resume-threads"));
-    assert!(common.contains("extract_thread_id()"));
-    assert!(common.contains("run_codex_resume()"));
-    assert!(common.contains("resume --json \"$thread_id\" -"));
-    assert!(common.contains("implementation_thread_id"));
-    assert!(common.contains("reviewer_thread_id"));
-    assert!(common.contains("review_completed"));
-    assert!(common.contains("linearize_completed"));
-    assert!(common.contains(
-        "WORK_LEAF_CODEX_BENCH_REVIEW_ROUNDS max review/fix rounds per feature, default 0 to use only the global timeout"
-    ));
-    assert!(common.contains("review_rounds=\"${WORK_LEAF_CODEX_BENCH_REVIEW_ROUNDS:-0}\""));
-    assert!(common.contains("review_round_limit"));
-    assert!(common.contains("while true; do"));
-    assert!(
-        common.contains("[[ \"$review_rounds\" != \"0\" && \"$round\" -gt \"$review_rounds\" ]]")
-    );
-    assert!(common.contains("token_usage"));
-    assert!(common.contains("patch_artifacts"));
-    assert!(common.contains("codex --disable apps --cd"));
-    assert!(common.contains("run_sequential_bench()"));
-    assert!(common.contains("run_worktree_bench()"));
-    assert!(common.contains("git -C \"$checkout_dir\" worktree add"));
-    assert!(common.contains("wait_for_parallel_features"));
-    assert!(common.contains("write_report \"dry run"));
-    assert!(common.contains("rm -rf \"$tmp_root\""));
-    assert!(common.contains("Additional author response and verification evidence"));
-    assert!(common.contains("previous_evidence_file"));
-    assert!(common.contains("no file changes after"));
-    assert!(!common.contains("commit_if_changed \\\n      \"$repo\" \\\n      \"FIX direct-Codex baseline feature $feature_index after review\" \\\n      \"Address the direct Codex reviewer findings for benchmark request $feature_index while keeping the change scoped to that reviewed feature.\" \\\n      || return 1"));
-}
-
-#[test]
-fn direct_codex_three_feature_bench_scripts_clean_temp_checkout_and_write_dry_run_reports() {
-    for (script, index_name, suffix) in [
-        (
-            "bench-three-features-sequential",
-            "three-feature-sequential-bench.jsonl",
-            "-three-feature-sequential-bench.md",
-        ),
-        (
-            "bench-three-features-worktree",
-            "three-feature-worktree-bench.jsonl",
-            "-three-feature-worktree-bench.md",
-        ),
-    ] {
-        let root = temp_dir(script);
-        let results = root.path().join("results");
-        let output = Command::new(Path::new(env!("CARGO_MANIFEST_DIR")).join(script))
-            .arg("--dry-run")
-            .env("WORK_LEAF_CODEX_BENCH_BASE", "HEAD")
-            .env("WORK_LEAF_CODEX_BENCH_TMPDIR", root.path())
-            .env("WORK_LEAF_CODEX_BENCH_RESULTS_DIR", &results)
-            .env("WORK_LEAF_CODEX_BENCH_SKIP_BUILD", "1")
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-            .unwrap();
-
-        assert!(
-            output.status.success(),
-            "{script} dry run should succeed\nstdout:\n{}\nstderr:\n{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let temp_root = stdout
-            .lines()
-            .find_map(|line| {
-                line.split_once("WORK_LEAF_CODEX_BENCH_TEMP=")
-                    .map(|(_, path)| PathBuf::from(path))
-            })
-            .unwrap_or_else(|| panic!("{script} dry run should print temp root\n{stdout}"));
-        assert!(
-            !temp_root.exists(),
-            "{script} should remove dry-run temp root {temp_root:?}"
-        );
-        let reports = fs::read_dir(&results)
-            .unwrap()
-            .filter_map(Result::ok)
-            .map(|entry| entry.path())
-            .collect::<Vec<_>>();
-        assert!(
-            reports.iter().any(|path| path
-                .file_name()
-                .is_some_and(|name| name.to_string_lossy().ends_with(suffix))),
-            "{script} dry run should write a markdown bench report"
-        );
-        assert!(
-            results.join(index_name).exists(),
-            "{script} dry run should write {index_name}"
-        );
-    }
 }
 
 struct TempProject {

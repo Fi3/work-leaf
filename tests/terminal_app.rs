@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, VecDeque};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -92,36 +92,42 @@ fn terminal_app_slash_command_from_colon_prompt_sends_to_selected_agent() {
 #[test]
 fn terminal_app_codex_status_slash_command_resumes_backend_session() {
     let root = temp_dir("terminal-app-codex-slash-command");
-    let fake_bin = root.join("bin");
-    fs::create_dir_all(&fake_bin).unwrap();
-    let codex = fake_bin.join("codex");
-    fs::write(
-        &codex,
-        "\
-#!/bin/sh
-seen_resume=0
-for arg in \"$@\"; do
-  if [ \"$arg\" = \"resume\" ]; then
-    seen_resume=1
-  fi
+    let (codex, python) = write_fake_sdk_sidecar(
+        &root,
+        r#"#!/bin/sh
+dir=$(dirname "$0")
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$line" in
+    *'"agent_id":"title-'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-title","reply":"status"}\n' "$id"
+      ;;
+    *'"op":"command"'*'"/status"'*)
+      printf '%s\n' "$line" >> "$dir/command.log"
+      printf '{"id":%s,"ok":true,"thread_id":"thread-slash-command","reply":"backend status from fake sdk"}\n' "$id"
+      ;;
+    *'"op":"launch"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-slash-command","reply":"launch reply from fake sdk"}\n' "$id"
+      ;;
+    *'"op":"shutdown"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      exit 0
+      ;;
+    *)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-slash-command","reply":"unexpected sdk request"}\n' "$id"
+      ;;
+  esac
 done
-input=$(cat)
-if [ \"$seen_resume\" = \"1\" ]; then
-  printf '%s\\n' \"$input\" >> \"$(dirname \"$0\")/resume.log\"
-  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"resume\",\"type\":\"agent_message\",\"text\":\"backend status from fake codex\"}}'
-else
-  printf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-slash-command\"}'
-  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"launch\",\"type\":\"agent_message\",\"text\":\"launch reply from fake codex\"}}'
-fi
-",
-    )
-    .unwrap();
-    make_executable(&codex);
+"#,
+    );
     let backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone()).with_binary(&codex),
+        CodexCommandConfig::new(root.clone())
+            .with_binary(&codex)
+            .with_sdk_python(&python),
         PromptPolicy::for_restricted_agents(),
     );
-    let chat = CommandChat::new(root, backend);
+    let chat = CommandChat::new(root.clone(), backend);
     let mut app = TerminalApp::new(chat, 100, 24);
 
     app.handle_bytes(b":new status command\n");
@@ -132,10 +138,12 @@ fi
 
     let frame = app.render_frame();
     assert!(frame.contains("user: /status"));
-    assert!(frame.contains("backend status from fake codex"), "{frame}");
-    assert_eq!(
-        fs::read_to_string(fake_bin.join("resume.log")).unwrap(),
-        "/status\n"
+    assert!(frame.contains("backend status from fake sdk"), "{frame}");
+    let command_log = fs::read_to_string(root.join("bin").join("command.log")).unwrap();
+    assert!(command_log.contains(r#""op":"command""#), "{command_log}");
+    assert!(
+        command_log.contains(r#""prompt":"/status""#),
+        "{command_log}"
     );
 }
 
@@ -508,45 +516,34 @@ fn terminal_app_chat_focus_arrows_recall_history_while_command_mode_is_active() 
 #[test]
 fn terminal_app_new_and_chat_work_through_spawned_codex_backend() {
     let root = temp_dir("terminal-app-codex-backend");
-    let fake_bin = root.join("bin");
-    fs::create_dir_all(&fake_bin).unwrap();
-    let codex = fake_bin.join("codex");
-    fs::write(
-        &codex,
-        "\
-#!/bin/sh
-seen_exec=0
-seen_resume=0
-for arg in \"$@\"; do
-  if [ \"$arg\" = \"exec\" ]; then
-    seen_exec=1
-  fi
-  if [ \"$arg\" = \"resume\" ]; then
-    seen_resume=1
-  fi
-  if [ \"$seen_exec\" = \"1\" ] && [ \"$arg\" = \"--ask-for-approval\" ]; then
-    echo \"--ask-for-approval must be passed before exec\" >&2
-    exit 42
-  fi
+    let (codex, python) = write_fake_sdk_sidecar(
+        &root,
+        r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$line" in
+    *'"agent_id":"title-'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-title","reply":"spawned-process"}\n' "$id"
+      ;;
+    *'"op":"send"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-user-1","reply":"resume reply from fake sdk"}\n' "$id"
+      ;;
+    *'"op":"launch"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-user-1","reply":"launch reply from fake sdk"}\n' "$id"
+      ;;
+    *'"op":"shutdown"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      exit 0
+      ;;
+  esac
 done
-
-if [ \"$seen_exec\" != \"1\" ]; then
-  echo \"missing exec subcommand\" >&2
-  exit 43
-fi
-
-if [ \"$seen_resume\" = \"1\" ]; then
-  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"item-2\",\"type\":\"agent_message\",\"text\":\"resume reply from fake codex\"}}'
-else
-  printf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-user-1\"}'
-  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"item-1\",\"type\":\"agent_message\",\"text\":\"launch reply from fake codex\"}}'
-fi
-",
-    )
-    .unwrap();
-    make_executable(&codex);
+"#,
+    );
     let backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone()).with_binary(&codex),
+        CodexCommandConfig::new(root.clone())
+            .with_binary(&codex)
+            .with_sdk_python(&python),
         PromptPolicy::for_restricted_agents(),
     );
     let chat = CommandChat::new(root, backend);
@@ -560,13 +557,13 @@ fi
         Some("user-1")
     );
     assert!(app.render_frame().contains("user-1"));
-    assert!(app.render_frame().contains("launch reply from fake codex"));
+    assert!(app.render_frame().contains("launch reply from fake sdk"));
 
     app.handle_bytes(b"continue\n");
     app.wait_for_idle(Duration::from_secs(1));
 
     assert!(app.render_frame().contains("user: continue"));
-    assert!(app.render_frame().contains("resume reply from fake codex"));
+    assert!(app.render_frame().contains("resume reply from fake sdk"));
 }
 
 #[test]
@@ -832,23 +829,33 @@ fn terminal_app_sgr_mouse_release_on_left_agent_row_selects_that_chat() {
 #[test]
 fn terminal_app_streams_spawned_codex_output_before_process_finishes() {
     let root = temp_dir("terminal-app-codex-streaming");
-    let fake_bin = root.join("bin");
-    fs::create_dir_all(&fake_bin).unwrap();
-    let codex = fake_bin.join("codex");
-    fs::write(
-        &codex,
-        "\
-#!/bin/sh
-printf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-stream\"}'
-printf '%s\\n' '{\"type\":\"error\",\"message\":\"streamed progress before final\"}'
-sleep 1
-printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"item-1\",\"type\":\"agent_message\",\"text\":\"streamed final reply\"}}'
-",
-    )
-    .unwrap();
-    make_executable(&codex);
+    let (codex, python) = write_fake_sdk_sidecar(
+        &root,
+        r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$line" in
+    *'"agent_id":"title-'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-title","reply":"stream-output"}\n' "$id"
+      ;;
+    *'"op":"launch"'*)
+      printf '{"id":%s,"event":{"type":"status","text":"streamed progress before final"}}\n' "$id"
+      sleep 1
+      printf '{"id":%s,"ok":true,"thread_id":"thread-stream","reply":"streamed final reply"}\n' "$id"
+      ;;
+    *'"op":"shutdown"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      exit 0
+      ;;
+  esac
+done
+"#,
+    );
     let backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone()).with_binary(&codex),
+        CodexCommandConfig::new(root.clone())
+            .with_binary(&codex)
+            .with_sdk_python(&python),
         PromptPolicy::for_restricted_agents(),
     );
     let chat = CommandChat::new(root, backend);
@@ -868,40 +875,42 @@ fn terminal_app_spawned_codex_processes_directive_message_before_later_prose_mes
     fs::create_dir_all(root.join("src")).unwrap();
     fs::write(root.join("src/ui.rs"), "pub fn ui() {}\n").unwrap();
     fs::write(root.join("src/ui_harness.rs"), "pub fn harness() {}\n").unwrap();
-    let fake_bin = root.join("bin");
-    fs::create_dir_all(&fake_bin).unwrap();
-    let codex = fake_bin.join("codex");
-    fs::write(
-        &codex,
-        "\
-#!/bin/sh
-seen_resume=0
-for arg in \"$@\"; do
-  if [ \"$arg\" = \"resume\" ]; then
-    seen_resume=1
-  fi
-done
-input=$(cat)
-if [ \"$seen_resume\" = \"1\" ]; then
-  case \"$input\" in
-    *\"work-leaf file text\"*)
-      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"item-follow\",\"type\":\"agent_message\",\"text\":\"I can patch after receiving src/ui.rs and src/ui_harness.rs.\"}}'
+    let (codex, python) = write_fake_sdk_sidecar(
+        &root,
+        r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$line" in
+    *'"agent_id":"title-'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-title","reply":"patch-arrow-keys"}\n' "$id"
       ;;
-    *)
-      printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"item-bad\",\"type\":\"agent_message\",\"text\":\"missing orchestrator file text\"}}'
+    *'"op":"send"'*"work-leaf file text"*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-directive-prose","reply":"I can patch after receiving src/ui.rs and src/ui_harness.rs."}\n' "$id"
+      ;;
+    *'"op":"send"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-directive-prose","reply":"missing orchestrator file text"}\n' "$id"
+      ;;
+    *'"op":"launch"'*)
+      printf '{"id":%s,"event":{"type":"message","text":"@work-leaf read src/ui.rs src/ui_harness.rs\\nI have requested the relevant UI and harness files from the orchestrator."}}\n' "$id"
+      sleep 0.1
+      printf '{"id":%s,"ok":true,"thread_id":"thread-directive-prose","reply":"@work-leaf read src/ui.rs src/ui_harness.rs\\nI have requested the relevant UI and harness files from the orchestrator."}\n' "$id"
+      ;;
+    *'"op":"interrupt"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      ;;
+    *'"op":"shutdown"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      exit 0
       ;;
   esac
-else
-  printf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"thread-directive-prose\"}'
-  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"item-directive\",\"type\":\"agent_message\",\"text\":\"@work-leaf read src/ui.rs src/ui_harness.rs\"}}'
-  printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"item-prose\",\"type\":\"agent_message\",\"text\":\"I have requested the relevant UI and harness files from the orchestrator.\"}}'
-fi
-",
-    )
-    .unwrap();
-    make_executable(&codex);
+done
+"#,
+    );
     let backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone()).with_binary(&codex),
+        CodexCommandConfig::new(root.clone())
+            .with_binary(&codex)
+            .with_sdk_python(&python),
         PromptPolicy::for_restricted_agents(),
     );
     let chat = CommandChat::new(root, backend);
@@ -1241,6 +1250,22 @@ fn temp_dir(name: &str) -> PathBuf {
     fs::create_dir_all(&root).unwrap();
     temp_cleanup::register(&root);
     root
+}
+
+fn write_fake_sdk_sidecar(root: &Path, script: &str) -> (PathBuf, PathBuf) {
+    let bin = root.join("bin");
+    fs::create_dir_all(&bin).unwrap();
+    let codex = bin.join("codex");
+    fs::write(
+        &codex,
+        "#!/bin/sh\necho unexpected direct codex invocation >&2\nexit 97\n",
+    )
+    .unwrap();
+    make_executable(&codex);
+    let python = bin.join("python");
+    fs::write(&python, script).unwrap();
+    make_executable(&python);
+    (codex, python)
 }
 
 #[cfg(unix)]

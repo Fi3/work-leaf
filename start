@@ -62,6 +62,28 @@ select_bench_bin_dir() {
   echo "Running Work Leaf binaries from $bin_dir"
 }
 
+ensure_codex_sdk_python() {
+  if [[ -n "${WORK_LEAF_CODEX_SDK_PYTHON:-}" ]]; then
+    return
+  fi
+
+  local venv_dir="${WORK_LEAF_CODEX_SDK_VENV:-$repo_root/target/work-leaf-codex-sdk-venv}"
+  local python="$venv_dir/bin/python"
+  local source_python="${PYTHON:-python3}"
+
+  if [[ ! -x "$python" ]]; then
+    "$source_python" -m venv "$venv_dir"
+  fi
+
+  if ! "$python" - <<'PY' >/dev/null 2>&1; then
+import openai_codex
+PY
+    "$python" -m pip install --upgrade openai-codex
+  fi
+
+  export WORK_LEAF_CODEX_SDK_PYTHON="$python"
+}
+
 if [[ "$bench_mode" == "1" ]]; then
   select_bench_bin_dir
 elif [[ "${WORK_LEAF_START_SKIP_BUILD:-}" != "1" ]]; then
@@ -72,6 +94,7 @@ else
 fi
 
 cli_bin="$bin_dir/work-leaf"
+ensure_codex_sdk_python
 
 set -- "${start_args[@]}"
 exec "$cli_bin" "$@"

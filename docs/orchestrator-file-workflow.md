@@ -181,21 +181,20 @@ With `ReadPermission::DirectFilesystem`, prompts tell agents:
   command;
 - use `@work-leaf done` when no more orchestrator work is required.
 
-The Codex backend applies this policy when launching sessions. Known resumed sessions receive only
-the follow-up message as Codex resume stdin, because the Codex thread already contains the
-launch-time policy and repository instructions. The source chain is:
+The Codex backend applies this policy when launching sessions. Known follow-up turns receive only
+the follow-up message, because the Codex app-server thread already contains the launch-time policy
+and repository instructions. The source chain is:
 
 1. `src/cli.rs::codex_backend` builds a `src/codex.rs::CodexBackend` with
    `PromptPolicy::for_project_with_read_permission` and resolves the Codex executable from `PATH`
    while skipping Codex's temporary `~/.codex/tmp/arg0` shim when a stable binary is available.
    The selected executable is passed to the Codex Python SDK sidecar through
-   `CodexConfig.codex_bin` when SDK mode is active. Its parent directory is prepended to the daemon
-   process `PATH` before workers start.
+   `CodexConfig.codex_bin`. Its parent directory is prepended to the daemon process `PATH` before
+   workers start.
 2. `src/codex.rs::CodexBackend` injects the policy into a launch prompt, sends it to the SDK
    sidecar, and records the returned app-server thread id for follow-up turns.
-3. Known-session follow-up messages are sent raw to the same SDK/app-server thread. The fallback
-   `codex exec resume` path uses policy injection only for resume invocations without in-memory
-   session context.
+3. Known-session follow-up messages are sent raw to the same SDK/app-server thread recorded during
+   launch.
 4. Agent replies are processed by `src/cli.rs::CommandChat::process_agent_reply_streaming`.
 5. Directive handling enters `src/orchestrator.rs::handle_agent_directives_streaming`.
 

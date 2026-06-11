@@ -16,7 +16,7 @@ fn real_terminal_pty_handles_file_read_left_toggle_and_chat_switching() {
     let _guard = pty_test_lock();
     let root = temp_dir("workflow");
     fs::write(root.path().join("Readme.md"), "pty workflow fixture\n").unwrap();
-    let fake_bin = write_fake_codex(root.path(), WORKFLOW_CODEX);
+    let fake_bin = write_fake_sdk_sidecar(root.path(), WORKFLOW_SDK_SIDECAR);
     let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 120, 30);
 
     app.wait_for_output_contains("Command chat:", Duration::from_secs(2));
@@ -67,7 +67,7 @@ fn real_terminal_pty_handles_file_read_left_toggle_and_chat_switching() {
 fn real_terminal_pty_keeps_chat_prompt_visible_after_large_agent_output() {
     let _guard = pty_test_lock();
     let root = temp_dir("large-output");
-    let fake_bin = write_fake_codex(root.path(), LARGE_OUTPUT_CODEX);
+    let fake_bin = write_fake_sdk_sidecar(root.path(), LARGE_OUTPUT_SDK_SIDECAR);
     let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 80, 12);
 
     app.wait_for_output_contains("Command chat:", Duration::from_secs(2));
@@ -91,7 +91,7 @@ fn real_terminal_pty_keeps_chat_prompt_visible_after_large_agent_output() {
 fn real_terminal_pty_ignores_ctrl_c_and_exits_on_colon_q() {
     let _guard = pty_test_lock();
     let root = temp_dir("quit");
-    let fake_bin = write_fake_codex(root.path(), LARGE_OUTPUT_CODEX);
+    let fake_bin = write_fake_sdk_sidecar(root.path(), LARGE_OUTPUT_SDK_SIDECAR);
     let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 80, 12);
 
     app.wait_for_output_contains("Command chat:", Duration::from_secs(2));
@@ -154,8 +154,7 @@ impl PtyWorkLeaf {
             .current_dir(project_dir)
             .env("PATH", path)
             .env("WORK_LEAF_IN_PROCESS", "1")
-            .env("WORK_LEAF_CODEX_BACKEND", "exec")
-            .env_remove("WORK_LEAF_CODEX_SDK_PYTHON")
+            .env("WORK_LEAF_CODEX_SDK_PYTHON", fake_bin.join("python"))
             .stdin(stdin)
             .stdout(stdout)
             .stderr(stderr)
@@ -262,12 +261,19 @@ fn last_frame(output: &str) -> String {
         .unwrap_or_else(|| output.to_string())
 }
 
-fn write_fake_codex(root: &Path, script: &str) -> PathBuf {
+fn write_fake_sdk_sidecar(root: &Path, script: &str) -> PathBuf {
     let bin = root.join("bin");
     fs::create_dir_all(&bin).unwrap();
     let codex = bin.join("codex");
-    fs::write(&codex, script).unwrap();
+    fs::write(
+        &codex,
+        "#!/bin/sh\necho unexpected direct codex invocation >&2\nexit 97\n",
+    )
+    .unwrap();
     make_executable(&codex);
+    let python = bin.join("python");
+    fs::write(&python, script).unwrap();
+    make_executable(&python);
     bin
 }
 
@@ -349,50 +355,46 @@ fn open_pty(width: u16, height: u16) -> (c_int, c_int) {
     (master, slave)
 }
 
-const WORKFLOW_CODEX: &str = r#"#!/bin/sh
-seen_resume=0
-for arg in "$@"; do
-  if [ "$arg" = "resume" ]; then
-    seen_resume=1
-  fi
+const WORKFLOW_SDK_SIDECAR: &str = r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$line" in
+    *'"op":"send"'*"work-leaf file text"*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-first","reply":"first follow-up answer after file text"}\n' "$id"
+      ;;
+    *'"op":"launch"'*"second"*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-second","reply":"second launch ready"}\n' "$id"
+      ;;
+    *'"op":"launch"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-first","reply":"@work-leaf read Readme.md\\nI requested file text from work-leaf."}\n' "$id"
+      ;;
+    *'"op":"shutdown"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      exit 0
+      ;;
+    *)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-first","reply":"unexpected SDK prompt"}\n' "$id"
+      ;;
+  esac
 done
-input=$(cat)
-if [ "$seen_resume" = "1" ]; then
-  case "$input" in
-    *"work-leaf file text"*)
-      printf '%s\n' '{"type":"item.completed","item":{"id":"follow","type":"agent_message","text":"first follow-up answer after file text"}}'
-      ;;
-    *)
-      printf '%s\n' '{"type":"item.completed","item":{"id":"unexpected","type":"agent_message","text":"unexpected resume prompt"}}'
-      ;;
-  esac
-else
-  case "$input" in
-    *"second"*)
-      printf '%s\n' '{"type":"thread.started","thread_id":"thread-second"}'
-      printf '%s\n' '{"type":"item.completed","item":{"id":"second","type":"agent_message","text":"second launch ready"}}'
-      ;;
-    *)
-      printf '%s\n' '{"type":"thread.started","thread_id":"thread-first"}'
-      printf '%s\n' '{"type":"turn.started"}'
-      printf '%s\n' '{"type":"item.completed","item":{"id":"read","type":"agent_message","text":"@work-leaf read Readme.md\nI requested file text from work-leaf."}}'
-      ;;
-  esac
-fi
 "#;
 
-const LARGE_OUTPUT_CODEX: &str = r#"#!/bin/sh
-seen_resume=0
-for arg in "$@"; do
-  if [ "$arg" = "resume" ]; then
-    seen_resume=1
-  fi
+const LARGE_OUTPUT_SDK_SIDECAR: &str = r#"#!/bin/sh
+printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$line" in
+    *'"op":"send"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-big-output","reply":"resume reply after large output"}\n' "$id"
+      ;;
+    *'"op":"launch"'*)
+      printf '{"id":%s,"ok":true,"thread_id":"thread-big-output","reply":"agent-output-line-00\\nagent-output-line-01\\nagent-output-line-02\\nagent-output-line-03\\nagent-output-line-04\\nagent-output-line-05\\nagent-output-line-06\\nagent-output-line-07\\nagent-output-line-08\\nagent-output-line-09\\nagent-output-line-10\\nagent-output-line-11\\nagent-output-line-12\\nagent-output-line-13\\nagent-output-line-14\\nagent-output-line-15\\nagent-output-line-16\\nagent-output-line-17\\nagent-output-line-18\\nagent-output-line-19\\nagent-output-line-20\\nagent-output-line-21\\nagent-output-line-22\\nagent-output-line-23\\nagent-output-line-24\\nagent-output-line-25\\nagent-output-line-26\\nagent-output-line-27\\nagent-output-line-28\\nagent-output-line-29\\nagent-output-line-30\\nagent-output-line-31\\nagent-output-line-32\\nagent-output-line-33\\nagent-output-line-34\\nagent-output-line-35\\nagent-output-line-36\\nagent-output-line-37\\nagent-output-line-38\\nagent-output-line-39"}\n' "$id"
+      ;;
+    *'"op":"shutdown"'*)
+      printf '{"id":%s,"ok":true}\n' "$id"
+      exit 0
+      ;;
+  esac
 done
-if [ "$seen_resume" = "1" ]; then
-  printf '%s\n' '{"type":"item.completed","item":{"id":"resume","type":"agent_message","text":"resume reply after large output"}}'
-else
-  printf '%s\n' '{"type":"thread.started","thread_id":"thread-big-output"}'
-  printf '%s\n' '{"type":"turn.started"}'
-  printf '%s\n' '{"type":"item.completed","item":{"id":"big","type":"agent_message","text":"agent-output-line-00\nagent-output-line-01\nagent-output-line-02\nagent-output-line-03\nagent-output-line-04\nagent-output-line-05\nagent-output-line-06\nagent-output-line-07\nagent-output-line-08\nagent-output-line-09\nagent-output-line-10\nagent-output-line-11\nagent-output-line-12\nagent-output-line-13\nagent-output-line-14\nagent-output-line-15\nagent-output-line-16\nagent-output-line-17\nagent-output-line-18\nagent-output-line-19\nagent-output-line-20\nagent-output-line-21\nagent-output-line-22\nagent-output-line-23\nagent-output-line-24\nagent-output-line-25\nagent-output-line-26\nagent-output-line-27\nagent-output-line-28\nagent-output-line-29\nagent-output-line-30\nagent-output-line-31\nagent-output-line-32\nagent-output-line-33\nagent-output-line-34\nagent-output-line-35\nagent-output-line-36\nagent-output-line-37\nagent-output-line-38\nagent-output-line-39"}}'
-fi
 "#;

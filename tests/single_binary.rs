@@ -20,8 +20,6 @@ fn work_leaf_binary_runs_without_sibling_orchestrator_binary() {
         .current_dir(root.path())
         .env_remove("WORK_LEAF_ORCHESTRATOR_URL")
         .env("WORK_LEAF_IN_PROCESS", "1")
-        .env("WORK_LEAF_CODEX_BACKEND", "exec")
-        .env_remove("WORK_LEAF_CODEX_SDK_PYTHON")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

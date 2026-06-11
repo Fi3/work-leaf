@@ -1484,11 +1484,8 @@ pub(crate) fn codex_backend(
     if let Some(sandbox) = codex_linearize_sandbox_from_env()? {
         config = config.with_linearize_sandbox(sandbox);
     }
-    if use_codex_sdk_backend() {
-        config = config.with_sdk_transport();
-        if let Some(python) = env::var_os("WORK_LEAF_CODEX_SDK_PYTHON") {
-            config = config.with_sdk_python(PathBuf::from(python));
-        }
+    if let Some(python) = env::var_os("WORK_LEAF_CODEX_SDK_PYTHON") {
+        config = config.with_sdk_python(PathBuf::from(python));
     }
     Ok(CodexBackend::new(
         config,
@@ -1515,15 +1512,6 @@ fn codex_linearize_sandbox_from_env() -> Result<Option<SandboxMode>, CliError> {
         _ => Err(CliError::Usage(format!(
             "invalid WORK_LEAF_CODEX_LINEARIZE_SANDBOX `{value}`; expected read-only, workspace-write, or danger-full-access"
         ))),
-    }
-}
-
-fn use_codex_sdk_backend() -> bool {
-    match env::var("WORK_LEAF_CODEX_BACKEND") {
-        Ok(value) if value == "exec" => false,
-        Ok(value) if value == "sdk" => true,
-        Ok(_) => false,
-        Err(_) => env::var_os("WORK_LEAF_CODEX_SDK_PYTHON").is_some(),
     }
 }
 

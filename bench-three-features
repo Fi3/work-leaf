@@ -119,7 +119,7 @@ launch_tmux_supervisor_if_needed() {
     WORK_LEAF_BENCH_SKIP_BUILD WORK_LEAF_BENCH_BIN_DIR WORK_LEAF_BENCH_LISTEN \
     WORK_LEAF_BENCH_TIMEOUT_SECS WORK_LEAF_BENCH_STALL_SECS WORK_LEAF_BENCH_MODEL \
     WORK_LEAF_BENCH_NO_READ_PERMISSION WORK_LEAF_BENCH_WEB_UI WORK_LEAF_BENCH_WEB_LISTEN \
-    WORK_LEAF_CODEX_SDK_PYTHON WORK_LEAF_CODEX_BACKEND; do
+    WORK_LEAF_CODEX_SDK_PYTHON; do
     if [[ -n "${!name+x}" ]]; then
       command_text+="$name=$(shell_quote "${!name}") "
     fi
@@ -278,7 +278,7 @@ PY
 import openai_codex
 print(openai_codex.__version__)
 PY
-  printf 'WORK_LEAF_CODEX_BACKEND=sdk\nWORK_LEAF_CODEX_SDK_PYTHON=%s\n' "$sdk_python" > "$tmp_root/codex-sdk-python.txt"
+  printf 'WORK_LEAF_CODEX_SDK_PYTHON=%s\n' "$sdk_python" > "$tmp_root/codex-sdk-python.txt"
 }
 
 detect_codex_model() {
@@ -580,7 +580,7 @@ if [[ "$no_read_permission" == "1" || "$no_read_permission" == "true" || "$no_re
 fi
 (
   cd "$checkout_dir"
-  exec env WORK_LEAF_CODEX_BACKEND=sdk WORK_LEAF_CODEX_SDK_PYTHON="$sdk_python" WORK_LEAF_CONTEXT_BUNDLE_DIR="$tmp_root/context-bundles" WORK_LEAF_COMMAND_TMPDIR="$child_tmp_dir" WORK_LEAF_CODEX_TRACE=1 WORK_LEAF_CODEX_LINEARIZE_SANDBOX=danger-full-access "$bin_dir/work-leaf-orchestrator" "${daemon_args[@]}" >"$tmp_root/daemon.out" 2>"$tmp_root/daemon.err"
+  exec env WORK_LEAF_CODEX_SDK_PYTHON="$sdk_python" WORK_LEAF_CONTEXT_BUNDLE_DIR="$tmp_root/context-bundles" WORK_LEAF_COMMAND_TMPDIR="$child_tmp_dir" WORK_LEAF_CODEX_TRACE=1 WORK_LEAF_CODEX_LINEARIZE_SANDBOX=danger-full-access "$bin_dir/work-leaf-orchestrator" "${daemon_args[@]}" >"$tmp_root/daemon.out" 2>"$tmp_root/daemon.err"
 ) &
 daemon_pid=$!
 {
