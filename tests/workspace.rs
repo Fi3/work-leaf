@@ -681,6 +681,173 @@ fn controller_delays_dependent_agent_launch_until_dependency_closes() {
 }
 
 #[test]
+fn controller_uses_first_waiting_prompt_as_dependent_launch_task() {
+    let root = git_repo("workspace-dependent-agent-first-prompt");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "parent patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after parent\n@work-leaf end\n@work-leaf done",
+        "summary: README changes from before to after parent",
+        "NO_FINDINGS",
+        "child launch reply",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let parent = controller.create_agent("update readme").unwrap();
+    let child = controller
+        .create_agent(format!("--depends-on {parent}"))
+        .unwrap();
+
+    controller
+        .send_message(&child, "fix dependent follow-up")
+        .unwrap();
+
+    let waiting = controller.snapshot();
+    let child_session = waiting.session(&child).expect("child session exists");
+    assert_eq!(child_session.title, "fix-dependent-follow-up");
+    assert_eq!(
+        child_session.loading,
+        Some(WorkLeafLoading::WaitingForDependency)
+    );
+    assert!(
+        child_session
+            .lines
+            .iter()
+            .any(|line| line == "user: fix dependent follow-up"),
+        "{child_session:?}"
+    );
+    assert!(
+        !backend.launches().iter().any(|launch| launch.id == child),
+        "dependent launch must wait for the parent to close"
+    );
+
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    let reviewed = controller.snapshot();
+    let parent_session = reviewed.session(&parent).expect("parent session exists");
+    let child_session = reviewed.session(&child).expect("child session exists");
+    assert_eq!(
+        parent_session.completion,
+        Some(WorkLeafCompletion::NeedsDecision)
+    );
+    assert_eq!(
+        child_session.loading,
+        Some(WorkLeafLoading::WaitingForDependency)
+    );
+    assert!(
+        reviewed
+            .session(&AgentId::new("review-user-1").unwrap())
+            .is_some(),
+        "parent review must start even while a dependent launch is waiting"
+    );
+    assert!(
+        !backend.launches().iter().any(|launch| launch.id == child),
+        "review completion alone must not release the dependent launch"
+    );
+
+    controller.send_message(&parent, "yes").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    let launches = backend.launches();
+    assert!(
+        launches.iter().any(|launch| {
+            launch.id == child
+                && launch.prompt == "fix dependent follow-up"
+                && launch.feature == "fix-dependent-follow-up"
+        }),
+        "{launches:?}"
+    );
+    assert!(
+        backend.sends().iter().all(|(target, _)| target != &child),
+        "the waiting task should be the child launch prompt, not a post-launch send"
+    );
+    let released = controller.snapshot();
+    let child_session = released.session(&child).expect("child session exists");
+    assert_eq!(child_session.loading, None);
+    assert!(
+        child_session
+            .lines
+            .iter()
+            .any(|line| line == "child launch reply"),
+        "{child_session:?}"
+    );
+}
+
+#[test]
+fn controller_defers_dependent_patch_promotion_until_dependency_closes() {
+    let root = git_repo("workspace-dependent-patch-promotion");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "parent patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after parent\n@work-leaf end\n@work-leaf done",
+        "summary: README changes from before to after parent",
+        "NO_FINDINGS",
+        "reader ready",
+        "patch ready",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let parent = controller.create_agent("update readme").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    let reader = controller.create_agent("inspect dependent patch").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+
+    controller
+        .promote_agent_to_patch(
+            &reader,
+            &format!("--depends-on {parent} implement dependent patch"),
+        )
+        .unwrap();
+
+    let waiting = controller.snapshot();
+    let parent_session = waiting.session(&parent).expect("parent session exists");
+    let reader_session = waiting.session(&reader).expect("reader session exists");
+    assert_eq!(
+        parent_session.completion,
+        Some(WorkLeafCompletion::NeedsDecision)
+    );
+    assert_eq!(
+        reader_session.loading,
+        Some(WorkLeafLoading::WaitingForDependency)
+    );
+    assert_eq!(reader_session.depends_on, vec![parent.clone()]);
+    assert_eq!(parent_session.depended_on_by, vec![reader.clone()]);
+    assert!(
+        backend.sends().iter().all(|(target, _)| target != &reader),
+        "patch promotion must not send before the dependency closes"
+    );
+
+    controller.send_message(&parent, "yes").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    let sends = backend.sends();
+    assert!(sends.iter().any(|(target, prompt)| {
+        target == &reader
+            && prompt.contains("Continue this existing Work Leaf session as a patch agent")
+            && prompt.contains("implement dependent patch")
+    }));
+    let released = controller.snapshot();
+    let reader_session = released.session(&reader).expect("reader session exists");
+    assert_eq!(reader_session.loading, None);
+    assert!(
+        reader_session.lines.iter().any(|line| {
+            line == &format!("work-leaf: dependency {parent} marked done; sending patch task")
+        }),
+        "{reader_session:?}"
+    );
+    assert!(
+        reader_session
+            .lines
+            .iter()
+            .any(|line| line == "patch ready"),
+        "{reader_session:?}"
+    );
+}
+
+#[test]
 fn controller_rejects_unknown_dependency_without_creating_agent() {
     let backend = FakeBackend::new(["parent launch"]);
     let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());

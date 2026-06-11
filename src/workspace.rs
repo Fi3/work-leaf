@@ -283,7 +283,7 @@ where
                 );
                 self.queue_or_start_launch_worker(launch);
             } else {
-                self.defer_launch_until_dependency(launch, dependency);
+                self.defer_launch_until_dependency(launch, dependency, title_pending);
             }
         } else {
             self.queue_or_start_launch_worker(launch);
@@ -308,8 +308,15 @@ where
             self.set_session_completion(agent_id, None);
         }
 
-        if let Some(title) = self.reserve_first_chat_title(agent_id, message) {
-            self.apply_agent_title(agent_id, title);
+        let first_chat_title = self.reserve_first_chat_title(agent_id, message);
+        if let Some(title) = &first_chat_title {
+            self.apply_agent_title(agent_id, title.clone());
+        }
+        if !is_agent_slash_command
+            && self.set_pending_dependent_launch_prompt(agent_id, message, first_chat_title)
+        {
+            self.append_agent_line(agent_id, format!("user: {message}"));
+            return Ok(());
         }
         if self
             .sessions
@@ -432,7 +439,7 @@ where
                 );
                 self.queue_or_start_launch_worker(launch);
             } else {
-                self.defer_launch_until_dependency(launch, dependency);
+                self.defer_launch_until_dependency(launch, dependency, false);
             }
         } else {
             self.queue_or_start_launch_worker(launch);
@@ -806,15 +813,46 @@ where
         self.publish_full_session(dependency);
     }
 
-    fn defer_launch_until_dependency(&mut self, launch: AgentLaunch, dependency: AgentId) {
+    fn defer_launch_until_dependency(
+        &mut self,
+        launch: AgentLaunch,
+        dependency: AgentId,
+        prompt_pending: bool,
+    ) {
         let agent_id = launch.id.clone();
         self.set_session_loading(&agent_id, Some(WorkLeafLoading::WaitingForDependency));
         self.append_agent_line(
             &agent_id,
             format!("work-leaf: waiting for {dependency} to be marked done"),
         );
-        self.pending_dependent_launches
-            .insert(agent_id, PendingDependentLaunch { launch, dependency });
+        self.pending_dependent_launches.insert(
+            agent_id,
+            PendingDependentLaunch {
+                launch,
+                dependency,
+                prompt_pending,
+            },
+        );
+    }
+
+    fn set_pending_dependent_launch_prompt(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+        feature: Option<String>,
+    ) -> bool {
+        let Some(pending) = self.pending_dependent_launches.get_mut(agent_id) else {
+            return false;
+        };
+        if !pending.prompt_pending {
+            return false;
+        }
+        pending.launch.prompt = prompt.to_string();
+        if let Some(feature) = feature {
+            pending.launch.feature = feature;
+        }
+        pending.prompt_pending = false;
+        true
     }
 
     fn defer_send_until_dependency(
@@ -1798,6 +1836,7 @@ struct Worker {
 struct PendingDependentLaunch {
     launch: AgentLaunch,
     dependency: AgentId,
+    prompt_pending: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
