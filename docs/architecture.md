@@ -74,10 +74,11 @@ artifact's `bin/work-leaf`.
 
 The project-root `build-target` script packages the user-facing `work-leaf` binary for the Rust host
 target reported by `rustc -vV`. `WORK_LEAF_BUILD_TARGETS` accepts an explicit whitespace-separated
-target list for release automation or manually prepared cross-linking environments. Each package is
-written under `dist/work-leaf-<target>` and includes only the `work-leaf` binary; Unix-like packages
-also get a `.tar.gz` archive, and Windows packages get a `.zip` archive when `zip` or PowerShell is
-available.
+target list for release automation or manually prepared cross-linking environments. Before building
+each package, the script asks `rustup` to install the target when `rustup` is available and the target
+is not already installed. Each package is written under `dist/work-leaf-<target>` and includes only
+the `work-leaf` binary; Unix-like packages also get a `.tar.gz` archive, and Windows packages get a
+`.zip` archive when `zip` or PowerShell is available.
 
 The `.github/workflows/release-binaries.yml` workflow builds release packages on native
 GitHub-hosted runners: Ubuntu x64 and ARM64 for Linux, macOS Intel and ARM64 for Darwin, and Windows

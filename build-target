@@ -14,6 +14,22 @@ fi
 
 target_list="${WORK_LEAF_BUILD_TARGETS:-$host_target}"
 
+ensure_rust_target_installed() {
+  local target="$1"
+
+  if ! command -v rustup >/dev/null 2>&1; then
+    echo "warning: rustup not found; unable to install Rust target $target before build" >&2
+    return
+  fi
+
+  if rustup target list --installed | grep -Fxq "$target"; then
+    return
+  fi
+
+  echo "installing Rust target $target"
+  rustup target add "$target"
+}
+
 mkdir -p "$dist_dir"
 
 for target in $target_list; do
@@ -25,6 +41,8 @@ for target in $target_list; do
       binary_name="work-leaf"
       ;;
   esac
+
+  ensure_rust_target_installed "$target"
 
   echo "building work-leaf for $target"
   (cd "$repo_root" && cargo build --release --locked --bin work-leaf --target "$target")

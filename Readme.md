@@ -22,8 +22,9 @@ binaries saved by that benchmark instead of binaries built from the current chec
 
 `./build-target` packages the `work-leaf` binary for the current Rust host target and writes it under
 `dist/work-leaf-<target>`. Set `WORK_LEAF_BUILD_TARGETS` to an explicit whitespace-separated target
-list when running in a prepared release environment. The release-binaries GitHub Actions workflow
-uses native Ubuntu, macOS, and Windows runners for the Linux, Darwin, and MSVC packages.
+list when running release automation. When `rustup` is available, the script installs missing Rust
+targets before building each package. The release-binaries GitHub Actions workflow uses native
+Ubuntu, macOS, and Windows runners for the Linux, Darwin, and MSVC packages.
 
 `./smoke-three-features` builds the current release binaries, creates a temporary checkout at the
 three-feature smoke-test base commit, and runs `./start` from that temporary checkout. The script
