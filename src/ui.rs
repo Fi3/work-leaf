@@ -207,11 +207,11 @@ impl LeftPaneLine {
         }
     }
 
-    fn agent_row(agent: &AgentListEntry, text: String) -> Self {
+    fn agent_row(agent: &AgentListEntry, text: String, ready: bool) -> Self {
         let target = LeftPaneClickTarget::Agent(agent.id.clone());
         Self {
             text,
-            ready: agent_ready_visible(agent),
+            ready,
             click_target: Some(target.clone()),
             control_target: Some(target),
         }
@@ -235,7 +235,10 @@ enum LeftPaneLineFormat {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum LeftPaneAgentSection {
-    Patches,
+    ClosedPatches,
+    NewPatches,
+    ReadyPatches,
+    WorkingPatches,
     Reviews,
     Reads,
     Linearize,
@@ -244,7 +247,10 @@ enum LeftPaneAgentSection {
 impl LeftPaneAgentSection {
     fn title(self) -> &'static str {
         match self {
-            Self::Patches => "patches",
+            Self::ClosedPatches => "closed",
+            Self::NewPatches => "new",
+            Self::ReadyPatches => "ready",
+            Self::WorkingPatches => "working",
             Self::Reviews => "reviews",
             Self::Reads => "reads",
             Self::Linearize => "linearize",
@@ -252,8 +258,11 @@ impl LeftPaneAgentSection {
     }
 }
 
-const LEFT_PANE_AGENT_SECTIONS: [LeftPaneAgentSection; 4] = [
-    LeftPaneAgentSection::Patches,
+const LEFT_PANE_AGENT_SECTIONS: [LeftPaneAgentSection; 7] = [
+    LeftPaneAgentSection::ClosedPatches,
+    LeftPaneAgentSection::NewPatches,
+    LeftPaneAgentSection::ReadyPatches,
+    LeftPaneAgentSection::WorkingPatches,
     LeftPaneAgentSection::Reviews,
     LeftPaneAgentSection::Reads,
     LeftPaneAgentSection::Linearize,
@@ -276,6 +285,21 @@ const CHAT_TRANSCRIPT_MESSAGE_SEPARATOR: char = '\u{1e}';
 enum LeftPaneClickTarget {
     Command,
     Agent(AgentId),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct AgentListPatchState {
+    has_user_message: bool,
+    closed: bool,
+}
+
+impl AgentListPatchState {
+    fn default_for_agent() -> Self {
+        Self {
+            has_user_message: true,
+            closed: false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -324,6 +348,7 @@ pub struct TerminalUi {
     focus: PaneFocus,
     left_visible: bool,
     agents: Vec<AgentListEntry>,
+    agent_patch_states: BTreeMap<AgentId, AgentListPatchState>,
     selected_agent: Option<AgentId>,
     control_selected: usize,
     split_chats: Vec<AgentId>,
@@ -350,6 +375,7 @@ impl TerminalUi {
             focus: PaneFocus::Left,
             left_visible: true,
             agents: Vec::new(),
+            agent_patch_states: BTreeMap::new(),
             selected_agent: None,
             control_selected: 0,
             split_chats: Vec::new(),
@@ -458,18 +484,45 @@ impl TerminalUi {
         Ok(())
     }
 
+    pub fn set_agent_patch_lifecycle(
+        &mut self,
+        agent_id: &AgentId,
+        has_user_message: bool,
+        closed: bool,
+    ) -> Result<(), String> {
+        let control_agent = self.control_selected_agent_id();
+        if !self.agents.iter().any(|agent| &agent.id == agent_id) {
+            return Err(format!("unknown agent `{agent_id}`"));
+        }
+        self.agent_patch_states.insert(
+            agent_id.clone(),
+            AgentListPatchState {
+                has_user_message,
+                closed,
+            },
+        );
+        self.restore_control_selection(control_agent.as_ref());
+        Ok(())
+    }
+
     pub(crate) fn set_agent_ready_state(
         &mut self,
         agent_id: &AgentId,
         ready: bool,
     ) -> Result<(), String> {
-        let Some(agent) = self.agents.iter_mut().find(|agent| &agent.id == agent_id) else {
+        let control_agent = self.control_selected_agent_id();
+        let Some(agent_index) = self.agents.iter().position(|agent| &agent.id == agent_id) else {
             return Err(format!("unknown agent `{agent_id}`"));
         };
-        if ready && !agent.ready && agent_allows_ready_highlight(agent) {
+        let should_ring = {
+            let agent = &self.agents[agent_index];
+            ready && !agent.ready && self.agent_allows_ready_highlight(agent)
+        };
+        if should_ring {
             self.pending_bell.set(true);
         }
-        agent.ready = ready;
+        self.agents[agent_index].ready = ready;
+        self.restore_control_selection(control_agent.as_ref());
         Ok(())
     }
 
@@ -1320,7 +1373,7 @@ impl TerminalUi {
             let mut section_started = false;
             for (visible_position, agent_index) in visible_agent_indices.iter().enumerate() {
                 let agent = &self.agents[*agent_index];
-                if agent_left_pane_section(agent) != section {
+                if self.agent_left_pane_section(agent) != section {
                     continue;
                 }
                 if !section_started {
@@ -1328,13 +1381,14 @@ impl TerminalUi {
                     section_started = true;
                 }
                 let selected = self.control_selected == visible_position + 1;
+                let ready = self.agent_ready_visible(agent);
                 let row = match format {
-                    LeftPaneLineFormat::Detailed => detailed_agent_row(agent, selected),
+                    LeftPaneLineFormat::Detailed => detailed_agent_row(agent, selected, ready),
                     LeftPaneLineFormat::Compact { inner_width } => {
-                        compact_agent_row(agent, selected, inner_width)
+                        compact_agent_row(agent, selected, inner_width, ready)
                     }
                 };
-                lines.push(LeftPaneLine::agent_row(agent, row));
+                lines.push(LeftPaneLine::agent_row(agent, row, ready));
                 if !agent.modified_files.is_empty() {
                     lines.push(LeftPaneLine::agent_detail(
                         format!(
@@ -1851,14 +1905,69 @@ impl TerminalUi {
         }
     }
 
+    fn restore_control_selection(&mut self, agent_id: Option<&AgentId>) {
+        if let Some(agent_id) = agent_id
+            && let Some(position) = self
+                .visible_agent_indices()
+                .iter()
+                .position(|index| self.agents[*index].id == *agent_id)
+        {
+            self.control_selected = position + 1;
+            return;
+        }
+        self.clamp_control_selection();
+    }
+
     fn visible_agent_indices(&self) -> Vec<usize> {
         let mut indices = Vec::new();
         for section in LEFT_PANE_AGENT_SECTIONS {
             indices.extend(self.agents.iter().enumerate().filter_map(|(index, agent)| {
-                (!agent.hidden && agent_left_pane_section(agent) == section).then_some(index)
+                (!agent.hidden && self.agent_left_pane_section(agent) == section).then_some(index)
             }));
         }
         indices
+    }
+
+    fn agent_patch_state(&self, agent: &AgentListEntry) -> AgentListPatchState {
+        self.agent_patch_states
+            .get(&agent.id)
+            .copied()
+            .unwrap_or_else(AgentListPatchState::default_for_agent)
+    }
+
+    fn agent_left_pane_section(&self, agent: &AgentListEntry) -> LeftPaneAgentSection {
+        let id = agent.id.as_str();
+        if id.starts_with("review-") {
+            LeftPaneAgentSection::Reviews
+        } else if id == "linearize" || id.starts_with("linearize-") {
+            LeftPaneAgentSection::Linearize
+        } else if id == "read" || id.starts_with("read-") || id.starts_with("reads-") {
+            LeftPaneAgentSection::Reads
+        } else {
+            let state = self.agent_patch_state(agent);
+            if state.closed {
+                LeftPaneAgentSection::ClosedPatches
+            } else if !state.has_user_message {
+                LeftPaneAgentSection::NewPatches
+            } else if agent.ready {
+                LeftPaneAgentSection::ReadyPatches
+            } else {
+                LeftPaneAgentSection::WorkingPatches
+            }
+        }
+    }
+
+    fn agent_ready_visible(&self, agent: &AgentListEntry) -> bool {
+        agent.ready && self.agent_allows_ready_highlight(agent)
+    }
+
+    fn agent_allows_ready_highlight(&self, agent: &AgentListEntry) -> bool {
+        !matches!(
+            self.agent_left_pane_section(agent),
+            LeftPaneAgentSection::ClosedPatches
+                | LeftPaneAgentSection::NewPatches
+                | LeftPaneAgentSection::Reviews
+        )
     }
 
     fn control_selected_agent_index(&self) -> Option<usize> {
@@ -2051,7 +2160,7 @@ fn agent_list_labels(agent: &AgentListEntry) -> (&str, &str) {
     }
 }
 
-fn detailed_agent_row(agent: &AgentListEntry, selected: bool) -> String {
+fn detailed_agent_row(agent: &AgentListEntry, selected: bool, ready: bool) -> String {
     let mut row = String::new();
     row.push(if selected { '>' } else { ' ' });
     let (primary, secondary) = agent_list_labels(agent);
@@ -2060,15 +2169,15 @@ fn detailed_agent_row(agent: &AgentListEntry, selected: bool) -> String {
     row.push_str(secondary);
     row.push_str("  working: ");
     row.push_str(&agent.feature);
-    if agent_ready_visible(agent) {
+    if ready {
         row.push_str("  READY");
     }
     row
 }
 
-fn compact_agent_row(agent: &AgentListEntry, selected: bool, width: usize) -> String {
+fn compact_agent_row(agent: &AgentListEntry, selected: bool, width: usize, ready: bool) -> String {
     let prefix = if selected { ">" } else { " " };
-    let status = if agent_ready_visible(agent) {
+    let status = if ready {
         " READY"
     } else {
         ""
@@ -2082,27 +2191,6 @@ fn compact_agent_row(agent: &AgentListEntry, selected: bool, width: usize) -> St
         compact_fixed_last(prefix, &agent.feature, id, status, width)
     };
     truncate_to_width(&row, width)
-}
-
-fn agent_ready_visible(agent: &AgentListEntry) -> bool {
-    agent.ready && agent_allows_ready_highlight(agent)
-}
-
-fn agent_allows_ready_highlight(agent: &AgentListEntry) -> bool {
-    agent_left_pane_section(agent) != LeftPaneAgentSection::Reviews
-}
-
-fn agent_left_pane_section(agent: &AgentListEntry) -> LeftPaneAgentSection {
-    let id = agent.id.as_str();
-    if id.starts_with("review-") {
-        LeftPaneAgentSection::Reviews
-    } else if id == "linearize" || id.starts_with("linearize-") {
-        LeftPaneAgentSection::Linearize
-    } else if id == "read" || id.starts_with("read-") || id.starts_with("reads-") {
-        LeftPaneAgentSection::Reads
-    } else {
-        LeftPaneAgentSection::Patches
-    }
 }
 
 fn compact_fixed_first(
@@ -2732,17 +2820,34 @@ mod tests {
     }
 
     #[test]
-    fn left_pane_groups_agent_rows_by_chat_kind() {
-        let mut ui = TerminalUi::new(100, 24);
-        let patch_id = AgentId::new("user-1").expect("test agent id is valid");
-        let review_id = AgentId::new("review-user-1").expect("test agent id is valid");
-        let read_id = AgentId::new("read-user-1").expect("test agent id is valid");
+    fn left_pane_groups_patch_rows_by_lifecycle() {
+        let mut ui = TerminalUi::new(120, 24);
+        let closed_id = AgentId::new("user-1").expect("test agent id is valid");
+        let new_id = AgentId::new("user-2").expect("test agent id is valid");
+        let ready_id = AgentId::new("user-3").expect("test agent id is valid");
+        let working_id = AgentId::new("user-4").expect("test agent id is valid");
+        let review_id = AgentId::new("review-user-4").expect("test agent id is valid");
+        let read_id = AgentId::new("read-user-4").expect("test agent id is valid");
         let linearize_id = AgentId::new("linearize").expect("test agent id is valid");
-        ui.add_agent(AgentListEntry::new(patch_id.clone(), "parser"));
+        ui.add_agent(AgentListEntry::new(
+            closed_id.clone(),
+            "closed parser CLOSED",
+        ));
+        ui.set_agent_patch_lifecycle(&closed_id, true, true)
+            .expect("closed patch agent is registered");
+        ui.add_agent(AgentListEntry::new(new_id.clone(), "new parser").with_ready(true));
+        ui.set_agent_patch_lifecycle(&new_id, false, false)
+            .expect("new patch agent is registered");
+        ui.add_agent(AgentListEntry::new(ready_id.clone(), "ready parser").with_ready(true));
+        ui.set_agent_patch_lifecycle(&ready_id, true, false)
+            .expect("ready patch agent is registered");
+        ui.add_agent(AgentListEntry::new(working_id.clone(), "working parser"));
+        ui.set_agent_patch_lifecycle(&working_id, true, false)
+            .expect("working patch agent is registered");
         ui.add_agent(AgentListEntry::new(review_id, "review parser").with_ready(true));
         ui.add_agent(AgentListEntry::new(read_id, "read parser"));
         ui.add_agent(AgentListEntry::new(linearize_id, "linearize"));
-        ui.select_agent(&patch_id)
+        ui.select_agent(&working_id)
             .expect("test patch agent is registered");
 
         let left_pane = ui.render_left_pane();
@@ -2750,18 +2855,63 @@ mod tests {
         let command = left_pane
             .find("[command]")
             .expect("command section renders");
-        let patches = left_pane.find("[patches]").expect("patch section renders");
+        let closed = left_pane.find("[closed]").expect("closed section renders");
+        let new = left_pane.find("[new]").expect("new section renders");
+        let ready = left_pane.find("[ready]").expect("ready section renders");
+        let working = left_pane.find("[working]").expect("working section renders");
         let reviews = left_pane.find("[reviews]").expect("review section renders");
         let reads = left_pane.find("[reads]").expect("read section renders");
         let linearize = left_pane
             .find("[linearize]")
             .expect("linearize section renders");
-        assert!(command < patches);
-        assert!(patches < reviews);
+        assert!(command < closed);
+        assert!(closed < new);
+        assert!(new < ready);
+        assert!(ready < working);
+        assert!(working < reviews);
         assert!(reviews < reads);
         assert!(reads < linearize);
-        assert!(left_pane.contains(">parser user-1  working: parser"));
-        assert!(left_pane.contains(" review-user-1 review parser  working: review parser"));
+        assert!(left_pane.contains(" closed parser CLOSED user-1  working: closed parser CLOSED"));
+        assert!(left_pane.contains(" new parser user-2  working: new parser"));
+        assert!(!left_pane.contains("new parser  READY"));
+        assert!(left_pane.contains(" ready parser user-3  working: ready parser  READY"));
+        assert!(left_pane.contains(">working parser user-4  working: working parser"));
+        assert!(left_pane.contains(" review-user-4 review parser  working: review parser"));
         assert!(!left_pane.contains("review parser  READY"));
+    }
+
+    #[test]
+    fn lifecycle_changes_keep_control_selection_on_same_agent() {
+        let mut ui = TerminalUi::new(120, 24);
+        let first_id = AgentId::new("user-1").expect("test agent id is valid");
+        let second_id = AgentId::new("user-2").expect("test agent id is valid");
+        ui.add_agent(AgentListEntry::new(first_id.clone(), "first"));
+        ui.set_agent_patch_lifecycle(&first_id, true, false)
+            .expect("first patch agent is registered");
+        ui.add_agent(AgentListEntry::new(second_id.clone(), "second"));
+        ui.set_agent_patch_lifecycle(&second_id, true, false)
+            .expect("second patch agent is registered");
+        ui.select_agent(&second_id)
+            .expect("second patch agent is registered");
+
+        ui.set_agent_ready_state(&second_id, true)
+            .expect("second patch agent is registered");
+
+        let ready_left_pane = ui
+            .render_left_pane()
+            .replace("\u{1b}[7m", "")
+            .replace("\u{1b}[0m", "");
+        assert!(ready_left_pane.contains("[ready]\n>second user-2  working: second  READY"));
+        assert!(ready_left_pane.contains("[working]\n first user-1  working: first"));
+
+        ui.set_agent_patch_lifecycle(&second_id, true, true)
+            .expect("second patch agent is registered");
+
+        let closed_left_pane = ui
+            .render_left_pane()
+            .replace("\u{1b}[7m", "")
+            .replace("\u{1b}[0m", "");
+        assert!(closed_left_pane.contains("[closed]\n>second user-2  working: second"));
+        assert!(closed_left_pane.contains("[working]\n first user-1  working: first"));
     }
 }

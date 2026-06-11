@@ -193,6 +193,7 @@ impl UiHarness {
                     let target_agent = self.ui.selected_agent().cloned();
                     if let Some(agent_id) = target_agent.as_ref() {
                         self.name_chat_from_first_prompt(agent_id, &message);
+                        let _ = self.ui.set_agent_patch_lifecycle(agent_id, true, false);
                     }
                     let target = target_agent
                         .as_ref()
@@ -281,6 +282,9 @@ impl UiHarness {
             self.next_agent += 1;
             self.ui
                 .add_agent(AgentListEntry::new(agent_id.clone(), "harness-agent"));
+            self.ui
+                .set_agent_patch_lifecycle(&agent_id, false, false)
+                .expect("generated fixture agent is registered");
             self.ui
                 .activate_agent_chat(&agent_id)
                 .expect("generated fixture agent is registered");
@@ -769,6 +773,10 @@ fn fixture_ui(width: u16, height: u16, parser: AgentId, tests: AgentId) -> Termi
             .with_modified_file("tests/parser.rs")
             .with_dependency(parser.clone()),
     );
+    ui.set_agent_patch_lifecycle(&parser, true, false)
+        .expect("fixture parser agent is registered");
+    ui.set_agent_patch_lifecycle(&tests, true, false)
+        .expect("fixture tests agent is registered");
     ui.select_agent(&parser)
         .expect("fixture parser agent is registered");
     ui

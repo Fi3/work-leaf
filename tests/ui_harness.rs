@@ -26,11 +26,14 @@ fn scripted_harness_left_pane_groups_command_and_patch_chats() {
     let command = left_pane
         .find("[command]")
         .expect("command section renders");
-    let patches = left_pane.find("[patches]").expect("patch section renders");
+    let ready = left_pane.find("[ready]").expect("ready section renders");
+    let working = left_pane.find("[working]").expect("working section renders");
 
-    assert!(command < patches);
+    assert!(command < ready);
+    assert!(ready < working);
     assert!(left_pane.contains("[command]\n  work-leaf  command"));
-    assert!(left_pane.contains("[patches]\n>parser user-1  working: parser  READY"));
+    assert!(left_pane.contains("[ready]\n>parser user-1  working: parser  READY"));
+    assert!(left_pane.contains("[working]\n tests user-2  working: tests"));
 }
 
 #[test]
@@ -418,6 +421,12 @@ fn scripted_harness_new_commands_select_new_agent_chat() {
             .any(|line| line.contains("agent user-3 launched for: ui automation"))
     );
     assert!(harness.render_frame().contains("user-3"));
+    assert!(
+        harness
+            .ui()
+            .render_left_pane()
+            .contains("[new]\n>harness-agent user-3  working: harness-agent")
+    );
 
     harness.handle_bytes(b"\x1b:new\n");
 
@@ -438,7 +447,7 @@ fn scripted_harness_names_new_chat_from_first_inserted_prompt() {
         harness
             .ui()
             .render_left_pane()
-            .contains(">harness-agent user-3  working: harness-agent")
+            .contains("[new]\n>harness-agent user-3  working: harness-agent")
     );
 
     harness.handle_bytes(b"please fix the OAuth redirect handler\n");

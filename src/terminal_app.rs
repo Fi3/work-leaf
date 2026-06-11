@@ -756,7 +756,9 @@ where
                     }
                 }
                 WorkLeafEvent::AgentLineAppended { agent_id, line } => {
-                    self.append_cached_agent_line(&agent_id, line);
+                    if let Some(session) = self.append_cached_agent_line(&agent_id, line) {
+                        self.apply_session_to_ui(&session);
+                    }
                 }
                 WorkLeafEvent::AgentSelected { agent_id } => {
                     let _ = self.ui.activate_agent_chat(&agent_id);
@@ -830,9 +832,9 @@ where
         session
     }
 
-    fn append_cached_agent_line(&mut self, agent_id: &AgentId, line: String) {
+    fn append_cached_agent_line(&mut self, agent_id: &AgentId, line: String) -> Option<WorkLeafSession> {
         if line.is_empty() {
-            return;
+            return None;
         }
         let Some(session) = self
             .snapshot
@@ -840,11 +842,12 @@ where
             .iter_mut()
             .find(|session| &session.id == agent_id)
         else {
-            return;
+            return None;
         };
         if !session.lines.iter().any(|existing| existing == &line) {
             session.lines.push(line);
         }
+        Some(session.clone())
     }
 
     fn apply_session_to_ui(&mut self, session: &WorkLeafSession) {
@@ -865,6 +868,11 @@ where
                 session.depended_on_by.clone(),
             );
         }
+        let _ = self.ui.set_agent_patch_lifecycle(
+            &session.id,
+            session_has_user_message(session),
+            session.completion == Some(WorkLeafCompletion::Closed),
+        );
         let _ = self
             .ui
             .set_agent_ready_state(&session.id, session_is_ready_for_ui(session));
@@ -1105,6 +1113,10 @@ fn session_display_title(session: &WorkLeafSession) -> String {
         Some(WorkLeafCompletion::Closed) => format!("{} CLOSED", session.title),
         None => session.title.clone(),
     }
+}
+
+fn session_has_user_message(session: &WorkLeafSession) -> bool {
+    session.completion.is_some() || session.lines.iter().any(|line| line.starts_with("user: "))
 }
 
 fn session_is_ready_for_ui(session: &WorkLeafSession) -> bool {
@@ -1916,6 +1928,84 @@ mod tests {
                 .render_left_pane()
                 .contains("\u{1b}[7m>feature user-1  working: feature  READY\u{1b}[0m")
         );
+    }
+
+    #[test]
+    fn terminal_app_groups_patch_sessions_by_lifecycle() {
+        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+        let drain_calls = Arc::new(AtomicUsize::new(0));
+        let controller = CountingController::new(
+            crate::WorkLeafSnapshot {
+                command_transcript: Vec::new(),
+                sessions: vec![
+                    WorkLeafSession {
+                        id: AgentId::new("user-1").expect("test agent id is valid"),
+                        kind: AgentKind::Codex,
+                        title: "closed feature".to_string(),
+                        feature: "closed feature".to_string(),
+                        lines: vec!["user: done".to_string()],
+                        loading: None,
+                        completion: Some(WorkLeafCompletion::Closed),
+                        token_usage: None,
+                        depends_on: Vec::new(),
+                        depended_on_by: Vec::new(),
+                    },
+                    WorkLeafSession {
+                        id: AgentId::new("user-2").expect("test agent id is valid"),
+                        kind: AgentKind::Codex,
+                        title: "new feature".to_string(),
+                        feature: "new feature".to_string(),
+                        lines: Vec::new(),
+                        loading: None,
+                        completion: None,
+                        token_usage: None,
+                        depends_on: Vec::new(),
+                        depended_on_by: Vec::new(),
+                    },
+                    WorkLeafSession {
+                        id: AgentId::new("user-3").expect("test agent id is valid"),
+                        kind: AgentKind::Codex,
+                        title: "ready feature".to_string(),
+                        feature: "ready feature".to_string(),
+                        lines: vec!["user: continue".to_string()],
+                        loading: None,
+                        completion: None,
+                        token_usage: None,
+                        depends_on: Vec::new(),
+                        depended_on_by: Vec::new(),
+                    },
+                    WorkLeafSession {
+                        id: AgentId::new("user-4").expect("test agent id is valid"),
+                        kind: AgentKind::Codex,
+                        title: "working feature".to_string(),
+                        feature: "working feature".to_string(),
+                        lines: vec!["user: continue".to_string()],
+                        loading: Some(WorkLeafLoading::WaitingForReply),
+                        completion: None,
+                        token_usage: None,
+                        depends_on: Vec::new(),
+                        depended_on_by: Vec::new(),
+                    },
+                ],
+            },
+            snapshot_calls,
+            drain_calls,
+        );
+        let app = TerminalAppCore::new(controller, 120, 24);
+
+        let left_pane = app.ui.render_left_pane();
+        let closed = left_pane.find("[closed]").expect("closed section renders");
+        let new = left_pane.find("[new]").expect("new section renders");
+        let ready = left_pane.find("[ready]").expect("ready section renders");
+        let working = left_pane.find("[working]").expect("working section renders");
+        assert!(closed < new);
+        assert!(new < ready);
+        assert!(ready < working);
+        assert!(left_pane.contains(" closed feature CLOSED user-1  working: closed feature CLOSED"));
+        assert!(left_pane.contains(" new feature user-2  working: new feature"));
+        assert!(!left_pane.contains("new feature  READY"));
+        assert!(left_pane.contains(" ready feature user-3  working: ready feature  READY"));
+        assert!(left_pane.contains(" working feature user-4  working: working feature"));
     }
 
     #[test]

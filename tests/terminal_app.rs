@@ -169,7 +169,9 @@ fn terminal_app_does_not_run_project_required_checks_outside_agent() {
 
     let frame = app.render_frame();
     assert!(frame.contains("launch reply"));
-    assert!(frame.contains("READY"));
+    let left_pane = app.ui().render_left_pane();
+    assert!(left_pane.contains("[new]"), "{left_pane}");
+    assert!(left_pane.contains("break-compile user-1"), "{left_pane}");
     assert!(!frame.contains("required check failed"));
     assert!(!frame.contains("compile failed"));
 }
@@ -1149,7 +1151,11 @@ fn terminal_app_delays_dependent_new_until_dependency_closes() {
         "dependent launch must not reach the backend before the parent closes"
     );
 
-    app.handle_bytes(&[27, 23, b'h', b'k', b'l']);
+    app.handle_bytes(&[27, 23, b'h', b'j', b'l']);
+    assert_eq!(
+        app.ui().selected_agent().map(AgentId::as_str),
+        Some("user-1")
+    );
     app.handle_bytes(b"iyes\n");
     assert!(app.wait_for_idle(Duration::from_secs(2)));
 
