@@ -203,6 +203,10 @@ impl UiHarness {
                         .push("fixture reply: message recorded".to_string());
                 }
             }
+            HarnessInput::Enter if self.ui.mode() == UiMode::Command => {
+                let actions = self.handle_ui_key(UiKey::Char('\n'));
+                self.record_actions(actions);
+            }
             HarnessInput::LineBreak if self.ui.mode() == UiMode::Insert => {
                 self.insert_chat_char('\n');
             }

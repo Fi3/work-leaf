@@ -90,6 +90,32 @@ fn scripted_harness_empty_chat_escape_enters_command_mode_and_forks_selected_age
 }
 
 #[test]
+fn scripted_harness_left_pane_enter_focuses_selected_chat_and_enters_insert_mode() {
+    let mut harness = UiHarness::new(80, 24);
+
+    assert_eq!(harness.ui().focus(), PaneFocus::Left);
+    assert_eq!(harness.ui().mode(), UiMode::Command);
+    assert_eq!(
+        harness.ui().selected_agent().map(|id| id.as_str()),
+        Some("user-1")
+    );
+
+    harness.handle_byte(b'\n');
+
+    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+    assert_eq!(harness.ui().mode(), UiMode::Insert);
+
+    harness.handle_bytes(b"hello\n");
+
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| line == "user-1> hello")
+    );
+}
+
+#[test]
 fn scripted_harness_prompt_arrow_keys_move_visible_cursor() {
     let mut harness = UiHarness::new(80, 24);
     harness.handle_bytes(b":ab\x1b[D");

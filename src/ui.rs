@@ -638,6 +638,10 @@ impl TerminalUi {
                 self.open_control_selection();
                 Vec::new()
             }
+            UiKey::Char('\n') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.open_control_selection_in_insert_mode();
+                Vec::new()
+            }
             UiKey::Char('x') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
                 self.hide_control_selection();
                 Vec::new()
@@ -1522,6 +1526,13 @@ impl TerminalUi {
         if let Some(agent_id) = self.control_selected_agent_id() {
             let _ = self.select_agent(&agent_id);
             self.focus = PaneFocus::Right;
+        }
+    }
+
+    fn open_control_selection_in_insert_mode(&mut self) {
+        self.open_control_selection();
+        if self.focus == PaneFocus::Right {
+            self.mode = UiMode::Insert;
         }
     }
 

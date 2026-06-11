@@ -561,6 +561,11 @@ where
             TerminalAppInput::Enter if self.ui.mode() == UiMode::Insert => {
                 self.send_chat_buffer();
             }
+            TerminalAppInput::Enter if self.ui.mode() == UiMode::Command => {
+                let actions = self.handle_ui_key(UiKey::Char('\n'));
+                self.record_actions(actions);
+                self.dirty = true;
+            }
             TerminalAppInput::Char('/') if self.should_start_agent_slash_command() => {
                 self.start_agent_slash_command();
                 self.dirty = true;
@@ -1645,6 +1650,51 @@ mod tests {
         assert_eq!(
             app.controller.sent_messages,
             vec![(agent_id, "first\nsecond".to_string())]
+        );
+    }
+
+    #[test]
+    fn left_pane_enter_focuses_selected_chat_and_enters_insert_mode() {
+        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+        let drain_calls = Arc::new(AtomicUsize::new(0));
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        let controller = CountingController::new(
+            crate::WorkLeafSnapshot {
+                command_transcript: Vec::new(),
+                sessions: vec![WorkLeafSession {
+                    id: agent_id.clone(),
+                    kind: AgentKind::Codex,
+                    title: "feature".to_string(),
+                    feature: "feature".to_string(),
+                    lines: Vec::new(),
+                    loading: None,
+                    completion: None,
+                    token_usage: None,
+                    depends_on: Vec::new(),
+                    depended_on_by: Vec::new(),
+                }],
+            },
+            snapshot_calls,
+            drain_calls,
+        );
+        let mut app = TerminalAppCore::new(controller, 80, 24);
+        app.ui
+            .select_agent(&agent_id)
+            .expect("test agent is registered");
+
+        assert_eq!(app.ui.focus(), PaneFocus::Left);
+        assert_eq!(app.ui.mode(), UiMode::Command);
+
+        assert!(app.handle_bytes(b"\n"));
+
+        assert_eq!(app.ui.focus(), PaneFocus::Right);
+        assert_eq!(app.ui.mode(), UiMode::Insert);
+
+        assert!(app.handle_bytes(b"hello\n"));
+
+        assert_eq!(
+            app.controller.sent_messages,
+            vec![(agent_id, "hello".to_string())]
         );
     }
 
