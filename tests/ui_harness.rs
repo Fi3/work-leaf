@@ -535,6 +535,101 @@ fn scripted_harness_mouse_wheel_scrolls_chat_history() {
 }
 
 #[test]
+fn scripted_harness_gg_and_uppercase_g_jump_chat_history_edges() {
+    let mut harness = UiHarness::new(80, 10);
+
+    harness.handle_bytes(&[23, b'l']);
+    harness.handle_byte(b'i');
+    for index in 0..12 {
+        harness.handle_bytes(format!("message-{index:02}\n").as_bytes());
+    }
+    harness.handle_byte(27);
+
+    let bottom_frame = harness.render_frame();
+    assert!(!bottom_frame.contains("UI harness"));
+    assert!(bottom_frame.contains("message-11"));
+
+    harness.handle_bytes(b"gg");
+
+    let top_frame = harness.render_frame();
+    assert!(top_frame.contains("UI harness"));
+    assert!(top_frame.contains("chat> "));
+    assert!(!top_frame.contains("message-11"));
+
+    harness.handle_byte(b'G');
+
+    let bottom_again = harness.render_frame();
+    assert!(!bottom_again.contains("UI harness"));
+    assert!(bottom_again.contains("message-11"));
+}
+
+#[test]
+fn scripted_harness_visual_cursor_scrolls_and_jumps_chat_history_edges() {
+    let mut harness = UiHarness::new(80, 10);
+
+    harness.handle_bytes(&[23, b'l']);
+    harness.handle_byte(b'i');
+    for index in 0..12 {
+        harness.handle_bytes(format!("message-{index:02}\n").as_bytes());
+    }
+    harness.handle_byte(27);
+    harness.handle_byte(b'v');
+
+    for _ in 0..32 {
+        harness.handle_byte(b'k');
+    }
+
+    let top_frame = harness.render_frame();
+    assert!(top_frame.contains("UI harness"));
+    assert!(top_frame.contains("mode=visual-cursor focus=right"));
+
+    harness.handle_byte(b'G');
+
+    let bottom_frame = harness.render_frame();
+    assert!(!bottom_frame.contains("UI harness"));
+    assert!(bottom_frame.contains("message-11"));
+
+    harness.handle_bytes(b"gg");
+
+    let top_again = harness.render_frame();
+    assert!(top_again.contains("UI harness"));
+    assert!(top_again.contains("chat> "));
+}
+
+#[test]
+fn scripted_harness_visual_selection_rebases_after_chat_history_jumps_and_scrolls() {
+    let mut jump_harness = UiHarness::new(80, 10);
+
+    jump_harness.handle_bytes(&[23, b'l']);
+    jump_harness.handle_byte(b'i');
+    for index in 0..12 {
+        jump_harness.handle_bytes(format!("message-{index:02}\n").as_bytes());
+    }
+    jump_harness.handle_byte(27);
+    jump_harness.handle_byte(b'V');
+    jump_harness.handle_bytes(b"gg");
+    jump_harness.handle_byte(b'Y');
+
+    assert_eq!(jump_harness.ui().copied_text(), Some("UI harness"));
+
+    let mut scroll_harness = UiHarness::new(80, 10);
+
+    scroll_harness.handle_bytes(&[23, b'l']);
+    scroll_harness.handle_byte(b'i');
+    for index in 0..12 {
+        scroll_harness.handle_bytes(format!("message-{index:02}\n").as_bytes());
+    }
+    scroll_harness.handle_byte(27);
+    scroll_harness.handle_byte(b'V');
+    for _ in 0..32 {
+        scroll_harness.handle_byte(b'k');
+    }
+    scroll_harness.handle_byte(b'Y');
+
+    assert_eq!(scroll_harness.ui().copied_text(), Some("UI harness"));
+}
+
+#[test]
 fn scripted_harness_arrow_keys_edit_focused_chat_without_switching_to_command() {
     let mut harness = UiHarness::new(80, 24);
 

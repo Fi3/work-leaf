@@ -487,7 +487,12 @@ impl TerminalUi {
     ) -> Vec<UiAction> {
         let visible_right_content = self.visible_right_content(right_content);
         let command_mode_text_key = self.command_mode_text_key_control_status(key);
-        let actions = self.handle_key_inner(key, &visible_right_content, right_cursor_column);
+        let actions = self.handle_key_inner(
+            key,
+            right_content,
+            &visible_right_content,
+            right_cursor_column,
+        );
         self.update_command_mode_typing_notice(command_mode_text_key);
         actions
     }
@@ -495,6 +500,7 @@ impl TerminalUi {
     fn handle_key_inner(
         &mut self,
         key: UiKey,
+        right_content: &str,
         visible_right_content: &str,
         right_cursor_column: Option<usize>,
     ) -> Vec<UiAction> {
@@ -519,16 +525,21 @@ impl TerminalUi {
             _ => {}
         }
 
+        if let Some(pending) = self.pending.take() {
+            return self.handle_pending_key(pending, key, right_content);
+        }
+
         if self.visual_selection.is_some() {
-            return self.handle_visual_key(key, visible_right_content);
+            return self.handle_visual_key(key, right_content, visible_right_content);
         }
 
         if self.visual_cursor.is_some() {
-            return self.handle_visual_cursor_key(key, visible_right_content, right_cursor_column);
-        }
-
-        if let Some(pending) = self.pending.take() {
-            return self.handle_pending_key(pending, key);
+            return self.handle_visual_cursor_key(
+                key,
+                right_content,
+                visible_right_content,
+                right_cursor_column,
+            );
         }
 
         match key {
@@ -543,6 +554,10 @@ impl TerminalUi {
             }
             UiKey::Char('g') if self.mode == UiMode::Command => {
                 self.pending = Some(PendingKey::G);
+                Vec::new()
+            }
+            UiKey::Char('G') if self.mode == UiMode::Command => {
+                self.reset_right_scroll();
                 Vec::new()
             }
             UiKey::Char('v') if self.mode == UiMode::Command => {
@@ -701,6 +716,11 @@ impl TerminalUi {
         self.right_scroll_rows = 0;
     }
 
+    fn scroll_right_pane_to_top(&mut self, right_content: &str) {
+        let (inner_width, inner_height) = self.right_inner_size();
+        self.right_scroll_rows = max_scroll_rows(right_content, inner_width, inner_height);
+    }
+
     fn visible_right_content(&self, right_content: &str) -> String {
         let (inner_width, inner_height) = self.right_inner_size();
         visible_content(
@@ -855,7 +875,12 @@ impl TerminalUi {
             .unwrap_or_default()
     }
 
-    fn handle_visual_key(&mut self, key: UiKey, visible_right_content: &str) -> Vec<UiAction> {
+    fn handle_visual_key(
+        &mut self,
+        key: UiKey,
+        right_content: &str,
+        visible_right_content: &str,
+    ) -> Vec<UiAction> {
         match key {
             UiKey::Esc => self.clear_visual_selection(),
             UiKey::Char('v') => self.set_visual_mode(VisualSelectionMode::Character),
@@ -863,10 +888,20 @@ impl TerminalUi {
             UiKey::Char(CTRL_V) => self.set_visual_mode(VisualSelectionMode::Block),
             UiKey::Char('y') => self.yank_visual_selection(visible_right_content, false),
             UiKey::Char('Y') => self.yank_visual_selection(visible_right_content, true),
-            UiKey::Char('h') | UiKey::Left => self.move_visual_cursor(0, -1, visible_right_content),
-            UiKey::Char('l') | UiKey::Right => self.move_visual_cursor(0, 1, visible_right_content),
-            UiKey::Char('j') | UiKey::Down => self.move_visual_cursor(1, 0, visible_right_content),
-            UiKey::Char('k') | UiKey::Up => self.move_visual_cursor(-1, 0, visible_right_content),
+            UiKey::Char('g') => self.pending = Some(PendingKey::G),
+            UiKey::Char('G') => self.jump_right_visual_cursor_to_bottom(right_content),
+            UiKey::Char('h') | UiKey::Left => {
+                self.move_visual_cursor(0, -1, right_content, visible_right_content);
+            }
+            UiKey::Char('l') | UiKey::Right => {
+                self.move_visual_cursor(0, 1, right_content, visible_right_content);
+            }
+            UiKey::Char('j') | UiKey::Down => {
+                self.move_visual_cursor(1, 0, right_content, visible_right_content);
+            }
+            UiKey::Char('k') | UiKey::Up => {
+                self.move_visual_cursor(-1, 0, right_content, visible_right_content);
+            }
             _ => {}
         }
         Vec::new()
@@ -875,6 +910,7 @@ impl TerminalUi {
     fn handle_visual_cursor_key(
         &mut self,
         key: UiKey,
+        right_content: &str,
         visible_right_content: &str,
         right_cursor_column: Option<usize>,
     ) -> Vec<UiAction> {
@@ -899,10 +935,20 @@ impl TerminalUi {
                 self.yank_current_line(visible_right_content, right_cursor_column);
                 self.clear_visual_selection();
             }
-            UiKey::Char('h') | UiKey::Left => self.move_visual_cursor(0, -1, visible_right_content),
-            UiKey::Char('l') | UiKey::Right => self.move_visual_cursor(0, 1, visible_right_content),
-            UiKey::Char('j') | UiKey::Down => self.move_visual_cursor(1, 0, visible_right_content),
-            UiKey::Char('k') | UiKey::Up => self.move_visual_cursor(-1, 0, visible_right_content),
+            UiKey::Char('g') => self.pending = Some(PendingKey::G),
+            UiKey::Char('G') => self.jump_right_visual_cursor_to_bottom(right_content),
+            UiKey::Char('h') | UiKey::Left => {
+                self.move_visual_cursor(0, -1, right_content, visible_right_content);
+            }
+            UiKey::Char('l') | UiKey::Right => {
+                self.move_visual_cursor(0, 1, right_content, visible_right_content);
+            }
+            UiKey::Char('j') | UiKey::Down => {
+                self.move_visual_cursor(1, 0, right_content, visible_right_content);
+            }
+            UiKey::Char('k') | UiKey::Up => {
+                self.move_visual_cursor(-1, 0, right_content, visible_right_content);
+            }
             _ => {}
         }
         Vec::new()
@@ -955,6 +1001,50 @@ impl TerminalUi {
         self.visual_selection = None;
     }
 
+    fn jump_right_visual_cursor_to_top(&mut self, right_content: &str) {
+        self.scroll_right_pane_to_top(right_content);
+        let visible_right_content = self.visible_right_content(right_content);
+        self.set_right_visual_cursor_row(&visible_right_content, 0);
+    }
+
+    fn jump_right_visual_cursor_to_bottom(&mut self, right_content: &str) {
+        self.reset_right_scroll();
+        let visible_right_content = self.visible_right_content(right_content);
+        let lines = self.visual_pane_lines(&visible_right_content, PaneFocus::Right);
+        let row = self.right_visual_start_row(&lines);
+        self.set_right_visual_cursor_row(&visible_right_content, row);
+    }
+
+    fn set_right_visual_cursor_row(&mut self, visible_right_content: &str, row: usize) {
+        let lines = self.visual_pane_lines(visible_right_content, PaneFocus::Right);
+        if lines.is_empty() {
+            return;
+        }
+        let row = row.min(lines.len().saturating_sub(1));
+
+        if let Some(selection) = self.visual_selection.as_mut() {
+            if selection.pane != PaneFocus::Right {
+                return;
+            }
+            let column = selection
+                .cursor
+                .column
+                .min(lines[row].chars().count().saturating_sub(1));
+            let point = VisualPoint { row, column };
+            selection.anchor = point;
+            selection.cursor = point;
+        } else if let Some(cursor) = self.visual_cursor.as_mut() {
+            if cursor.pane != PaneFocus::Right {
+                return;
+            }
+            let column = cursor
+                .point
+                .column
+                .min(lines[row].chars().count().saturating_sub(1));
+            cursor.point = VisualPoint { row, column };
+        }
+    }
+
     fn visual_start_point(
         &self,
         visible_right_content: &str,
@@ -1003,6 +1093,7 @@ impl TerminalUi {
         &mut self,
         row_delta: isize,
         column_delta: isize,
+        right_content: &str,
         visible_right_content: &str,
     ) {
         let Some((pane, point)) = self
@@ -1022,7 +1113,16 @@ impl TerminalUi {
             return;
         }
         let max_row = lines.len().saturating_sub(1) as isize;
-        let next_row = (point.row as isize + row_delta).clamp(0, max_row) as usize;
+        let requested_row = point.row as isize + row_delta;
+        if pane == PaneFocus::Right {
+            if requested_row < 0 && self.scroll_right_visual_view(right_content, true) {
+                return;
+            }
+            if requested_row > max_row && self.scroll_right_visual_view(right_content, false) {
+                return;
+            }
+        }
+        let next_row = requested_row.clamp(0, max_row) as usize;
         let line_len = lines[next_row].chars().count();
         let max_column = line_len.saturating_sub(1) as isize;
         let next_column = (point.column as isize + column_delta).clamp(0, max_column) as usize;
@@ -1037,6 +1137,33 @@ impl TerminalUi {
                 column: next_column,
             };
         }
+    }
+
+    fn scroll_right_visual_view(&mut self, right_content: &str, up: bool) -> bool {
+        let previous_scroll_rows = self.right_scroll_rows;
+        if up {
+            let (inner_width, inner_height) = self.right_inner_size();
+            self.right_scroll_rows = self
+                .right_scroll_rows
+                .saturating_add(1)
+                .min(max_scroll_rows(right_content, inner_width, inner_height));
+        } else {
+            self.right_scroll_rows = self.right_scroll_rows.saturating_sub(1);
+        }
+        let changed = self.right_scroll_rows != previous_scroll_rows;
+        if changed {
+            let visible_right_content = self.visible_right_content(right_content);
+            let lines = self.visual_pane_lines(&visible_right_content, PaneFocus::Right);
+            if !lines.is_empty() {
+                let row = if up {
+                    0
+                } else {
+                    self.right_visual_start_row(&lines)
+                };
+                self.set_right_visual_cursor_row(&visible_right_content, row);
+            }
+        }
+        changed
     }
 
     fn yank_current_line(
@@ -1257,7 +1384,12 @@ impl TerminalUi {
         ))
     }
 
-    fn handle_pending_key(&mut self, pending: PendingKey, key: UiKey) -> Vec<UiAction> {
+    fn handle_pending_key(
+        &mut self,
+        pending: PendingKey,
+        key: UiKey,
+        right_content: &str,
+    ) -> Vec<UiAction> {
         match (pending, key) {
             (PendingKey::CtrlW, UiKey::Char('h')) if self.mode == UiMode::Command => {
                 if self.left_visible {
@@ -1289,6 +1421,10 @@ impl TerminalUi {
                 self.previous_window();
                 Vec::new()
             }
+            (PendingKey::G, UiKey::Char('g')) if self.mode == UiMode::Command => {
+                self.jump_right_visual_cursor_to_top(right_content);
+                Vec::new()
+            }
             _ => Vec::new(),
         }
     }
@@ -1306,7 +1442,7 @@ impl TerminalUi {
     fn is_command_control_char(&self, ch: char) -> bool {
         matches!(
             ch,
-            'i' | ':' | ',' | 's' | 't' | 'f' | 'g' | 'v' | 'V' | 'Y' | CTRL_V
+            'i' | ':' | ',' | 's' | 't' | 'f' | 'g' | 'G' | 'v' | 'V' | 'Y' | CTRL_V
         ) || (self.focus == PaneFocus::Left && matches!(ch, 'j' | 'k' | 'l' | 'x'))
     }
 
@@ -2045,6 +2181,25 @@ fn visible_content(content: &str, width: u16, height: u16, scroll_rows: usize) -
     } else {
         format!("{visible_history}\n{prompt}")
     }
+}
+
+fn max_scroll_rows(content: &str, width: u16, height: u16) -> usize {
+    let height = usize::from(height);
+    let Some((history, prompt)) = split_chat_prompt(content) else {
+        return if content.is_empty() {
+            0
+        } else {
+            visual_block_row_count(content, width).saturating_sub(height)
+        };
+    };
+
+    if history.is_empty() {
+        return 0;
+    }
+
+    let prompt_rows = visual_block_row_count(prompt, width);
+    let history_height = height.saturating_sub(prompt_rows).max(1);
+    visual_block_row_count(history, width).saturating_sub(history_height)
 }
 
 fn split_chat_prompt(content: &str) -> Option<(&str, &str)> {
