@@ -436,9 +436,9 @@ the selected agent chat when an agent is selected.
 
 The terminal app maps a session to a left-pane `READY` marker when the controller exposes no loading
 state for that session. Sessions waiting for a completion answer show `DONE?` in the row title, and
-closed sessions show `CLOSED`. `TerminalUi` queues one terminal bell when a chat transitions into
-the ready state and renders ready rows in reverse video so they remain highlighted until the chat
-becomes busy again.
+closed sessions show `CLOSED` without the ready marker. `TerminalUi` queues one terminal bell when a
+chat transitions into the ready state and renders ready rows in reverse video so they remain
+highlighted until the chat becomes busy or closed.
 
 `src/ui.rs::TerminalUi` owns terminal-specific presentation state:
 

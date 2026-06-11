@@ -850,7 +850,7 @@ where
         }
         let _ = self
             .ui
-            .set_agent_ready_state(&session.id, session.loading.is_none());
+            .set_agent_ready_state(&session.id, session_is_ready_for_ui(session));
     }
 
     fn should_start_agent_slash_command(&self) -> bool {
@@ -1059,6 +1059,10 @@ fn session_display_title(session: &WorkLeafSession) -> String {
         Some(WorkLeafCompletion::Closed) => format!("{} CLOSED", session.title),
         None => session.title.clone(),
     }
+}
+
+fn session_is_ready_for_ui(session: &WorkLeafSession) -> bool {
+    session.loading.is_none() && session.completion != Some(WorkLeafCompletion::Closed)
 }
 
 fn is_agent_slash_command_line(line: &str) -> bool {
@@ -1549,6 +1553,47 @@ mod tests {
                 .render_left_pane()
                 .contains("\u{1b}[7m>feature user-1  working: feature  READY\u{1b}[0m")
         );
+    }
+
+    #[test]
+    fn closed_completion_clears_ready_highlight_in_left_pane() {
+        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+        let drain_calls = Arc::new(AtomicUsize::new(0));
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        let mut session = WorkLeafSession {
+            id: agent_id,
+            kind: AgentKind::Codex,
+            title: "feature".to_string(),
+            feature: "feature".to_string(),
+            lines: Vec::new(),
+            loading: None,
+            completion: Some(WorkLeafCompletion::NeedsDecision),
+            token_usage: None,
+            depends_on: Vec::new(),
+            depended_on_by: Vec::new(),
+        };
+        let controller = CountingController::new(
+            crate::WorkLeafSnapshot {
+                command_transcript: Vec::new(),
+                sessions: vec![session.clone()],
+            },
+            snapshot_calls,
+            drain_calls,
+        );
+        let mut app = TerminalAppCore::new(controller, 80, 24);
+
+        let ready_left_pane = app.ui.render_left_pane();
+        assert!(ready_left_pane.contains("feature DONE?"));
+        assert!(ready_left_pane.contains("READY"));
+        assert!(ready_left_pane.contains("\u{1b}[7m"));
+
+        session.completion = Some(WorkLeafCompletion::Closed);
+        app.apply_session_to_ui(&session);
+
+        let closed_left_pane = app.ui.render_left_pane();
+        assert!(closed_left_pane.contains("feature CLOSED"));
+        assert!(!closed_left_pane.contains("READY"));
+        assert!(!closed_left_pane.contains("\u{1b}[7m"));
     }
 
     #[test]
