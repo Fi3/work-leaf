@@ -340,6 +340,7 @@ where
         self.ensure_session_exists(agent_id)?;
         let request = parse_agent_creation_request(split_command_line(prompt))?;
         self.validate_dependency_target(agent_id, request.depends_on.as_ref())?;
+        self.remember_agent_review_baseline(agent_id);
         let prompt = request.args.join(" ");
         let promotion_prompt = patch_promotion_prompt(&prompt);
         self.append_agent_line(
@@ -707,9 +708,7 @@ where
     }
 
     fn remember_agent_review_baseline(&mut self, agent_id: &AgentId) {
-        if !agent_id.as_str().starts_with("user-")
-            || self.agent_review_baselines.contains_key(agent_id)
-        {
+        if self.agent_review_baselines.contains_key(agent_id) {
             return;
         }
         let Some(root) = self
@@ -1505,15 +1504,14 @@ where
     }
 
     fn should_start_review(&self, agent_id: &AgentId, result: &CommandChatResult) -> bool {
-        agent_id.as_str().starts_with("user-")
-            && match result {
-                CommandChatResult::AgentLaunched { reply, .. }
-                | CommandChatResult::AgentMessage { reply, .. } => {
-                    (contains_done_directive(reply) || contains_done_summary(reply, agent_id))
-                        && self.has_unreviewed_agent_commit(agent_id)
-                }
-                _ => false,
+        match result {
+            CommandChatResult::AgentLaunched { reply, .. }
+            | CommandChatResult::AgentMessage { reply, .. } => {
+                (contains_done_directive(reply) || contains_done_summary(reply, agent_id))
+                    && self.has_unreviewed_agent_commit(agent_id)
             }
+            _ => false,
+        }
     }
 
     fn has_unreviewed_agent_commit(&self, agent_id: &AgentId) -> bool {
@@ -2360,7 +2358,11 @@ fn split_command_line(line: &str) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::collections::{BTreeMap, VecDeque};
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::process::Command;
+    use std::sync::{Arc, Mutex};
 
     use super::*;
 
@@ -2381,6 +2383,71 @@ mod tests {
             _prompt: &str,
         ) -> Result<ChatMessage, crate::agent::AgentError> {
             Ok(ChatMessage::new(MessageRole::Agent, String::new()))
+        }
+    }
+
+    #[derive(Clone, Debug)]
+    struct ScriptedBackend {
+        state: Arc<Mutex<ScriptedBackendState>>,
+    }
+
+    #[derive(Debug)]
+    struct ScriptedBackendState {
+        replies: VecDeque<String>,
+        launches: Vec<AgentLaunch>,
+        sends: Vec<(AgentId, String)>,
+        sessions: BTreeMap<AgentId, AgentSession>,
+    }
+
+    impl ScriptedBackend {
+        fn new<const N: usize>(replies: [&str; N]) -> Self {
+            Self {
+                state: Arc::new(Mutex::new(ScriptedBackendState {
+                    replies: replies.into_iter().map(String::from).collect(),
+                    launches: Vec::new(),
+                    sends: Vec::new(),
+                    sessions: BTreeMap::new(),
+                })),
+            }
+        }
+
+        fn launches(&self) -> Vec<AgentLaunch> {
+            self.state.lock().unwrap().launches.clone()
+        }
+    }
+
+    impl AgentBackend for ScriptedBackend {
+        fn launch(
+            &mut self,
+            request: AgentLaunch,
+        ) -> Result<AgentSession, crate::agent::AgentError> {
+            let mut state = self.state.lock().unwrap();
+            state.launches.push(request.clone());
+            let agent_id = request.id.clone();
+            let mut session = AgentSession::new(request);
+            let reply = state.replies.pop_front().expect("missing fake reply");
+            session.push_message(MessageRole::Agent, reply);
+            state.sessions.insert(agent_id, session.clone());
+            Ok(session)
+        }
+
+        fn send(
+            &mut self,
+            agent_id: &AgentId,
+            prompt: &str,
+        ) -> Result<ChatMessage, crate::agent::AgentError> {
+            let mut state = self.state.lock().unwrap();
+            state.sends.push((agent_id.clone(), prompt.to_string()));
+            let reply = state.replies.pop_front().expect("missing fake reply");
+            if let Some(session) = state.sessions.get_mut(agent_id) {
+                session.push_message(MessageRole::User, prompt);
+                session.push_message(MessageRole::Agent, reply.clone());
+            }
+            Ok(ChatMessage::new(MessageRole::Agent, reply))
+        }
+
+        fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
+            self.state.lock().unwrap().sessions.get(agent_id).cloned()
         }
     }
 
@@ -2416,6 +2483,70 @@ mod tests {
         assert_eq!(session.completion, Some(WorkLeafCompletion::NeedsDecision));
         assert_eq!(session.loading, None);
         assert!(!controller.implicit_loading_agents.contains_key(&agent_id));
+    }
+
+    #[test]
+    fn non_user_patch_agent_done_starts_review_and_completion_question() {
+        let root = git_repo("workspace-non-user-review-completion");
+        fs::write(root.join("README.md"), "before\n").unwrap();
+        git(&root, ["add", "README.md"]);
+        git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+        let backend = ScriptedBackend::new([
+            "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+            "NO_FINDINGS",
+        ]);
+        let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+        let mut controller = WorkLeafController::new(chat);
+        let agent_id = AgentId::new("chat-9").expect("test agent id is valid");
+
+        controller.register_agent_feature(agent_id.clone(), "review completion".to_string());
+        controller.add_session(WorkLeafSession {
+            id: agent_id.clone(),
+            kind: AgentKind::Codex,
+            title: "chat-9".to_string(),
+            feature: "review completion".to_string(),
+            lines: Vec::new(),
+            loading: None,
+            completion: None,
+            token_usage: None,
+            depends_on: Vec::new(),
+            depended_on_by: Vec::new(),
+        });
+
+        controller
+            .send_message(&agent_id, "finish review completion")
+            .expect("patch-agent message is accepted");
+        assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+        let reviewer_id = AgentId::new("review-chat-9").expect("test reviewer id is valid");
+        assert!(
+            backend
+                .launches()
+                .iter()
+                .any(|launch| launch.id == reviewer_id),
+            "clean review should launch for non-user patch-agent ids"
+        );
+        let snapshot = controller.snapshot();
+        let patch_agent = snapshot
+            .session(&agent_id)
+            .expect("patch-agent session exists");
+        assert_eq!(
+            patch_agent.completion,
+            Some(WorkLeafCompletion::NeedsDecision)
+        );
+        assert!(
+            patch_agent
+                .lines
+                .iter()
+                .any(|line| line == "work-leaf: is this feature done? [yes/no]"),
+            "{patch_agent:?}"
+        );
+        assert!(
+            patch_agent.lines.iter().any(|line| {
+                line.contains("chat-9 reviewed by review-chat-9: rounds=1 resolved=yes")
+            }),
+            "{patch_agent:?}"
+        );
     }
 
     #[test]
@@ -2457,5 +2588,29 @@ mod tests {
             .expect("created patch agent session exists");
         assert_eq!(session.title, "bad-regression-chat-name-patch-agents");
         assert_eq!(session.feature, "bad-regression-chat-name-patch-agents");
+    }
+
+    fn git_repo(name: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        git(&root, ["init"]);
+        git(&root, ["config", "user.email", "test@example.com"]);
+        git(&root, ["config", "user.name", "Test User"]);
+        root
+    }
+
+    fn git<const N: usize>(root: &Path, args: [&str; N]) {
+        let output = Command::new("git")
+            .current_dir(root)
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "git failed\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
 }

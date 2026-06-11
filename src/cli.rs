@@ -493,6 +493,7 @@ where
         };
         let agent_id = AgentId::new(agent_id.clone()).map_err(CliError::Agent)?;
         let prompt = args[1..].join(" ");
+        self.remember_agent_review_baseline(&agent_id);
         self.send_to_agent(&agent_id, &patch_promotion_prompt(&prompt))
     }
 
@@ -621,9 +622,7 @@ where
     }
 
     fn remember_agent_review_baseline(&mut self, agent_id: &AgentId) {
-        if user_agent_number(agent_id).is_none()
-            || self.agent_review_baselines.contains_key(agent_id)
-        {
+        if self.agent_review_baselines.contains_key(agent_id) {
             return;
         }
         if let Ok(Some(hash)) = GitHistory::new(self.project_dir.clone()).head_hash() {
