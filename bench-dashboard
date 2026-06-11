@@ -1,0 +1,877 @@
+#!/usr/bin/env python3
+"""Serve a local dashboard for Work Leaf three-feature benchmark reports."""
+
+from __future__ import annotations
+
+import argparse
+import html as html_lib
+import json
+import os
+import re
+import sys
+import tempfile
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Any
+from urllib.parse import unquote
+
+
+ROOT = Path(__file__).resolve().parent
+DEFAULT_RESULTS_DIR = ROOT / "bench-results"
+TOKEN_RE = re.compile(r"(cached_input|reasoning_output|input|output)=(\d+)")
+META_RE = re.compile(r"^- ([A-Za-z0-9_]+):\s*(.*)$")
+
+
+def parse_json_stream(text: str) -> list[dict[str, Any]]:
+    decoder = json.JSONDecoder()
+    records: list[dict[str, Any]] = []
+    index = 0
+    while index < len(text):
+        while index < len(text) and text[index].isspace():
+            index += 1
+        if index >= len(text):
+            break
+        try:
+            value, end = decoder.raw_decode(text, index)
+        except json.JSONDecodeError:
+            next_start = text.find("{", index + 1)
+            if next_start == -1:
+                break
+            index = next_start
+            continue
+        if isinstance(value, dict):
+            records.append(value)
+        index = end
+    return records
+
+
+def parse_markdown_metadata(text: str) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for line in text.splitlines():
+        match = META_RE.match(line)
+        if match:
+            fields[match.group(1)] = match.group(2).strip()
+    return fields
+
+
+def parse_token_totals(token_usage: str | None) -> dict[str, int]:
+    totals = {
+        "input": 0,
+        "cached_input": 0,
+        "uncached_input": 0,
+        "output": 0,
+        "reasoning_output": 0,
+    }
+    if not token_usage:
+        return totals
+    for key, value in TOKEN_RE.findall(token_usage):
+        totals[key] += int(value)
+    totals["uncached_input"] = max(0, totals["input"] - totals["cached_input"])
+    return totals
+
+
+def int_or_none(value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    text = str(value).strip()
+    if not text or text.lower() == "null":
+        return None
+    try:
+        return int(text)
+    except ValueError:
+        return None
+
+
+def value(fields: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        if fields.get(key) not in (None, ""):
+            return fields[key]
+    return None
+
+
+def classify_bench(report_name: str, fields: dict[str, Any]) -> str:
+    hints = " ".join(
+        str(part)
+        for part in (
+            report_name,
+            value(fields, "bench_mode"),
+            value(fields, "bench_kind"),
+            value(fields, "report"),
+            value(fields, "patch_artifacts"),
+        )
+        if part
+    ).lower()
+    if "sequential" in hints:
+        return "Sequential"
+    if "worktree" in hints:
+        return "Worktree"
+    return "Work Leaf"
+
+
+def infer_report_name(run_id: str, fields: dict[str, Any], index_name: str) -> str | None:
+    report = value(fields, "report")
+    if report:
+        return Path(str(report)).name
+    if not run_id:
+        return None
+    mode = str(value(fields, "bench_mode") or "").lower()
+    if mode == "sequential" or "sequential" in index_name:
+        return f"{run_id}-three-feature-sequential-bench.md"
+    if mode == "worktree" or "worktree" in index_name:
+        return f"{run_id}-three-feature-worktree-bench.md"
+    return f"{run_id}-three-feature-bench.md"
+
+
+def report_files(results_dir: Path) -> list[Path]:
+    if not results_dir.exists():
+        return []
+    return sorted(
+        path
+        for path in results_dir.glob("*.md")
+        if is_bench_report_name(path.name)
+    )
+
+
+def is_bench_report_name(name: str) -> bool:
+    lowered = name.lower()
+    if "direct-comparison" in lowered or "interim-baseline" in lowered:
+        return False
+    return "three-feature" in lowered and (
+        "bench" in lowered or "sequential" in lowered or "worktree" in lowered
+    )
+
+
+def normalize_record(
+    fields: dict[str, Any],
+    report_name: str,
+    markdown_text: str | None = None,
+) -> dict[str, Any]:
+    run_id = str(value(fields, "run_id") or report_name.split("-three-feature", 1)[0])
+    tokens = parse_token_totals(str(value(fields, "token_usage") or ""))
+    changed_added = int_or_none(value(fields, "changed_lines_added", "added_lines"))
+    changed_deleted = int_or_none(value(fields, "changed_lines_deleted", "deleted_lines"))
+    changed_total = int_or_none(value(fields, "changed_lines_total", "total_line_delta"))
+    if changed_total is None and changed_added is not None and changed_deleted is not None:
+        changed_total = changed_added + changed_deleted
+    result = str(value(fields, "result") or "unknown")
+    code_quality = str(value(fields, "code_quality") or "")
+    final_checks = "pass" if code_quality.startswith("passed ") else ("not run" if code_quality == "not run" else code_quality or "unknown")
+    kind = classify_bench(report_name, fields)
+
+    return {
+        "id": report_name,
+        "report_file": report_name,
+        "kind": kind,
+        "run_id": run_id,
+        "result": result,
+        "duration_seconds": int_or_none(value(fields, "duration_seconds")),
+        "input_tokens": tokens["input"],
+        "cached_input_tokens": tokens["cached_input"],
+        "uncached_input_tokens": tokens["uncached_input"],
+        "output_tokens": tokens["output"],
+        "reasoning_output_tokens": tokens["reasoning_output"],
+        "review_completed": str(value(fields, "review_completed") or "unknown"),
+        "linearize_completed": str(value(fields, "linearize_completed") or "unknown"),
+        "commits_after_base": int_or_none(value(fields, "commits_after_base")),
+        "changed_files": int_or_none(value(fields, "changed_files")),
+        "changed_lines_added": changed_added,
+        "changed_lines_deleted": changed_deleted,
+        "changed_lines_total": changed_total,
+        "final_checks": final_checks,
+        "agent_model": str(value(fields, "agent_model") or "unknown"),
+        "agent_transport": str(value(fields, "agent_transport") or "unknown"),
+        "no_read_permission": str(value(fields, "no_read_permission") or "unknown"),
+        "benched_binary_commit": str(value(fields, "benched_binary_commit", "bench_driver_commit") or "unknown"),
+        "benched_binary_dirty": str(value(fields, "benched_binary_dirty", "bench_driver_dirty") or "unknown"),
+        "operator_notes": str(value(fields, "operator_notes", "human_operator_note") or ""),
+        "markdown_preview": markdown_text.splitlines()[0] if markdown_text else "",
+    }
+
+
+def collect_bench_records(results_dir: Path) -> list[dict[str, Any]]:
+    results_dir = results_dir.resolve()
+    merged: dict[str, dict[str, Any]] = {}
+
+    if results_dir.exists():
+        for index_path in sorted(results_dir.glob("*.jsonl")):
+            for fields in parse_json_stream(index_path.read_text(encoding="utf-8", errors="replace")):
+                run_id = str(value(fields, "run_id") or "")
+                report_name = infer_report_name(run_id, fields, index_path.name)
+                if not report_name or not is_bench_report_name(report_name):
+                    continue
+                md_path = results_dir / report_name
+                md_text = md_path.read_text(encoding="utf-8", errors="replace") if md_path.exists() else None
+                md_fields = parse_markdown_metadata(md_text) if md_text else {}
+                combined = {**md_fields, **fields}
+                merged[report_name] = normalize_record(combined, report_name, md_text)
+
+    for md_path in report_files(results_dir):
+        if md_path.name in merged:
+            continue
+        md_text = md_path.read_text(encoding="utf-8", errors="replace")
+        fields = parse_markdown_metadata(md_text)
+        merged[md_path.name] = normalize_record(fields, md_path.name, md_text)
+
+    return sorted(
+        merged.values(),
+        key=lambda record: str(record.get("run_id") or record.get("report_file") or ""),
+        reverse=True,
+    )
+
+
+def latest_reference(records: list[dict[str, Any]]) -> str:
+    if not records:
+        return "no benchmark report found"
+    latest = records[0]
+    return (
+        f"{latest['run_id']} ({latest['kind']}, {latest['result']}, "
+        f"model {latest['agent_model']})"
+    )
+
+
+def read_report(results_dir: Path, report_name: str) -> str:
+    decoded = unquote(report_name)
+    if decoded != Path(decoded).name or "/" in decoded or "\\" in decoded:
+        raise FileNotFoundError(decoded)
+    if not is_bench_report_name(decoded):
+        raise FileNotFoundError(decoded)
+    report_path = results_dir.resolve() / decoded
+    if not report_path.exists() or not report_path.is_file():
+        raise FileNotFoundError(decoded)
+    return report_path.read_text(encoding="utf-8", errors="replace")
+
+
+def json_bytes(value_: Any) -> bytes:
+    return json.dumps(value_, indent=2, sort_keys=True).encode("utf-8")
+
+
+def render_index_html() -> str:
+    return r"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Work Leaf Bench Dashboard</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f7f8fa;
+      --surface: #ffffff;
+      --surface-2: #eef1f5;
+      --text: #16181d;
+      --muted: #5f6876;
+      --border: #d8dde6;
+      --accent: #0f766e;
+      --pass: #157f3b;
+      --fail: #b42318;
+      --warn: #b65c00;
+      --shadow: 0 1px 2px rgba(18, 24, 31, 0.08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101418;
+        --surface: #171d23;
+        --surface-2: #202832;
+        --text: #eef2f6;
+        --muted: #a2acb8;
+        --border: #2d3743;
+        --accent: #2dd4bf;
+        --pass: #4ade80;
+        --fail: #fb7185;
+        --warn: #fbbf24;
+        --shadow: none;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main {
+      width: min(1520px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+    p { margin: 8px 0; color: var(--muted); max-width: 1160px; }
+    code {
+      padding: 1px 5px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface-2);
+      color: var(--text);
+    }
+    .intro {
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 18px;
+    }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin: 14px 0;
+      flex-wrap: wrap;
+    }
+    .filter {
+      min-width: min(420px, 100%);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 9px 11px;
+      font: inherit;
+    }
+    .summary {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .mode-filters {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 0 0 12px;
+    }
+    .mode-filter {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .mode-filter.active {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+    }
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    table {
+      width: 100%;
+      min-width: 1280px;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+      text-transform: uppercase;
+    }
+    tbody tr { cursor: pointer; }
+    tbody tr:hover { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+    tbody tr:last-child td { border-bottom: 0; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      font-size: 12px;
+      font-weight: 650;
+    }
+    .pass { color: var(--pass); }
+    .fail { color: var(--fail); }
+    .unknown { color: var(--warn); }
+    .report-view {
+      display: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .report-header {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    button {
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 8px 11px;
+      font: inherit;
+      cursor: pointer;
+    }
+    button:hover { border-color: var(--accent); }
+    pre {
+      margin: 0;
+      padding: 16px;
+      overflow: auto;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <section id="home">
+      <div class="intro">
+        <h1>Work Leaf Three-Feature Benchmarks</h1>
+        <p>This dashboard reads <code>bench-results</code> and compares the same three requested features across benchmark modes.</p>
+        <p><strong>Work Leaf</strong> rows run the orchestrator release under test against the fixed base commit. There are many Work Leaf rows because every new candidate release can be benchmarked and saved.</p>
+        <p><strong>Sequential</strong> runs direct Codex on request 1, review/fix/commit, then request 2, then request 3, followed by a final linearization pass. <strong>Worktree</strong> runs the direct Codex patch/review loops in parallel worktrees and then asks a direct Codex linearizer to integrate the reviewed branches.</p>
+        <p>To run a saved Work Leaf benchmark output, use <code>./start --bench</code> and select one of the saved artifact directories.</p>
+        <p>The benchmark commands are intentionally not perfectly written so we can see whether agents can still produce the intended feature. The only tightly written command is the <code>/&lt;command&gt;</code> feature request. As of the latest recorded bench, <span id="latest-reference">loading...</span>, no recorded output has implemented that request fully correctly: not sequential, not worktree, and not any saved Work Leaf run.</p>
+      </div>
+      <div class="toolbar">
+        <input id="filter" class="filter" type="search" placeholder="Filter by mode, run id, result, model, commit, notes...">
+        <div id="summary" class="summary"></div>
+      </div>
+      <div id="mode-filters" class="mode-filters"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Mode</th>
+              <th>Run</th>
+              <th>Result</th>
+              <th class="num">Time</th>
+              <th class="num">Input</th>
+              <th class="num">Uncached</th>
+              <th class="num">Output</th>
+              <th class="num">Reasoning</th>
+              <th>Review</th>
+              <th>Linearize</th>
+              <th class="num">Commits</th>
+              <th class="num">Files</th>
+              <th class="num">Lines</th>
+              <th>Checks</th>
+              <th>Model</th>
+              <th>Transport</th>
+              <th>Dirty</th>
+            </tr>
+          </thead>
+          <tbody id="bench-body">
+            <tr><td colspan="17">Loading bench reports...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section id="report" class="report-view">
+      <div class="report-header">
+        <h2 id="report-title">Report</h2>
+        <button id="back" type="button">Back to table</button>
+      </div>
+      <pre id="report-content"></pre>
+    </section>
+  </main>
+  <script>
+    const body = document.getElementById('bench-body');
+    const filter = document.getElementById('filter');
+    const summary = document.getElementById('summary');
+    const modeFilters = document.getElementById('mode-filters');
+    const latestReference = document.getElementById('latest-reference');
+    const home = document.getElementById('home');
+    const report = document.getElementById('report');
+    const reportTitle = document.getElementById('report-title');
+    const reportContent = document.getElementById('report-content');
+    const back = document.getElementById('back');
+    let records = [];
+    let activeMode = 'All';
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char]));
+    }
+
+    function number(value) {
+      if (value === null || value === undefined || Number(value) === 0) return value === 0 ? '0' : '-';
+      return Number(value).toLocaleString();
+    }
+
+    function duration(seconds) {
+      if (seconds === null || seconds === undefined) return '-';
+      seconds = Number(seconds);
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = seconds % 60;
+      if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+      return `${m}m ${String(s).padStart(2, '0')}s`;
+    }
+
+    function lineDelta(record) {
+      const added = record.changed_lines_added;
+      const deleted = record.changed_lines_deleted;
+      if (added === null || added === undefined || deleted === null || deleted === undefined) return '-';
+      return `+${number(added)}/-${number(deleted)}`;
+    }
+
+    function statusClass(value) {
+      const normalized = String(value || '').toLowerCase();
+      if (normalized === 'pass' || normalized === 'yes') return 'pass';
+      if (normalized === 'fail' || normalized === 'no') return 'fail';
+      return 'unknown';
+    }
+
+    function searchable(record) {
+      return [
+        record.kind, record.run_id, record.result, record.agent_model, record.agent_transport,
+        record.benched_binary_commit, record.benched_binary_dirty, record.operator_notes,
+        record.report_file
+      ].join(' ').toLowerCase();
+    }
+
+    function modeCounts() {
+      const counts = { All: records.length, 'Work Leaf': 0, Sequential: 0, Worktree: 0 };
+      for (const record of records) counts[record.kind] = (counts[record.kind] || 0) + 1;
+      return counts;
+    }
+
+    function renderModeFilters() {
+      const counts = modeCounts();
+      const order = ['All', 'Work Leaf', 'Sequential', 'Worktree'];
+      modeFilters.innerHTML = '';
+      for (const mode of order) {
+        if (mode !== 'All' && !counts[mode]) continue;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `mode-filter${activeMode === mode ? ' active' : ''}`;
+        button.textContent = `${mode} (${counts[mode] || 0})`;
+        button.addEventListener('click', () => {
+          activeMode = mode;
+          renderModeFilters();
+          renderRows();
+        });
+        modeFilters.appendChild(button);
+      }
+    }
+
+    function renderRows() {
+      const query = filter.value.trim().toLowerCase();
+      const counts = modeCounts();
+      const visible = records.filter(record => {
+        const modeMatches = activeMode === 'All' || record.kind === activeMode;
+        return modeMatches && (!query || searchable(record).includes(query));
+      });
+      summary.textContent = `${visible.length} of ${records.length} reports; Work Leaf ${counts['Work Leaf'] || 0}, Sequential ${counts.Sequential || 0}, Worktree ${counts.Worktree || 0}`;
+      if (visible.length === 0) {
+        body.innerHTML = '<tr><td colspan="17">No bench reports match the filter.</td></tr>';
+        return;
+      }
+      body.innerHTML = '';
+      for (const record of visible) {
+        const tr = document.createElement('tr');
+        tr.title = 'Open saved benchmark report';
+        tr.innerHTML = `
+          <td><span class="badge">${escapeHtml(record.kind)}</span></td>
+          <td><code>${escapeHtml(record.run_id)}</code></td>
+          <td><span class="${statusClass(record.result)}">${record.result}</span></td>
+          <td class="num">${duration(record.duration_seconds)}</td>
+          <td class="num">${number(record.input_tokens)}</td>
+          <td class="num">${number(record.uncached_input_tokens)}</td>
+          <td class="num">${number(record.output_tokens)}</td>
+          <td class="num">${number(record.reasoning_output_tokens)}</td>
+          <td><span class="${statusClass(record.review_completed)}">${record.review_completed}</span></td>
+          <td><span class="${statusClass(record.linearize_completed)}">${record.linearize_completed}</span></td>
+          <td class="num">${number(record.commits_after_base)}</td>
+          <td class="num">${number(record.changed_files)}</td>
+          <td class="num">${lineDelta(record)}</td>
+          <td>${escapeHtml(record.final_checks)}</td>
+          <td>${escapeHtml(record.agent_model)}</td>
+          <td>${escapeHtml(record.agent_transport)}</td>
+          <td>${escapeHtml(record.benched_binary_dirty)}</td>
+        `;
+        tr.addEventListener('click', () => openReport(record.report_file));
+        body.appendChild(tr);
+      }
+    }
+
+    async function openReport(reportFile) {
+      history.pushState({ reportFile }, '', `#report=${encodeURIComponent(reportFile)}`);
+      await showReport(reportFile);
+    }
+
+    async function showReport(reportFile) {
+      home.classList.add('hidden');
+      report.style.display = 'block';
+      reportTitle.textContent = reportFile;
+      reportContent.textContent = 'Loading report...';
+      const response = await fetch(`/api/report/${encodeURIComponent(reportFile)}`);
+      if (!response.ok) {
+        reportContent.textContent = `Failed to load ${reportFile}: HTTP ${response.status}`;
+        return;
+      }
+      reportContent.textContent = await response.text();
+    }
+
+    function showHome() {
+      history.pushState({}, '', location.pathname);
+      report.style.display = 'none';
+      home.classList.remove('hidden');
+    }
+
+    back.addEventListener('click', showHome);
+    filter.addEventListener('input', renderRows);
+    window.addEventListener('popstate', () => route());
+
+    function route() {
+      const match = location.hash.match(/^#report=(.+)$/);
+      if (match) {
+        showReport(decodeURIComponent(match[1]));
+      } else {
+        report.style.display = 'none';
+        home.classList.remove('hidden');
+      }
+    }
+
+    async function load() {
+      const response = await fetch('/api/benches');
+      const payload = await response.json();
+      records = payload.records || [];
+      latestReference.textContent = payload.latest_reference || 'no benchmark report found';
+      renderModeFilters();
+      renderRows();
+      route();
+    }
+
+    load().catch(error => {
+      body.innerHTML = `<tr><td colspan="17">Failed to load bench reports: ${error}</td></tr>`;
+      latestReference.textContent = 'bench reports failed to load';
+    });
+  </script>
+</body>
+</html>
+"""
+
+
+class BenchDashboardHandler(BaseHTTPRequestHandler):
+    results_dir: Path = DEFAULT_RESULTS_DIR
+
+    def log_message(self, format_: str, *args: Any) -> None:
+        sys.stderr.write("%s - - [%s] %s\n" % (self.address_string(), self.log_date_time_string(), format_ % args))
+
+    def send_body(self, status: int, content_type: str, body: bytes) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self) -> None:
+        path = self.path.split("?", 1)[0]
+        if path in ("/", "/index.html"):
+            self.send_body(200, "text/html; charset=utf-8", render_index_html().encode("utf-8"))
+            return
+        if path == "/api/benches":
+            records = collect_bench_records(self.results_dir)
+            payload = {
+                "results_dir": str(self.results_dir),
+                "latest_reference": latest_reference(records),
+                "records": records,
+            }
+            self.send_body(200, "application/json; charset=utf-8", json_bytes(payload))
+            return
+        if path.startswith("/api/report/"):
+            report_name = path.removeprefix("/api/report/")
+            try:
+                body = read_report(self.results_dir, report_name).encode("utf-8")
+            except FileNotFoundError:
+                self.send_body(404, "text/plain; charset=utf-8", b"report not found\n")
+                return
+            self.send_body(200, "text/plain; charset=utf-8", body)
+            return
+        self.send_body(404, "text/plain; charset=utf-8", b"not found\n")
+
+
+def serve(host: str, port: int, results_dir: Path) -> None:
+    handler = type("ConfiguredBenchDashboardHandler", (BenchDashboardHandler,), {"results_dir": results_dir.resolve()})
+    server = ThreadingHTTPServer((host, port), handler)
+    bound_host, bound_port = server.server_address[:2]
+    print(f"Serving Work Leaf bench dashboard at http://{bound_host}:{bound_port}", flush=True)
+    print(f"Reading bench reports from {results_dir.resolve()}", flush=True)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopped bench dashboard.")
+    finally:
+        server.server_close()
+
+
+def write(path: Path, text: str) -> None:
+    path.write_text(text, encoding="utf-8")
+
+
+def run_self_test() -> None:
+    with tempfile.TemporaryDirectory(prefix="work-leaf-bench-dashboard-test.") as tmp:
+        results = Path(tmp) / "bench-results"
+        results.mkdir()
+        write(
+            results / "20260611T113324+0200-three-feature-bench.md",
+            """# Three-Feature Smoke Bench
+
+- result: pass
+- duration_seconds: 2130
+- benched_binary_commit: abc123
+- benched_binary_dirty: no
+- agent_transport: sdk
+- agent_model: gpt-5.5
+- no_read_permission: 0
+- review_completed: yes
+- linearize_completed: yes
+- commits_after_base: 3
+- changed_files: 12
+- changed_lines_added: 1409
+- changed_lines_deleted: 45
+- changed_lines_total: 1454
+- token_usage: user-1: input=100 cached_input=80 output=5 reasoning_output=3; linearize: input=50 cached_input=40 output=4 reasoning_output=2
+- code_quality: passed cargo test
+""",
+        )
+        write(
+            results / "20260610T194209+0200-three-feature-sequential-bench.md",
+            """# Three-Feature Direct Codex Bench
+
+- result: pass
+- bench_mode: sequential
+- duration_seconds: 3867
+- agent_transport: direct-codex-cli
+- agent_model: gpt-5.5
+- review_completed: yes
+- linearize_completed: yes
+- commits_after_base: 3
+- changed_files: 16
+- changed_lines_added: 1549
+- changed_lines_deleted: 125
+- token_usage: sequential: input=200 cached_input=150 output=20 reasoning_output=10
+- code_quality: passed cargo test
+""",
+        )
+        write(
+            results / "20260610T204700+0200-three-feature-worktree-bench.md",
+            """# Three-Feature Direct Codex Bench
+
+- result: fail
+- bench_mode: worktree
+- duration_seconds: 1500
+- agent_transport: direct-codex-cli
+- agent_model: gpt-5.5
+- review_completed: yes
+- linearize_completed: no
+- commits_after_base: 3
+- changed_files: 15
+- changed_lines_added: 1760
+- changed_lines_deleted: 192
+- token_usage: worktree: input=300 cached_input=250 output=30 reasoning_output=11
+- code_quality: not run
+""",
+        )
+        write(
+            results / "three-feature-bench.jsonl",
+            json.dumps(
+                {
+                    "run_id": "20260611T113324+0200",
+                    "result": "pass",
+                    "duration_seconds": 2130,
+                    "agent_transport": "sdk",
+                    "agent_model": "gpt-5.5",
+                    "review_completed": "yes",
+                    "linearize_completed": "yes",
+                    "changed_lines_added": 1409,
+                    "changed_lines_deleted": 45,
+                    "token_usage": "user: input=100 cached_input=80 output=5 reasoning_output=3; linearize: input=50 cached_input=40 output=4 reasoning_output=2",
+                    "report": str(results / "20260611T113324+0200-three-feature-bench.md"),
+                },
+                indent=2,
+            )
+            + "\n",
+        )
+
+        records = collect_bench_records(results)
+        assert len(records) == 3, records
+        latest = records[0]
+        assert latest["kind"] == "Work Leaf", latest
+        assert latest["run_id"] == "20260611T113324+0200", latest
+        assert latest["input_tokens"] == 150, latest
+        assert latest["uncached_input_tokens"] == 30, latest
+        assert latest["changed_lines_total"] == 1454, latest
+        kinds = {record["kind"] for record in records}
+        assert kinds == {"Work Leaf", "Sequential", "Worktree"}, kinds
+        html = render_index_html()
+        for expected in (
+            "bench-results",
+            "Work Leaf",
+            "Sequential",
+            "Worktree",
+            "./start --bench",
+            "/&lt;command&gt;",
+            "not sequential, not worktree, and not any saved Work Leaf run",
+        ):
+            assert expected in html, expected
+        assert "20260611T113324+0200" in latest_reference(records)
+        assert read_report(results, "20260611T113324+0200-three-feature-bench.md").startswith("# Three-Feature")
+    print("bench-dashboard self-test ok")
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Serve Work Leaf bench-results as a local HTML dashboard.")
+    parser.add_argument("--host", default=os.environ.get("WORK_LEAF_BENCH_DASHBOARD_HOST", "127.0.0.1"))
+    parser.add_argument("--port", type=int, default=int(os.environ.get("WORK_LEAF_BENCH_DASHBOARD_PORT", "8765")))
+    parser.add_argument(
+        "--results-dir",
+        type=Path,
+        default=Path(os.environ.get("WORK_LEAF_BENCH_RESULTS_DIR", DEFAULT_RESULTS_DIR)),
+        help="benchmark results directory, default bench-results",
+    )
+    parser.add_argument("--self-test", action="store_true", help="run parser and HTML contract tests")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str]) -> int:
+    args = parse_args(argv)
+    if args.self_test:
+        run_self_test()
+        return 0
+    serve(args.host, args.port, args.results_dir)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
