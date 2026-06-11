@@ -875,6 +875,31 @@ fn scripted_harness_insert_arrow_keys_move_visible_chat_cursor() {
 }
 
 #[test]
+fn scripted_harness_chat_cursor_stays_at_right_edge_when_prompt_fills_line() {
+    let mut harness = UiHarness::new(80, 24);
+    harness.handle_bytes(&[23, b'l']);
+
+    let layout = harness.ui().layout();
+    let inner_width = usize::from(layout.right_width.saturating_sub(2).max(1));
+    let message = "x".repeat(inner_width - "chat> ".chars().count());
+    harness.handle_byte(b'i');
+    harness.handle_bytes(message.as_bytes());
+
+    let frame = harness.render_frame();
+    let expected_column = layout.left_width + layout.right_width - 1;
+    assert!(frame.contains(&format!("chat> {message}")));
+    assert!(frame.ends_with(&format!("\u{1b}[5;{expected_column}H")));
+
+    harness.handle_byte(b'y');
+
+    let wrapped_frame = harness.render_frame();
+    let expected_wrapped_column = layout.left_width + 3;
+    assert!(wrapped_frame.ends_with(&format!(
+        "\u{1b}[6;{expected_wrapped_column}H"
+    )));
+}
+
+#[test]
 fn scripted_harness_chat_cursor_stays_on_prompt_after_full_width_history_line() {
     let mut harness = UiHarness::new(80, 24);
     harness.handle_bytes(&[23, b'l']);
@@ -888,7 +913,7 @@ fn scripted_harness_chat_cursor_stays_on_prompt_after_full_width_history_line() 
     let frame = harness.render_frame();
     assert!(frame.contains(&format!("user-1> {message}")));
     assert!(frame.contains("chat> "));
-    assert!(frame.ends_with("\u{1b}[7;24H"));
+    assert!(frame.ends_with("\u{1b}[10;24H"));
 }
 
 #[test]

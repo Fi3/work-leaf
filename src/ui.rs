@@ -2446,6 +2446,10 @@ fn buffer_to_string(buffer: &Buffer) -> String {
 fn visual_row_count(line: &str, width: u16) -> usize {
     let width = usize::from(width.max(1));
     let len = line.chars().count().min(usize::from(u16::MAX));
+    visual_line_row_count(len, width)
+}
+
+fn visual_line_row_count(len: usize, width: usize) -> usize {
     len.saturating_sub(1)
         .checked_div(width)
         .unwrap_or(0)
@@ -2461,23 +2465,44 @@ fn visual_block_row_count(text: &str, width: u16) -> usize {
 fn visual_text_cursor_position(text: &str, cursor_chars: usize, width: u16) -> (u16, u16) {
     let width = usize::from(width.max(1));
     let mut row = 0_usize;
-    let mut column = 0_usize;
-    for ch in text.chars().take(cursor_chars) {
+    let mut line_chars = 0_usize;
+    let mut chars = text.chars();
+    for _ in 0..cursor_chars {
+        let Some(ch) = chars.next() else {
+            break;
+        };
         if ch == '\n' {
-            row = row.saturating_add(1);
-            column = 0;
+            row = row.saturating_add(visual_line_row_count(line_chars, width));
+            line_chars = 0;
             continue;
         }
-        column = column.saturating_add(1);
-        if column >= width {
-            row = row.saturating_add(1);
-            column = 0;
-        }
+        line_chars = line_chars.saturating_add(1);
     }
+    let at_text_end = chars.next().is_none();
+    let (line_rows, column) = if at_text_end && line_chars > 0 && line_chars.is_multiple_of(width) {
+        (line_chars / width - 1, width.saturating_sub(1))
+    } else {
+        (line_chars / width, line_chars % width)
+    };
+    row = row.saturating_add(line_rows);
     (
         row.min(usize::from(u16::MAX)) as u16,
         column.min(usize::from(u16::MAX)) as u16,
     )
+}
+
+#[cfg(test)]
+mod visual_cursor_tests {
+    use super::*;
+
+    #[test]
+    fn cursor_at_full_line_end_stays_on_last_visible_cell() {
+        assert_eq!(visual_text_cursor_position("abcd", 4, 4), (0, 3));
+        assert_eq!(visual_text_cursor_position("abcde", 4, 4), (1, 0));
+        assert_eq!(visual_text_cursor_position("abcde", 5, 4), (1, 1));
+        assert_eq!(visual_text_cursor_position("abcd\n", 5, 4), (1, 0));
+        assert_eq!(visual_text_cursor_position("abcdefgh", 8, 4), (1, 3));
+    }
 }
 
 fn cursor_char_count(text: &str, cursor: usize) -> usize {
