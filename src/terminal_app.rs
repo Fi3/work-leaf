@@ -641,6 +641,9 @@ where
         {
             self.controller.send_message(&agent_id, line);
         } else {
+            if should_show_command_surface_for_command(line) {
+                self.ui.select_command_interface();
+            }
             self.controller.execute_command_line(line);
         }
         self.apply_controller_events();
@@ -1074,6 +1077,10 @@ fn is_agent_slash_command_line(line: &str) -> bool {
     })
 }
 
+fn should_show_command_surface_for_command(line: &str) -> bool {
+    matches!(line.split_whitespace().next(), Some("linearize"))
+}
+
 #[cfg(test)]
 type LoadingKind = WorkLeafLoading;
 
@@ -1367,6 +1374,78 @@ mod tests {
         fn shutdown(&mut self) {}
     }
 
+    #[derive(Debug)]
+    struct LinearizeGateController {
+        snapshot: crate::WorkLeafSnapshot,
+        pending_events: Vec<WorkLeafEvent>,
+    }
+
+    impl LinearizeGateController {
+        fn new(agent_id: AgentId) -> Self {
+            Self {
+                snapshot: crate::WorkLeafSnapshot {
+                    command_transcript: Vec::new(),
+                    sessions: vec![WorkLeafSession {
+                        id: agent_id,
+                        kind: AgentKind::Codex,
+                        title: "reviewed feature".to_string(),
+                        feature: "reviewed feature".to_string(),
+                        lines: vec!["patch chat transcript".to_string()],
+                        loading: None,
+                        completion: Some(WorkLeafCompletion::NeedsDecision),
+                        token_usage: None,
+                        depends_on: Vec::new(),
+                        depended_on_by: Vec::new(),
+                    }],
+                },
+                pending_events: Vec::new(),
+            }
+        }
+    }
+
+    impl TerminalController for LinearizeGateController {
+        fn snapshot(&self) -> crate::WorkLeafSnapshot {
+            self.snapshot.clone()
+        }
+
+        fn drain_events(&mut self) -> Vec<WorkLeafEvent> {
+            std::mem::take(&mut self.pending_events)
+        }
+
+        fn execute_command_line(&mut self, line: &str) {
+            self.pending_events
+                .push(WorkLeafEvent::CommandTranscriptLine {
+                    line: format!("work-leaf> {line}"),
+                });
+            if line == "linearize" {
+                self.pending_events.push(WorkLeafEvent::CommandTranscriptLine {
+                    line: "work-leaf: reviewed patch chats must be classified as closed before linearize: user-1. Use force-linearize to bypass.".to_string(),
+                });
+            }
+        }
+
+        fn send_command_agent_message(&mut self, _message: &str) {}
+
+        fn send_message(&mut self, _agent_id: &AgentId, _message: &str) {}
+
+        fn interrupt_agent(&mut self, _agent_id: &AgentId) {}
+
+        fn push_transcript_line(&mut self, line: String) {
+            self.pending_events
+                .push(WorkLeafEvent::CommandTranscriptLine { line });
+        }
+
+        fn is_busy(&mut self) -> bool {
+            false
+        }
+
+        fn loading_text(&self, _loading: WorkLeafLoading) -> String {
+            "Waiting for Codex".to_string()
+        }
+
+        fn shutdown(&mut self) {}
+    }
+
     #[test]
     fn pasted_command_prompt_input_polls_controller_once_per_chunk() {
         let snapshot_calls = Arc::new(AtomicUsize::new(0));
@@ -1479,6 +1558,30 @@ mod tests {
         assert!(app.handle_bytes(b"ifirst\x1b[13;2~second"));
 
         assert_eq!(app.chat_buffer.as_str(), "firstsecond");
+    }
+
+    #[test]
+    fn blocked_linearize_from_selected_chat_renders_command_message() {
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        let controller = LinearizeGateController::new(agent_id.clone());
+        let mut app = TerminalAppCore::new(controller, 100, 24);
+        app.ui
+            .select_agent(&agent_id)
+            .expect("test agent is registered");
+
+        assert!(app.render_frame().contains("patch chat transcript"));
+        assert!(
+            !app.render_frame()
+                .contains("reviewed patch chats must be classified as closed")
+        );
+
+        assert!(app.handle_bytes(b":linearize\n"));
+
+        let frame = app.render_frame();
+        assert!(app.ui.selected_agent().is_none());
+        assert!(frame.contains("work-leaf> linearize"));
+        assert!(frame.contains("work-leaf: reviewed patch chats must be classified"));
+        assert!(frame.contains("Use force-linearize to bypass."));
     }
 
     fn assert_shift_enter_sequence_inserts_line_break(sequence: &[u8]) {

@@ -134,6 +134,23 @@ fn scripted_harness_prompt_history_down_restores_in_progress_prompt() {
 }
 
 #[test]
+fn scripted_harness_blocked_linearize_renders_command_message_from_chat() {
+    let mut harness = UiHarness::new(100, 24);
+
+    assert_eq!(
+        harness.ui().selected_agent().map(|id| id.as_str()),
+        Some("user-1")
+    );
+
+    harness.handle_bytes(b":linearize\n");
+
+    assert!(harness.ui().selected_agent().is_none());
+    let frame = harness.render_frame();
+    assert!(frame.contains("work-leaf: reviewed patch chats must be classified"));
+    assert!(frame.contains("Use force-linearize to bypass."));
+}
+
+#[test]
 fn scripted_harness_ctrl_c_discards_prompt_history_draft() {
     let mut harness = UiHarness::new(80, 24);
 

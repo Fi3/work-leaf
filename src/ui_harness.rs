@@ -266,11 +266,19 @@ impl UiHarness {
 
         match line {
             "help" | "?" => {
-                self.transcript
-                    .push("commands: new [prompt...], review, linearize, quit".into());
+                self.transcript.push(
+                    "commands: new [prompt...], review, linearize, force-linearize, quit".into(),
+                );
             }
             "review" => self.transcript.push("fixture review: no findings".into()),
-            "linearize" => self
+            "linearize" => {
+                self.ui.select_command_interface();
+                self.transcript.push(
+                    "work-leaf: reviewed patch chats must be classified as closed before linearize: user-1, user-2. Use force-linearize to bypass."
+                        .into(),
+                );
+            }
+            "force-linearize" => self
                 .transcript
                 .push("fixture linearize: keep user-1, keep user-2".into()),
             other => self
