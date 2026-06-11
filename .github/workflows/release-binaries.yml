@@ -1,0 +1,100 @@
+name: Release binaries
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+  pull_request:
+    paths:
+      - "build-target"
+      - ".github/workflows/release-binaries.yml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "src/**"
+      - "tests/build_target.rs"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-24.04
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-24.04-arm
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+          - target: aarch64-apple-darwin
+            runner: macos-15
+          - target: x86_64-pc-windows-msvc
+            runner: windows-2025
+            msvc_component: Microsoft.VisualStudio.Component.VC.Tools.x86.x64
+          - target: aarch64-pc-windows-msvc
+            runner: windows-11-arm
+            msvc_component: Microsoft.VisualStudio.Component.VC.Tools.ARM64
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux build tools
+        if: startsWith(matrix.runner, 'ubuntu-')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config
+
+      - name: Verify macOS SDK
+        if: startsWith(matrix.runner, 'macos-')
+        run: |
+          xcode-select -p
+          xcrun --sdk macosx --show-sdk-path
+
+      - name: Verify MSVC build tools
+        if: startsWith(matrix.runner, 'windows-')
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (!(Test-Path $vswhere)) {
+            throw "vswhere.exe was not found; the MSVC toolchain is not installed."
+          }
+
+          $component = "${{ matrix.msvc_component }}"
+          $installationPath = & $vswhere -latest -products * -requires $component -property installationPath
+          if (!$installationPath) {
+            throw "MSVC component $component was not found."
+          }
+
+          Write-Host "Found Visual Studio at $installationPath"
+
+      - name: Install Rust target
+        run: |
+          rustup toolchain install stable --profile minimal --target "${{ matrix.target }}"
+          rustup default stable
+          rustc -vV
+          cargo -V
+
+      - name: Build package
+        env:
+          WORK_LEAF_BUILD_TARGETS: ${{ matrix.target }}
+        run: bash ./build-target
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: work-leaf-${{ matrix.target }}
+          path: |
+            dist/work-leaf-${{ matrix.target }}
+            dist/work-leaf-${{ matrix.target }}.tar.gz
+            dist/work-leaf-${{ matrix.target }}.zip
+          if-no-files-found: error
+          retention-days: 14

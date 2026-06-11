@@ -3,7 +3,16 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 dist_dir="${WORK_LEAF_DIST_DIR:-$repo_root/dist}"
-target_list="${WORK_LEAF_BUILD_TARGETS:-x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-apple-darwin aarch64-apple-darwin x86_64-pc-windows-msvc aarch64-pc-windows-msvc}"
+host_target="$(
+  rustc -vV | awk -F': ' '/^host: / { print $2 }'
+)"
+
+if [[ -z "$host_target" ]]; then
+  echo "could not determine Rust host target from rustc -vV" >&2
+  exit 1
+fi
+
+target_list="${WORK_LEAF_BUILD_TARGETS:-$host_target}"
 
 mkdir -p "$dist_dir"
 
@@ -29,6 +38,17 @@ for target in $target_list; do
     *-pc-windows-*)
       if command -v zip >/dev/null 2>&1; then
         (cd "$dist_dir" && rm -f "work-leaf-$target.zip" && zip -qr "work-leaf-$target.zip" "work-leaf-$target")
+      elif command -v powershell.exe >/dev/null 2>&1 || command -v powershell >/dev/null 2>&1; then
+        powershell_bin="$(command -v powershell.exe || command -v powershell)"
+        archive_path="$dist_dir/work-leaf-$target.zip"
+        package_path="$package_dir"
+        if command -v cygpath >/dev/null 2>&1; then
+          archive_path="$(cygpath -w "$archive_path")"
+          package_path="$(cygpath -w "$package_path")"
+        fi
+        "$powershell_bin" -NoProfile -Command "Compress-Archive -Path '$package_path' -DestinationPath '$archive_path' -Force"
+      else
+        echo "warning: zip or PowerShell not found; leaving unpacked package at $package_dir" >&2
       fi
       ;;
     *)

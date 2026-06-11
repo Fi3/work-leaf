@@ -70,6 +70,19 @@ that contain executable `bin/work-leaf` and `bin/work-leaf-orchestrator` files. 
 benchmark binary sets newest first by artifact name, prompts for a selection, skips the release
 build, and executes the selected artifact's `bin/work-leaf`.
 
+The project-root `build-target` script packages the user-facing `work-leaf` binary for the Rust host
+target reported by `rustc -vV`. `WORK_LEAF_BUILD_TARGETS` accepts an explicit whitespace-separated
+target list for release automation or manually prepared cross-linking environments. Each package is
+written under `dist/work-leaf-<target>` and includes only the `work-leaf` binary; Unix-like packages
+also get a `.tar.gz` archive, and Windows packages get a `.zip` archive when `zip` or PowerShell is
+available.
+
+The `.github/workflows/release-binaries.yml` workflow builds release packages on native
+GitHub-hosted runners: Ubuntu x64 and ARM64 for Linux, macOS Intel and ARM64 for Darwin, and Windows
+x64 and ARM64 for MSVC. The workflow installs or verifies the native compiler, SDK, or MSVC
+components before installing the Rust target and invoking `build-target` with a single
+`WORK_LEAF_BUILD_TARGETS` value.
+
 The project-root `smoke-three-features` script runs the current Work Leaf binaries against a
 temporary Git checkout at the three-feature smoke-test base commit. It builds release binaries from
 the current checkout unless `WORK_LEAF_SMOKE_SKIP_BUILD=1`, passes those binaries to `start` through
