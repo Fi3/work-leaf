@@ -656,6 +656,24 @@ fn scripted_harness_insert_arrow_keys_move_visible_chat_cursor() {
     assert_eq!(harness.ui().mode(), UiMode::Insert);
     assert!(harness.render_frame().ends_with("\u{1b}[5;26H"));
 }
+
+#[test]
+fn scripted_harness_chat_cursor_stays_on_prompt_after_full_width_history_line() {
+    let mut harness = UiHarness::new(80, 24);
+    harness.handle_bytes(&[23, b'l']);
+
+    let inner_width = usize::from(harness.ui().layout().right_width.saturating_sub(2));
+    let message = "x".repeat(inner_width - "user-1> ".chars().count());
+    harness.handle_byte(b'i');
+    harness.handle_bytes(message.as_bytes());
+    harness.handle_byte(b'\n');
+
+    let frame = harness.render_frame();
+    assert!(frame.contains(&format!("user-1> {message}")));
+    assert!(frame.contains("chat> "));
+    assert!(frame.ends_with("\u{1b}[7;24H"));
+}
+
 #[test]
 fn scripted_harness_arrow_keys_recall_chat_history() {
     let mut harness = UiHarness::new(80, 24);

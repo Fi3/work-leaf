@@ -2130,7 +2130,10 @@ fn buffer_to_string(buffer: &Buffer) -> String {
 fn visual_row_count(line: &str, width: u16) -> usize {
     let width = usize::from(width.max(1));
     let len = line.chars().count().min(usize::from(u16::MAX));
-    (len / width).saturating_add(1)
+    len.saturating_sub(1)
+        .checked_div(width)
+        .unwrap_or(0)
+        .saturating_add(1)
 }
 
 fn visual_block_row_count(text: &str, width: u16) -> usize {
