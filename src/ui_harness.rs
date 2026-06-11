@@ -148,9 +148,13 @@ impl UiHarness {
             HarnessInput::Quit => self.quit = true,
             HarnessInput::Interrupt => {
                 if self.ui.mode() == UiMode::Prompt {
-                    self.clear_prompt_edit_state();
+                    self.cancel_prompt_edit();
                     let actions = self.handle_ui_key(UiKey::Esc);
                     self.record_actions(actions);
+                    self.ui.show_ctrl_c_exit_notice();
+                    return;
+                }
+                if self.cancel_chat_edit() {
                     self.ui.show_ctrl_c_exit_notice();
                     return;
                 }
@@ -318,6 +322,27 @@ impl UiHarness {
         self.prompt_cursor = 0;
         self.prompt_history_index = None;
         self.prompt_history_draft = None;
+    }
+
+    fn cancel_prompt_edit(&mut self) {
+        if !self.prompt_buffer.trim().is_empty() {
+            self.prompt_history.push(self.prompt_buffer.clone());
+        }
+        self.clear_prompt_edit_state();
+    }
+
+    fn cancel_chat_edit(&mut self) -> bool {
+        if self.chat_buffer.is_empty() {
+            return false;
+        }
+        if !self.chat_buffer.trim().is_empty() {
+            self.chat_history.push(self.chat_buffer.clone());
+        }
+        self.chat_buffer.clear();
+        self.chat_cursor = 0;
+        self.chat_history_index = None;
+        self.chat_history_draft = None;
+        true
     }
 
     fn insert_prompt_char(&mut self, ch: char) {

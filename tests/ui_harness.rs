@@ -187,6 +187,25 @@ fn scripted_harness_ctrl_c_discards_prompt_history_draft() {
 }
 
 #[test]
+fn scripted_harness_ctrl_c_keeps_cancelled_prompt_available_in_history() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(b":cancelled command");
+    assert!(harness.handle_byte(3));
+    assert!(!harness.is_quit());
+    assert_eq!(harness.ui().mode(), UiMode::Command);
+
+    harness.handle_bytes(b":\x1b[A\n");
+
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| line == "unknown fixture command: cancelled command")
+    );
+}
+
+#[test]
 fn scripted_harness_bytewise_prompt_arrow_keys_edit_without_leaving_prompt() {
     let mut harness = UiHarness::new(80, 24);
     harness.handle_byte(b':');
@@ -773,6 +792,37 @@ fn scripted_harness_chat_history_down_restores_in_progress_message() {
             .transcript()
             .iter()
             .any(|line| line == "user-1> second draft")
+    );
+}
+
+#[test]
+fn scripted_harness_ctrl_c_cancels_chat_prompt_without_interrupt_and_keeps_history() {
+    let mut harness = UiHarness::new(80, 24);
+
+    harness.handle_bytes(&[23, b'l']);
+    harness.handle_bytes(b"icancel this prompt");
+
+    assert_eq!(harness.ui().mode(), UiMode::Insert);
+    assert!(harness.render_frame().contains("chat> cancel this prompt"));
+
+    assert!(harness.handle_byte(3));
+
+    assert_eq!(harness.ui().mode(), UiMode::Insert);
+    assert!(!harness.render_frame().contains("chat> cancel this prompt"));
+    assert!(
+        !harness
+            .transcript()
+            .iter()
+            .any(|line| line.contains("sent Ctrl-C"))
+    );
+
+    harness.handle_bytes(b"\x1b[A\n");
+
+    assert!(
+        harness
+            .transcript()
+            .iter()
+            .any(|line| line == "user-1> cancel this prompt")
     );
 }
 

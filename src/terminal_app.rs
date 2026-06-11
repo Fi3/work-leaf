@@ -515,9 +515,14 @@ where
             }
             TerminalAppInput::Interrupt => {
                 if self.ui.mode() == UiMode::Prompt {
-                    self.clear_prompt_edit_state();
+                    self.cancel_prompt_edit();
                     let actions = self.handle_ui_key(UiKey::Esc);
                     self.record_actions(actions);
+                    self.ui.show_ctrl_c_exit_notice();
+                    self.dirty = true;
+                    return;
+                }
+                if self.cancel_chat_edit() {
                     self.ui.show_ctrl_c_exit_notice();
                     self.dirty = true;
                     return;
@@ -868,6 +873,28 @@ where
         self.prompt_buffer.clear();
         self.prompt_history_index = None;
         self.prompt_history_draft = None;
+    }
+
+    fn cancel_prompt_edit(&mut self) {
+        let prompt = self.prompt_buffer.as_str().to_string();
+        if !prompt.trim().is_empty() {
+            self.prompt_history.push(prompt);
+        }
+        self.clear_prompt_edit_state();
+    }
+
+    fn cancel_chat_edit(&mut self) -> bool {
+        let prompt = self.chat_buffer.as_str().to_string();
+        if prompt.is_empty() {
+            return false;
+        }
+        if !prompt.trim().is_empty() {
+            self.chat_history.push(prompt);
+        }
+        self.chat_buffer.clear();
+        self.chat_history_index = None;
+        self.chat_history_draft = None;
+        true
     }
 
     fn start_agent_slash_command(&mut self) {
@@ -1360,6 +1387,7 @@ mod tests {
         drain_calls: Arc<AtomicUsize>,
         sent_messages: Vec<(AgentId, String)>,
         sent_command_messages: Vec<String>,
+        interrupted_agents: Vec<AgentId>,
     }
 
     impl CountingController {
@@ -1374,6 +1402,7 @@ mod tests {
                 drain_calls,
                 sent_messages: Vec::new(),
                 sent_command_messages: Vec::new(),
+                interrupted_agents: Vec::new(),
             }
         }
     }
@@ -1400,7 +1429,9 @@ mod tests {
                 .push((agent_id.clone(), message.to_string()));
         }
 
-        fn interrupt_agent(&mut self, _agent_id: &AgentId) {}
+        fn interrupt_agent(&mut self, agent_id: &AgentId) {
+            self.interrupted_agents.push(agent_id.clone());
+        }
 
         fn push_transcript_line(&mut self, _line: String) {}
 
@@ -1646,6 +1677,97 @@ mod tests {
         assert!(app.handle_bytes(b"ifirst\x1b[13;2~second"));
 
         assert_eq!(app.chat_buffer.as_str(), "firstsecond");
+    }
+
+    #[test]
+    fn ctrl_c_cancels_active_chat_prompt_without_interrupting_agent() {
+        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+        let drain_calls = Arc::new(AtomicUsize::new(0));
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        let controller = CountingController::new(
+            crate::WorkLeafSnapshot {
+                command_transcript: Vec::new(),
+                sessions: vec![WorkLeafSession {
+                    id: agent_id.clone(),
+                    kind: AgentKind::Codex,
+                    title: "feature".to_string(),
+                    feature: "feature".to_string(),
+                    lines: Vec::new(),
+                    loading: None,
+                    completion: None,
+                    token_usage: None,
+                    depends_on: Vec::new(),
+                    depended_on_by: Vec::new(),
+                }],
+            },
+            snapshot_calls,
+            drain_calls,
+        );
+        let mut app = TerminalAppCore::new(controller, 80, 24);
+        app.ui
+            .activate_agent_chat(&agent_id)
+            .expect("test agent is registered");
+
+        assert!(app.handle_bytes(b"cancel this prompt"));
+        assert_eq!(app.chat_buffer.as_str(), "cancel this prompt");
+
+        assert!(app.handle_byte(3));
+
+        assert_eq!(app.ui.mode(), UiMode::Insert);
+        assert_eq!(app.chat_buffer.as_str(), "");
+        assert!(app.controller.interrupted_agents.is_empty());
+        assert!(app.controller.sent_messages.is_empty());
+
+        assert!(app.handle_bytes(b"\x1b[A\n"));
+
+        assert_eq!(
+            app.controller.sent_messages,
+            vec![(agent_id, "cancel this prompt".to_string())]
+        );
+    }
+
+    #[test]
+    fn ctrl_c_cancels_buffered_chat_prompt_before_agent_interrupt() {
+        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+        let drain_calls = Arc::new(AtomicUsize::new(0));
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        let controller = CountingController::new(
+            crate::WorkLeafSnapshot {
+                command_transcript: Vec::new(),
+                sessions: vec![WorkLeafSession {
+                    id: agent_id.clone(),
+                    kind: AgentKind::Codex,
+                    title: "feature".to_string(),
+                    feature: "feature".to_string(),
+                    lines: Vec::new(),
+                    loading: None,
+                    completion: None,
+                    token_usage: None,
+                    depends_on: Vec::new(),
+                    depended_on_by: Vec::new(),
+                }],
+            },
+            snapshot_calls,
+            drain_calls,
+        );
+        let mut app = TerminalAppCore::new(controller, 80, 24);
+        app.ui
+            .activate_agent_chat(&agent_id)
+            .expect("test agent is registered");
+        assert!(app.handle_bytes(b"cancel this prompt"));
+        app.handle_input(TerminalAppInput::Key(UiKey::Esc));
+        assert_eq!(app.ui.mode(), UiMode::Command);
+        assert_eq!(app.chat_buffer.as_str(), "cancel this prompt");
+
+        assert!(app.handle_byte(3));
+
+        assert_eq!(app.chat_buffer.as_str(), "");
+        assert!(app.controller.interrupted_agents.is_empty());
+        assert!(app.handle_bytes(b"i\x1b[A\n"));
+        assert_eq!(
+            app.controller.sent_messages,
+            vec![(agent_id, "cancel this prompt".to_string())]
+        );
     }
 
     #[test]
