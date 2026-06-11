@@ -3,7 +3,9 @@ use std::fmt::{self, Write};
 use std::path::PathBuf;
 use std::process::Command;
 
-use crate::agent::{AgentBackend, AgentError, AgentId, AgentLaunch, AgentProfile};
+use crate::agent::{
+    AgentBackend, AgentError, AgentId, AgentLaunch, AgentProfile, AgentSession, MessageRole,
+};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AgentCommit {
@@ -172,6 +174,40 @@ pub struct ReviewResult {
     pub findings_resolved: bool,
 }
 
+pub(crate) fn render_review_source_context(
+    commit: &AgentCommit,
+    session: Option<&AgentSession>,
+) -> String {
+    let mut text = String::new();
+    let _ = write!(
+        text,
+        "Work Leaf collected this context from commits, git logs, and recorded chat history without querying Agent-ID {}.\n\nGit metadata:\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\n\nGit commit log:\n{}",
+        commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context, commit.body
+    );
+    text.push_str("\n\nRecorded chat history:");
+    match session {
+        Some(session) if !session.messages.is_empty() => {
+            for (index, message) in session.messages.iter().enumerate() {
+                let role = match &message.role {
+                    MessageRole::User => "user",
+                    MessageRole::Agent => "agent",
+                    MessageRole::Orchestrator => "orchestrator",
+                    MessageRole::System => "system",
+                };
+                let _ = write!(
+                    text,
+                    "\n\n{} {role}:\n{}",
+                    index + 1,
+                    message.text.trim_end()
+                );
+            }
+        }
+        Some(_) => text.push_str("\n(no recorded messages)"),
+        None => text.push_str("\n(unavailable from backend session state)"),
+    }
+    text
+}
+
 #[derive(Debug)]
 pub struct ReviewCoordinator<B> {
     root: PathBuf,
@@ -217,21 +253,21 @@ where
     }
 
     fn review_commit(&mut self, commit: AgentCommit) -> Result<ReviewResult, ReviewError> {
-        let summary_prompt = format!(
-            "Please summarize the full reviewed patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\n\nFocus on what behavior the cumulative patch changes. Also include verification evidence from this session: focused checks, broad checks, real-agent smoke scenarios and results, and any exact blocker that prevented required verification.",
-            commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context
-        );
-        let summary = self
-            .backend
-            .send(&commit.agent_id, &summary_prompt)
-            .map_err(ReviewError::Agent)?
-            .text;
+        let source_context = {
+            let session = self.backend.session(&commit.agent_id);
+            render_review_source_context(&commit, session.as_ref())
+        };
 
         let reviewer_id = AgentId::new(format!("review-{}", commit.agent_id.as_str()))
             .map_err(ReviewError::Agent)?;
         let review_prompt = format!(
-            "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\nSummary from original agent:\n{}\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.\n\nFor agent-facing changes, missing required real-agent verification is a finding unless the summary or review scope includes the exact real-agent scenario and visible result, or the exact pre-agent blocker. If you report missing verification, state the precise evidence that would resolve it. When the patch agent responds with verification evidence or a blocker rather than code, evaluate that evidence instead of requiring another patch.",
-            commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context, summary
+            "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\n\nSource context from Work Leaf commits, logs, and chat history:\n{}\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.\n\nFor agent-facing changes, missing required real-agent verification is a finding unless the source context includes the exact real-agent scenario and visible result, or the exact pre-agent blocker. If you report missing verification, state the precise evidence that would resolve it. When the patch agent responds with verification evidence or a blocker rather than code, evaluate that evidence instead of requiring another patch.",
+            commit.agent_id,
+            commit.hash,
+            commit.feature,
+            commit.reason,
+            commit.context,
+            source_context
         );
         let reviewer_session = self
             .backend
@@ -254,13 +290,15 @@ where
                 "The reviewer found issues in your patch for commit {}.\n{}\n\nPlease fix the patch's code or test defects through the orchestrator patch flow. If a finding is about missing verification, missing explanation, or another non-code issue, resolve it by replying with the exact evidence, command result, real-agent scenario, or blocker; do not submit a cosmetic patch for non-code evidence. Do not modify documentation or plain-text files; documentation and prose updates are deferred to the linearize agent. Emit `@work-leaf done` when the findings are resolved.",
                 commit.hash, review_text
             );
-            self.backend
+            let fix_reply = self
+                .backend
                 .send(&commit.agent_id, &fix_prompt)
-                .map_err(ReviewError::Agent)?;
+                .map_err(ReviewError::Agent)?
+                .text;
 
             let recheck_prompt = format!(
-                "The original agent has responded to the findings for commit {}. Please check the patch again and reply with NO_FINDINGS if resolved, otherwise list remaining FINDINGS. The response may include code patches, verification evidence, real-agent smoke results, or an exact blocker; evaluate that evidence directly and do not require a code patch for a non-code finding. Documentation and plain-text updates are deferred to the linearize agent and must not be reported as remaining patch-agent findings.",
-                commit.hash
+                "The original agent has responded to the findings for commit {}.\n{}\n\nPlease check the patch again and reply with NO_FINDINGS if resolved, otherwise list remaining FINDINGS. The response may include code patches, verification evidence, real-agent smoke results, or an exact blocker; evaluate that evidence directly and do not require a code patch for a non-code finding. Documentation and plain-text updates are deferred to the linearize agent and must not be reported as remaining patch-agent findings.",
+                commit.hash, fix_reply
             );
             review_text = self
                 .backend

@@ -377,7 +377,7 @@ fn controller_uses_agent_profile_for_non_codex_launches_and_reviews() {
             "Agent-ID: user-1\nFeature: parser\nReason: parse configs\nContext: parser context",
         ],
     );
-    let backend = FakeBackend::new(["launch reply", "summary", "NO_FINDINGS"]);
+    let backend = FakeBackend::new(["launch reply", "NO_FINDINGS"]);
     let profile = AgentProfile::new(
         AgentKind::External("local-test-agent".to_string()),
         "Local Test Agent",
@@ -463,6 +463,11 @@ fn controller_starts_review_after_patch_agent_done_and_loops_until_clean() {
             && prompt.contains("Please check the patch again")
             && prompt.contains("verification evidence")
     }));
+    assert!(
+        !sends
+            .iter()
+            .any(|(target, prompt)| target == &agent_id && prompt.contains("Please summarize"))
+    );
 }
 
 #[test]
@@ -2002,6 +2007,16 @@ impl FakeBackend {
             .expect("missing fake reply")
     }
 
+    fn next_reviewer_reply(&self) -> String {
+        let mut state = self.state.lock().unwrap();
+        let reply = state.replies.pop_front().expect("missing fake reply");
+        if reply.starts_with("summary:") && !state.replies.is_empty() {
+            state.replies.pop_front().expect("missing fake reply")
+        } else {
+            reply
+        }
+    }
+
     fn title_reply(&self, prompt: &str) -> String {
         fake_title_from_title_prompt(prompt)
     }
@@ -2058,6 +2073,8 @@ impl AgentBackend for FakeBackend {
         let agent_id = session.id.clone();
         let reply = if session.id.as_str().starts_with("title-") {
             self.title_reply(&session.messages[0].text)
+        } else if session.id.as_str().starts_with("review-") {
+            self.next_reviewer_reply()
         } else {
             self.next_reply()
         };
@@ -2074,6 +2091,14 @@ impl AgentBackend for FakeBackend {
         let mut state = self.state.lock().unwrap();
         state.sends.push((agent_id.clone(), prompt.to_string()));
         let reply = state.replies.pop_front().expect("missing fake reply");
+        let reply = if agent_id.as_str().starts_with("review-")
+            && reply.starts_with("summary:")
+            && !state.replies.is_empty()
+        {
+            state.replies.pop_front().expect("missing fake reply")
+        } else {
+            reply
+        };
         if let Some(session) = state.sessions.get_mut(agent_id) {
             session.push_message(MessageRole::User, prompt);
             session.push_message(MessageRole::Agent, reply.clone());

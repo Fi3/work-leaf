@@ -96,15 +96,19 @@ The intended lifecycle is:
    findings.
 
 The current implementation path for this review loop builds patch-agent review targets through
-`src/review.rs::GitHistory`, asks the original agent for a summary, launches or resumes the patch
-agent's `review-<agent-id>` reviewer, resolves reviewer orchestrator directives such as file reads,
-sends findings back to the original agent, and asks the reviewer to recheck until `NO_FINDINGS` or
-the round limit. Command-chat and controller review startup keep one reviewer identity per patch
-agent and skip latest agent heads that already completed a review pass. Automatic review requires an
-unreviewed provisional commit from the patch agent and that agent's `@work-leaf done` directive; the
-done directive may arrive in the same turn as the patch or in a later turn from the same agent
-session. Review is scoped to all provisional commits from that patch agent since the launch or latest
-reviewed baseline. An explicit `review` command is the history-wide review entry point.
+`src/review.rs::GitHistory`, renders source context from Work Leaf commit metadata, git commit logs,
+and recorded patch-agent chat history, launches or resumes the patch agent's `review-<agent-id>`
+reviewer, resolves reviewer orchestrator directives such as file reads, sends findings back to the
+original agent, and asks the reviewer to recheck until `NO_FINDINGS` or the round limit. The review
+flow does not ask the original patch agent for a separate summary before launching the reviewer. When
+a patch agent resolves a non-code finding with verification evidence, a real-agent smoke result, or
+an exact blocker, that reply is included in the reviewer recheck prompt. Command-chat and controller
+review startup keep one reviewer identity per patch agent and skip latest agent heads that already
+completed a review pass. Automatic review requires an unreviewed provisional commit from the patch
+agent and that agent's `@work-leaf done` directive; the done directive may arrive in the same turn as
+the patch or in a later turn from the same agent session. Review is scoped to all provisional commits
+from that patch agent since the launch or latest reviewed baseline. An explicit `review` command is
+the history-wide review entry point.
 
 ### Inspection Agent
 

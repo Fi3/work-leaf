@@ -20,7 +20,7 @@ use crate::orchestrator::{
     DirectiveStreamInterruptDetector, FileReadTracker, OrchestratorEvent, PatchOwnershipTracker,
     handle_agent_directives_streaming, send_agent_streaming_interruptible,
 };
-use crate::review::{AgentCommit, has_no_findings};
+use crate::review::{AgentCommit, has_no_findings, render_review_source_context};
 use crate::review::{GitHistory, ReviewResult};
 use crate::terminal_app::{RemoteTerminalApp, TerminalApp};
 use crate::ui::UiAction;
@@ -668,29 +668,20 @@ where
         reuse_reviewer: bool,
         stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
     ) -> Result<ReviewResult, CliError> {
-        let summary_prompt = format!(
-            "Please summarize the full reviewed patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\n\nFocus on what behavior the cumulative patch changes. Also include verification evidence from this session: focused checks, broad checks, real-agent smoke scenarios and results, and any exact blocker that prevented required verification.",
-            commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context
-        );
-        let summary = {
-            let backend = self
-                .backend
-                .as_mut()
-                .expect("command chat backend is present");
-            send_agent_streaming_interruptible(
-                backend,
-                &commit.agent_id,
-                &summary_prompt,
-                &mut *stream,
-            )
-        }
-        .map_err(CliError::Agent)?
-        .text;
+        let source_context = {
+            let session = self.agent_session(&commit.agent_id);
+            render_review_source_context(&commit, session.as_ref())
+        };
 
         let review_feature = format!("review {}", commit.feature);
         let review_prompt = format!(
-            "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\nSummary from original agent:\n{}\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.\n\nFor agent-facing changes, missing required real-agent verification is a finding unless the summary or review scope includes the exact real-agent scenario and visible result, or the exact pre-agent blocker. If you report missing verification, state the precise evidence that would resolve it. When the patch agent responds with verification evidence or a blocker rather than code, evaluate that evidence instead of requiring another patch.",
-            commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context, summary
+            "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\n\nSource context from Work Leaf commits, logs, and chat history:\n{}\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.\n\nFor agent-facing changes, missing required real-agent verification is a finding unless the source context includes the exact real-agent scenario and visible result, or the exact pre-agent blocker. If you report missing verification, state the precise evidence that would resolve it. When the patch agent responds with verification evidence or a blocker rather than code, evaluate that evidence instead of requiring another patch.",
+            commit.agent_id,
+            commit.hash,
+            commit.feature,
+            commit.reason,
+            commit.context,
+            source_context
         );
         let mut review_text = if reuse_reviewer {
             {

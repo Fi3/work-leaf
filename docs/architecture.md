@@ -499,19 +499,21 @@ conflicts and malformed patch diagnostics back to the active agent backend. `Pat
 review targets for a patch agent since a launch or reviewed baseline, and resolves agent metadata
 commits by exact hash. `ReviewCoordinator<B>` launches reviewer agents against those review targets
 and loops until the reviewer reports no findings or the configured maximum round count is reached.
-`CommandChat` resolves reviewer `@work-leaf` directives, such as file reads, before interpreting
-reviewer output as findings. `CommandChat` and `WorkLeafController` keep a stable
-`review-<agent-id>` reviewer identity for each patch agent and skip latest agent heads that have
-already completed review. `AgentCommit`, `ReviewResult`, and `ReviewError` are the public review
-workflow types. `WorkLeafController` scopes automatic review after a patch agent reports done to the
-patch agent that produced the provisional commit; explicit review commands use the history-wide
-review target lookup. Reviewer prompts treat documentation and prose-only updates as linearizer
-responsibility, so missing docs, README, changelog, markdown, txt, or other plain-text updates are not
-reported as patch-agent findings. Review summary prompts ask patch agents to include verification
-evidence, real-agent smoke scenarios, and exact blockers. If a reviewer reports a non-code finding
-such as missing real-agent verification, the patch agent can resolve it by replying with the exact
-evidence or blocker instead of submitting another code patch, and the reviewer evaluates that
-evidence on the next pass.
+Reviewer launch prompts include source context rendered from Work Leaf commit metadata, git commit
+logs, and any recorded backend session chat history for the patch agent. The review flow does not ask
+the patch agent for a separate summary before launching the reviewer. `CommandChat` resolves
+reviewer `@work-leaf` directives, such as file reads, before interpreting reviewer output as
+findings. `CommandChat` and `WorkLeafController` keep a stable `review-<agent-id>` reviewer identity
+for each patch agent and skip latest agent heads that have already completed review. `AgentCommit`,
+`ReviewResult`, and `ReviewError` are the public review workflow types. `WorkLeafController` scopes
+automatic review after a patch agent reports done to the patch agent that produced the provisional
+commit; explicit review commands use the history-wide review target lookup. Reviewer prompts treat
+documentation and prose-only updates as linearizer responsibility, so missing docs, README,
+changelog, markdown, txt, or other plain-text updates are not reported as patch-agent findings. If a
+reviewer reports a non-code finding such as missing real-agent verification, the patch agent can
+resolve it by replying with the exact evidence or blocker instead of submitting another code patch;
+the reviewer recheck prompt includes that reply so the reviewer evaluates the evidence directly on
+the next pass.
 
 `src/linearize.rs::LinearizePlanner<B>` prepares linearization questions and launches a linearizer
 agent with decisions, groups, and required tests. `LinearizeAction`, `LinearizeGroup`,

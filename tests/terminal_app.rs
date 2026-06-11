@@ -1053,7 +1053,6 @@ fn terminal_app_marks_reviewed_patch_agent_done_and_closed_visibly() {
         .unwrap();
     let backend = FakeBackend::new([
         "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
-        "summary: README changes from before to after",
         "NO_FINDINGS",
         "backend status output",
         "follow reply",
@@ -1119,7 +1118,6 @@ fn terminal_app_delays_dependent_new_until_dependency_closes() {
         .unwrap();
     let backend = FakeBackend::new([
         "parent patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after parent\n@work-leaf end\n@work-leaf done",
-        "summary: README changes from before to after parent",
         "NO_FINDINGS",
         "child launch reply",
     ]);

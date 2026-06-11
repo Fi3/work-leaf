@@ -50,20 +50,24 @@ diff --git a/src/lib.rs b/src/lib.rs
     assert_eq!(commits[0].feature, "parser");
     assert_eq!(commits[0].reason, "return parsed value");
 
-    let backend = FakeBackend::new([
-        "summary: returns parsed value",
-        "NO_FINDINGS",
-        "linearizer ready",
-    ]);
+    let backend = FakeBackend::new(["NO_FINDINGS", "linearizer ready"]);
     let mut reviewer = ReviewCoordinator::new(root.clone(), backend);
     let review_results = reviewer.review_latest_agent_commits().unwrap();
     let backend = reviewer.into_backend();
 
     assert_eq!(review_results.len(), 1);
     assert!(review_results[0].findings_resolved);
-    assert_eq!(backend.sends[0].0.as_str(), "user-1");
-    assert!(backend.sends[0].1.contains("summarize"));
+    assert!(
+        backend.sends.is_empty(),
+        "review should not ask the patch agent for a summary before launching the reviewer"
+    );
     assert_eq!(backend.launches[0].id.as_str(), "review-user-1");
+    assert!(
+        backend.launches[0]
+            .prompt
+            .contains("Source context from Work Leaf commits, logs, and chat history")
+    );
+    assert!(backend.launches[0].prompt.contains("return parsed value"));
     assert!(backend.launches[0].prompt.contains("NO_FINDINGS"));
 
     let questions = LinearizePlanner::<FakeBackend>::questions_for(&commits);

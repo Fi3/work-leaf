@@ -451,12 +451,7 @@ fn command_chat_reuses_reviewer_for_later_commit_from_same_patch_agent() {
             "Agent-ID: user-1\nFeature: docs\nReason: first pass\nContext: docs context",
         ],
     );
-    let backend = FakeBackend::new([
-        "summary: first docs pass",
-        "NO_FINDINGS",
-        "summary: second docs pass",
-        "NO_FINDINGS",
-    ]);
+    let backend = FakeBackend::new(["NO_FINDINGS", "NO_FINDINGS"]);
     let mut chat = CommandChat::new(root.clone(), backend);
 
     let first = chat.handle_line("review").unwrap();
@@ -487,6 +482,15 @@ fn command_chat_reuses_reviewer_for_later_commit_from_same_patch_agent() {
             .count(),
         1
     );
+    assert!(
+        backend.launches[0]
+            .prompt
+            .contains("Source context from Work Leaf commits, logs, and chat history")
+    );
+    assert!(backend.launches[0].prompt.contains(
+        "Work Leaf collected this context from commits, git logs, and recorded chat history without querying Agent-ID user-1"
+    ));
+    assert!(backend.launches[0].prompt.contains("first pass"));
     assert!(backend.sends.iter().any(|(target, prompt)| {
         target.as_str() == "review-user-1"
             && prompt.contains("Review the full patch scope")
@@ -512,7 +516,7 @@ fn command_chat_requires_force_linearize_for_direct_linearize_launch() {
             "Agent-ID: user-1\nFeature: docs\nReason: first pass\nContext: docs context",
         ],
     );
-    let backend = FakeBackend::new(["summary: docs pass", "NO_FINDINGS", "linearizer ready"]);
+    let backend = FakeBackend::new(["NO_FINDINGS", "linearizer ready"]);
     let mut chat = CommandChat::new(root, backend);
 
     let review = chat.handle_line("review").unwrap();
@@ -544,12 +548,7 @@ fn command_chat_processes_reviewer_orchestrator_directives_before_findings() {
             "Agent-ID: user-1\nFeature: docs\nReason: review docs\nContext: docs context",
         ],
     );
-    let backend = FakeBackend::new([
-        "summary: docs changed",
-        "@work-leaf read README.md",
-        "NO_FINDINGS",
-        "NO_FINDINGS",
-    ]);
+    let backend = FakeBackend::new(["@work-leaf read README.md", "NO_FINDINGS"]);
     let mut chat = CommandChat::new(root, backend);
 
     let result = chat.handle_line("review").unwrap();
@@ -561,6 +560,14 @@ fn command_chat_processes_reviewer_orchestrator_directives_before_findings() {
     assert!(results[0].findings_resolved);
 
     let backend = chat.into_backend();
+    assert!(
+        backend.launches[0]
+            .prompt
+            .contains("Source context from Work Leaf commits, logs, and chat history")
+    );
+    assert!(backend.launches[0].prompt.contains(
+        "Work Leaf collected this context from commits, git logs, and recorded chat history without querying Agent-ID user-1"
+    ));
     assert!(backend.sends.iter().any(|(target, prompt)| {
         target.as_str() == "review-user-1"
             && prompt.contains("work-leaf file text")

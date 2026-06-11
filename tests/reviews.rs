@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -75,12 +75,21 @@ fn review_coordinator_loops_until_reviewer_reports_no_findings() {
         ],
     );
 
+    let investigated_id = AgentId::new("chat-a").unwrap();
+    let mut investigated_session = AgentSession::new(AgentLaunch::new(
+        investigated_id.clone(),
+        AgentKind::Codex,
+        "parser",
+        "implement parser value",
+    ));
+    investigated_session.push_message(MessageRole::Agent, "applied parser value patch");
+    investigated_session.push_message(MessageRole::User, "orchestrator: cargo test passed");
     let backend = FakeBackend::new([
-        "summary: returns a parser value",
         "FINDINGS\n- missing edge case",
         "fixed missing edge case",
         "NO_FINDINGS",
-    ]);
+    ])
+    .with_session(investigated_session);
     let mut coordinator = ReviewCoordinator::new(root, backend).with_max_rounds(4);
 
     let results = coordinator.review_latest_agent_commits().unwrap();
@@ -98,7 +107,20 @@ fn review_coordinator_loops_until_reviewer_reports_no_findings() {
     assert!(
         backend.launches[0]
             .prompt
-            .contains("summary: returns a parser value")
+            .contains("Source context from Work Leaf commits, logs, and chat history")
+    );
+    assert!(backend.launches[0].prompt.contains(
+        "Work Leaf collected this context from commits, git logs, and recorded chat history without querying Agent-ID chat-a"
+    ));
+    assert!(
+        backend.launches[0]
+            .prompt
+            .contains("applied parser value patch")
+    );
+    assert!(
+        backend.launches[0]
+            .prompt
+            .contains("orchestrator: cargo test passed")
     );
     assert!(backend.launches[0].prompt.contains("chat-a"));
     assert!(
@@ -107,29 +129,34 @@ fn review_coordinator_loops_until_reviewer_reports_no_findings() {
             .contains("Documentation and plain-text updates are deferred to the linearize agent")
     );
 
-    assert_eq!(backend.sends.len(), 3);
+    assert_eq!(backend.sends.len(), 2);
     assert_eq!(backend.sends[0].0.as_str(), "chat-a");
-    assert!(backend.sends[0].1.contains("summarize"));
-    assert_eq!(backend.sends[1].0.as_str(), "chat-a");
-    assert!(backend.sends[1].1.contains("missing edge case"));
+    assert!(backend.sends[0].1.contains("missing edge case"));
     assert!(
-        backend.sends[1]
+        backend.sends[0]
             .1
             .contains("Do not modify documentation or plain-text files")
     );
     assert!(
-        backend.sends[1]
+        backend.sends[0]
             .1
             .contains("If a finding is about missing verification")
     );
-    assert_eq!(backend.sends[2].0.as_str(), "review-chat-a");
-    assert!(backend.sends[2].1.contains("check the patch again"));
+    assert_eq!(backend.sends[1].0.as_str(), "review-chat-a");
+    assert!(backend.sends[1].1.contains("check the patch again"));
+    assert!(backend.sends[1].1.contains("fixed missing edge case"));
     assert!(
-        backend.sends[2]
+        backend.sends[1]
             .1
             .contains("must not be reported as remaining patch-agent findings")
     );
-    assert!(backend.sends[2].1.contains("verification evidence"));
+    assert!(backend.sends[1].1.contains("verification evidence"));
+    assert!(
+        !backend
+            .sends
+            .iter()
+            .any(|(target, prompt)| target == &investigated_id && prompt.contains("summarize"))
+    );
 }
 
 #[test]
@@ -180,6 +207,7 @@ struct FakeBackend {
     replies: VecDeque<String>,
     launches: Vec<AgentLaunch>,
     sends: Vec<(AgentId, String)>,
+    sessions: BTreeMap<AgentId, AgentSession>,
 }
 
 impl FakeBackend {
@@ -188,7 +216,13 @@ impl FakeBackend {
             replies: replies.into_iter().map(String::from).collect(),
             launches: Vec::new(),
             sends: Vec::new(),
+            sessions: BTreeMap::new(),
         }
+    }
+
+    fn with_session(mut self, session: AgentSession) -> Self {
+        self.sessions.insert(session.id.clone(), session);
+        self
     }
 
     fn next_reply(&mut self) -> String {
@@ -202,12 +236,22 @@ impl AgentBackend for FakeBackend {
         self.launches.push(request.clone());
         let mut session = AgentSession::new(request);
         session.push_message(MessageRole::Agent, reply);
+        self.sessions.insert(session.id.clone(), session.clone());
         Ok(session)
     }
 
     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
         self.sends.push((agent_id.clone(), prompt.to_string()));
-        Ok(ChatMessage::new(MessageRole::Agent, self.next_reply()))
+        let reply = self.next_reply();
+        if let Some(session) = self.sessions.get_mut(agent_id) {
+            session.push_message(MessageRole::User, prompt);
+            session.push_message(MessageRole::Agent, reply.clone());
+        }
+        Ok(ChatMessage::new(MessageRole::Agent, reply))
+    }
+
+    fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
+        self.sessions.get(agent_id).cloned()
     }
 }
 
