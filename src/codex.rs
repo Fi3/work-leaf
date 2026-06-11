@@ -1,14 +1,13 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::env;
 use std::io::{BufRead, BufReader, Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
-use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::agent::{
@@ -26,11 +25,8 @@ const REMOVED_CODEX_CHILD_ENV: &[&str] = &[
     "WORK_LEAF_COMMAND_TMPDIR",
     "WORK_LEAF_CONTEXT_BUNDLE_DIR",
     "WORK_LEAF_CODEX_LINEARIZE_SANDBOX",
-    WORK_LEAF_CODEX_SDK_PYTHON_ENV,
 ];
-const CODEX_SDK_SIDECAR: &str = include_str!("codex_sdk_sidecar.py");
-const CODEX_SDK_SPAWN_RETRY_DELAYS_MS: &[u64] = &[0, 25, 50, 100];
-const WORK_LEAF_CODEX_SDK_PYTHON_ENV: &str = "WORK_LEAF_CODEX_SDK_PYTHON";
+const CODEX_APP_SERVER_SPAWN_RETRY_DELAYS_MS: &[u64] = &[0, 25, 50, 100];
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SandboxMode {
@@ -56,7 +52,6 @@ pub struct CodexCommandConfig {
     pub model: Option<String>,
     pub sandbox: SandboxMode,
     pub linearize_sandbox: SandboxMode,
-    pub sdk_python: Option<PathBuf>,
 }
 
 impl CodexCommandConfig {
@@ -67,7 +62,6 @@ impl CodexCommandConfig {
             model: None,
             sandbox: SandboxMode::ReadOnly,
             linearize_sandbox: SandboxMode::WorkspaceWrite,
-            sdk_python: None,
         }
     }
 
@@ -90,11 +84,6 @@ impl CodexCommandConfig {
         self.linearize_sandbox = sandbox;
         self
     }
-
-    pub fn with_sdk_python(mut self, python: impl Into<PathBuf>) -> Self {
-        self.sdk_python = Some(python.into());
-        self
-    }
 }
 
 #[derive(Debug)]
@@ -103,7 +92,7 @@ pub struct CodexBackend {
     policy: PromptPolicy,
     state: Arc<Mutex<CodexBackendState>>,
     operation_condvar: Arc<Condvar>,
-    sdk: Arc<CodexSdkSidecar>,
+    app_server: Arc<CodexAppServer>,
     shutdown: AgentShutdownHandle,
     lifecycle: Arc<()>,
 }
@@ -115,7 +104,7 @@ impl Clone for CodexBackend {
             policy: self.policy.clone(),
             state: self.state.clone(),
             operation_condvar: self.operation_condvar.clone(),
-            sdk: self.sdk.clone(),
+            app_server: self.app_server.clone(),
             shutdown: self.shutdown.clone(),
             lifecycle: self.lifecycle.clone(),
         }
@@ -131,141 +120,180 @@ struct CodexBackendState {
 }
 
 #[derive(Debug)]
-struct CodexSdkSidecar {
+struct CodexAppServer {
     config: CodexCommandConfig,
-    process: Mutex<Option<CodexSdkProcess>>,
-    router: Arc<(Mutex<CodexSdkRouterState>, Condvar)>,
+    process: Mutex<Option<CodexAppServerProcess>>,
+    router: Arc<(Mutex<CodexAppServerRouterState>, Condvar)>,
+    loaded_threads: Mutex<BTreeSet<String>>,
+    active_turns: Arc<Mutex<BTreeMap<AgentId, ActiveTurn>>>,
     next_request_id: AtomicU64,
 }
 
 #[derive(Debug)]
-struct CodexSdkProcess {
+struct CodexAppServerProcess {
     child: Child,
     stdin: Arc<Mutex<ChildStdin>>,
     _guard: crate::agent_runtime::ActiveAgentProcessGuard,
 }
 
 #[derive(Debug, Default)]
-struct CodexSdkRouterState {
-    queues: BTreeMap<u64, VecDeque<CodexSdkInbound>>,
+struct CodexAppServerRouterState {
+    responses: BTreeMap<String, VecDeque<CodexJsonRpcResponse>>,
+    turn_notifications: BTreeMap<String, VecDeque<CodexAppServerNotification>>,
+    pending_turn_notifications: BTreeMap<String, VecDeque<CodexAppServerNotification>>,
     closed_error: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-struct CodexSdkInbound {
-    id: Option<u64>,
-    ok: Option<bool>,
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct CodexJsonRpcResponse {
+    result: Option<Value>,
     error: Option<String>,
-    thread_id: Option<String>,
-    reply: Option<String>,
-    usage: Option<AgentTokenUsage>,
-    event: Option<CodexSdkEvent>,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-#[serde(tag = "type")]
-enum CodexSdkEvent {
-    #[serde(rename = "status")]
-    Status { text: String },
-    #[serde(rename = "message")]
-    Message { text: String },
-    #[serde(rename = "usage")]
-    Usage { usage: AgentTokenUsage },
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct CodexAppServerNotification {
+    method: String,
+    params: Value,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct ActiveTurn {
+    thread_id: String,
+    turn_id: String,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-struct CodexSdkTurnOutput {
+struct CodexTurnOutput {
     thread_id: String,
     reply: String,
     usage: Option<AgentTokenUsage>,
 }
 
 #[derive(Clone, Debug)]
-struct CodexSdkTurnRequest<'a> {
-    op: &'a str,
+struct CodexTurnRequest<'a> {
     agent_id: &'a AgentId,
     prompt: &'a str,
     thread_id: Option<&'a str>,
     sandbox: SandboxMode,
 }
 
-#[derive(Debug, Serialize)]
-struct CodexSdkConfig {
-    codex_bin: String,
-    cwd: String,
-    client_version: String,
-}
-
-impl CodexSdkSidecar {
+impl CodexAppServer {
     fn new(config: CodexCommandConfig) -> Self {
         Self {
             config,
             process: Mutex::new(None),
-            router: Arc::new((Mutex::new(CodexSdkRouterState::default()), Condvar::new())),
+            router: Arc::new((
+                Mutex::new(CodexAppServerRouterState::default()),
+                Condvar::new(),
+            )),
+            loaded_threads: Mutex::new(BTreeSet::new()),
+            active_turns: Arc::new(Mutex::new(BTreeMap::new())),
             next_request_id: AtomicU64::new(1),
         }
     }
 
-    fn request_streaming(
+    fn request_turn_streaming(
         &self,
-        turn: CodexSdkTurnRequest<'_>,
+        turn: CodexTurnRequest<'_>,
         shutdown: &AgentShutdownHandle,
         sink: &mut dyn FnMut(AgentStreamEvent),
         mut should_interrupt: Option<&mut dyn FnMut(&AgentStreamEvent) -> bool>,
-    ) -> Result<CodexSdkTurnOutput, AgentError> {
+    ) -> Result<CodexTurnOutput, AgentError> {
         self.ensure_started(shutdown)?;
-        let request_id = self.next_request_id.fetch_add(1, Ordering::Relaxed);
-        let request = json!({
-            "id": request_id,
-            "op": turn.op,
-            "agent_id": turn.agent_id.as_str(),
-            "thread_id": turn.thread_id,
-            "prompt": turn.prompt,
-            "cwd": self.config.project_dir.display().to_string(),
-            "model": self.config.model.as_deref(),
-            "sandbox": turn.sandbox.as_codex_arg(),
-        });
-        self.write_request_with_restart(request_id, &request, shutdown)?;
+        let thread_id = match turn.thread_id {
+            Some(thread_id) => {
+                self.ensure_thread_loaded(thread_id, &turn.sandbox, shutdown)?;
+                thread_id.to_string()
+            }
+            None => {
+                let thread_id = self.start_thread(&turn.sandbox, shutdown)?;
+                sink(AgentStreamEvent::Status(format!(
+                    "Codex session {thread_id}"
+                )));
+                thread_id
+            }
+        };
+        let started = self.request_raw(
+            "turn/start",
+            Some(turn_start_params(
+                &thread_id,
+                turn.prompt,
+                &self.config,
+                &turn.sandbox,
+            )),
+            shutdown,
+        )?;
+        let turn_id = json_pointer_str(&started, &["turn", "id"])
+            .ok_or_else(|| {
+                self.protocol_error("turn/start response did not include turn.id".to_string())
+            })?
+            .to_string();
+        self.register_turn(&turn_id);
+        let _active_turn = ActiveTurnGuard::new(
+            self.active_turns.clone(),
+            turn.agent_id.clone(),
+            thread_id.clone(),
+            turn_id.clone(),
+        );
 
-        let mut output = CodexSdkTurnOutput::default();
+        let mut output = CodexTurnOutput {
+            thread_id: thread_id.clone(),
+            reply: String::new(),
+            usage: None,
+        };
         let mut streamed_messages = Vec::new();
         loop {
-            let inbound = self.next_message(request_id)?;
-            if let Some(event) = inbound.event {
-                match event {
-                    CodexSdkEvent::Status { text } => {
-                        if output.thread_id.is_empty()
-                            && let Some(thread_id) = codex_sdk_session_id_from_status(&text)
-                        {
-                            output.thread_id = thread_id.to_string();
+            let notification = self.next_turn_notification(&turn_id)?;
+            match notification.method.as_str() {
+                "turn/started" => {
+                    let event = AgentStreamEvent::Status("Codex is working".to_string());
+                    sink(event.clone());
+                    if should_interrupt
+                        .as_deref_mut()
+                        .is_some_and(|detector| detector(&event))
+                    {
+                        self.request_interrupt(turn.agent_id)?;
+                        self.unregister_turn(&turn_id);
+                        output.reply = streamed_messages.join("\n\n");
+                        return Ok(output);
+                    }
+                }
+                "item/started" | "item/completed" => {
+                    if let Some(item) = notification.params.get("item") {
+                        if let Some(status) = activity_from_item(&notification.method, item) {
+                            let event = AgentStreamEvent::Status(status);
+                            sink(event.clone());
+                            if should_interrupt
+                                .as_deref_mut()
+                                .is_some_and(|detector| detector(&event))
+                            {
+                                self.request_interrupt(turn.agent_id)?;
+                                self.unregister_turn(&turn_id);
+                                output.reply = streamed_messages.join("\n\n");
+                                return Ok(output);
+                            }
                         }
-                        let event = AgentStreamEvent::Status(text);
-                        sink(event.clone());
-                        if should_interrupt
-                            .as_deref_mut()
-                            .is_some_and(|detector| detector(&event))
+                        if notification.method == "item/completed"
+                            && let Some(message) = agent_message_text(item)
                         {
-                            self.request_interrupt(turn.agent_id, shutdown)?;
-                            self.unregister_request(request_id);
-                            output.reply = streamed_messages.join("\n\n");
-                            return Ok(output);
+                            output.reply = message.to_string();
+                            streamed_messages.push(message.to_string());
+                            let event = AgentStreamEvent::AgentMessage(message.to_string());
+                            sink(event.clone());
+                            if should_interrupt
+                                .as_deref_mut()
+                                .is_some_and(|detector| detector(&event))
+                            {
+                                self.request_interrupt(turn.agent_id)?;
+                                self.unregister_turn(&turn_id);
+                                output.reply = streamed_messages.join("\n\n");
+                                return Ok(output);
+                            }
                         }
                     }
-                    CodexSdkEvent::Message { text } => {
-                        streamed_messages.push(text.clone());
-                        let event = AgentStreamEvent::AgentMessage(text);
-                        sink(event.clone());
-                        if should_interrupt
-                            .as_deref_mut()
-                            .is_some_and(|detector| detector(&event))
-                        {
-                            self.request_interrupt(turn.agent_id, shutdown)?;
-                            self.unregister_request(request_id);
-                            output.reply = streamed_messages.join("\n\n");
-                            return Ok(output);
-                        }
-                    }
-                    CodexSdkEvent::Usage { usage } => {
+                }
+                "thread/tokenUsage/updated" => {
+                    if let Some(usage) = token_usage_from_params(&notification.params) {
                         output.usage = Some(usage);
                         let event = AgentStreamEvent::Usage(usage);
                         sink(event.clone());
@@ -273,40 +301,127 @@ impl CodexSdkSidecar {
                             .as_deref_mut()
                             .is_some_and(|detector| detector(&event))
                         {
-                            self.request_interrupt(turn.agent_id, shutdown)?;
-                            self.unregister_request(request_id);
+                            self.request_interrupt(turn.agent_id)?;
+                            self.unregister_turn(&turn_id);
                             output.reply = streamed_messages.join("\n\n");
                             return Ok(output);
                         }
                     }
                 }
-                continue;
-            }
-            match inbound.ok {
-                Some(true) => {
-                    self.unregister_request(request_id);
-                    output.thread_id = inbound.thread_id.unwrap_or_default();
-                    output.reply = if streamed_messages.is_empty() {
-                        inbound.reply.unwrap_or_default()
-                    } else {
-                        streamed_messages.join("\n\n")
-                    };
-                    output.usage = inbound.usage;
+                "turn/completed" => {
+                    self.unregister_turn(&turn_id);
+                    if turn_failed(&notification.params) {
+                        return Err(self.protocol_error(
+                            turn_error_message(&notification.params)
+                                .unwrap_or("Codex turn failed")
+                                .to_string(),
+                        ));
+                    }
+                    if !streamed_messages.is_empty() {
+                        output.reply = streamed_messages.join("\n\n");
+                    }
                     return Ok(output);
                 }
-                Some(false) => {
-                    self.unregister_request(request_id);
-                    return Err(AgentError::ProcessFailed {
-                        program: self.python_program(),
-                        status: None,
-                        stderr: inbound
-                            .error
-                            .unwrap_or_else(|| "Codex SDK sidecar request failed".to_string()),
-                    });
-                }
-                None => {}
+                _ => {}
             }
         }
+    }
+
+    fn command(
+        &self,
+        agent_id: &AgentId,
+        prompt: &str,
+        thread_id: &str,
+        sandbox: &SandboxMode,
+        shutdown: &AgentShutdownHandle,
+    ) -> Result<CodexTurnOutput, AgentError> {
+        self.ensure_thread_loaded(thread_id, sandbox, shutdown)?;
+        let (command, args) = slash_command_name(prompt);
+        let Some(command) = command else {
+            return self.request_turn_streaming(
+                CodexTurnRequest {
+                    agent_id,
+                    prompt,
+                    thread_id: Some(thread_id),
+                    sandbox: sandbox.clone(),
+                },
+                shutdown,
+                &mut |_| {},
+                None,
+            );
+        };
+
+        let mut reply_thread_id = thread_id.to_string();
+        let reply = match command.as_str() {
+            "status" | "st" => self.render_status(thread_id, sandbox, shutdown),
+            "fork" => {
+                let forked = self.request_raw(
+                    "thread/fork",
+                    Some(thread_resume_params(thread_id, &self.config, sandbox)),
+                    shutdown,
+                )?;
+                reply_thread_id = json_pointer_str(&forked, &["thread", "id"])
+                    .ok_or_else(|| {
+                        self.protocol_error(
+                            "thread/fork response did not include thread.id".to_string(),
+                        )
+                    })?
+                    .to_string();
+                self.loaded_threads
+                    .lock()
+                    .expect("loaded threads mutex poisoned")
+                    .insert(reply_thread_id.clone());
+                format!("Forked Codex thread {thread_id} -> {reply_thread_id}")
+            }
+            "compact" | "compress" => {
+                self.request_raw(
+                    "thread/compact/start",
+                    Some(json!({ "threadId": thread_id })),
+                    shutdown,
+                )?;
+                format!("Compaction started for Codex thread {thread_id}.")
+            }
+            "rename" | "name" => {
+                if args.is_empty() {
+                    "Usage: /rename <name>".to_string()
+                } else {
+                    self.request_raw(
+                        "thread/name/set",
+                        Some(json!({ "threadId": thread_id, "name": args })),
+                        shutdown,
+                    )?;
+                    format!("Renamed Codex thread {thread_id} to {args}.")
+                }
+            }
+            "archive" => {
+                self.request_raw(
+                    "thread/archive",
+                    Some(json!({ "threadId": thread_id })),
+                    shutdown,
+                )?;
+                format!("Archived Codex thread {thread_id}.")
+            }
+            "unarchive" => {
+                self.request_raw(
+                    "thread/unarchive",
+                    Some(json!({ "threadId": thread_id })),
+                    shutdown,
+                )?;
+                format!("Unarchived Codex thread {thread_id}.")
+            }
+            "help" | "?" => {
+                "Supported app-server slash commands: /status, /fork, /compact, /rename <name>, /archive, /unarchive, /help.".to_string()
+            }
+            _ => format!(
+                "Codex app-server command /{command} is not exposed by Work Leaf; no model request was sent."
+            ),
+        };
+
+        Ok(CodexTurnOutput {
+            thread_id: reply_thread_id,
+            reply,
+            usage: None,
+        })
     }
 
     fn interrupt(
@@ -314,153 +429,328 @@ impl CodexSdkSidecar {
         agent_id: &AgentId,
         shutdown: &AgentShutdownHandle,
     ) -> Result<(), AgentError> {
-        self.ensure_started(shutdown)?;
-        let request_id = self.next_request_id.fetch_add(1, Ordering::Relaxed);
-        let request = json!({
-            "id": request_id,
-            "op": "interrupt",
-            "agent_id": agent_id.as_str(),
-        });
-        self.write_request_with_restart(request_id, &request, shutdown)?;
-        loop {
-            let inbound = self.next_message(request_id)?;
-            match inbound.ok {
-                Some(true) => {
-                    self.unregister_request(request_id);
-                    return Ok(());
-                }
-                Some(false) => {
-                    self.unregister_request(request_id);
-                    return Err(AgentError::ProcessFailed {
-                        program: self.python_program(),
-                        status: None,
-                        stderr: inbound
-                            .error
-                            .unwrap_or_else(|| "Codex SDK sidecar interrupt failed".to_string()),
-                    });
-                }
-                None => {}
-            }
+        let active = self
+            .active_turns
+            .lock()
+            .expect("active turns mutex poisoned")
+            .get(agent_id)
+            .cloned();
+        if let Some(active) = active {
+            self.request_raw(
+                "turn/interrupt",
+                Some(json!({
+                    "threadId": active.thread_id,
+                    "turnId": active.turn_id,
+                })),
+                shutdown,
+            )?;
         }
+        Ok(())
     }
 
-    fn request_interrupt(
+    fn request_interrupt(&self, agent_id: &AgentId) -> Result<(), AgentError> {
+        let active = self
+            .active_turns
+            .lock()
+            .expect("active turns mutex poisoned")
+            .get(agent_id)
+            .cloned();
+        if let Some(active) = active {
+            self.write_request_no_wait(
+                "turn/interrupt",
+                Some(json!({
+                    "threadId": active.thread_id,
+                    "turnId": active.turn_id,
+                })),
+            )?;
+        }
+        Ok(())
+    }
+
+    fn start_thread(
         &self,
-        agent_id: &AgentId,
+        sandbox: &SandboxMode,
+        shutdown: &AgentShutdownHandle,
+    ) -> Result<String, AgentError> {
+        let response = self.request_raw(
+            "thread/start",
+            Some(thread_start_params(&self.config, sandbox)),
+            shutdown,
+        )?;
+        let thread_id = json_pointer_str(&response, &["thread", "id"])
+            .ok_or_else(|| {
+                self.protocol_error("thread/start response did not include thread.id".to_string())
+            })?
+            .to_string();
+        self.loaded_threads
+            .lock()
+            .expect("loaded threads mutex poisoned")
+            .insert(thread_id.clone());
+        Ok(thread_id)
+    }
+
+    fn ensure_thread_loaded(
+        &self,
+        thread_id: &str,
+        sandbox: &SandboxMode,
         shutdown: &AgentShutdownHandle,
     ) -> Result<(), AgentError> {
+        if self
+            .loaded_threads
+            .lock()
+            .expect("loaded threads mutex poisoned")
+            .contains(thread_id)
+        {
+            return Ok(());
+        }
+        self.request_raw(
+            "thread/resume",
+            Some(thread_resume_params(thread_id, &self.config, sandbox)),
+            shutdown,
+        )?;
+        self.loaded_threads
+            .lock()
+            .expect("loaded threads mutex poisoned")
+            .insert(thread_id.to_string());
+        Ok(())
+    }
+
+    fn render_status(
+        &self,
+        thread_id: &str,
+        sandbox: &SandboxMode,
+        shutdown: &AgentShutdownHandle,
+    ) -> String {
+        let thread = self
+            .request_raw(
+                "thread/read",
+                Some(json!({ "threadId": thread_id, "includeTurns": false })),
+                shutdown,
+            )
+            .ok()
+            .and_then(|value| value.get("thread").cloned());
+        let config = self
+            .request_raw(
+                "config/read",
+                Some(json!({ "cwd": self.config.project_dir.display().to_string(), "includeLayers": false })),
+                shutdown,
+            )
+            .ok()
+            .and_then(|value| value.get("config").cloned());
+        let account = self
+            .request_raw("account/read", None, shutdown)
+            .ok()
+            .and_then(|value| value.get("account").cloned());
+
+        let model = self
+            .config
+            .model
+            .clone()
+            .or_else(|| {
+                config
+                    .as_ref()
+                    .and_then(|value| json_string(value, "model"))
+            })
+            .unwrap_or_else(|| "default".to_string());
+        let thread_cwd = thread
+            .as_ref()
+            .and_then(|value| json_string(value, "cwd"))
+            .unwrap_or_else(|| self.config.project_dir.display().to_string());
+        let account_text = account
+            .as_ref()
+            .and_then(|value| json_string(value, "type").or_else(|| json_string(value, "kind")))
+            .unwrap_or_else(|| "unknown".to_string());
+        let thread_status = thread
+            .as_ref()
+            .and_then(|value| value.get("status"))
+            .map(display_json_value)
+            .unwrap_or_else(|| "unknown".to_string());
+        let context_window = config
+            .as_ref()
+            .and_then(|value| {
+                value
+                    .get("modelContextWindow")
+                    .or_else(|| value.get("model_context_window"))
+            })
+            .and_then(Value::as_u64);
+
+        let mut lines = vec![
+            "OpenAI Codex app-server status".to_string(),
+            format!("Model: {model}"),
+            format!("Directory: {thread_cwd}"),
+            format!(
+                "Permissions: sandbox {}, approval never",
+                sandbox.as_codex_arg()
+            ),
+            format!("Account: {account_text}"),
+            format!("Session: {thread_id}"),
+        ];
+        if let Some(value) = context_window {
+            lines.push(format!("Context window: {value} tokens"));
+        }
+        lines.push(format!("Thread status: {thread_status}"));
+        lines.join("\n")
+    }
+
+    fn request_raw(
+        &self,
+        method: &str,
+        params: Option<Value>,
+        shutdown: &AgentShutdownHandle,
+    ) -> Result<Value, AgentError> {
         self.ensure_started(shutdown)?;
-        let request_id = self.next_request_id.fetch_add(1, Ordering::Relaxed);
-        let request = json!({
+        self.request_raw_started(method, params)
+    }
+
+    fn request_raw_started(
+        &self,
+        method: &str,
+        params: Option<Value>,
+    ) -> Result<Value, AgentError> {
+        let request_id = self
+            .next_request_id
+            .fetch_add(1, Ordering::Relaxed)
+            .to_string();
+        self.register_response(&request_id);
+        match self.write_request(&request_id, method, params) {
+            Ok(()) => {}
+            Err(error) if is_broken_pipe(&error) => {
+                self.unregister_response(&request_id);
+                return Err(error);
+            }
+            Err(error) => {
+                self.unregister_response(&request_id);
+                return Err(error);
+            }
+        }
+        self.next_response(&request_id)
+    }
+
+    fn write_request_no_wait(&self, method: &str, params: Option<Value>) -> Result<(), AgentError> {
+        let request_id = self
+            .next_request_id
+            .fetch_add(1, Ordering::Relaxed)
+            .to_string();
+        self.write_request(&request_id, method, params)
+    }
+
+    fn write_request(
+        &self,
+        request_id: &str,
+        method: &str,
+        params: Option<Value>,
+    ) -> Result<(), AgentError> {
+        let mut message = json!({
             "id": request_id,
-            "op": "interrupt",
-            "agent_id": agent_id.as_str(),
+            "method": method,
         });
-        self.write_request(&request)
+        if let Some(params) = params {
+            message["params"] = params;
+        }
+        self.write_message(&message)
+    }
+
+    fn write_notification(&self, method: &str, params: Option<Value>) -> Result<(), AgentError> {
+        let mut message = json!({ "method": method });
+        if let Some(params) = params {
+            message["params"] = params;
+        }
+        self.write_message(&message)
+    }
+
+    fn write_message(&self, message: &Value) -> Result<(), AgentError> {
+        let text = serde_json::to_string(message).map_err(|error| {
+            self.protocol_error(format!(
+                "failed to serialize Codex app-server request: {error}"
+            ))
+        })?;
+        let stdin = {
+            let process = self
+                .process
+                .lock()
+                .expect("codex app-server process mutex poisoned");
+            process
+                .as_ref()
+                .map(|process| process.stdin.clone())
+                .ok_or_else(|| self.protocol_error("Codex app-server is not running".to_string()))?
+        };
+        write_json_line(&stdin, &text).map_err(AgentError::Io)
     }
 
     fn ensure_started(&self, shutdown: &AgentShutdownHandle) -> Result<(), AgentError> {
         let mut process_guard = self
             .process
             .lock()
-            .expect("codex sdk sidecar process mutex poisoned");
+            .expect("codex app-server process mutex poisoned");
         if let Some(process) = process_guard.as_mut() {
             match process.child.try_wait() {
                 Ok(Some(status)) => {
-                    trace_codex_sdk(format_args!(
-                        "sidecar exited before reuse with status {status:?}; restarting"
+                    trace_codex_app_server(format_args!(
+                        "app-server exited before reuse with status {status:?}; restarting"
                     ));
                     *process_guard = None;
-                    self.reset_router_after_restart();
+                    self.reset_after_restart();
                 }
                 Ok(None) => return Ok(()),
                 Err(error) => {
-                    return Err(AgentError::ProcessFailed {
-                        program: self.python_program(),
-                        status: None,
-                        stderr: format!("failed to inspect Codex SDK sidecar: {error}"),
-                    });
+                    return Err(
+                        self.protocol_error(format!("failed to inspect Codex app-server: {error}"))
+                    );
                 }
             }
         }
 
-        let python = self.python_program();
-        let config = CodexSdkConfig {
-            codex_bin: self.config.binary.display().to_string(),
-            cwd: self.config.project_dir.display().to_string(),
-            client_version: env!("CARGO_PKG_VERSION").to_string(),
-        };
-        let config_json =
-            serde_json::to_string(&config).map_err(|error| AgentError::ProcessFailed {
-                program: python.clone(),
-                status: None,
-                stderr: format!("failed to serialize Codex SDK sidecar config: {error}"),
-            })?;
-
-        let mut child = self.spawn_sidecar_process(&python, &config_json)?;
+        let mut child = self.spawn_app_server_process()?;
         let child_pid = child.id();
-        trace_codex_sdk(format_args!("spawned sidecar pid {child_pid}"));
+        trace_codex_app_server(format_args!("spawned app-server pid {child_pid}"));
         let guard = shutdown.register_single_process(child_pid);
         let stdin = Arc::new(Mutex::new(child.stdin.take().ok_or_else(|| {
-            AgentError::ProcessFailed {
-                program: python.clone(),
-                status: None,
-                stderr: "Codex SDK sidecar did not expose stdin".to_string(),
-            }
+            self.protocol_error("Codex app-server did not expose stdin".to_string())
         })?));
-        let stdout = child
-            .stdout
-            .take()
-            .ok_or_else(|| AgentError::ProcessFailed {
-                program: python.clone(),
-                status: None,
-                stderr: "Codex SDK sidecar did not expose stdout".to_string(),
-            })?;
+        let stdout = child.stdout.take().ok_or_else(|| {
+            self.protocol_error("Codex app-server did not expose stdout".to_string())
+        })?;
         let stderr = child.stderr.take();
-        self.spawn_reader(stdout);
+        self.spawn_reader(stdout, stdin.clone());
         self.spawn_stderr_drain(stderr);
-        *process_guard = Some(CodexSdkProcess {
+        *process_guard = Some(CodexAppServerProcess {
             child,
             stdin,
             _guard: guard,
         });
         drop(process_guard);
-        self.wait_until_ready()
+        self.initialize()
     }
 
-    fn spawn_reader(&self, stdout: impl Read + Send + 'static) {
-        let router = self.router.clone();
-        thread::spawn(move || {
-            for line in BufReader::new(stdout).lines() {
-                match line {
-                    Ok(line) => match serde_json::from_str::<CodexSdkInbound>(&line) {
-                        Ok(inbound) => route_sdk_inbound(&router, inbound),
-                        Err(error) => close_sdk_router(
-                            &router,
-                            format!("invalid Codex SDK sidecar JSON: {error}: {line}"),
-                        ),
-                    },
-                    Err(error) => {
-                        close_sdk_router(&router, format!("Codex SDK sidecar read failed: {error}"))
-                    }
-                }
-            }
-            close_sdk_router(&router, "Codex SDK sidecar closed stdout".to_string());
-        });
+    fn initialize(&self) -> Result<(), AgentError> {
+        self.request_raw_started(
+            "initialize",
+            Some(json!({
+                "clientInfo": {
+                    "name": "work_leaf",
+                    "title": "Work Leaf",
+                    "version": env!("CARGO_PKG_VERSION"),
+                },
+                "capabilities": {
+                    "experimentalApi": true,
+                },
+            })),
+        )?;
+        self.write_notification("initialized", None)
     }
 
-    fn spawn_sidecar_process(&self, python: &Path, config_json: &str) -> Result<Child, AgentError> {
+    fn spawn_app_server_process(&self) -> Result<Child, AgentError> {
         let mut last_busy_error = None;
-        for delay_ms in CODEX_SDK_SPAWN_RETRY_DELAYS_MS {
+        for delay_ms in CODEX_APP_SERVER_SPAWN_RETRY_DELAYS_MS {
             if *delay_ms > 0 {
                 thread::sleep(Duration::from_millis(*delay_ms));
             }
-            let mut command = Command::new(python);
+            let mut command = Command::new(&self.config.binary);
             command
-                .arg("-u")
-                .arg("-c")
-                .arg(CODEX_SDK_SIDECAR)
-                .env("WORK_LEAF_CODEX_SDK_CONFIG", config_json)
+                .arg("app-server")
+                .arg("--listen")
+                .arg("stdio://")
+                .current_dir(&self.config.project_dir)
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
@@ -471,8 +761,8 @@ impl CodexSdkSidecar {
             match command.spawn() {
                 Ok(child) => return Ok(child),
                 Err(error) if is_text_file_busy(&error) => {
-                    trace_codex_sdk(format_args!(
-                        "sidecar executable was busy during spawn; retrying"
+                    trace_codex_app_server(format_args!(
+                        "app-server executable was busy during spawn; retrying"
                     ));
                     last_busy_error = Some(error);
                 }
@@ -484,113 +774,69 @@ impl CodexSdkSidecar {
         )))
     }
 
+    fn spawn_reader(&self, stdout: impl Read + Send + 'static, stdin: Arc<Mutex<ChildStdin>>) {
+        let router = self.router.clone();
+        thread::spawn(move || {
+            for line in BufReader::new(stdout).lines() {
+                match line {
+                    Ok(line) => match serde_json::from_str::<Value>(&line) {
+                        Ok(message) => route_app_server_message(&router, &stdin, message),
+                        Err(error) => close_app_server_router(
+                            &router,
+                            format!("invalid Codex app-server JSON: {error}: {line}"),
+                        ),
+                    },
+                    Err(error) => close_app_server_router(
+                        &router,
+                        format!("Codex app-server read failed: {error}"),
+                    ),
+                }
+            }
+            close_app_server_router(&router, "Codex app-server closed stdout".to_string());
+        });
+    }
+
     fn spawn_stderr_drain(&self, stderr: Option<impl Read + Send + 'static>) {
         if let Some(mut stderr) = stderr {
             thread::spawn(move || {
                 let mut text = String::new();
                 let _ = stderr.read_to_string(&mut text);
                 if env::var_os("WORK_LEAF_CODEX_TRACE").is_some() && !text.trim().is_empty() {
-                    eprintln!("work-leaf codex sdk sidecar stderr:\n{}", text.trim());
+                    eprintln!("work-leaf codex app-server stderr:\n{}", text.trim());
                 }
             });
         }
     }
 
-    fn wait_until_ready(&self) -> Result<(), AgentError> {
-        let inbound = self.next_message(0)?;
-        if inbound.ok == Some(true) {
-            self.unregister_request(0);
-            Ok(())
-        } else {
-            Err(AgentError::ProcessFailed {
-                program: self.python_program(),
-                status: None,
-                stderr: inbound
-                    .error
-                    .unwrap_or_else(|| "Codex SDK sidecar did not report ready".to_string()),
-            })
-        }
-    }
-
-    fn write_request(&self, request: &Value) -> Result<(), AgentError> {
-        let text = serde_json::to_string(request).map_err(|error| AgentError::ProcessFailed {
-            program: self.python_program(),
-            status: None,
-            stderr: format!("failed to serialize Codex SDK sidecar request: {error}"),
-        })?;
-        let stdin = {
-            let process = self
-                .process
-                .lock()
-                .expect("codex sdk sidecar process mutex poisoned");
-            process
-                .as_ref()
-                .map(|process| process.stdin.clone())
-                .ok_or_else(|| AgentError::ProcessFailed {
-                    program: self.python_program(),
-                    status: None,
-                    stderr: "Codex SDK sidecar is not running".to_string(),
-                })?
-        };
-        let mut stdin = stdin
-            .lock()
-            .expect("codex sdk sidecar stdin mutex poisoned");
-        stdin.write_all(text.as_bytes())?;
-        stdin.write_all(b"\n")?;
-        stdin.flush()?;
-        Ok(())
-    }
-
-    fn write_request_with_restart(
-        &self,
-        request_id: u64,
-        request: &Value,
-        shutdown: &AgentShutdownHandle,
-    ) -> Result<(), AgentError> {
-        self.register_request(request_id);
-        match self.write_request(request) {
-            Ok(()) => Ok(()),
-            Err(error) if is_broken_pipe(&error) => {
-                self.unregister_request(request_id);
-                trace_codex_sdk(format_args!(
-                    "sidecar write failed with broken pipe; restarting once"
-                ));
-                self.stop_sidecar_process();
-                self.reset_router_after_restart();
-                self.ensure_started(shutdown)?;
-                self.register_request(request_id);
-                if let Err(error) = self.write_request(request) {
-                    self.unregister_request(request_id);
-                    return Err(error);
-                }
-                Ok(())
-            }
-            Err(error) => {
-                self.unregister_request(request_id);
-                Err(error)
-            }
-        }
-    }
-
-    fn stop_sidecar_process(&self) {
+    fn stop_process(&self) {
         if let Some(mut process) = self
             .process
             .lock()
-            .expect("codex sdk sidecar process mutex poisoned")
+            .expect("codex app-server process mutex poisoned")
             .take()
         {
             let pid = process.child.id();
-            trace_codex_sdk(format_args!("stopping sidecar pid {pid}"));
+            trace_codex_app_server(format_args!("stopping app-server pid {pid}"));
             let _ = process.child.kill();
             let _ = process.child.wait();
         }
     }
 
-    fn reset_router_after_restart(&self) {
+    fn reset_after_restart(&self) {
         let (lock, condvar) = &*self.router;
-        let mut state = lock.lock().expect("codex sdk router mutex poisoned");
+        let mut state = lock.lock().expect("codex app-server router mutex poisoned");
         state.closed_error = None;
-        state.queues.clear();
+        state.responses.clear();
+        state.turn_notifications.clear();
+        state.pending_turn_notifications.clear();
+        self.loaded_threads
+            .lock()
+            .expect("loaded threads mutex poisoned")
+            .clear();
+        self.active_turns
+            .lock()
+            .expect("active turns mutex poisoned")
+            .clear();
         condvar.notify_all();
     }
 
@@ -598,96 +844,117 @@ impl CodexSdkSidecar {
         if self
             .process
             .lock()
-            .expect("codex sdk sidecar process mutex poisoned")
+            .expect("codex app-server process mutex poisoned")
             .is_none()
         {
             return;
         }
-        let request_id = self.next_request_id.fetch_add(1, Ordering::Relaxed);
-        let request = json!({
-            "id": request_id,
-            "op": "shutdown",
-        });
-        let write_result = self.write_request(&request);
-        if let Err(error) = &write_result {
-            trace_codex_sdk(format_args!("sidecar shutdown request failed: {error}"));
-        }
-        if let Some(mut process) = self
-            .process
-            .lock()
-            .expect("codex sdk sidecar process mutex poisoned")
-            .take()
-        {
-            let pid = process.child.id();
-            if write_result.is_ok()
-                && wait_for_child_exit(&mut process.child, Duration::from_secs(2))
-            {
-                trace_codex_sdk(format_args!("sidecar pid {pid} exited after shutdown"));
-            } else {
-                trace_codex_sdk(format_args!("killing sidecar pid {pid} during shutdown"));
-                let _ = process.child.kill();
-                let _ = process.child.wait();
-            }
-        }
-        self.reset_router_after_restart();
+        self.stop_process();
+        self.reset_after_restart();
     }
 
-    fn register_request(&self, request_id: u64) {
+    fn register_response(&self, request_id: &str) {
         let (lock, _) = &*self.router;
         lock.lock()
-            .expect("codex sdk router mutex poisoned")
-            .queues
-            .entry(request_id)
+            .expect("codex app-server router mutex poisoned")
+            .responses
+            .entry(request_id.to_string())
             .or_default();
     }
 
-    fn unregister_request(&self, request_id: u64) {
+    fn unregister_response(&self, request_id: &str) {
         let (lock, _) = &*self.router;
         lock.lock()
-            .expect("codex sdk router mutex poisoned")
-            .queues
-            .remove(&request_id);
+            .expect("codex app-server router mutex poisoned")
+            .responses
+            .remove(request_id);
     }
 
-    fn next_message(&self, request_id: u64) -> Result<CodexSdkInbound, AgentError> {
+    fn next_response(&self, request_id: &str) -> Result<Value, AgentError> {
         let (lock, condvar) = &*self.router;
-        let mut state = lock.lock().expect("codex sdk router mutex poisoned");
+        let mut state = lock.lock().expect("codex app-server router mutex poisoned");
         loop {
-            if let Some(message) = state
-                .queues
-                .get_mut(&request_id)
+            if let Some(response) = state
+                .responses
+                .get_mut(request_id)
                 .and_then(VecDeque::pop_front)
             {
-                return Ok(message);
+                state.responses.remove(request_id);
+                if let Some(error) = response.error {
+                    return Err(self.protocol_error(error));
+                }
+                return Ok(response.result.unwrap_or(Value::Null));
             }
             if let Some(error) = &state.closed_error {
-                return Err(AgentError::ProcessFailed {
-                    program: self.python_program(),
-                    status: None,
-                    stderr: error.clone(),
-                });
+                return Err(self.protocol_error(error.clone()));
             }
             state = condvar
                 .wait(state)
-                .expect("codex sdk router mutex poisoned");
+                .expect("codex app-server router mutex poisoned");
         }
     }
 
-    fn python_program(&self) -> PathBuf {
-        self.config
-            .sdk_python
-            .clone()
-            .or_else(|| env::var_os(WORK_LEAF_CODEX_SDK_PYTHON_ENV).map(PathBuf::from))
-            .unwrap_or_else(|| PathBuf::from("python3"))
+    fn register_turn(&self, turn_id: &str) {
+        let (lock, condvar) = &*self.router;
+        let mut state = lock.lock().expect("codex app-server router mutex poisoned");
+        let pending = state
+            .pending_turn_notifications
+            .remove(turn_id)
+            .unwrap_or_default();
+        state
+            .turn_notifications
+            .entry(turn_id.to_string())
+            .or_default()
+            .extend(pending);
+        condvar.notify_all();
+    }
+
+    fn unregister_turn(&self, turn_id: &str) {
+        let (lock, _) = &*self.router;
+        lock.lock()
+            .expect("codex app-server router mutex poisoned")
+            .turn_notifications
+            .remove(turn_id);
+    }
+
+    fn next_turn_notification(
+        &self,
+        turn_id: &str,
+    ) -> Result<CodexAppServerNotification, AgentError> {
+        let (lock, condvar) = &*self.router;
+        let mut state = lock.lock().expect("codex app-server router mutex poisoned");
+        loop {
+            if let Some(notification) = state
+                .turn_notifications
+                .get_mut(turn_id)
+                .and_then(VecDeque::pop_front)
+            {
+                return Ok(notification);
+            }
+            if let Some(error) = &state.closed_error {
+                return Err(self.protocol_error(error.clone()));
+            }
+            state = condvar
+                .wait(state)
+                .expect("codex app-server router mutex poisoned");
+        }
+    }
+
+    fn protocol_error(&self, message: String) -> AgentError {
+        AgentError::ProcessFailed {
+            program: self.config.binary.clone(),
+            status: None,
+            stderr: message,
+        }
     }
 }
 
-impl Drop for CodexSdkSidecar {
+impl Drop for CodexAppServer {
     fn drop(&mut self) {
         if let Some(mut process) = self
             .process
             .lock()
-            .expect("codex sdk sidecar process mutex poisoned")
+            .expect("codex app-server process mutex poisoned")
             .take()
         {
             let _ = process.child.kill();
@@ -696,31 +963,410 @@ impl Drop for CodexSdkSidecar {
     }
 }
 
-fn route_sdk_inbound(
-    router: &Arc<(Mutex<CodexSdkRouterState>, Condvar)>,
-    inbound: CodexSdkInbound,
+struct ActiveTurnGuard {
+    active_turns: Arc<Mutex<BTreeMap<AgentId, ActiveTurn>>>,
+    agent_id: AgentId,
+    active: ActiveTurn,
+}
+
+impl ActiveTurnGuard {
+    fn new(
+        active_turns: Arc<Mutex<BTreeMap<AgentId, ActiveTurn>>>,
+        agent_id: AgentId,
+        thread_id: String,
+        turn_id: String,
+    ) -> Self {
+        let active = ActiveTurn { thread_id, turn_id };
+        active_turns
+            .lock()
+            .expect("active turns mutex poisoned")
+            .insert(agent_id.clone(), active.clone());
+        Self {
+            active_turns,
+            agent_id,
+            active,
+        }
+    }
+}
+
+impl Drop for ActiveTurnGuard {
+    fn drop(&mut self) {
+        let mut active_turns = self
+            .active_turns
+            .lock()
+            .expect("active turns mutex poisoned");
+        if active_turns.get(&self.agent_id) == Some(&self.active) {
+            active_turns.remove(&self.agent_id);
+        }
+    }
+}
+
+fn route_app_server_message(
+    router: &Arc<(Mutex<CodexAppServerRouterState>, Condvar)>,
+    stdin: &Arc<Mutex<ChildStdin>>,
+    message: Value,
 ) {
-    let request_id = inbound.id.unwrap_or(0);
-    let (lock, condvar) = &**router;
-    let mut state = lock.lock().expect("codex sdk router mutex poisoned");
-    if request_id != 0 && !state.queues.contains_key(&request_id) {
+    if let Some(method) = message.get("method").and_then(Value::as_str) {
+        if let Some(id) = message.get("id").cloned() {
+            respond_to_server_request(stdin, id, method);
+            return;
+        }
+        let params = message.get("params").cloned().unwrap_or(Value::Null);
+        route_notification(
+            router,
+            CodexAppServerNotification {
+                method: method.to_string(),
+                params,
+            },
+        );
         return;
     }
-    state
-        .queues
-        .entry(request_id)
-        .or_default()
-        .push_back(inbound);
+
+    let Some(id) = message.get("id").map(json_rpc_id_string) else {
+        return;
+    };
+    let response = if let Some(error) = message.get("error") {
+        CodexJsonRpcResponse {
+            result: None,
+            error: Some(json_rpc_error_message(error)),
+        }
+    } else {
+        CodexJsonRpcResponse {
+            result: Some(message.get("result").cloned().unwrap_or(Value::Null)),
+            error: None,
+        }
+    };
+    let (lock, condvar) = &**router;
+    let mut state = lock.lock().expect("codex app-server router mutex poisoned");
+    if let Some(queue) = state.responses.get_mut(&id) {
+        queue.push_back(response);
+        condvar.notify_all();
+    }
+}
+
+fn route_notification(
+    router: &Arc<(Mutex<CodexAppServerRouterState>, Condvar)>,
+    notification: CodexAppServerNotification,
+) {
+    let Some(turn_id) = notification_turn_id(&notification) else {
+        return;
+    };
+    let (lock, condvar) = &**router;
+    let mut state = lock.lock().expect("codex app-server router mutex poisoned");
+    if let Some(queue) = state.turn_notifications.get_mut(&turn_id) {
+        queue.push_back(notification);
+    } else {
+        state
+            .pending_turn_notifications
+            .entry(turn_id)
+            .or_default()
+            .push_back(notification);
+    }
     condvar.notify_all();
 }
 
-fn close_sdk_router(router: &Arc<(Mutex<CodexSdkRouterState>, Condvar)>, error: String) {
+fn respond_to_server_request(stdin: &Arc<Mutex<ChildStdin>>, id: Value, method: &str) {
+    let result = match method {
+        "item/commandExecution/requestApproval" | "item/fileChange/requestApproval" => {
+            json!({ "decision": "accept" })
+        }
+        _ => json!({}),
+    };
+    let response = json!({ "id": id, "result": result });
+    if let Ok(text) = serde_json::to_string(&response) {
+        let _ = write_json_line(stdin, &text);
+    }
+}
+
+fn close_app_server_router(
+    router: &Arc<(Mutex<CodexAppServerRouterState>, Condvar)>,
+    error: String,
+) {
     let (lock, condvar) = &**router;
-    let mut state = lock.lock().expect("codex sdk router mutex poisoned");
+    let mut state = lock.lock().expect("codex app-server router mutex poisoned");
     if state.closed_error.is_none() {
         state.closed_error = Some(error);
     }
     condvar.notify_all();
+}
+
+fn write_json_line(stdin: &Arc<Mutex<ChildStdin>>, text: &str) -> std::io::Result<()> {
+    let mut stdin = stdin.lock().expect("codex app-server stdin mutex poisoned");
+    stdin.write_all(text.as_bytes())?;
+    stdin.write_all(b"\n")?;
+    stdin.flush()
+}
+
+fn thread_start_params(config: &CodexCommandConfig, sandbox: &SandboxMode) -> Value {
+    let mut params = json!({
+        "approvalPolicy": "never",
+        "cwd": config.project_dir.display().to_string(),
+        "sandbox": sandbox.as_codex_arg(),
+    });
+    if let Some(model) = &config.model {
+        params["model"] = json!(model);
+    }
+    params
+}
+
+fn thread_resume_params(
+    thread_id: &str,
+    config: &CodexCommandConfig,
+    sandbox: &SandboxMode,
+) -> Value {
+    let mut params = thread_start_params(config, sandbox);
+    params["threadId"] = json!(thread_id);
+    params
+}
+
+fn turn_start_params(
+    thread_id: &str,
+    prompt: &str,
+    config: &CodexCommandConfig,
+    sandbox: &SandboxMode,
+) -> Value {
+    let mut params = json!({
+        "approvalPolicy": "never",
+        "cwd": config.project_dir.display().to_string(),
+        "sandboxPolicy": sandbox_policy(sandbox),
+        "threadId": thread_id,
+        "input": [{ "type": "text", "text": prompt }],
+    });
+    if let Some(model) = &config.model {
+        params["model"] = json!(model);
+    }
+    params
+}
+
+fn sandbox_policy(sandbox: &SandboxMode) -> Value {
+    match sandbox {
+        SandboxMode::WorkspaceWrite => json!({ "type": "workspaceWrite" }),
+        SandboxMode::DangerFullAccess => json!({ "type": "dangerFullAccess" }),
+        SandboxMode::ReadOnly => json!({ "type": "readOnly" }),
+    }
+}
+
+fn notification_turn_id(notification: &CodexAppServerNotification) -> Option<String> {
+    notification
+        .params
+        .get("turnId")
+        .and_then(Value::as_str)
+        .or_else(|| {
+            notification
+                .params
+                .get("turn")
+                .and_then(|turn| turn.get("id"))
+                .and_then(Value::as_str)
+        })
+        .map(ToString::to_string)
+}
+
+fn token_usage_from_params(params: &Value) -> Option<AgentTokenUsage> {
+    let usage = params
+        .get("tokenUsage")
+        .or_else(|| params.get("token_usage"))?
+        .get("last")?;
+    Some(AgentTokenUsage {
+        input_tokens: json_u64(usage, "inputTokens", "input_tokens"),
+        cached_input_tokens: json_u64(usage, "cachedInputTokens", "cached_input_tokens"),
+        output_tokens: json_u64(usage, "outputTokens", "output_tokens"),
+        reasoning_output_tokens: json_u64(
+            usage,
+            "reasoningOutputTokens",
+            "reasoning_output_tokens",
+        ),
+    })
+}
+
+fn json_u64(value: &Value, camel: &str, snake: &str) -> u64 {
+    value
+        .get(camel)
+        .or_else(|| value.get(snake))
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
+}
+
+fn agent_message_text(item: &Value) -> Option<&str> {
+    let item = item_root(item);
+    (json_string_ref(item, "type") == Some("agentMessage"))
+        .then(|| json_string_ref(item, "text"))
+        .flatten()
+}
+
+fn activity_from_item(method: &str, item: &Value) -> Option<String> {
+    let item = item_root(item);
+    let phase = if method == "item/started" {
+        "started"
+    } else {
+        "completed"
+    };
+    match json_string_ref(item, "type")? {
+        "commandExecution" => {
+            let command = compact_text(json_string_ref(item, "command")?, 160);
+            if phase == "completed" {
+                if let Some(exit_code) = item.get("exitCode").and_then(Value::as_i64) {
+                    Some(format!("command completed: {command} (exit {exit_code})"))
+                } else {
+                    Some(format!("command completed: {command}"))
+                }
+            } else {
+                Some(format!("command started: {command}"))
+            }
+        }
+        "fileChange" => {
+            let paths = item_change_paths(item);
+            let paths = if paths.is_empty() {
+                "unknown paths".to_string()
+            } else {
+                compact_text(&paths.join(", "), 160)
+            };
+            Some(format!("file change {phase}: {paths}"))
+        }
+        "mcpToolCall" => {
+            let server = json_string_ref(item, "server").unwrap_or("mcp");
+            let tool = json_string_ref(item, "tool").unwrap_or("tool");
+            Some(format!("mcp tool {phase}: {server}/{tool}"))
+        }
+        "dynamicToolCall" => {
+            let namespace = json_string_ref(item, "namespace");
+            let tool = json_string_ref(item, "tool").unwrap_or("tool");
+            Some(match namespace {
+                Some(namespace) if !namespace.is_empty() => {
+                    format!("tool {phase}: {namespace}/{tool}")
+                }
+                _ => format!("tool {phase}: {tool}"),
+            })
+        }
+        "webSearch" => json_string_ref(item, "query")
+            .map(|query| format!("web search {phase}: {}", compact_text(query, 160))),
+        "plan" if phase == "completed" => json_string_ref(item, "text")
+            .map(|plan| format!("plan updated: {}", compact_text(plan, 160))),
+        _ => None,
+    }
+}
+
+fn item_root(item: &Value) -> &Value {
+    item.get("root").unwrap_or(item)
+}
+
+fn item_change_paths(item: &Value) -> Vec<String> {
+    item.get("changes")
+        .and_then(Value::as_array)
+        .map(|changes| {
+            changes
+                .iter()
+                .flat_map(|change| {
+                    ["path", "oldPath", "newPath", "movePath"]
+                        .into_iter()
+                        .filter_map(|key| json_string(change, key))
+                })
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn compact_text(text: &str, limit: usize) -> String {
+    let normalized = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if normalized.chars().count() <= limit {
+        return normalized;
+    }
+    let mut compacted = normalized
+        .chars()
+        .take(limit.saturating_sub(3))
+        .collect::<String>();
+    compacted.push_str("...");
+    compacted
+}
+
+fn turn_failed(params: &Value) -> bool {
+    params
+        .get("turn")
+        .and_then(|turn| turn.get("status"))
+        .map(display_json_value)
+        .is_some_and(|status| status == "failed")
+}
+
+fn turn_error_message(params: &Value) -> Option<&str> {
+    params
+        .get("turn")
+        .and_then(|turn| turn.get("error"))
+        .and_then(|error| json_string_ref(error, "message"))
+}
+
+fn json_pointer_str<'a>(value: &'a Value, path: &[&str]) -> Option<&'a str> {
+    let mut current = value;
+    for key in path {
+        current = current.get(*key)?;
+    }
+    current.as_str()
+}
+
+fn json_string(value: &Value, key: &str) -> Option<String> {
+    json_string_ref(value, key).map(ToString::to_string)
+}
+
+fn json_string_ref<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
+    value.get(key).and_then(Value::as_str)
+}
+
+fn display_json_value(value: &Value) -> String {
+    if let Some(text) = value.as_str() {
+        return text.to_string();
+    }
+    if let Some(root) = value.get("root") {
+        return display_json_value(root);
+    }
+    if let Some(value_type) = value.get("type").and_then(Value::as_str) {
+        return value_type.to_string();
+    }
+    value.to_string()
+}
+
+fn json_rpc_id_string(value: &Value) -> String {
+    value
+        .as_str()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| value.to_string())
+}
+
+fn json_rpc_error_message(error: &Value) -> String {
+    error
+        .get("message")
+        .and_then(Value::as_str)
+        .unwrap_or("Codex app-server request failed")
+        .to_string()
+}
+
+fn slash_command_name(prompt: &str) -> (Option<String>, &str) {
+    let stripped = prompt.trim();
+    if !stripped.starts_with('/') || stripped.len() == 1 {
+        return (None, "");
+    }
+    let without_slash = &stripped[1..];
+    if without_slash.chars().next().is_none_or(char::is_whitespace) {
+        return (None, "");
+    }
+    let (command, args) = without_slash
+        .split_once(char::is_whitespace)
+        .unwrap_or((without_slash, ""));
+    (Some(command.to_ascii_lowercase()), args.trim())
+}
+
+fn is_codex_slash_command(prompt: &str) -> bool {
+    slash_command_name(prompt).0.is_some()
+}
+
+fn is_linearize_agent(agent_id: &AgentId) -> bool {
+    let value = agent_id.as_str();
+    value == "linearize" || value.starts_with("linearize-")
+}
+
+fn trace_codex_app_server(message: std::fmt::Arguments<'_>) {
+    if env::var_os("WORK_LEAF_CODEX_TRACE").is_some() {
+        eprintln!("work-leaf codex app-server: {message}");
+    }
 }
 
 fn is_broken_pipe(error: &AgentError) -> bool {
@@ -731,52 +1377,15 @@ fn is_text_file_busy(error: &std::io::Error) -> bool {
     error.raw_os_error() == Some(26)
 }
 
-fn is_codex_slash_command(prompt: &str) -> bool {
-    let mut chars = prompt.trim_start().chars();
-    matches!(chars.next(), Some('/')) && chars.next().is_some_and(|ch| !ch.is_whitespace())
-}
-
-fn codex_sdk_session_id_from_status(text: &str) -> Option<&str> {
-    text.strip_prefix("Codex session ")
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-}
-
-fn is_linearize_agent(agent_id: &AgentId) -> bool {
-    let value = agent_id.as_str();
-    value == "linearize" || value.starts_with("linearize-")
-}
-
-fn trace_codex_sdk(message: std::fmt::Arguments<'_>) {
-    if env::var_os("WORK_LEAF_CODEX_TRACE").is_some() {
-        eprintln!("work-leaf codex sdk: {message}");
-    }
-}
-
-fn wait_for_child_exit(child: &mut Child, timeout: Duration) -> bool {
-    let start = SystemTime::now();
-    loop {
-        match child.try_wait() {
-            Ok(Some(_)) => return true,
-            Ok(None) => {}
-            Err(_) => return false,
-        }
-        if start.elapsed().unwrap_or_default() >= timeout {
-            return false;
-        }
-        thread::sleep(Duration::from_millis(20));
-    }
-}
-
 impl CodexBackend {
     pub fn new(config: CodexCommandConfig, policy: PromptPolicy) -> Self {
-        let sdk = Arc::new(CodexSdkSidecar::new(config.clone()));
+        let app_server = Arc::new(CodexAppServer::new(config.clone()));
         Self {
             config,
             policy,
             state: Arc::new(Mutex::new(CodexBackendState::default())),
             operation_condvar: Arc::new(Condvar::new()),
-            sdk,
+            app_server,
             shutdown: AgentShutdownHandle::default(),
             lifecycle: Arc::new(()),
         }
@@ -887,14 +1496,14 @@ impl Drop for AgentOperationGuard {
 impl Drop for CodexBackend {
     fn drop(&mut self) {
         let strong_count = Arc::strong_count(&self.lifecycle);
-        trace_codex_sdk(format_args!(
+        trace_codex_app_server(format_args!(
             "backend drop with lifecycle owners={strong_count}"
         ));
         if strong_count == 1 {
-            trace_codex_sdk(format_args!(
+            trace_codex_app_server(format_args!(
                 "last backend owner dropped; shutting down agents"
             ));
-            self.sdk.shutdown();
+            self.app_server.shutdown();
         }
     }
 }
@@ -917,11 +1526,11 @@ impl AgentBackend for CodexBackend {
     }
 
     fn interrupt(&mut self, agent_id: &AgentId) -> Result<(), AgentError> {
-        self.sdk.interrupt(agent_id, &self.shutdown)
+        self.app_server.interrupt(agent_id, &self.shutdown)
     }
 
     fn shutdown(&mut self) {
-        self.sdk.shutdown();
+        self.app_server.shutdown();
     }
 
     fn launch_streaming(
@@ -933,9 +1542,8 @@ impl AgentBackend for CodexBackend {
         let prompt = self
             .policy
             .inject(&request.id, &request.feature, &request.prompt);
-        let output = self.sdk.request_streaming(
-            CodexSdkTurnRequest {
-                op: "launch",
+        let output = self.app_server.request_turn_streaming(
+            CodexTurnRequest {
                 agent_id: &request.id,
                 prompt: &prompt,
                 thread_id: None,
@@ -972,9 +1580,8 @@ impl AgentBackend for CodexBackend {
         let prompt = self
             .policy
             .inject(&request.id, &request.feature, &request.prompt);
-        let output = self.sdk.request_streaming(
-            CodexSdkTurnRequest {
-                op: "launch",
+        let output = self.app_server.request_turn_streaming(
+            CodexTurnRequest {
                 agent_id: &request.id,
                 prompt: &prompt,
                 thread_id: None,
@@ -1024,28 +1631,31 @@ impl AgentBackend for CodexBackend {
                 state.thread_ids.get(agent_id).cloned(),
             )
         };
-        let sdk_prompt = if has_session {
+        let prompt = if has_session {
             prompt.to_string()
         } else {
             self.policy.inject(agent_id, &feature, prompt)
         };
-        let op = if is_codex_slash_command(prompt) {
-            "command"
+        let sandbox = self.sandbox_for_agent(agent_id);
+        let output = if is_codex_slash_command(&prompt) {
+            let thread_id = thread_id
+                .as_deref()
+                .ok_or_else(|| AgentError::UnknownSession(agent_id.clone()))?;
+            self.app_server
+                .command(agent_id, &prompt, thread_id, &sandbox, &self.shutdown)?
         } else {
-            "send"
+            self.app_server.request_turn_streaming(
+                CodexTurnRequest {
+                    agent_id,
+                    prompt: &prompt,
+                    thread_id: thread_id.as_deref(),
+                    sandbox,
+                },
+                &self.shutdown,
+                sink,
+                None,
+            )?
         };
-        let output = self.sdk.request_streaming(
-            CodexSdkTurnRequest {
-                op,
-                agent_id,
-                prompt: &sdk_prompt,
-                thread_id: thread_id.as_deref(),
-                sandbox: self.sandbox_for_agent(agent_id),
-            },
-            &self.shutdown,
-            sink,
-            None,
-        )?;
         if !output.thread_id.is_empty() || output.usage.is_some() {
             let mut state = self
                 .state
@@ -1060,7 +1670,7 @@ impl AgentBackend for CodexBackend {
                 record_usage(&mut state, agent_id, usage);
             }
         }
-        self.record_send_reply(agent_id, prompt, output.reply)
+        self.record_send_reply(agent_id, prompt.as_str(), output.reply)
     }
 
     fn send_streaming_interruptible(
@@ -1087,28 +1697,31 @@ impl AgentBackend for CodexBackend {
                 state.thread_ids.get(agent_id).cloned(),
             )
         };
-        let sdk_prompt = if has_session {
+        let prompt = if has_session {
             prompt.to_string()
         } else {
             self.policy.inject(agent_id, &feature, prompt)
         };
-        let op = if is_codex_slash_command(prompt) {
-            "command"
+        let sandbox = self.sandbox_for_agent(agent_id);
+        let output = if is_codex_slash_command(&prompt) {
+            let thread_id = thread_id
+                .as_deref()
+                .ok_or_else(|| AgentError::UnknownSession(agent_id.clone()))?;
+            self.app_server
+                .command(agent_id, &prompt, thread_id, &sandbox, &self.shutdown)?
         } else {
-            "send"
+            self.app_server.request_turn_streaming(
+                CodexTurnRequest {
+                    agent_id,
+                    prompt: &prompt,
+                    thread_id: thread_id.as_deref(),
+                    sandbox,
+                },
+                &self.shutdown,
+                sink,
+                Some(should_interrupt),
+            )?
         };
-        let output = self.sdk.request_streaming(
-            CodexSdkTurnRequest {
-                op,
-                agent_id,
-                prompt: &sdk_prompt,
-                thread_id: thread_id.as_deref(),
-                sandbox: self.sandbox_for_agent(agent_id),
-            },
-            &self.shutdown,
-            sink,
-            Some(should_interrupt),
-        )?;
         if !output.thread_id.is_empty() || output.usage.is_some() {
             let mut state = self
                 .state
@@ -1123,7 +1736,7 @@ impl AgentBackend for CodexBackend {
                 record_usage(&mut state, agent_id, usage);
             }
         }
-        self.record_send_reply(agent_id, prompt, output.reply)
+        self.record_send_reply(agent_id, prompt.as_str(), output.reply)
     }
 }
 

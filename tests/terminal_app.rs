@@ -11,7 +11,10 @@ use work_leaf::{
     CodexCommandConfig, CommandChat, MessageRole, PaneFocus, PromptPolicy, TerminalApp, UiMode,
 };
 
+mod support;
 mod temp_cleanup;
+
+use support::fake_codex::write_app_server_script;
 
 #[test]
 fn terminal_app_new_and_chat_message_use_real_command_chat_backend() {
@@ -92,39 +95,41 @@ fn terminal_app_slash_command_from_colon_prompt_sends_to_selected_agent() {
 #[test]
 fn terminal_app_codex_status_slash_command_resumes_backend_session() {
     let root = temp_dir("terminal-app-codex-slash-command");
-    let (codex, python) = write_fake_sdk_sidecar(
+    let fake_codex = write_fake_codex_app_server(
         &root,
         r#"#!/bin/sh
 dir=$(dirname "$0")
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  printf '%s\n' "$line" >> "$dir/command.log"
+  id=$(request_id "$line")
   case "$line" in
-    *'"agent_id":"title-'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-title","reply":"status"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"op":"command"'*'"/status"'*)
-      printf '%s\n' "$line" >> "$dir/command.log"
-      printf '{"id":%s,"ok":true,"thread_id":"thread-slash-command","reply":"backend status from fake sdk"}\n' "$id"
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-slash-command"
       ;;
-    *'"op":"launch"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-slash-command","reply":"launch reply from fake sdk"}\n' "$id"
+    *'"method":"turn/start"'*'"title-'*)
+      turn_message "$id" "thread-slash-command" "status"
       ;;
-    *'"op":"shutdown"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      exit 0
+    *'"method":"turn/start"'*)
+      turn_message "$id" "thread-slash-command" "launch reply from fake app-server"
       ;;
-    *)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-slash-command","reply":"unexpected sdk request"}\n' "$id"
+    *'"method":"thread/read"'*)
+      thread_result "$id" "thread-slash-command"
+      ;;
+    *'"method":"config/read"'*)
+      printf '{"id":"%s","result":{"config":{"model":"fake-status-model","modelContextWindow":4096}}}\n' "$id"
+      ;;
+    *'"method":"account/read"'*)
+      printf '{"id":"%s","result":{"account":{"type":"test-account"}}}\n' "$id"
       ;;
   esac
 done
 "#,
     );
     let backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone())
-            .with_binary(&codex)
-            .with_sdk_python(&python),
+        CodexCommandConfig::new(root.clone()).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
     let chat = CommandChat::new(root.clone(), backend);
@@ -138,11 +143,19 @@ done
 
     let frame = app.render_frame();
     assert!(frame.contains("user: /status"));
-    assert!(frame.contains("backend status from fake sdk"), "{frame}");
-    let command_log = fs::read_to_string(root.join("bin").join("command.log")).unwrap();
-    assert!(command_log.contains(r#""op":"command""#), "{command_log}");
     assert!(
-        command_log.contains(r#""prompt":"/status""#),
+        frame.contains("OpenAI Codex app-server status"),
+        "{frame}\ntranscript: {:?}",
+        app.transcript()
+    );
+    assert!(
+        frame.contains("fake-status-model"),
+        "{frame}\ntranscript: {:?}",
+        app.transcript()
+    );
+    let command_log = fs::read_to_string(root.join("bin").join("command.log")).unwrap();
+    assert!(
+        command_log.contains(r#""method":"thread/read""#),
         "{command_log}"
     );
 }
@@ -518,34 +531,33 @@ fn terminal_app_chat_focus_arrows_recall_history_while_command_mode_is_active() 
 #[test]
 fn terminal_app_new_and_chat_work_through_spawned_codex_backend() {
     let root = temp_dir("terminal-app-codex-backend");
-    let (codex, python) = write_fake_sdk_sidecar(
+    let fake_codex = write_fake_codex_app_server(
         &root,
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"agent_id":"title-'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-title","reply":"spawned-process"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"op":"send"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-user-1","reply":"resume reply from fake sdk"}\n' "$id"
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-user-1"
       ;;
-    *'"op":"launch"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-user-1","reply":"launch reply from fake sdk"}\n' "$id"
+    *'"method":"turn/start"'*'"title-'*)
+      turn_message "$id" "thread-user-1" "spawned-process"
       ;;
-    *'"op":"shutdown"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      exit 0
+    *'"method":"turn/start"'*'"continue"'*)
+      turn_message "$id" "thread-user-1" "resume reply from fake app-server"
+      ;;
+    *'"method":"turn/start"'*)
+      turn_message "$id" "thread-user-1" "launch reply from fake app-server"
       ;;
   esac
 done
 "#,
     );
     let backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone())
-            .with_binary(&codex)
-            .with_sdk_python(&python),
+        CodexCommandConfig::new(root.clone()).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
     let chat = CommandChat::new(root, backend);
@@ -559,13 +571,19 @@ done
         Some("user-1")
     );
     assert!(app.render_frame().contains("user-1"));
-    assert!(app.render_frame().contains("launch reply from fake sdk"));
+    assert!(
+        app.render_frame()
+            .contains("launch reply from fake app-server")
+    );
 
     app.handle_bytes(b"continue\n");
     app.wait_for_idle(Duration::from_secs(1));
 
     assert!(app.render_frame().contains("user: continue"));
-    assert!(app.render_frame().contains("resume reply from fake sdk"));
+    assert!(
+        app.render_frame()
+            .contains("resume reply from fake app-server")
+    );
 }
 
 #[test]
@@ -831,33 +849,34 @@ fn terminal_app_sgr_mouse_release_on_left_agent_row_selects_that_chat() {
 #[test]
 fn terminal_app_streams_spawned_codex_output_before_process_finishes() {
     let root = temp_dir("terminal-app-codex-streaming");
-    let (codex, python) = write_fake_sdk_sidecar(
+    let fake_codex = write_fake_codex_app_server(
         &root,
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"agent_id":"title-'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-title","reply":"stream-output"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"op":"launch"'*)
-      printf '{"id":%s,"event":{"type":"status","text":"streamed progress before final"}}\n' "$id"
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-stream"
+      ;;
+    *'"method":"turn/start"'*'"title-'*)
+      turn_message "$id" "thread-stream" "stream-output"
+      ;;
+    *'"method":"turn/start"'*)
+      printf '{"id":"%s","result":{"turn":{"id":"turn-%s"}}}\n' "$id" "$id"
+      command_started_item "$id" "thread-stream" "streamed progress before final"
       sleep 1
-      printf '{"id":%s,"ok":true,"thread_id":"thread-stream","reply":"streamed final reply"}\n' "$id"
-      ;;
-    *'"op":"shutdown"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      exit 0
+      agent_message_item "$id" "thread-stream" "streamed final reply"
+      turn_completed "$id" "thread-stream"
       ;;
   esac
 done
 "#,
     );
     let backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone())
-            .with_binary(&codex)
-            .with_sdk_python(&python),
+        CodexCommandConfig::new(root.clone()).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
     let chat = CommandChat::new(root, backend);
@@ -877,42 +896,40 @@ fn terminal_app_spawned_codex_processes_directive_message_before_later_prose_mes
     fs::create_dir_all(root.join("src")).unwrap();
     fs::write(root.join("src/ui.rs"), "pub fn ui() {}\n").unwrap();
     fs::write(root.join("src/ui_harness.rs"), "pub fn harness() {}\n").unwrap();
-    let (codex, python) = write_fake_sdk_sidecar(
+    let fake_codex = write_fake_codex_app_server(
         &root,
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"agent_id":"title-'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-title","reply":"patch-arrow-keys"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"op":"send"'*"work-leaf file text"*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-directive-prose","reply":"I can patch after receiving src/ui.rs and src/ui_harness.rs."}\n' "$id"
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-directive-prose"
       ;;
-    *'"op":"send"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-directive-prose","reply":"missing orchestrator file text"}\n' "$id"
+    *'"method":"turn/start"'*'"title-'*)
+      turn_message "$id" "thread-directive-prose" "patch-arrow-keys"
       ;;
-    *'"op":"launch"'*)
-      printf '{"id":%s,"event":{"type":"message","text":"@work-leaf read src/ui.rs src/ui_harness.rs\\nI have requested the relevant UI and harness files from the orchestrator."}}\n' "$id"
+    *'"method":"turn/start"'*"work-leaf file text"*)
+      turn_message "$id" "thread-directive-prose" "I can patch after receiving src/ui.rs and src/ui_harness.rs."
+      ;;
+    *'"method":"turn/start"'*)
+      text='@work-leaf read src/ui.rs src/ui_harness.rs\nI have requested the relevant UI and harness files from the orchestrator.'
+      turn_started "$id" "thread-directive-prose"
+      agent_message_item "$id" "thread-directive-prose" "$text"
+      IFS= read -r interrupt_line
+      interrupt_id=$(request_id "$interrupt_line")
+      rpc_ok "$interrupt_id"
       sleep 0.1
-      printf '{"id":%s,"ok":true,"thread_id":"thread-directive-prose","reply":"@work-leaf read src/ui.rs src/ui_harness.rs\\nI have requested the relevant UI and harness files from the orchestrator."}\n' "$id"
-      ;;
-    *'"op":"interrupt"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      ;;
-    *'"op":"shutdown"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      exit 0
+      turn_completed "$id" "thread-directive-prose"
       ;;
   esac
 done
 "#,
     );
     let backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone())
-            .with_binary(&codex)
-            .with_sdk_python(&python),
+        CodexCommandConfig::new(root.clone()).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
     let chat = CommandChat::new(root, backend);
@@ -1256,33 +1273,13 @@ fn temp_dir(name: &str) -> PathBuf {
     root
 }
 
-fn write_fake_sdk_sidecar(root: &Path, script: &str) -> (PathBuf, PathBuf) {
+fn write_fake_codex_app_server(root: &Path, script: &str) -> PathBuf {
     let bin = root.join("bin");
     fs::create_dir_all(&bin).unwrap();
     let codex = bin.join("codex");
-    fs::write(
-        &codex,
-        "#!/bin/sh\necho unexpected direct codex invocation >&2\nexit 97\n",
-    )
-    .unwrap();
-    make_executable(&codex);
-    let python = bin.join("python");
-    fs::write(&python, script).unwrap();
-    make_executable(&python);
-    (codex, python)
+    write_app_server_script(&codex, script);
+    codex
 }
-
-#[cfg(unix)]
-fn make_executable(path: &std::path::Path) {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(path).unwrap().permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(path, permissions).unwrap();
-}
-
-#[cfg(not(unix))]
-fn make_executable(_path: &std::path::Path) {}
 
 fn fake_title_from_title_prompt(prompt: &str) -> String {
     let first_prompt = prompt

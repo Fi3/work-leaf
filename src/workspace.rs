@@ -1215,7 +1215,7 @@ where
                 if self.launch_starting.remove(&agent_id) {
                     self.start_next_pending_launch();
                 }
-                self.append_agent_line(&agent_id, text);
+                self.append_agent_line_allow_duplicate(&agent_id, text);
             }
             WorkerEvent::Usage { agent_id, usage } => {
                 if self.stopped_for_linearize.contains(&agent_id) {

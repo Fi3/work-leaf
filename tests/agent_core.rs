@@ -10,9 +10,11 @@ use work_leaf::{
     CodexCommandConfig, MessageRole, PromptPolicy, SandboxMode,
 };
 
+mod support;
 mod temp_cleanup;
 
 static CODEX_ENV_LOCK: Mutex<()> = Mutex::new(());
+use support::fake_codex::write_app_server_script;
 
 #[test]
 fn prompt_policy_wraps_every_agent_prompt_with_file_access_rules() {
@@ -191,18 +193,6 @@ fn temp_dir(name: &str) -> PathBuf {
     root
 }
 
-#[cfg(unix)]
-fn make_executable(path: &std::path::Path) {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(path).unwrap().permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(path, permissions).unwrap();
-}
-
-#[cfg(not(unix))]
-fn make_executable(_path: &std::path::Path) {}
-
 #[test]
 fn codex_backend_records_agent_replies_in_session_history() {
     let config = CodexCommandConfig::new(PathBuf::from("/repo")).with_binary("printf");
@@ -230,48 +220,45 @@ fn codex_backend_records_agent_replies_in_session_history() {
 }
 
 #[test]
-fn codex_backend_sdk_sidecar_uses_persistent_sidecar_protocol() {
-    let root = temp_dir("codex-sdk-sidecar-protocol");
+fn codex_backend_app_server_uses_persistent_json_rpc_protocol() {
+    let root = temp_dir("codex-app-server-protocol");
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
-    let fake_python = fake_bin.join("python");
-    fs::write(
-        &fake_python,
+    let fake_codex = fake_bin.join("codex");
+    write_app_server_script(
+        &fake_codex,
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"op":"launch"'*)
-      text='sdk launch reply'
-      thread='sdk-thread-1'
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"op":"send"'*)
-      text='sdk send reply'
-      thread='sdk-thread-1'
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-1"
       ;;
-    *'"op":"command"'*)
-      text='sdk command reply'
-      thread='sdk-thread-1'
+    *'"method":"thread/resume"'*)
+      thread_result "$id" "thread-1"
       ;;
-    *)
-      text='sdk ok'
-      thread='sdk-thread-1'
+    *'"method":"turn/start"'*)
+      turn_message_with_usage "$id" "thread-1" "app-server launch reply"
+      ;;
+    *'"method":"thread/read"'*)
+      thread_result "$id" "thread-1"
+      ;;
+    *'"method":"config/read"'*)
+      printf '{"id":"%s","result":{"config":{"model":"fake-model","modelContextWindow":8192}}}\n' "$id"
+      ;;
+    *'"method":"account/read"'*)
+      printf '{"id":"%s","result":{"account":{"type":"chatgpt"}}}\n' "$id"
       ;;
   esac
-  printf '{"id":%s,"event":{"type":"status","text":"Codex is working"}}\n' "$id"
-  printf '{"id":%s,"event":{"type":"usage","usage":{"input_tokens":7,"cached_input_tokens":3,"output_tokens":2,"reasoning_output_tokens":1}}}\n' "$id"
-  printf '{"id":%s,"ok":true,"thread_id":"%s","reply":"%s","usage":{"input_tokens":7,"cached_input_tokens":3,"output_tokens":2,"reasoning_output_tokens":1}}\n' "$id" "$thread" "$text"
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
 
     let mut backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone())
-            .with_binary("/usr/bin/codex")
-            .with_sdk_python(&fake_python),
+        CodexCommandConfig::new(root.clone()).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
     let agent_id = AgentId::new("chat-a").unwrap();
@@ -282,8 +269,8 @@ done
             AgentLaunch::new(
                 agent_id.clone(),
                 AgentKind::Codex,
-                "sdk",
-                "launch through sdk",
+                "app-server",
+                "launch through app-server",
             ),
             &mut |event| events.push(event),
         )
@@ -292,8 +279,9 @@ done
         .send_streaming(&agent_id, "/status", &mut |event| events.push(event))
         .unwrap();
 
-    assert_eq!(session.messages[1].text, "sdk launch reply");
-    assert_eq!(reply.text, "sdk command reply");
+    assert_eq!(session.messages[1].text, "app-server launch reply");
+    assert!(reply.text.contains("OpenAI Codex app-server status"));
+    assert!(reply.text.contains("Model: fake-model"));
     assert!(events.contains(&AgentStreamEvent::Status("Codex is working".to_string())));
     assert!(events.contains(&AgentStreamEvent::Usage(AgentTokenUsage {
         input_tokens: 7,
@@ -304,35 +292,33 @@ done
 }
 
 #[test]
-fn codex_backend_uses_sdk_sidecar_without_transport_opt_in() {
-    let root = temp_dir("codex-sdk-default-sidecar");
+fn codex_backend_uses_app_server_without_transport_opt_in() {
+    let root = temp_dir("codex-app-server-default");
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
-    let codex = fake_bin.join("codex");
-    fs::write(
-        &codex,
-        "#!/bin/sh\nprintf 'unexpected direct codex invocation\\n' >> \"$(dirname \"$0\")/runs.log\"\nexit 42\n",
-    )
-    .unwrap();
-    make_executable(&codex);
-    let fake_python = fake_bin.join("python");
-    fs::write(
-        &fake_python,
+    let fake_codex = fake_bin.join("codex");
+    write_app_server_script(
+        &fake_codex,
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
-  printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-default","reply":"sdk default launch"}\n' "$id"
+  id=$(request_id "$line")
+  case "$line" in
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
+      ;;
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-default"
+      ;;
+    *'"method":"turn/start"'*)
+      turn_message "$id" "thread-default" "app-server default launch"
+      ;;
+  esac
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
 
     let mut backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone())
-            .with_binary(&codex)
-            .with_sdk_python(&fake_python),
+        CodexCommandConfig::new(root.clone()).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
 
@@ -340,43 +326,45 @@ done
         .launch(AgentLaunch::new(
             AgentId::new("chat-a").unwrap(),
             AgentKind::Codex,
-            "sdk",
-            "launch through default sdk",
+            "app-server",
+            "launch through default app-server",
         ))
         .unwrap();
 
-    assert_eq!(session.messages[1].text, "sdk default launch");
-    assert!(
-        !fake_bin.join("runs.log").exists(),
-        "resolved Codex binary must not run"
-    );
+    assert_eq!(session.messages[1].text, "app-server default launch");
 }
 
 #[test]
-fn codex_backend_sdk_sidecar_returns_full_streamed_message_transcript() {
-    let root = temp_dir("codex-sdk-sidecar-streamed-transcript");
+fn codex_backend_app_server_returns_full_streamed_message_transcript() {
+    let root = temp_dir("codex-app-server-streamed-transcript");
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
-    let fake_python = fake_bin.join("python");
-    fs::write(
-        &fake_python,
+    let fake_codex = fake_bin.join("codex");
+    write_app_server_script(
+        &fake_codex,
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
-  printf '{"id":%s,"event":{"type":"message","text":"@work-leaf read src/ui.rs"}}\n' "$id"
-  printf '{"id":%s,"event":{"type":"message","text":"@work-leaf done"}}\n' "$id"
-  printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-1","reply":"@work-leaf done"}\n' "$id"
+  id=$(request_id "$line")
+  case "$line" in
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
+      ;;
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-1"
+      ;;
+    *'"method":"turn/start"'*)
+      turn_started "$id" "thread-1"
+      agent_message_item "$id" "thread-1" "@work-leaf read src/ui.rs"
+      agent_message_item "$id" "thread-1" "@work-leaf done"
+      turn_completed "$id" "thread-1"
+      ;;
+  esac
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
 
     let mut backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone())
-            .with_binary("/usr/bin/codex")
-            .with_sdk_python(&fake_python),
+        CodexCommandConfig::new(root.clone()).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
     let agent_id = AgentId::new("chat-a").unwrap();
@@ -384,7 +372,12 @@ done
 
     let session = backend
         .launch_streaming(
-            AgentLaunch::new(agent_id, AgentKind::Codex, "sdk", "launch through sdk"),
+            AgentLaunch::new(
+                agent_id,
+                AgentKind::Codex,
+                "app-server",
+                "launch through app-server",
+            ),
             &mut |event| events.push(event),
         )
         .unwrap();
@@ -402,55 +395,51 @@ done
 }
 
 #[test]
-fn codex_backend_sdk_sidecar_interrupts_after_complete_streamed_directive() {
-    let root = temp_dir("codex-sdk-interrupts-streamed-directive");
+fn codex_backend_app_server_interrupts_after_complete_streamed_directive() {
+    let root = temp_dir("codex-app-server-interrupts-streamed-directive");
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
-    let fake_python = fake_bin.join("python");
-    fs::write(
-        &fake_python,
+    let fake_codex = fake_bin.join("codex");
+    write_app_server_script(
+        &fake_codex,
         r#"#!/bin/sh
 log="$(dirname "$0")/requests.log"
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
   printf '%s\n' "$line" >> "$log"
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"op":"launch"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-1","reply":"ready"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"op":"send"'*)
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-1"
+      ;;
+    *'"method":"turn/start"'*'"continue"'*)
       patch='@work-leaf patch update readme\ndiff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end'
-      printf '{"id":%s,"event":{"type":"message","text":"%s"}}\n' "$id" "$patch"
+      turn_started "$id" "thread-1"
+      agent_message_item "$id" "thread-1" "$patch"
       IFS= read -r interrupt_line
       printf '%s\n' "$interrupt_line" >> "$log"
-      interrupt_id=$(printf '%s' "$interrupt_line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
-      printf '{"id":%s,"ok":true}\n' "$interrupt_id"
-      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-1","reply":"%s"}\n' "$id" "$patch"
+      interrupt_id=$(request_id "$interrupt_line")
+      rpc_ok "$interrupt_id"
+      turn_completed "$id" "thread-1"
       ;;
-    *'"op":"interrupt"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      ;;
-    *)
-      printf '{"id":%s,"ok":false,"error":"unexpected request"}\n' "$id"
+    *'"method":"turn/start"'*)
+      turn_message "$id" "thread-1" "ready"
       ;;
   esac
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
 
     let mut backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone())
-            .with_binary("/usr/bin/codex")
-            .with_sdk_python(&fake_python),
+        CodexCommandConfig::new(root.clone()).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
     let agent_id = AgentId::new("chat-a").unwrap();
     backend
         .launch_streaming(
-            AgentLaunch::new(agent_id.clone(), AgentKind::Codex, "sdk", "launch"),
+            AgentLaunch::new(agent_id.clone(), AgentKind::Codex, "app-server", "launch"),
             &mut |_| {},
         )
         .unwrap();
@@ -475,67 +464,62 @@ done
     let mut requests = String::new();
     for _ in 0..20 {
         requests = fs::read_to_string(&requests_path).unwrap();
-        if requests.contains(r#""op":"interrupt""#) {
+        if requests.contains(r#""method":"turn/interrupt""#) {
             break;
         }
         thread::sleep(Duration::from_millis(50));
     }
-    assert!(requests.contains(r#""op":"interrupt""#), "{requests}");
+    assert!(
+        requests.contains(r#""method":"turn/interrupt""#),
+        "{requests}"
+    );
 }
 
 #[test]
-fn codex_backend_sdk_sidecar_returns_after_requesting_interrupt_without_waiting_for_ack_or_turn_completion()
+fn codex_backend_app_server_returns_after_requesting_interrupt_without_waiting_for_ack_or_turn_completion()
  {
-    let root = temp_dir("codex-sdk-interrupt-returns-before-turn-completion");
+    let root = temp_dir("codex-app-server-interrupt-returns-before-turn-completion");
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
-    let fake_python = fake_bin.join("python");
-    fs::write(
-        &fake_python,
+    let fake_codex = fake_bin.join("codex");
+    write_app_server_script(
+        &fake_codex,
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"op":"launch"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-1","reply":"ready"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"op":"send"'*)
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-1"
+      ;;
+    *'"method":"turn/start"'*'"continue"'*)
       patch='@work-leaf patch update readme\ndiff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end'
-      printf '{"id":%s,"event":{"type":"message","text":"%s"}}\n' "$id" "$patch"
+      turn_started "$id" "thread-1"
+      agent_message_item "$id" "thread-1" "$patch"
       IFS= read -r interrupt_line
-      interrupt_id=$(printf '%s' "$interrupt_line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+      interrupt_id=$(request_id "$interrupt_line")
       sleep 2
-      printf '{"id":%s,"ok":true}\n' "$interrupt_id"
-      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-1","reply":"late completion"}\n' "$id"
+      rpc_ok "$interrupt_id"
+      turn_message "$id" "thread-1" "late completion"
       ;;
-    *'"op":"interrupt"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      ;;
-    *'"op":"shutdown"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      exit 0
-      ;;
-    *)
-      printf '{"id":%s,"ok":false,"error":"unexpected request"}\n' "$id"
+    *'"method":"turn/start"'*)
+      turn_message "$id" "thread-1" "ready"
       ;;
   esac
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
 
     let mut backend = CodexBackend::new(
-        CodexCommandConfig::new(root)
-            .with_binary("/usr/bin/codex")
-            .with_sdk_python(&fake_python),
+        CodexCommandConfig::new(root).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
     let agent_id = AgentId::new("chat-a").unwrap();
     backend
         .launch_streaming(
-            AgentLaunch::new(agent_id.clone(), AgentKind::Codex, "sdk", "launch"),
+            AgentLaunch::new(agent_id.clone(), AgentKind::Codex, "app-server", "launch"),
             &mut |_| {},
         )
         .unwrap();
@@ -570,52 +554,43 @@ done
 }
 
 #[test]
-fn codex_backend_sdk_sidecar_keeps_thread_id_when_launch_returns_after_interrupt_ack() {
-    let root = temp_dir("codex-sdk-launch-interrupt-keeps-thread-id");
+fn codex_backend_app_server_keeps_thread_id_when_launch_returns_after_interrupt_ack() {
+    let root = temp_dir("codex-app-server-launch-interrupt-keeps-thread-id");
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
-    let fake_python = fake_bin.join("python");
-    fs::write(
-        &fake_python,
+    let fake_codex = fake_bin.join("codex");
+    write_app_server_script(
+        &fake_codex,
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"op":"send"'*'"thread_id":"sdk-thread-1"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-1","reply":"continued with sdk-thread-1"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"op":"launch"'*)
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-1"
+      ;;
+    *'"method":"turn/start"'*'"continue"'*)
+      turn_message "$id" "thread-1" "continued with thread-1"
+      ;;
+    *'"method":"turn/start"'*)
       patch='@work-leaf patch update readme\ndiff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end'
-      printf '{"id":%s,"event":{"type":"status","text":"Codex session sdk-thread-1"}}\n' "$id"
-      printf '{"id":%s,"event":{"type":"message","text":"%s"}}\n' "$id" "$patch"
+      turn_started "$id" "thread-1"
+      agent_message_item "$id" "thread-1" "$patch"
       IFS= read -r interrupt_line
-      interrupt_id=$(printf '%s' "$interrupt_line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
-      printf '{"id":%s,"ok":true}\n' "$interrupt_id"
+      interrupt_id=$(request_id "$interrupt_line")
+      rpc_ok "$interrupt_id"
       sleep 1
-      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-1","reply":"late completion"}\n' "$id"
-      ;;
-    *'"op":"interrupt"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      ;;
-    *'"op":"shutdown"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      exit 0
-      ;;
-    *)
-      printf '{"id":%s,"ok":false,"error":"unexpected request"}\n' "$id"
+      turn_completed "$id" "thread-1"
       ;;
   esac
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
 
     let mut backend = CodexBackend::new(
-        CodexCommandConfig::new(root)
-            .with_binary("/usr/bin/codex")
-            .with_sdk_python(&fake_python),
+        CodexCommandConfig::new(root).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
     let agent_id = AgentId::new("chat-a").unwrap();
@@ -624,7 +599,7 @@ done
 
     let session = backend
         .launch_streaming_interruptible(
-            AgentLaunch::new(agent_id.clone(), AgentKind::Codex, "sdk", "launch"),
+            AgentLaunch::new(agent_id.clone(), AgentKind::Codex, "app-server", "launch"),
             &mut |event| events.push(event),
             &mut should_interrupt,
         )
@@ -637,43 +612,44 @@ done
     );
     assert!(events.iter().any(|event| matches!(
         event,
-        AgentStreamEvent::Status(text) if text == "Codex session sdk-thread-1"
+        AgentStreamEvent::Status(text) if text == "Codex session thread-1"
     )));
     let reply = backend.send(&agent_id, "continue").unwrap();
-    assert_eq!(reply.text, "continued with sdk-thread-1");
+    assert_eq!(reply.text, "continued with thread-1");
     backend.shutdown();
 }
 
 #[test]
-fn codex_backend_sdk_sidecar_sends_workspace_write_for_linearize() {
-    let root = temp_dir("codex-sdk-linearize-sandbox");
+fn codex_backend_app_server_sends_workspace_write_for_linearize() {
+    let root = temp_dir("codex-app-server-linearize-sandbox");
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
-    let fake_python = fake_bin.join("python");
-    fs::write(
-        &fake_python,
+    let fake_codex = fake_bin.join("codex");
+    write_app_server_script(
+        &fake_codex,
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"agent_id":"linearize"'*'"sandbox":"workspace-write"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-linearize","reply":"linearize sandbox ok"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *)
-      printf '{"id":%s,"ok":false,"error":"unexpected request"}\n' "$id"
+    *'"method":"thread/start"'*'"sandbox":"workspace-write"'*)
+      thread_result "$id" "thread-linearize"
+      ;;
+    *'"method":"turn/start"'*)
+      turn_message "$id" "thread-linearize" "linearize sandbox ok"
+      ;;
+    *'"method":"thread/start"'*)
+      rpc_error "$id" "unexpected sandbox"
       ;;
   esac
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
 
     let mut backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone())
-            .with_binary("/usr/bin/codex")
-            .with_sdk_python(&fake_python),
+        CodexCommandConfig::new(root.clone()).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
 
@@ -693,35 +669,37 @@ done
 }
 
 #[test]
-fn codex_backend_sdk_sidecar_sends_configured_sandbox_for_linearize() {
-    let root = temp_dir("codex-sdk-linearize-configured-sandbox");
+fn codex_backend_app_server_sends_configured_sandbox_for_linearize() {
+    let root = temp_dir("codex-app-server-linearize-configured-sandbox");
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
-    let fake_python = fake_bin.join("python");
-    fs::write(
-        &fake_python,
+    let fake_codex = fake_bin.join("codex");
+    write_app_server_script(
+        &fake_codex,
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"agent_id":"linearize"'*'"sandbox":"danger-full-access"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"sdk-thread-linearize","reply":"linearize sandbox ok"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *)
-      printf '{"id":%s,"ok":false,"error":"unexpected request"}\n' "$id"
+    *'"method":"thread/start"'*'"sandbox":"danger-full-access"'*)
+      thread_result "$id" "thread-linearize"
+      ;;
+    *'"method":"turn/start"'*)
+      turn_message "$id" "thread-linearize" "linearize sandbox ok"
+      ;;
+    *'"method":"thread/start"'*)
+      rpc_error "$id" "unexpected sandbox"
       ;;
   esac
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
 
     let mut backend = CodexBackend::new(
         CodexCommandConfig::new(root.clone())
-            .with_binary("/usr/bin/codex")
-            .with_sdk_python(&fake_python)
+            .with_binary(&fake_codex)
             .with_linearize_sandbox(SandboxMode::DangerFullAccess),
         PromptPolicy::for_restricted_agents(),
     );
@@ -742,25 +720,27 @@ done
 }
 
 #[test]
-fn codex_backend_sdk_sidecar_error_is_reported() {
-    let root = temp_dir("codex-sdk-sidecar-error");
-    let fake_python = root.join("python");
-    fs::write(
-        &fake_python,
+fn codex_backend_app_server_error_is_reported() {
+    let root = temp_dir("codex-app-server-error");
+    let fake_codex = root.join("codex");
+    write_app_server_script(
+        &fake_codex,
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
-  printf '{"id":%s,"ok":false,"error":"sidecar launch failed"}\n' "$id"
+  id=$(request_id "$line")
+  case "$line" in
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
+      ;;
+    *'"method":"thread/start"'*)
+      rpc_error "$id" "app-server launch failed"
+      ;;
+  esac
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
     let mut backend = CodexBackend::new(
-        CodexCommandConfig::new(root)
-            .with_binary("/usr/bin/codex")
-            .with_sdk_python(&fake_python),
+        CodexCommandConfig::new(root).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
 
@@ -774,41 +754,40 @@ done
         .unwrap_err()
         .to_string();
 
-    assert!(error.contains("sidecar launch failed"));
+    assert!(error.contains("app-server launch failed"));
 }
 
 #[test]
 fn codex_backend_removes_parent_codex_and_work_leaf_runtime_environment() {
     let _guard = CODEX_ENV_LOCK.lock().unwrap();
-    let root = temp_dir("codex-sdk-env-sanitized");
-    let fake_python = root.join("python");
-    fs::write(
-        &fake_python,
+    let root = temp_dir("codex-app-server-env-sanitized");
+    let fake_codex = root.join("codex");
+    write_app_server_script(
+        &fake_codex,
         r#"#!/bin/sh
-for name in CODEX_THREAD_ID CODEX_CI CODEX_MANAGED_BY_NPM CODEX_MANAGED_PACKAGE_ROOT WORK_LEAF_CODEX_TRACE WORK_LEAF_COMMAND_TMPDIR WORK_LEAF_CONTEXT_BUNDLE_DIR WORK_LEAF_CODEX_LINEARIZE_SANDBOX WORK_LEAF_CODEX_SDK_PYTHON; do
+for name in CODEX_THREAD_ID CODEX_CI CODEX_MANAGED_BY_NPM CODEX_MANAGED_PACKAGE_ROOT WORK_LEAF_CODEX_TRACE WORK_LEAF_COMMAND_TMPDIR WORK_LEAF_CONTEXT_BUNDLE_DIR WORK_LEAF_CODEX_LINEARIZE_SANDBOX; do
   value=$(eval "printf '%s' \"\${$name-}\"")
   if [ -n "$value" ]; then
-    printf '{"id":0,"ok":false,"error":"%s leaked as %s"}\n' "$name" "$value"
+    printf '{"id":"0","error":{"code":-32000,"message":"%s leaked as %s"}}\n' "$name" "$value"
     exit 0
   fi
 done
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"op":"shutdown"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      exit 0
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-clean-env","reply":"clean env"}\n' "$id"
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-clean-env"
+      ;;
+    *'"method":"turn/start"'*)
+      turn_message "$id" "thread-clean-env" "clean env"
       ;;
   esac
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
     let saved = [
         ("CODEX_THREAD_ID", std::env::var_os("CODEX_THREAD_ID")),
         ("CODEX_CI", std::env::var_os("CODEX_CI")),
@@ -836,19 +815,13 @@ done
             "WORK_LEAF_CODEX_LINEARIZE_SANDBOX",
             std::env::var_os("WORK_LEAF_CODEX_LINEARIZE_SANDBOX"),
         ),
-        (
-            "WORK_LEAF_CODEX_SDK_PYTHON",
-            std::env::var_os("WORK_LEAF_CODEX_SDK_PYTHON"),
-        ),
     ];
     for (name, _) in &saved {
         unsafe { std::env::set_var(name, "parent-value") };
     }
 
     let mut backend = CodexBackend::new(
-        CodexCommandConfig::new(root)
-            .with_binary("/usr/bin/codex")
-            .with_sdk_python(&fake_python),
+        CodexCommandConfig::new(root).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
     let result = backend.launch(AgentLaunch::new(
@@ -871,41 +844,38 @@ done
 
 #[test]
 fn codex_backend_serializes_concurrent_sends_to_the_same_agent() {
-    let root = temp_dir("codex-sdk-same-agent-single-flight");
-    let fake_python = root.join("python");
-    fs::write(
-        &fake_python,
+    let root = temp_dir("codex-app-server-same-agent-single-flight");
+    let fake_codex = root.join("codex");
+    write_app_server_script(
+        &fake_codex,
         r#"#!/bin/sh
 dir=$(dirname "$0")
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"op":"launch"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-123","reply":"launch reply"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"op":"send"'*)
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-123"
+      ;;
+    *'"method":"turn/start"'*'"first"'*|*'"method":"turn/start"'*'"second"'*)
       if ! mkdir "$dir/inflight" 2>/dev/null; then
         printf 'overlap\n' >> "$dir/overlap.log"
       fi
       sleep 0.3
       rmdir "$dir/inflight" 2>/dev/null
-      printf '{"id":%s,"ok":true,"thread_id":"thread-123","reply":"resume reply"}\n' "$id"
+      turn_message "$id" "thread-123" "resume reply"
       ;;
-    *'"op":"shutdown"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      exit 0
+    *'"method":"turn/start"'*)
+      turn_message "$id" "thread-123" "launch reply"
       ;;
   esac
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
     let mut backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone())
-            .with_binary("/usr/bin/codex")
-            .with_sdk_python(&fake_python),
+        CodexCommandConfig::new(root.clone()).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
     let agent_id = AgentId::new("user-1").unwrap();
@@ -939,16 +909,16 @@ done
 
     assert!(
         !root.join("overlap.log").exists(),
-        "same-agent SDK sends must not overlap"
+        "same-agent app-server sends must not overlap"
     );
 }
 
 #[test]
-fn codex_backend_reuses_one_sdk_sidecar_for_concurrent_launches() {
-    let root = temp_dir("codex-sdk-single-sidecar");
-    let fake_python = root.join("python");
-    fs::write(
-        &fake_python,
+fn codex_backend_reuses_one_app_server_for_concurrent_launches() {
+    let root = temp_dir("codex-app-server-single-process");
+    let fake_codex = root.join("codex");
+    write_app_server_script(
+        &fake_codex,
         r#"#!/bin/sh
 dir=$(dirname "$0")
 count_file="$dir/start-count"
@@ -958,28 +928,25 @@ if [ -f "$count_file" ]; then
 fi
 count=$((count + 1))
 printf '%s\n' "$count" > "$count_file"
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"op":"launch"'*)
-      sleep 0.2
-      printf '{"id":%s,"ok":true,"thread_id":"thread-%s","reply":"launch reply"}\n' "$id" "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"op":"shutdown"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      exit 0
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-$id"
+      ;;
+    *'"method":"turn/start"'*)
+      sleep 0.2
+      turn_message "$id" "thread-$id" "launch reply"
       ;;
   esac
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
     let backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone())
-            .with_binary("/usr/bin/codex")
-            .with_sdk_python(&fake_python),
+        CodexCommandConfig::new(root.clone()).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
 

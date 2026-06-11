@@ -11,7 +11,10 @@ use work_leaf::{
     PromptPolicy, ReadPermission, parse_process_args, render_process_help,
 };
 
+mod support;
 mod temp_cleanup;
+
+use support::fake_codex::write_app_server_script;
 
 #[test]
 fn binary_help_describes_launching_orchestrator_not_internal_operations() {
@@ -644,52 +647,45 @@ fn command_chat_spawned_codex_handles_read_classify_patch_and_route_directives()
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
     let codex = fake_bin.join("codex");
-    fs::write(
+    write_app_server_script(
         &codex,
-        "#!/bin/sh\necho unexpected direct codex invocation >&2\nexit 97\n",
-    )
-    .unwrap();
-    make_executable(&codex);
-    let fake_python = fake_bin.join("python");
-    fs::write(
-        &fake_python,
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+dir=$(dirname "$0")
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  printf '%s\n' "$line" >> "$dir/requests.log"
+  id=$(request_id "$line")
   case "$line" in
-    *'"op":"send"'*"work-leaf file text"*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-protocol","reply":"read follow-up received src/lib.rs"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"op":"send"'*"work-leaf command classification"*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-protocol","reply":"classification follow-up received target lock"}\n' "$id"
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-protocol"
       ;;
-    *'"op":"send"'*"work-leaf command result"*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-protocol","reply":"command result follow-up received"}\n' "$id"
+    *'"method":"turn/start"'*"work-leaf file text"*)
+      turn_message "$id" "thread-protocol" "read follow-up received src/lib.rs"
       ;;
-    *'"op":"send"'*"Message from user-1"*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-protocol","reply":"routed follow-up received"}\n' "$id"
+    *'"method":"turn/start"'*"work-leaf command classification"*)
+      turn_message "$id" "thread-protocol" "classification follow-up received target lock"
       ;;
-    *'"op":"launch"'*)
-      printf '%s\n' "{\"id\":$id,\"ok\":true,\"thread_id\":\"thread-protocol\",\"reply\":\"@work-leaf read src/lib.rs\\n@work-leaf locks classify cargo test\\n@work-leaf locks run target -- sh -c \\\"printf command-run-ok\\\"\\n@work-leaf patch return value two\\ndiff --git a/src/lib.rs b/src/lib.rs\\n--- a/src/lib.rs\\n+++ b/src/lib.rs\\n@@ -1 +1 @@\\n-pub fn value() -> u8 { 1 }\\n+pub fn value() -> u8 { 2 }\\n@work-leaf end\\n@work-leaf send user-2 please check this patch\"}"
+    *'"method":"turn/start"'*"work-leaf command result"*)
+      turn_message "$id" "thread-protocol" "command result follow-up received"
       ;;
-    *'"op":"shutdown"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      exit 0
+    *'"method":"turn/start"'*"Message from user-1"*)
+      turn_message "$id" "thread-protocol" "routed follow-up received"
       ;;
-    *)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-protocol","reply":"unexpected SDK prompt"}\n' "$id"
+    *'"method":"turn/start"'*"run full protocol"*)
+      reply='@work-leaf read src/lib.rs\n@work-leaf locks classify cargo test\n@work-leaf locks run target -- sh -c \"printf command-run-ok\"\n@work-leaf patch return value two\ndiff --git a/src/lib.rs b/src/lib.rs\n--- a/src/lib.rs\n+++ b/src/lib.rs\n@@ -1 +1 @@\n-pub fn value() -> u8 { 1 }\n+pub fn value() -> u8 { 2 }\n@work-leaf end\n@work-leaf send user-2 please check this patch'
+      turn_message "$id" "thread-protocol" "$reply"
+      ;;
+    *'"method":"turn/start"'*)
+      turn_message "$id" "thread-protocol" "unexpected app-server prompt"
       ;;
   esac
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
     let backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone())
-            .with_binary(&codex)
-            .with_sdk_python(&fake_python),
+        CodexCommandConfig::new(root.clone()).with_binary(&codex),
         PromptPolicy::for_restricted_agents(),
     );
     let mut chat = CommandChat::new(root.clone(), backend);
@@ -702,7 +698,10 @@ done
     assert!(reply.contains("sent file text to user-1: src/lib.rs"));
     assert!(reply.contains("classified command for user-1: writes=yes paths=target"));
     assert!(reply.contains("ran command for user-1: status=0 paths=target"));
-    assert!(reply.contains("applied patch from user-1: return value two"));
+    assert!(
+        reply.contains("applied patch from user-1: return value two"),
+        "{reply}"
+    );
     assert!(reply.contains("routed message from user-1 to user-2"));
     assert!(reply.contains("read follow-up received src/lib.rs"));
     assert!(reply.contains("classification follow-up received target lock"));
@@ -719,8 +718,8 @@ done
 }
 
 #[test]
-fn command_chat_processes_sdk_streamed_directives_before_final_reply() {
-    let root = temp_git_repo("command-chat-sdk-streamed-directives");
+fn command_chat_processes_app_server_streamed_directives_before_final_reply() {
+    let root = temp_git_repo("command-chat-app-server-streamed-directives");
     fs::create_dir_all(root.join("src")).unwrap();
     fs::write(root.join("src/lib.rs"), "pub fn value() -> u8 { 1 }\n").unwrap();
     git(&root, ["add", "src/lib.rs"]);
@@ -730,36 +729,41 @@ fn command_chat_processes_sdk_streamed_directives_before_final_reply() {
     );
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
-    let fake_python = fake_bin.join("python");
-    fs::write(
-        &fake_python,
+    let fake_codex = fake_bin.join("codex");
+    write_app_server_script(
+        &fake_codex,
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"op":"interrupt"'*)
-      printf '%s\n' "{\"id\":$id,\"ok\":true}"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *)
-      printf '%s\n' "{\"id\":$id,\"event\":{\"type\":\"message\",\"text\":\"@work-leaf patch return value two\\ndiff --git a/src/lib.rs b/src/lib.rs\\n--- a/src/lib.rs\\n+++ b/src/lib.rs\\n@@ -1 +1 @@\\n-pub fn value() -> u8 { 1 }\\n+pub fn value() -> u8 { 2 }\\n@work-leaf end\\n@work-leaf done\"}}"
-      printf '%s\n' "{\"id\":$id,\"ok\":true,\"thread_id\":\"sdk-thread-1\",\"reply\":\"late final reply\"}"
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-1"
+      ;;
+    *'"method":"turn/start"'*)
+      patch='@work-leaf patch return value two\ndiff --git a/src/lib.rs b/src/lib.rs\n--- a/src/lib.rs\n+++ b/src/lib.rs\n@@ -1 +1 @@\n-pub fn value() -> u8 { 1 }\n+pub fn value() -> u8 { 2 }\n@work-leaf end\n@work-leaf done'
+      turn_started "$id" "thread-1"
+      agent_message_item "$id" "thread-1" "$patch"
+      IFS= read -r interrupt_line
+      interrupt_id=$(request_id "$interrupt_line")
+      rpc_ok "$interrupt_id"
+      turn_completed "$id" "thread-1"
       ;;
   esac
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
     let backend = CodexBackend::new(
-        CodexCommandConfig::new(root.clone())
-            .with_binary("/usr/bin/codex")
-            .with_sdk_python(&fake_python),
+        CodexCommandConfig::new(root.clone()).with_binary(&fake_codex),
         PromptPolicy::for_restricted_agents(),
     );
     let mut chat = CommandChat::new(root.clone(), backend);
 
-    let result = chat.handle_line("new run sdk streamed directives").unwrap();
+    let result = chat
+        .handle_line("new run app-server streamed directives")
+        .unwrap();
 
     let CommandChatResult::AgentLaunched { reply, .. } = result else {
         panic!("expected launched agent");
@@ -832,30 +836,26 @@ fn scripted_command_chat_reports_agent_launch_error_without_exiting() {
     let fake_bin = root.join("bin");
     fs::create_dir_all(&fake_bin).unwrap();
     let codex = fake_bin.join("codex");
-    fs::write(
+    write_app_server_script(
         &codex,
-        "#!/bin/sh\necho unexpected direct codex invocation >&2\nexit 97\n",
-    )
-    .unwrap();
-    make_executable(&codex);
-    let fake_python = fake_bin.join("python");
-    fs::write(
-        &fake_python,
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
-  printf '{"id":%s,"ok":false,"error":"codex launch failed"}\n' "$id"
+  id=$(request_id "$line")
+  case "$line" in
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
+      ;;
+    *'"method":"thread/start"'*)
+      rpc_error "$id" "codex launch failed"
+      ;;
+  esac
 done
 "#,
-    )
-    .unwrap();
-    make_executable(&fake_python);
+    );
 
     let mut child = Command::new(env!("CARGO_BIN_EXE_work-leaf"))
         .env("PATH", format!("{}:{}", fake_bin.display(), current_path()))
         .env("WORK_LEAF_IN_PROCESS", "1")
-        .env("WORK_LEAF_CODEX_SDK_PYTHON", &fake_python)
         .env_remove("WORK_LEAF_ORCHESTRATOR_URL")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -944,18 +944,6 @@ fn git_output<const N: usize>(root: &std::path::Path, args: [&str; N]) -> String
 fn current_path() -> String {
     std::env::var("PATH").unwrap_or_default()
 }
-
-#[cfg(unix)]
-fn make_executable(path: &std::path::Path) {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(path).unwrap().permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(path, permissions).unwrap();
-}
-
-#[cfg(not(unix))]
-fn make_executable(_path: &std::path::Path) {}
 
 #[derive(Debug)]
 struct FakeBackend {

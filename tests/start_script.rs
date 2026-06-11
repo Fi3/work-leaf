@@ -19,10 +19,10 @@ fn start_script_builds_release_binaries_and_stops_daemon_after_cli_exit() {
     assert!(script.contains("--bin work-leaf"));
     assert!(script.contains("exec \"$cli_bin\" \"$@\""));
     assert!(!script.contains("work-leaf-orchestrator"));
-    assert!(script.contains("ensure_codex_sdk_python"));
-    assert!(script.contains("openai-codex"));
-    assert!(script.contains("-m venv"));
-    assert!(script.contains("work-leaf-codex-sdk-venv"));
+    assert!(!script.contains("ensure_codex_sdk_python"));
+    assert!(!script.contains("openai-codex"));
+    assert!(!script.contains("-m venv"));
+    assert!(!script.contains("work-leaf-codex-sdk-venv"));
 
     let root = temp_dir("start-script");
     let mut app = PtyStart::spawn(root.path(), Path::new(env!("CARGO_BIN_EXE_work-leaf")));
@@ -56,7 +56,6 @@ impl PtyStart {
             .env("WORK_LEAF_START_BIN_DIR", bin_dir)
             .env("WORK_LEAF_START_LISTEN", "127.0.0.1:0")
             .env("WORK_LEAF_IN_PROCESS", "1")
-            .env("WORK_LEAF_CODEX_SDK_PYTHON", "/bin/false")
             .stdin(stdin)
             .stdout(stdout)
             .stderr(stderr)
@@ -157,7 +156,7 @@ fn start_script_delegates_daemon_lifecycle_to_single_binary() {
     assert!(script.contains("cli_bin=\"$bin_dir/work-leaf\""));
     assert!(!script.contains("WORK_LEAF_START_LISTEN"));
     assert!(!script.contains("WORK_LEAF_ORCHESTRATOR_URL"));
-    assert!(script.contains("WORK_LEAF_CODEX_SDK_PYTHON"));
+    assert!(!script.contains("WORK_LEAF_CODEX_SDK_PYTHON"));
 }
 
 #[test]
@@ -320,16 +319,14 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     );
     assert!(script.contains("patch_artifacts"));
     assert!(script.contains("WORK_LEAF_CODEX_TRACE=1"));
-    assert!(
-        script.contains(
-            "exec env WORK_LEAF_CODEX_SDK_PYTHON=\"$sdk_python\" WORK_LEAF_CONTEXT_BUNDLE_DIR=\"$tmp_root/context-bundles\" WORK_LEAF_COMMAND_TMPDIR=\"$child_tmp_dir\" WORK_LEAF_CODEX_TRACE=1 WORK_LEAF_CODEX_LINEARIZE_SANDBOX=danger-full-access"
-        )
-    );
-    assert!(script.contains("ensure_codex_sdk_python"));
-    assert!(script.contains("codex-sdk-venv"));
-    assert!(script.contains("sdk-install.log"));
-    assert!(script.contains("codex-sdk-python.txt"));
-    assert!(script.contains("openai-codex"));
+    assert!(script.contains(
+        "exec env WORK_LEAF_CONTEXT_BUNDLE_DIR=\"$tmp_root/context-bundles\" WORK_LEAF_COMMAND_TMPDIR=\"$child_tmp_dir\" WORK_LEAF_CODEX_TRACE=1 WORK_LEAF_CODEX_LINEARIZE_SANDBOX=danger-full-access"
+    ));
+    assert!(!script.contains("ensure_codex_sdk_python"));
+    assert!(!script.contains("codex-sdk-venv"));
+    assert!(!script.contains("sdk-install.log"));
+    assert!(!script.contains("codex-sdk-python.txt"));
+    assert!(!script.contains("openai-codex"));
     assert!(script.contains("redact_sensitive_env()"));
     assert!(script.contains("<redacted>"));
     assert!(script.contains("TMPDIR=\"$child_tmp_dir\""));
@@ -355,13 +352,13 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(!script.contains("post_agent \"$session_id\" \"/status\""));
     assert!(script.contains("code_quality"));
     assert!(script.contains("agent_backend: codex"));
-    assert!(script.contains("agent_transport: sdk"));
+    assert!(script.contains("agent_transport: app-server"));
     assert!(script.contains("agent_model"));
     assert!(script.contains("agent_model_source"));
     assert!(script.contains("requested_agent_model"));
     assert!(script.contains("detect_codex_model()"));
-    assert!(script.contains("ConfigReadResponse"));
-    assert!(script.contains("\"config/read\""));
+    assert!(!script.contains("ConfigReadResponse"));
+    assert!(!script.contains("\"config/read\""));
     assert!(script.contains("no_read_permission"));
     assert!(script.contains("read_permission_mode"));
     assert!(script.contains("WORK_LEAF_BENCH_NO_READ_PERMISSION"));

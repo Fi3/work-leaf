@@ -11,13 +11,17 @@ use std::time::{Duration, Instant};
 
 use work_leaf::{AgentId, HttpControllerClient};
 
+mod support;
+
+use support::fake_codex::write_path_app_server;
+
 #[test]
 fn localhost_http_controller_preserves_terminal_workflow_state() {
     if localhost_tcp_is_unavailable() {
         return;
     }
     let root = temp_dir("http-controller");
-    let fake_bin = write_fake_sdk_sidecar(root.path(), HTTP_SDK_SIDECAR);
+    let fake_bin = write_fake_codex_app_server(root.path(), HTTP_APP_SERVER);
     let mut daemon = Daemon::spawn(root.path(), &fake_bin);
     let mut client = HttpControllerClient::connect(daemon.url()).unwrap();
 
@@ -63,7 +67,7 @@ fn localhost_http_controller_serves_static_web_ui_assets() {
         return;
     }
     let root = temp_dir("http-web-ui");
-    let fake_bin = write_fake_sdk_sidecar(root.path(), HTTP_SDK_SIDECAR);
+    let fake_bin = write_fake_codex_app_server(root.path(), HTTP_APP_SERVER);
     let mut daemon = Daemon::spawn(root.path(), &fake_bin);
 
     let html = http_get(daemon.url(), "/web-ui/");
@@ -135,7 +139,6 @@ impl Daemon {
             .current_dir(project_dir)
             .env("PATH", path)
             .stdout(Stdio::piped())
-            .env("WORK_LEAF_CODEX_SDK_PYTHON", fake_bin.join("python"))
             .stderr(Stdio::piped())
             .spawn()
             .unwrap();
@@ -209,44 +212,25 @@ fn temp_dir(name: &str) -> TempProject {
     TempProject { root }
 }
 
-fn write_fake_sdk_sidecar(root: &Path, script: &str) -> PathBuf {
-    let bin = root.join("bin");
-    fs::create_dir_all(&bin).unwrap();
-    let codex = bin.join("codex");
-    fs::write(
-        &codex,
-        "#!/bin/sh\necho unexpected direct codex invocation >&2\nexit 97\n",
-    )
-    .unwrap();
-    make_executable(&codex);
-    let python = bin.join("python");
-    fs::write(&python, script).unwrap();
-    make_executable(&python);
-    bin
+fn write_fake_codex_app_server(root: &Path, script: &str) -> PathBuf {
+    write_path_app_server(root, script)
 }
 
-fn make_executable(path: &Path) {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(path).unwrap().permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(path, permissions).unwrap();
-}
-
-const HTTP_SDK_SIDECAR: &str = r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+const HTTP_APP_SERVER: &str = r#"#!/bin/sh
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"op":"send"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-http","reply":"resume over http"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"op":"launch"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-http","reply":"launch over http"}\n' "$id"
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-http"
       ;;
-    *'"op":"shutdown"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      exit 0
+    *'"method":"turn/start"'*"continue over http"*)
+      turn_message "$id" "thread-http" "resume over http"
+      ;;
+    *'"method":"turn/start"'*)
+      turn_message "$id" "thread-http" "launch over http"
       ;;
   esac
 done

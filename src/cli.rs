@@ -1863,9 +1863,6 @@ pub(crate) fn codex_backend(
     if let Some(sandbox) = codex_linearize_sandbox_from_env()? {
         config = config.with_linearize_sandbox(sandbox);
     }
-    if let Some(python) = env::var_os("WORK_LEAF_CODEX_SDK_PYTHON") {
-        config = config.with_sdk_python(PathBuf::from(python));
-    }
     Ok(CodexBackend::new(
         config,
         PromptPolicy::for_project_with_read_permission(&project_dir, read_permission)

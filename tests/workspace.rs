@@ -117,6 +117,28 @@ fn controller_does_not_append_streamed_agent_messages_again_on_completion() {
 }
 
 #[test]
+fn controller_keeps_repeated_streamed_status_activity_lines() {
+    let backend = RepeatedStatusBackend;
+    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("rerun checks").unwrap();
+
+    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+    let snapshot = controller.snapshot();
+    let session = snapshot.session(&agent_id).expect("session exists");
+    assert_eq!(
+        session
+            .lines
+            .iter()
+            .filter(|line| line.as_str() == "codex: command started: cargo test")
+            .count(),
+        2,
+        "{session:?}"
+    );
+}
+
+#[test]
 fn controller_does_not_append_orchestrator_follow_up_blocks_on_completion() {
     let root = std::env::temp_dir().join(format!(
         "work-leaf-workspace-trims-orchestrator-follow-up-blocks-{}",
@@ -535,6 +557,35 @@ impl AgentBackend for PanicLaunchBackend {
 
     fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
         panic!("intentional backend panic")
+    }
+}
+
+#[derive(Clone, Debug)]
+struct RepeatedStatusBackend;
+
+impl AgentBackend for RepeatedStatusBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+        self.launch_streaming(request, &mut |_| {})
+    }
+
+    fn launch_streaming(
+        &mut self,
+        request: AgentLaunch,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+    ) -> Result<AgentSession, AgentError> {
+        sink(AgentStreamEvent::Status(
+            "command started: cargo test".to_string(),
+        ));
+        sink(AgentStreamEvent::Status(
+            "command started: cargo test".to_string(),
+        ));
+        let mut session = AgentSession::new(request);
+        session.push_message(MessageRole::Agent, "checks finished");
+        Ok(session)
+    }
+
+    fn send(&mut self, _agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+        Ok(ChatMessage::new(MessageRole::Agent, "unused"))
     }
 }
 

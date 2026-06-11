@@ -97,8 +97,8 @@ localhost HTTP API with the real configured Codex backend. It builds the current
 unless `WORK_LEAF_BENCH_SKIP_BUILD=1`, runs those binaries against a temporary checkout at the smoke
 base commit, polls the daemon through `GET /state`, records pass/fail, duration, review and
 linearize completion, commit churn, code-quality checks, and efficiency notes under
-`bench-results`, enables Codex sidecar tracing in the daemon artifacts, runs Codex through the SDK
-sidecar, gives only the linearize agent a `danger-full-access` Codex sandbox through
+`bench-results`, enables Codex app-server tracing in the daemon artifacts, runs Codex through the
+local app-server JSON-RPC interface, gives only the linearize agent a `danger-full-access` Codex sandbox through
 `WORK_LEAF_CODEX_LINEARIZE_SANDBOX`, and removes the temporary checkout before exit.
 
 ## Agent Domain
@@ -159,6 +159,10 @@ rather than using `@work-leaf` read, patch, or lock directives.
 - `AgentBackend::shutdown_handle` returns an `AgentShutdownHandle` for terminating active provider
   processes.
 - `AgentStreamEvent` carries status text, streamed agent messages, and streamed errors.
+- The workspace controller appends provider stream events as individual transcript occurrences.
+  Repeated status/activity lines are preserved because identical visible events can represent
+  separate real agent actions. Completion-time trimming removes only final assistant-reply text that
+  duplicates already streamed assistant message blocks.
 - `AgentShutdownHandle::shutdown` terminates registered processes, waits briefly, and then kills
   remaining processes.
 
@@ -180,32 +184,32 @@ public lifecycle extension is required before external child processes can parti
 
 - `SandboxMode` and `CodexCommandConfig` define Codex runtime settings.
 - `CodexBackend` stores Codex session history and implements `AgentBackend`.
-- `CodexBackend` starts one embedded Python sidecar from `src/codex_sdk_sidecar.py`. The sidecar
-  imports the `openai-codex` Python SDK, starts one Codex app-server through
-  `openai_codex.client.CodexClient`, and multiplexes Work Leaf launch, send, command, interrupt, and
-  shutdown requests over JSONL.
+- `CodexBackend` starts one shared `codex app-server --listen stdio://` process and speaks the
+  app-server JSON-RPC methods Work Leaf uses for initialization, thread start/resume, turn start,
+  status reads, interrupts, and exposed slash-command actions.
+- Release-package builds run `build-target`, which packages the target-native `work-leaf` binary.
+  Packaged binaries require the Codex executable on `PATH`; they do not require the Python SDK or a
+  Rust toolchain at runtime.
 - `src/cli.rs::codex_backend` resolves the Codex binary from `PATH` while skipping Codex's temporary
   `~/.codex/tmp/arg0` shim when a stable `codex` executable is available later in `PATH`. Work Leaf
-  passes that executable to `CodexConfig.codex_bin`, so the SDK drives the same local Codex runtime
-  selected from `PATH` instead of silently using the SDK package's pinned binary. `codex_backend`
-  prepends the selected executable's parent directory to the daemon process `PATH` before worker
-  threads start.
-- The project-root `start` script provisions `target/work-leaf-codex-sdk-venv`, installs
-  `openai-codex` when the environment does not already provide an importable SDK, and exports
-  `WORK_LEAF_CODEX_SDK_PYTHON` for the CLI. The `WORK_LEAF_CODEX_SDK_PYTHON` environment variable
-  selects an existing Python interpreter for the sidecar.
+  passes that executable to `CodexCommandConfig::binary`, so the app-server process uses the same
+  local Codex runtime selected from `PATH`. `codex_backend` prepends the selected executable's parent
+  directory to the daemon process `PATH` before worker threads start.
+- The project-root `start` script starts the Work Leaf daemon with the configured binaries and does
+  not provision any Python package environment for Codex.
 - `CodexBackend::record_launch_reply` and `session` maintain in-memory session state.
-- `CodexBackend` receives app-server notifications from the Python sidecar and records the returned
-  thread id, the complete assistant-message transcript for the turn, and per-turn token usage in the
+- `CodexBackend` receives app-server notifications directly and records the returned thread id, the
+  complete assistant-message transcript for the turn, visible lifecycle activity, and per-turn token usage in the
   provider-neutral session state. The complete transcript is used for orchestrator directive parsing
-  even when the SDK reports several assistant message items before the final turn-completed response.
+  even when the app-server reports several assistant message items before the final turn-completed
+  notification.
 - Codex linearizer sessions run with the dedicated linearize sandbox, which defaults to
   `workspace-write` and can be configured with `WORK_LEAF_CODEX_LINEARIZE_SANDBOX` (`read-only`,
   `workspace-write`, or `danger-full-access`). The approval policy remains `never`. Patch agents and
   reviewer agents keep the configured Codex sandbox and continue to use orchestrator-mediated writes.
 - `CodexBackend` serializes launch and send operations per `AgentId` across cloned backend handles.
   This keeps a single Codex thread from receiving overlapping turns while allowing different agent
-  sessions to work concurrently through the shared SDK/app-server sidecar.
+  sessions to work concurrently through the shared app-server process.
 - `CodexBackend` uses the interruptible streaming contract for patch/review agents. When a streamed
   assistant message already contains a complete terminal Work Leaf directive such as a read request,
   edit/patch block, locked command, routed send, or done marker, the backend sends an app-server

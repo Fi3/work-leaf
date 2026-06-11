@@ -196,12 +196,12 @@ and repository instructions. The source chain is:
 1. `src/cli.rs::codex_backend` builds a `src/codex.rs::CodexBackend` with
    `PromptPolicy::for_project_with_read_permission` and resolves the Codex executable from `PATH`
    while skipping Codex's temporary `~/.codex/tmp/arg0` shim when a stable binary is available.
-   The selected executable is passed to the Codex Python SDK sidecar through
-   `CodexConfig.codex_bin`. Its parent directory is prepended to the daemon process `PATH` before
-   workers start.
-2. `src/codex.rs::CodexBackend` injects the policy into a launch prompt, sends it to the SDK
-   sidecar, and records the returned app-server thread id for follow-up turns.
-3. Known-session follow-up messages are sent raw to the same SDK/app-server thread recorded during
+   The selected executable is passed to `CodexCommandConfig::binary`. Its parent directory is
+   prepended to the daemon process `PATH` before workers start.
+2. `src/codex.rs::CodexBackend` starts `codex app-server --listen stdio://`, injects the policy into
+   a launch prompt, sends `thread/start` and `turn/start` JSON-RPC requests, and records the
+   returned app-server thread id for follow-up turns.
+3. Known-session follow-up messages are sent raw to the same app-server thread recorded during
    launch.
 4. Agent replies are processed by `src/cli.rs::CommandChat::process_agent_reply_streaming`.
 5. Directive handling enters `src/orchestrator.rs::handle_agent_directives_streaming`.

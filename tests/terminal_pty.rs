@@ -11,12 +11,16 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
+mod support;
+
+use support::fake_codex::write_path_app_server;
+
 #[test]
 fn real_terminal_pty_handles_file_read_left_toggle_and_chat_switching() {
     let _guard = pty_test_lock();
     let root = temp_dir("workflow");
     fs::write(root.path().join("Readme.md"), "pty workflow fixture\n").unwrap();
-    let fake_bin = write_fake_sdk_sidecar(root.path(), WORKFLOW_SDK_SIDECAR);
+    let fake_bin = write_fake_codex_app_server(root.path(), WORKFLOW_APP_SERVER);
     let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 120, 30);
 
     app.wait_for_output_contains("force-linearize", Duration::from_secs(2));
@@ -74,7 +78,7 @@ fn real_terminal_pty_handles_file_read_left_toggle_and_chat_switching() {
 fn real_terminal_pty_keeps_chat_prompt_visible_after_large_agent_output() {
     let _guard = pty_test_lock();
     let root = temp_dir("large-output");
-    let fake_bin = write_fake_sdk_sidecar(root.path(), LARGE_OUTPUT_SDK_SIDECAR);
+    let fake_bin = write_fake_codex_app_server(root.path(), LARGE_OUTPUT_APP_SERVER);
     let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 80, 12);
 
     app.wait_for_output_contains("force-linearize", Duration::from_secs(2));
@@ -98,31 +102,29 @@ fn real_terminal_pty_keeps_chat_prompt_visible_after_large_agent_output() {
 fn real_terminal_pty_line_feed_keeps_chat_prompt_multiline_until_carriage_return() {
     let _guard = pty_test_lock();
     let root = temp_dir("multiline-shift-enter");
-    let fake_bin = write_fake_sdk_sidecar(
+    let fake_bin = write_fake_codex_app_server(
         root.path(),
         r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"agent_id":"title-'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-title","reply":"multiline"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"agent_id":"command-agent"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-command-agent","reply":"REPLY: I can run help, new [prompt...], review, linearize, force-linearize, or quit."}\n' "$id"
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-multiline"
       ;;
-    *'"op":"send"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-multiline","reply":"multiline prompt received"}\n' "$id"
+    *'"method":"turn/start"'*'"command-agent"'*)
+      turn_message "$id" "thread-multiline" "REPLY: I can run help, new [prompt...], review, linearize, force-linearize, or quit."
       ;;
-    *'"op":"launch"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-multiline","reply":"multiline launch ready"}\n' "$id"
+    *'"method":"turn/start"'*"First prompt:"*)
+      turn_message "$id" "thread-multiline" "multiline"
       ;;
-    *'"op":"shutdown"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      exit 0
+    *'"method":"turn/start"'*"first"*)
+      turn_message "$id" "thread-multiline" "multiline prompt received"
       ;;
-    *)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-multiline","reply":"unexpected SDK prompt"}\n' "$id"
+    *'"method":"turn/start"'*)
+      turn_message "$id" "thread-multiline" "multiline launch ready"
       ;;
   esac
 done
@@ -156,7 +158,7 @@ done
 fn real_terminal_pty_ignores_ctrl_c_and_exits_on_colon_q() {
     let _guard = pty_test_lock();
     let root = temp_dir("quit");
-    let fake_bin = write_fake_sdk_sidecar(root.path(), LARGE_OUTPUT_SDK_SIDECAR);
+    let fake_bin = write_fake_codex_app_server(root.path(), LARGE_OUTPUT_APP_SERVER);
     let mut app = PtyWorkLeaf::spawn(root.path(), &fake_bin, 80, 12);
 
     app.wait_for_output_contains("force-linearize", Duration::from_secs(2));
@@ -219,7 +221,6 @@ impl PtyWorkLeaf {
             .current_dir(project_dir)
             .env("PATH", path)
             .env("WORK_LEAF_IN_PROCESS", "1")
-            .env("WORK_LEAF_CODEX_SDK_PYTHON", fake_bin.join("python"))
             .stdin(stdin)
             .stdout(stdout)
             .stderr(stderr)
@@ -326,20 +327,8 @@ fn last_frame(output: &str) -> String {
         .unwrap_or_else(|| output.to_string())
 }
 
-fn write_fake_sdk_sidecar(root: &Path, script: &str) -> PathBuf {
-    let bin = root.join("bin");
-    fs::create_dir_all(&bin).unwrap();
-    let codex = bin.join("codex");
-    fs::write(
-        &codex,
-        "#!/bin/sh\necho unexpected direct codex invocation >&2\nexit 97\n",
-    )
-    .unwrap();
-    make_executable(&codex);
-    let python = bin.join("python");
-    fs::write(&python, script).unwrap();
-    make_executable(&python);
-    bin
+fn write_fake_codex_app_server(root: &Path, script: &str) -> PathBuf {
+    write_path_app_server(root, script)
 }
 
 struct TempProject {
@@ -368,15 +357,6 @@ fn temp_dir(name: &str) -> TempProject {
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
     TempProject { root }
-}
-
-#[cfg(unix)]
-fn make_executable(path: &Path) {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(path).unwrap().permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(path, permissions).unwrap();
 }
 
 #[repr(C)]
@@ -420,60 +400,59 @@ fn open_pty(width: u16, height: u16) -> (c_int, c_int) {
     (master, slave)
 }
 
-const WORKFLOW_SDK_SIDECAR: &str = r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+const WORKFLOW_APP_SERVER: &str = r#"#!/bin/sh
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"agent_id":"title-agent"'*"second"*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-title-agent","reply":"second"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"agent_id":"title-agent"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-title-agent","reply":"patch-ui"}\n' "$id"
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-workflow"
       ;;
-    *'"agent_id":"command-agent"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-command-agent","reply":"REPLY: I can run help, new [prompt...], review, linearize, force-linearize, or quit."}\n' "$id"
+    *'"method":"turn/start"'*'"command-agent"'*)
+      turn_message "$id" "thread-workflow" "REPLY: I can run help, new [prompt...], review, linearize, force-linearize, or quit."
       ;;
-    *'"op":"send"'*"work-leaf file text"*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-first","reply":"first follow-up answer after file text"}\n' "$id"
+    *'"method":"turn/start"'*"First prompt:"*"second"*)
+      turn_message "$id" "thread-workflow" "second"
       ;;
-    *'"op":"launch"'*"second"*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-second","reply":"second launch ready"}\n' "$id"
+    *'"method":"turn/start"'*"First prompt:"*"patch ui"*)
+      turn_message "$id" "thread-workflow" "patch-ui"
       ;;
-    *'"op":"launch"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-first","reply":"@work-leaf read Readme.md\\nI requested file text from work-leaf."}\n' "$id"
+    *'"method":"turn/start"'*"work-leaf file text"*)
+      turn_message "$id" "thread-workflow" "first follow-up answer after file text"
       ;;
-    *'"op":"shutdown"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      exit 0
+    *'"method":"turn/start"'*"second"*)
+      turn_message "$id" "thread-workflow" "second launch ready"
       ;;
-    *)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-first","reply":"unexpected SDK prompt"}\n' "$id"
+    *'"method":"turn/start"'*)
+      turn_message "$id" "thread-workflow" "@work-leaf read Readme.md\nI requested file text from work-leaf."
       ;;
   esac
 done
 "#;
 
-const LARGE_OUTPUT_SDK_SIDECAR: &str = r#"#!/bin/sh
-printf '%s\n' '{"id":0,"ok":true,"ready":true}'
+const LARGE_OUTPUT_APP_SERVER: &str = r#"#!/bin/sh
 while IFS= read -r line; do
-  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  id=$(request_id "$line")
   case "$line" in
-    *'"agent_id":"title-'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-title","reply":"large"}\n' "$id"
+    *'"method":"initialize"'*)
+      rpc_ok "$id"
       ;;
-    *'"agent_id":"command-agent"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-command-agent","reply":"REPLY: I can run help, new [prompt...], review, linearize, force-linearize, or quit."}\n' "$id"
+    *'"method":"thread/start"'*)
+      thread_result "$id" "thread-big-output"
       ;;
-    *'"op":"send"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-big-output","reply":"resume reply after large output"}\n' "$id"
+    *'"method":"turn/start"'*'"command-agent"'*)
+      turn_message "$id" "thread-big-output" "REPLY: I can run help, new [prompt...], review, linearize, force-linearize, or quit."
       ;;
-    *'"op":"launch"'*)
-      printf '{"id":%s,"ok":true,"thread_id":"thread-big-output","reply":"agent-output-line-00\\nagent-output-line-01\\nagent-output-line-02\\nagent-output-line-03\\nagent-output-line-04\\nagent-output-line-05\\nagent-output-line-06\\nagent-output-line-07\\nagent-output-line-08\\nagent-output-line-09\\nagent-output-line-10\\nagent-output-line-11\\nagent-output-line-12\\nagent-output-line-13\\nagent-output-line-14\\nagent-output-line-15\\nagent-output-line-16\\nagent-output-line-17\\nagent-output-line-18\\nagent-output-line-19\\nagent-output-line-20\\nagent-output-line-21\\nagent-output-line-22\\nagent-output-line-23\\nagent-output-line-24\\nagent-output-line-25\\nagent-output-line-26\\nagent-output-line-27\\nagent-output-line-28\\nagent-output-line-29\\nagent-output-line-30\\nagent-output-line-31\\nagent-output-line-32\\nagent-output-line-33\\nagent-output-line-34\\nagent-output-line-35\\nagent-output-line-36\\nagent-output-line-37\\nagent-output-line-38\\nagent-output-line-39"}\n' "$id"
+    *'"method":"turn/start"'*"First prompt:"*)
+      turn_message "$id" "thread-big-output" "large"
       ;;
-    *'"op":"shutdown"'*)
-      printf '{"id":%s,"ok":true}\n' "$id"
-      exit 0
+    *'"method":"turn/start"'*"hello after overflow"*)
+      turn_message "$id" "thread-big-output" "resume reply after large output"
+      ;;
+    *'"method":"turn/start"'*)
+      turn_message "$id" "thread-big-output" "agent-output-line-00\nagent-output-line-01\nagent-output-line-02\nagent-output-line-03\nagent-output-line-04\nagent-output-line-05\nagent-output-line-06\nagent-output-line-07\nagent-output-line-08\nagent-output-line-09\nagent-output-line-10\nagent-output-line-11\nagent-output-line-12\nagent-output-line-13\nagent-output-line-14\nagent-output-line-15\nagent-output-line-16\nagent-output-line-17\nagent-output-line-18\nagent-output-line-19\nagent-output-line-20\nagent-output-line-21\nagent-output-line-22\nagent-output-line-23\nagent-output-line-24\nagent-output-line-25\nagent-output-line-26\nagent-output-line-27\nagent-output-line-28\nagent-output-line-29\nagent-output-line-30\nagent-output-line-31\nagent-output-line-32\nagent-output-line-33\nagent-output-line-34\nagent-output-line-35\nagent-output-line-36\nagent-output-line-37\nagent-output-line-38\nagent-output-line-39"
       ;;
   esac
 done
