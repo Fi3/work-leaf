@@ -87,6 +87,13 @@ is not already installed. Each package is written under `dist/work-leaf-<target>
 the `work-leaf` binary; Unix-like packages also get a `.tar.gz` archive, and Windows packages get a
 `.zip` archive when `zip` or PowerShell is available.
 
+The project-root `release` script owns the local patch-release workflow. It requires a clean git
+worktree, reads the current `work-leaf` package version from `Cargo.toml`, increments only the patch
+component, updates `Cargo.toml`, runs `cargo check` so `Cargo.lock` records the same package version,
+runs the required format, clippy, test, and `build-target` checks, commits `Cargo.toml` and
+`Cargo.lock`, and creates the corresponding `v<version>` tag. With `--push`, it pushes `HEAD` and the
+new tag to `origin`.
+
 The `.github/workflows/release-binaries.yml` workflow builds release packages on native
 GitHub-hosted runners: Ubuntu x64 and ARM64 for Linux, macOS Intel and ARM64 for Darwin, and Windows
 x64 and ARM64 for MSVC. The workflow installs or verifies the native compiler, SDK, or MSVC

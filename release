@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$repo_root"
+
+usage() {
+  cat <<'EOF'
+Usage: ./release [--push]
+
+Bump the Work Leaf patch version by +0.0.1, refresh Cargo.lock, run the
+required checks, build the release package, commit the version bump, and create
+the matching v<version> git tag.
+
+Options:
+  --push        push HEAD and the new release tag to origin after tagging
+  -h, --help    show this help
+EOF
+}
+
+push_release=0
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --push)
+      push_release=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+require_command() {
+  local command="$1"
+  if ! command -v "$command" >/dev/null 2>&1; then
+    echo "required command not found: $command" >&2
+    exit 1
+  fi
+}
+
+read_manifest_version() {
+  perl -0ne '
+    if (/\[package\](.*?)(?:\n\[|\z)/s) {
+      my $block = $1;
+      if (
+        $block =~ /^\s*name\s*=\s*"work-leaf"\s*$/m
+        && $block =~ /^\s*version\s*=\s*"([0-9]+)\.([0-9]+)\.([0-9]+)"\s*$/m
+      ) {
+        print "$1.$2.$3";
+        exit 0;
+      }
+    }
+  ' Cargo.toml
+}
+
+read_lockfile_version() {
+  perl -0ne '
+    while (/\[\[package\]\](.*?)(?=\n\[\[package\]\]|\z)/sg) {
+      my $block = $1;
+      if (
+        $block =~ /^\s*name\s*=\s*"work-leaf"\s*$/m
+        && $block =~ /^\s*version\s*=\s*"([^"]+)"\s*$/m
+      ) {
+        print "$1";
+        exit 0;
+      }
+    }
+  ' Cargo.lock
+}
+
+require_command cargo
+require_command git
+require_command perl
+
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "release requires a clean git worktree before bumping the version" >&2
+  exit 1
+fi
+
+current_version="$(read_manifest_version)"
+if [[ ! "$current_version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+  echo "could not read a semantic x.y.z package version for work-leaf from Cargo.toml" >&2
+  exit 1
+fi
+
+major="${BASH_REMATCH[1]}"
+minor="${BASH_REMATCH[2]}"
+patch="${BASH_REMATCH[3]}"
+next_version="$major.$minor.$((10#$patch + 1))"
+tag="v$next_version"
+
+if [[ -n "$(git tag --list "$tag")" ]]; then
+  echo "release tag already exists: $tag" >&2
+  exit 1
+fi
+
+echo "Preparing Work Leaf $tag"
+
+export WORK_LEAF_RELEASE_NEXT_VERSION="$next_version"
+perl -0pi -e '
+  my $next = $ENV{"WORK_LEAF_RELEASE_NEXT_VERSION"};
+  s/(\[package\].*?^\s*version\s*=\s*")[^"]+(")/$1$next$2/sm
+    or die "could not update Cargo.toml package version\n";
+' Cargo.toml
+
+cargo check
+
+lockfile_version="$(read_lockfile_version)"
+if [[ "$lockfile_version" != "$next_version" ]]; then
+  echo "Cargo.lock work-leaf version is $lockfile_version, expected $next_version" >&2
+  exit 1
+fi
+
+cargo fmt
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all-targets --all-features
+"$repo_root/build-target"
+
+git add Cargo.toml Cargo.lock
+git commit -m "UPDATE bump release version to $tag so locked release builds use matching metadata"
+git tag "$tag"
+
+echo "Created release tag $tag"
+if [[ "$push_release" == "1" ]]; then
+  git push origin HEAD "$tag"
+else
+  echo "Push with: git push origin HEAD $tag"
+fi

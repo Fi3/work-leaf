@@ -6,6 +6,14 @@ for coding. The highly opinionated part is the flow of work: open many agent tha
 with atomic commits, review with an agent every single commit, patch them, rewrite git history to
 have the smallest diff possible and not too many commit, review again agent/human.
 
+## Try it
+
+## The flow
+
+## When to use it
+
+## When not to use it
+
 ## Installing
 
 `install.sh` installs the release binary for Linux or macOS. It detects the local OS and CPU, resolves
@@ -22,13 +30,13 @@ available on `PATH` for the default agent, or Claude available on `PATH` when la
 
 ## Running
 
+## Benches
+
 `./start` builds the `work-leaf` binary in release mode and renders the terminal CLI. Set
 `WORK_LEAF_START_SKIP_BUILD=1` to reuse an existing binary, and set `WORK_LEAF_START_BIN_DIR` to run
 `work-leaf` from a different binary directory. Pass `-d` or `--daemon` to run only the localhost HTTP
 API and web UI daemon, or pass `-c` or `--cli` with an API URL to attach the terminal CLI to an
-existing daemon. Pass `--agent claude` or `-a claude` to use Claude as the default provider for the
-daemon's terminal and web UI sessions; Codex is the default provider, and `--agent codex` selects it
-explicitly.
+existing daemon.
 
 `./start --bench` lists saved benchmark artifact directories that contain executable Work Leaf
 binaries, newest first by the timestamped artifact name, and prompts for the benchmark to run. The
@@ -41,6 +49,12 @@ binaries saved by that benchmark instead of binaries built from the current chec
 list when running release automation. When `rustup` is available, the script installs missing Rust
 targets before building each package. The release-binaries GitHub Actions workflow uses native
 Ubuntu, macOS, and Windows runners for the Linux, Darwin, and MSVC packages.
+
+`./release` prepares a patch release from a clean git worktree. It increments the package version by
+`0.0.1`, refreshes `Cargo.lock`, runs `cargo fmt`, `cargo clippy --all-targets --all-features -- -D
+warnings`, `cargo test --all-targets --all-features`, and `./build-target`, then commits the version
+bump and creates the matching `v<version>` tag. Pass `--push` to push `HEAD` and the tag to `origin`
+after the local release is created.
 
 `./smoke-three-features` builds the current release binaries, creates a temporary checkout at the
 three-feature smoke-test base commit, and runs `./start` from that temporary checkout. The script
