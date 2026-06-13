@@ -14,9 +14,10 @@ use std::time::Duration;
 
 use crate::agent::{
     AgentBackend, AgentId, AgentLaunch, AgentProfile, AgentSession, AgentShutdownHandle,
-    AgentStreamEvent, PromptPolicy, ReadPermission,
+    AgentStreamEvent, ChatMessage, PromptPolicy, ReadPermission,
 };
 use crate::chat_title::{chat_title_from_agent_reply, chat_title_prompt};
+use crate::claude::{ClaudeBackend, ClaudeCommandConfig};
 use crate::codex::{CodexBackend, CodexCommandConfig, SandboxMode};
 use crate::linearize::{LinearizePlanner, LinearizeQuestion};
 use crate::locks::{CommandWritePolicy, FileLockTable};
@@ -51,16 +52,51 @@ where
     backend.launch_streaming_interruptible(launch, &mut sink, &mut should_interrupt)
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub enum SelectedAgent {
+    #[default]
+    Codex,
+    Claude,
+}
+
+impl SelectedAgent {
+    pub fn parse(value: &str) -> Result<Self, CliError> {
+        match value {
+            "codex" => Ok(Self::Codex),
+            "claude" => Ok(Self::Claude),
+            _ => Err(CliError::Usage(format!(
+                "unsupported agent `{value}`; expected `codex` or `claude`"
+            ))),
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Codex => "codex",
+            Self::Claude => "claude",
+        }
+    }
+
+    pub fn profile(&self) -> AgentProfile {
+        match self {
+            Self::Codex => AgentProfile::codex(),
+            Self::Claude => AgentProfile::claude(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ProcessCommand {
     Help,
     Daemon {
         model: Option<String>,
         read_permission: ReadPermission,
+        agent: SelectedAgent,
     },
     Launch {
         model: Option<String>,
         read_permission: ReadPermission,
+        agent: SelectedAgent,
         cli_url: Option<String>,
     },
 }
@@ -82,12 +118,14 @@ where
         return Ok(ProcessCommand::Launch {
             model: None,
             read_permission: ReadPermission::Orchestrator,
+            agent: SelectedAgent::default(),
             cli_url: None,
         });
     }
 
     let mut model = None;
     let mut read_permission = ReadPermission::Orchestrator;
+    let mut agent = SelectedAgent::default();
     let mut daemon = false;
     let mut cli_url = None;
     let mut index = 0;
@@ -116,6 +154,13 @@ where
                 model = Some(args[index + 1].clone());
                 index += 2;
             }
+            "-a" | "--agent" => {
+                if index + 1 >= args.len() {
+                    return Err(CliError::Usage(format!("{} requires a value", args[index])));
+                }
+                agent = SelectedAgent::parse(&args[index + 1])?;
+                index += 2;
+            }
             "new"
             | "patch"
             | "review"
@@ -140,12 +185,14 @@ where
         return Ok(ProcessCommand::Daemon {
             model,
             read_permission,
+            agent,
         });
     }
 
     Ok(ProcessCommand::Launch {
         model,
         read_permission,
+        agent,
         cli_url,
     })
 }
@@ -167,14 +214,15 @@ pub fn run_cli_from_env() -> ! {
         ProcessCommand::Launch {
             model,
             read_permission,
+            agent,
             cli_url,
         } => {
             let result = if let Some(cli_url) = cli_url {
                 run_http_cli_with_url(cli_url)
             } else if env::var_os("WORK_LEAF_IN_PROCESS").is_some() {
-                run_in_process_cli(model, read_permission)
+                run_in_process_cli(model, read_permission, agent)
             } else {
-                run_http_cli(model, read_permission)
+                run_http_cli(model, read_permission, agent)
             };
             if let Err(error) = result {
                 eprintln!("{error}");
@@ -185,8 +233,9 @@ pub fn run_cli_from_env() -> ! {
         ProcessCommand::Daemon {
             model,
             read_permission,
+            agent,
         } => {
-            if let Err(error) = run_daemon_cli(model, read_permission) {
+            if let Err(error) = run_daemon_cli(model, read_permission, agent) {
                 eprintln!("{error}");
                 process::exit(1);
             }
@@ -198,21 +247,28 @@ pub fn run_cli_from_env() -> ! {
 fn run_in_process_cli(
     model: Option<String>,
     read_permission: ReadPermission,
+    agent: SelectedAgent,
 ) -> Result<(), CliError> {
     let project_dir = env::current_dir()?;
-    let backend = codex_backend(project_dir.clone(), model, read_permission)?;
-    let chat = CommandChat::new(project_dir, backend);
+    let profile = agent.profile();
+    let backend = selected_agent_backend(project_dir.clone(), model, read_permission, agent)?;
+    let chat = CommandChat::new(project_dir, backend).with_agent_profile(profile);
     run_command_chat(chat)
 }
 
-fn run_http_cli(model: Option<String>, read_permission: ReadPermission) -> Result<(), CliError> {
+fn run_http_cli(
+    model: Option<String>,
+    read_permission: ReadPermission,
+    agent: SelectedAgent,
+) -> Result<(), CliError> {
     let project_dir = env::current_dir()?;
     if let Ok(url) = env::var("WORK_LEAF_ORCHESTRATOR_URL") {
         let client = HttpControllerClient::connect(url).map_err(http_cli_error)?;
         return run_http_command_chat(client, project_dir);
     }
 
-    let daemon = ManagedInProcessOrchestrator::start(project_dir.clone(), model, read_permission)?;
+    let daemon =
+        ManagedInProcessOrchestrator::start(project_dir.clone(), model, read_permission, agent)?;
     run_http_command_chat(daemon.client(), project_dir)
 }
 
@@ -222,10 +278,15 @@ fn run_http_cli_with_url(url: String) -> Result<(), CliError> {
     run_http_command_chat(client, project_dir)
 }
 
-fn run_daemon_cli(model: Option<String>, read_permission: ReadPermission) -> Result<(), CliError> {
+fn run_daemon_cli(
+    model: Option<String>,
+    read_permission: ReadPermission,
+    agent: SelectedAgent,
+) -> Result<(), CliError> {
     let project_dir = env::current_dir()?;
-    let backend = codex_backend(project_dir.clone(), model, read_permission)?;
-    let chat = CommandChat::new(project_dir, backend);
+    let profile = agent.profile();
+    let backend = selected_agent_backend(project_dir.clone(), model, read_permission, agent)?;
+    let chat = CommandChat::new(project_dir, backend).with_agent_profile(profile);
     let controller = crate::WorkLeafController::new(chat);
     let api_server = crate::http_controller::HttpControllerServer::bind_api_only("127.0.0.1:0")
         .map_err(http_cli_error)?;
@@ -276,9 +337,11 @@ impl ManagedInProcessOrchestrator {
         project_dir: PathBuf,
         model: Option<String>,
         read_permission: ReadPermission,
+        agent: SelectedAgent,
     ) -> Result<Self, CliError> {
-        let backend = codex_backend(project_dir.clone(), model, read_permission)?;
-        let chat = CommandChat::new(project_dir, backend);
+        let profile = agent.profile();
+        let backend = selected_agent_backend(project_dir.clone(), model, read_permission, agent)?;
+        let chat = CommandChat::new(project_dir, backend).with_agent_profile(profile);
         let controller = crate::WorkLeafController::new(chat);
         let server = crate::HttpControllerServer::bind("127.0.0.1:0").map_err(http_cli_error)?;
         let url = server.local_url().map_err(http_cli_error)?;
@@ -307,6 +370,116 @@ impl Drop for ManagedInProcessOrchestrator {
 
 fn http_cli_error(error: OrchestratorHttpError) -> CliError {
     CliError::Io(io::Error::other(error.to_string()))
+}
+
+#[derive(Clone, Debug)]
+pub(crate) enum SelectedAgentBackend {
+    Codex(CodexBackend),
+    Claude(ClaudeBackend),
+}
+
+impl AgentBackend for SelectedAgentBackend {
+    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, crate::agent::AgentError> {
+        match self {
+            Self::Codex(backend) => backend.launch(request),
+            Self::Claude(backend) => backend.launch(request),
+        }
+    }
+
+    fn send(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+    ) -> Result<ChatMessage, crate::agent::AgentError> {
+        match self {
+            Self::Codex(backend) => backend.send(agent_id, prompt),
+            Self::Claude(backend) => backend.send(agent_id, prompt),
+        }
+    }
+
+    fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
+        match self {
+            Self::Codex(backend) => backend.session(agent_id),
+            Self::Claude(backend) => backend.session(agent_id),
+        }
+    }
+
+    fn interrupt(&mut self, agent_id: &AgentId) -> Result<(), crate::agent::AgentError> {
+        match self {
+            Self::Codex(backend) => backend.interrupt(agent_id),
+            Self::Claude(backend) => backend.interrupt(agent_id),
+        }
+    }
+
+    fn shutdown_handle(&self) -> AgentShutdownHandle {
+        match self {
+            Self::Codex(backend) => backend.shutdown_handle(),
+            Self::Claude(backend) => backend.shutdown_handle(),
+        }
+    }
+
+    fn shutdown(&mut self) {
+        match self {
+            Self::Codex(backend) => backend.shutdown(),
+            Self::Claude(backend) => backend.shutdown(),
+        }
+    }
+
+    fn launch_streaming(
+        &mut self,
+        request: AgentLaunch,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+    ) -> Result<AgentSession, crate::agent::AgentError> {
+        match self {
+            Self::Codex(backend) => backend.launch_streaming(request, sink),
+            Self::Claude(backend) => backend.launch_streaming(request, sink),
+        }
+    }
+
+    fn launch_streaming_interruptible(
+        &mut self,
+        request: AgentLaunch,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+        should_interrupt: &mut dyn FnMut(&AgentStreamEvent) -> bool,
+    ) -> Result<AgentSession, crate::agent::AgentError> {
+        match self {
+            Self::Codex(backend) => {
+                backend.launch_streaming_interruptible(request, sink, should_interrupt)
+            }
+            Self::Claude(backend) => {
+                backend.launch_streaming_interruptible(request, sink, should_interrupt)
+            }
+        }
+    }
+
+    fn send_streaming(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+    ) -> Result<ChatMessage, crate::agent::AgentError> {
+        match self {
+            Self::Codex(backend) => backend.send_streaming(agent_id, prompt, sink),
+            Self::Claude(backend) => backend.send_streaming(agent_id, prompt, sink),
+        }
+    }
+
+    fn send_streaming_interruptible(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+        should_interrupt: &mut dyn FnMut(&AgentStreamEvent) -> bool,
+    ) -> Result<ChatMessage, crate::agent::AgentError> {
+        match self {
+            Self::Codex(backend) => {
+                backend.send_streaming_interruptible(agent_id, prompt, sink, should_interrupt)
+            }
+            Self::Claude(backend) => {
+                backend.send_streaming_interruptible(agent_id, prompt, sink, should_interrupt)
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -1221,7 +1394,7 @@ fn stream_secondary_follow_ups(
 
 pub fn render_process_help() -> String {
     [
-        "Usage: work-leaf [--model <model>] [--no-read-permission] [-d|--deamon] [-c|--cli <http-api-url>]",
+        "Usage: work-leaf [--agent <codex|claude>] [--model <model>] [--no-read-permission] [-d|--deamon] [-c|--cli <http-api-url>]",
         "",
         "launches the orchestrator from the current project directory.",
         "Agents are created inside the command chat. Patches, file locks, review routing, and linearization handoff are orchestrator-controlled workflows, not top-level process commands.",
@@ -1230,7 +1403,8 @@ pub fn render_process_help() -> String {
         "  -d, --deamon           run only the localhost HTTP API and web UI daemon",
         "      --daemon           alias for --deamon",
         "  -c, --cli <url>        connect the CLI to an existing localhost HTTP API",
-        "  --model <model>          select the Codex model",
+        "  -a, --agent <agent>      select the default agent provider: codex or claude (default: codex)",
+        "  --model <model>          select the model for the chosen agent",
         "  --no-read-permission     allow agents to read project files directly; writes still require orchestrator patches",
         "",
         "Inside command chat:",
@@ -1870,6 +2044,42 @@ pub(crate) fn codex_backend(
     ))
 }
 
+pub(crate) fn selected_agent_backend(
+    project_dir: PathBuf,
+    model: Option<String>,
+    read_permission: ReadPermission,
+    agent: SelectedAgent,
+) -> Result<SelectedAgentBackend, CliError> {
+    match agent {
+        SelectedAgent::Codex => {
+            codex_backend(project_dir, model, read_permission).map(SelectedAgentBackend::Codex)
+        }
+        SelectedAgent::Claude => {
+            claude_backend(project_dir, model, read_permission).map(SelectedAgentBackend::Claude)
+        }
+    }
+}
+
+pub(crate) fn claude_backend(
+    project_dir: PathBuf,
+    model: Option<String>,
+    read_permission: ReadPermission,
+) -> Result<ClaudeBackend, CliError> {
+    let binary = resolve_binary_from_path("claude");
+    prepend_process_path(binary.parent());
+    let mut config = ClaudeCommandConfig::new(project_dir.clone())
+        .with_binary(binary)
+        .with_read_tools(read_permission == ReadPermission::DirectFilesystem);
+    if let Some(model) = model {
+        config = config.with_model(model);
+    }
+    Ok(ClaudeBackend::new(
+        config,
+        PromptPolicy::for_project_with_read_permission(&project_dir, read_permission)
+            .map_err(CliError::Agent)?,
+    ))
+}
+
 fn codex_linearize_sandbox_from_env() -> Result<Option<SandboxMode>, CliError> {
     let value = match env::var("WORK_LEAF_CODEX_LINEARIZE_SANDBOX") {
         Ok(value) => value,
@@ -1894,6 +2104,19 @@ fn codex_linearize_sandbox_from_env() -> Result<Option<SandboxMode>, CliError> {
 fn resolve_codex_binary() -> PathBuf {
     let path = env::var_os("PATH");
     resolve_codex_binary_from_path(path.as_deref())
+}
+
+fn resolve_binary_from_path(name: &str) -> PathBuf {
+    let Some(path) = env::var_os("PATH") else {
+        return PathBuf::from(name);
+    };
+    for dir in env::split_paths(&path) {
+        let candidate = dir.join(name);
+        if candidate.is_file() {
+            return candidate;
+        }
+    }
+    PathBuf::from(name)
 }
 
 fn prepend_process_path(dir: Option<&Path>) {
@@ -2026,6 +2249,7 @@ mod tests {
             ProcessCommand::Daemon {
                 model: None,
                 read_permission: ReadPermission::Orchestrator,
+                agent: SelectedAgent::Codex,
             }
         );
         assert_eq!(
@@ -2033,6 +2257,7 @@ mod tests {
             ProcessCommand::Daemon {
                 model: None,
                 read_permission: ReadPermission::Orchestrator,
+                agent: SelectedAgent::Codex,
             }
         );
         assert_eq!(
@@ -2040,6 +2265,7 @@ mod tests {
             ProcessCommand::Daemon {
                 model: Some("gpt-test".to_string()),
                 read_permission: ReadPermission::Orchestrator,
+                agent: SelectedAgent::Codex,
             }
         );
     }
@@ -2051,6 +2277,7 @@ mod tests {
             ProcessCommand::Launch {
                 model: None,
                 read_permission: ReadPermission::Orchestrator,
+                agent: SelectedAgent::Codex,
                 cli_url: Some("http://127.0.0.1:7878".to_string()),
             }
         );
@@ -2059,6 +2286,7 @@ mod tests {
             ProcessCommand::Launch {
                 model: None,
                 read_permission: ReadPermission::Orchestrator,
+                agent: SelectedAgent::Codex,
                 cli_url: Some("http://localhost:7878".to_string()),
             }
         );
@@ -2067,6 +2295,7 @@ mod tests {
             ProcessCommand::Launch {
                 model: None,
                 read_permission: ReadPermission::Orchestrator,
+                agent: SelectedAgent::Codex,
                 cli_url: Some("http://127.0.0.1:7878".to_string()),
             }
         );

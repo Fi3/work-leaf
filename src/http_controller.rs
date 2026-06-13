@@ -13,7 +13,9 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::CommandChat;
 use crate::agent::{AgentBackend, AgentId, ReadPermission};
-use crate::cli::{ProcessCommand, codex_backend, parse_process_args, render_process_help};
+use crate::cli::{
+    ProcessCommand, SelectedAgent, parse_process_args, render_process_help, selected_agent_backend,
+};
 use crate::workspace::{WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSnapshot};
 
 #[derive(Clone, Debug)]
@@ -362,9 +364,15 @@ pub fn run_orchestrator_from_env() -> ! {
 
 fn run_orchestrator(config: OrchestratorProcessConfig) -> Result<(), String> {
     let project_dir = std::env::current_dir().map_err(|error| error.to_string())?;
-    let backend = codex_backend(project_dir.clone(), config.model, config.read_permission)
-        .map_err(|error| error.to_string())?;
-    let chat = CommandChat::new(project_dir, backend);
+    let profile = config.agent.profile();
+    let backend = selected_agent_backend(
+        project_dir.clone(),
+        config.model,
+        config.read_permission,
+        config.agent,
+    )
+    .map_err(|error| error.to_string())?;
+    let chat = CommandChat::new(project_dir, backend).with_agent_profile(profile);
     let controller = WorkLeafController::new(chat);
     let server = HttpControllerServer::bind(&config.listen).map_err(|error| error.to_string())?;
     println!(
@@ -385,6 +393,7 @@ struct OrchestratorProcessConfig {
     listen: String,
     model: Option<String>,
     read_permission: ReadPermission,
+    agent: SelectedAgent,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -431,6 +440,7 @@ where
         ProcessCommand::Launch {
             model,
             read_permission,
+            agent,
             cli_url,
         } => {
             if cli_url.is_some() {
@@ -443,17 +453,20 @@ where
                     listen,
                     model,
                     read_permission,
+                    agent,
                 },
             ))
         }
         ProcessCommand::Daemon {
             model,
             read_permission,
+            agent,
         } => Ok(OrchestratorProcessCommand::Launch(
             OrchestratorProcessConfig {
                 listen,
                 model,
                 read_permission,
+                agent,
             },
         )),
     }

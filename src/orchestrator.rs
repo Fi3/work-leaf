@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -291,6 +291,42 @@ impl ContextBundleStore {
         }
         fs::write(&path, text).ok()?;
         Some(path)
+    }
+
+    fn read(&self, path: &Path) -> Option<Result<crate::locks::FileSnapshot, FileReadFailure>> {
+        if !self.owns_bundle_path(path) {
+            return None;
+        }
+        Some(
+            fs::read_to_string(path)
+                .map(|text| crate::locks::FileSnapshot {
+                    path: path.to_path_buf(),
+                    text,
+                })
+                .map_err(|error| FileReadFailure {
+                    path: path.to_path_buf(),
+                    diagnostic: error.to_string(),
+                }),
+        )
+    }
+
+    fn owns_bundle_path(&self, path: &Path) -> bool {
+        let Ok(relative) = path.strip_prefix(&self.inner.dir) else {
+            return false;
+        };
+        let mut components = relative.components();
+        let Some(Component::Normal(file_name)) = components.next() else {
+            return false;
+        };
+        if components.next().is_some() {
+            return false;
+        }
+        let Some(file_name) = file_name.to_str() else {
+            return false;
+        };
+        file_name
+            .strip_prefix("bundle-")
+            .is_some_and(|suffix| suffix.ends_with(".md"))
     }
 }
 
@@ -951,12 +987,13 @@ fn send_file_read_response<B>(
 where
     B: AgentBackend,
 {
-    let response = read_requested_files(services.locks, paths)?;
+    let response = read_requested_files(services.locks, services.context_bundles, paths)?;
     let (exact_snapshots, changed_snapshots, unchanged_snapshots) =
         split_repeated_file_reads(services.file_reads, agent_id, &response.snapshots, force);
     let normalized_paths = response
         .snapshots
         .iter()
+        .chain(response.context_bundle_snapshots.iter())
         .map(|snapshot| snapshot.path.clone())
         .collect::<Vec<_>>();
     let unavailable_paths = response
@@ -964,7 +1001,7 @@ where
         .iter()
         .map(|failure| failure.path.clone())
         .collect::<Vec<_>>();
-    let prompt = render_file_read_response(
+    let project_prompt = render_file_read_response(
         services.context_bundles,
         services.file_reads,
         agent_id,
@@ -973,6 +1010,20 @@ where
         &unchanged_snapshots,
         &response.failures,
     );
+    let prompt = if response.context_bundle_snapshots.is_empty() {
+        project_prompt
+    } else {
+        let mut prompt = render_file_read_response_inline(&response.context_bundle_snapshots, &[]);
+        if !exact_snapshots.is_empty()
+            || !changed_snapshots.is_empty()
+            || !unchanged_snapshots.is_empty()
+            || !response.failures.is_empty()
+        {
+            prompt.push('\n');
+            prompt.push_str(&project_prompt);
+        }
+        prompt
+    };
     let reply = send_agent_streaming_interruptible(backend, agent_id, &prompt, stream)?;
     services
         .file_reads
@@ -1150,7 +1201,7 @@ fn patch_conflict_refresh_response(
     agent_id: &AgentId,
     files: &[PathBuf],
 ) -> Result<Option<FileReadResponse>, OrchestratorError> {
-    let response = read_requested_files(services.locks, files)?;
+    let response = read_requested_files(services.locks, services.context_bundles, files)?;
     if !response.failures.is_empty() || response.snapshots.len() != files.len() {
         return Ok(Some(response));
     }
@@ -1459,6 +1510,7 @@ fn follow_up(agent_id: AgentId, message: ChatMessage) -> AgentFollowUp {
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct FileReadResponse {
     snapshots: Vec<crate::locks::FileSnapshot>,
+    context_bundle_snapshots: Vec<crate::locks::FileSnapshot>,
     failures: Vec<FileReadFailure>,
 }
 
@@ -1470,12 +1522,21 @@ struct FileReadFailure {
 
 fn read_requested_files(
     locks: &FileLockTable,
+    context_bundles: &ContextBundleStore,
     paths: &[PathBuf],
 ) -> Result<FileReadResponse, FileAccessError> {
     let mut failures = Vec::new();
+    let mut context_bundle_snapshots = Vec::new();
     let mut normalized_paths = BTreeSet::new();
 
     for path in paths {
+        if let Some(result) = context_bundles.read(path) {
+            match result {
+                Ok(snapshot) => context_bundle_snapshots.push(snapshot),
+                Err(failure) => failures.push(failure),
+            }
+            continue;
+        }
         match locks.normalize_path(path) {
             Ok(path) => {
                 normalized_paths.insert(path);
@@ -1514,6 +1575,7 @@ fn read_requested_files(
 
     Ok(FileReadResponse {
         snapshots,
+        context_bundle_snapshots,
         failures,
     })
 }

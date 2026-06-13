@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use work_leaf::{AgentId, HttpControllerClient};
+use work_leaf::{AgentId, AgentKind, HttpControllerClient};
 
 mod support;
 
@@ -94,6 +94,34 @@ fn localhost_http_controller_serves_static_web_ui_assets() {
     daemon.wait_for_exit(Duration::from_secs(2));
 }
 
+#[test]
+fn localhost_http_controller_uses_selected_claude_agent_for_web_ui_sessions() {
+    if localhost_tcp_is_unavailable() {
+        return;
+    }
+    let root = temp_dir("http-claude-agent");
+    let fake_bin = write_fake_claude(root.path());
+    let mut daemon = Daemon::spawn_with_args(root.path(), &fake_bin, ["--agent", "claude"]);
+    let mut client = HttpControllerClient::connect(daemon.url()).unwrap();
+
+    client.execute_command_line("new http claude").unwrap();
+    assert!(client.wait_for_idle(Duration::from_secs(5)).unwrap());
+
+    let agent_id = AgentId::new("user-1").unwrap();
+    let snapshot = client.snapshot().unwrap();
+    let session = snapshot.session(&agent_id).expect("session exists");
+    assert_eq!(session.kind, AgentKind::External("claude".to_string()));
+    assert!(
+        session
+            .lines
+            .iter()
+            .any(|line| line == "launch over claude")
+    );
+
+    client.shutdown().unwrap();
+    daemon.wait_for_exit(Duration::from_secs(2));
+}
+
 fn http_get(base_url: &str, path: &str) -> String {
     let address = base_url.strip_prefix("http://").unwrap();
     let mut stream = TcpStream::connect(address).unwrap();
@@ -128,12 +156,21 @@ struct Daemon {
 
 impl Daemon {
     fn spawn(project_dir: &Path, fake_bin: &Path) -> Self {
+        Self::spawn_with_args(project_dir, fake_bin, std::iter::empty::<&str>())
+    }
+
+    fn spawn_with_args<I, S>(project_dir: &Path, fake_bin: &Path, args: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<std::ffi::OsStr>,
+    {
         let path = format!(
             "{}:{}",
             fake_bin.display(),
             std::env::var("PATH").unwrap_or_default()
         );
         let mut child = Command::new(env!("CARGO_BIN_EXE_work-leaf-orchestrator"))
+            .args(args)
             .arg("--listen")
             .arg("127.0.0.1:0")
             .current_dir(project_dir)
@@ -214,6 +251,28 @@ fn temp_dir(name: &str) -> TempProject {
 
 fn write_fake_codex_app_server(root: &Path, script: &str) -> PathBuf {
     write_path_app_server(root, script)
+}
+
+fn write_fake_claude(root: &Path) -> PathBuf {
+    let bin = root.join("bin");
+    fs::create_dir_all(&bin).unwrap();
+    let claude = bin.join("claude");
+    fs::write(
+        &claude,
+        r#"#!/bin/sh
+while IFS= read -r _line; do :; done
+printf '{"type":"system","subtype":"init","session_id":"session-http-claude"}\n'
+printf '{"type":"system","subtype":"status","status":"requesting","session_id":"session-http-claude"}\n'
+printf '{"type":"stream_event","session_id":"session-http-claude","event":{"type":"content_block_delta","delta":{"type":"text_delta","text":"launch over claude"}}}\n'
+printf '{"type":"result","subtype":"success","session_id":"session-http-claude","result":"launch over claude"}\n'
+"#,
+    )
+    .unwrap();
+    use std::os::unix::fs::PermissionsExt;
+    let mut permissions = fs::metadata(&claude).unwrap().permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&claude, permissions).unwrap();
+    bin
 }
 
 const HTTP_APP_SERVER: &str = r#"#!/bin/sh

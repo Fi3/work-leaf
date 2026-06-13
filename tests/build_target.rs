@@ -24,7 +24,9 @@ fn build_target_script_defaults_to_the_rust_host_target() {
     assert!(script.contains("rustup target list --installed"));
     assert!(script.contains("rustup target add"));
     assert!(script.contains("cargo build --release --locked --bin work-leaf"));
+    assert!(script.contains("Claude available on PATH when"));
     assert!(script.contains("Python SDK"));
+    assert!(script.contains("TypeScript SDK"));
     assert!(script.contains("dist"));
     assert!(
         !script.contains("work-leaf-orchestrator"),

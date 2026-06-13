@@ -1,6 +1,7 @@
 pub mod agent;
 pub mod agent_runtime;
 mod chat_title;
+pub mod claude;
 pub mod cli;
 pub mod codex;
 pub mod http_controller;
@@ -20,8 +21,9 @@ pub use agent::{
     AgentShutdownHandle, AgentStreamEvent, AgentTokenUsage, ChatMessage, MessageRole, PromptPolicy,
     ReadPermission,
 };
+pub use claude::{ClaudeBackend, ClaudeCommandConfig};
 pub use cli::{
-    CliError, CommandChat, CommandChatResult, ProcessCommand, parse_process_args,
+    CliError, CommandChat, CommandChatResult, ProcessCommand, SelectedAgent, parse_process_args,
     render_command_chat_help, render_daemon_startup, render_process_help, run_cli_from_env,
 };
 pub use codex::{CodexBackend, CodexCommandConfig, SandboxMode};

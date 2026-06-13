@@ -1,8 +1,8 @@
-use work_leaf::CodexBackend;
 use work_leaf::agent::{
     AgentBackend, AgentError, AgentId, AgentKind, AgentLaunch, AgentProfile, AgentSession,
     AgentShutdownHandle, AgentStreamEvent, ChatMessage, MessageRole,
 };
+use work_leaf::{ClaudeBackend, CodexBackend};
 
 #[test]
 fn external_agent_provider_implements_backend_through_agent_interface() {
@@ -50,6 +50,13 @@ fn codex_backend_implements_the_same_provider_neutral_trait() {
     fn assert_backend<B: AgentBackend>() {}
 
     assert_backend::<CodexBackend>();
+}
+
+#[test]
+fn claude_backend_implements_the_same_provider_neutral_trait() {
+    fn assert_backend<B: AgentBackend>() {}
+
+    assert_backend::<ClaudeBackend>();
 }
 
 #[derive(Default)]

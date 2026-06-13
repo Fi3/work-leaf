@@ -12,6 +12,7 @@ agent-provider integrations use:
 - `workspace` defines the UI-neutral controller and DTOs used by frontends.
 - `cli` defines the command-chat API used by the binary and by controller orchestration.
 - `codex` defines the Codex provider implementation.
+- `claude` defines the Claude provider implementation.
 - `http_controller` defines the localhost HTTP transport used by the daemon and CLI process
   boundary.
 - `orchestrator`, `patch`, `review`, `linearize`, and `locks` define core workflow behavior.
@@ -25,7 +26,8 @@ public interfaces are:
 - Agent-provider integration: `AgentBackend`, `AgentStreamEvent`, `AgentShutdownHandle`,
   `AgentProfile`, `AgentKind`, `AgentLaunch`, `AgentSession`, `AgentId`, `ChatMessage`,
   `MessageRole`, `PromptPolicy`, `ReadPermission`, `AgentError`.
-- Command orchestration: `CommandChat`, `CommandChatResult`, `ProcessCommand`, `CliError`.
+- Command orchestration: `CommandChat`, `CommandChatResult`, `ProcessCommand`, `SelectedAgent`,
+  `CliError`.
 - Localhost controller transport: `HttpControllerClient`, `HttpControllerServer`,
   `OrchestratorHttpError`.
 - Core workflows: `AgentOrchestrator`, `GitPatcher`, `PatchCoordinator`, `GitHistory`,
@@ -49,10 +51,12 @@ The dependency direction is inward. UIs drive `WorkLeafController`; the controll
 workflow modules do not depend on terminal rendering, terminal input, or a specific agent provider.
 
 The package has two binary targets. `src/bin/work-leaf-orchestrator.rs` calls
-`work_leaf::run_orchestrator_from_env()`, creates the Codex backend and `CommandChat`, wraps them in
-`WorkLeafController<CodexBackend>`, and exposes that controller through
+`work_leaf::run_orchestrator_from_env()`, creates the selected agent backend and `CommandChat`,
+wraps them in `WorkLeafController`, and exposes that controller through
 `src/http_controller.rs::HttpControllerServer` on a localhost HTTP address. The daemon prints a
-machine-readable `WORK_LEAF_ORCHESTRATOR_URL=http://...` startup line after binding.
+machine-readable `WORK_LEAF_ORCHESTRATOR_URL=http://...` startup line after binding. The selected
+backend defaults to Codex and can be set to Claude with `--agent claude` or `-a claude`;
+`--agent codex` selects Codex explicitly.
 
 `src/bin/work-leaf.rs` calls `work_leaf::run_cli_from_env()`. The CLI connects to
 `WORK_LEAF_ORCHESTRATOR_URL` when that environment variable is present; otherwise it starts an
@@ -66,7 +70,9 @@ The project-root `start` script builds the `work-leaf` binary in release mode un
 `WORK_LEAF_START_SKIP_BUILD=1`, resolves the CLI binary from `WORK_LEAF_START_BIN_DIR` or
 `target/release`, and executes it with the remaining arguments. `-d`/`--daemon` starts the packaged
 binary in daemon mode, and `-c`/`--cli <http-api-url>` attaches the terminal CLI to an existing HTTP
-API endpoint. With `--bench`, the script searches `WORK_LEAF_START_BENCH_RESULTS_DIR` or
+API endpoint. `--agent <codex|claude>` and `-a <codex|claude>` select the daemon's default agent
+provider for terminal and web UI sessions. With `--bench`, the script searches
+`WORK_LEAF_START_BENCH_RESULTS_DIR` or
 `bench-results` for timestamped `*-artifacts` directories that contain executable `bin/work-leaf`
 and `bin/work-leaf-orchestrator` files. It lists those saved benchmark binary sets newest first by
 artifact name, prompts for a selection, skips the release build, and executes the selected
@@ -106,8 +112,8 @@ local app-server JSON-RPC interface, gives only the linearize agent a `danger-fu
 `src/agent.rs` owns provider-neutral agent data:
 
 - `AgentId` validates stable agent identifiers.
-- `AgentKind` identifies the provider kind. `AgentKind::Codex` is the built-in provider, and
-  `AgentKind::External(String)` identifies non-Codex providers.
+- `AgentKind` identifies the provider kind. `AgentKind::Codex` is the built-in default provider,
+  and `AgentKind::External(String)` identifies non-Codex providers such as Claude.
 - `AgentProfile` carries the active provider kind, display name, and default feature label.
 - `AgentLaunch` describes a new agent session request.
 - `AgentSession` stores the agent id, kind, feature, state, messages, and modified files.
@@ -220,6 +226,32 @@ public lifecycle extension is required before external child processes can parti
 that need provider-neutral behavior import `AgentBackend` from `work_leaf::agent` or from the
 top-level re-export, not from `work_leaf::codex`.
 
+## Claude Provider
+
+`src/claude.rs` contains the Claude-specific implementation of the neutral agent runtime interface:
+
+- `ClaudeCommandConfig` defines Claude runtime settings.
+- `ClaudeBackend` stores Claude session history and implements `AgentBackend`.
+- `ClaudeBackend` starts a `claude --print` process per turn and uses Claude's streaming JSON SDK
+  input/output mode. Work Leaf sends SDK user-message JSON on stdin, reads newline-delimited JSON
+  events from stdout, records the Claude session id from `system/init`, and resumes follow-up turns
+  with `--resume <session-id>`.
+- Claude `system/status` events become visible Work Leaf status lines, streaming text deltas become
+  visible agent-message chunks, and the final `result` text is recorded as the complete assistant
+  reply for orchestrator directive parsing.
+- Packaged binaries require the Claude executable on `PATH` only when launched with `--agent
+  claude`; they do not require the Python or TypeScript Claude Agent SDK package at runtime.
+- Work Leaf launches Claude with no built-in tools under orchestrator-read mode, so repository reads
+  go through `@work-leaf read`. With direct filesystem read permission, Claude receives the
+  read-only `Read`, `Glob`, and `Grep` tools while writes still go through Work Leaf patch
+  directives.
+- `src/cli.rs::claude_backend` resolves the Claude binary from `PATH`, applies the selected model,
+  and creates the provider with the same `PromptPolicy` used by the rest of the orchestrator.
+
+`ClaudeBackend` is a provider implementation, not the owner of the generic agent contract. Callers
+that need provider-neutral behavior import `AgentBackend` from `work_leaf::agent` or from the
+top-level re-export, not from `work_leaf::claude`.
+
 ## Command Chat
 
 `src/cli.rs::CommandChat<B>` is the command orchestration surface shared by the CLI, controller, and
@@ -299,8 +331,9 @@ When a mediated file-read response would be large, the orchestrator writes the e
 temporary context bundle in a per-orchestrator system-temp directory and sends the agent a compact
 manifest with the bundle path, file names, digests, and byte counts. The bundle directory is removed
 when the owning orchestrator state is dropped. Agents in orchestrator-read mode may read only those
-orchestrator-provided bundle paths directly; repository file reads remain mediated by
-`@work-leaf read`, and manual repository writes use the structured `@work-leaf edit` protocol. The
+orchestrator-provided bundle paths through `@work-leaf read <bundle-path>`; repository file reads
+remain mediated by `@work-leaf read`, and manual repository writes use the structured
+`@work-leaf edit` protocol. The
 legacy `@work-leaf patch` protocol remains available for complete valid unified diffs and for
 tracked command diffs. The orchestrator tracks
 per-agent file snapshots with digests. A repeated read for unchanged text returns only the matching

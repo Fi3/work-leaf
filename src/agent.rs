@@ -104,6 +104,14 @@ impl AgentProfile {
             default_feature: "user-agent".to_string(),
         }
     }
+
+    pub fn claude() -> Self {
+        Self {
+            kind: AgentKind::External("claude".to_string()),
+            display_name: "Claude".to_string(),
+            default_feature: "user-agent".to_string(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

@@ -8,7 +8,7 @@ use std::time::Duration;
 use work_leaf::{
     AgentBackend, AgentError, AgentId, AgentLaunch, AgentSession, AgentStreamEvent, ChatMessage,
     CodexBackend, CodexCommandConfig, CommandChat, CommandChatResult, MessageRole, ProcessCommand,
-    PromptPolicy, ReadPermission, parse_process_args, render_process_help,
+    PromptPolicy, ReadPermission, SelectedAgent, parse_process_args, render_process_help,
 };
 
 mod support;
@@ -25,7 +25,9 @@ fn binary_help_describes_launching_orchestrator_not_internal_operations() {
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("Usage: work-leaf [--model <model>] [--no-read-permission]"));
+    assert!(stdout.contains(
+        "Usage: work-leaf [--agent <codex|claude>] [--model <model>] [--no-read-permission]"
+    ));
     assert!(stdout.contains("launches the orchestrator"));
     assert!(stdout.contains("command chat"));
     assert!(stdout.contains("allow agents to read project files directly"));
@@ -43,6 +45,7 @@ fn no_args_launches_orchestrator_from_current_project_directory() {
         ProcessCommand::Launch {
             model: None,
             read_permission: ReadPermission::Orchestrator,
+            agent: SelectedAgent::Codex,
             cli_url: None,
         }
     );
@@ -57,6 +60,7 @@ fn no_read_permission_allows_direct_filesystem_reads() {
         ProcessCommand::Launch {
             model: None,
             read_permission: ReadPermission::DirectFilesystem,
+            agent: SelectedAgent::Codex,
             cli_url: None,
         }
     );
@@ -72,9 +76,52 @@ fn process_args_accept_model_and_no_read_permission_together() {
         ProcessCommand::Launch {
             model: Some("gpt-5".to_string()),
             read_permission: ReadPermission::DirectFilesystem,
+            agent: SelectedAgent::Codex,
             cli_url: None,
         }
     );
+}
+
+#[test]
+fn process_args_default_to_codex_agent() {
+    let command = parse_process_args(["work-leaf"]).unwrap();
+
+    assert!(matches!(
+        command,
+        ProcessCommand::Launch {
+            agent: SelectedAgent::Codex,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn process_args_accept_default_agent_selection() {
+    assert!(matches!(
+        parse_process_args(["work-leaf", "--agent", "claude"]).unwrap(),
+        ProcessCommand::Launch {
+            agent: SelectedAgent::Claude,
+            ..
+        }
+    ));
+    assert!(matches!(
+        parse_process_args(["work-leaf", "-a", "codex", "-d"]).unwrap(),
+        ProcessCommand::Daemon {
+            agent: SelectedAgent::Codex,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn process_args_reject_unknown_default_agent() {
+    assert!(matches!(
+        parse_process_args(["work-leaf", "--agent", "watson"]),
+        Err(work_leaf::CliError::Usage(message))
+            if message.contains("unsupported agent `watson`")
+                && message.contains("codex")
+                && message.contains("claude")
+    ));
 }
 
 #[test]
@@ -195,6 +242,31 @@ fn command_chat_processes_agent_orchestrator_requests_automatically() {
     assert_eq!(backend.sends[0].0, AgentId::new("user-1").unwrap());
     assert!(backend.sends[0].1.contains("src/lib.rs"));
     assert!(backend.sends[0].1.contains("pub fn parsed()"));
+}
+
+#[test]
+fn command_chat_allows_agents_to_read_generated_context_bundles() {
+    let root = temp_dir("command-chat-context-bundle-read");
+    fs::write(root.join("large.txt"), "large context line\n".repeat(2_000)).unwrap();
+    let backend = BundleReadBackend::default();
+    let mut chat = CommandChat::new(root, backend);
+
+    let result = chat.handle_line("new explain repo").unwrap();
+
+    let CommandChatResult::AgentLaunched { reply, .. } = result else {
+        panic!("expected launched agent");
+    };
+    assert!(reply.contains("final answer after bundle text"), "{reply}");
+
+    let backend = chat.into_backend();
+    assert_eq!(backend.sends.len(), 2);
+    assert!(backend.sends[0].contains("Context bundle:"));
+    assert!(backend.sends[1].contains("BEGIN FILE large.txt"));
+    assert!(
+        !backend.sends[1].contains("Unavailable file text"),
+        "{}",
+        backend.sends[1]
+    );
 }
 
 #[test]
@@ -1043,6 +1115,38 @@ impl AgentBackend for FakeBackend {
         Ok(ChatMessage::new(
             MessageRole::Agent,
             self.replies.pop_front().expect("missing fake reply"),
+        ))
+    }
+}
+
+#[derive(Debug, Default)]
+struct BundleReadBackend {
+    sends: Vec<String>,
+}
+
+impl AgentBackend for BundleReadBackend {
+    fn launch(&mut self, request: work_leaf::AgentLaunch) -> Result<AgentSession, AgentError> {
+        let mut session = AgentSession::new(request);
+        session.push_message(MessageRole::Agent, "@work-leaf read large.txt");
+        Ok(session)
+    }
+
+    fn send(&mut self, _agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+        self.sends.push(prompt.to_string());
+        if self.sends.len() == 1 {
+            let bundle_path = prompt
+                .lines()
+                .find_map(|line| line.strip_prefix("Context bundle: "))
+                .expect("first follow-up should provide a context bundle path");
+            return Ok(ChatMessage::new(
+                MessageRole::Agent,
+                format!("@work-leaf read {bundle_path}"),
+            ));
+        }
+
+        Ok(ChatMessage::new(
+            MessageRole::Agent,
+            "final answer after bundle text",
         ))
     }
 }

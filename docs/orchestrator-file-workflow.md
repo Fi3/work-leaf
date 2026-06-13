@@ -26,8 +26,8 @@ terminal adapters around it:
   agents, and review/linearize entry points.
 - `src/workspace.rs::WorkLeafController` exposes the UI-neutral control surface used by the terminal
   app.
-- `src/http_controller.rs::HttpControllerServer` exposes `WorkLeafController<CodexBackend>` through
-  a localhost HTTP API for the `work-leaf-orchestrator` daemon.
+- `src/http_controller.rs::HttpControllerServer` exposes `WorkLeafController` through a localhost
+  HTTP API for the `work-leaf-orchestrator` daemon.
 - `src/http_controller.rs::HttpControllerClient` drives that API for out-of-process frontends.
 - `src/terminal_app.rs::RemoteTerminalApp` adapts terminal input and rendering to the HTTP client
   used by the `work-leaf` CLI.
@@ -189,22 +189,23 @@ With `ReadPermission::DirectFilesystem`, prompts tell agents:
   command;
 - use `@work-leaf done` when no more orchestrator work is required.
 
-The Codex backend applies this policy when launching sessions. Known follow-up turns receive only
-the follow-up message, because the Codex app-server thread already contains the launch-time policy
-and repository instructions. The source chain is:
+The selected agent backend applies this policy when launching sessions. Known follow-up turns
+receive only the follow-up message, because the provider session already contains the launch-time
+policy and repository instructions. The source chain is:
 
-1. `src/cli.rs::codex_backend` builds a `src/codex.rs::CodexBackend` with
-   `PromptPolicy::for_project_with_read_permission` and resolves the Codex executable from `PATH`
-   while skipping Codex's temporary `~/.codex/tmp/arg0` shim when a stable binary is available.
-   The selected executable is passed to `CodexCommandConfig::binary`. Its parent directory is
-   prepended to the daemon process `PATH` before workers start.
+1. `src/cli.rs::selected_agent_backend` chooses Codex or Claude from `SelectedAgent`, builds the
+   provider with `PromptPolicy::for_project_with_read_permission`, and resolves the selected
+   provider executable from `PATH`.
 2. `src/codex.rs::CodexBackend` starts `codex app-server --listen stdio://`, injects the policy into
    a launch prompt, sends `thread/start` and `turn/start` JSON-RPC requests, and records the
    returned app-server thread id for follow-up turns.
-3. Known-session follow-up messages are sent raw to the same app-server thread recorded during
+3. `src/claude.rs::ClaudeBackend` starts `claude --print` in streaming JSON SDK mode, injects the
+   policy into a launch prompt, records the returned Claude session id, and resumes follow-up turns
+   with `--resume <session-id>`.
+4. Known-session follow-up messages are sent raw to the same provider session recorded during
    launch.
-4. Agent replies are processed by `src/cli.rs::CommandChat::process_agent_reply_streaming`.
-5. Directive handling enters `src/orchestrator.rs::handle_agent_directives_streaming`.
+5. Agent replies are processed by `src/cli.rs::CommandChat::process_agent_reply_streaming`.
+6. Directive handling enters `src/orchestrator.rs::handle_agent_directives_streaming`.
 
 The process starts in `ReadPermission::Orchestrator` by default. The top-level
 `--no-read-permission` option selects `ReadPermission::DirectFilesystem`; in that mode the
@@ -267,6 +268,10 @@ current file text. The force form is accepted for compatibility:
 For paths that already have a tracked snapshot in the same agent session, the force form still uses
 the repeated-read digest/diff response. This keeps large files from being copied into the same chat
 session more than once.
+
+Large read responses are stored in generated context bundle files under the orchestrator's temporary
+bundle directory. Agents can request those exact bundle paths with `@work-leaf read <bundle-path>`;
+other paths outside the repository root remain unavailable through mediated reads.
 
 The read path is:
 
@@ -631,8 +636,10 @@ The important source symbols for this workflow are:
 
 - `src/agent.rs::PromptPolicy`: injects file-access rules into agent prompts.
 - `src/agent.rs::ReadPermission`: selects orchestrator-mediated or direct filesystem read prompts.
-- `src/codex.rs::CodexBackend`: launches Codex sessions with injected policy and sends known-session
-  follow-ups as raw resume stdin.
+- `src/codex.rs::CodexBackend`: launches Codex sessions with injected policy and sends
+  known-session follow-ups through the Codex app-server thread.
+- `src/claude.rs::ClaudeBackend`: launches Claude sessions with injected policy and sends
+  known-session follow-ups through Claude's streaming JSON resume mode.
 - `src/cli.rs::CommandChat`: owns the command surface, backend, file locks, read tracker, and
   directive loop.
 - `src/http_controller.rs::HttpControllerServer`: exposes the workspace controller as localhost HTTP

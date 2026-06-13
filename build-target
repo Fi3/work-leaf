@@ -80,7 +80,9 @@ Built Work Leaf packages in:
   $dist_dir
 
 Each package contains the single work-leaf binary. Runtime machines need Codex
-available on PATH; no Rust toolchain, Python SDK, or platform SDK is required.
+available on PATH for the default agent, or Claude available on PATH when
+launched with --agent claude; no Rust toolchain, Python SDK, TypeScript SDK, or
+platform SDK is required.
 Launch that binary with -d/--deamon to serve the HTTP API and web UI without
 starting the CLI, or with -c/--cli <http-api-url> to attach the CLI to an
 existing HTTP API.
