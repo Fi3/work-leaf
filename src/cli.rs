@@ -227,7 +227,13 @@ where
 }
 
 pub fn run_cli_from_env() -> ! {
-    let config = match parse_process_config(env::args()) {
+    let args = env::args().collect::<Vec<_>>();
+    if process_args_request_version(&args) {
+        print!("{}", render_process_version("work-leaf"));
+        process::exit(0);
+    }
+
+    let config = match parse_process_config(args) {
         Ok(config) => config,
         Err(error) => {
             eprintln!("{error}");
@@ -1493,9 +1499,25 @@ fn stream_secondary_follow_ups(
     }
 }
 
+fn process_args_request_version(args: &[String]) -> bool {
+    let mut args = args;
+    if args
+        .first()
+        .is_some_and(|arg| arg.ends_with("work-leaf") || arg.ends_with("work-leaf.exe"))
+    {
+        args = &args[1..];
+    }
+
+    matches!(args, [arg] if arg == "--version")
+}
+
+pub(crate) fn render_process_version(binary_name: &str) -> String {
+    format!("{binary_name} {}\n", env!("CARGO_PKG_VERSION"))
+}
+
 pub fn render_process_help() -> String {
     [
-        "Usage: work-leaf [--agent <codex|claude>] [--model <model>] [--no-read-permission] [-d|--deamon] [-c|--cli <http-api-url>]",
+        "Usage: work-leaf [--agent <codex|claude>] [--model <model>] [--no-read-permission] [-d|--deamon] [-c|--cli <http-api-url>] [--version]",
         "",
         "launches the orchestrator from the current project directory.",
         "Agents are created inside the command chat. Patches, file locks, review routing, and linearization handoff are orchestrator-controlled workflows, not top-level process commands.",
@@ -1507,6 +1529,7 @@ pub fn render_process_help() -> String {
         "  -a, --agent <agent>      select the default agent provider: codex or claude (default: codex)",
         "  --model <model>          select the model for the chosen agent",
         "  --no-read-permission     allow agents to read project files directly; writes still require orchestrator patches",
+        "  --version                print the work-leaf version",
         "",
         "Inside command chat:",
         "  new [prompt...]",

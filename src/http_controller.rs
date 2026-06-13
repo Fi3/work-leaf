@@ -14,7 +14,8 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use crate::CommandChat;
 use crate::agent::{AgentBackend, AgentId, ReadPermission};
 use crate::cli::{
-    ProcessCommand, SelectedAgent, parse_process_args, render_process_help, selected_agent_backend,
+    ProcessCommand, SelectedAgent, parse_process_args, render_process_help, render_process_version,
+    selected_agent_backend,
 };
 use crate::workspace::{WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSnapshot};
 
@@ -339,7 +340,13 @@ impl WebUiServer {
 }
 
 pub fn run_orchestrator_from_env() -> ! {
-    let command = match parse_orchestrator_args(std::env::args()) {
+    let args = std::env::args().collect::<Vec<_>>();
+    if orchestrator_args_request_version(&args) {
+        print!("{}", render_process_version("work-leaf-orchestrator"));
+        process::exit(0);
+    }
+
+    let command = match parse_orchestrator_args(args) {
         Ok(command) => command,
         Err(error) => {
             eprintln!("{error}");
@@ -360,6 +367,17 @@ pub fn run_orchestrator_from_env() -> ! {
             process::exit(0);
         }
     }
+}
+
+fn orchestrator_args_request_version(args: &[String]) -> bool {
+    let mut args = args;
+    if args.first().is_some_and(|arg| {
+        arg.ends_with("work-leaf-orchestrator") || arg.ends_with("work-leaf-orchestrator.exe")
+    }) {
+        args = &args[1..];
+    }
+
+    matches!(args, [arg] if arg == "--version")
 }
 
 fn run_orchestrator(config: OrchestratorProcessConfig) -> Result<(), String> {

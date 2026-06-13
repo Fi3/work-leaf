@@ -91,7 +91,16 @@ The `.github/workflows/release-binaries.yml` workflow builds release packages on
 GitHub-hosted runners: Ubuntu x64 and ARM64 for Linux, macOS Intel and ARM64 for Darwin, and Windows
 x64 and ARM64 for MSVC. The workflow installs or verifies the native compiler, SDK, or MSVC
 components before installing the Rust target and invoking `build-target` with a single
-`WORK_LEAF_BUILD_TARGETS` value.
+`WORK_LEAF_BUILD_TARGETS` value. The release publishing job generates one SHA-256 checksum asset for
+each archive and uploads the archives and checksum files to the GitHub release.
+
+The project-root `install.sh` script is the Unix release installer. It supports Linux and macOS,
+maps `uname -s` and `uname -m` to the same release target triples produced by `build-target`, resolves
+the latest GitHub release unless `WORK_LEAF_INSTALL_VERSION` names a specific tag, downloads the
+matching `.tar.gz` archive and `.sha256` file, verifies the checksum with `sha256sum` or `shasum`,
+and installs `work-leaf` into `WORK_LEAF_INSTALL_DIR` or `/usr/local/bin`. The installer compares the
+requested release tag with the installed binary's `work-leaf --version` output and skips the download
+when the requested version is already installed.
 
 The project-root `smoke-three-features` script runs the current Work Leaf binaries against a
 temporary Git checkout at the three-feature smoke-test base commit. It builds release binaries from

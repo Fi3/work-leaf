@@ -168,6 +168,13 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: Generate checksums
+        run: |
+          shopt -s nullglob
+          for archive in release-assets/*.tar.gz release-assets/*.zip; do
+            (cd "$(dirname "$archive")" && sha256sum "$(basename "$archive")" > "$(basename "$archive").sha256")
+          done
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -175,7 +182,7 @@ jobs:
           TAG_EXISTS: ${{ steps.tag_status.outputs.exists }}
         run: |
           shopt -s nullglob
-          assets=(release-assets/*.tar.gz release-assets/*.zip)
+          assets=(release-assets/*.tar.gz release-assets/*.zip release-assets/*.sha256)
 
           if (( ${#assets[@]} == 0 )); then
             echo "::error::No release archive assets were downloaded."

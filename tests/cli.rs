@@ -38,6 +38,55 @@ fn binary_help_describes_launching_orchestrator_not_internal_operations() {
 }
 
 #[test]
+fn binary_version_prints_manifest_version_without_launching_orchestrator() {
+    let output = Command::new(env!("CARGO_BIN_EXE_work-leaf"))
+        .arg("--version")
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        format!("work-leaf {}\n", env!("CARGO_PKG_VERSION"))
+    );
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn orchestrator_binary_version_matches_advertised_process_option() {
+    let output = Command::new(env!("CARGO_BIN_EXE_work-leaf-orchestrator"))
+        .arg("--version")
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        format!("work-leaf-orchestrator {}\n", env!("CARGO_PKG_VERSION"))
+    );
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn binary_version_uses_only_the_long_version_option() {
+    let help = Command::new(env!("CARGO_BIN_EXE_work-leaf"))
+        .arg("--help")
+        .output()
+        .unwrap();
+    assert!(help.status.success());
+    let stdout = String::from_utf8_lossy(&help.stdout);
+    assert!(stdout.contains("--version"));
+    assert!(!stdout.contains("-V"));
+
+    let short = Command::new(env!("CARGO_BIN_EXE_work-leaf"))
+        .arg("-V")
+        .output()
+        .unwrap();
+    assert!(!short.status.success());
+    assert!(String::from_utf8_lossy(&short.stderr).contains("unknown option `-V`"));
+}
+
+#[test]
 fn no_args_launches_orchestrator_from_current_project_directory() {
     let command = parse_process_args(["work-leaf"]).unwrap();
 

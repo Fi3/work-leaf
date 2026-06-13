@@ -212,6 +212,154 @@ fn github_release_workflow_builds_each_binary_on_its_native_runner() {
     );
 }
 
+#[test]
+fn github_release_workflow_publishes_sha256_checksums_for_release_archives() {
+    let workflow_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(".github")
+        .join("workflows")
+        .join("release-binaries.yml");
+    let workflow = fs::read_to_string(&workflow_path).expect("release workflow exists");
+
+    assert!(workflow.contains("sha256sum"));
+    assert!(workflow.contains("*.sha256"));
+    assert!(workflow.contains("release-assets/*.sha256"));
+}
+
+#[test]
+fn install_script_installs_requested_release_after_checksum_verification() {
+    let script_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("install.sh");
+    let script_mode = fs::metadata(&script_path)
+        .expect("install.sh exists")
+        .permissions()
+        .mode();
+    assert_ne!(script_mode & 0o111, 0, "install.sh should be executable");
+
+    let temp_dir = unique_temp_dir("work-leaf-install");
+    let release_dir = temp_dir.join("release");
+    let install_dir = temp_dir.join("bin");
+    fs::create_dir_all(&release_dir).expect("release dir is created");
+    fs::create_dir_all(&install_dir).expect("install dir is created");
+
+    write_release_archive(&release_dir, "x86_64-unknown-linux-gnu", "1.2.3", true);
+
+    let output = Command::new("bash")
+        .arg(&script_path)
+        .env("WORK_LEAF_INSTALL_BASE_URL", file_url(&release_dir))
+        .env("WORK_LEAF_INSTALL_DIR", &install_dir)
+        .env("WORK_LEAF_INSTALL_TARGET", "x86_64-unknown-linux-gnu")
+        .env("WORK_LEAF_INSTALL_VERSION", "v1.2.3")
+        .output()
+        .expect("install.sh runs");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(
+        output.status.success(),
+        "install.sh should succeed\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    );
+    assert!(stdout.contains("Installed work-leaf v1.2.3"));
+
+    let installed = install_dir.join("work-leaf");
+    assert!(installed.exists(), "install.sh should install work-leaf");
+    assert_ne!(
+        fs::metadata(&installed).unwrap().permissions().mode() & 0o111,
+        0,
+        "installed work-leaf should be executable"
+    );
+
+    let version_output = Command::new(&installed)
+        .arg("--version")
+        .output()
+        .expect("installed fake binary runs");
+    assert!(version_output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&version_output.stdout),
+        "work-leaf 1.2.3\n"
+    );
+
+    let _ = fs::remove_dir_all(temp_dir);
+}
+
+#[test]
+fn install_script_skips_matching_installed_version_without_downloading() {
+    let script_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("install.sh");
+    let temp_dir = unique_temp_dir("work-leaf-install-skip");
+    let install_dir = temp_dir.join("bin");
+    fs::create_dir_all(&install_dir).expect("install dir is created");
+
+    write_executable(
+        &install_dir.join("work-leaf"),
+        r#"#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" == "--version" ]]; then
+  printf 'work-leaf 1.2.3\n'
+  exit 0
+fi
+exit 1
+"#,
+    );
+
+    let output = Command::new("bash")
+        .arg(&script_path)
+        .env(
+            "WORK_LEAF_INSTALL_BASE_URL",
+            file_url(&temp_dir.join("missing")),
+        )
+        .env("WORK_LEAF_INSTALL_DIR", &install_dir)
+        .env("WORK_LEAF_INSTALL_TARGET", "x86_64-unknown-linux-gnu")
+        .env("WORK_LEAF_INSTALL_VERSION", "v1.2.3")
+        .output()
+        .expect("install.sh runs");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(
+        output.status.success(),
+        "install.sh should skip before downloading\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    );
+    assert!(stdout.contains("work-leaf v1.2.3 is already installed"));
+
+    let _ = fs::remove_dir_all(temp_dir);
+}
+
+#[test]
+fn install_script_rejects_release_archive_when_checksum_mismatches() {
+    let script_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("install.sh");
+    let temp_dir = unique_temp_dir("work-leaf-install-checksum");
+    let release_dir = temp_dir.join("release");
+    let install_dir = temp_dir.join("bin");
+    fs::create_dir_all(&release_dir).expect("release dir is created");
+    fs::create_dir_all(&install_dir).expect("install dir is created");
+
+    write_release_archive(&release_dir, "x86_64-unknown-linux-gnu", "1.2.3", false);
+
+    let output = Command::new("bash")
+        .arg(&script_path)
+        .env("WORK_LEAF_INSTALL_BASE_URL", file_url(&release_dir))
+        .env("WORK_LEAF_INSTALL_DIR", &install_dir)
+        .env("WORK_LEAF_INSTALL_TARGET", "x86_64-unknown-linux-gnu")
+        .env("WORK_LEAF_INSTALL_VERSION", "v1.2.3")
+        .output()
+        .expect("install.sh runs");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(
+        !output.status.success(),
+        "install.sh should fail on checksum mismatch\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    );
+    assert!(
+        stderr.contains("checksum") || stdout.contains("checksum"),
+        "checksum failures should explain the verification problem\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    );
+    assert!(
+        !install_dir.join("work-leaf").exists(),
+        "checksum failure must not install work-leaf"
+    );
+
+    let _ = fs::remove_dir_all(temp_dir);
+}
+
 fn unique_temp_dir(prefix: &str) -> PathBuf {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -229,4 +377,76 @@ fn write_executable(path: &Path, contents: &str) {
         .permissions();
     permissions.set_mode(0o755);
     fs::set_permissions(path, permissions).expect("fake executable is executable");
+}
+
+fn write_release_archive(release_dir: &Path, target: &str, version: &str, valid_checksum: bool) {
+    let package_dir = release_dir.join(format!("work-leaf-{target}"));
+    fs::create_dir_all(&package_dir).expect("package dir is created");
+    write_executable(
+        &package_dir.join("work-leaf"),
+        &format!(
+            r#"#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${{1:-}}" == "--version" ]]; then
+  printf 'work-leaf {version}\n'
+  exit 0
+fi
+printf 'fake work-leaf {version}\n'
+"#
+        ),
+    );
+
+    let archive_name = format!("work-leaf-{target}.tar.gz");
+    let archive_path = release_dir.join(&archive_name);
+    let tar_output = Command::new("tar")
+        .arg("-czf")
+        .arg(&archive_path)
+        .arg("-C")
+        .arg(release_dir)
+        .arg(format!("work-leaf-{target}"))
+        .output()
+        .expect("tar creates test release archive");
+    assert!(
+        tar_output.status.success(),
+        "tar should create release archive\nstderr:\n{}",
+        String::from_utf8_lossy(&tar_output.stderr)
+    );
+
+    let checksum = if valid_checksum {
+        sha256_hex(&archive_path)
+    } else {
+        "0000000000000000000000000000000000000000000000000000000000000000".to_string()
+    };
+    fs::write(
+        release_dir.join(format!("{archive_name}.sha256")),
+        format!("{checksum}  {archive_name}\n"),
+    )
+    .expect("checksum file is written");
+}
+
+fn sha256_hex(path: &Path) -> String {
+    let output = match Command::new("sha256sum").arg(path).output() {
+        Ok(output) => output,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Command::new("shasum")
+            .arg("-a")
+            .arg("256")
+            .arg(path)
+            .output()
+            .expect("sha256sum or shasum is available for checksum tests"),
+        Err(error) => panic!("sha256sum failed to start for checksum tests: {error}"),
+    };
+    assert!(
+        output.status.success(),
+        "checksum tool should hash archive\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout)
+        .split_whitespace()
+        .next()
+        .expect("sha256sum prints a digest")
+        .to_string()
+}
+
+fn file_url(path: &Path) -> String {
+    format!("file://{}", path.display())
 }

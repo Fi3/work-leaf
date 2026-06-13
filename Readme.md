@@ -6,6 +6,20 @@ for coding. The highly opinionated part is the flow of work: open many agent tha
 with atomic commits, review with an agent every single commit, patch them, rewrite git history to
 have the smallest diff possible and not too many commit, review again agent/human.
 
+## Installing
+
+`install.sh` installs the release binary for Linux or macOS. It detects the local OS and CPU, resolves
+the latest GitHub release, downloads the matching `work-leaf-<target>.tar.gz` archive and
+`.sha256` checksum file, verifies the checksum, and installs `work-leaf` into `/usr/local/bin`.
+
+Set `WORK_LEAF_INSTALL_DIR` to install into another directory, such as `$HOME/.local/bin`. Set
+`WORK_LEAF_INSTALL_VERSION` to install a specific release tag. When the target directory already
+contains the requested version, the installer exits without downloading another archive.
+
+The installed binary supports `work-leaf --version` for update checks. Runtime machines need Codex
+available on `PATH` for the default agent, or Claude available on `PATH` when launched with
+`--agent claude`.
+
 ## Running
 
 `./start` builds the `work-leaf` binary in release mode and renders the terminal CLI. Set
