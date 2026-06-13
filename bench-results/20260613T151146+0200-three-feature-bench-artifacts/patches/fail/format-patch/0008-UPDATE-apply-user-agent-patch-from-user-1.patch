@@ -1,0 +1,83 @@
+From 7d6d104a621bcab9deb684532462fae6a95e411f Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Sat, 13 Jun 2026 15:29:14 +0200
+Subject: [PATCH 08/10] UPDATE apply user-agent patch from user-1
+
+Agent-ID: user-1
+Feature: user-agent
+Reason: wire vim visual entry keys (v/V/Ctrl-V) and visual-aware arrow routing into the real TerminalApp event loop
+Context: The orchestrator applied this provisional patch for user-1 while the agent was working on feature `user-agent`. The agent stated the reason as `wire vim visual entry keys (v/V/Ctrl-V) and visual-aware arrow routing into the real TerminalApp event loop`. The patch touched src/terminal_app.rs and changed the working tree with 29 added line(s) and 2 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs | 31 +++++++++++++++++++++++++++++--
+ 1 file changed, 29 insertions(+), 2 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 9aea71a..dbde508 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -7,6 +7,7 @@ use crate::agent::{AgentBackend, AgentId};
+ use crate::cli::{CommandChat, terminal_right_content, ui_action_text};
+ use crate::http_controller::HttpControllerClient;
+ use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode};
++use crate::ui::VisualKind;
+ use crate::workspace::{
+     SessionClosure, WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession,
+     WorkLeafSnapshot,
+@@ -547,6 +548,29 @@ where
+                 self.start_agent_slash_command();
+                 self.dirty = true;
+             }
++            TerminalAppInput::Char('v')
++                if self.ui.mode() == UiMode::Command && !self.ui.is_visual() =>
++            {
++                let content = self.right_content();
++                self.ui.enter_visual(VisualKind::Char, &content);
++                self.dirty = true;
++            }
++            TerminalAppInput::Char('V')
++                if self.ui.mode() == UiMode::Command && !self.ui.is_visual() =>
++            {
++                let content = self.right_content();
++                self.ui.enter_visual(VisualKind::Line, &content);
++                self.dirty = true;
++            }
++            TerminalAppInput::BlockVisual => {
++                if self.ui.is_visual() {
++                    self.ui.visual_toggle_kind(VisualKind::Block);
++                } else if self.ui.mode() == UiMode::Command {
++                    let content = self.right_content();
++                    self.ui.enter_visual(VisualKind::Block, &content);
++                }
++                self.dirty = true;
++            }
+             TerminalAppInput::LineBreak if self.ui.mode() == UiMode::Insert => {
+                 self.chat_buffer.push('\n');
+                 self.chat_history_index = None;
+@@ -818,8 +842,9 @@ where
+     }
+ 
+     fn should_route_chat_arrow(&self) -> bool {
+-        self.ui.mode() == UiMode::Insert
+-            || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right)
++        !self.ui.is_visual()
++            && (self.ui.mode() == UiMode::Insert
++                || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right))
+     }
+ 
+     fn defer_escape_key(&self) -> bool {
+@@ -1068,6 +1093,7 @@ enum TerminalAppInput {
+     PasteEnd,
+     Interrupt,
+     Quit,
++    BlockVisual,
+ }
+ 
+ impl TerminalAppInput {
+@@ -1079,6 +1105,7 @@ impl TerminalAppInput {
+             27 => Some(Self::Key(UiKey::Esc)),
+             23 => Some(Self::Key(UiKey::CtrlW)),
+             8 | 127 => Some(Self::Backspace),
++            22 => Some(Self::BlockVisual),
+             byte if byte.is_ascii_graphic() || byte == b' ' => Some(Self::Char(byte as char)),
+             _ => None,
+         }

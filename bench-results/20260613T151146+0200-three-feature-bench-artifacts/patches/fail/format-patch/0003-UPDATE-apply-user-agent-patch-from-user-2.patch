@@ -1,0 +1,79 @@
+From 1ec3e8f3e3c0902de9661acd57604c8814e29872 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Sat, 13 Jun 2026 15:18:35 +0200
+Subject: [PATCH 03/10] UPDATE apply user-agent patch from user-2
+
+Agent-ID: user-2
+Feature: user-agent
+Reason: Add selected-agent slash-command routing test for /status and /fork proving the ordinary send path is bypassed
+Context: The orchestrator applied this provisional patch for user-2 while the agent was working on feature `user-agent`. The agent stated the reason as `Add selected-agent slash-command routing test for /status and /fork proving the ordinary send path is bypassed`. The patch touched tests/workspace.rs and changed the working tree with 55 added line(s) and 0 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ tests/workspace.rs | 55 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 55 insertions(+)
+
+diff --git a/tests/workspace.rs b/tests/workspace.rs
+index ffd6a7e..3aa43a0 100644
+--- a/tests/workspace.rs
++++ b/tests/workspace.rs
+@@ -659,6 +659,61 @@ struct FakeBackend {
+     state: Arc<Mutex<FakeBackendState>>,
+ }
+ 
++#[test]
++fn controller_routes_selected_agent_slash_commands_to_backend_command_path() {
++    let backend = FakeBackend::new(["launch reply"]);
++    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
++    let mut controller = WorkLeafController::new(chat);
++
++    let agent_id = controller.create_agent("inspect backend status").unwrap();
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    controller.send_message(&agent_id, "/status").unwrap();
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++    controller
++        .send_message(&agent_id, "/fork feature-branch")
++        .unwrap();
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    let commands = backend.commands();
++    assert!(
++        commands
++            .iter()
++            .any(|(target, command)| target == &agent_id && command == "/status"),
++        "selected-agent /status must run through the backend command path"
++    );
++    assert!(
++        commands
++            .iter()
++            .any(|(target, command)| target == &agent_id && command == "/fork feature-branch"),
++        "selected-agent /fork must run through the backend command path"
++    );
++
++    let sends = backend.sends();
++    assert!(
++        !sends
++            .iter()
++            .any(|(_, prompt)| prompt == "/status" || prompt.starts_with("/fork")),
++        "slash commands must not reach the ordinary send/resume prompt path"
++    );
++
++    let snapshot = controller.snapshot();
++    let session = snapshot.session(&agent_id).expect("session exists");
++    assert!(session.lines.iter().any(|line| line == "user: /status"));
++    assert!(
++        session
++            .lines
++            .iter()
++            .any(|line| line == "backend command output: /status")
++    );
++    assert!(
++        session
++            .lines
++            .iter()
++            .any(|line| line == "backend command output: /fork feature-branch")
++    );
++}
++
+ #[derive(Debug)]
+ struct FakeBackendState {
+     replies: VecDeque<String>,

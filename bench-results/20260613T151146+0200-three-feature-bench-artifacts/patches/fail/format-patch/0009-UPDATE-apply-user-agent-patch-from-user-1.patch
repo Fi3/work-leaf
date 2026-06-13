@@ -1,0 +1,103 @@
+From 41086a9acec2279a85f9402bba0afcd34ed9d83e Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Sat, 13 Jun 2026 15:29:35 +0200
+Subject: [PATCH 09/10] UPDATE apply user-agent patch from user-1
+
+Agent-ID: user-1
+Feature: user-agent
+Reason: add ui_harness integration tests for vim visual selection: char/line/block yank, both panes, selection highlight, status label, and escape
+Context: The orchestrator applied this provisional patch for user-1 while the agent was working on feature `user-agent`. The agent stated the reason as `add ui_harness integration tests for vim visual selection: char/line/block yank, both panes, selection highlight, status label, and escape`. The patch touched tests/ui_harness.rs and changed the working tree with 82 added line(s) and 0 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ tests/ui_harness.rs | 82 +++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 82 insertions(+)
+
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index 94b7097..77e0dc1 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -567,3 +567,85 @@ fn strip_ansi(input: &str) -> String {
+     }
+     output
+ }
++
++#[test]
++fn scripted_harness_visual_char_selection_yanks_focused_right_pane_text() {
++    let mut harness = UiHarness::new(80, 24);
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_byte(b'v');
++    assert!(harness.ui().is_visual());
++
++    harness.handle_byte(b'l');
++    harness.handle_byte(b'y');
++
++    assert!(!harness.ui().is_visual());
++    assert_eq!(harness.ui().visual_yank(), Some("UI"));
++}
++
++#[test]
++fn scripted_harness_visual_line_selection_yanks_whole_line() {
++    let mut harness = UiHarness::new(80, 24);
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_byte(b'V');
++    harness.handle_byte(b'y');
++
++    assert_eq!(harness.ui().visual_yank(), Some("UI harness"));
++}
++
++#[test]
++fn scripted_harness_visual_block_selection_yanks_rectangle() {
++    let mut harness = UiHarness::new(80, 24);
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_byte(22);
++    assert!(harness.ui().is_visual());
++
++    harness.handle_byte(b'j');
++    harness.handle_byte(b'l');
++    harness.handle_byte(b'y');
++
++    assert_eq!(harness.ui().visual_yank(), Some("UI\nEs"));
++}
++
++#[test]
++fn scripted_harness_visual_selection_highlights_focused_text() {
++    let mut harness = UiHarness::new(80, 24);
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_byte(b'v');
++    harness.handle_byte(b'l');
++
++    assert!(harness.render_frame().contains("\u{1b}[7mUI\u{1b}[0m"));
++}
++
++#[test]
++fn scripted_harness_visual_line_selection_works_in_left_pane() {
++    let mut harness = UiHarness::new(80, 24);
++    assert_eq!(harness.ui().focus(), PaneFocus::Left);
++
++    harness.handle_byte(b'V');
++    assert!(harness.ui().is_visual());
++    harness.handle_byte(b'y');
++
++    assert_eq!(harness.ui().visual_yank(), Some("  work-leaf  command"));
++}
++
++#[test]
++fn scripted_harness_visual_mode_status_shows_visual() {
++    let mut harness = UiHarness::new(80, 24);
++    harness.handle_byte(b'v');
++
++    assert!(harness.ui().is_visual());
++    assert!(harness.render_frame().contains("mode=visual focus=left"));
++}
++
++#[test]
++fn scripted_harness_visual_escape_exits_without_yank() {
++    let mut harness = UiHarness::new(80, 24);
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_byte(b'v');
++    assert!(harness.ui().is_visual());
++
++    harness.handle_byte(27);
++
++    assert!(!harness.ui().is_visual());
++    assert_eq!(harness.ui().visual_yank(), None);
++}

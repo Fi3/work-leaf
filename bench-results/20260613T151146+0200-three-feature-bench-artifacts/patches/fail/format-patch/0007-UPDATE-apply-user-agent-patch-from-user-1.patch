@@ -1,0 +1,80 @@
+From a9bf7bec400e56c9e9b722570b58a588b5ef365c Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Sat, 13 Jun 2026 15:28:59 +0200
+Subject: [PATCH 07/10] UPDATE apply user-agent patch from user-1
+
+Agent-ID: user-1
+Feature: user-agent
+Reason: wire vim visual entry keys (v/V/Ctrl-V) and visual-aware arrow routing into UiHarness, with ui_harness tests covering char/line/block yank, highlight, status, and escape
+Context: The orchestrator applied this provisional patch for user-1 while the agent was working on feature `user-agent`. The agent stated the reason as `wire vim visual entry keys (v/V/Ctrl-V) and visual-aware arrow routing into UiHarness, with ui_harness tests covering char/line/block yank, highlight, status, and escape`. The patch touched src/ui_harness.rs and changed the working tree with 26 added line(s) and 2 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/ui_harness.rs | 28 ++++++++++++++++++++++++++--
+ 1 file changed, 26 insertions(+), 2 deletions(-)
+
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index ea74a84..89dd808 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -2,6 +2,7 @@ use crate::{
+     AgentId, AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode,
+     chat_title::{ChatTitleAgent, fallback_chat_title_from_prompt},
+ };
++use crate::ui::VisualKind;
+ 
+ #[derive(Debug)]
+ pub struct UiHarness {
+@@ -191,6 +192,26 @@ impl UiHarness {
+             HarnessInput::Char('/') if self.should_start_agent_slash_command() => {
+                 self.start_agent_slash_command();
+             }
++            HarnessInput::Char('v')
++                if self.ui.mode() == UiMode::Command && !self.ui.is_visual() =>
++            {
++                let content = self.right_content();
++                self.ui.enter_visual(VisualKind::Char, &content);
++            }
++            HarnessInput::Char('V')
++                if self.ui.mode() == UiMode::Command && !self.ui.is_visual() =>
++            {
++                let content = self.right_content();
++                self.ui.enter_visual(VisualKind::Line, &content);
++            }
++            HarnessInput::BlockVisual => {
++                if self.ui.is_visual() {
++                    self.ui.visual_toggle_kind(VisualKind::Block);
++                } else if self.ui.mode() == UiMode::Command {
++                    let content = self.right_content();
++                    self.ui.enter_visual(VisualKind::Block, &content);
++                }
++            }
+             HarnessInput::Char(ch) if self.ui.mode() == UiMode::Prompt => {
+                 self.insert_prompt_char(ch);
+             }
+@@ -439,8 +460,9 @@ impl UiHarness {
+     }
+ 
+     fn should_route_chat_arrow(&self) -> bool {
+-        self.ui.mode() == UiMode::Insert
+-            || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right)
++        !self.ui.is_visual()
++            && (self.ui.mode() == UiMode::Insert
++                || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right))
+     }
+ 
+     fn defer_escape_key(&self) -> bool {
+@@ -576,6 +598,7 @@ enum HarnessInput {
+     Backspace,
+     Interrupt,
+     Quit,
++    BlockVisual,
+ }
+ 
+ impl HarnessInput {
+@@ -587,6 +610,7 @@ impl HarnessInput {
+             27 => Some(Self::Key(UiKey::Esc)),
+             23 => Some(Self::Key(UiKey::CtrlW)),
+             8 | 127 => Some(Self::Backspace),
++            22 => Some(Self::BlockVisual),
+             byte if byte.is_ascii_graphic() || byte == b' ' => Some(Self::Char(byte as char)),
+             _ => None,
+         }

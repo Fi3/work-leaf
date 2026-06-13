@@ -274,3 +274,33 @@
   "patch_artifacts": "/home/user/src/work-leaf/bench-results/20260611T113324+0200-three-feature-bench-artifacts/patches/pass",
   "report": "/home/user/src/work-leaf/bench-results/20260611T113324+0200-three-feature-bench.md"
 }
+{
+  "run_id": "20260613T151146+0200",
+  "result": "fail",
+  "benched_binary_commit": "371c38f1f771f597e32fc0fb1eee03ed1a0f1790",
+  "benched_binary_dirty": "yes",
+  "agent_backend": "claude",
+  "agent_transport": "claude-cli-json",
+  "agent_model": "claude-opus-4-8",
+  "agent_model_source": "Claude local JSONL assistant.message.model",
+  "requested_agent_model": "default",
+  "no_read_permission": "0",
+  "read_permission_mode": "orchestrator-mediated file reads",
+  "web_ui_url": "http://127.0.0.1:40781",
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "duration_seconds": 1875,
+  "review_completed": "yes",
+  "linearize_completed": "yes",
+  "commits_after_base": 10,
+  "changed_files": 10,
+  "changed_lines_added": 936,
+  "changed_lines_deleted": 49,
+  "changed_lines_total": 985,
+  "code_quality": "not run; linearize produced 10 commits instead of 3",
+  "token_usage": "Claude local logs reconstructed by requestId; total_requests=67 input=93 cache_creation=2933553 cache_read=4516873 total_input=7450519 output=280100 reasoning_output=0 errors=linearize:rate_limit",
+  "comment": "linearize produced 10 commits after base; expected 3 one-per-feature final commits",
+  "operator_notes": "Claude benchmark launched with a one-off agent-aware runner because bench-three-features in this checkout has Codex-specific daemon args and metadata.",
+  "binaries_produced": "work-leaf work-leaf-orchestrator",
+  "patch_artifacts": "/home/user/src/work-leaf/bench-results/20260613T151146+0200-three-feature-bench-artifacts/patches/fail",
+  "report": "/home/user/src/work-leaf/bench-results/20260613T151146+0200-three-feature-bench.md"
+}

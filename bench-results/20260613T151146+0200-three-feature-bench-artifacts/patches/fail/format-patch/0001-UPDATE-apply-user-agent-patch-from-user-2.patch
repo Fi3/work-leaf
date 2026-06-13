@@ -1,0 +1,114 @@
+From 5052ab24ce093efb38c78cf5028cfe2e753a0b49 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Sat, 13 Jun 2026 15:17:50 +0200
+Subject: [PATCH 01/10] UPDATE apply user-agent patch from user-2
+
+Agent-ID: user-2
+Feature: user-agent
+Reason: Route selected-agent slash commands to a dedicated backend command path so /status and /fork execute as backend commands instead of ordinary send/resume prompts
+Context: The orchestrator applied this provisional patch for user-2 while the agent was working on feature `user-agent`. The agent stated the reason as `Route selected-agent slash commands to a dedicated backend command path so /status and /fork execute as backend commands instead of ordinary send/resume prompts`. The patch touched src/agent_runtime.rs, src/cli.rs, src/codex.rs, src/workspace.rs and changed the working tree with 46 added line(s) and 1 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/agent_runtime.rs | 13 ++++++++++++-
+ src/cli.rs           | 18 ++++++++++++++++++
+ src/codex.rs         | 11 +++++++++++
+ src/workspace.rs     |  5 +++++
+ 4 files changed, 46 insertions(+), 1 deletion(-)
+
+diff --git a/src/agent_runtime.rs b/src/agent_runtime.rs
+index c3ea84d..e8e0e38 100644
+--- a/src/agent_runtime.rs
++++ b/src/agent_runtime.rs
+@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
+ use std::thread;
+ use std::time::{Duration, Instant};
+ 
+-use crate::agent::{AgentError, AgentId, AgentLaunch, AgentSession, ChatMessage};
++use crate::agent::{AgentError, AgentId, AgentLaunch, AgentSession, ChatMessage, MessageRole};
+ 
+ pub trait AgentBackend {
+     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError>;
+@@ -13,6 +13,17 @@ pub trait AgentBackend {
+         Ok(())
+     }
+ 
++    fn run_command(
++        &mut self,
++        _agent_id: &AgentId,
++        command: &str,
++    ) -> Result<ChatMessage, AgentError> {
++        Ok(ChatMessage::new(
++            MessageRole::Orchestrator,
++            format!("backend command `{command}` is not supported by this agent"),
++        ))
++    }
++
+     fn shutdown_handle(&self) -> AgentShutdownHandle {
+         AgentShutdownHandle::default()
+     }
+diff --git a/src/cli.rs b/src/cli.rs
+index 24584e4..fc387a0 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -465,6 +465,24 @@ where
+         })
+     }
+ 
++    pub(crate) fn run_agent_command(
++        &mut self,
++        agent_id: &AgentId,
++        command: &str,
++    ) -> Result<CommandChatResult, CliError> {
++        let reply = self
++            .backend
++            .as_mut()
++            .expect("command chat backend is present")
++            .run_command(agent_id, command)
++            .map_err(CliError::Agent)?
++            .text;
++        Ok(CommandChatResult::AgentMessage {
++            agent_id: agent_id.clone(),
++            reply,
++        })
++    }
++
+     fn launch_agent(&mut self, args: &[String]) -> Result<CommandChatResult, CliError> {
+         let original_next_user_agent = self.next_user_agent;
+         let launch = self.prepare_agent_launch(args)?;
+diff --git a/src/codex.rs b/src/codex.rs
+index 0b4f118..2644539 100644
+--- a/src/codex.rs
++++ b/src/codex.rs
+@@ -384,6 +384,17 @@ impl AgentBackend for CodexBackend {
+         Ok(())
+     }
+ 
++    fn run_command(
++        &mut self,
++        agent_id: &AgentId,
++        command: &str,
++    ) -> Result<ChatMessage, AgentError> {
++        let invocation = self.build_send_invocation(agent_id, command)?;
++        let output = self.run_invocation_streaming(&invocation, Some(agent_id), &mut |_| {})?;
++        let reply = parse_codex_output(&output).agent_reply.unwrap_or(output);
++        Ok(ChatMessage::new(MessageRole::Agent, reply))
++    }
++
+     fn launch_streaming(
+         &mut self,
+         request: AgentLaunch,
+diff --git a/src/workspace.rs b/src/workspace.rs
+index 8fc3e6f..f0fbb0e 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -259,6 +259,11 @@ where
+             return Ok(());
+         }
+ 
++        if let Some(command) = agent_backend_command(message) {
++            self.start_agent_command_worker(agent_id, command);
++            return Ok(());
++        }
++
+         let title_prompt = self.reserve_first_chat_title_prompt(agent_id, message);
+         self.set_session_loading(agent_id, Some(WorkLeafLoading::WaitingForReply));
+         self.append_agent_line(agent_id, format!("user: {message}"));

@@ -1,0 +1,114 @@
+From 587bf8c38abc904f6ae3f0fca1018f867e3ddae7 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Sat, 13 Jun 2026 15:18:11 +0200
+Subject: [PATCH 02/10] UPDATE apply user-agent patch from user-2
+
+Agent-ID: user-2
+Feature: user-agent
+Reason: Define the selected-agent backend-command worker and detector and add /status and /fork coverage proving the ordinary send path is bypassed
+Context: The orchestrator applied this provisional patch for user-2 while the agent was working on feature `user-agent`. The agent stated the reason as `Define the selected-agent backend-command worker and detector and add /status and /fork coverage proving the ordinary send path is bypassed`. The patch touched src/workspace.rs, tests/workspace.rs and changed the working tree with 50 added line(s) and 0 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/workspace.rs   | 28 ++++++++++++++++++++++++++++
+ tests/workspace.rs | 22 ++++++++++++++++++++++
+ 2 files changed, 50 insertions(+)
+
+diff --git a/src/workspace.rs b/src/workspace.rs
+index f0fbb0e..0231463 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -303,6 +303,29 @@ where
+         self.start_review_for_agent(None)
+     }
+ 
++    fn start_agent_command_worker(&mut self, agent_id: &AgentId, command: &str) {
++        self.set_session_loading(agent_id, Some(WorkLeafLoading::WaitingForReply));
++        self.append_agent_line(agent_id, format!("user: {command}"));
++        let agent_id = agent_id.clone();
++        let command = command.to_string();
++        self.start_worker(
++            move |mut chat, sender| match chat.run_agent_command(&agent_id, &command) {
++                Ok(result) => {
++                    let _ = sender.send(WorkerEvent::Complete {
++                        agent_id: Some(agent_id),
++                        result,
++                    });
++                }
++                Err(error) => {
++                    let _ = sender.send(WorkerEvent::Error {
++                        agent_id: Some(agent_id),
++                        message: command_chat_error_text(&error),
++                    });
++                }
++            },
++        );
++    }
++
+     fn start_review_for_patch_agent(
+         &mut self,
+         agent_id: &AgentId,
+@@ -1235,6 +1258,11 @@ fn strip_ascii_prefix_case_insensitive<'a>(message: &'a str, prefix: &str) -> Op
+         .then(|| message[prefix.len()..].trim())
+ }
+ 
++fn agent_backend_command(message: &str) -> Option<&str> {
++    let first = message.strip_prefix('/')?.chars().next()?;
++    (!first.is_whitespace()).then_some(message)
++}
++
+ fn split_command_line(line: &str) -> Vec<String> {
+     line.split_whitespace().map(str::to_string).collect()
+ }
+diff --git a/tests/workspace.rs b/tests/workspace.rs
+index 5724d95..ffd6a7e 100644
+--- a/tests/workspace.rs
++++ b/tests/workspace.rs
+@@ -664,6 +664,7 @@ struct FakeBackendState {
+     replies: VecDeque<String>,
+     launches: Vec<AgentLaunch>,
+     sends: Vec<(AgentId, String)>,
++    commands: Vec<(AgentId, String)>,
+ }
+ 
+ #[derive(Clone, Debug)]
+@@ -676,6 +677,7 @@ impl FakeBackend {
+                 replies: replies.into_iter().map(String::from).collect(),
+                 launches: Vec::new(),
+                 sends: Vec::new(),
++                commands: Vec::new(),
+             })),
+         }
+     }
+@@ -688,6 +690,10 @@ impl FakeBackend {
+         self.state.lock().unwrap().sends.clone()
+     }
+ 
++    fn commands(&self) -> Vec<(AgentId, String)> {
++        self.state.lock().unwrap().commands.clone()
++    }
++
+     fn next_reply(&self) -> String {
+         self.state
+             .lock()
+@@ -723,6 +729,22 @@ impl AgentBackend for FakeBackend {
+             .push((agent_id.clone(), prompt.to_string()));
+         Ok(ChatMessage::new(MessageRole::Agent, self.next_reply()))
+     }
++
++    fn run_command(
++        &mut self,
++        agent_id: &AgentId,
++        command: &str,
++    ) -> Result<ChatMessage, AgentError> {
++        self.state
++            .lock()
++            .unwrap()
++            .commands
++            .push((agent_id.clone(), command.to_string()));
++        Ok(ChatMessage::new(
++            MessageRole::Agent,
++            format!("backend command output: {command}"),
++        ))
++    }
+ }
+ 
+ impl AgentBackend for ConcurrentBackend {

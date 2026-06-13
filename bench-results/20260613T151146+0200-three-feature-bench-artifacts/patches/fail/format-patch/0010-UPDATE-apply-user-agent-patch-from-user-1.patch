@@ -1,0 +1,42 @@
+From 63f3ff4ce169af6ab55f6fdb8b546661cc999ab3 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Sat, 13 Jun 2026 15:30:35 +0200
+Subject: [PATCH 10/10] UPDATE apply user-agent patch from user-1
+
+Agent-ID: user-1
+Feature: user-agent
+Reason: order/merge the VisualKind imports added in terminal_app.rs and ui_harness.rs to satisfy rustfmt
+Context: The orchestrator applied this provisional patch for user-1 while the agent was working on feature `user-agent`. The agent stated the reason as `order/merge the VisualKind imports added in terminal_app.rs and ui_harness.rs to satisfy rustfmt`. The patch touched src/terminal_app.rs, src/ui_harness.rs and changed the working tree with 6 added line(s) and 7 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs | 3 +--
+ src/ui_harness.rs   | 2 +-
+ 2 files changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index dbde508..88f140a 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -6,8 +6,7 @@ use rustyline::line_buffer::{ChangeListener, DeleteListener, Direction, LineBuff
+ use crate::agent::{AgentBackend, AgentId};
+ use crate::cli::{CommandChat, terminal_right_content, ui_action_text};
+ use crate::http_controller::HttpControllerClient;
+-use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode};
+-use crate::ui::VisualKind;
++use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode, VisualKind};
+ use crate::workspace::{
+     SessionClosure, WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession,
+     WorkLeafSnapshot,
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index 89dd808..78d3642 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -1,8 +1,8 @@
++use crate::ui::VisualKind;
+ use crate::{
+     AgentId, AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode,
+     chat_title::{ChatTitleAgent, fallback_chat_title_from_prompt},
+ };
+-use crate::ui::VisualKind;
+ 
+ #[derive(Debug)]
+ pub struct UiHarness {

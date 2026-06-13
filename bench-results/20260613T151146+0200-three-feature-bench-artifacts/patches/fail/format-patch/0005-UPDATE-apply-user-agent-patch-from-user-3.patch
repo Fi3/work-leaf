@@ -1,0 +1,25 @@
+From bc14cde533d90347c27d7ae83ac5d2a6648109a5 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Sat, 13 Jun 2026 15:26:02 +0200
+Subject: [PATCH 05/10] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: ADD missing session_closures field declaration to the controller struct
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `ADD missing session_closures field declaration to the controller struct`. The patch touched src/workspace.rs and changed the working tree with 1 added line(s) and 0 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/workspace.rs | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/workspace.rs b/src/workspace.rs
+index ecaa5c9..0acdb1d 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -32,6 +32,7 @@ where
+     review_commits_in_progress: BTreeMap<AgentId, String>,
+     reviewed_agent_commits: BTreeMap<AgentId, String>,
+     agent_review_baselines: BTreeMap<AgentId, String>,
++    session_closures: BTreeMap<AgentId, SessionClosure>,
+ }
+ 
+ impl<B> WorkLeafController<B>
