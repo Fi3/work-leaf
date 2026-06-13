@@ -113,6 +113,20 @@ impl AgentShutdownHandle {
         self.register_process(ActiveAgentProcess::new(pid))
     }
 
+    pub(crate) fn terminate_registered_process(&self, pid: u32) {
+        let process = self
+            .registry
+            .lock()
+            .expect("agent process registry mutex poisoned")
+            .processes
+            .get(&pid)
+            .copied();
+        if let Some(process) = process {
+            trace_agent_shutdown(format_args!("terminating pid {}", process.pid));
+            process.terminate();
+        }
+    }
+
     fn register_process(&self, process: ActiveAgentProcess) -> ActiveAgentProcessGuard {
         let pid = process.pid;
         let shutting_down = {

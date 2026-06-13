@@ -23,8 +23,9 @@ pub use agent::{
 };
 pub use claude::{ClaudeBackend, ClaudeCommandConfig};
 pub use cli::{
-    CliError, CommandChat, CommandChatResult, ProcessCommand, SelectedAgent, parse_process_args,
-    render_command_chat_help, render_daemon_startup, render_process_help, run_cli_from_env,
+    CliError, CommandChat, CommandChatResult, ProcessCommand, ProcessConfig, SelectedAgent,
+    parse_process_args, parse_process_config, render_command_chat_help, render_daemon_startup,
+    render_process_help, run_cli_from_env,
 };
 pub use codex::{CodexBackend, CodexCommandConfig, SandboxMode};
 pub use http_controller::{

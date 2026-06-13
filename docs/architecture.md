@@ -26,8 +26,8 @@ public interfaces are:
 - Agent-provider integration: `AgentBackend`, `AgentStreamEvent`, `AgentShutdownHandle`,
   `AgentProfile`, `AgentKind`, `AgentLaunch`, `AgentSession`, `AgentId`, `ChatMessage`,
   `MessageRole`, `PromptPolicy`, `ReadPermission`, `AgentError`.
-- Command orchestration: `CommandChat`, `CommandChatResult`, `ProcessCommand`, `SelectedAgent`,
-  `CliError`.
+- Command orchestration: `CommandChat`, `CommandChatResult`, `ProcessCommand`, `ProcessConfig`,
+  `SelectedAgent`, `CliError`.
 - Localhost controller transport: `HttpControllerClient`, `HttpControllerServer`,
   `OrchestratorHttpError`.
 - Core workflows: `AgentOrchestrator`, `GitPatcher`, `PatchCoordinator`, `GitHistory`,
@@ -164,7 +164,8 @@ rather than using `@work-leaf` read, patch, or lock directives.
   methods keep the ordinary streaming behavior.
 - `AgentBackend::shutdown_handle` returns an `AgentShutdownHandle` for terminating active provider
   processes.
-- `AgentStreamEvent` carries status text, streamed agent messages, and streamed errors.
+- `AgentStreamEvent` carries status text, streamed agent messages, streamed errors, and provider
+  token-usage snapshots.
 - The workspace controller appends provider stream events as individual transcript occurrences.
   Repeated status/activity lines are preserved because identical visible events can represent
   separate real agent actions. Completion-time trimming removes only final assistant-reply text that
@@ -237,8 +238,15 @@ top-level re-export, not from `work_leaf::codex`.
   events from stdout, records the Claude session id from `system/init`, and resumes follow-up turns
   with `--resume <session-id>`.
 - Claude `system/status` events become visible Work Leaf status lines, streaming text deltas become
-  visible agent-message chunks, and the final `result` text is recorded as the complete assistant
-  reply for orchestrator directive parsing.
+  visible agent-message chunks, `result` usage becomes provider-neutral token-usage stream events,
+  and the final `result` text is recorded as the complete assistant reply for orchestrator directive
+  parsing.
+- Claude interrupts terminate the active per-agent `claude --print` subprocess while shared backend
+  shutdown still terminates every registered Claude subprocess. Claude uses the same interrupt path
+  for interruptible streaming: after a complete terminal Work Leaf directive streams, the backend
+  terminates the active turn so the orchestrator can process the directive without waiting for more
+  model output. A process exit caused by a recorded interrupt is treated as a cancelled turn rather
+  than a provider failure.
 - Packaged binaries require the Claude executable on `PATH` only when launched with `--agent
   claude`; they do not require the Python or TypeScript Claude Agent SDK package at runtime.
 - Work Leaf launches Claude with no built-in tools under orchestrator-read mode, so repository reads
@@ -256,6 +264,11 @@ top-level re-export, not from `work_leaf::claude`.
 
 `src/cli.rs::CommandChat<B>` is the command orchestration surface shared by the CLI, controller, and
 tests. It is generic over `B: AgentBackend`.
+
+`ProcessCommand` represents the top-level process mode: help, daemon, or terminal launch. Daemon and
+launch commands carry the `SelectedAgent` parsed from `--agent`/`-a` so public callers can inspect
+the selected provider directly from the command. `ProcessConfig` pairs the command with the same
+selected agent for callers that prefer a separate parsed configuration value.
 
 `CommandChat` owns:
 

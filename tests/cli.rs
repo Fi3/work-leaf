@@ -8,7 +8,8 @@ use std::time::Duration;
 use work_leaf::{
     AgentBackend, AgentError, AgentId, AgentLaunch, AgentSession, AgentStreamEvent, ChatMessage,
     CodexBackend, CodexCommandConfig, CommandChat, CommandChatResult, MessageRole, ProcessCommand,
-    PromptPolicy, ReadPermission, SelectedAgent, parse_process_args, render_process_help,
+    PromptPolicy, ReadPermission, SelectedAgent, parse_process_args, parse_process_config,
+    render_process_help,
 };
 
 mod support;
@@ -52,6 +53,36 @@ fn no_args_launches_orchestrator_from_current_project_directory() {
 }
 
 #[test]
+fn process_command_public_variants_keep_agent_selection_shape() {
+    let daemon = ProcessCommand::Daemon {
+        model: None,
+        read_permission: ReadPermission::Orchestrator,
+        agent: SelectedAgent::Codex,
+    };
+    let launch = ProcessCommand::Launch {
+        model: None,
+        read_permission: ReadPermission::Orchestrator,
+        agent: SelectedAgent::Claude,
+        cli_url: None,
+    };
+
+    assert!(matches!(
+        daemon,
+        ProcessCommand::Daemon {
+            agent: SelectedAgent::Codex,
+            ..
+        }
+    ));
+    assert!(matches!(
+        launch,
+        ProcessCommand::Launch {
+            agent: SelectedAgent::Claude,
+            ..
+        }
+    ));
+}
+
+#[test]
 fn no_read_permission_allows_direct_filesystem_reads() {
     let command = parse_process_args(["work-leaf", "--no-read-permission"]).unwrap();
 
@@ -84,33 +115,21 @@ fn process_args_accept_model_and_no_read_permission_together() {
 
 #[test]
 fn process_args_default_to_codex_agent() {
-    let command = parse_process_args(["work-leaf"]).unwrap();
+    let config = parse_process_config(["work-leaf"]).unwrap();
 
-    assert!(matches!(
-        command,
-        ProcessCommand::Launch {
-            agent: SelectedAgent::Codex,
-            ..
-        }
-    ));
+    assert_eq!(config.agent, SelectedAgent::Codex);
+    assert!(matches!(config.command, ProcessCommand::Launch { .. }));
 }
 
 #[test]
 fn process_args_accept_default_agent_selection() {
-    assert!(matches!(
-        parse_process_args(["work-leaf", "--agent", "claude"]).unwrap(),
-        ProcessCommand::Launch {
-            agent: SelectedAgent::Claude,
-            ..
-        }
-    ));
-    assert!(matches!(
-        parse_process_args(["work-leaf", "-a", "codex", "-d"]).unwrap(),
-        ProcessCommand::Daemon {
-            agent: SelectedAgent::Codex,
-            ..
-        }
-    ));
+    let launch = parse_process_config(["work-leaf", "--agent", "claude"]).unwrap();
+    assert_eq!(launch.agent, SelectedAgent::Claude);
+    assert!(matches!(launch.command, ProcessCommand::Launch { .. }));
+
+    let daemon = parse_process_config(["work-leaf", "-a", "codex", "-d"]).unwrap();
+    assert_eq!(daemon.agent, SelectedAgent::Codex);
+    assert!(matches!(daemon.command, ProcessCommand::Daemon { .. }));
 }
 
 #[test]

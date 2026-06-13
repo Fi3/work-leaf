@@ -73,6 +73,8 @@ struct ClaudeBackendState {
     session_ids: BTreeMap<AgentId, String>,
     usage: BTreeMap<AgentId, AgentTokenUsage>,
     active_agent_operations: BTreeSet<AgentId>,
+    active_turn_processes: BTreeMap<AgentId, u32>,
+    interrupted_turns: BTreeSet<AgentId>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -104,9 +106,27 @@ impl ClaudeBackend {
 
     fn run_turn_streaming(
         &self,
+        agent_id: &AgentId,
         prompt: &str,
         resume_session_id: Option<&str>,
         sink: &mut dyn FnMut(AgentStreamEvent),
+    ) -> Result<ClaudeTurnOutput, AgentError> {
+        self.run_turn_streaming_interruptible(
+            agent_id,
+            prompt,
+            resume_session_id,
+            sink,
+            &mut |_| false,
+        )
+    }
+
+    fn run_turn_streaming_interruptible(
+        &self,
+        agent_id: &AgentId,
+        prompt: &str,
+        resume_session_id: Option<&str>,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+        should_interrupt: &mut dyn FnMut(&AgentStreamEvent) -> bool,
     ) -> Result<ClaudeTurnOutput, AgentError> {
         let mut command = Command::new(&self.config.binary);
         command
@@ -143,7 +163,9 @@ impl ClaudeBackend {
                 self.config.binary.display()
             ))
         })?;
-        let process_guard = self.shutdown.register_single_process(child.id());
+        let pid = child.id();
+        let process_guard = self.shutdown.register_single_process(pid);
+        let _active_process_guard = self.register_active_turn_process(agent_id, pid);
         let mut stdin = child
             .stdin
             .take()
@@ -175,6 +197,15 @@ impl ClaudeBackend {
         let mut result_reply = None;
         let mut result_error = None;
 
+        let mut interrupt_sent = false;
+        let mut stream = |event: AgentStreamEvent| {
+            sink(event.clone());
+            if !interrupt_sent && should_interrupt(&event) {
+                interrupt_sent = true;
+                self.interrupt_active_turn(agent_id);
+            }
+        };
+
         for line in BufReader::new(stdout).lines() {
             let line = line.map_err(AgentError::Io)?;
             if line.trim().is_empty() {
@@ -190,12 +221,13 @@ impl ClaudeBackend {
                 &mut assistant_reply,
                 &mut result_reply,
                 &mut result_error,
-                sink,
+                &mut stream,
             )?;
         }
 
         let status = child.wait().map_err(AgentError::Io)?;
         drop(process_guard);
+        let interrupted = self.take_interrupted_turn(agent_id);
         let stderr = stderr_reader
             .map(|reader| {
                 reader
@@ -203,6 +235,12 @@ impl ClaudeBackend {
                     .unwrap_or_else(|_| "Claude stderr reader panicked".to_string())
             })
             .unwrap_or_default();
+        output.reply = result_reply
+            .or_else(|| (!assistant_reply.is_empty()).then_some(assistant_reply))
+            .unwrap_or(streamed_reply);
+        if interrupted {
+            return Ok(output);
+        }
         if !status.success() {
             return Err(AgentError::ProcessFailed {
                 program: self.config.binary.clone(),
@@ -213,9 +251,6 @@ impl ClaudeBackend {
         if let Some(error) = result_error {
             return Err(backend_error(error));
         }
-        output.reply = result_reply
-            .or_else(|| (!assistant_reply.is_empty()).then_some(assistant_reply))
-            .unwrap_or(streamed_reply);
         Ok(output)
     }
 
@@ -300,6 +335,43 @@ impl ClaudeBackend {
             condvar: self.operation_condvar.clone(),
         }
     }
+
+    fn register_active_turn_process(&self, agent_id: &AgentId, pid: u32) -> ActiveTurnProcessGuard {
+        self.state
+            .lock()
+            .expect("claude backend state mutex poisoned")
+            .active_turn_processes
+            .insert(agent_id.clone(), pid);
+        ActiveTurnProcessGuard {
+            agent_id: agent_id.clone(),
+            state: self.state.clone(),
+        }
+    }
+
+    fn interrupt_active_turn(&self, agent_id: &AgentId) {
+        let active_pid = {
+            let mut state = self
+                .state
+                .lock()
+                .expect("claude backend state mutex poisoned");
+            let active_pid = state.active_turn_processes.get(agent_id).copied();
+            if active_pid.is_some() {
+                state.interrupted_turns.insert(agent_id.clone());
+            }
+            active_pid
+        };
+        if let Some(pid) = active_pid {
+            self.shutdown.terminate_registered_process(pid);
+        }
+    }
+
+    fn take_interrupted_turn(&self, agent_id: &AgentId) -> bool {
+        self.state
+            .lock()
+            .expect("claude backend state mutex poisoned")
+            .interrupted_turns
+            .remove(agent_id)
+    }
 }
 
 impl AgentBackend for ClaudeBackend {
@@ -319,6 +391,11 @@ impl AgentBackend for ClaudeBackend {
         self.shutdown.clone()
     }
 
+    fn interrupt(&mut self, agent_id: &AgentId) -> Result<(), AgentError> {
+        self.interrupt_active_turn(agent_id);
+        Ok(())
+    }
+
     fn launch_streaming(
         &mut self,
         request: AgentLaunch,
@@ -328,7 +405,27 @@ impl AgentBackend for ClaudeBackend {
         let prompt = self
             .policy
             .inject(&request.id, &request.feature, &request.prompt);
-        let output = self.run_turn_streaming(&prompt, None, sink)?;
+        let output = self.run_turn_streaming(&request.id, &prompt, None, sink)?;
+        Ok(self.record_launch_reply(request, output))
+    }
+
+    fn launch_streaming_interruptible(
+        &mut self,
+        request: AgentLaunch,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+        should_interrupt: &mut dyn FnMut(&AgentStreamEvent) -> bool,
+    ) -> Result<AgentSession, AgentError> {
+        let _operation_guard = self.acquire_agent_operation(&request.id);
+        let prompt = self
+            .policy
+            .inject(&request.id, &request.feature, &request.prompt);
+        let output = self.run_turn_streaming_interruptible(
+            &request.id,
+            &prompt,
+            None,
+            sink,
+            should_interrupt,
+        )?;
         Ok(self.record_launch_reply(request, output))
     }
 
@@ -360,7 +457,47 @@ impl AgentBackend for ClaudeBackend {
         } else {
             self.policy.inject(agent_id, &feature, prompt)
         };
-        let output = self.run_turn_streaming(&prompt, claude_session_id.as_deref(), sink)?;
+        let output =
+            self.run_turn_streaming(agent_id, &prompt, claude_session_id.as_deref(), sink)?;
+        self.record_send_reply(agent_id, &prompt, output)
+    }
+
+    fn send_streaming_interruptible(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+        sink: &mut dyn FnMut(AgentStreamEvent),
+        should_interrupt: &mut dyn FnMut(&AgentStreamEvent) -> bool,
+    ) -> Result<ChatMessage, AgentError> {
+        let _operation_guard = self.acquire_agent_operation(agent_id);
+        let (has_session, feature, claude_session_id) = {
+            let state = self
+                .state
+                .lock()
+                .expect("claude backend state mutex poisoned");
+            let feature = state
+                .sessions
+                .get(agent_id)
+                .map(|session| session.feature.clone())
+                .unwrap_or_else(|| "unknown".to_string());
+            (
+                state.sessions.contains_key(agent_id),
+                feature,
+                state.session_ids.get(agent_id).cloned(),
+            )
+        };
+        let prompt = if has_session {
+            prompt.to_string()
+        } else {
+            self.policy.inject(agent_id, &feature, prompt)
+        };
+        let output = self.run_turn_streaming_interruptible(
+            agent_id,
+            &prompt,
+            claude_session_id.as_deref(),
+            sink,
+            should_interrupt,
+        )?;
         self.record_send_reply(agent_id, &prompt, output)
     }
 }
@@ -383,6 +520,27 @@ impl Drop for AgentOperationGuard {
     }
 }
 
+#[derive(Debug)]
+struct ActiveTurnProcessGuard {
+    agent_id: AgentId,
+    state: Arc<Mutex<ClaudeBackendState>>,
+}
+
+impl Drop for ActiveTurnProcessGuard {
+    fn drop(&mut self) {
+        self.state
+            .lock()
+            .expect("claude backend state mutex poisoned")
+            .active_turn_processes
+            .remove(&self.agent_id);
+        self.state
+            .lock()
+            .expect("claude backend state mutex poisoned")
+            .interrupted_turns
+            .remove(&self.agent_id);
+    }
+}
+
 fn handle_claude_event(
     value: &Value,
     output: &mut ClaudeTurnOutput,
@@ -396,16 +554,18 @@ fn handle_claude_event(
     match event_type {
         "system" => handle_system_event(value, output, sink),
         "stream_event" => handle_stream_event(value, streamed_reply, sink),
-        "assistant" => {
-            if assistant_reply.is_empty() {
-                *assistant_reply = assistant_message_text(value);
-            }
+        "assistant" if assistant_reply.is_empty() => {
+            *assistant_reply = assistant_message_text(value);
         }
+        "assistant" => {}
         "result" => {
             if let Some(session_id) = json_str(value, &["session_id"]) {
                 output.session_id = session_id.to_string();
             }
-            output.usage = usage_from_value(value);
+            if let Some(usage) = usage_from_value(value) {
+                output.usage = Some(usage);
+                sink(AgentStreamEvent::Usage(usage));
+            }
             if value
                 .get("is_error")
                 .and_then(Value::as_bool)

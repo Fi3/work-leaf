@@ -101,7 +101,21 @@ pub enum ProcessCommand {
     },
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProcessConfig {
+    pub command: ProcessCommand,
+    pub agent: SelectedAgent,
+}
+
 pub fn parse_process_args<I, S>(args: I) -> Result<ProcessCommand, CliError>
+where
+    I: IntoIterator<Item = S>,
+    S: Into<String>,
+{
+    parse_process_config(args).map(|config| config.command)
+}
+
+pub fn parse_process_config<I, S>(args: I) -> Result<ProcessConfig, CliError>
 where
     I: IntoIterator<Item = S>,
     S: Into<String>,
@@ -115,11 +129,15 @@ where
     }
 
     if args.is_empty() {
-        return Ok(ProcessCommand::Launch {
-            model: None,
-            read_permission: ReadPermission::Orchestrator,
-            agent: SelectedAgent::default(),
-            cli_url: None,
+        let agent = SelectedAgent::default();
+        return Ok(ProcessConfig {
+            command: ProcessCommand::Launch {
+                model: None,
+                read_permission: ReadPermission::Orchestrator,
+                agent: agent.clone(),
+                cli_url: None,
+            },
+            agent,
         });
     }
 
@@ -131,7 +149,12 @@ where
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
-            "--help" | "-h" | "help" => return Ok(ProcessCommand::Help),
+            "--help" | "-h" | "help" => {
+                return Ok(ProcessConfig {
+                    command: ProcessCommand::Help,
+                    agent: SelectedAgent::default(),
+                });
+            }
             "-d" | "--deamon" | "--daemon" => {
                 daemon = true;
                 index += 1;
@@ -182,29 +205,36 @@ where
                 "-d/--deamon cannot be combined with -c/--cli".to_string(),
             ));
         }
-        return Ok(ProcessCommand::Daemon {
-            model,
-            read_permission,
+        return Ok(ProcessConfig {
+            command: ProcessCommand::Daemon {
+                model,
+                read_permission,
+                agent: agent.clone(),
+            },
             agent,
         });
     }
 
-    Ok(ProcessCommand::Launch {
-        model,
-        read_permission,
+    Ok(ProcessConfig {
+        command: ProcessCommand::Launch {
+            model,
+            read_permission,
+            agent: agent.clone(),
+            cli_url,
+        },
         agent,
-        cli_url,
     })
 }
 
 pub fn run_cli_from_env() -> ! {
-    let command = match parse_process_args(env::args()) {
-        Ok(command) => command,
+    let config = match parse_process_config(env::args()) {
+        Ok(config) => config,
         Err(error) => {
             eprintln!("{error}");
             process::exit(2);
         }
     };
+    let ProcessConfig { command, .. } = config;
 
     match command {
         ProcessCommand::Help => {
