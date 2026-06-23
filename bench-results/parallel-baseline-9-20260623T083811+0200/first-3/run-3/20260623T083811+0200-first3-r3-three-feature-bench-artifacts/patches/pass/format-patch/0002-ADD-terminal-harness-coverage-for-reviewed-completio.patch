@@ -1,0 +1,156 @@
+From 5b2739bf7b50b60e721648178b14411e9d86b187 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Tue, 23 Jun 2026 09:00:22 +0200
+Subject: [PATCH 2/3] ADD terminal harness coverage for reviewed completion
+ decisions
+
+Expose fixture helpers for completion-question and closed patch-chat states so the harness verifies DONE highlighting, closed rows without READY markers, and reopening a closed chat when the user sends follow-up text.
+---
+ src/ui.rs           |  7 +++++++
+ src/ui_harness.rs   | 42 +++++++++++++++++++++++++++++++++++++++++-
+ tests/ui_harness.rs | 33 +++++++++++++++++++++++++++++++++
+ 3 files changed, 81 insertions(+), 1 deletion(-)
+
+diff --git a/src/ui.rs b/src/ui.rs
+index 8d2c379..ba6e073 100644
+--- a/src/ui.rs
++++ b/src/ui.rs
+@@ -475,6 +475,13 @@ impl TerminalUi {
+         Ok(())
+     }
+ 
++    pub(crate) fn agent_feature(&self, agent_id: &AgentId) -> Option<&str> {
++        self.agents
++            .iter()
++            .find(|agent| &agent.id == agent_id)
++            .map(|agent| agent.feature.as_str())
++    }
++
+     pub(crate) fn set_agent_relationships(
+         &mut self,
+         agent_id: &AgentId,
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index eb09368..a49e735 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -67,6 +67,24 @@ impl UiHarness {
+         self.ui.set_agent_ready_state(&agent_id, true)
+     }
+ 
++    pub fn mark_agent_needs_completion_decision(&mut self, agent_id: &str) -> Result<(), String> {
++        let agent_id = AgentId::new(agent_id).map_err(|error| error.to_string())?;
++        let feature = self.agent_base_feature(&agent_id)?;
++        self.ui
++            .set_agent_feature(&agent_id, format!("{feature} DONE?"))?;
++        self.ui.set_agent_patch_lifecycle(&agent_id, true, false)?;
++        self.ui.set_agent_ready_state(&agent_id, true)
++    }
++
++    pub fn mark_agent_closed(&mut self, agent_id: &str) -> Result<(), String> {
++        let agent_id = AgentId::new(agent_id).map_err(|error| error.to_string())?;
++        let feature = self.agent_base_feature(&agent_id)?;
++        self.ui
++            .set_agent_feature(&agent_id, format!("{feature} CLOSED"))?;
++        self.ui.set_agent_patch_lifecycle(&agent_id, true, true)?;
++        self.ui.set_agent_ready_state(&agent_id, false)
++    }
++
+     pub fn add_review_agent(
+         &mut self,
+         agent_id: &str,
+@@ -205,7 +223,7 @@ impl UiHarness {
+                     let target_agent = self.ui.selected_agent().cloned();
+                     if let Some(agent_id) = target_agent.as_ref() {
+                         self.name_chat_from_first_prompt(agent_id, &message);
+-                        let _ = self.ui.set_agent_patch_lifecycle(agent_id, true, false);
++                        self.reopen_agent_after_chat(agent_id);
+                     }
+                     let target = target_agent
+                         .as_ref()
+@@ -328,6 +346,13 @@ impl UiHarness {
+         }
+     }
+ 
++    fn reopen_agent_after_chat(&mut self, agent_id: &AgentId) {
++        if let Ok(feature) = self.agent_base_feature(agent_id) {
++            let _ = self.ui.set_agent_feature(agent_id, feature);
++        }
++        let _ = self.ui.set_agent_patch_lifecycle(agent_id, true, false);
++    }
++
+     fn name_chat_from_first_prompt(&mut self, agent_id: &AgentId, prompt: &str) {
+         if let Some(title) = self
+             .chat_title_agent
+@@ -337,6 +362,14 @@ impl UiHarness {
+         }
+     }
+ 
++    fn agent_base_feature(&self, agent_id: &AgentId) -> Result<String, String> {
++        let feature = self
++            .ui
++            .agent_feature(agent_id)
++            .ok_or_else(|| format!("unknown agent `{agent_id}`"))?;
++        Ok(strip_completion_suffix(feature).to_string())
++    }
++
+     fn clear_prompt_edit_state(&mut self) {
+         self.prompt_buffer.clear();
+         self.prompt_cursor = 0;
+@@ -599,6 +632,13 @@ impl UiHarness {
+     }
+ }
+ 
++fn strip_completion_suffix(feature: &str) -> &str {
++    feature
++        .strip_suffix(" DONE?")
++        .or_else(|| feature.strip_suffix(" CLOSED"))
++        .unwrap_or(feature)
++}
++
+ #[derive(Clone, Debug, Eq, PartialEq)]
+ struct PendingEscapeSequence {
+     bytes: Vec<u8>,
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index 240caa8..c2ce5ce 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -86,6 +86,39 @@ fn scripted_harness_rings_and_highlights_ready_chat() {
+     assert!(!harness.render_frame().starts_with('\u{7}'));
+ }
+ 
++#[test]
++fn scripted_harness_highlights_done_question_closes_and_reopens_patch_chat() {
++    let mut harness = UiHarness::new(100, 24);
++
++    harness
++        .mark_agent_needs_completion_decision("user-1")
++        .expect("fixture user-1 agent is registered");
++    let done_left_pane = harness.ui().render_left_pane();
++    assert!(done_left_pane.contains("parser DONE?"));
++    assert!(done_left_pane.contains("READY"));
++    assert!(done_left_pane.contains("\u{1b}[7m"));
++
++    harness
++        .mark_agent_closed("user-1")
++        .expect("fixture user-1 agent is registered");
++    let closed_left_pane = strip_ansi(&harness.ui().render_left_pane());
++    assert!(closed_left_pane.contains("[closed]\n>parser CLOSED user-1"));
++    assert!(!closed_left_pane.contains("READY"));
++
++    harness.handle_byte(b'\n');
++    harness.handle_bytes(b"another change\n");
++
++    let reopened_left_pane = strip_ansi(&harness.ui().render_left_pane());
++    assert!(!reopened_left_pane.contains("parser CLOSED"));
++    assert!(reopened_left_pane.contains("[working]\n>parser user-1"));
++    assert!(
++        harness
++            .transcript()
++            .iter()
++            .any(|line| line == "user-1> another change")
++    );
++}
++
+ #[test]
+ fn scripted_harness_switches_modes_without_enter() {
+     let mut harness = UiHarness::new(80, 24);

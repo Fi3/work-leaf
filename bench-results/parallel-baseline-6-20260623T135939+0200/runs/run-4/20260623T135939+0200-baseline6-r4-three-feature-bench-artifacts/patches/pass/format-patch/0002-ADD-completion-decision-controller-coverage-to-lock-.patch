@@ -1,0 +1,89 @@
+From 8b1089bebb42d50528823c9b5ec4eb57c5918f6b Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Tue, 23 Jun 2026 14:18:29 +0200
+Subject: [PATCH 2/3] ADD completion-decision controller coverage to lock
+ review-finished chat behavior
+
+The controller tests cover the clean-review completion path end to end: review completion selects the patch chat, yes closes the feature, and a later user message reopens the chat before sending follow-up work.
+---
+ src/workspace.rs | 60 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 60 insertions(+)
+
+diff --git a/src/workspace.rs b/src/workspace.rs
+index 72d6ce4..67242af 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -2285,6 +2285,57 @@ mod tests {
+         assert!(!controller.implicit_loading_agents.contains_key(&agent_id));
+     }
+ 
++    #[test]
++    fn feature_done_yes_closes_and_next_message_reopens_chat() {
++        let chat = CommandChat::new(PathBuf::from("/repo"), EmptyBackend);
++        let mut controller = WorkLeafController::new(chat);
++        let agent_id = controller
++            .create_agent("completion workflow")
++            .expect("agent launch is prepared");
++        assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++        controller.ask_feature_done(&agent_id);
++        controller
++            .send_message(&agent_id, "yes")
++            .expect("completion answer is accepted");
++
++        let snapshot = controller.snapshot();
++        let session = snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(session.completion, Some(WorkLeafCompletion::Closed));
++        assert!(
++            session.lines.iter().any(|line| line == "user: yes"),
++            "{session:?}"
++        );
++        assert!(
++            session
++                .lines
++                .iter()
++                .any(|line| line == FEATURE_CLOSED_MESSAGE),
++            "{session:?}"
++        );
++
++        controller
++            .send_message(&agent_id, "continue with follow-up")
++            .expect("closed chat accepts follow-up");
++        assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++        let snapshot = controller.snapshot();
++        let session = snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(session.completion, None);
++        assert_eq!(session.loading, None);
++        assert!(
++            session
++                .lines
++                .iter()
++                .any(|line| line == "user: continue with follow-up"),
++            "{session:?}"
++        );
++    }
++
+     #[test]
+     fn non_user_patch_agent_done_starts_review_and_completion_question() {
+         let root = git_repo("workspace-non-user-review-completion");
+@@ -2318,6 +2369,15 @@ mod tests {
+             .expect("patch-agent message is accepted");
+         assert!(controller.wait_for_idle(Duration::from_secs(2)));
+ 
++        let events = controller.drain_events();
++        assert!(
++            events.iter().any(|event| matches!(
++                event,
++                WorkLeafEvent::AgentSelected { agent_id: selected } if selected == &agent_id
++            )),
++            "{events:?}"
++        );
++
+         let reviewer_id = AgentId::new("review-chat-9").expect("test reviewer id is valid");
+         assert!(
+             backend

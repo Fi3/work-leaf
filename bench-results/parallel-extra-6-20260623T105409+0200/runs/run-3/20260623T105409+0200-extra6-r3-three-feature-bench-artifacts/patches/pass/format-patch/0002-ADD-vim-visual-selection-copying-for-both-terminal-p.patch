@@ -1,0 +1,326 @@
+From 8ce13ff2b5bb1deecb5f1f7cb3103b1a2733c945 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Tue, 23 Jun 2026 11:15:17 +0200
+Subject: [PATCH 2/3] ADD vim visual selection copying for both terminal panes
+
+Support character, line, and block visual selections in the focused terminal pane and yank the selected text through the terminal clipboard path. The harness coverage exercises right-pane transcript selections and left-pane row selections so the behavior stays tied to the shared TerminalUi render path.
+---
+ src/ui.rs            | 91 +++++++++++++++++++++++++++++++++-----------
+ tests/terminal_ui.rs | 13 ++++---
+ tests/ui_harness.rs  | 57 +++++++++++++++++++++++++++
+ 3 files changed, 134 insertions(+), 27 deletions(-)
+
+diff --git a/src/ui.rs b/src/ui.rs
+index 620b15c..d5bbd8a 100644
+--- a/src/ui.rs
++++ b/src/ui.rs
+@@ -172,6 +172,7 @@ struct ChatHistoryMessage {
+ #[derive(Clone, Debug, Eq, PartialEq)]
+ struct VisualCursor {
+     pane: PaneFocus,
++    anchor: VisualPoint,
+     point: VisualPoint,
+ }
+ 
+@@ -452,7 +453,7 @@ impl TerminalUi {
+     }
+ 
+     pub fn visual_selection_active(&self) -> bool {
+-        self.visual_selection.is_some()
++        self.visual_selection.is_some() || self.visual_cursor.is_some()
+     }
+ 
+     pub fn copied_text(&self) -> Option<&str> {
+@@ -1067,10 +1068,8 @@ impl TerminalUi {
+                 visible_right_content,
+                 right_cursor_column,
+             ),
+-            UiKey::Char('Y') => {
+-                self.yank_current_line(visible_right_content, right_cursor_column);
+-                self.clear_visual_selection();
+-            }
++            UiKey::Char('y') => self.yank_visual_selection(visible_right_content, false),
++            UiKey::Char('Y') => self.yank_visual_selection(visible_right_content, true),
+             UiKey::Char('g') => self.pending = Some(PendingKey::G),
+             UiKey::Char('z') if self.chat_folding_enabled() => self.pending = Some(PendingKey::Z),
+             UiKey::Char('G') => self.jump_right_visual_cursor_to_bottom(right_content),
+@@ -1099,6 +1098,7 @@ impl TerminalUi {
+         let point = self.visual_start_point(visible_right_content, right_cursor_column);
+         self.visual_cursor = Some(VisualCursor {
+             pane: self.focus,
++            anchor: point,
+             point,
+         });
+     }
+@@ -1109,21 +1109,19 @@ impl TerminalUi {
+         visible_right_content: &str,
+         right_cursor_column: Option<usize>,
+     ) {
+-        let (pane, point) = self
++        let (pane, anchor, cursor) = self
+             .visual_cursor
+             .take()
+-            .map(|cursor| (cursor.pane, cursor.point))
++            .map(|cursor| (cursor.pane, cursor.anchor, cursor.point))
+             .unwrap_or_else(|| {
+-                (
+-                    self.focus,
+-                    self.visual_start_point(visible_right_content, right_cursor_column),
+-                )
++                let point = self.visual_start_point(visible_right_content, right_cursor_column);
++                (self.focus, point, point)
+             });
+         self.visual_selection = Some(VisualSelection {
+             pane,
+             mode,
+-            anchor: point,
+-            cursor: point,
++            anchor,
++            cursor,
+         });
+     }
+ 
+@@ -1178,7 +1176,9 @@ impl TerminalUi {
+                 .point
+                 .column
+                 .min(lines[row].chars().count().saturating_sub(1));
+-            cursor.point = VisualPoint { row, column };
++            let point = VisualPoint { row, column };
++            cursor.anchor = point;
++            cursor.point = point;
+         }
+     }
+ 
+@@ -1190,7 +1190,7 @@ impl TerminalUi {
+         match self.focus {
+             PaneFocus::Left => {
+                 let lines = self.visual_pane_lines(visible_right_content, PaneFocus::Left);
+-                let row = self.control_selected.min(lines.len().saturating_sub(1));
++                let row = self.left_visual_start_row(lines.len());
+                 VisualPoint { row, column: 0 }
+             }
+             PaneFocus::Right => {
+@@ -1226,6 +1226,26 @@ impl TerminalUi {
+         lines.len().saturating_sub(1)
+     }
+ 
++    fn left_visual_start_row(&self, line_count: usize) -> usize {
++        if line_count == 0 {
++            return 0;
++        }
++        let target = if self.control_selected == 0 {
++            LeftPaneClickTarget::Command
++        } else {
++            let Some(agent_id) = self.control_selected_agent_id() else {
++                return 0;
++            };
++            LeftPaneClickTarget::Agent(agent_id)
++        };
++        let inner_width = usize::from(self.layout().left_width.saturating_sub(2).max(1));
++        self.left_pane_lines(inner_width)
++            .iter()
++            .position(|line| line.control_target.as_ref() == Some(&target))
++            .unwrap_or(0)
++            .min(line_count.saturating_sub(1))
++    }
++
+     fn move_visual_cursor(
+         &mut self,
+         row_delta: isize,
+@@ -1344,9 +1364,33 @@ impl TerminalUi {
+         visible_right_content: &str,
+         force_line: bool,
+     ) -> Option<String> {
+-        let selection = self.visual_selection.as_ref()?;
++        let selection = self.current_visual_selection()?;
+         let lines = self.visual_pane_lines(visible_right_content, selection.pane);
+-        (!lines.is_empty()).then(|| extract_visual_text(&lines, selection, force_line))
++        (!lines.is_empty()).then(|| extract_visual_text(&lines, &selection, force_line))
++    }
++
++    fn current_visual_selection(&self) -> Option<VisualSelection> {
++        self.visual_selection.clone().or_else(|| {
++            self.visual_cursor.as_ref().map(|cursor| VisualSelection {
++                pane: cursor.pane,
++                mode: VisualSelectionMode::Character,
++                anchor: cursor.anchor,
++                cursor: cursor.point,
++            })
++        })
++    }
++
++    fn rendered_visual_selection(&self) -> Option<VisualSelection> {
++        self.visual_selection.clone().or_else(|| {
++            self.visual_cursor.as_ref().and_then(|cursor| {
++                (cursor.anchor != cursor.point).then_some(VisualSelection {
++                    pane: cursor.pane,
++                    mode: VisualSelectionMode::Character,
++                    anchor: cursor.anchor,
++                    cursor: cursor.point,
++                })
++            })
++        })
+     }
+ 
+     fn copy_text_to_clipboard(&mut self, text: String) {
+@@ -1451,7 +1495,7 @@ impl TerminalUi {
+     }
+ 
+     fn apply_visual_selection(&self, buffer: &mut Buffer, visible_right_content: &str) {
+-        let Some(selection) = self.visual_selection.as_ref() else {
++        let Some(selection) = self.rendered_visual_selection() else {
+             return;
+         };
+         let Some(area) = self.visual_pane_area(selection.pane) else {
+@@ -1459,7 +1503,7 @@ impl TerminalUi {
+         };
+         let lines = self.visual_pane_lines(visible_right_content, selection.pane);
+         let width = usize::from(area.width.max(1));
+-        for row in visual_row_range(selection, lines.len()) {
++        for row in visual_row_range(&selection, lines.len()) {
+             if row >= usize::from(area.height) {
+                 break;
+             }
+@@ -1467,7 +1511,7 @@ impl TerminalUi {
+                 .get(row)
+                 .map(|line| line.chars().count())
+                 .unwrap_or_default();
+-            let Some((start, end)) = visual_column_range(selection, row, line_len, width, false)
++            let Some((start, end)) = visual_column_range(&selection, row, line_len, width, false)
+             else {
+                 continue;
+             };
+@@ -1524,9 +1568,12 @@ impl TerminalUi {
+             .column
+             .min(lines[row].chars().count().saturating_sub(1));
+         Some((
+-            area.y.saturating_add(row.min(usize::from(u16::MAX)) as u16),
++            area.y
++                .saturating_add(row.min(usize::from(u16::MAX)) as u16)
++                .saturating_add(1),
+             area.x
+-                .saturating_add(column.min(usize::from(u16::MAX)) as u16),
++                .saturating_add(column.min(usize::from(u16::MAX)) as u16)
++                .saturating_add(1),
+         ))
+     }
+ 
+diff --git a/tests/terminal_ui.rs b/tests/terminal_ui.rs
+index 2f85ac5..4db220f 100644
+--- a/tests/terminal_ui.rs
++++ b/tests/terminal_ui.rs
+@@ -329,7 +329,7 @@ fn visual_mode_yanks_left_pane_line_and_block_selections() {
+ 
+     ui.handle_key(UiKey::Char('y'));
+ 
+-    assert_eq!(ui.copied_text(), Some("[command]\n> work-leaf  command"));
++    assert_eq!(ui.copied_text(), Some("> work-leaf  command\n[working]"));
+     assert!(!ui.visual_selection_active());
+     assert!(ui.render_screen("right pane").starts_with("\u{1b}]52;c;"));
+ 
+@@ -343,7 +343,7 @@ fn visual_mode_yanks_left_pane_line_and_block_selections() {
+     );
+     ui.handle_key(UiKey::Char('y'));
+ 
+-    assert_eq!(ui.copied_text(), Some("[co\n> w"));
++    assert_eq!(ui.copied_text(), Some("> w\n[wo"));
+ }
+ 
+ #[test]
+@@ -356,14 +356,14 @@ fn visual_mode_v_enters_cursor_mode_before_selecting_text() {
+ 
+     ui.handle_key(UiKey::Char('v'));
+ 
+-    assert!(!ui.visual_selection_active());
++    assert!(ui.visual_selection_active());
+     assert!(
+         ui.render_screen("right pane")
+             .contains("mode=visual-cursor focus=left")
+     );
+ 
+     ui.handle_key(UiKey::Char('j'));
+-    assert!(!ui.visual_selection_active());
++    assert!(ui.visual_selection_active());
+     assert!(
+         ui.render_screen("right pane")
+             .contains("mode=visual-cursor focus=left")
+@@ -380,7 +380,10 @@ fn visual_mode_v_enters_cursor_mode_before_selecting_text() {
+     ui.handle_key(UiKey::Char('V'));
+     ui.handle_key(UiKey::Char('y'));
+ 
+-    assert_eq!(ui.copied_text(), Some(" parser chat-a"));
++    assert_eq!(
++        ui.copied_text(),
++        Some("> work-leaf  command\n[working]\n parser chat-a\n docs chat-b")
++    );
+ }
+ 
+ #[test]
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index c50872c..ce2908f 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -392,6 +392,63 @@ fn scripted_harness_visual_mode_yanks_right_pane_line_to_clipboard() {
+     assert!(frame.contains("copied "));
+ }
+ 
++#[test]
++fn scripted_harness_visual_char_mode_yanks_right_pane_selection_to_clipboard() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_byte(b'v');
++    assert!(harness.ui().visual_selection_active());
++
++    harness.handle_byte(b'l');
++    assert!(
++        harness
++            .render_frame()
++            .contains("\u{1b}[7mEs\u{1b}[0mc command")
++    );
++    harness.handle_byte(b'y');
++
++    assert_eq!(harness.ui().copied_text(), Some("Es"));
++    assert!(harness.render_frame().starts_with("\u{1b}]52;c;"));
++}
++
++#[test]
++fn scripted_harness_visual_line_mode_yanks_left_pane_selected_row_to_clipboard() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_byte(b'V');
++    assert!(harness.ui().visual_selection_active());
++    assert!(
++        harness
++            .render_frame()
++            .contains("mode=visual-line focus=left")
++    );
++
++    harness.handle_byte(b'Y');
++
++    assert_eq!(harness.ui().copied_text(), Some(">user-1 READY"));
++}
++
++#[test]
++fn scripted_harness_visual_block_mode_yanks_right_pane_rectangle_to_clipboard() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_byte(22);
++    assert!(harness.ui().visual_selection_active());
++    assert!(
++        harness
++            .render_frame()
++            .contains("mode=visual-block focus=right")
++    );
++
++    harness.handle_byte(b'l');
++    harness.handle_byte(b'j');
++    harness.handle_byte(b'y');
++
++    assert_eq!(harness.ui().copied_text(), Some("Es\nch"));
++}
++
+ #[test]
+ fn scripted_harness_ctrl_c_never_quits_and_only_right_focus_interrupts_agent() {
+     let mut harness = UiHarness::new(80, 24);

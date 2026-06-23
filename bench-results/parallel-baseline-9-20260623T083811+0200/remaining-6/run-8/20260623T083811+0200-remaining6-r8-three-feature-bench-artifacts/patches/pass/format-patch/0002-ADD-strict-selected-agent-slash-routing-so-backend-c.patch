@@ -1,0 +1,706 @@
+From 4b8d0a64c638829b01f09f05f98f702c097b68a3 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Tue, 23 Jun 2026 09:56:05 +0200
+Subject: [PATCH 2/2] ADD strict selected-agent slash routing so backend
+ commands do not become prompts
+
+Selected-agent messages that begin with a slash command use the provider command path instead of normal prompt send. This lets backend commands run against the existing agent session immediately while ordinary task prompts keep the existing send and queue behavior.
+---
+ src/agent_runtime.rs  |   7 ++
+ src/cli.rs            |  33 +++++++
+ src/codex.rs          |  41 +++++++++
+ src/workspace.rs      | 210 +++++++++++++++++++++++++++++++++++++++++-
+ tests/terminal_app.rs |  37 ++++++--
+ tests/workspace.rs    |  53 ++++++++---
+ 6 files changed, 362 insertions(+), 19 deletions(-)
+
+diff --git a/src/agent_runtime.rs b/src/agent_runtime.rs
+index 1eb3ba0..3bfad5c 100644
+--- a/src/agent_runtime.rs
++++ b/src/agent_runtime.rs
+@@ -13,6 +13,13 @@ pub trait AgentBackend {
+     fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError>;
+     fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError>;
+ 
++    fn command(&mut self, _agent_id: &AgentId, command: &str) -> Result<ChatMessage, AgentError> {
++        Err(AgentError::Io(std::io::Error::new(
++            std::io::ErrorKind::Unsupported,
++            format!("backend command `{command}` is not supported"),
++        )))
++    }
++
+     /// Optional snapshot lookup for providers that keep local session metadata.
+     ///
+     /// Work Leaf does not require providers to override this method for persistent hidden
+diff --git a/src/cli.rs b/src/cli.rs
+index 1320377..874a7d7 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -427,6 +427,17 @@ impl AgentBackend for SelectedAgentBackend {
+         }
+     }
+ 
++    fn command(
++        &mut self,
++        agent_id: &AgentId,
++        command: &str,
++    ) -> Result<ChatMessage, crate::agent::AgentError> {
++        match self {
++            Self::Codex(backend) => backend.command(agent_id, command),
++            Self::Claude(backend) => backend.command(agent_id, command),
++        }
++    }
++
+     fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
+         match self {
+             Self::Codex(backend) => backend.session(agent_id),
+@@ -883,6 +894,20 @@ where
+         message: &str,
+         stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+     ) -> Result<CommandChatResult, CliError> {
++        if is_agent_slash_command_message(message) {
++            let reply = self
++                .backend
++                .as_mut()
++                .expect("command chat backend is present")
++                .command(agent_id, message)
++                .map_err(CliError::Agent)?
++                .text;
++            return Ok(CommandChatResult::AgentMessage {
++                agent_id: agent_id.clone(),
++                reply,
++            });
++        }
++
+         let feature = self
+             .agents
+             .get(agent_id)
+@@ -1558,6 +1583,14 @@ fn parse_command_agent_reply(reply: &str) -> Result<CommandAgentDecision, CliErr
+     Ok(CommandAgentDecision::Reply(reply))
+ }
+ 
++fn is_agent_slash_command_message(message: &str) -> bool {
++    message.strip_prefix('/').is_some_and(|rest| {
++        rest.chars()
++            .next()
++            .is_some_and(|first| !first.is_whitespace())
++    })
++}
++
+ fn strip_ascii_prefix_case_insensitive<'a>(value: &'a str, prefix: &str) -> Option<&'a str> {
+     value
+         .to_ascii_lowercase()
+diff --git a/src/codex.rs b/src/codex.rs
+index 271ee85..f014e5c 100644
+--- a/src/codex.rs
++++ b/src/codex.rs
+@@ -1521,6 +1521,47 @@ impl AgentBackend for CodexBackend {
+         self.send_streaming(agent_id, prompt, &mut |_| {})
+     }
+ 
++    fn command(&mut self, agent_id: &AgentId, command: &str) -> Result<ChatMessage, AgentError> {
++        if slash_command_name(command).0.is_none() {
++            return Err(AgentError::Io(std::io::Error::new(
++                std::io::ErrorKind::InvalidInput,
++                "backend command must start with `/` followed by a command token",
++            )));
++        }
++
++        let _operation_guard = self.acquire_agent_operation(agent_id);
++        let thread_id = {
++            let state = self
++                .state
++                .lock()
++                .expect("codex backend state mutex poisoned");
++            state
++                .thread_ids
++                .get(agent_id)
++                .cloned()
++                .ok_or_else(|| AgentError::UnknownSession(agent_id.clone()))?
++        };
++        let sandbox = self.sandbox_for_agent(agent_id);
++        let output =
++            self.app_server
++                .command(agent_id, command, &thread_id, &sandbox, &self.shutdown)?;
++        if !output.thread_id.is_empty() || output.usage.is_some() {
++            let mut state = self
++                .state
++                .lock()
++                .expect("codex backend state mutex poisoned");
++            if !output.thread_id.is_empty() {
++                state
++                    .thread_ids
++                    .insert(agent_id.clone(), output.thread_id.clone());
++            }
++            if let Some(usage) = output.usage {
++                record_usage(&mut state, agent_id, usage);
++            }
++        }
++        self.record_send_reply(agent_id, command, output.reply)
++    }
++
+     fn shutdown_handle(&self) -> AgentShutdownHandle {
+         self.shutdown.clone()
+     }
+diff --git a/src/workspace.rs b/src/workspace.rs
+index 72d6ce4..af28c51 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -290,7 +290,11 @@ where
+             self.set_session_completion(agent_id, None);
+         }
+ 
+-        let first_chat_title = self.reserve_first_chat_title(agent_id, message);
++        let first_chat_title = if is_agent_slash_command {
++            None
++        } else {
++            self.reserve_first_chat_title(agent_id, message)
++        };
+         if let Some(title) = &first_chat_title {
+             self.apply_agent_title(agent_id, title.clone());
+         }
+@@ -298,6 +302,10 @@ where
+             self.append_agent_line(agent_id, format!("user: {message}"));
+             return Ok(());
+         }
++        if is_agent_slash_command {
++            self.start_agent_command_worker(agent_id.clone(), message.to_string());
++            return Ok(());
++        }
+         if self
+             .sessions
+             .get(agent_id)
+@@ -1015,6 +1023,24 @@ where
+         self.start_send_worker_with_user_line(agent_id, message, false);
+     }
+ 
++    fn start_agent_command_worker(&mut self, agent_id: AgentId, message: String) {
++        self.append_agent_line(&agent_id, format!("user: {message}"));
++        self.start_worker(None, move |mut chat, sender| {
++            let mut stream = |_: &AgentId, _: AgentStreamEvent| {};
++            match chat.send_to_agent_streaming_with_ids(&agent_id, &message, &mut stream) {
++                Ok(result) => {
++                    let _ = sender.send(WorkerEvent::AgentCommandComplete { agent_id, result });
++                }
++                Err(error) => {
++                    let _ = sender.send(WorkerEvent::AgentCommandError {
++                        agent_id,
++                        message: command_chat_error_text(&error),
++                    });
++                }
++            }
++        });
++    }
++
+     fn start_send_worker_with_user_line(
+         &mut self,
+         agent_id: AgentId,
+@@ -1229,6 +1255,18 @@ where
+             WorkerEvent::CommandAgentDecision { decision } => {
+                 self.apply_command_agent_decision(decision);
+             }
++            WorkerEvent::AgentCommandComplete { agent_id, result } => {
++                if self.stopped_for_linearize.contains(&agent_id) {
++                    return;
++                }
++                self.apply_agent_result(&agent_id, &result);
++            }
++            WorkerEvent::AgentCommandError { agent_id, message } => {
++                if self.stopped_for_linearize.contains(&agent_id) {
++                    return;
++                }
++                self.append_agent_line(&agent_id, message);
++            }
+             WorkerEvent::Complete {
+                 agent_id,
+                 result,
+@@ -1931,6 +1969,14 @@ enum WorkerEvent {
+     CommandAgentDecision {
+         decision: CommandAgentDecision,
+     },
++    AgentCommandComplete {
++        agent_id: AgentId,
++        result: CommandChatResult,
++    },
++    AgentCommandError {
++        agent_id: AgentId,
++        message: String,
++    },
+     Complete {
+         agent_id: Option<AgentId>,
+         result: CommandChatResult,
+@@ -2196,6 +2242,7 @@ mod tests {
+         replies: VecDeque<String>,
+         launches: Vec<AgentLaunch>,
+         sends: Vec<(AgentId, String)>,
++        commands: Vec<(AgentId, String)>,
+         sessions: BTreeMap<AgentId, AgentSession>,
+     }
+ 
+@@ -2206,6 +2253,7 @@ mod tests {
+                     replies: replies.into_iter().map(String::from).collect(),
+                     launches: Vec::new(),
+                     sends: Vec::new(),
++                    commands: Vec::new(),
+                     sessions: BTreeMap::new(),
+                 })),
+             }
+@@ -2214,6 +2262,14 @@ mod tests {
+         fn launches(&self) -> Vec<AgentLaunch> {
+             self.state.lock().unwrap().launches.clone()
+         }
++
++        fn sends(&self) -> Vec<(AgentId, String)> {
++            self.state.lock().unwrap().sends.clone()
++        }
++
++        fn commands(&self) -> Vec<(AgentId, String)> {
++            self.state.lock().unwrap().commands.clone()
++        }
+     }
+ 
+     impl AgentBackend for ScriptedBackend {
+@@ -2246,11 +2302,163 @@ mod tests {
+             Ok(ChatMessage::new(MessageRole::Agent, reply))
+         }
+ 
++        fn command(
++            &mut self,
++            agent_id: &AgentId,
++            command: &str,
++        ) -> Result<ChatMessage, crate::agent::AgentError> {
++            let mut state = self.state.lock().unwrap();
++            state.commands.push((agent_id.clone(), command.to_string()));
++            let reply = state.replies.pop_front().expect("missing fake reply");
++            if let Some(session) = state.sessions.get_mut(agent_id) {
++                session.push_message(MessageRole::User, command);
++                session.push_message(MessageRole::Agent, reply.clone());
++            }
++            Ok(ChatMessage::new(MessageRole::Agent, reply))
++        }
++
+         fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
+             self.state.lock().unwrap().sessions.get(agent_id).cloned()
+         }
+     }
+ 
++    #[test]
++    fn selected_agent_status_slash_command_runs_immediately_while_agent_is_loading() {
++        let backend = ScriptedBackend::new(["busy backend status output"]);
++        let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
++        let mut controller = WorkLeafController::new(chat);
++        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
++
++        controller.register_agent_feature(agent_id.clone(), "busy slash status".to_string());
++        controller.add_session(WorkLeafSession {
++            id: agent_id.clone(),
++            kind: AgentKind::Codex,
++            title: "user-1".to_string(),
++            feature: "busy slash status".to_string(),
++            lines: Vec::new(),
++            loading: Some(WorkLeafLoading::WaitingForReply),
++            completion: None,
++            token_usage: None,
++            depends_on: Vec::new(),
++            depended_on_by: Vec::new(),
++        });
++
++        controller
++            .send_message(&agent_id, "/status")
++            .expect("slash command message is accepted");
++        assert!(controller.wait_for_session_line(
++            &agent_id,
++            "busy backend status output",
++            Duration::from_secs(1)
++        ));
++
++        assert_eq!(
++            backend.commands(),
++            vec![(agent_id.clone(), "/status".to_string())]
++        );
++        assert!(
++            backend.sends().is_empty(),
++            "/status must not reach the normal send path"
++        );
++        assert!(!controller.has_pending_agent_prompt(&agent_id));
++        let snapshot = controller.snapshot();
++        let session = snapshot.session(&agent_id).expect("agent session exists");
++        assert_eq!(session.loading, Some(WorkLeafLoading::WaitingForReply));
++        assert!(session.lines.iter().any(|line| line == "user: /status"));
++    }
++
++    #[test]
++    fn selected_agent_status_slash_command_uses_backend_command_not_send() {
++        let backend = ScriptedBackend::new(["backend status output"]);
++        let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
++        let mut controller = WorkLeafController::new(chat);
++        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
++
++        controller.register_agent_feature(agent_id.clone(), "slash status".to_string());
++        controller.add_session(WorkLeafSession {
++            id: agent_id.clone(),
++            kind: AgentKind::Codex,
++            title: "user-1".to_string(),
++            feature: "slash status".to_string(),
++            lines: Vec::new(),
++            loading: None,
++            completion: None,
++            token_usage: None,
++            depends_on: Vec::new(),
++            depended_on_by: Vec::new(),
++        });
++
++        controller
++            .send_message(&agent_id, "/status")
++            .expect("slash command message is accepted");
++        assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++        assert_eq!(
++            backend.commands(),
++            vec![(agent_id.clone(), "/status".to_string())]
++        );
++        assert!(
++            backend.sends().is_empty(),
++            "/status must not reach the normal send path"
++        );
++        let snapshot = controller.snapshot();
++        let session = snapshot.session(&agent_id).expect("agent session exists");
++        assert!(session.lines.iter().any(|line| line == "user: /status"));
++        assert!(
++            session
++                .lines
++                .iter()
++                .any(|line| line == "backend status output"),
++            "{session:?}"
++        );
++    }
++
++    #[test]
++    fn selected_agent_fork_slash_command_uses_backend_command() {
++        let backend = ScriptedBackend::new(["backend fork output"]);
++        let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
++        let mut controller = WorkLeafController::new(chat);
++        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
++
++        controller.register_agent_feature(agent_id.clone(), "slash fork".to_string());
++        controller.add_session(WorkLeafSession {
++            id: agent_id.clone(),
++            kind: AgentKind::Codex,
++            title: "user-1".to_string(),
++            feature: "slash fork".to_string(),
++            lines: Vec::new(),
++            loading: None,
++            completion: None,
++            token_usage: None,
++            depends_on: Vec::new(),
++            depended_on_by: Vec::new(),
++        });
++
++        controller
++            .send_message(&agent_id, "/fork")
++            .expect("slash command message is accepted");
++        assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++        assert_eq!(
++            backend.commands(),
++            vec![(agent_id.clone(), "/fork".to_string())]
++        );
++        assert!(
++            backend.sends().is_empty(),
++            "/fork must not reach the normal send path"
++        );
++        let snapshot = controller.snapshot();
++        let session = snapshot.session(&agent_id).expect("agent session exists");
++        assert!(session.lines.iter().any(|line| line == "user: /fork"));
++        assert!(
++            session
++                .lines
++                .iter()
++                .any(|line| line == "backend fork output"),
++            "{session:?}"
++        );
++    }
++
+     #[test]
+     fn feature_done_decision_clears_patch_agent_loading() {
+         let chat = CommandChat::new(PathBuf::from("/repo"), EmptyBackend);
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index 93d3086..982f7de 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -49,7 +49,7 @@ fn terminal_app_new_and_chat_message_use_real_command_chat_backend() {
+ }
+ 
+ #[test]
+-fn terminal_app_slash_command_from_chat_view_sends_to_selected_agent() {
++fn terminal_app_slash_command_from_chat_view_uses_selected_agent_command() {
+     let backend = FakeBackend::new(["launch reply", "backend status output"]);
+     let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+     let mut app = TerminalApp::new(chat, 100, 24);
+@@ -66,13 +66,14 @@ fn terminal_app_slash_command_from_chat_view_sends_to_selected_agent() {
+ 
+     let backend = app.into_chat().into_backend();
+     assert_eq!(
+-        backend.sends(),
++        backend.commands(),
+         vec![(AgentId::new("user-1").unwrap(), "/status".to_string())]
+     );
++    assert!(backend.sends().is_empty());
+ }
+ 
+ #[test]
+-fn terminal_app_slash_command_from_colon_prompt_sends_to_selected_agent() {
++fn terminal_app_slash_command_from_colon_prompt_uses_selected_agent_command() {
+     let backend = FakeBackend::new(["launch reply", "backend colon status output"]);
+     let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+     let mut app = TerminalApp::new(chat, 100, 24);
+@@ -87,9 +88,10 @@ fn terminal_app_slash_command_from_colon_prompt_sends_to_selected_agent() {
+ 
+     let backend = app.into_chat().into_backend();
+     assert_eq!(
+-        backend.sends(),
++        backend.commands(),
+         vec![(AgentId::new("user-1").unwrap(), "/status".to_string())]
+     );
++    assert!(backend.sends().is_empty());
+ }
+ 
+ #[test]
+@@ -1091,6 +1093,7 @@ fn terminal_app_marks_reviewed_patch_agent_done_and_closed_visibly() {
+     let frame = app.render_frame();
+     assert!(frame.contains("work-leaf: is this feature done? [yes/no]"));
+     let sends_after_review = backend.sends().len();
++    let commands_after_review = backend.commands().len();
+ 
+     app.handle_bytes(b"i/status\n");
+     assert!(app.wait_for_idle(Duration::from_secs(1)));
+@@ -1098,17 +1101,20 @@ fn terminal_app_marks_reviewed_patch_agent_done_and_closed_visibly() {
+     assert!(frame.contains("user: /status"));
+     assert!(frame.contains("backend status output"));
+     assert!(app.ui().render_left_pane().contains("DONE?"));
+-    assert_eq!(backend.sends().len(), sends_after_review + 1);
++    assert_eq!(backend.sends().len(), sends_after_review);
++    assert_eq!(backend.commands().len(), commands_after_review + 1);
+ 
+     app.handle_bytes(b"maybe\n");
+     assert!(app.render_frame().contains("work-leaf: answer yes or no"));
+-    assert_eq!(backend.sends().len(), sends_after_review + 1);
++    assert_eq!(backend.sends().len(), sends_after_review);
++    assert_eq!(backend.commands().len(), commands_after_review + 1);
+ 
+     app.handle_bytes(b"yes\n");
+     let frame = app.render_frame();
+     assert!(frame.contains("work-leaf: feature marked closed"));
+     assert!(app.ui().render_left_pane().contains("CLOSED"));
+-    assert_eq!(backend.sends().len(), sends_after_review + 1);
++    assert_eq!(backend.sends().len(), sends_after_review);
++    assert_eq!(backend.commands().len(), commands_after_review + 1);
+ 
+     app.handle_bytes(b"add another tweak\n");
+     assert!(app.wait_for_idle(Duration::from_secs(1)));
+@@ -1245,6 +1251,7 @@ struct FakeBackendState {
+     replies: VecDeque<String>,
+     launches: Vec<AgentLaunch>,
+     sends: Vec<(AgentId, String)>,
++    commands: Vec<(AgentId, String)>,
+     sessions: BTreeMap<AgentId, AgentSession>,
+ }
+ 
+@@ -1334,6 +1341,7 @@ impl FakeBackend {
+                 replies,
+                 launches: Vec::new(),
+                 sends: Vec::new(),
++                commands: Vec::new(),
+                 sessions: BTreeMap::new(),
+             })),
+         }
+@@ -1346,6 +1354,10 @@ impl FakeBackend {
+     fn sends(&self) -> Vec<(AgentId, String)> {
+         self.state.lock().unwrap().sends.clone()
+     }
++
++    fn commands(&self) -> Vec<(AgentId, String)> {
++        self.state.lock().unwrap().commands.clone()
++    }
+ }
+ 
+ impl AgentBackend for FakeBackend {
+@@ -1406,6 +1418,17 @@ impl AgentBackend for FakeBackend {
+         Ok(ChatMessage::new(MessageRole::Agent, reply))
+     }
+ 
++    fn command(&mut self, agent_id: &AgentId, command: &str) -> Result<ChatMessage, AgentError> {
++        let mut state = self.state.lock().unwrap();
++        state.commands.push((agent_id.clone(), command.to_string()));
++        let reply = state.replies.pop_front().expect("missing fake reply");
++        if let Some(session) = state.sessions.get_mut(agent_id) {
++            session.push_message(MessageRole::User, command);
++            session.push_message(MessageRole::Agent, reply.clone());
++        }
++        Ok(ChatMessage::new(MessageRole::Agent, reply))
++    }
++
+     fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
+         self.state.lock().unwrap().sessions.get(agent_id).cloned()
+     }
+diff --git a/tests/workspace.rs b/tests/workspace.rs
+index 36509bf..a23242d 100644
+--- a/tests/workspace.rs
++++ b/tests/workspace.rs
+@@ -770,6 +770,7 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
+         "{patch_agent:?}"
+     );
+     let sends_after_review = backend.sends().len();
++    let commands_after_review = backend.commands().len();
+ 
+     controller.send_message(&agent_id, "/status").unwrap();
+     assert!(controller.wait_for_idle(Duration::from_secs(1)));
+@@ -786,10 +787,11 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
+             .iter()
+             .any(|line| line == "backend status reply")
+     );
+-    assert_eq!(backend.sends().len(), sends_after_review + 1);
++    assert_eq!(backend.sends().len(), sends_after_review);
++    assert_eq!(backend.commands().len(), commands_after_review + 1);
+     assert!(
+         backend
+-            .sends()
++            .commands()
+             .iter()
+             .any(|(target, prompt)| target == &agent_id && prompt == "/status")
+     );
+@@ -807,7 +809,8 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
+             .iter()
+             .any(|line| line == "work-leaf: answer yes or no to close this feature")
+     );
+-    assert_eq!(backend.sends().len(), sends_after_review + 1);
++    assert_eq!(backend.sends().len(), sends_after_review);
++    assert_eq!(backend.commands().len(), commands_after_review + 1);
+ 
+     controller.send_message(&agent_id, "no thanks").unwrap();
+     let snapshot = controller.snapshot();
+@@ -822,7 +825,8 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
+             .iter()
+             .any(|line| line == "user: no thanks")
+     );
+-    assert_eq!(backend.sends().len(), sends_after_review + 1);
++    assert_eq!(backend.sends().len(), sends_after_review);
++    assert_eq!(backend.commands().len(), commands_after_review + 1);
+ 
+     controller.send_message(&agent_id, "no /status").unwrap();
+     let snapshot = controller.snapshot();
+@@ -837,7 +841,8 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
+             .iter()
+             .any(|line| line == "user: no /status")
+     );
+-    assert_eq!(backend.sends().len(), sends_after_review + 1);
++    assert_eq!(backend.sends().len(), sends_after_review);
++    assert_eq!(backend.commands().len(), commands_after_review + 1);
+ 
+     controller.send_message(&agent_id, "yes").unwrap();
+     let snapshot = controller.snapshot();
+@@ -849,7 +854,8 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
+             .iter()
+             .any(|line| line == "work-leaf: feature marked closed")
+     );
+-    assert_eq!(backend.sends().len(), sends_after_review + 1);
++    assert_eq!(backend.sends().len(), sends_after_review);
++    assert_eq!(backend.commands().len(), commands_after_review + 1);
+ 
+     controller
+         .send_message(&agent_id, "add another tweak")
+@@ -1469,7 +1475,7 @@ fn controller_linearize_preserves_cumulative_review_scope_for_one_done() {
+ }
+ 
+ #[test]
+-fn controller_sends_agent_slash_commands_to_the_backend_unchanged() {
++fn controller_routes_agent_slash_commands_to_backend_command_unchanged() {
+     let backend = FakeBackend::new(["launch reply", "backend status output"]);
+     let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+     let mut controller = WorkLeafController::new(chat);
+@@ -1492,14 +1498,18 @@ fn controller_sends_agent_slash_commands_to_the_backend_unchanged() {
+             .any(|line| line == "backend status output")
+     );
+     assert_eq!(
+-        backend.sends(),
++        backend.commands(),
+         vec![(agent_id.clone(), "/status".to_string())],
+-        "slash commands must be sent to the selected agent unchanged"
++        "slash commands must be routed to the selected backend command path unchanged"
++    );
++    assert!(
++        backend.sends().is_empty(),
++        "slash commands must not use the normal prompt send path"
+     );
+ }
+ 
+ #[test]
+-fn controller_sends_fork_slash_command_to_the_same_agent_unchanged() {
++fn controller_routes_fork_slash_command_to_the_same_backend_agent_unchanged() {
+     let backend = FakeBackend::new(["launch reply", "backend fork output"]);
+     let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+     let mut controller = WorkLeafController::new(chat);
+@@ -1531,13 +1541,17 @@ fn controller_sends_fork_slash_command_to_the_same_agent_unchanged() {
+     );
+     assert!(snapshot.session(&AgentId::new("user-2").unwrap()).is_none());
+     assert_eq!(
+-        backend.sends(),
++        backend.commands(),
+         vec![(
+             source_agent.clone(),
+             "/fork try an alternate implementation".to_string()
+         )],
+         "slash commands must not be converted into Work Leaf actions"
+     );
++    assert!(
++        backend.sends().is_empty(),
++        "slash commands must not use the normal prompt send path"
++    );
+ }
+ 
+ #[test]
+@@ -2427,6 +2441,7 @@ struct FakeBackendState {
+     replies: VecDeque<String>,
+     launches: Vec<AgentLaunch>,
+     sends: Vec<(AgentId, String)>,
++    commands: Vec<(AgentId, String)>,
+     sessions: BTreeMap<AgentId, AgentSession>,
+ }
+ 
+@@ -2471,6 +2486,7 @@ impl FakeBackend {
+                 replies: replies.into_iter().map(String::from).collect(),
+                 launches: Vec::new(),
+                 sends: Vec::new(),
++                commands: Vec::new(),
+                 sessions: BTreeMap::new(),
+             })),
+         }
+@@ -2504,6 +2520,10 @@ impl FakeBackend {
+             .collect()
+     }
+ 
++    fn commands(&self) -> Vec<(AgentId, String)> {
++        self.state.lock().unwrap().commands.clone()
++    }
++
+     fn all_sends(&self) -> Vec<(AgentId, String)> {
+         self.state.lock().unwrap().sends.clone()
+     }
+@@ -2631,6 +2651,17 @@ impl AgentBackend for FakeBackend {
+         Ok(ChatMessage::new(MessageRole::Agent, reply))
+     }
+ 
++    fn command(&mut self, agent_id: &AgentId, command: &str) -> Result<ChatMessage, AgentError> {
++        let mut state = self.state.lock().unwrap();
++        state.commands.push((agent_id.clone(), command.to_string()));
++        let reply = state.replies.pop_front().expect("missing fake reply");
++        if let Some(session) = state.sessions.get_mut(agent_id) {
++            session.push_message(MessageRole::User, command);
++            session.push_message(MessageRole::Agent, reply.clone());
++        }
++        Ok(ChatMessage::new(MessageRole::Agent, reply))
++    }
++
+     fn session(&self, agent_id: &AgentId) -> Option<AgentSession> {
+         self.state.lock().unwrap().sessions.get(agent_id).cloned()
+     }

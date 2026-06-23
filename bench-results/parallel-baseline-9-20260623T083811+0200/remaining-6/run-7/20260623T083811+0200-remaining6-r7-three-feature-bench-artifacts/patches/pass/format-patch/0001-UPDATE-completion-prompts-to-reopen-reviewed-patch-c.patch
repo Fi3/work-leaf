@@ -1,0 +1,171 @@
+From 4661a5b12f64db963e1e3c56ee5a6a09400fd9f0 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Tue, 23 Jun 2026 09:49:39 +0200
+Subject: [PATCH 1/3] UPDATE completion prompts to reopen reviewed patch chats
+ for follow-up replies
+
+Treat arbitrary replies to the review-completion question as follow-up requests so users can continue a reviewed patch chat without first fitting the response into a strict yes/no answer. The controller clears the pending decision, marks the feature open, and routes the requested fix back through the normal patch/review cycle.
+---
+ docs/architecture.md               | 12 ++---
+ docs/orchestrator-file-workflow.md |  6 +--
+ src/workspace.rs                   |  8 +++-
+ tests/workspace.rs                 | 73 ++++--------------------------
+ 4 files changed, 25 insertions(+), 74 deletions(-)
+
+diff --git a/docs/architecture.md b/docs/architecture.md
+index 1c5bdc9..2229553 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -397,12 +397,12 @@ bare `no` keeps the feature open. A `no` followed by punctuation and follow-up t
+ follow-up prompt that asks for the requested fixes through the patch flow and another
+ `@work-leaf done` before the controller starts a new review pass. After the new review resolves with
+ no findings, the controller selects the patch-agent chat and asks the completion question again.
+-Messages that are not accepted yes/no answers keep the completion question active and are not sent to
+-the backend. A later message in a closed chat clears the closed state before sending the message to
+-the agent backend. The normal `linearize` command requires every reviewed patch-agent chat in the
+-current instance to be closed before launching the linearizer. `force-linearize` launches the same
+-linearizer handoff without that closed-chat gate for automation and direct command-chat flows that
+-intentionally bypass the completion decision.
++Other replies keep the feature open and send the patch agent the same structured follow-up prompt
++with the user's text as the requested fix. A later message in a closed chat clears the closed state
++before sending the message to the agent backend. The normal `linearize` command requires every
++reviewed patch-agent chat in the current instance to be closed before launching the linearizer.
++`force-linearize` launches the same linearizer handoff without that closed-chat gate for automation
++and direct command-chat flows that intentionally bypass the completion decision.
+ 
+ Agent dependency options are validated before dependent work is registered. A dependency target from
+ `--depends-on <agent-id>` must name an existing, different session. When the dependency is still
+diff --git a/docs/orchestrator-file-workflow.md b/docs/orchestrator-file-workflow.md
+index 513b13a..fbdb2a9 100644
+--- a/docs/orchestrator-file-workflow.md
++++ b/docs/orchestrator-file-workflow.md
+@@ -487,9 +487,9 @@ that patch-agent chat closed. A bare `no` keeps it open. A `no` followed by punc
+ follow-up text sends the patch agent a structured follow-up prompt, and the patch agent must submit
+ the requested fixes through the patch protocol and report `@work-leaf done` before review runs
+ again. After that review resolves with no findings, the patch-agent chat is selected and asks the
+-completion question again. Messages that are not accepted yes/no answers leave the completion
+-question active. A later user message in a closed chat reopens it before the message is sent to the
+-agent.
++completion question again. Other replies keep the feature open and send the patch agent the same
++structured follow-up prompt with the user's text as the requested fix. A later user message in a
++closed chat reopens it before the message is sent to the agent.
+ 
+ ## Developer Path
+ 
+diff --git a/src/workspace.rs b/src/workspace.rs
+index 72d6ce4..8c2d52c 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -23,7 +23,6 @@ use crate::review::{AgentCommit, GitHistory, ReviewResult};
+ const FEATURE_DONE_QUESTION: &str = "work-leaf: is this feature done? [yes/no]";
+ const FEATURE_CLOSED_MESSAGE: &str = "work-leaf: feature marked closed";
+ const FEATURE_OPEN_MESSAGE: &str = "work-leaf: feature remains open";
+-const FEATURE_DONE_ANSWER_MESSAGE: &str = "work-leaf: answer yes or no to close this feature";
+ pub(crate) const REVIEW_FINISHED_NO_FINDINGS_MESSAGE: &str =
+     "work-leaf: review finished with no findings";
+ pub(crate) const REVIEW_FINISHED_WITH_FINDINGS_MESSAGE: &str =
+@@ -1369,7 +1368,12 @@ where
+                 }
+             }
+             FeatureDoneAnswer::Unknown => {
+-                self.append_agent_line(agent_id, FEATURE_DONE_ANSWER_MESSAGE.to_string());
++                self.set_session_completion(agent_id, None);
++                self.append_agent_line(agent_id, FEATURE_OPEN_MESSAGE.to_string());
++                self.start_send_worker_without_user_line(
++                    agent_id.clone(),
++                    user_follow_up_fix_prompt(message),
++                );
+             }
+         }
+     }
+diff --git a/tests/workspace.rs b/tests/workspace.rs
+index 36509bf..09bdd64 100644
+--- a/tests/workspace.rs
++++ b/tests/workspace.rs
+@@ -795,76 +795,23 @@ fn controller_asks_patch_agent_if_feature_is_done_after_clean_review() {
+     );
+ 
+     controller.send_message(&agent_id, "maybe").unwrap();
+-    let snapshot = controller.snapshot();
+-    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+-    assert_eq!(
+-        patch_agent.completion,
+-        Some(WorkLeafCompletion::NeedsDecision)
+-    );
+-    assert!(
+-        patch_agent
+-            .lines
+-            .iter()
+-            .any(|line| line == "work-leaf: answer yes or no to close this feature")
+-    );
+-    assert_eq!(backend.sends().len(), sends_after_review + 1);
+-
+-    controller.send_message(&agent_id, "no thanks").unwrap();
+-    let snapshot = controller.snapshot();
+-    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+-    assert_eq!(
+-        patch_agent.completion,
+-        Some(WorkLeafCompletion::NeedsDecision)
+-    );
+-    assert!(
+-        patch_agent
+-            .lines
+-            .iter()
+-            .any(|line| line == "user: no thanks")
+-    );
+-    assert_eq!(backend.sends().len(), sends_after_review + 1);
+-
+-    controller.send_message(&agent_id, "no /status").unwrap();
+-    let snapshot = controller.snapshot();
+-    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+-    assert_eq!(
+-        patch_agent.completion,
+-        Some(WorkLeafCompletion::NeedsDecision)
+-    );
+-    assert!(
+-        patch_agent
+-            .lines
+-            .iter()
+-            .any(|line| line == "user: no /status")
+-    );
+-    assert_eq!(backend.sends().len(), sends_after_review + 1);
+-
+-    controller.send_message(&agent_id, "yes").unwrap();
+-    let snapshot = controller.snapshot();
+-    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+-    assert_eq!(patch_agent.completion, Some(WorkLeafCompletion::Closed));
+-    assert!(
+-        patch_agent
+-            .lines
+-            .iter()
+-            .any(|line| line == "work-leaf: feature marked closed")
+-    );
+-    assert_eq!(backend.sends().len(), sends_after_review + 1);
+-
+-    controller
+-        .send_message(&agent_id, "add another tweak")
+-        .unwrap();
+     assert!(controller.wait_for_idle(Duration::from_secs(1)));
+     let snapshot = controller.snapshot();
+     let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+     assert_eq!(patch_agent.completion, None);
+-    assert!(patch_agent.lines.iter().any(|line| line == "follow reply"));
+     assert!(
+-        backend
+-            .sends()
++        patch_agent
++            .lines
+             .iter()
+-            .any(|(target, prompt)| { target == &agent_id && prompt == "add another tweak" })
++            .any(|line| line == "work-leaf: feature remains open")
+     );
++    assert_eq!(backend.sends().len(), sends_after_review + 2);
++    assert!(backend.sends().iter().any(|(target, prompt)| {
++        target == &agent_id
++            && prompt.contains("feature is not done")
++            && prompt.contains("maybe")
++            && prompt.contains("emit `@work-leaf done` again")
++    }));
+ }
+ 
+ #[test]
