@@ -289,10 +289,33 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
         .mode();
 
     assert_ne!(mode & 0o111, 0, "bench script should be executable");
-    assert!(script.contains("WORK_LEAF_BENCH_BASE:-c92a0b7060a36eac6db2d869b85e589a7a9480f9"));
-    assert!(script.contains("curl -fsS \"$url/state\""));
+    assert!(script.contains("prepare_worktree_checkout()"));
+    assert!(script.contains("copy_untracked_worktree_files()"));
+    assert!(script.contains("default_results_dir_relative_to_repo()"));
+    assert!(script.contains("worktree_source_commit"));
+    assert!(script.contains("WORK_LEAF_BENCH_SOURCE_HEAD"));
+    assert!(!script.contains("WORK_LEAF_BENCH_BASE:-c92a0b7060a36eac6db2d869b85e589a7a9480f9"));
+    assert!(script.contains("fetch_state_snapshot()"));
+    assert!(script.contains("best_state_snapshot()"));
+    assert!(script.contains("curl -fsS \"$url/state\" > \"$next\""));
+    assert!(script.contains("state_snapshot_is_valid \"$next\""));
+    assert!(script.contains("mv \"$next\" \"$destination\""));
+    assert!(script.contains("state_snapshot_is_valid \"$tmp_root/state.json\" && return 0"));
+    assert!(script.contains("session_summary \"$report_state_file\""));
+    assert!(!script.contains("cp \"$tmp_root/state.json\" \"$tmp_root/final-state.json\""));
+    assert!(script.contains(
+        "fetch_state_snapshot \"$tmp_root/state.json\" || fail_bench \"orchestrator state request failed\""
+    ));
+    assert!(!script.contains("curl -fsS \"$url/state\" > \"$tmp_root/state.json\""));
+    assert!(!script.contains("curl -fsS \"$url/state\" > \"$tmp_root/final-state.json\""));
     assert!(script.contains("bench-results"));
     assert!(script.contains("results_dir=\"$(cd \"$results_dir\" && pwd)\""));
+    assert!(script.contains(
+        "WORK_LEAF_BENCH_BUSY_STALL_SECS no-progress timeout while agents are busy, default 1800"
+    ));
+    assert!(script.contains(
+        "WORK_LEAF_BENCH_IDLE_STALL_SECS no-progress timeout while agents are idle, default 300"
+    ));
     assert!(script.contains("three-feature-bench.jsonl"));
     assert!(script.contains("WORK_LEAF_BENCH_WEB_UI"));
     assert!(script.contains("web-ui/serve.py"));
@@ -330,7 +353,7 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains("redact_sensitive_env()"));
     assert!(script.contains("<redacted>"));
     assert!(script.contains("TMPDIR=\"$child_tmp_dir\""));
-    assert!(script.contains("final-state.next.json"));
+    assert!(script.contains("local next=\"${destination}.next\""));
     assert!(script.contains("daemon-env.txt"));
     assert!(script.contains("daemon-ps.txt"));
     assert!(script.contains("web-ui.out"));
@@ -343,6 +366,15 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains("select(.id|startswith(\"review-\"))"));
     assert!(!script.contains(".feature|test(\"review\""));
     assert!(!script.contains(".title|test(\"review\""));
+    assert!(script.contains("done_users="));
+    assert!(script.contains("terminal_users="));
+    assert!(script.contains("\"$terminal_users\" == \"$user_count\""));
+    assert!(!script.contains("\"$done_users\" == \"3\""));
+    assert!(script.contains("patch_agents_with_commits="));
+    assert!(script.contains("expected_final_commits="));
+    assert!(
+        script.contains("completed without reviewed commits; running checks without linearize")
+    );
     assert!(script.contains("linearize_completed"));
     assert!(script.contains("post_command 'force-linearize' || fail_bench \"failed to post force-linearize command\"\n    linearize_started=1\n    sleep 5\n    continue"));
     assert!(script.contains("post_agent 'linearize' 'Accept the proposed linearization plan."));

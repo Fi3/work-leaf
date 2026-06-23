@@ -259,6 +259,7 @@ impl PromptPolicy {
             "The legacy `@work-leaf patch <reason>` unified-diff directive is still accepted only when you already have a complete valid unified diff with real hunk ranges; prefer `@work-leaf edit` for manual code, configuration, and test changes.",
             "Use `@work-leaf locks classify <command>` only when you are unsure whether a command writes project files.",
             "Use `@work-leaf locks run <path> <path...> -- <command>` to run a command while the orchestrator holds write locks for every path the command may write.",
+            "Lock paths must be repository-relative. Do not lock `/tmp`, absolute paths, or parent paths; use `$TMPDIR` inside the command for scratch files while locking only the repository paths or caches the command may write.",
             "This command-lock rule is language- and tool-agnostic: use it for any formatter, build, test, code generator, package manager, installer, cache-producing tool, or repository-required check that may write files.",
             "Choose the command from the repository instructions and project context; choose the lock paths from the files, directories, caches, build outputs, dependency folders, or lockfiles that command may write.",
             "Run checks that existed before your patch or checks you added yourself. Do not run another patch agent's focused tests as local validation; report those as integration conflicts unless your own source change clearly caused them.",

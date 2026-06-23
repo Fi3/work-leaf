@@ -35,10 +35,17 @@ when Work Leaf exits, fails, or is interrupted. Set `WORK_LEAF_SMOKE_BASE` to ch
 base commit, or pass daemon options after `--`.
 
 `./bench-three-features` runs the same three-feature scenario through the localhost HTTP API with
-the real configured Codex backend. It uses the default mediated-read workflow, records pass/fail,
-duration, review and linearize completion, commit churn, code-quality checks, and observed
-inefficiencies under `bench-results`, and enables Codex child-process trace output in the saved
-daemon artifacts. It always removes its temporary checkout.
+the real configured Codex backend. It creates a temporary clean Git checkout from the current
+working directory, commits that snapshot as the benchmark base, uses the default mediated-read
+workflow, records pass/fail, duration, review and linearize completion, commit churn, code-quality
+checks, and observed inefficiencies under `bench-results`, and enables Codex child-process trace
+output in the saved daemon artifacts. Busy agent silence and idle orchestrator silence have separate
+stall limits through `WORK_LEAF_BENCH_BUSY_STALL_SECS` and `WORK_LEAF_BENCH_IDLE_STALL_SECS`.
+Untracked benchmark output under `bench-results` remains saved output rather than source input for
+the temporary checkout. The script always removes its temporary checkout. `./bench-dashboard` serves
+saved benchmark reports from `bench-results`, including nested parallel-run result directories. When
+`bench-results/baseline-manifest.json` is present, reports listed there form the regression baseline;
+other discovered reports are shown separately as old or invalid data.
 
 `work-leaf-orchestrator` owns the controller, agent backend, locks, review routing, and patch
 workflow. It prints `WORK_LEAF_ORCHESTRATOR_URL=http://...` after binding its localhost HTTP API.

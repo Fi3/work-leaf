@@ -1329,6 +1329,58 @@ fn controller_starts_review_when_done_directive_has_trailing_whitespace() {
 }
 
 #[test]
+fn controller_corrects_malformed_reviewer_directive_and_finishes_review() {
+    let root = git_repo("workspace-reviewer-protocol-correction");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+        "summary: README changes from before to after",
+        "FINDINGS\n- missing verification evidence",
+        "Verified with the required real-agent scenario.\n@work-leaf done",
+        "@work-leaf done with extra text",
+        "NO_FINDINGS",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("update readme").unwrap();
+
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    let reviewer_id = AgentId::new("review-user-1").unwrap();
+    let snapshot = controller.snapshot();
+    let reviewer = snapshot
+        .session(&reviewer_id)
+        .expect("reviewer session exists");
+    assert_eq!(reviewer.loading, None);
+    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+    assert_eq!(
+        patch_agent.completion,
+        Some(WorkLeafCompletion::NeedsDecision)
+    );
+    assert!(
+        patch_agent.lines.iter().any(|line| {
+            line.contains("user-1 reviewed by review-user-1: rounds=2 resolved=yes")
+        }),
+        "{patch_agent:?}"
+    );
+    assert!(
+        !reviewer
+            .lines
+            .iter()
+            .any(|line| line.contains("unknown work-leaf directive")),
+        "{reviewer:?}"
+    );
+    let sends = backend.sends();
+    assert!(sends.iter().any(|(target, prompt)| {
+        target == &reviewer_id
+            && prompt.contains("work-leaf protocol correction")
+            && prompt.contains("unknown work-leaf directive `done with extra text`")
+    }));
+}
+
+#[test]
 fn controller_command_linearize_requires_closed_patch_chats_unless_forced() {
     let root = git_repo("workspace-linearize-force-command");
     fs::write(root.join("README.md"), "before\n").unwrap();

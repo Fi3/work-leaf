@@ -6,19 +6,19 @@ usage() {
 Usage: bench-three-features [--dry-run]
 
 Run the real three-feature orchestrator benchmark with the current Work Leaf
-binaries against a temporary checkout at the historical base commit. The runner
-drives the localhost HTTP API directly, saves a benchmark report every time it
-runs, and always removes the temporary checkout.
+binaries against a clean temporary snapshot of the current working directory.
+The runner drives the localhost HTTP API directly, saves a benchmark report
+every time it runs, and always removes the temporary checkout.
 
 Environment:
-  WORK_LEAF_BENCH_BASE          base commit for the temp checkout
   WORK_LEAF_BENCH_TMPDIR        parent directory for the temporary checkout
   WORK_LEAF_BENCH_RESULTS_DIR   report directory, default bench-results
   WORK_LEAF_BENCH_SKIP_BUILD    set to 1 to skip cargo build --release --bins
   WORK_LEAF_BENCH_BIN_DIR       directory containing current Work Leaf binaries
   WORK_LEAF_BENCH_LISTEN        daemon listen address, default 127.0.0.1:0
   WORK_LEAF_BENCH_TIMEOUT_SECS  total timeout, default 7200
-  WORK_LEAF_BENCH_STALL_SECS    no-progress timeout, default 900
+  WORK_LEAF_BENCH_BUSY_STALL_SECS no-progress timeout while agents are busy, default 1800
+  WORK_LEAF_BENCH_IDLE_STALL_SECS no-progress timeout while agents are idle, default 300
   WORK_LEAF_BENCH_MODEL         optional Codex model passed to the daemon
   WORK_LEAF_BENCH_NO_READ_PERMISSION set to 1 to pass --no-read-permission
   WORK_LEAF_BENCH_OPERATOR_NOTES optional human notes saved in the report
@@ -47,11 +47,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-base_commit="${WORK_LEAF_BENCH_BASE:-c92a0b7060a36eac6db2d869b85e589a7a9480f9}"
 tmp_parent="${WORK_LEAF_BENCH_TMPDIR:-${TMPDIR:-/tmp}}"
 results_dir="${WORK_LEAF_BENCH_RESULTS_DIR:-$repo_root/bench-results}"
 timeout_secs="${WORK_LEAF_BENCH_TIMEOUT_SECS:-7200}"
-stall_secs="${WORK_LEAF_BENCH_STALL_SECS:-900}"
+busy_stall_secs="${WORK_LEAF_BENCH_BUSY_STALL_SECS:-${WORK_LEAF_BENCH_STALL_SECS:-1800}}"
+idle_stall_secs="${WORK_LEAF_BENCH_IDLE_STALL_SECS:-300}"
 listen_addr="${WORK_LEAF_BENCH_LISTEN:-127.0.0.1:0}"
 bin_dir="${WORK_LEAF_BENCH_BIN_DIR:-$repo_root/target/release}"
 requested_bench_model="${WORK_LEAF_BENCH_MODEL:-default}"
@@ -63,6 +63,9 @@ web_ui_enabled="${WORK_LEAF_BENCH_WEB_UI:-1}"
 web_ui_listen="${WORK_LEAF_BENCH_WEB_LISTEN:-127.0.0.1:0}"
 mkdir -p "$tmp_parent" "$results_dir"
 results_dir="$(cd "$results_dir" && pwd)"
+source_head="$(git -C "$repo_root" rev-parse HEAD 2>/dev/null || printf 'unknown')"
+worktree_source_dirty="unknown"
+base_commit="pending-worktree-snapshot"
 
 shell_quote() {
   printf '%q' "$1"
@@ -114,9 +117,10 @@ launch_tmux_supervisor_if_needed() {
   local supervisor_command="$results_dir/${run_id}-three-feature-bench-supervisor.command"
   local command_text="cd $(shell_quote "$repo_root") && "
   local name
-  for name in WORK_LEAF_BENCH_BASE WORK_LEAF_BENCH_TMPDIR WORK_LEAF_BENCH_RESULTS_DIR \
+  for name in WORK_LEAF_BENCH_TMPDIR WORK_LEAF_BENCH_RESULTS_DIR \
     WORK_LEAF_BENCH_SKIP_BUILD WORK_LEAF_BENCH_BIN_DIR WORK_LEAF_BENCH_LISTEN \
-    WORK_LEAF_BENCH_TIMEOUT_SECS WORK_LEAF_BENCH_STALL_SECS WORK_LEAF_BENCH_MODEL \
+    WORK_LEAF_BENCH_TIMEOUT_SECS WORK_LEAF_BENCH_STALL_SECS \
+    WORK_LEAF_BENCH_BUSY_STALL_SECS WORK_LEAF_BENCH_IDLE_STALL_SECS WORK_LEAF_BENCH_MODEL \
     WORK_LEAF_BENCH_NO_READ_PERMISSION WORK_LEAF_BENCH_WEB_UI WORK_LEAF_BENCH_WEB_LISTEN; do
     if [[ -n "${!name+x}" ]]; then
       command_text+="$name=$(shell_quote "${!name}") "
@@ -178,16 +182,145 @@ cleanup_daemon_tmp() {
   fi
 }
 
+source_worktree_dirty() {
+  if git -C "$repo_root" diff --quiet --ignore-submodules -- \
+    && git -C "$repo_root" diff --cached --quiet --ignore-submodules -- \
+    && [[ -z "$(git -C "$repo_root" ls-files --others --exclude-standard)" ]]; then
+    printf 'no'
+  else
+    printf 'yes'
+  fi
+}
+
+results_dir_relative_to_repo() {
+  local relative
+  relative="$(realpath --relative-to="$repo_root" "$results_dir" 2>/dev/null || true)"
+  case "$relative" in
+    ""|..|../*|/*)
+      return 1
+      ;;
+    *)
+      printf '%s\n' "$relative"
+      ;;
+  esac
+}
+
+default_results_dir_relative_to_repo() {
+  local relative
+  relative="$(realpath --relative-to="$repo_root" "$repo_root/bench-results" 2>/dev/null || true)"
+  case "$relative" in
+    ""|..|../*|/*)
+      return 1
+      ;;
+    *)
+      printf '%s\n' "$relative"
+      ;;
+  esac
+}
+
+worktree_untracked_path_is_skipped() {
+  local path="$1"
+  local results_relative="${2:-}"
+  local default_results_relative="${3:-}"
+  if [[ -n "$results_relative" ]]; then
+    case "$path" in
+      "$results_relative"|"$results_relative"/*)
+        return 0
+        ;;
+    esac
+  fi
+  if [[ -n "$default_results_relative" ]]; then
+    case "$path" in
+      "$default_results_relative"|"$default_results_relative"/*)
+        return 0
+        ;;
+    esac
+  fi
+  return 1
+}
+
+copy_untracked_worktree_files() {
+  local file results_relative default_results_relative
+  results_relative="$(results_dir_relative_to_repo || true)"
+  default_results_relative="$(default_results_dir_relative_to_repo || true)"
+  while IFS= read -r -d '' file; do
+    if worktree_untracked_path_is_skipped "$file" "$results_relative" "$default_results_relative"; then
+      continue
+    fi
+    mkdir -p "$checkout_dir/$(dirname "$file")"
+    cp -Pp "$repo_root/$file" "$checkout_dir/$file"
+  done < <(git -C "$repo_root" ls-files --others --exclude-standard -z)
+}
+
+prepare_worktree_checkout() {
+  source_head="$(git -C "$repo_root" rev-parse HEAD)"
+  worktree_source_dirty="$(source_worktree_dirty)"
+
+  git -C "$repo_root" clone --no-hardlinks "$repo_root" "$checkout_dir" >/dev/null
+  git -C "$checkout_dir" checkout --detach "$source_head" >/dev/null
+
+  if ! git -C "$repo_root" diff --quiet --binary HEAD --; then
+    git -C "$repo_root" diff --binary HEAD -- | git -C "$checkout_dir" apply --whitespace=nowarn
+  fi
+  copy_untracked_worktree_files
+
+  git -C "$checkout_dir" add -A
+  if ! git -C "$checkout_dir" diff --cached --quiet --ignore-submodules --; then
+    git -C "$checkout_dir" \
+      -c user.name="Work Leaf Bench" \
+      -c user.email="work-leaf-bench@example.invalid" \
+      commit -m "WORK_LEAF_BENCH_WORKTREE_SNAPSHOT" >/dev/null
+  fi
+  base_commit="$(git -C "$checkout_dir" rev-parse HEAD)"
+}
+
+state_snapshot_is_valid() {
+  local path="$1"
+  [[ -s "$path" ]] && jq -e '.snapshot.sessions' "$path" >/dev/null 2>&1
+}
+
+fetch_state_snapshot() {
+  local destination="$1"
+  local next="${destination}.next"
+
+  rm -f "$next"
+  curl -fsS "$url/state" > "$next" || {
+    rm -f "$next"
+    return 1
+  }
+  state_snapshot_is_valid "$next" || {
+    rm -f "$next"
+    return 1
+  }
+  mv "$next" "$destination"
+}
+
+best_state_snapshot() {
+  if state_snapshot_is_valid "$tmp_root/final-state.json"; then
+    printf '%s\n' "$tmp_root/final-state.json"
+    return 0
+  fi
+  if state_snapshot_is_valid "$tmp_root/state.json"; then
+    printf '%s\n' "$tmp_root/state.json"
+    return 0
+  fi
+  return 1
+}
+
+save_final_state_snapshot() {
+  fetch_state_snapshot "$tmp_root/final-state.json" 2>/dev/null && return 0
+  state_snapshot_is_valid "$tmp_root/state.json" && return 0
+  state_snapshot_is_valid "$tmp_root/final-state.json" && return 0
+  return 1
+}
+
 cleanup() {
   local status=$?
   if [[ "$status" -ne 0 && "$reported" == "0" ]]; then
     result="fail"
     failure_reason="${failure_reason:-bench exited unexpectedly with status $status}"
     if [[ -n "${url:-}" ]]; then
-      curl -fsS "$url/state" > "$tmp_root/final-state.json" 2>/dev/null || true
-    fi
-    if [[ ! -f "$tmp_root/final-state.json" && -f "$tmp_root/state.json" ]]; then
-      cp "$tmp_root/state.json" "$tmp_root/final-state.json" 2>/dev/null || true
+      save_final_state_snapshot || true
     fi
     git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt" 2>/dev/null || true
     git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt" 2>/dev/null || true
@@ -217,6 +350,9 @@ copy_artifacts() {
       cp "$tmp_root/$file" "$artifact_dir/$file"
     fi
   done
+  if ! state_snapshot_is_valid "$artifact_dir/final-state.json" && state_snapshot_is_valid "$artifact_dir/state.json"; then
+    cp "$artifact_dir/state.json" "$artifact_dir/final-state.json" 2>/dev/null || true
+  fi
   mkdir -p "$artifact_dir/bin"
   for binary in work-leaf work-leaf-orchestrator; do
     if [[ -x "$bin_dir/$binary" ]]; then
@@ -279,7 +415,7 @@ write_report() {
   local comment="$1"
   local end_epoch elapsed commits status_lines recent_log benched_commit benched_dirty
   local changed_files changed_lines_added changed_lines_deleted changed_lines_total
-  local binaries_produced effective_notes read_permission_mode patch_artifacts
+  local binaries_produced effective_notes read_permission_mode patch_artifacts report_state_file
   end_epoch="$(date +%s)"
   elapsed=$((end_epoch - start_epoch))
   commits="$(git -C "$checkout_dir" rev-list --count HEAD ^"$base_commit" 2>/dev/null || printf '0')"
@@ -299,6 +435,7 @@ write_report() {
   changed_lines_total=$((changed_lines_added + changed_lines_deleted))
   copy_artifacts
   save_repo_snapshot "$result"
+  report_state_file="$(best_state_snapshot 2>/dev/null || printf '%s\n' "$tmp_root/final-state.json")"
   binaries_produced="$(find "$artifact_dir/bin" -maxdepth 1 -type f -perm -111 -printf '%f ' 2>/dev/null | sed 's/[[:space:]]*$//')"
   patch_artifacts="$artifact_dir/patches/$result"
   effective_notes="${operator_notes:-$comment}"
@@ -316,6 +453,8 @@ write_report() {
 - duration_seconds: $elapsed
 - benched_binary_commit: $benched_commit
 - benched_binary_dirty: $benched_dirty
+- worktree_source_commit: $source_head
+- worktree_source_dirty: $worktree_source_dirty
 - agent_backend: codex
 - agent_transport: app-server
 - agent_model: $bench_model
@@ -346,7 +485,7 @@ write_report() {
 ## Sessions
 
 \`\`\`
-$(session_summary "$tmp_root/final-state.json")
+$(session_summary "$report_state_file")
 \`\`\`
 
 ## Recent Commits
@@ -366,6 +505,8 @@ EOF
     --arg result "$result" \
     --arg benched_binary_commit "$benched_commit" \
     --arg benched_binary_dirty "$benched_dirty" \
+    --arg worktree_source_commit "$source_head" \
+    --arg worktree_source_dirty "$worktree_source_dirty" \
     --arg agent_backend "codex" \
     --arg agent_transport "app-server" \
     --arg agent_model "$bench_model" \
@@ -390,20 +531,20 @@ EOF
     --argjson changed_lines_added "$changed_lines_added" \
     --argjson changed_lines_deleted "$changed_lines_deleted" \
     --argjson changed_lines_total "$changed_lines_total" \
-    '{run_id:$run_id,result:$result,benched_binary_commit:$benched_binary_commit,benched_binary_dirty:$benched_binary_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,agent_model:$agent_model,agent_model_source:$agent_model_source,requested_agent_model:$requested_agent_model,no_read_permission:$no_read_permission,read_permission_mode:$read_permission_mode,web_ui_url:$web_ui_url,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
+    '{run_id:$run_id,result:$result,benched_binary_commit:$benched_binary_commit,benched_binary_dirty:$benched_binary_dirty,worktree_source_commit:$worktree_source_commit,worktree_source_dirty:$worktree_source_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,agent_model:$agent_model,agent_model_source:$agent_model_source,requested_agent_model:$requested_agent_model,no_read_permission:$no_read_permission,read_permission_mode:$read_permission_mode,web_ui_url:$web_ui_url,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
     >> "$index_path"
   reported=1
   log "bench report: $report_path"
 }
 
 collect_token_usage() {
-  if [[ ! -f "$tmp_root/final-state.json" ]]; then
-    return
-  fi
+  local state_file
   if [[ -n "${url:-}" ]]; then
-    curl -fsS "$url/state" > "$tmp_root/final-state.next.json" 2>/dev/null \
-      && mv "$tmp_root/final-state.next.json" "$tmp_root/final-state.json" \
-      || rm -f "$tmp_root/final-state.next.json"
+    fetch_state_snapshot "$tmp_root/final-state.json" 2>/dev/null || true
+  fi
+  state_file="$(best_state_snapshot 2>/dev/null || true)"
+  if [[ -z "$state_file" ]]; then
+    return
   fi
   token_usage="$(
     jq -r '
@@ -411,14 +552,14 @@ collect_token_usage() {
         | select($session.token_usage != null)
         | "\($session.id): input=\($session.token_usage.input_tokens) cached_input=\($session.token_usage.cached_input_tokens) output=\($session.token_usage.output_tokens) reasoning_output=\($session.token_usage.reasoning_output_tokens)"]
       | if length == 0 then "unavailable" else join("; ") end
-    ' "$tmp_root/final-state.json" 2>/dev/null || printf 'unavailable'
+    ' "$state_file" 2>/dev/null || printf 'unavailable'
   )"
 }
 
 fail_bench() {
   failure_reason="$1"
   result="fail"
-  curl -fsS "$url/state" > "$tmp_root/final-state.json" 2>/dev/null || cp "$tmp_root/state.json" "$tmp_root/final-state.json" 2>/dev/null || true
+  save_final_state_snapshot || true
   git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt" 2>/dev/null || true
   git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt" 2>/dev/null || true
   collect_token_usage
@@ -474,15 +615,14 @@ start_web_ui() {
   log "web UI helper did not print a URL before timeout; continuing without it"
 }
 
-log "WORK_LEAF_BENCH_TEMP=$tmp_root"
-log "WORK_LEAF_BENCH_BASE=$base_commit"
-
 if [[ "$dry_run" == "1" ]]; then
-  git -C "$repo_root" clone --no-checkout --no-hardlinks "$repo_root" "$checkout_dir" >/dev/null
-  git -C "$checkout_dir" checkout --detach "$base_commit" >/dev/null
+  log "WORK_LEAF_BENCH_TEMP=$tmp_root"
+  log "WORK_LEAF_BENCH_SOURCE_HEAD=$source_head"
+  prepare_worktree_checkout
+  log "WORK_LEAF_BENCH_BASE=$base_commit"
   result="skipped"
   code_quality="not run"
-  write_report "dry run created and removed the isolated checkout without launching agents"
+  write_report "dry run created and removed the working-tree snapshot checkout without launching agents"
   exit 0
 fi
 
@@ -490,8 +630,10 @@ if [[ "${WORK_LEAF_BENCH_SKIP_BUILD:-}" != "1" ]]; then
   (cd "$repo_root" && cargo build --release --bins)
 fi
 
-git -C "$repo_root" clone --no-checkout --no-hardlinks "$repo_root" "$checkout_dir" >/dev/null
-git -C "$checkout_dir" checkout --detach "$base_commit" >/dev/null
+log "WORK_LEAF_BENCH_TEMP=$tmp_root"
+log "WORK_LEAF_BENCH_SOURCE_HEAD=$source_head"
+prepare_worktree_checkout
+log "WORK_LEAF_BENCH_BASE=$base_commit"
 mkdir -p "$child_tmp_dir"
 detect_codex_model
 
@@ -538,6 +680,7 @@ log "started 3 patch agents"
 
 linearize_started=0
 accepted_linearize=0
+expected_final_commits=3
 last_sig=""
 last_progress_epoch="$start_epoch"
 
@@ -546,7 +689,7 @@ while true; do
   elapsed=$((now - start_epoch))
   (( elapsed <= timeout_secs )) || fail_bench "timed out after ${elapsed}s"
 
-  curl -fsS "$url/state" > "$tmp_root/state.json" || fail_bench "orchestrator state request failed"
+  fetch_state_snapshot "$tmp_root/state.json" || fail_bench "orchestrator state request failed"
   if [[ -f "$tmp_root/abort-reason" ]]; then
     fail_bench "$(cat "$tmp_root/abort-reason")"
   fi
@@ -557,22 +700,40 @@ while true; do
     last_progress_epoch="$now"
     log "elapsed=${elapsed}s busy=$busy $sig"
   fi
-  if (( now - last_progress_epoch > stall_secs )); then
-    fail_bench "stalled for more than ${stall_secs}s without session state changes"
-  fi
-
   reviews="$(jq '[.snapshot.sessions[] | select(.id|startswith("review-"))] | length' "$tmp_root/state.json")"
   ready_users="$(jq '[.snapshot.sessions[] | select((.id|test("^user-[0-9]+$")) and .completion == "NeedsDecision")] | length' "$tmp_root/state.json")"
+  done_users="$(jq '[.snapshot.sessions[] | select(.id|test("^user-[0-9]+$")) | .id as $session_id | select([.lines[]? | select(contains("agent " + $session_id + " reported done"))] | length > 0)] | length' "$tmp_root/state.json")"
+  terminal_users="$(jq '[.snapshot.sessions[] | select(.id|test("^user-[0-9]+$")) | .id as $session_id | select(.completion == "NeedsDecision" or ([.lines[]? | select(contains("agent " + $session_id + " reported done"))] | length > 0)) | .id] | unique | length' "$tmp_root/state.json")"
   user_count="$(jq '[.snapshot.sessions[] | select(.id|test("^user-[0-9]+$"))] | length' "$tmp_root/state.json")"
   commits_after_base="$(git -C "$checkout_dir" rev-list --count HEAD ^"$base_commit" 2>/dev/null || printf '0')"
+  patch_agents_with_commits="$(git -C "$checkout_dir" log --format=%B "$base_commit"..HEAD 2>/dev/null | awk '/^Agent-ID: user-[0-9]+$/ { print $2 }' | sort -u | wc -l | tr -d ' ')"
+  [[ -n "$patch_agents_with_commits" ]] || patch_agents_with_commits=0
   launch_errors="$(jq '[.snapshot.sessions[] | select((.id|test("^user-[0-9]+$")) and ([.lines[]? | select(startswith("error:"))] | length > 0))] | length' "$tmp_root/state.json")"
+  if [[ "$busy" == "true" ]]; then
+    active_stall_secs="$busy_stall_secs"
+    active_stall_kind="busy"
+  else
+    active_stall_secs="$idle_stall_secs"
+    active_stall_kind="idle"
+  fi
+  if (( now - last_progress_epoch > active_stall_secs )); then
+    fail_bench "${active_stall_kind} stalled for more than ${active_stall_secs}s without session state changes; user_count=${user_count} terminal_users=${terminal_users} done_users=${done_users} ready_users=${ready_users} patch_agents_with_commits=${patch_agents_with_commits}"
+  fi
   if [[ "$busy" == "false" && "$user_count" == "3" && "$launch_errors" == "3" && "$commits_after_base" == "0" ]]; then
     fail_bench "all three initial Codex launches failed before producing work"
   fi
 
-  if [[ "$linearize_started" == "0" && "$ready_users" == "3" && "$reviews" -ge 3 && "$busy" == "false" ]]; then
+  if [[ "$linearize_started" == "0" && "$busy" == "false" && "$user_count" == "3" && "$terminal_users" == "$user_count" && "$ready_users" -ge "$patch_agents_with_commits" ]]; then
     review_completed="yes"
-    log "all patch agents reviewed; launching force-linearize"
+    expected_final_commits="$patch_agents_with_commits"
+    if [[ "$patch_agents_with_commits" == "0" ]]; then
+      log "all patch agents completed without reviewed commits; running checks without linearize"
+      linearize_started=1
+      accepted_linearize=1
+      sleep 5
+      continue
+    fi
+    log "all patch agents done and ${patch_agents_with_commits} patch-agent commit(s) reviewed; launching force-linearize"
     post_command 'force-linearize' || fail_bench "failed to post force-linearize command"
     linearize_started=1
     sleep 5
@@ -590,7 +751,7 @@ while true; do
 
   if [[ "$accepted_linearize" == "1" && "$busy" == "false" ]]; then
     linearize_completed="yes"
-    curl -fsS "$url/state" > "$tmp_root/final-state.json" || fail_bench "orchestrator final-state request failed"
+    fetch_state_snapshot "$tmp_root/final-state.json" || fail_bench "orchestrator final-state request failed"
     git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt"
     git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt"
     if [[ -s "$tmp_root/final-status.txt" ]]; then
@@ -598,9 +759,9 @@ while true; do
       fail_bench "linearize finished with a dirty repository"
     fi
     commits_after_base="$(git -C "$checkout_dir" rev-list --count HEAD ^"$base_commit" 2>/dev/null || printf '0')"
-    if [[ "$commits_after_base" != "3" ]]; then
-      code_quality="not run; linearize produced ${commits_after_base} commits instead of 3"
-      fail_bench "linearize produced ${commits_after_base} commits after base; expected 3 one-per-feature final commits"
+    if [[ "$commits_after_base" != "$expected_final_commits" ]]; then
+      code_quality="not run; workflow produced ${commits_after_base} commits instead of ${expected_final_commits}"
+      fail_bench "workflow produced ${commits_after_base} commits after base; expected ${expected_final_commits} final commit(s) for patch agents that changed code"
     fi
     log "running final code quality checks"
     (

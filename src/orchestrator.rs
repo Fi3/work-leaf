@@ -693,15 +693,32 @@ pub(crate) fn handle_agent_directives_streaming<B>(
 where
     B: AgentBackend,
 {
-    let directives = parse_agent_directives(text)?;
     let mut run = DirectiveRun::default();
+    let directives = match parse_agent_directives(text) {
+        Ok(directives) => directives,
+        Err(OrchestratorError::Usage(message)) if needs_protocol_correction(text) => {
+            let reply = send_agent_streaming_interruptible(
+                backend,
+                agent_id,
+                &render_protocol_correction_prompt(Some(&message)),
+                stream,
+            )?;
+            run.follow_up_replies
+                .push(follow_up(agent_id.clone(), reply));
+            run.events.push(OrchestratorEvent::ProtocolCorrectionSent {
+                agent_id: agent_id.clone(),
+            });
+            return Ok(run);
+        }
+        Err(error) => return Err(error),
+    };
     let mut applied_patch_files = BTreeSet::new();
 
     if directives.is_empty() && needs_protocol_correction(text) {
         let reply = send_agent_streaming_interruptible(
             backend,
             agent_id,
-            &render_protocol_correction_prompt(),
+            &render_protocol_correction_prompt(None),
             stream,
         )?;
         run.follow_up_replies
@@ -1082,7 +1099,17 @@ fn run_command_for_agent<B>(
 where
     B: AgentBackend,
 {
-    let locked_paths = normalize_paths(services.locks, lock_paths)?;
+    let locked_paths = match normalize_paths(services.locks, lock_paths) {
+        Ok(paths) => paths,
+        Err(FileAccessError::PathEscapesRoot(path)) => {
+            let prompt = render_lock_paths_rejected(command, lock_paths, &path);
+            let reply = send_agent_streaming_interruptible(backend, agent_id, &prompt, stream)?;
+            run.follow_up_replies
+                .push(follow_up(agent_id.clone(), reply));
+            return Ok(());
+        }
+        Err(error) => return Err(error.into()),
+    };
     let command_write_paths = normalize_paths(
         services.locks,
         &services
@@ -1490,14 +1517,17 @@ fn needs_protocol_correction(text: &str) -> bool {
     text.contains("@work-leaf")
 }
 
-fn render_protocol_correction_prompt() -> String {
-    [
-        "work-leaf protocol correction",
-        "`@work-leaf` is not a shell command. Do not run it in a shell and do not ask the user to run it.",
-        "Emit orchestrator requests as top-level plain response lines, for example `@work-leaf read src/lib.rs` or `@work-leaf done`.",
-        "Do not put directives in prose, quotes, or code fences. Continue the task by emitting the next required directive or `@work-leaf done`.",
-    ]
-    .join("\n")
+fn render_protocol_correction_prompt(diagnostic: Option<&str>) -> String {
+    let mut lines = vec!["work-leaf protocol correction".to_string()];
+    if let Some(diagnostic) = diagnostic {
+        lines.push(format!("Last directive diagnostic: {diagnostic}"));
+    }
+    lines.extend([
+        "`@work-leaf` is not a shell command. Do not run it in a shell and do not ask the user to run it.".to_string(),
+        "Emit orchestrator requests as top-level plain response lines, for example `@work-leaf read src/lib.rs` or `@work-leaf done`.".to_string(),
+        "Do not put directives in prose, quotes, or code fences. Continue the task by emitting the next required directive or `@work-leaf done`.".to_string(),
+    ]);
+    lines.join("\n")
 }
 
 fn follow_up(agent_id: AgentId, message: ChatMessage) -> AgentFollowUp {
@@ -2430,6 +2460,18 @@ fn render_command_rejected(command: &str, locked_paths: &[PathBuf], diagnostic: 
     format!(
         "work-leaf command rejected\ncommand: {command}\nlocked paths: {}\nreason: {diagnostic}; this masks command failures, so Work Leaf did not run the command.\nRun the check normally and let Work Leaf capture the non-zero status, stdout, and stderr.",
         display_paths(locked_paths)
+    )
+}
+
+fn render_lock_paths_rejected(
+    command: &str,
+    lock_paths: &[PathBuf],
+    rejected_path: &Path,
+) -> String {
+    format!(
+        "work-leaf command rejected\ncommand: {command}\nlocked paths: {}\nreason: lock paths must be repository-relative; `{}` escapes the project root. Do not lock `/tmp`, absolute paths, or parent paths. Use `$TMPDIR` inside the command for scratch files, and lock only repository paths or caches the command may write.\nnext: Reply with a corrected `@work-leaf locks run <repo-relative-path>... -- <command>` directive, or use `@work-leaf done` if no command is still needed.",
+        display_paths(lock_paths),
+        rejected_path.display()
     )
 }
 

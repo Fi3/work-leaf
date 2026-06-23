@@ -349,6 +349,36 @@ fn orchestrator_protocol_scopes_locked_command_tmpdir_without_daemon_tmpdir() {
 }
 
 #[test]
+fn orchestrator_protocol_guides_agents_away_from_absolute_tmp_lock_paths() {
+    let root = temp_git_repo("protocol-command-absolute-tmp-lock");
+    let backend = RecordingBackend::default();
+    let mut orchestrator = AgentOrchestrator::new(root, backend);
+    let agent_id = AgentId::new("user-1").unwrap();
+
+    let events = orchestrator
+        .handle_agent_message(
+            &agent_id,
+            "tmp",
+            "@work-leaf locks run . /tmp/work-leaf-real-check -- sh -c 'printf ok > \"$TMPDIR/out\"'",
+        )
+        .unwrap();
+    let backend = orchestrator.into_backend();
+
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, OrchestratorEvent::CommandRun { .. })),
+        "absolute tmp lock paths must be rejected before command execution"
+    );
+    assert_eq!(backend.sends.len(), 1);
+    let prompt = &backend.sends[0].1;
+    assert!(prompt.contains("work-leaf command rejected"));
+    assert!(prompt.contains("lock paths must be repository-relative"));
+    assert!(prompt.contains("Do not lock `/tmp`"));
+    assert!(prompt.contains("$TMPDIR"));
+}
+
+#[test]
 fn orchestrator_protocol_rejects_locked_commands_that_mask_failures() {
     let root = temp_git_repo("protocol-command-masks-failure");
     let backend = RecordingBackend::default();

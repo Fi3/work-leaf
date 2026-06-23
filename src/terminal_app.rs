@@ -78,6 +78,10 @@ where
         self.inner.wait_for_frame_contains(needle, timeout)
     }
 
+    pub fn wait_for_frame_contains_all(&mut self, needles: &[&str], timeout: Duration) -> bool {
+        self.inner.wait_for_frame_contains_all(needles, timeout)
+    }
+
     pub fn handle_bytes(&mut self, bytes: &[u8]) -> bool {
         self.inner.handle_bytes(bytes)
     }
@@ -155,6 +159,10 @@ impl RemoteTerminalApp {
 
     pub fn wait_for_frame_contains(&mut self, needle: &str, timeout: Duration) -> bool {
         self.inner.wait_for_frame_contains(needle, timeout)
+    }
+
+    pub fn wait_for_frame_contains_all(&mut self, needles: &[&str], timeout: Duration) -> bool {
+        self.inner.wait_for_frame_contains_all(needles, timeout)
     }
 
     pub fn handle_bytes(&mut self, bytes: &[u8]) -> bool {
@@ -425,6 +433,21 @@ where
         }
         self.apply_controller_events();
         self.render_frame().contains(needle)
+    }
+
+    fn wait_for_frame_contains_all(&mut self, needles: &[&str], timeout: Duration) -> bool {
+        let start = Instant::now();
+        while start.elapsed() < timeout {
+            self.apply_controller_events();
+            let frame = self.render_frame();
+            if needles.iter().all(|needle| frame.contains(needle)) {
+                return true;
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        self.apply_controller_events();
+        let frame = self.render_frame();
+        needles.iter().all(|needle| frame.contains(needle))
     }
 
     fn handle_bytes(&mut self, bytes: &[u8]) -> bool {

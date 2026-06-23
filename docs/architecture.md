@@ -100,12 +100,27 @@ checkout on normal exit, launch failure, or interruption.
 
 The project-root `bench-three-features` script runs the same three-feature scenario through the
 localhost HTTP API with the real configured Codex backend. It builds the current release binaries
-unless `WORK_LEAF_BENCH_SKIP_BUILD=1`, runs those binaries against a temporary checkout at the smoke
-base commit, polls the daemon through `GET /state`, records pass/fail, duration, review and
-linearize completion, commit churn, code-quality checks, and efficiency notes under
-`bench-results`, enables Codex app-server tracing in the daemon artifacts, runs Codex through the
-local app-server JSON-RPC interface, gives only the linearize agent a `danger-full-access` Codex sandbox through
-`WORK_LEAF_CODEX_LINEARIZE_SANDBOX`, and removes the temporary checkout before exit.
+unless `WORK_LEAF_BENCH_SKIP_BUILD=1`, creates a temporary clean Git checkout from the current
+working directory, commits that snapshot as the benchmark base, runs the binaries against that
+snapshot, polls the daemon through `GET /state`, records pass/fail, duration, review and linearize
+completion, commit churn, code-quality checks, and efficiency notes under `bench-results`, enables
+Codex app-server tracing in the daemon artifacts, runs Codex through the local app-server JSON-RPC
+interface, gives only the linearize agent a `danger-full-access` Codex sandbox through
+`WORK_LEAF_CODEX_LINEARIZE_SANDBOX`, and removes the temporary checkout before exit. The bench driver
+uses a total timeout plus separate no-progress limits for busy agent work and idle orchestrator
+states through `WORK_LEAF_BENCH_BUSY_STALL_SECS` and `WORK_LEAF_BENCH_IDLE_STALL_SECS`. A patch
+agent is treated as terminal for linearization when its session is ready for a completion decision or
+the transcript records the agent as done, so no-op agents and patch-producing agents can finish
+through different terminal states. Untracked benchmark output under `bench-results` is treated as
+saved output rather than source input when the snapshot is assembled.
+
+The project-root `bench-dashboard` script serves saved benchmark reports from `bench-results`.
+It reads top-level report files and nested run directories such as parallel benchmark batches,
+keeps report links as relative paths under the configured results directory, and rejects report
+requests that escape that directory. When `bench-results/baseline-manifest.json` exists, the
+dashboard treats the listed report paths as the active regression baseline, computes token variance
+and repeated-run regression thresholds from those rows, and shows every other discovered report in a
+separate old/invalid table.
 
 ## Agent Domain
 

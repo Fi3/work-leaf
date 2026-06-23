@@ -936,12 +936,14 @@ done
     let mut app = TerminalApp::new(chat, 100, 24);
 
     app.handle_bytes(b":new patch arrow keys\n");
-    app.wait_for_idle(Duration::from_secs(1));
-
-    let frame = app.render_frame();
-    assert!(frame.contains("I have requested the relevant UI and harness files"));
-    assert!(frame.contains("sent file text to user-1: src/ui.rs, src/ui_harness.rs"));
-    assert!(frame.contains("I can patch after receiving src/ui.rs and src/ui_harness.rs"));
+    assert!(app.wait_for_frame_contains_all(
+        &[
+            "I have requested the relevant UI and harness files",
+            "sent file text to user-1: src/ui.rs, src/ui_harness.rs",
+            "I can patch after receiving src/ui.rs and src/ui_harness.rs",
+        ],
+        Duration::from_secs(2)
+    ));
 }
 
 #[test]
