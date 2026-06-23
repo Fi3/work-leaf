@@ -1,0 +1,91 @@
+From 1383a16663c584c6d0628acc4cdff3fee7abd513 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Tue, 23 Jun 2026 16:45:52 +0200
+Subject: [PATCH 1/3] ADD regression coverage for reopening closed patch chats
+ after completion
+
+---
+ src/workspace.rs | 70 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 70 insertions(+)
+
+diff --git a/src/workspace.rs b/src/workspace.rs
+index 72d6ce4..1f356d2 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -2285,6 +2285,76 @@ mod tests {
+         assert!(!controller.implicit_loading_agents.contains_key(&agent_id));
+     }
+ 
++    #[test]
++    fn feature_done_yes_closes_and_later_chat_reopens_patch_agent() {
++        let backend = ScriptedBackend::new(["reopened patch chat"]);
++        let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
++        let mut controller = WorkLeafController::new(chat);
++        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
++
++        controller.register_agent_feature(agent_id.clone(), "completion flow".to_string());
++        controller.add_session(WorkLeafSession {
++            id: agent_id.clone(),
++            kind: AgentKind::Codex,
++            title: "completion flow".to_string(),
++            feature: "completion flow".to_string(),
++            lines: Vec::new(),
++            loading: None,
++            completion: None,
++            token_usage: None,
++            depends_on: Vec::new(),
++            depended_on_by: Vec::new(),
++        });
++
++        controller.ask_feature_done(&agent_id);
++        controller
++            .send_message(&agent_id, "yes")
++            .expect("completion answer is accepted");
++
++        let closed_snapshot = controller.snapshot();
++        let closed_session = closed_snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(closed_session.completion, Some(WorkLeafCompletion::Closed));
++        assert!(
++            closed_session
++                .lines
++                .iter()
++                .any(|line| line == "work-leaf: feature marked closed"),
++            "{closed_session:?}"
++        );
++
++        controller
++            .send_message(&agent_id, "please handle one more case")
++            .expect("closed patch chat accepts follow-up");
++        assert_eq!(
++            controller.session_completion(&agent_id),
++            None,
++            "typing in a closed patch chat reopens it before routing to the backend"
++        );
++        assert!(controller.wait_for_idle(Duration::from_secs(2)));
++
++        let reopened_snapshot = controller.snapshot();
++        let reopened_session = reopened_snapshot
++            .session(&agent_id)
++            .expect("patch agent session remains visible");
++        assert_eq!(reopened_session.completion, None);
++        assert!(
++            reopened_session
++                .lines
++                .iter()
++                .any(|line| line == "user: please handle one more case"),
++            "{reopened_session:?}"
++        );
++        assert!(
++            reopened_session
++                .lines
++                .iter()
++                .any(|line| line == "reopened patch chat"),
++            "{reopened_session:?}"
++        );
++    }
++
+     #[test]
+     fn non_user_patch_agent_done_starts_review_and_completion_question() {
+         let root = git_repo("workspace-non-user-review-completion");

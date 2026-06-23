@@ -1,0 +1,306 @@
+From eebe4412fef4391dfc1e227045649a43d251fd97 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Tue, 23 Jun 2026 16:37:19 +0200
+Subject: [PATCH 3/3] FIX reopen closed patch chats when follow-up messages are
+ sent
+
+---
+ docs/architecture.md |  10 +-
+ src/workspace.rs     | 226 ++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 227 insertions(+), 9 deletions(-)
+
+diff --git a/docs/architecture.md b/docs/architecture.md
+index b7b6ab1..0f50e65 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -451,10 +451,12 @@ Frontend code should use these methods:
+ - `send_command_agent_message` to route chat from the Work Leaf command surface to `command-agent`.
+ - `send_message` to send a prompt to one session while other sessions may still be busy.
+   When the target session is already waiting for a backend reply, the controller appends the user's
+-  text immediately and queues the backend send until that session is available. Messages that start
+-  with `/` followed by a non-empty command token are routed to the selected backend instead of being
+-  interpreted as Work Leaf commands. The slash command output visible in the chat is the selected
+-  backend's response to the raw slash-prefixed message.
++  text immediately and queues the backend send until that session is available. A follow-up sent to
++  a closed patch session clears the closed completion state and marks the session as waiting for a
++  backend reply before the normal message or selected-agent command is dispatched. Messages that
++  start with `/` followed by a non-empty command token are routed to the selected backend instead of
++  being interpreted as Work Leaf commands. The slash command output visible in the chat is the
++  selected backend's response to the raw slash-prefixed message.
+ - `start_review` to create or resume reviewer sessions for explicit history-wide review and stream
+   reviewer output.
+ - `is_busy`, `wait_for_idle`, and `wait_for_session_line` for tests and event loops.
+diff --git a/src/workspace.rs b/src/workspace.rs
+index e3256ef..7232f11 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -286,10 +286,6 @@ where
+             self.handle_completion_answer(agent_id, message);
+             return Ok(());
+         }
+-        if self.session_completion(agent_id) == Some(WorkLeafCompletion::Closed) {
+-            self.set_session_completion(agent_id, None);
+-        }
+-
+         let first_chat_title = self.reserve_first_chat_title(agent_id, message);
+         if let Some(title) = &first_chat_title {
+             self.apply_agent_title(agent_id, title.clone());
+@@ -1020,7 +1016,11 @@ where
+     }
+ 
+     fn start_agent_command_worker(&mut self, agent_id: AgentId, command: String) {
++        let was_closed = self.session_completion(&agent_id) == Some(WorkLeafCompletion::Closed);
+         self.set_session_loading(&agent_id, Some(WorkLeafLoading::WaitingForReply));
++        if was_closed {
++            self.set_session_completion(&agent_id, None);
++        }
+         self.append_agent_line(&agent_id, format!("user: {command}"));
+         self.start_worker(Some(agent_id.clone()), move |mut chat, sender| {
+             let stream_sender = sender.clone();
+@@ -1062,7 +1062,11 @@ where
+         message: String,
+         append_user_line: bool,
+     ) {
++        let was_closed = self.session_completion(&agent_id) == Some(WorkLeafCompletion::Closed);
+         self.set_session_loading(&agent_id, Some(WorkLeafLoading::WaitingForReply));
++        if was_closed {
++            self.set_session_completion(&agent_id, None);
++        }
+         if append_user_line {
+             self.append_agent_line(&agent_id, format!("user: {message}"));
+         }
+@@ -2203,7 +2207,7 @@ mod tests {
+     use std::fs;
+     use std::path::{Path, PathBuf};
+     use std::process::Command;
+-    use std::sync::{Arc, Mutex};
++    use std::sync::{Arc, Condvar, Mutex};
+ 
+     use super::*;
+ 
+@@ -2227,6 +2231,55 @@ mod tests {
+         }
+     }
+ 
++    #[derive(Clone, Debug)]
++    struct BlockingBackend {
++        release: Arc<(Mutex<bool>, Condvar)>,
++    }
++
++    impl BlockingBackend {
++        fn new() -> (Self, Arc<(Mutex<bool>, Condvar)>) {
++            let release = Arc::new((Mutex::new(false), Condvar::new()));
++            (
++                Self {
++                    release: Arc::clone(&release),
++                },
++                release,
++            )
++        }
++    }
++
++    impl AgentBackend for BlockingBackend {
++        fn launch(
++            &mut self,
++            request: AgentLaunch,
++        ) -> Result<AgentSession, crate::agent::AgentError> {
++            Ok(AgentSession::new(request))
++        }
++
++        fn send(
++            &mut self,
++            _agent_id: &AgentId,
++            _prompt: &str,
++        ) -> Result<ChatMessage, crate::agent::AgentError> {
++            let (lock, cvar) = &*self.release;
++            let mut released = lock.lock().unwrap();
++            while !*released {
++                released = cvar.wait(released).unwrap();
++            }
++            Ok(ChatMessage::new(
++                MessageRole::Agent,
++                "follow-up reply".to_string(),
++            ))
++        }
++    }
++
++    fn release_blocking_backend(release: &Arc<(Mutex<bool>, Condvar)>) {
++        let (lock, cvar) = &**release;
++        let mut released = lock.lock().unwrap();
++        *released = true;
++        cvar.notify_all();
++    }
++
+     #[derive(Clone, Debug)]
+     struct ScriptedBackend {
+         state: Arc<Mutex<ScriptedBackendState>>,
+@@ -2326,6 +2379,169 @@ mod tests {
+         assert!(!controller.implicit_loading_agents.contains_key(&agent_id));
+     }
+ 
++    #[test]
++    fn yes_closes_feature_and_later_message_reopens_without_idle_status() {
++        let (backend, release) = BlockingBackend::new();
++        let chat = CommandChat::new(PathBuf::from("/repo"), backend);
++        let mut controller = WorkLeafController::new(chat);
++        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
++
++        controller.register_agent_feature(agent_id.clone(), "completion flow".to_string());
++        controller.add_session(WorkLeafSession {
++            id: agent_id.clone(),
++            kind: AgentKind::Codex,
++            title: "completion flow".to_string(),
++            feature: "completion flow".to_string(),
++            lines: Vec::new(),
++            loading: None,
++            completion: None,
++            token_usage: None,
++            depends_on: Vec::new(),
++            depended_on_by: Vec::new(),
++        });
++        controller.ask_feature_done(&agent_id);
++        controller.drain_events();
++
++        controller
++            .send_message(&agent_id, "yes")
++            .expect("yes answer is accepted");
++
++        let snapshot = controller.snapshot();
++        let closed = snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(closed.completion, Some(WorkLeafCompletion::Closed));
++        assert!(
++            closed
++                .lines
++                .iter()
++                .any(|line| line == "work-leaf: feature marked closed")
++        );
++        controller.drain_events();
++
++        controller
++            .send_message(&agent_id, "continue with polish")
++            .expect("closed patch agent accepts follow-up chat");
++        let events = controller.drain_events();
++
++        assert!(events.iter().any(|event| {
++            matches!(
++                event,
++                WorkLeafEvent::AgentStatusUpdated {
++                    agent_id: updated_agent_id,
++                    loading: Some(WorkLeafLoading::WaitingForReply),
++                    completion: None,
++                    ..
++                } if updated_agent_id == &agent_id
++            )
++        }));
++        assert!(!events.iter().any(|event| {
++            matches!(
++                event,
++                WorkLeafEvent::AgentStatusUpdated {
++                    agent_id: updated_agent_id,
++                    loading: None,
++                    completion: None,
++                    ..
++                } if updated_agent_id == &agent_id
++            )
++        }));
++
++        let snapshot = controller.snapshot();
++        let reopened = snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(reopened.completion, None);
++        assert_eq!(reopened.loading, Some(WorkLeafLoading::WaitingForReply));
++        assert!(
++            reopened
++                .lines
++                .iter()
++                .any(|line| line == "user: continue with polish")
++        );
++
++        release_blocking_backend(&release);
++        assert!(controller.wait_for_idle(Duration::from_secs(2)));
++        let snapshot = controller.snapshot();
++        let finished = snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(finished.completion, None);
++        assert_eq!(finished.loading, None);
++        assert!(finished.lines.iter().any(|line| line == "follow-up reply"));
++    }
++
++    #[test]
++    fn yes_closes_feature_and_later_agent_slash_command_reopens_without_idle_status() {
++        let (backend, release) = BlockingBackend::new();
++        let chat = CommandChat::new(PathBuf::from("/repo"), backend);
++        let mut controller = WorkLeafController::new(chat);
++        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
++
++        controller.register_agent_feature(agent_id.clone(), "completion flow".to_string());
++        controller.add_session(WorkLeafSession {
++            id: agent_id.clone(),
++            kind: AgentKind::Codex,
++            title: "completion flow".to_string(),
++            feature: "completion flow".to_string(),
++            lines: Vec::new(),
++            loading: None,
++            completion: None,
++            token_usage: None,
++            depends_on: Vec::new(),
++            depended_on_by: Vec::new(),
++        });
++        controller.ask_feature_done(&agent_id);
++        controller.drain_events();
++
++        controller
++            .send_message(&agent_id, "yes")
++            .expect("yes answer is accepted");
++        let snapshot = controller.snapshot();
++        let closed = snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(closed.completion, Some(WorkLeafCompletion::Closed));
++        controller.drain_events();
++
++        controller
++            .send_message(&agent_id, "/status")
++            .expect("closed patch agent accepts slash command follow-up");
++        let events = controller.drain_events();
++
++        assert!(events.iter().any(|event| {
++            matches!(
++                event,
++                WorkLeafEvent::AgentStatusUpdated {
++                    agent_id: updated_agent_id,
++                    loading: Some(WorkLeafLoading::WaitingForReply),
++                    completion: None,
++                    ..
++                } if updated_agent_id == &agent_id
++            )
++        }));
++        assert!(!events.iter().any(|event| {
++            matches!(
++                event,
++                WorkLeafEvent::AgentStatusUpdated {
++                    agent_id: updated_agent_id,
++                    loading: None,
++                    completion: None,
++                    ..
++                } if updated_agent_id == &agent_id
++            )
++        }));
++
++        let snapshot = controller.snapshot();
++        let reopened = snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(reopened.completion, None);
++        assert_eq!(reopened.loading, Some(WorkLeafLoading::WaitingForReply));
++        assert!(reopened.lines.iter().any(|line| line == "user: /status"));
++        release_blocking_backend(&release);
++    }
++
+     #[test]
+     fn non_user_patch_agent_done_starts_review_and_completion_question() {
+         let root = git_repo("workspace-non-user-review-completion");
