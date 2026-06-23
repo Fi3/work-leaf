@@ -1,0 +1,162 @@
+From 0cdc7792bb58fda476587812981a432bf7c14663 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Tue, 23 Jun 2026 15:35:07 +0200
+Subject: [PATCH 3/3] FIX keep closed patch chats visibly reopened for
+ follow-up work
+
+Preserve each visible reopen marker when a user sends follow-up text to a closed patch chat, while keeping completion yes/no answers local to the controller and forwarding only real follow-up work to the patch agent.
+---
+ src/workspace.rs | 133 +++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 133 insertions(+)
+
+diff --git a/src/workspace.rs b/src/workspace.rs
+index 5e30182..945f6b9 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -288,6 +288,7 @@ where
+         }
+         if self.session_completion(agent_id) == Some(WorkLeafCompletion::Closed) {
+             self.set_session_completion(agent_id, None);
++            self.append_agent_line_allow_duplicate(agent_id, FEATURE_OPEN_MESSAGE.to_string());
+         }
+ 
+         let first_chat_title = self.reserve_first_chat_title(agent_id, message);
+@@ -2514,6 +2515,138 @@ mod tests {
+         );
+     }
+ 
++    #[test]
++    fn completion_yes_closes_and_later_message_reopens_patch_chat() {
++        let backend = ScriptedBackend::new([
++            "reopened reply",
++            "reopened edge case",
++            "second reopened reply",
++        ]);
++        let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
++        let mut controller = WorkLeafController::new(chat);
++        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
++
++        controller.register_agent_feature(agent_id.clone(), "review completion".to_string());
++        controller.add_session(WorkLeafSession {
++            id: agent_id.clone(),
++            kind: AgentKind::Codex,
++            title: "user-1".to_string(),
++            feature: "review completion".to_string(),
++            lines: vec![FEATURE_DONE_QUESTION.to_string()],
++            loading: None,
++            completion: Some(WorkLeafCompletion::NeedsDecision),
++            token_usage: None,
++            depends_on: Vec::new(),
++            depended_on_by: Vec::new(),
++        });
++
++        controller
++            .send_message(&agent_id, "yes")
++            .expect("completion answer is accepted");
++
++        let closed_snapshot = controller.snapshot();
++        let closed_session = closed_snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(closed_session.completion, Some(WorkLeafCompletion::Closed));
++        assert!(
++            closed_session.lines.iter().any(|line| line == "user: yes"),
++            "{closed_session:?}"
++        );
++        assert!(
++            closed_session
++                .lines
++                .iter()
++                .any(|line| line == FEATURE_CLOSED_MESSAGE),
++            "{closed_session:?}"
++        );
++        assert!(
++            backend.sends().is_empty(),
++            "completion answers must not be forwarded to the backend"
++        );
++
++        let follow_up = "handle the reopened edge case";
++        controller
++            .send_message(&agent_id, follow_up)
++            .expect("later patch-agent message is accepted");
++        assert!(controller.wait_for_idle(Duration::from_secs(2)));
++
++        let reopened_snapshot = controller.snapshot();
++        let reopened_session = reopened_snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(reopened_session.completion, None);
++        assert!(
++            reopened_session
++                .lines
++                .iter()
++                .any(|line| line == FEATURE_OPEN_MESSAGE),
++            "{reopened_session:?}"
++        );
++        assert!(
++            reopened_session
++                .lines
++                .iter()
++                .any(|line| line == &format!("user: {follow_up}")),
++            "{reopened_session:?}"
++        );
++        let patch_agent_sends = backend
++            .sends()
++            .into_iter()
++            .filter(|(sent_agent_id, _)| sent_agent_id == &agent_id)
++            .collect::<Vec<_>>();
++        assert_eq!(
++            patch_agent_sends,
++            vec![(agent_id.clone(), follow_up.to_string())]
++        );
++
++        controller.ask_feature_done(&agent_id);
++        let second_decision_snapshot = controller.snapshot();
++        let second_decision_session = second_decision_snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(
++            second_decision_session.completion,
++            Some(WorkLeafCompletion::NeedsDecision)
++        );
++
++        controller
++            .send_message(&agent_id, "yes")
++            .expect("second completion answer is accepted");
++        let second_follow_up = "handle another reopened edge case";
++        controller
++            .send_message(&agent_id, second_follow_up)
++            .expect("second later patch-agent message is accepted");
++        assert!(controller.wait_for_idle(Duration::from_secs(2)));
++
++        let reopened_again_snapshot = controller.snapshot();
++        let reopened_again_session = reopened_again_snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(reopened_again_session.completion, None);
++        assert_eq!(
++            reopened_again_session
++                .lines
++                .iter()
++                .filter(|line| line.as_str() == FEATURE_OPEN_MESSAGE)
++                .count(),
++            2,
++            "{reopened_again_session:?}"
++        );
++        let patch_agent_sends = backend
++            .sends()
++            .into_iter()
++            .filter(|(sent_agent_id, _)| sent_agent_id == &agent_id)
++            .collect::<Vec<_>>();
++        assert_eq!(
++            patch_agent_sends,
++            vec![
++                (agent_id.clone(), follow_up.to_string()),
++                (agent_id, second_follow_up.to_string()),
++            ]
++        );
++    }
++
+     #[test]
+     fn inline_patch_agent_title_comes_from_title_agent() {
+         let chat = CommandChat::new(PathBuf::from("/repo"), EmptyBackend);

@@ -38,9 +38,10 @@ base commit, or pass daemon options after `--`.
 the real configured Codex backend. It creates a temporary clean Git checkout from the current
 working directory, commits that snapshot as the benchmark base, uses the default mediated-read
 workflow, records pass/fail, duration, review and linearize completion, commit churn, code-quality
-checks, and observed inefficiencies under `bench-results`, and enables Codex child-process trace
-output in the saved daemon artifacts. Busy agent silence and idle orchestrator silence have separate
-stall limits through `WORK_LEAF_BENCH_BUSY_STALL_SECS` and `WORK_LEAF_BENCH_IDLE_STALL_SECS`.
+checks, the Codex CLI path and version, resolved model, reasoning effort, and observed inefficiencies
+under `bench-results`, and enables Codex child-process trace output in the saved daemon artifacts.
+Busy agent silence and idle orchestrator silence have separate stall limits through
+`WORK_LEAF_BENCH_BUSY_STALL_SECS` and `WORK_LEAF_BENCH_IDLE_STALL_SECS`.
 Untracked benchmark output under `bench-results` remains saved output rather than source input for
 the temporary checkout. The script always removes its temporary checkout. `./bench-dashboard` serves
 saved benchmark reports from `bench-results`, including nested parallel-run result directories. When

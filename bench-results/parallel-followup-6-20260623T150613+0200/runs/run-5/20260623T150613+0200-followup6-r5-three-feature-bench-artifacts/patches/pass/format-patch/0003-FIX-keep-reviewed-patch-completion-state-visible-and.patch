@@ -1,0 +1,441 @@
+From e953783b7453e638bf505fdeb2ec838315f61fe4 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Tue, 23 Jun 2026 15:45:22 +0200
+Subject: [PATCH 3/3] FIX keep reviewed patch completion state visible and
+ reopenable
+
+Reviewed patch chats keep the completion decision visible in terminal rows, closed chats reopen when later text is sent, and compact rows preserve completion markers while truncating long titles. The controller and UiHarness coverage exercise the completion lifecycle end to end.
+---
+ src/ui.rs           | 40 ++++++++++++++++++-
+ src/ui_harness.rs   | 91 +++++++++++++++++++++++++++++++++++++++++++-
+ src/workspace.rs    | 65 +++++++++++++++++++++++++++++++
+ tests/ui_harness.rs | 93 ++++++++++++++++++++++++++++++++++++---------
+ 4 files changed, 269 insertions(+), 20 deletions(-)
+
+diff --git a/src/ui.rs b/src/ui.rs
+index 4099ed9..4c9d3cc 100644
+--- a/src/ui.rs
++++ b/src/ui.rs
+@@ -464,6 +464,13 @@ impl TerminalUi {
+         self.agents.push(agent);
+     }
+ 
++    pub(crate) fn agent_feature(&self, agent_id: &AgentId) -> Option<&str> {
++        self.agents
++            .iter()
++            .find(|agent| &agent.id == agent_id)
++            .map(|agent| agent.feature.as_str())
++    }
++
+     pub(crate) fn set_agent_feature(
+         &mut self,
+         agent_id: &AgentId,
+@@ -2275,10 +2282,23 @@ fn compact_fixed_last(
+     let flexible_width = width.saturating_sub(fixed_width);
+     format!(
+         "{prefix}{} {fixed}{status}",
+-        truncate_to_width(flexible, flexible_width)
++        truncate_completion_label_to_width(flexible, flexible_width)
+     )
+ }
+ 
++fn truncate_completion_label_to_width(text: &str, width: usize) -> String {
++    for suffix in [" DONE?", " CLOSED"] {
++        if let Some(base) = text.strip_suffix(suffix) {
++            let suffix_width = suffix.chars().count();
++            if suffix_width < width {
++                let base_width = width.saturating_sub(suffix_width);
++                return format!("{}{}", truncate_to_width(base, base_width), suffix);
++            }
++        }
++    }
++    truncate_to_width(text, width)
++}
++
+ fn truncate_to_width(text: &str, width: usize) -> String {
+     text.chars().take(width).collect()
+ }
+@@ -2987,4 +3007,22 @@ mod tests {
+         assert!(closed_left_pane.contains("[closed]\n>second user-2  working: second"));
+         assert!(closed_left_pane.contains("[working]\n first user-1  working: first"));
+     }
++
++    #[test]
++    fn compact_patch_row_preserves_completion_marker_when_title_is_truncated() {
++        let mut ui = TerminalUi::new(160, 30);
++        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
++        ui.add_agent(
++            AgentListEntry::new(agent_id.clone(), "feature-txt-before-to-after DONE?")
++                .with_ready(true),
++        );
++        ui.select_agent(&agent_id)
++            .expect("test patch agent is registered");
++
++        let left_pane = ui.render_screen("");
++
++        assert!(left_pane.contains("DONE?"));
++        assert!(left_pane.contains("READY"));
++        assert!(!left_pane.contains("feature-txt-befo user-1 READY"));
++    }
+ }
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index eb09368..7e3e24c 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -204,6 +204,10 @@ impl UiHarness {
+                     self.chat_history.push(message.clone());
+                     let target_agent = self.ui.selected_agent().cloned();
+                     if let Some(agent_id) = target_agent.as_ref() {
++                        if self.handle_completion_answer(agent_id, &message) {
++                            return;
++                        }
++                        self.reopen_closed_agent(agent_id);
+                         self.name_chat_from_first_prompt(agent_id, &message);
+                         let _ = self.ui.set_agent_patch_lifecycle(agent_id, true, false);
+                     }
+@@ -292,8 +296,11 @@ impl UiHarness {
+             let agent_id = AgentId::new(format!("user-{}", self.next_agent))
+                 .expect("generated fixture id is valid");
+             self.next_agent += 1;
++            let title = self
++                .chat_title_agent
++                .assign_title_from_prompt(&agent_id, prompt);
+             self.ui
+-                .add_agent(AgentListEntry::new(agent_id.clone(), "harness-agent"));
++                .add_agent(AgentListEntry::new(agent_id.clone(), title));
+             self.ui
+                 .set_agent_patch_lifecycle(&agent_id, false, false)
+                 .expect("generated fixture agent is registered");
+@@ -311,7 +318,7 @@ impl UiHarness {
+                     "commands: new [prompt...], review, linearize, force-linearize, quit".into(),
+                 );
+             }
+-            "review" => self.transcript.push("fixture review: no findings".into()),
++            "review" => self.finish_selected_review(),
+             "linearize" => {
+                 self.ui.select_command_interface();
+                 self.transcript.push(
+@@ -328,6 +335,79 @@ impl UiHarness {
+         }
+     }
+ 
++    fn finish_selected_review(&mut self) {
++        self.transcript.push("fixture review: no findings".into());
++        let Some(agent_id) = self.ui.selected_agent().cloned() else {
++            return;
++        };
++        self.mark_agent_needs_completion(&agent_id);
++        let _ = self.ui.activate_agent_chat(&agent_id);
++        self.transcript
++            .push("work-leaf: is this feature done? [yes/no]".into());
++    }
++
++    fn handle_completion_answer(&mut self, agent_id: &AgentId, message: &str) -> bool {
++        let Some(base_title) = self.agent_title_before_suffix(agent_id, " DONE?") else {
++            return false;
++        };
++        self.transcript.push(format!("{agent_id}> {message}"));
++        if message.trim().eq_ignore_ascii_case("yes") {
++            self.set_agent_completion_feature(agent_id, &base_title, " CLOSED", true, false);
++            self.transcript
++                .push("work-leaf: feature marked closed".to_string());
++        } else if message.trim().eq_ignore_ascii_case("no") {
++            self.set_agent_completion_feature(agent_id, &base_title, "", false, false);
++            self.transcript
++                .push("work-leaf: feature remains open".to_string());
++        } else {
++            self.transcript
++                .push("work-leaf: answer yes or no to close this feature".to_string());
++        }
++        true
++    }
++
++    fn mark_agent_needs_completion(&mut self, agent_id: &AgentId) {
++        let Some(base_title) = self.agent_base_title(agent_id) else {
++            return;
++        };
++        self.set_agent_completion_feature(agent_id, &base_title, " DONE?", false, true);
++    }
++
++    fn reopen_closed_agent(&mut self, agent_id: &AgentId) {
++        if let Some(base_title) = self.agent_title_before_suffix(agent_id, " CLOSED") {
++            self.set_agent_completion_feature(agent_id, &base_title, "", false, false);
++        }
++    }
++
++    fn set_agent_completion_feature(
++        &mut self,
++        agent_id: &AgentId,
++        base_title: &str,
++        suffix: &str,
++        closed: bool,
++        ready: bool,
++    ) {
++        let _ = self
++            .ui
++            .set_agent_feature(agent_id, format!("{base_title}{suffix}"));
++        let _ = self.ui.set_agent_patch_lifecycle(agent_id, true, closed);
++        let _ = self.ui.set_agent_ready_state(agent_id, ready);
++    }
++
++    fn agent_base_title(&self, agent_id: &AgentId) -> Option<String> {
++        self.ui
++            .agent_feature(agent_id)
++            .map(strip_completion_suffix)
++            .map(str::to_string)
++    }
++
++    fn agent_title_before_suffix(&self, agent_id: &AgentId, suffix: &str) -> Option<String> {
++        self.ui
++            .agent_feature(agent_id)?
++            .strip_suffix(suffix)
++            .map(str::to_string)
++    }
++
+     fn name_chat_from_first_prompt(&mut self, agent_id: &AgentId, prompt: &str) {
+         if let Some(title) = self
+             .chat_title_agent
+@@ -599,6 +679,13 @@ impl UiHarness {
+     }
+ }
+ 
++fn strip_completion_suffix(title: &str) -> &str {
++    title
++        .strip_suffix(" DONE?")
++        .or_else(|| title.strip_suffix(" CLOSED"))
++        .unwrap_or(title)
++}
++
+ #[derive(Clone, Debug, Eq, PartialEq)]
+ struct PendingEscapeSequence {
+     bytes: Vec<u8>,
+diff --git a/src/workspace.rs b/src/workspace.rs
+index 0e1e057..273a7ee 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -2310,6 +2310,71 @@ mod tests {
+         assert!(!controller.implicit_loading_agents.contains_key(&agent_id));
+     }
+ 
++    #[test]
++    fn feature_done_yes_closes_and_later_message_reopens_session() {
++        let backend = ScriptedBackend::new(["reopened reply", "reviewed feature"]);
++        let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
++        let mut controller = WorkLeafController::new(chat);
++        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
++
++        controller.register_agent_feature(agent_id.clone(), "reviewed feature".to_string());
++        controller.add_session(WorkLeafSession {
++            id: agent_id.clone(),
++            kind: AgentKind::Codex,
++            title: "reviewed feature".to_string(),
++            feature: "reviewed feature".to_string(),
++            lines: Vec::new(),
++            loading: None,
++            completion: None,
++            token_usage: None,
++            depends_on: Vec::new(),
++            depended_on_by: Vec::new(),
++        });
++
++        controller.ask_feature_done(&agent_id);
++        controller
++            .send_message(&agent_id, "yes")
++            .expect("completion answer is accepted");
++
++        assert!(
++            backend.sends().is_empty(),
++            "yes closes the feature without sending a backend turn"
++        );
++        let closed_snapshot = controller.snapshot();
++        let closed = closed_snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(closed.completion, Some(WorkLeafCompletion::Closed));
++        assert!(closed.lines.iter().any(|line| line == "user: yes"));
++        assert!(
++            closed
++                .lines
++                .iter()
++                .any(|line| line == FEATURE_CLOSED_MESSAGE)
++        );
++
++        controller
++            .send_message(&agent_id, "continue work")
++            .expect("message after close is accepted");
++        assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++        assert_eq!(
++            backend.sends(),
++            vec![(agent_id.clone(), "continue work".to_string())]
++        );
++        let reopened_snapshot = controller.snapshot();
++        let reopened = reopened_snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(reopened.completion, None);
++        assert!(
++            reopened
++                .lines
++                .iter()
++                .any(|line| line == "user: continue work")
++        );
++    }
++
+     #[test]
+     fn selected_agent_slash_status_executes_backend_command_without_normal_send() {
+         let backend = ScriptedBackend::new(["backend status output", "selected slash command"]);
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index 6de8d03..9ffe35d 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -86,6 +86,75 @@ fn scripted_harness_rings_and_highlights_ready_chat() {
+     assert!(!harness.render_frame().starts_with('\u{7}'));
+ }
+ 
++#[test]
++fn scripted_harness_review_done_highlights_chat_until_yes_closes_and_later_text_reopens() {
++    let mut harness = UiHarness::new(120, 24);
++
++    harness.handle_bytes(b":new completion flow\n");
++    assert_eq!(
++        harness.ui().selected_agent().map(|id| id.as_str()),
++        Some("user-3")
++    );
++
++    harness.handle_bytes(b"\x1b:review\n");
++
++    let done_frame = harness.render_frame();
++    assert!(done_frame.starts_with('\u{7}'));
++    assert!(done_frame.contains("work-leaf: is this feature done? [yes/no]"));
++    let done_left_pane = strip_ansi(&harness.ui().render_left_pane());
++    let ready_section = done_left_pane
++        .find("[ready]")
++        .expect("ready section renders");
++    let working_section = done_left_pane
++        .find("[working]")
++        .expect("working section renders");
++    let done_row = done_left_pane
++        .find(">completion-flow DONE? user-3  working: completion-flow DONE?  READY")
++        .expect("reviewed patch row renders with completion prompt");
++    assert!(
++        ready_section < done_row && done_row < working_section,
++        "{done_left_pane}"
++    );
++
++    harness.handle_bytes(b"yes\n");
++
++    let closed_left_pane = strip_ansi(&harness.ui().render_left_pane());
++    assert!(
++        closed_left_pane
++            .contains("[closed]\n>completion-flow CLOSED user-3  working: completion-flow CLOSED"),
++        "{closed_left_pane}"
++    );
++    assert!(
++        !closed_left_pane
++            .contains("completion-flow CLOSED user-3  working: completion-flow CLOSED  READY"),
++        "{closed_left_pane}"
++    );
++    assert!(
++        harness
++            .transcript()
++            .iter()
++            .any(|line| line == "work-leaf: feature marked closed")
++    );
++
++    harness.handle_bytes(b"follow up\n");
++
++    let reopened_left_pane = strip_ansi(&harness.ui().render_left_pane());
++    let working_section = reopened_left_pane
++        .find("[working]")
++        .expect("working section renders");
++    let reopened_row = reopened_left_pane
++        .find(">completion-flow user-3  working: completion-flow")
++        .expect("reopened patch row renders without completion suffix");
++    assert!(working_section < reopened_row, "{reopened_left_pane}");
++    assert!(!reopened_left_pane.contains("completion-flow CLOSED"));
++    assert!(
++        harness
++            .transcript()
++            .iter()
++            .any(|line| line == "user-3> follow up")
++    );
++}
++
+ #[test]
+ fn scripted_harness_switches_modes_without_enter() {
+     let mut harness = UiHarness::new(80, 24);
+@@ -185,7 +254,7 @@ fn scripted_harness_long_prompt_arrows_keep_rendered_cursor_at_edit_position() {
+ #[test]
+ fn scripted_harness_prompt_arrow_keys_recall_prompt_history() {
+     let mut harness = UiHarness::new(80, 24);
+-    harness.handle_bytes(b":review\n:linearize\n:\x1b[A\x1b[A\x1b[B\n");
++    harness.handle_bytes(b":review\n\x1b:linearize\n:\x1b[A\x1b[A\x1b[B\n");
+     assert_eq!(harness.ui().mode(), UiMode::Command);
+     assert_eq!(
+         harness
+@@ -201,7 +270,7 @@ fn scripted_harness_prompt_arrow_keys_recall_prompt_history() {
+ fn scripted_harness_prompt_history_down_restores_in_progress_prompt() {
+     let mut harness = UiHarness::new(80, 24);
+ 
+-    harness.handle_bytes(b":review\n:draft command\x1b[A\x1b[B\n");
++    harness.handle_bytes(b":review\n\x1b:draft command\x1b[A\x1b[B\n");
+ 
+     assert!(
+         harness
+@@ -232,7 +301,7 @@ fn scripted_harness_blocked_linearize_renders_command_message_from_chat() {
+ fn scripted_harness_ctrl_c_discards_prompt_history_draft() {
+     let mut harness = UiHarness::new(80, 24);
+ 
+-    harness.handle_bytes(b":review\n:draft command\x1b[A");
++    harness.handle_bytes(b":review\n\x1b:draft command\x1b[A");
+     assert!(harness.render_frame().contains(":review"));
+ 
+     assert!(harness.handle_byte(3));
+@@ -511,7 +580,7 @@ fn scripted_harness_new_commands_select_new_agent_chat() {
+         harness
+             .ui()
+             .render_left_pane()
+-            .contains("[new]\n>harness-agent user-3  working: harness-agent")
++            .contains("[new]\n>ui-automation user-3  working: ui-automation")
+     );
+ 
+     harness.handle_bytes(b"\x1b:new\n");
+@@ -528,15 +597,7 @@ fn scripted_harness_new_commands_select_new_agent_chat() {
+ fn scripted_harness_names_new_chat_from_first_inserted_prompt() {
+     let mut harness = UiHarness::new(80, 24);
+ 
+-    harness.handle_bytes(b":new\n");
+-    assert!(
+-        harness
+-            .ui()
+-            .render_left_pane()
+-            .contains("[new]\n>harness-agent user-3  working: harness-agent")
+-    );
+-
+-    harness.handle_bytes(b"please fix the OAuth redirect handler\n");
++    harness.handle_bytes(b":new please fix the OAuth redirect handler\n");
+ 
+     let named_left_pane = harness.ui().render_left_pane();
+     assert!(named_left_pane.contains(
+@@ -557,8 +618,7 @@ fn scripted_harness_names_new_chat_from_first_inserted_prompt() {
+ fn scripted_harness_summarizes_noisy_chat_title_from_first_inserted_prompt() {
+     let mut harness = UiHarness::new(80, 24);
+ 
+-    harness.handle_bytes(b":new\n");
+-    harness.handle_bytes(b"it looks like that we there have been a bad regression chat name for patch agents is not created by the system agent but it has to summarize it\n");
++    harness.handle_bytes(b":new it looks like that we there have been a bad regression chat name for patch agents is not created by the system agent but it has to summarize it\n");
+ 
+     let named_left_pane = harness.ui().render_left_pane();
+     assert!(named_left_pane.contains(
+@@ -571,9 +631,8 @@ fn scripted_harness_summarizes_noisy_chat_title_from_first_inserted_prompt() {
+ fn scripted_harness_caps_chat_title_for_left_pane_space() {
+     let mut harness = UiHarness::new(80, 24);
+ 
+-    harness.handle_bytes(b":new\n");
+     harness.handle_bytes(
+-        b"fix authentication authorization migration workflow regressions before release\n",
++        b":new fix authentication authorization migration workflow regressions before release\n",
+     );
+ 
+     let named_left_pane = harness.ui().render_left_pane();

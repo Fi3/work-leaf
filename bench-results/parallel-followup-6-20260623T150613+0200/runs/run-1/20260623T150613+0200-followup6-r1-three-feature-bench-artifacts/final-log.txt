@@ -1,0 +1,30 @@
+9713f67 FIX keep patch completion prompts active until yes closes or follow-up reopens them
+af9c85d ADD backend command routing so selected-agent slash commands bypass prompt sends
+d8a4b9d FIX start visual selection in the focused pane for accurate yanks
+9b899a2 ADD Codex benchmark baseline artifacts for regression detection
+877de09 FIX make agent workflows recover and benchmark gates state-based
+7014e00 v0.1.1
+faf17c7 ADD Claude benchmark failure artifacts to preserve quota-limited run
+efcabba FIX preserve provider selection API and make Claude interrupts real
+371c38f ADD Leaf blame Neovim plugin to expose Work Leaf provenance in editor
+15fd27c ADD Claude provider selection and mediated bundle reads for portable agent workflows
+cf50907 ADD release publishing to binary workflow so builds produce GitHub releases
+9a99771 UPGRADE Drive Codex through app-server JSON-RPC to remove SDK runtime
+b93e585 FIX keep command and title system agents persistent for contextual orchestration
+23a638a ADD reviewed and reviewing sections to the terminal left pane
+3be0d3f FIX wrapped chat prompt cursor at the visible line edge
+4a66811 FIX completion prompts after clean patch-agent reviews
+7ef94b9 ADD patch lifecycle sections to the terminal left menu
+15b9c51 FIX command-mode comma to focus the left pane from chat panes
+80e6e8d FIX dependent waiting-chat launches to carry the first task metadata
+2ffa3cd ADD per-window chat message folds for terminal panes
+9e77538 ADD automatic Rust target installation for release packaging
+ec06f79 ADD daemon and remote CLI modes for packaged launches
+97ecf21 ADD focus selected chat with Enter from the left pane
+d7971f5 UPDATE release packaging to avoid host cross-linking failures
+b2b1329 UPDATE apply when-i-m-prompting-i-ctr patch from user-2
+b49856a FIX insert-mode multiline input so terminal line breaks do not submit unfinished prompts
+6269daa UPDATE derive compact chat titles through the title agent so left-pane rows stay readable
+b2ee5b9 FIX prompt cursor row calculation so full-width chat lines keep the cursor on the prompt
+dac6b2e UPDATE right-pane chat navigation so gg and G reach history edges
+973b2eb UPDATE reviewer context to use commit logs and patch-agent evidence

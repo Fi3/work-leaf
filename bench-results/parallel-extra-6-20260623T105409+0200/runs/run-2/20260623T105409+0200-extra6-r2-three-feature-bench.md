@@ -10,8 +10,12 @@
 - worktree_source_dirty: yes
 - agent_backend: codex
 - agent_transport: app-server
-- agent_model: unknown
-- agent_model_source: not requested
+- codex_cli_path: /usr/bin/codex
+- codex_cli_version: codex-cli 0.141.0
+- agent_model: gpt-5.5
+- agent_model_source: codex config /home/user/.codex/config.toml
+- agent_reasoning_effort: xhigh
+- agent_reasoning_effort_source: codex config /home/user/.codex/config.toml
 - requested_agent_model: default
 - no_read_permission: 0
 - read_permission_mode: orchestrator-mediated file reads

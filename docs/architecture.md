@@ -103,9 +103,11 @@ localhost HTTP API with the real configured Codex backend. It builds the current
 unless `WORK_LEAF_BENCH_SKIP_BUILD=1`, creates a temporary clean Git checkout from the current
 working directory, commits that snapshot as the benchmark base, runs the binaries against that
 snapshot, polls the daemon through `GET /state`, records pass/fail, duration, review and linearize
-completion, commit churn, code-quality checks, and efficiency notes under `bench-results`, enables
-Codex app-server tracing in the daemon artifacts, runs Codex through the local app-server JSON-RPC
-interface, gives only the linearize agent a `danger-full-access` Codex sandbox through
+completion, commit churn, code-quality checks, the Codex CLI path and version, resolved model,
+reasoning effort, and efficiency notes under `bench-results`, enables Codex app-server tracing in
+the daemon artifacts, runs Codex through
+the local app-server JSON-RPC interface, gives only the linearize agent a `danger-full-access` Codex
+sandbox through
 `WORK_LEAF_CODEX_LINEARIZE_SANDBOX`, and removes the temporary checkout before exit. The bench driver
 uses a total timeout plus separate no-progress limits for busy agent work and idle orchestrator
 states through `WORK_LEAF_BENCH_BUSY_STALL_SECS` and `WORK_LEAF_BENCH_IDLE_STALL_SECS`. A patch

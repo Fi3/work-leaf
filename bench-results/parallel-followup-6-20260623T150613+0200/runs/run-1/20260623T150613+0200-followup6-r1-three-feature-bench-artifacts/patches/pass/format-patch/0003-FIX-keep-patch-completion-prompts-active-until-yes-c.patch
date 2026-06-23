@@ -1,0 +1,244 @@
+From 9713f6784679f0604811879d609597ceb0976fbd Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Tue, 23 Jun 2026 15:27:27 +0200
+Subject: [PATCH 3/3] FIX keep patch completion prompts active until yes closes
+ or follow-up reopens them
+
+---
+ src/ui_harness.rs   | 62 +++++++++++++++++++++++++++++++++++++++++++++
+ src/workspace.rs    | 49 +++++++++++++++++++++++++++++++++++
+ tests/ui_harness.rs | 49 +++++++++++++++++++++++++++++++++++
+ 3 files changed, 160 insertions(+)
+
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index eb09368..e1259c2 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -1,3 +1,5 @@
++use std::collections::{BTreeMap, BTreeSet};
++
+ use crate::{
+     AgentId, AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode, chat_title::ChatTitleAgent,
+ };
+@@ -17,6 +19,8 @@ pub struct UiHarness {
+     chat_history_draft: Option<String>,
+     escape_sequence: Option<PendingEscapeSequence>,
+     transcript: Vec<String>,
++    completion_features: BTreeMap<AgentId, String>,
++    closed_features: BTreeSet<AgentId>,
+     chat_title_agent: ChatTitleAgent,
+     next_agent: usize,
+     quit: bool,
+@@ -48,6 +52,8 @@ impl UiHarness {
+                 "Esc command, i insert, : prompt, Ctrl-W h/j/k/l focus, , focus/toggle left, q quit"
+                     .to_string(),
+             ],
++            completion_features: BTreeMap::new(),
++            closed_features: BTreeSet::new(),
+             chat_title_agent,
+             next_agent: 3,
+             quit: false,
+@@ -67,6 +73,21 @@ impl UiHarness {
+         self.ui.set_agent_ready_state(&agent_id, true)
+     }
+ 
++    pub fn ask_feature_done(&mut self, agent_id: &str, feature: &str) -> Result<(), String> {
++        let agent_id = AgentId::new(agent_id).map_err(|error| error.to_string())?;
++        self.completion_features
++            .insert(agent_id.clone(), feature.to_string());
++        self.closed_features.remove(&agent_id);
++        self.ui
++            .set_agent_feature(&agent_id, format!("{feature} DONE?"))?;
++        self.ui.set_agent_patch_lifecycle(&agent_id, true, false)?;
++        self.ui.set_agent_ready_state(&agent_id, true)?;
++        self.ui.activate_agent_chat(&agent_id)?;
++        self.transcript
++            .push("work-leaf: is this feature done? [yes/no]".to_string());
++        Ok(())
++    }
++
+     pub fn add_review_agent(
+         &mut self,
+         agent_id: &str,
+@@ -204,6 +225,9 @@ impl UiHarness {
+                     self.chat_history.push(message.clone());
+                     let target_agent = self.ui.selected_agent().cloned();
+                     if let Some(agent_id) = target_agent.as_ref() {
++                        if self.handle_feature_completion_message(agent_id, &message) {
++                            return;
++                        }
+                         self.name_chat_from_first_prompt(agent_id, &message);
+                         let _ = self.ui.set_agent_patch_lifecycle(agent_id, true, false);
+                     }
+@@ -328,6 +352,44 @@ impl UiHarness {
+         }
+     }
+ 
++    fn handle_feature_completion_message(&mut self, agent_id: &AgentId, message: &str) -> bool {
++        if self.closed_features.remove(agent_id) {
++            if let Some(feature) = self.completion_features.remove(agent_id) {
++                let _ = self.ui.set_agent_feature(agent_id, feature);
++                let _ = self.ui.set_agent_patch_lifecycle(agent_id, true, false);
++                let _ = self.ui.set_agent_ready_state(agent_id, false);
++            }
++            return false;
++        }
++
++        let Some(feature) = self.completion_features.get(agent_id).cloned() else {
++            return false;
++        };
++
++        self.transcript.push(format!("{agent_id}> {message}"));
++        if message.eq_ignore_ascii_case("yes") {
++            self.closed_features.insert(agent_id.clone());
++            let _ = self
++                .ui
++                .set_agent_feature(agent_id, format!("{feature} CLOSED"));
++            let _ = self.ui.set_agent_patch_lifecycle(agent_id, true, true);
++            let _ = self.ui.set_agent_ready_state(agent_id, false);
++            self.transcript
++                .push("work-leaf: feature marked closed".to_string());
++        } else if message.eq_ignore_ascii_case("no") {
++            self.completion_features.remove(agent_id);
++            let _ = self.ui.set_agent_feature(agent_id, feature);
++            let _ = self.ui.set_agent_patch_lifecycle(agent_id, true, false);
++            let _ = self.ui.set_agent_ready_state(agent_id, false);
++            self.transcript
++                .push("work-leaf: feature remains open".to_string());
++        } else {
++            self.transcript
++                .push("work-leaf: answer yes or no to close this feature".to_string());
++        }
++        true
++    }
++
+     fn name_chat_from_first_prompt(&mut self, agent_id: &AgentId, prompt: &str) {
+         if let Some(title) = self
+             .chat_title_agent
+diff --git a/src/workspace.rs b/src/workspace.rs
+index adc2e7b..a82a6af 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -2439,6 +2439,7 @@ mod tests {
+             depends_on: Vec::new(),
+             depended_on_by: Vec::new(),
+         });
++        controller.title_agent.mark_named(agent_id);
+         controller
+     }
+ 
+@@ -2583,6 +2584,54 @@ mod tests {
+         assert!(!controller.implicit_loading_agents.contains_key(&agent_id));
+     }
+ 
++    #[test]
++    fn closed_feature_reopens_when_user_sends_follow_up() {
++        let backend = ScriptedBackend::new(["reopened reply"]);
++        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
++        let mut controller = controller_with_agent(backend.clone(), &agent_id);
++
++        controller.ask_feature_done(&agent_id);
++        controller
++            .send_message(&agent_id, "yes")
++            .expect("completion answer is accepted");
++
++        let snapshot = controller.snapshot();
++        let closed = snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(closed.completion, Some(WorkLeafCompletion::Closed));
++        assert!(
++            closed
++                .lines
++                .iter()
++                .any(|line| line == FEATURE_CLOSED_MESSAGE),
++            "{closed:?}"
++        );
++
++        controller
++            .send_message(&agent_id, "please continue")
++            .expect("closed patch chat can be reopened");
++        assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++        let snapshot = controller.snapshot();
++        let reopened = snapshot
++            .session(&agent_id)
++            .expect("patch agent session exists");
++        assert_eq!(reopened.completion, None);
++        assert!(
++            backend
++                .sends()
++                .iter()
++                .any(|(id, prompt)| id == &agent_id && prompt == "please continue"),
++            "{:?}",
++            backend.sends()
++        );
++        assert!(
++            reopened.lines.iter().any(|line| line == "reopened reply"),
++            "{reopened:?}"
++        );
++    }
++
+     #[test]
+     fn non_user_patch_agent_done_starts_review_and_completion_question() {
+         let root = git_repo("workspace-non-user-review-completion");
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index 63e645d..bd082c0 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -86,6 +86,55 @@ fn scripted_harness_rings_and_highlights_ready_chat() {
+     assert!(!harness.render_frame().starts_with('\u{7}'));
+ }
+ 
++#[test]
++fn scripted_harness_completion_question_highlights_closes_and_reopens_patch_chat() {
++    let mut harness = UiHarness::new(100, 24);
++
++    harness
++        .ask_feature_done("user-2", "tests")
++        .expect("fixture user-2 agent is registered");
++
++    let done_frame = harness.render_frame();
++    assert!(done_frame.starts_with('\u{7}'));
++    assert!(
++        harness
++            .ui()
++            .render_left_pane()
++            .contains("\u{1b}[7m>tests DONE? user-2  working: tests DONE?  READY\u{1b}[0m")
++    );
++    assert!(
++        harness
++            .transcript()
++            .iter()
++            .any(|line| line == "work-leaf: is this feature done? [yes/no]")
++    );
++
++    harness.handle_bytes(b"yes\n");
++
++    let closed_left_pane = strip_ansi(&harness.ui().render_left_pane());
++    assert!(closed_left_pane.contains("[closed]\n>tests CLOSED user-2  working: tests CLOSED"));
++    assert!(!closed_left_pane.contains("tests CLOSED  READY"));
++    assert!(
++        harness
++            .transcript()
++            .iter()
++            .any(|line| line == "work-leaf: feature marked closed")
++    );
++
++    harness.handle_bytes(b"please continue\n");
++
++    let reopened_left_pane = strip_ansi(&harness.ui().render_left_pane());
++    assert!(reopened_left_pane.contains("[working]\n>tests user-2  working: tests"));
++    assert!(!reopened_left_pane.contains("tests CLOSED"));
++    assert!(!reopened_left_pane.contains("tests DONE?"));
++    assert!(
++        harness
++            .transcript()
++            .iter()
++            .any(|line| line == "user-2> please continue")
++    );
++}
++
+ #[test]
+ fn scripted_harness_switches_modes_without_enter() {
+     let mut harness = UiHarness::new(80, 24);

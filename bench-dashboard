@@ -352,8 +352,12 @@ def normalize_record(
         "changed_lines_deleted": changed_deleted,
         "changed_lines_total": changed_total,
         "final_checks": final_checks,
-        "agent_model": str(value(fields, "agent_model") or "unknown"),
+        "agent_model": str(value(fields, "agent_model") or "not recorded"),
+        "agent_reasoning_effort": str(value(fields, "agent_reasoning_effort") or "not recorded"),
+        "agent_reasoning_effort_source": str(value(fields, "agent_reasoning_effort_source") or "not recorded"),
         "agent_transport": str(value(fields, "agent_transport") or "unknown"),
+        "codex_cli_path": str(value(fields, "codex_cli_path") or "unknown"),
+        "codex_cli_version": str(value(fields, "codex_cli_version") or "unknown"),
         "no_read_permission": str(value(fields, "no_read_permission") or "unknown"),
         "benched_binary_commit": str(value(fields, "benched_binary_commit", "bench_driver_commit") or "unknown"),
         "benched_binary_dirty": str(value(fields, "benched_binary_dirty", "bench_driver_dirty") or "unknown"),
@@ -711,13 +715,15 @@ def render_index_html() -> str:
               <th class="num">Files</th>
               <th class="num">Lines</th>
               <th>Checks</th>
+              <th>Codex CLI</th>
               <th>Model</th>
+              <th>Reasoning</th>
               <th>Transport</th>
               <th>Dirty</th>
             </tr>
           </thead>
           <tbody id="bench-body">
-            <tr><td colspan="17">Loading bench reports...</td></tr>
+            <tr><td colspan="19">Loading bench reports...</td></tr>
           </tbody>
         </table>
       </div>
@@ -744,13 +750,15 @@ def render_index_html() -> str:
               <th class="num">Files</th>
               <th class="num">Lines</th>
               <th>Checks</th>
+              <th>Codex CLI</th>
               <th>Model</th>
+              <th>Reasoning</th>
               <th>Transport</th>
               <th>Dirty</th>
             </tr>
           </thead>
           <tbody id="old-bench-body">
-            <tr><td colspan="17">Loading old benchmark reports...</td></tr>
+            <tr><td colspan="19">Loading old benchmark reports...</td></tr>
           </tbody>
         </table>
       </div>
@@ -825,7 +833,8 @@ def render_index_html() -> str:
 
     function searchable(record) {
       return [
-        record.kind, record.run_id, record.result, record.agent_model, record.agent_transport,
+        record.kind, record.run_id, record.result, record.agent_model, record.agent_reasoning_effort, record.agent_transport,
+        record.codex_cli_version, record.codex_cli_path,
         record.benched_binary_commit, record.benched_binary_dirty, record.operator_notes,
         record.report_file, record.baseline_status, record.baseline_reason
       ].join(' ').toLowerCase();
@@ -867,7 +876,7 @@ def render_index_html() -> str:
 
     function renderTableRows(targetBody, visible, emptyText) {
       if (visible.length === 0) {
-        targetBody.innerHTML = `<tr><td colspan="17">${emptyText}</td></tr>`;
+        targetBody.innerHTML = `<tr><td colspan="19">${emptyText}</td></tr>`;
         return;
       }
       targetBody.innerHTML = '';
@@ -889,7 +898,9 @@ def render_index_html() -> str:
           <td class="num">${number(record.changed_files)}</td>
           <td class="num">${lineDelta(record)}</td>
           <td>${escapeHtml(record.final_checks)}</td>
+          <td>${escapeHtml(record.codex_cli_version)}</td>
           <td>${escapeHtml(record.agent_model)}</td>
+          <td>${escapeHtml(record.agent_reasoning_effort)}</td>
           <td>${escapeHtml(record.agent_transport)}</td>
           <td>${escapeHtml(record.benched_binary_dirty)}</td>
         `;
@@ -1074,7 +1085,11 @@ def run_self_test() -> None:
 - benched_binary_commit: abc123
 - benched_binary_dirty: no
 - agent_transport: sdk
+- codex_cli_path: /usr/bin/codex
+- codex_cli_version: codex-cli 0.141.0
 - agent_model: gpt-5.5
+- agent_reasoning_effort: xhigh
+- agent_reasoning_effort_source: codex config /home/user/.codex/config.toml
 - no_read_permission: 0
 - review_completed: yes
 - linearize_completed: yes
@@ -1133,7 +1148,11 @@ def run_self_test() -> None:
                     "result": "pass",
                     "duration_seconds": 2130,
                     "agent_transport": "sdk",
+                    "codex_cli_path": "/usr/bin/codex",
+                    "codex_cli_version": "codex-cli 0.141.0",
                     "agent_model": "gpt-5.5",
+                    "agent_reasoning_effort": "xhigh",
+                    "agent_reasoning_effort_source": "codex config /home/user/.codex/config.toml",
                     "review_completed": "yes",
                     "linearize_completed": "yes",
                     "changed_lines_added": 1409,
@@ -1154,7 +1173,11 @@ def run_self_test() -> None:
 - result: pass
 - duration_seconds: 2400
 - agent_transport: app-server
+- codex_cli_path: /usr/bin/codex
+- codex_cli_version: codex-cli 0.141.0
 - agent_model: gpt-5.5
+- agent_reasoning_effort: xhigh
+- agent_reasoning_effort_source: codex config /home/user/.codex/config.toml
 - review_completed: yes
 - linearize_completed: yes
 - commits_after_base: 3
@@ -1173,7 +1196,11 @@ def run_self_test() -> None:
                     "result": "pass",
                     "duration_seconds": 2400,
                     "agent_transport": "app-server",
+                    "codex_cli_path": "/usr/bin/codex",
+                    "codex_cli_version": "codex-cli 0.141.0",
                     "agent_model": "gpt-5.5",
+                    "agent_reasoning_effort": "xhigh",
+                    "agent_reasoning_effort_source": "codex config /home/user/.codex/config.toml",
                     "review_completed": "yes",
                     "linearize_completed": "yes",
                     "changed_lines_added": 1200,
@@ -1217,10 +1244,16 @@ def run_self_test() -> None:
         latest = records[0]
         assert latest["kind"] == "Parallel", latest
         assert latest["run_id"] == "20260622T221828+0200-parallel-1", latest
+        assert latest["codex_cli_version"] == "codex-cli 0.141.0", latest
+        assert latest["agent_model"] == "gpt-5.5", latest
+        assert latest["agent_reasoning_effort"] == "xhigh", latest
         parallel_report = "parallel-20260622T221828+0200/run-1/20260622T221828+0200-parallel-1-three-feature-bench.md"
         assert latest["report_file"] == parallel_report, latest
         work_leaf = next(record for record in records if record["run_id"] == "20260611T113324+0200")
         assert work_leaf["kind"] == "Work Leaf", work_leaf
+        assert work_leaf["codex_cli_version"] == "codex-cli 0.141.0", work_leaf
+        assert work_leaf["agent_model"] == "gpt-5.5", work_leaf
+        assert work_leaf["agent_reasoning_effort"] == "xhigh", work_leaf
         assert work_leaf["input_tokens"] == 150, work_leaf
         assert work_leaf["uncached_input_tokens"] == 30, work_leaf
         assert work_leaf["changed_lines_total"] == 1454, work_leaf

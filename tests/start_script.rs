@@ -385,8 +385,17 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains("code_quality"));
     assert!(script.contains("agent_backend: codex"));
     assert!(script.contains("agent_transport: app-server"));
+    assert!(script.contains("codex_cli_path: $codex_cli_path"));
+    assert!(script.contains("codex_cli_version: $codex_cli_version"));
+    assert!(script.contains("detect_codex_cli_version()"));
+    assert!(script.contains("codex --version"));
     assert!(script.contains("agent_model"));
     assert!(script.contains("agent_model_source"));
+    assert!(script.contains("agent_reasoning_effort"));
+    assert!(script.contains("agent_reasoning_effort_source"));
+    assert!(script.contains("read_codex_config_value"));
+    assert!(!script.contains("bench_model=\"unknown\""));
+    assert!(script.contains("daemon_args+=(\"--model\" \"$bench_model\")"));
     assert!(script.contains("requested_agent_model"));
     assert!(script.contains("detect_codex_model()"));
     assert!(!script.contains("ConfigReadResponse"));
