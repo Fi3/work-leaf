@@ -6,9 +6,9 @@ usage() {
 Usage: bench-three-features [--dry-run]
 
 Run the real three-feature orchestrator benchmark with the current Work Leaf
-binaries against a clean temporary snapshot of the current working directory.
-The runner drives the localhost HTTP API directly, saves a benchmark report
-every time it runs, and always removes the temporary checkout.
+binaries against the fixed historical three-feature benchmark base commit. The
+runner drives the localhost HTTP API directly, saves a benchmark report every
+time it runs, and always removes the temporary checkout.
 
 Environment:
   WORK_LEAF_BENCH_TMPDIR        parent directory for the temporary checkout
@@ -24,6 +24,9 @@ Environment:
   WORK_LEAF_BENCH_OPERATOR_NOTES optional human notes saved in the report
   WORK_LEAF_BENCH_WEB_UI       set to 0 to skip the local web UI helper
   WORK_LEAF_BENCH_WEB_LISTEN   web UI listen address, default 127.0.0.1:0
+
+The benchmark target base is fixed at c92a0b7060a36eac6db2d869b85e589a7a9480f9.
+WORK_LEAF_BENCH_BASE is intentionally unsupported so saved runs are comparable.
 USAGE
 }
 
@@ -47,6 +50,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly base_commit="c92a0b7060a36eac6db2d869b85e589a7a9480f9"
+if [[ -n "${WORK_LEAF_BENCH_BASE+x}" ]]; then
+  echo "error: WORK_LEAF_BENCH_BASE is not supported; bench-three-features always uses $base_commit" >&2
+  exit 2
+fi
 tmp_parent="${WORK_LEAF_BENCH_TMPDIR:-${TMPDIR:-/tmp}}"
 results_dir="${WORK_LEAF_BENCH_RESULTS_DIR:-$repo_root/bench-results}"
 timeout_secs="${WORK_LEAF_BENCH_TIMEOUT_SECS:-7200}"
@@ -67,9 +75,8 @@ web_ui_enabled="${WORK_LEAF_BENCH_WEB_UI:-1}"
 web_ui_listen="${WORK_LEAF_BENCH_WEB_LISTEN:-127.0.0.1:0}"
 mkdir -p "$tmp_parent" "$results_dir"
 results_dir="$(cd "$results_dir" && pwd)"
-source_head="$(git -C "$repo_root" rev-parse HEAD 2>/dev/null || printf 'unknown')"
-worktree_source_dirty="unknown"
-base_commit="pending-worktree-snapshot"
+source_head="$base_commit"
+worktree_source_dirty="no"
 
 shell_quote() {
   printf '%q' "$1"
@@ -186,96 +193,11 @@ cleanup_daemon_tmp() {
   fi
 }
 
-source_worktree_dirty() {
-  if git -C "$repo_root" diff --quiet --ignore-submodules -- \
-    && git -C "$repo_root" diff --cached --quiet --ignore-submodules -- \
-    && [[ -z "$(git -C "$repo_root" ls-files --others --exclude-standard)" ]]; then
-    printf 'no'
-  else
-    printf 'yes'
-  fi
-}
-
-results_dir_relative_to_repo() {
-  local relative
-  relative="$(realpath --relative-to="$repo_root" "$results_dir" 2>/dev/null || true)"
-  case "$relative" in
-    ""|..|../*|/*)
-      return 1
-      ;;
-    *)
-      printf '%s\n' "$relative"
-      ;;
-  esac
-}
-
-default_results_dir_relative_to_repo() {
-  local relative
-  relative="$(realpath --relative-to="$repo_root" "$repo_root/bench-results" 2>/dev/null || true)"
-  case "$relative" in
-    ""|..|../*|/*)
-      return 1
-      ;;
-    *)
-      printf '%s\n' "$relative"
-      ;;
-  esac
-}
-
-worktree_untracked_path_is_skipped() {
-  local path="$1"
-  local results_relative="${2:-}"
-  local default_results_relative="${3:-}"
-  if [[ -n "$results_relative" ]]; then
-    case "$path" in
-      "$results_relative"|"$results_relative"/*)
-        return 0
-        ;;
-    esac
-  fi
-  if [[ -n "$default_results_relative" ]]; then
-    case "$path" in
-      "$default_results_relative"|"$default_results_relative"/*)
-        return 0
-        ;;
-    esac
-  fi
-  return 1
-}
-
-copy_untracked_worktree_files() {
-  local file results_relative default_results_relative
-  results_relative="$(results_dir_relative_to_repo || true)"
-  default_results_relative="$(default_results_dir_relative_to_repo || true)"
-  while IFS= read -r -d '' file; do
-    if worktree_untracked_path_is_skipped "$file" "$results_relative" "$default_results_relative"; then
-      continue
-    fi
-    mkdir -p "$checkout_dir/$(dirname "$file")"
-    cp -Pp "$repo_root/$file" "$checkout_dir/$file"
-  done < <(git -C "$repo_root" ls-files --others --exclude-standard -z)
-}
-
-prepare_worktree_checkout() {
-  source_head="$(git -C "$repo_root" rev-parse HEAD)"
-  worktree_source_dirty="$(source_worktree_dirty)"
-
-  git -C "$repo_root" clone --no-hardlinks "$repo_root" "$checkout_dir" >/dev/null
-  git -C "$checkout_dir" checkout --detach "$source_head" >/dev/null
-
-  if ! git -C "$repo_root" diff --quiet --binary HEAD --; then
-    git -C "$repo_root" diff --binary HEAD -- | git -C "$checkout_dir" apply --whitespace=nowarn
-  fi
-  copy_untracked_worktree_files
-
-  git -C "$checkout_dir" add -A
-  if ! git -C "$checkout_dir" diff --cached --quiet --ignore-submodules --; then
-    git -C "$checkout_dir" \
-      -c user.name="Work Leaf Bench" \
-      -c user.email="work-leaf-bench@example.invalid" \
-      commit -m "WORK_LEAF_BENCH_WORKTREE_SNAPSHOT" >/dev/null
-  fi
-  base_commit="$(git -C "$checkout_dir" rev-parse HEAD)"
+prepare_base_checkout() {
+  source_head="$base_commit"
+  worktree_source_dirty="no"
+  git -C "$repo_root" clone --no-checkout --no-hardlinks "$repo_root" "$checkout_dir" >/dev/null
+  git -C "$checkout_dir" checkout --detach "$base_commit" >/dev/null
 }
 
 state_snapshot_is_valid() {
@@ -707,7 +629,7 @@ if [[ "$dry_run" == "1" ]]; then
     agent_reasoning_effort_source="dry run did not launch Codex"
   fi
   detect_codex_cli_version
-  prepare_worktree_checkout
+  prepare_base_checkout
   log "WORK_LEAF_BENCH_BASE=$base_commit"
   result="skipped"
   code_quality="not run"
@@ -727,7 +649,7 @@ fi
 
 log "WORK_LEAF_BENCH_TEMP=$tmp_root"
 log "WORK_LEAF_BENCH_SOURCE_HEAD=$source_head"
-prepare_worktree_checkout
+prepare_base_checkout
 log "WORK_LEAF_BENCH_BASE=$base_commit"
 mkdir -p "$child_tmp_dir"
 
@@ -817,14 +739,10 @@ while true; do
 
   if [[ "$linearize_started" == "0" && "$busy" == "false" && "$user_count" == "3" && "$terminal_users" == "$user_count" && "$ready_users" -ge "$patch_agents_with_commits" ]]; then
     review_completed="yes"
-    expected_final_commits="$patch_agents_with_commits"
-    if [[ "$patch_agents_with_commits" == "0" ]]; then
-      log "all patch agents completed without reviewed commits; running checks without linearize"
-      linearize_started=1
-      accepted_linearize=1
-      sleep 5
-      continue
+    if [[ "$patch_agents_with_commits" != "3" ]]; then
+      fail_bench "expected all three patch agents to produce reviewed commits before linearize; got ${patch_agents_with_commits}"
     fi
+    expected_final_commits=3
     log "all patch agents done and ${patch_agents_with_commits} patch-agent commit(s) reviewed; launching force-linearize"
     post_command 'force-linearize' || fail_bench "failed to post force-linearize command"
     linearize_started=1

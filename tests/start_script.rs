@@ -289,12 +289,16 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
         .mode();
 
     assert_ne!(mode & 0o111, 0, "bench script should be executable");
-    assert!(script.contains("prepare_worktree_checkout()"));
-    assert!(script.contains("copy_untracked_worktree_files()"));
-    assert!(script.contains("default_results_dir_relative_to_repo()"));
+    assert!(script.contains("readonly base_commit=\"c92a0b7060a36eac6db2d869b85e589a7a9480f9\""));
+    assert!(script.contains("prepare_base_checkout()"));
+    assert!(!script.contains("prepare_worktree_checkout()"));
+    assert!(!script.contains("copy_untracked_worktree_files()"));
+    assert!(!script.contains("default_results_dir_relative_to_repo()"));
+    assert!(!script.contains("WORK_LEAF_BENCH_WORKTREE_SNAPSHOT"));
+    assert!(script.contains("WORK_LEAF_BENCH_BASE is not supported"));
     assert!(script.contains("worktree_source_commit"));
     assert!(script.contains("WORK_LEAF_BENCH_SOURCE_HEAD"));
-    assert!(!script.contains("WORK_LEAF_BENCH_BASE:-c92a0b7060a36eac6db2d869b85e589a7a9480f9"));
+    assert!(!script.contains("WORK_LEAF_BENCH_BASE:-"));
     assert!(script.contains("fetch_state_snapshot()"));
     assert!(script.contains("best_state_snapshot()"));
     assert!(script.contains("curl -fsS \"$url/state\" > \"$next\""));
@@ -372,11 +376,14 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(!script.contains("\"$done_users\" == \"3\""));
     assert!(script.contains("patch_agents_with_commits="));
     assert!(script.contains("expected_final_commits="));
+    assert!(script.contains("if [[ \"$patch_agents_with_commits\" != \"3\" ]]; then"));
+    assert!(script.contains("expected all three patch agents to produce reviewed commits"));
     assert!(
-        script.contains("completed without reviewed commits; running checks without linearize")
+        !script.contains("completed without reviewed commits; running checks without linearize")
     );
     assert!(script.contains("linearize_completed"));
-    assert!(script.contains("post_command 'force-linearize' || fail_bench \"failed to post force-linearize command\"\n    linearize_started=1\n    sleep 5\n    continue"));
+    assert!(script.contains("post_command 'force-linearize'"));
+    assert!(script.contains("linearize_started=1"));
     assert!(script.contains("post_agent 'linearize' 'Accept the proposed linearization plan."));
     assert!(script.contains("accepted_linearize=1\n    sleep 5\n    continue"));
     assert!(script.contains("token_usage"));
@@ -420,7 +427,6 @@ fn three_feature_bench_script_cleans_temp_checkout_and_writes_dry_run_report() {
     let results = root.path().join("results");
     let output = Command::new(Path::new(env!("CARGO_MANIFEST_DIR")).join("bench-three-features"))
         .arg("--dry-run")
-        .env("WORK_LEAF_BENCH_BASE", "HEAD")
         .env("WORK_LEAF_BENCH_TMPDIR", root.path())
         .env("WORK_LEAF_BENCH_RESULTS_DIR", &results)
         .stdin(Stdio::null())
@@ -436,6 +442,7 @@ fn three_feature_bench_script_cleans_temp_checkout_and_writes_dry_run_report() {
         String::from_utf8_lossy(&output.stderr)
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("WORK_LEAF_BENCH_BASE=c92a0b7060a36eac6db2d869b85e589a7a9480f9"));
     let temp_root = stdout
         .lines()
         .find_map(|line| {
@@ -459,6 +466,32 @@ fn three_feature_bench_script_cleans_temp_checkout_and_writes_dry_run_report() {
         "dry run should write a markdown bench report"
     );
     assert!(results.join("three-feature-bench.jsonl").exists());
+}
+
+#[test]
+fn three_feature_bench_script_rejects_base_override() {
+    let root = temp_dir("three-feature-bench-base-override");
+    let results = root.path().join("results");
+    let output = Command::new(Path::new(env!("CARGO_MANIFEST_DIR")).join("bench-three-features"))
+        .arg("--dry-run")
+        .env("WORK_LEAF_BENCH_BASE", "HEAD")
+        .env("WORK_LEAF_BENCH_TMPDIR", root.path())
+        .env("WORK_LEAF_BENCH_RESULTS_DIR", &results)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .unwrap();
+
+    assert!(
+        !output.status.success(),
+        "base override must be rejected\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("WORK_LEAF_BENCH_BASE is not supported")
+    );
 }
 
 struct TempProject {
