@@ -401,6 +401,14 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains("accepted_linearize=1\n    sleep 5\n    continue"));
     assert!(script.contains("token_usage"));
     assert!(script.contains("$session.token_usage.input_tokens"));
+    assert!(script.contains("compute_token_model_fit()"));
+    assert!(script.contains("baseline-manifest.json"));
+    assert!(script.contains("token_model_status"));
+    assert!(script.contains("token_model_delta_tokens"));
+    assert!(script.contains("token_model_rerun"));
+    assert!(script.contains("## Token Model Fit"));
+    assert!(script.contains("rerun recommendation: $token_model_rerun"));
+    assert!(script.contains("outside fitted central 98%"));
     assert!(!script.contains("post_agent \"$session_id\" \"/status\""));
     assert!(script.contains("code_quality"));
     assert!(script.contains("agent_backend: codex"));

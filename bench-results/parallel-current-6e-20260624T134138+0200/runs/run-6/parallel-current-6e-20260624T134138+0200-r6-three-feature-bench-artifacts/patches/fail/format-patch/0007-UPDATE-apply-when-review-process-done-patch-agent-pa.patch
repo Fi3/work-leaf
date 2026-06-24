@@ -1,0 +1,63 @@
+From 717eadcbe1438ba3feb9371699a48d6bc1799d8c Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 14:08:18 +0200
+Subject: [PATCH 7/8] UPDATE apply when-review-process-done-patch-agent patch
+ from user-3
+
+Agent-ID: user-3
+Feature: when-review-process-done-patch-agent
+Reason: FIX terminal feature-completion test to assert patch-agent readiness instead of reviewer readiness
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `when-review-process-done-patch-agent`. The agent stated the reason as `FIX terminal feature-completion test to assert patch-agent readiness instead of reviewer readiness`. The patch touched tests/terminal_app.rs and changed the working tree with 17 added line(s) and 7 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ tests/terminal_app.rs | 24 +++++++++++++++++-------
+ 1 file changed, 17 insertions(+), 7 deletions(-)
+
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index cbd6bb3..77085a7 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -986,10 +986,12 @@ fn terminal_app_feature_completion_closes_reviewed_feature_on_yes_and_reopens_on
+     assert!(app.wait_for_idle(Duration::from_secs(1)));
+     let closed_frame = app.render_frame();
+     assert!(closed_frame.contains("work-leaf: feature closed"));
++    let left_pane = app.ui().render_left_pane();
+     assert!(
+-        !app.ui().render_left_pane().contains("READY"),
+-        "{}",
+-        app.ui().render_left_pane()
++        !left_pane
++            .lines()
++            .any(|line| line.contains("user-1") && line.contains("READY")),
++        "{left_pane}"
+     );
+ 
+     app.handle_bytes(b"follow up\n");
+@@ -998,16 +1000,24 @@ fn terminal_app_feature_completion_closes_reviewed_feature_on_yes_and_reopens_on
+     assert!(reopened_frame.contains("work-leaf: feature reopened"));
+     assert!(reopened_frame.contains("user: follow up"));
+     assert!(reopened_frame.contains("Is this feature done? yes/no"));
+-    assert!(app.ui().render_left_pane().contains("READY"));
++    let left_pane = app.ui().render_left_pane();
++    assert!(
++        left_pane
++            .lines()
++            .any(|line| line.contains("user-1") && line.contains("READY")),
++        "{left_pane}"
++    );
+ 
+     app.handle_bytes(b"yes\n");
+     assert!(app.wait_for_idle(Duration::from_secs(1)));
+     let second_closed_frame = app.render_frame();
+     assert!(second_closed_frame.contains("work-leaf: feature closed"));
++    let left_pane = app.ui().render_left_pane();
+     assert!(
+-        !app.ui().render_left_pane().contains("READY"),
+-        "{}",
+-        app.ui().render_left_pane()
++        !left_pane
++            .lines()
++            .any(|line| line.contains("user-1") && line.contains("READY")),
++        "{left_pane}"
+     );
+ }
+ 

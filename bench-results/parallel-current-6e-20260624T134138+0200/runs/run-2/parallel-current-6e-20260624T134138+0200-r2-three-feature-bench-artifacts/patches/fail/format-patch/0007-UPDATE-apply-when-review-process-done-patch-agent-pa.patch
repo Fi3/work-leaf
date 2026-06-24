@@ -1,0 +1,337 @@
+From 48bff56554554449399599be460b5188f4b1d19a Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 14:06:40 +0200
+Subject: [PATCH 7/7] UPDATE apply when-review-process-done-patch-agent patch
+ from user-3
+
+Agent-ID: user-3
+Feature: when-review-process-done-patch-agent
+Reason: FIX keep feature close state in controller DTOs instead of deriving it from agent transcript text
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `when-review-process-done-patch-agent`. The agent stated the reason as `FIX keep feature close state in controller DTOs instead of deriving it from agent transcript text`. The patch touched src/terminal_app.rs, src/workspace.rs, tests/workspace.rs and changed the working tree with 93 added line(s) and 33 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs | 74 +++++++++++++++++++++++++++++----------------
+ src/workspace.rs    | 45 ++++++++++++++++++++++++---
+ tests/workspace.rs  |  3 ++
+ 3 files changed, 91 insertions(+), 31 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 99e8c02..d38e0f1 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -8,8 +8,7 @@ use crate::cli::{CommandChat, terminal_right_content, ui_action_text};
+ use crate::http_controller::HttpControllerClient;
+ use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode};
+ use crate::workspace::{
+-    FEATURE_CLOSED_MESSAGE, FEATURE_DONE_QUESTION, FEATURE_REOPENED_MESSAGE, WorkLeafController,
+-    WorkLeafEvent, WorkLeafLoading, WorkLeafSession, WorkLeafSnapshot,
++    WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession, WorkLeafSnapshot,
+ };
+ 
+ #[derive(Debug)]
+@@ -711,9 +710,16 @@ where
+                     title,
+                     feature,
+                     loading,
++                    feature_closed,
+                 } => {
+-                    let session =
+-                        self.upsert_cached_session_status(agent_id, kind, title, feature, loading);
++                    let session = self.upsert_cached_session_status(
++                        agent_id,
++                        kind,
++                        title,
++                        feature,
++                        loading,
++                        feature_closed,
++                    );
+                     self.apply_session_to_ui(&session);
+                 }
+                 WorkLeafEvent::AgentLineAppended { agent_id, line } => {
+@@ -758,6 +764,7 @@ where
+         title: String,
+         feature: String,
+         loading: Option<WorkLeafLoading>,
++        feature_closed: bool,
+     ) -> WorkLeafSession {
+         if let Some(session) = self
+             .snapshot
+@@ -769,6 +776,7 @@ where
+             session.title = title;
+             session.feature = feature;
+             session.loading = loading;
++            session.feature_closed = feature_closed;
+             return session.clone();
+         }
+ 
+@@ -779,6 +787,7 @@ where
+             feature,
+             lines: Vec::new(),
+             loading,
++            feature_closed,
+         };
+         self.snapshot.sessions.push(session.clone());
+         self.snapshot
+@@ -818,13 +827,13 @@ where
+                 session.title.clone(),
+             ));
+         }
+-        let feature_closed = session_feature_closed(session);
+         let _ = self
+             .ui
+-            .set_agent_hidden_state(&session.id, feature_closed);
+-        let _ = self
+-            .ui
+-            .set_agent_ready_state(&session.id, session.loading.is_none() && !feature_closed);
++            .set_agent_hidden_state(&session.id, session.feature_closed);
++        let _ = self.ui.set_agent_ready_state(
++            &session.id,
++            session.loading.is_none() && !session.feature_closed,
++        );
+     }
+ 
+     fn should_start_agent_slash_command(&self) -> bool {
+@@ -1079,19 +1088,6 @@ const SPINNER: [&str; 4] = ["|", "/", "-", "\\"];
+ 
+ const MAX_ESCAPE_SEQUENCE: usize = 64;
+ 
+-fn session_feature_closed(session: &WorkLeafSession) -> bool {
+-    session
+-        .lines
+-        .iter()
+-        .rev()
+-        .find_map(|line| match line.as_str() {
+-            FEATURE_CLOSED_MESSAGE => Some(true),
+-            FEATURE_DONE_QUESTION | FEATURE_REOPENED_MESSAGE => Some(false),
+-            _ => None,
+-        })
+-        .unwrap_or(false)
+-}
+-
+ fn is_complete_control_sequence(sequence: &[u8]) -> bool {
+     sequence.len() > 1
+         && sequence
+@@ -1369,6 +1365,7 @@ mod tests {
+                     feature: "feature".to_string(),
+                     lines: vec!["large transcript line".repeat(256)],
+                     loading: None,
++                    feature_closed: false,
+                 }],
+             },
+             Arc::clone(&snapshot_calls),
+@@ -1429,11 +1426,9 @@ mod tests {
+                     kind: AgentKind::Codex,
+                     title: "feature".to_string(),
+                     feature: "feature".to_string(),
+-                    lines: vec![
+-                        FEATURE_DONE_QUESTION.to_string(),
+-                        FEATURE_CLOSED_MESSAGE.to_string(),
+-                    ],
++                    lines: Vec::new(),
+                     loading: None,
++                    feature_closed: true,
+                 }],
+             },
+             Arc::clone(&snapshot_calls),
+@@ -1445,6 +1440,33 @@ mod tests {
+         assert!(!app.ui().render_left_pane().contains("user-1"));
+     }
+ 
++    #[test]
++    fn agent_transcript_line_matching_feature_closed_does_not_hide_chat() {
++        let snapshot_calls = Arc::new(AtomicUsize::new(0));
++        let drain_calls = Arc::new(AtomicUsize::new(0));
++        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
++        let controller = CountingController::new(
++            crate::WorkLeafSnapshot {
++                command_transcript: Vec::new(),
++                sessions: vec![WorkLeafSession {
++                    id: agent_id,
++                    kind: AgentKind::Codex,
++                    title: "feature".to_string(),
++                    feature: "feature".to_string(),
++                    lines: vec!["work-leaf: feature closed".to_string()],
++                    loading: None,
++                    feature_closed: false,
++                }],
++            },
++            Arc::clone(&snapshot_calls),
++            Arc::clone(&drain_calls),
++        );
++
++        let app = TerminalAppCore::new(controller, 80, 24);
++
++        assert!(app.ui().render_left_pane().contains("user-1"));
++    }
++
+     #[test]
+     fn command_surface_insert_mode_renders_chat_buffer() {
+         let chat = CommandChat::new(PathBuf::from("."), NoopBackend);
+diff --git a/src/workspace.rs b/src/workspace.rs
+index e81e86a..d826dac 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -37,7 +37,6 @@ where
+     reviewed_agent_commits: BTreeMap<AgentId, String>,
+     agent_review_baselines: BTreeMap<AgentId, String>,
+     feature_done_prompts: BTreeSet<AgentId>,
+-    closed_feature_chats: BTreeSet<AgentId>,
+ }
+ 
+ impl<B> WorkLeafController<B>
+@@ -60,7 +59,6 @@ where
+             reviewed_agent_commits: BTreeMap::new(),
+             agent_review_baselines: BTreeMap::new(),
+             feature_done_prompts: BTreeSet::new(),
+-            closed_feature_chats: BTreeSet::new(),
+         }
+     }
+ 
+@@ -238,6 +236,7 @@ where
+             feature: launch.feature.clone(),
+             lines: Vec::new(),
+             loading: Some(WorkLeafLoading::Launching),
++            feature_closed: false,
+         });
+         self.pending_events.push(WorkLeafEvent::AgentSelected {
+             agent_id: agent_id.clone(),
+@@ -270,16 +269,22 @@ where
+ 
+         if self.feature_done_prompts.remove(agent_id) {
+             if is_feature_done_yes_response(message) {
+-                self.closed_feature_chats.insert(agent_id.clone());
+                 self.append_agent_line_allow_duplicate(agent_id, format!("user: {message}"));
++                self.set_session_feature_closed(agent_id, true);
+                 self.append_agent_line_allow_duplicate(
+                     agent_id,
+                     FEATURE_CLOSED_MESSAGE.to_string(),
+                 );
+                 return Ok(());
+             }
++            self.set_session_feature_closed(agent_id, false);
+             self.append_agent_line_allow_duplicate(agent_id, FEATURE_REOPENED_MESSAGE.to_string());
+-        } else if self.closed_feature_chats.remove(agent_id) {
++        } else if self
++            .sessions
++            .get(agent_id)
++            .is_some_and(|session| session.feature_closed)
++        {
++            self.set_session_feature_closed(agent_id, false);
+             self.append_agent_line_allow_duplicate(agent_id, FEATURE_REOPENED_MESSAGE.to_string());
+         }
+ 
+@@ -398,6 +403,7 @@ where
+                     feature: format!("review {}", commit.feature),
+                     lines: Vec::new(),
+                     loading: Some(WorkLeafLoading::WaitingForReply),
++                    feature_closed: false,
+                 });
+             }
+             if reviewer_ids.is_empty() {
+@@ -436,6 +442,7 @@ where
+             feature: title,
+             lines: Vec::new(),
+             loading: Some(WorkLeafLoading::Launching),
++            feature_closed: false,
+         });
+         self.pending_events.push(WorkLeafEvent::AgentSelected {
+             agent_id: agent_id.clone(),
+@@ -733,6 +740,7 @@ where
+                 title: session.title.clone(),
+                 feature: session.feature.clone(),
+                 loading: session.loading,
++                feature_closed: session.feature_closed,
+             });
+         }
+         self.register_agent_feature(agent_id.clone(), title);
+@@ -795,7 +803,7 @@ where
+         if !agent_id.as_str().starts_with("user-") {
+             return;
+         }
+-        self.closed_feature_chats.remove(agent_id);
++        self.set_session_feature_closed(agent_id, false);
+         self.feature_done_prompts.insert(agent_id.clone());
+         self.append_agent_line_allow_duplicate(agent_id, FEATURE_DONE_QUESTION.to_string());
+     }
+@@ -834,6 +842,30 @@ where
+             title: session.title.clone(),
+             feature: session.feature.clone(),
+             loading: session.loading,
++            feature_closed: session.feature_closed,
++        });
++    }
++
++    fn set_session_feature_closed(&mut self, agent_id: &AgentId, feature_closed: bool) {
++        let fallback_kind = self.agent_kind();
++        if !self.sessions.contains_key(agent_id) {
++            let session = WorkLeafSession::unknown(agent_id.clone(), fallback_kind);
++            self.sessions.insert(agent_id.clone(), session.clone());
++            self.pending_events
++                .push(WorkLeafEvent::AgentAdded { session });
++        }
++        let session = self
++            .sessions
++            .get_mut(agent_id)
++            .expect("session was inserted before updating feature close state");
++        session.feature_closed = feature_closed;
++        self.pending_events.push(WorkLeafEvent::AgentStatusUpdated {
++            agent_id: session.id.clone(),
++            kind: session.kind.clone(),
++            title: session.title.clone(),
++            feature: session.feature.clone(),
++            loading: session.loading,
++            feature_closed: session.feature_closed,
+         });
+     }
+ 
+@@ -927,6 +959,7 @@ pub struct WorkLeafSession {
+     pub feature: String,
+     pub lines: Vec<String>,
+     pub loading: Option<WorkLeafLoading>,
++    pub feature_closed: bool,
+ }
+ 
+ impl WorkLeafSession {
+@@ -938,6 +971,7 @@ impl WorkLeafSession {
+             feature: "agent".to_string(),
+             lines: Vec::new(),
+             loading: None,
++            feature_closed: false,
+         }
+     }
+ }
+@@ -962,6 +996,7 @@ pub enum WorkLeafEvent {
+         title: String,
+         feature: String,
+         loading: Option<WorkLeafLoading>,
++        feature_closed: bool,
+     },
+     AgentLineAppended {
+         agent_id: AgentId,
+diff --git a/tests/workspace.rs b/tests/workspace.rs
+index 01aef1d..0a73148 100644
+--- a/tests/workspace.rs
++++ b/tests/workspace.rs
+@@ -353,6 +353,7 @@ fn controller_prompts_to_close_reviewed_feature_and_reopens_on_new_message() {
+ 
+     let snapshot = controller.snapshot();
+     let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
++    assert!(!patch_agent.feature_closed);
+     assert!(
+         patch_agent
+             .lines
+@@ -365,6 +366,7 @@ fn controller_prompts_to_close_reviewed_feature_and_reopens_on_new_message() {
+ 
+     let closed = controller.snapshot();
+     let patch_agent = closed.session(&agent_id).expect("patch agent exists");
++    assert!(patch_agent.feature_closed);
+     assert!(patch_agent.lines.iter().any(|line| line == "user: yes"));
+     assert!(
+         patch_agent
+@@ -385,6 +387,7 @@ fn controller_prompts_to_close_reviewed_feature_and_reopens_on_new_message() {
+ 
+     let reopened = controller.snapshot();
+     let patch_agent = reopened.session(&agent_id).expect("patch agent exists");
++    assert!(!patch_agent.feature_closed);
+     assert!(
+         patch_agent
+             .lines

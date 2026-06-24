@@ -178,6 +178,19 @@ code_quality="not run"
 result="fail"
 failure_reason=""
 token_usage="unavailable"
+token_model_status="unavailable"
+token_model_label="unavailable"
+token_model_total=0
+token_model_baseline_count=0
+token_model_mean=0
+token_model_stddev=0
+token_model_delta_tokens=0
+token_model_z="0.00"
+token_model_percentile="0.00"
+token_model_central95_low=0
+token_model_central95_high=0
+token_model_rerun="unknown"
+token_model_comment="baseline model unavailable"
 operator_notes="${WORK_LEAF_BENCH_OPERATOR_NOTES:-}"
 reported=0
 
@@ -407,6 +420,245 @@ session_summary() {
   fi
 }
 
+compute_token_model_fit() {
+  local output key value_
+  output="$(
+    python3 - "$results_dir" "$result" "$token_usage" <<'PY'
+import json
+import math
+import re
+import sys
+from pathlib import Path
+
+results_dir = Path(sys.argv[1])
+current_result = sys.argv[2]
+current_token_usage = sys.argv[3]
+manifest_path = results_dir / "baseline-manifest.json"
+token_re = re.compile(r"(cached_input|reasoning_output|input|output)=(\d+)")
+meta_re = re.compile(r"^- ([A-Za-z0-9_]+):\s*(.*)$")
+
+
+def emit(key: str, value: object) -> None:
+    print(f"{key}\t{value}")
+
+
+def parse_tokens(text: str | None) -> dict[str, int]:
+    totals = {"input": 0, "output": 0}
+    if not text:
+        return totals
+    for key, value in token_re.findall(text):
+        if key in totals:
+            totals[key] += int(value)
+    return totals
+
+
+def parse_metadata(path: Path) -> dict[str, str]:
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return {}
+    fields: dict[str, str] = {}
+    for line in text.splitlines():
+        match = meta_re.match(line)
+        if match:
+            fields[match.group(1)] = match.group(2).strip()
+    return fields
+
+
+def sample_stddev(values: list[int], mean: float) -> float:
+    if len(values) < 2:
+        return 0.0
+    return math.sqrt(sum((value - mean) ** 2 for value in values) / (len(values) - 1))
+
+
+def gamma_lower_regularized(shape: float, x: float) -> float:
+    if shape <= 0 or x < 0:
+        return 0.0
+    if x == 0:
+        return 0.0
+    log_gamma = math.lgamma(shape)
+    if x < shape + 1.0:
+        term_shape = shape
+        total = 1.0 / shape
+        delta = total
+        for _ in range(10_000):
+            term_shape += 1.0
+            delta *= x / term_shape
+            total += delta
+            if abs(delta) < abs(total) * 1e-14:
+                return total * math.exp(-x + shape * math.log(x) - log_gamma)
+        return total * math.exp(-x + shape * math.log(x) - log_gamma)
+
+    b = x + 1.0 - shape
+    c = 1.0 / 1e-300
+    d = 1.0 / b
+    h = d
+    for i in range(1, 10_000):
+        an = -i * (i - shape)
+        b += 2.0
+        d = an * d + b
+        if abs(d) < 1e-300:
+            d = 1e-300
+        c = b + an / c
+        if abs(c) < 1e-300:
+            c = 1e-300
+        d = 1.0 / d
+        delta = d * c
+        h *= delta
+        if abs(delta - 1.0) < 1e-14:
+            upper = math.exp(-x + shape * math.log(x) - log_gamma) * h
+            return max(0.0, min(1.0, 1.0 - upper))
+    upper = math.exp(-x + shape * math.log(x) - log_gamma) * h
+    return max(0.0, min(1.0, 1.0 - upper))
+
+
+def gamma_quantile(probability: float, shape: float, scale: float) -> int:
+    low = 0.0
+    high = max(1.0, shape * scale)
+    while gamma_lower_regularized(shape, high / scale) < probability:
+        high *= 2.0
+    for _ in range(120):
+        midpoint = (low + high) / 2.0
+        if gamma_lower_regularized(shape, midpoint / scale) < probability:
+            low = midpoint
+        else:
+            high = midpoint
+    return int((low + high) / 2.0 + 0.5)
+
+
+def unavailable(reason: str) -> None:
+    emit("token_model_status", "unavailable")
+    emit("token_model_label", "unavailable")
+    emit("token_model_total", 0)
+    emit("token_model_baseline_count", 0)
+    emit("token_model_mean", 0)
+    emit("token_model_stddev", 0)
+    emit("token_model_delta_tokens", 0)
+    emit("token_model_z", "0.00")
+    emit("token_model_percentile", "0.00")
+    emit("token_model_central95_low", 0)
+    emit("token_model_central95_high", 0)
+    emit("token_model_rerun", "unknown")
+    emit("token_model_comment", reason)
+
+
+if not manifest_path.exists():
+    unavailable("baseline-manifest.json not found")
+    raise SystemExit(0)
+
+try:
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+except (OSError, json.JSONDecodeError) as error:
+    unavailable(f"baseline manifest unreadable: {error}")
+    raise SystemExit(0)
+
+baseline_totals: list[int] = []
+for item in manifest.get("reports") or []:
+    report_name = item.get("report") if isinstance(item, dict) else item
+    if not report_name:
+        continue
+    fields = parse_metadata(results_dir / str(report_name))
+    if fields.get("result", "").lower() != "pass":
+        continue
+    tokens = parse_tokens(fields.get("token_usage"))
+    total = tokens["input"] + tokens["output"]
+    if tokens["input"] > 0 and tokens["output"] > 0:
+        baseline_totals.append(total)
+
+if len(baseline_totals) < 2:
+    unavailable("not enough passing baseline reports with token usage")
+    raise SystemExit(0)
+
+mean = sum(baseline_totals) / len(baseline_totals)
+stddev = sample_stddev(baseline_totals, mean)
+if stddev <= 0:
+    unavailable("baseline token variance is zero")
+    raise SystemExit(0)
+
+variance = stddev * stddev
+shape = mean * mean / variance
+scale = variance / mean
+low95 = gamma_quantile(0.025, shape, scale)
+high95 = gamma_quantile(0.975, shape, scale)
+low98 = gamma_quantile(0.01, shape, scale)
+high98 = gamma_quantile(0.99, shape, scale)
+
+current_tokens = parse_tokens(current_token_usage)
+current_total = current_tokens["input"] + current_tokens["output"]
+if current_result.lower() != "pass":
+    emit("token_model_status", "reliability")
+    emit("token_model_label", "failed")
+    emit("token_model_total", current_total)
+    emit("token_model_baseline_count", len(baseline_totals))
+    emit("token_model_mean", int(mean + 0.5))
+    emit("token_model_stddev", int(stddev + 0.5))
+    emit("token_model_delta_tokens", int(current_total - mean))
+    emit("token_model_z", f"{((current_total - mean) / stddev):.2f}")
+    emit("token_model_percentile", "0.00")
+    emit("token_model_central95_low", low95)
+    emit("token_model_central95_high", high95)
+    emit("token_model_rerun", "investigate")
+    emit("token_model_comment", "not a successful token-model sample; investigate reliability failure")
+    raise SystemExit(0)
+
+percentile = gamma_lower_regularized(shape, current_total / scale) * 100
+delta = int(current_total - mean)
+z_score = (current_total - mean) / stddev
+if low95 <= current_total <= high95:
+    status = "fit"
+    label = "fits"
+    rerun = "not needed"
+    comment = "inside fitted central 95%"
+elif low98 <= current_total <= high98:
+    status = "watch"
+    label = "watch"
+    rerun = "useful"
+    comment = "outside central 95% but inside central 98%"
+else:
+    status = "anomaly"
+    label = "anomaly"
+    rerun = "recommended"
+    comment = "outside fitted central 98%"
+
+emit("token_model_status", status)
+emit("token_model_label", label)
+emit("token_model_total", current_total)
+emit("token_model_baseline_count", len(baseline_totals))
+emit("token_model_mean", int(mean + 0.5))
+emit("token_model_stddev", int(stddev + 0.5))
+emit("token_model_delta_tokens", delta)
+emit("token_model_z", f"{z_score:.2f}")
+emit("token_model_percentile", f"{percentile:.2f}")
+emit("token_model_central95_low", low95)
+emit("token_model_central95_high", high95)
+emit("token_model_rerun", rerun)
+emit("token_model_comment", comment)
+PY
+  )" || {
+    token_model_status="unavailable"
+    token_model_label="unavailable"
+    token_model_comment="token model comparison failed"
+    return
+  }
+  while IFS=$'\t' read -r key value_; do
+    case "$key" in
+      token_model_status) token_model_status="$value_" ;;
+      token_model_label) token_model_label="$value_" ;;
+      token_model_total) token_model_total="$value_" ;;
+      token_model_baseline_count) token_model_baseline_count="$value_" ;;
+      token_model_mean) token_model_mean="$value_" ;;
+      token_model_stddev) token_model_stddev="$value_" ;;
+      token_model_delta_tokens) token_model_delta_tokens="$value_" ;;
+      token_model_z) token_model_z="$value_" ;;
+      token_model_percentile) token_model_percentile="$value_" ;;
+      token_model_central95_low) token_model_central95_low="$value_" ;;
+      token_model_central95_high) token_model_central95_high="$value_" ;;
+      token_model_rerun) token_model_rerun="$value_" ;;
+      token_model_comment) token_model_comment="$value_" ;;
+    esac
+  done <<< "$output"
+}
+
 write_report() {
   local comment="$1"
   local end_epoch elapsed commits status_lines recent_log benched_commit benched_dirty
@@ -440,6 +692,7 @@ write_report() {
   else
     read_permission_mode="orchestrator-mediated file reads"
   fi
+  compute_token_model_fit
   cat > "$report_path" <<EOF
 # Three-Feature Smoke Bench
 
@@ -474,6 +727,19 @@ write_report() {
 - changed_lines_deleted: $changed_lines_deleted
 - changed_lines_total: $changed_lines_total
 - token_usage: $token_usage
+- token_model_status: $token_model_status
+- token_model_label: $token_model_label
+- token_model_total: $token_model_total
+- token_model_baseline_count: $token_model_baseline_count
+- token_model_mean: $token_model_mean
+- token_model_stddev: $token_model_stddev
+- token_model_delta_tokens: $token_model_delta_tokens
+- token_model_z: $token_model_z
+- token_model_percentile: $token_model_percentile
+- token_model_central95_low: $token_model_central95_low
+- token_model_central95_high: $token_model_central95_high
+- token_model_rerun: $token_model_rerun
+- token_model_comment: $token_model_comment
 - code_quality: $code_quality
 - comment: $comment
 - operator_notes: $effective_notes
@@ -481,6 +747,21 @@ write_report() {
 - binaries: $artifact_dir/bin
 - binaries_produced: ${binaries_produced:-none}
 - patch_artifacts: $patch_artifacts
+
+## Token Model Fit
+
+Status: $token_model_label
+
+- total input+output: $token_model_total
+- fitted baseline runs: $token_model_baseline_count
+- fitted mean: $token_model_mean
+- fitted stddev: $token_model_stddev
+- delta from mean: $token_model_delta_tokens
+- z-score: $token_model_z
+- fitted percentile: $token_model_percentile%
+- central 95% interval: $token_model_central95_low to $token_model_central95_high
+- rerun recommendation: $token_model_rerun
+- interpretation: $token_model_comment
 
 ## Sessions
 
@@ -525,6 +806,12 @@ EOF
     --arg linearize_completed "$linearize_completed" \
     --arg code_quality "$code_quality" \
     --arg token_usage "$token_usage" \
+    --arg token_model_status "$token_model_status" \
+    --arg token_model_label "$token_model_label" \
+    --arg token_model_z "$token_model_z" \
+    --arg token_model_percentile "$token_model_percentile" \
+    --arg token_model_rerun "$token_model_rerun" \
+    --arg token_model_comment "$token_model_comment" \
     --arg comment "$comment" \
     --arg operator_notes "$effective_notes" \
     --arg binaries_produced "${binaries_produced:-none}" \
@@ -535,7 +822,14 @@ EOF
     --argjson changed_lines_added "$changed_lines_added" \
     --argjson changed_lines_deleted "$changed_lines_deleted" \
     --argjson changed_lines_total "$changed_lines_total" \
-    '{run_id:$run_id,result:$result,benched_binary_commit:$benched_binary_commit,benched_binary_dirty:$benched_binary_dirty,worktree_source_commit:$worktree_source_commit,worktree_source_dirty:$worktree_source_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,codex_cli_path:$codex_cli_path,codex_cli_version:$codex_cli_version,agent_model:$agent_model,agent_model_source:$agent_model_source,agent_reasoning_effort:$agent_reasoning_effort,agent_reasoning_effort_source:$agent_reasoning_effort_source,requested_agent_model:$requested_agent_model,no_read_permission:$no_read_permission,read_permission_mode:$read_permission_mode,web_ui_url:$web_ui_url,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
+    --argjson token_model_total "$token_model_total" \
+    --argjson token_model_baseline_count "$token_model_baseline_count" \
+    --argjson token_model_mean "$token_model_mean" \
+    --argjson token_model_stddev "$token_model_stddev" \
+    --argjson token_model_delta_tokens "$token_model_delta_tokens" \
+    --argjson token_model_central95_low "$token_model_central95_low" \
+    --argjson token_model_central95_high "$token_model_central95_high" \
+    '{run_id:$run_id,result:$result,benched_binary_commit:$benched_binary_commit,benched_binary_dirty:$benched_binary_dirty,worktree_source_commit:$worktree_source_commit,worktree_source_dirty:$worktree_source_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,codex_cli_path:$codex_cli_path,codex_cli_version:$codex_cli_version,agent_model:$agent_model,agent_model_source:$agent_model_source,agent_reasoning_effort:$agent_reasoning_effort,agent_reasoning_effort_source:$agent_reasoning_effort_source,requested_agent_model:$requested_agent_model,no_read_permission:$no_read_permission,read_permission_mode:$read_permission_mode,web_ui_url:$web_ui_url,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,token_model_status:$token_model_status,token_model_label:$token_model_label,token_model_total:$token_model_total,token_model_baseline_count:$token_model_baseline_count,token_model_mean:$token_model_mean,token_model_stddev:$token_model_stddev,token_model_delta_tokens:$token_model_delta_tokens,token_model_z:$token_model_z,token_model_percentile:$token_model_percentile,token_model_central95_low:$token_model_central95_low,token_model_central95_high:$token_model_central95_high,token_model_rerun:$token_model_rerun,token_model_comment:$token_model_comment,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
     >> "$index_path"
   reported=1
   log "bench report: $report_path"

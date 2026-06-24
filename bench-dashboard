@@ -22,7 +22,7 @@ DEFAULT_RESULTS_DIR = ROOT / "bench-results"
 BASELINE_MANIFEST_NAME = "baseline-manifest.json"
 TOKEN_RE = re.compile(r"(cached_input|reasoning_output|input|output)=(\d+)")
 META_RE = re.compile(r"^- ([A-Za-z0-9_]+):\s*(.*)$")
-REGRESSION_RUN_COUNTS = (1, 3, 6, 9)
+REGRESSION_RUN_COUNTS = (1, 3, 6, 9, 12, 24)
 
 
 def parse_json_stream(text: str) -> list[dict[str, Any]]:
@@ -165,14 +165,22 @@ def load_baseline_manifest(results_dir: Path) -> dict[str, Any]:
     }
 
 
-def split_baseline_records(
+def split_benchmark_records(
     records: list[dict[str, Any]],
     manifest: dict[str, Any],
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     baseline: list[dict[str, Any]] = []
+    comparisons: list[dict[str, Any]] = []
     old_invalid: list[dict[str, Any]] = []
     configured = bool(manifest.get("configured"))
     report_set = set(manifest.get("report_set") or [])
+    baseline_base_commits = {
+        base_commit
+        for record in records
+        if record["report_file"] in report_set
+        for base_commit in [str(record.get("base_commit") or "")]
+        if base_commit and base_commit != "unknown"
+    }
 
     for record in records:
         copy = dict(record)
@@ -181,6 +189,10 @@ def split_baseline_records(
                 copy["baseline_status"] = "baseline"
                 copy["baseline_reason"] = "listed in baseline manifest"
                 baseline.append(copy)
+            elif is_model_comparison_record(copy, baseline_base_commits):
+                copy["baseline_status"] = "comparison"
+                copy["baseline_reason"] = "same benchmark base as fitted baseline; not used for fitting"
+                comparisons.append(copy)
             else:
                 copy["baseline_status"] = "old-invalid"
                 copy["baseline_reason"] = "not listed in baseline manifest"
@@ -190,7 +202,14 @@ def split_baseline_records(
             copy["baseline_reason"] = "no baseline manifest configured"
             baseline.append(copy)
 
-    return baseline, old_invalid
+    return baseline, comparisons, old_invalid
+
+
+def is_model_comparison_record(record: dict[str, Any], baseline_base_commits: set[str]) -> bool:
+    base_commit = str(record.get("base_commit") or "")
+    if not base_commit or base_commit == "unknown" or base_commit not in baseline_base_commits:
+        return False
+    return str(record.get("kind") or "") in {"Work Leaf", "Parallel"}
 
 
 def rounded(value_: float) -> int:
@@ -211,6 +230,63 @@ def sample_stddev(values: list[int], mean: float) -> float:
     return math.sqrt(variance)
 
 
+def gamma_lower_regularized(shape: float, x: float) -> float:
+    if shape <= 0 or x < 0:
+        return 0.0
+    if x == 0:
+        return 0.0
+    log_gamma = math.lgamma(shape)
+    if x < shape + 1:
+        term_shape = shape
+        total = 1.0 / shape
+        delta = total
+        for _ in range(10_000):
+            term_shape += 1.0
+            delta *= x / term_shape
+            total += delta
+            if abs(delta) < abs(total) * 1e-14:
+                return total * math.exp(-x + shape * math.log(x) - log_gamma)
+        return total * math.exp(-x + shape * math.log(x) - log_gamma)
+
+    b = x + 1.0 - shape
+    c = 1.0 / 1e-300
+    d = 1.0 / b
+    h = d
+    for i in range(1, 10_000):
+        an = -i * (i - shape)
+        b += 2.0
+        d = an * d + b
+        if abs(d) < 1e-300:
+            d = 1e-300
+        c = b + an / c
+        if abs(c) < 1e-300:
+            c = 1e-300
+        d = 1.0 / d
+        delta = d * c
+        h *= delta
+        if abs(delta - 1.0) < 1e-14:
+            upper = math.exp(-x + shape * math.log(x) - log_gamma) * h
+            return max(0.0, min(1.0, 1.0 - upper))
+    upper = math.exp(-x + shape * math.log(x) - log_gamma) * h
+    return max(0.0, min(1.0, 1.0 - upper))
+
+
+def gamma_quantile(probability: float, shape: float, scale: float) -> int:
+    if probability <= 0 or shape <= 0 or scale <= 0:
+        return 0
+    low = 0.0
+    high = max(1.0, shape * scale)
+    while gamma_lower_regularized(shape, high / scale) < probability:
+        high *= 2.0
+    for _ in range(120):
+        midpoint = (low + high) / 2.0
+        if gamma_lower_regularized(shape, midpoint / scale) < probability:
+            low = midpoint
+        else:
+            high = midpoint
+    return rounded((low + high) / 2.0)
+
+
 def baseline_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
     totals = sorted(
         int(record["input_tokens"]) + int(record["output_tokens"])
@@ -228,12 +304,21 @@ def baseline_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
             "input_output_median": None,
             "input_output_stddev": None,
             "coefficient_of_variation_percent": None,
+            "gamma_alpha": None,
+            "gamma_theta": None,
+            "central95_low": None,
+            "central95_high": None,
+            "central98_low": None,
+            "central98_high": None,
             "regression_thresholds": [],
         }
 
     mean = sum(totals) / len(totals)
     stddev = sample_stddev(totals, mean)
     cv_percent = (stddev / mean * 100) if mean else 0.0
+    variance = stddev * stddev
+    gamma_alpha = (mean * mean / variance) if variance > 0 else None
+    gamma_theta = (variance / mean) if variance > 0 and mean else None
     thresholds = []
     for run_count in REGRESSION_RUN_COUNTS:
         if stddev == 0 or len(totals) < 2:
@@ -257,7 +342,94 @@ def baseline_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
         "input_output_median": rounded(median(totals)),
         "input_output_stddev": rounded(stddev),
         "coefficient_of_variation_percent": round(cv_percent, 1),
+        "gamma_alpha": round(gamma_alpha, 3) if gamma_alpha else None,
+        "gamma_theta": rounded(gamma_theta) if gamma_theta else None,
+        "central95_low": gamma_quantile(0.025, gamma_alpha, gamma_theta) if gamma_alpha and gamma_theta else None,
+        "central95_high": gamma_quantile(0.975, gamma_alpha, gamma_theta) if gamma_alpha and gamma_theta else None,
+        "central98_low": gamma_quantile(0.01, gamma_alpha, gamma_theta) if gamma_alpha and gamma_theta else None,
+        "central98_high": gamma_quantile(0.99, gamma_alpha, gamma_theta) if gamma_alpha and gamma_theta else None,
         "regression_thresholds": thresholds,
+    }
+
+
+def annotate_token_model(records: list[dict[str, Any]], summary: dict[str, Any], source: str) -> None:
+    for record in records:
+        total = int(record.get("input_tokens") or 0) + int(record.get("output_tokens") or 0)
+        record["input_output_tokens"] = total
+        record["token_model_source"] = source
+        record["token_model_delta_tokens"] = None
+        record["token_model_z"] = None
+        record["token_model_percentile"] = None
+        if source == "training":
+            record["token_model_status"] = "training"
+            record["token_model_label"] = "training"
+            record["token_model_rerun"] = "not applicable"
+            record["token_model_reason"] = "used to fit the baseline model"
+            continue
+        if source == "old-invalid":
+            record["token_model_status"] = "unavailable"
+            record["token_model_label"] = "excluded"
+            record["token_model_rerun"] = "not applicable"
+            record["token_model_reason"] = "not a same-base model comparison"
+            continue
+        if str(record.get("result") or "").lower() != "pass":
+            record["token_model_status"] = "reliability"
+            record["token_model_label"] = "failed"
+            record["token_model_rerun"] = "investigate"
+            record["token_model_reason"] = "failed or stalled before a successful token trajectory"
+            continue
+        if (
+            not summary.get("count")
+            or not summary.get("gamma_alpha")
+            or not summary.get("gamma_theta")
+            or not summary.get("input_output_stddev")
+        ):
+            record["token_model_status"] = "unavailable"
+            record["token_model_label"] = "unavailable"
+            record["token_model_rerun"] = "unknown"
+            record["token_model_reason"] = "baseline model unavailable"
+            continue
+        mean = float(summary["input_output_mean"])
+        stddev = float(summary["input_output_stddev"])
+        alpha = float(summary["gamma_alpha"])
+        theta = float(summary["gamma_theta"])
+        percentile = gamma_lower_regularized(alpha, total / theta)
+        delta = total - int(summary["input_output_mean"])
+        z_score = (total - mean) / stddev if stddev else 0.0
+        record["token_model_delta_tokens"] = delta
+        record["token_model_z"] = round(z_score, 2)
+        record["token_model_percentile"] = round(percentile * 100, 2)
+        central95_low = int(summary["central95_low"])
+        central95_high = int(summary["central95_high"])
+        central98_low = int(summary["central98_low"])
+        central98_high = int(summary["central98_high"])
+        if central95_low <= total <= central95_high:
+            record["token_model_status"] = "fit"
+            record["token_model_label"] = "fits"
+            record["token_model_rerun"] = "not needed"
+            record["token_model_reason"] = "inside fitted central 95%"
+        elif central98_low <= total <= central98_high:
+            record["token_model_status"] = "watch"
+            record["token_model_label"] = "watch"
+            record["token_model_rerun"] = "useful"
+            record["token_model_reason"] = "outside central 95% but inside central 98%"
+        else:
+            record["token_model_status"] = "anomaly"
+            record["token_model_label"] = "anomaly"
+            record["token_model_rerun"] = "recommended"
+            record["token_model_reason"] = "outside fitted central 98%"
+
+
+def comparison_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
+    successful = [record for record in records if record.get("token_model_status") in {"fit", "watch", "anomaly"}]
+    failed = [record for record in records if record.get("token_model_status") == "reliability"]
+    return {
+        "count": len(records),
+        "successful_count": len(successful),
+        "failed_count": len(failed),
+        "fit_count": sum(record.get("token_model_status") == "fit" for record in successful),
+        "watch_count": sum(record.get("token_model_status") == "watch" for record in successful),
+        "anomaly_count": sum(record.get("token_model_status") == "anomaly" for record in successful),
     }
 
 
@@ -344,6 +516,7 @@ def normalize_record(
         "uncached_input_tokens": tokens["uncached_input"],
         "output_tokens": tokens["output"],
         "reasoning_output_tokens": tokens["reasoning_output"],
+        "base_commit": str(value(fields, "base_commit") or "unknown"),
         "review_completed": str(value(fields, "review_completed") or "unknown"),
         "linearize_completed": str(value(fields, "linearize_completed") or "unknown"),
         "commits_after_base": int_or_none(value(fields, "commits_after_base")),
@@ -595,7 +768,7 @@ def render_index_html() -> str:
     }
     table {
       width: 100%;
-      min-width: 1280px;
+      min-width: 1480px;
       border-collapse: collapse;
     }
     th, td {
@@ -684,7 +857,8 @@ def render_index_html() -> str:
         <h2 id="variance-title">Variance</h2>
         <p id="baseline-notes">Loading baseline manifest...</p>
         <div id="baseline-metrics" class="metric-grid"></div>
-        <p>The regression baseline uses only passing reports listed in <code>baseline-manifest.json</code>. Old runs, failed runs, and runs from older benchmark harnesses stay visible below but do not affect these statistics.</p>
+        <p>The regression baseline uses only passing reports listed in <code>baseline-manifest.json</code>. New benchmark runs are model comparisons above the baseline table; they do not refit the baseline unless the manifest is changed deliberately.</p>
+        <p id="comparison-summary">Loading comparison results...</p>
         <p>The detection estimates are rough two-sample thresholds from the observed baseline standard deviation. Smaller regressions need more repeated runs; a single run is only useful for large changes.</p>
         <ul id="thresholds" class="threshold-list"></ul>
       </section>
@@ -693,6 +867,44 @@ def render_index_html() -> str:
         <div id="summary" class="summary"></div>
       </div>
       <div id="mode-filters" class="mode-filters"></div>
+      <div class="section-title">
+        <h2>Model Comparisons</h2>
+        <span id="comparison-count" class="summary"></span>
+      </div>
+      <p>These runs share the fitted benchmark base but are not part of <code>baseline-manifest.json</code>. Successful rows are compared against the fitted token model; failed rows are reliability failures.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Mode</th>
+              <th>Run</th>
+              <th>Result</th>
+              <th>Model Fit</th>
+              <th class="num">Model Δ</th>
+              <th>Rerun</th>
+              <th class="num">Time</th>
+              <th class="num">Input</th>
+              <th class="num">Uncached</th>
+              <th class="num">Output</th>
+              <th class="num">Reasoning</th>
+              <th>Review</th>
+              <th>Linearize</th>
+              <th class="num">Commits</th>
+              <th class="num">Files</th>
+              <th class="num">Lines</th>
+              <th>Checks</th>
+              <th>Codex CLI</th>
+              <th>Model</th>
+              <th>Reasoning</th>
+              <th>Transport</th>
+              <th>Dirty</th>
+            </tr>
+          </thead>
+          <tbody id="comparison-body">
+            <tr><td colspan="22">Loading model comparison reports...</td></tr>
+          </tbody>
+        </table>
+      </div>
       <div class="section-title">
         <h2>Regression Baseline</h2>
         <span id="baseline-count" class="summary"></span>
@@ -704,6 +916,9 @@ def render_index_html() -> str:
               <th>Mode</th>
               <th>Run</th>
               <th>Result</th>
+              <th>Model Fit</th>
+              <th class="num">Model Δ</th>
+              <th>Rerun</th>
               <th class="num">Time</th>
               <th class="num">Input</th>
               <th class="num">Uncached</th>
@@ -723,7 +938,7 @@ def render_index_html() -> str:
             </tr>
           </thead>
           <tbody id="bench-body">
-            <tr><td colspan="19">Loading bench reports...</td></tr>
+            <tr><td colspan="22">Loading bench reports...</td></tr>
           </tbody>
         </table>
       </div>
@@ -739,6 +954,9 @@ def render_index_html() -> str:
               <th>Mode</th>
               <th>Run</th>
               <th>Result</th>
+              <th>Model Fit</th>
+              <th class="num">Model Δ</th>
+              <th>Rerun</th>
               <th class="num">Time</th>
               <th class="num">Input</th>
               <th class="num">Uncached</th>
@@ -758,7 +976,7 @@ def render_index_html() -> str:
             </tr>
           </thead>
           <tbody id="old-bench-body">
-            <tr><td colspan="19">Loading old benchmark reports...</td></tr>
+            <tr><td colspan="22">Loading old benchmark reports...</td></tr>
           </tbody>
         </table>
       </div>
@@ -773,15 +991,18 @@ def render_index_html() -> str:
   </main>
   <script>
     const body = document.getElementById('bench-body');
+    const comparisonBody = document.getElementById('comparison-body');
     const oldBody = document.getElementById('old-bench-body');
     const filter = document.getElementById('filter');
     const summary = document.getElementById('summary');
     const modeFilters = document.getElementById('mode-filters');
     const latestReference = document.getElementById('latest-reference');
     const baselineNotes = document.getElementById('baseline-notes');
+    const comparisonSummary = document.getElementById('comparison-summary');
     const baselineMetrics = document.getElementById('baseline-metrics');
     const thresholds = document.getElementById('thresholds');
     const baselineCount = document.getElementById('baseline-count');
+    const comparisonCount = document.getElementById('comparison-count');
     const oldCount = document.getElementById('old-count');
     const home = document.getElementById('home');
     const report = document.getElementById('report');
@@ -789,6 +1010,7 @@ def render_index_html() -> str:
     const reportContent = document.getElementById('report-content');
     const back = document.getElementById('back');
     let records = [];
+    let comparisonRecords = [];
     let oldRecords = [];
     let activeMode = 'All';
 
@@ -831,17 +1053,35 @@ def render_index_html() -> str:
       return 'unknown';
     }
 
+    function modelStatusClass(value) {
+      const normalized = String(value || '').toLowerCase();
+      if (normalized === 'fit' || normalized === 'training') return 'pass';
+      if (normalized === 'watch' || normalized === 'unavailable') return 'unknown';
+      if (normalized === 'anomaly' || normalized === 'reliability') return 'fail';
+      return 'unknown';
+    }
+
+    function modelDistance(record) {
+      const delta = record.token_model_delta_tokens;
+      if (delta === null || delta === undefined) return '-';
+      const sign = Number(delta) >= 0 ? '+' : '';
+      const z = record.token_model_z === null || record.token_model_z === undefined ? '-' : `${Number(record.token_model_z).toFixed(2)}`;
+      const percentile = record.token_model_percentile === null || record.token_model_percentile === undefined ? '-' : `${Number(record.token_model_percentile).toFixed(1)}%`;
+      return `${sign}${number(delta)} / z ${z} / p ${percentile}`;
+    }
+
     function searchable(record) {
       return [
         record.kind, record.run_id, record.result, record.agent_model, record.agent_reasoning_effort, record.agent_transport,
         record.codex_cli_version, record.codex_cli_path,
         record.benched_binary_commit, record.benched_binary_dirty, record.operator_notes,
-        record.report_file, record.baseline_status, record.baseline_reason
+        record.report_file, record.baseline_status, record.baseline_reason,
+        record.token_model_status, record.token_model_reason, record.token_model_rerun
       ].join(' ').toLowerCase();
     }
 
     function modeCounts() {
-      const all = [...records, ...oldRecords];
+      const all = [...comparisonRecords, ...records, ...oldRecords];
       const counts = { All: all.length, 'Work Leaf': 0, Parallel: 0, Sequential: 0, Worktree: 0 };
       for (const record of all) counts[record.kind] = (counts[record.kind] || 0) + 1;
       return counts;
@@ -876,7 +1116,7 @@ def render_index_html() -> str:
 
     function renderTableRows(targetBody, visible, emptyText) {
       if (visible.length === 0) {
-        targetBody.innerHTML = `<tr><td colspan="19">${emptyText}</td></tr>`;
+        targetBody.innerHTML = `<tr><td colspan="22">${emptyText}</td></tr>`;
         return;
       }
       targetBody.innerHTML = '';
@@ -887,6 +1127,9 @@ def render_index_html() -> str:
           <td><span class="badge">${escapeHtml(record.kind)}</span></td>
           <td><code>${escapeHtml(record.run_id)}</code></td>
           <td><span class="${statusClass(record.result)}">${record.result}</span></td>
+          <td><span class="${modelStatusClass(record.token_model_status)}" title="${escapeHtml(record.token_model_reason)}">${escapeHtml(record.token_model_label || record.token_model_status || '-')}</span></td>
+          <td class="num">${modelDistance(record)}</td>
+          <td>${escapeHtml(record.token_model_rerun || '-')}</td>
           <td class="num">${duration(record.duration_seconds)}</td>
           <td class="num">${number(record.input_tokens)}</td>
           <td class="num">${number(record.uncached_input_tokens)}</td>
@@ -911,11 +1154,14 @@ def render_index_html() -> str:
 
     function renderRows() {
       const counts = modeCounts();
+      const comparisonVisible = visibleRows(comparisonRecords);
       const visible = visibleRows(records);
       const oldVisible = visibleRows(oldRecords);
-      summary.textContent = `${visible.length} of ${records.length} baseline reports; ${oldVisible.length} of ${oldRecords.length} old/invalid reports; Work Leaf ${counts['Work Leaf'] || 0}, Parallel ${counts.Parallel || 0}, Sequential ${counts.Sequential || 0}, Worktree ${counts.Worktree || 0}`;
+      summary.textContent = `${comparisonVisible.length} of ${comparisonRecords.length} comparisons; ${visible.length} of ${records.length} baseline reports; ${oldVisible.length} of ${oldRecords.length} old/invalid reports; Work Leaf ${counts['Work Leaf'] || 0}, Parallel ${counts.Parallel || 0}, Sequential ${counts.Sequential || 0}, Worktree ${counts.Worktree || 0}`;
+      comparisonCount.textContent = `${comparisonVisible.length} shown`;
       baselineCount.textContent = `${visible.length} shown`;
       oldCount.textContent = `${oldVisible.length} shown`;
+      renderTableRows(comparisonBody, comparisonVisible, 'No model comparison bench reports match the filter.');
       renderTableRows(body, visible, 'No baseline bench reports match the filter.');
       renderTableRows(oldBody, oldVisible, 'No old or invalid bench reports match the filter.');
     }
@@ -936,6 +1182,7 @@ def render_index_html() -> str:
         <div class="metric"><span class="metric-label">Mean input+output</span><span class="metric-value">${number(baselineSummary.input_output_mean)}</span></div>
         <div class="metric"><span class="metric-label">Stddev</span><span class="metric-value">${number(baselineSummary.input_output_stddev)}</span></div>
         <div class="metric"><span class="metric-label">CV</span><span class="metric-value">${baselineSummary.coefficient_of_variation_percent}%</span></div>
+        <div class="metric"><span class="metric-label">Central 95%</span><span class="metric-value">${number(baselineSummary.central95_low)}-${number(baselineSummary.central95_high)}</span></div>
         <div class="metric"><span class="metric-label">Min</span><span class="metric-value">${number(baselineSummary.input_output_min)}</span></div>
         <div class="metric"><span class="metric-label">Max</span><span class="metric-value">${number(baselineSummary.input_output_max)}</span></div>
       `;
@@ -989,8 +1236,11 @@ def render_index_html() -> str:
       const response = await fetch('/api/benches');
       const payload = await response.json();
       records = payload.records || [];
+      comparisonRecords = payload.comparison_records || [];
       oldRecords = payload.old_invalid_records || [];
       latestReference.textContent = payload.latest_reference || 'no benchmark report found';
+      const comparisons = payload.comparison_summary || {};
+      comparisonSummary.textContent = `${comparisons.successful_count || 0} successful comparison runs, ${comparisons.failed_count || 0} failed/stalled comparison runs; ${comparisons.fit_count || 0} fit, ${comparisons.watch_count || 0} watch, ${comparisons.anomaly_count || 0} anomaly.`;
       renderBaselineSummary(payload.baseline_manifest || {}, payload.baseline_summary || {});
       renderModeFilters();
       renderRows();
@@ -998,8 +1248,9 @@ def render_index_html() -> str:
     }
 
     load().catch(error => {
-      body.innerHTML = `<tr><td colspan="17">Failed to load bench reports: ${error}</td></tr>`;
-      oldBody.innerHTML = `<tr><td colspan="17">Failed to load bench reports: ${error}</td></tr>`;
+      comparisonBody.innerHTML = `<tr><td colspan="22">Failed to load bench reports: ${error}</td></tr>`;
+      body.innerHTML = `<tr><td colspan="22">Failed to load bench reports: ${error}</td></tr>`;
+      oldBody.innerHTML = `<tr><td colspan="22">Failed to load bench reports: ${error}</td></tr>`;
       latestReference.textContent = 'bench reports failed to load';
     });
   </script>
@@ -1030,13 +1281,19 @@ class BenchDashboardHandler(BaseHTTPRequestHandler):
         if path == "/api/benches":
             all_records = collect_bench_records(self.results_dir)
             manifest = load_baseline_manifest(self.results_dir)
-            baseline_records, old_invalid_records = split_baseline_records(all_records, manifest)
+            baseline_records, comparison_records, old_invalid_records = split_benchmark_records(all_records, manifest)
+            summary = baseline_summary(baseline_records)
+            annotate_token_model(baseline_records, summary, "training")
+            annotate_token_model(comparison_records, summary, "comparison")
+            annotate_token_model(old_invalid_records, summary, "old-invalid")
             payload = {
                 "results_dir": str(self.results_dir),
-                "latest_reference": latest_reference(baseline_records or all_records),
+                "latest_reference": latest_reference(comparison_records or baseline_records or all_records),
                 "baseline_manifest": baseline_manifest_payload(manifest),
-                "baseline_summary": baseline_summary(baseline_records),
+                "baseline_summary": summary,
+                "comparison_summary": comparison_summary(comparison_records),
                 "records": baseline_records,
+                "comparison_records": comparison_records,
                 "old_invalid_records": old_invalid_records,
                 "all_records": all_records,
             }
@@ -1093,6 +1350,7 @@ def run_self_test() -> None:
 - no_read_permission: 0
 - review_completed: yes
 - linearize_completed: yes
+- base_commit: fixed-base
 - commits_after_base: 3
 - changed_files: 12
 - changed_lines_added: 1409
@@ -1113,6 +1371,7 @@ def run_self_test() -> None:
 - agent_model: gpt-5.5
 - review_completed: yes
 - linearize_completed: yes
+- base_commit: old-direct-base
 - commits_after_base: 3
 - changed_files: 16
 - changed_lines_added: 1549
@@ -1132,6 +1391,7 @@ def run_self_test() -> None:
 - agent_model: gpt-5.5
 - review_completed: yes
 - linearize_completed: no
+- base_commit: old-direct-base
 - commits_after_base: 3
 - changed_files: 15
 - changed_lines_added: 1760
@@ -1155,6 +1415,7 @@ def run_self_test() -> None:
                     "agent_reasoning_effort_source": "codex config /home/user/.codex/config.toml",
                     "review_completed": "yes",
                     "linearize_completed": "yes",
+                    "base_commit": "fixed-base",
                     "changed_lines_added": 1409,
                     "changed_lines_deleted": 45,
                     "token_usage": "user: input=100 cached_input=80 output=5 reasoning_output=3; linearize: input=50 cached_input=40 output=4 reasoning_output=2",
@@ -1180,6 +1441,7 @@ def run_self_test() -> None:
 - agent_reasoning_effort_source: codex config /home/user/.codex/config.toml
 - review_completed: yes
 - linearize_completed: yes
+- base_commit: fixed-base
 - commits_after_base: 3
 - changed_files: 14
 - changed_lines_added: 1200
@@ -1203,6 +1465,7 @@ def run_self_test() -> None:
                     "agent_reasoning_effort_source": "codex config /home/user/.codex/config.toml",
                     "review_completed": "yes",
                     "linearize_completed": "yes",
+                    "base_commit": "fixed-base",
                     "changed_lines_added": 1200,
                     "changed_lines_deleted": 120,
                     "token_usage": "user-1: input=400 cached_input=300 output=40 reasoning_output=12",
@@ -1229,26 +1492,82 @@ def run_self_test() -> None:
             )
             + "\n",
         )
+        comparison_run = results / "parallel-20260624T134138+0200" / "run-1"
+        comparison_run.mkdir(parents=True)
+        write(
+            comparison_run / "20260624T134138+0200-parallel-1-three-feature-bench.md",
+            """# Three-Feature Smoke Bench
+
+- result: pass
+- duration_seconds: 2100
+- agent_transport: app-server
+- codex_cli_path: /usr/bin/codex
+- codex_cli_version: codex-cli 0.141.0
+- agent_model: gpt-5.5
+- agent_reasoning_effort: xhigh
+- review_completed: yes
+- linearize_completed: yes
+- base_commit: fixed-base
+- commits_after_base: 3
+- changed_files: 12
+- changed_lines_added: 1180
+- changed_lines_deleted: 90
+- token_usage: user-1: input=250 cached_input=200 output=25 reasoning_output=9
+- code_quality: passed cargo test
+""",
+        )
+        write(
+            comparison_run / "three-feature-bench.jsonl",
+            json.dumps(
+                {
+                    "run_id": "20260624T134138+0200-parallel-1",
+                    "result": "pass",
+                    "duration_seconds": 2100,
+                    "agent_transport": "app-server",
+                    "codex_cli_path": "/usr/bin/codex",
+                    "codex_cli_version": "codex-cli 0.141.0",
+                    "agent_model": "gpt-5.5",
+                    "agent_reasoning_effort": "xhigh",
+                    "review_completed": "yes",
+                    "linearize_completed": "yes",
+                    "base_commit": "fixed-base",
+                    "changed_lines_added": 1180,
+                    "changed_lines_deleted": 90,
+                    "token_usage": "user-1: input=250 cached_input=200 output=25 reasoning_output=9",
+                    "report": str(comparison_run / "20260624T134138+0200-parallel-1-three-feature-bench.md"),
+                },
+                indent=2,
+            )
+            + "\n",
+        )
 
         records = collect_bench_records(results)
         manifest = load_baseline_manifest(results)
-        baseline_records, old_invalid_records = split_baseline_records(records, manifest)
-        assert len(records) == 4, records
+        baseline_records, comparison_records, old_invalid_records = split_benchmark_records(records, manifest)
+        summary = baseline_summary(baseline_records)
+        annotate_token_model(baseline_records, summary, "training")
+        annotate_token_model(comparison_records, summary, "comparison")
+        annotate_token_model(old_invalid_records, summary, "old-invalid")
+        assert len(records) == 5, records
         assert len(baseline_records) == 2, baseline_records
+        assert len(comparison_records) == 1, comparison_records
         assert len(old_invalid_records) == 2, old_invalid_records
         assert {record["baseline_status"] for record in baseline_records} == {"baseline"}, baseline_records
+        assert {record["baseline_status"] for record in comparison_records} == {"comparison"}, comparison_records
         assert {record["baseline_status"] for record in old_invalid_records} == {"old-invalid"}, old_invalid_records
-        summary = baseline_summary(baseline_records)
         assert summary["count"] == 2, summary
         assert summary["input_output_mean"] == 300, summary
+        assert summary["central95_low"] is not None, summary
+        assert comparison_records[0]["token_model_status"] in {"fit", "watch", "anomaly"}, comparison_records
+        assert comparison_summary(comparison_records)["successful_count"] == 1, comparison_records
         latest = records[0]
         assert latest["kind"] == "Parallel", latest
-        assert latest["run_id"] == "20260622T221828+0200-parallel-1", latest
+        assert latest["run_id"] == "20260624T134138+0200-parallel-1", latest
         assert latest["codex_cli_version"] == "codex-cli 0.141.0", latest
         assert latest["agent_model"] == "gpt-5.5", latest
         assert latest["agent_reasoning_effort"] == "xhigh", latest
-        parallel_report = "parallel-20260622T221828+0200/run-1/20260622T221828+0200-parallel-1-three-feature-bench.md"
-        assert latest["report_file"] == parallel_report, latest
+        comparison_report = "parallel-20260624T134138+0200/run-1/20260624T134138+0200-parallel-1-three-feature-bench.md"
+        assert latest["report_file"] == comparison_report, latest
         work_leaf = next(record for record in records if record["run_id"] == "20260611T113324+0200")
         assert work_leaf["kind"] == "Work Leaf", work_leaf
         assert work_leaf["codex_cli_version"] == "codex-cli 0.141.0", work_leaf
@@ -1267,16 +1586,19 @@ def run_self_test() -> None:
             "Sequential",
             "Worktree",
             "Regression Baseline",
+            "Model Comparisons",
             "Old / Invalid Benchmarks",
             "Variance",
+            "Model Fit",
             "runs are needed",
             "./start --bench",
             "/&lt;command&gt;",
             "not sequential, not worktree, and not any saved Work Leaf run",
         ):
             assert expected in html, expected
-        assert "20260622T221828+0200-parallel-1" in latest_reference(records)
+        assert "20260624T134138+0200-parallel-1" in latest_reference(records)
         assert read_report(results, "20260611T113324+0200-three-feature-bench.md").startswith("# Three-Feature")
+        parallel_report = "parallel-20260622T221828+0200/run-1/20260622T221828+0200-parallel-1-three-feature-bench.md"
         assert read_report(results, parallel_report).startswith("# Three-Feature")
         try:
             read_report(results, "../20260611T113324+0200-three-feature-bench.md")

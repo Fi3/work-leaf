@@ -1,0 +1,53 @@
+From 423801e49d829b44c1176436ed98d8acd2a68691 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 14:07:15 +0200
+Subject: [PATCH 6/8] UPDATE apply when-review-process-done-patch-agent patch
+ from user-3
+
+Agent-ID: user-3
+Feature: when-review-process-done-patch-agent
+Reason: FIX review completion prompt visibility by selecting the patch-agent chat when asking for feature completion
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `when-review-process-done-patch-agent`. The agent stated the reason as `FIX review completion prompt visibility by selecting the patch-agent chat when asking for feature completion`. The patch touched src/workspace.rs, tests/terminal_app.rs and changed the working tree with 8 added line(s) and 1 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/workspace.rs      | 3 +++
+ tests/terminal_app.rs | 6 +++++-
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/src/workspace.rs b/src/workspace.rs
+index e835f5b..dab7961 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -829,6 +829,9 @@ where
+             agent_id,
+             format!("work-leaf: review complete for {short_hash}. {FEATURE_COMPLETION_PROMPT_SUFFIX}"),
+         );
++        self.pending_events.push(WorkLeafEvent::AgentSelected {
++            agent_id: agent_id.clone(),
++        });
+     }
+ 
+     fn latest_agent_review_commit(&self, agent_id: &AgentId) -> Option<AgentCommit> {
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index 316f1e4..cbd6bb3 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -948,7 +948,7 @@ fn terminal_app_review_adds_reviewer_chat_and_streams_output_immediately() {
+ }
+ 
+ #[test]
+-fn terminal_app_closes_reviewed_feature_on_yes_and_reopens_on_new_message() {
++fn terminal_app_feature_completion_closes_reviewed_feature_on_yes_and_reopens_on_new_message() {
+     let root = git_repo("terminal-app-feature-completion");
+     fs::write(root.join("README.md"), "before\n").unwrap();
+     Command::new("git")
+@@ -975,6 +975,10 @@ fn terminal_app_closes_reviewed_feature_on_yes_and_reopens_on_new_message() {
+     app.handle_bytes(b":new update readme\n");
+     assert!(app.wait_for_idle(Duration::from_secs(2)));
+     let reviewed_frame = app.render_frame();
++    assert_eq!(
++        app.ui().selected_agent().map(AgentId::as_str),
++        Some("user-1")
++    );
+     assert!(reviewed_frame.contains("Is this feature done? yes/no"));
+     assert!(reviewed_frame.contains("READY"));
+ 

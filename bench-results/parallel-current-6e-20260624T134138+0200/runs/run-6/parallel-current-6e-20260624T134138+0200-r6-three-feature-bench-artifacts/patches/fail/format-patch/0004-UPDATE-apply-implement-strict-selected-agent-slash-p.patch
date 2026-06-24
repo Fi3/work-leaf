@@ -1,0 +1,69 @@
+From cca59f506b7fe77e47ee6c8ca2dfc03ddc14547d Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 13:53:52 +0200
+Subject: [PATCH 4/8] UPDATE apply implement-strict-selected-agent-slash patch
+ from user-2
+
+Agent-ID: user-2
+Feature: implement-strict-selected-agent-slash
+Reason: FIX keep backend command errors within existing AgentError variants to avoid breaking public enum matching
+Context: The orchestrator applied this provisional patch for user-2 while the agent was working on feature `implement-strict-selected-agent-slash`. The agent stated the reason as `FIX keep backend command errors within existing AgentError variants to avoid breaking public enum matching`. The patch touched src/agent.rs, src/agent_runtime.rs and changed the working tree with 8 added line(s) and 14 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/agent.rs         | 10 ----------
+ src/agent_runtime.rs | 10 +++++++---
+ 2 files changed, 7 insertions(+), 13 deletions(-)
+
+diff --git a/src/agent.rs b/src/agent.rs
+index d38e7e7..9fcc9e9 100644
+--- a/src/agent.rs
++++ b/src/agent.rs
+@@ -304,10 +304,6 @@ pub enum AgentError {
+         status: Option<i32>,
+         stderr: String,
+     },
+-    UnsupportedCommand {
+-        agent_id: AgentId,
+-        command: String,
+-    },
+     UnknownSession(AgentId),
+ }
+ 
+@@ -327,12 +323,6 @@ impl fmt::Display for AgentError {
+                 status,
+                 stderr.trim()
+             ),
+-            Self::UnsupportedCommand { agent_id, command } => {
+-                write!(
+-                    formatter,
+-                    "agent session `{agent_id}` does not support backend command `{command}`"
+-                )
+-            }
+             Self::UnknownSession(id) => write!(formatter, "unknown agent session `{id}`"),
+         }
+     }
+diff --git a/src/agent_runtime.rs b/src/agent_runtime.rs
+index ad9b6d6..f0f09f3 100644
+--- a/src/agent_runtime.rs
++++ b/src/agent_runtime.rs
+@@ -1,4 +1,5 @@
+ use std::collections::BTreeMap;
++use std::path::PathBuf;
+ use std::process::Command;
+ use std::sync::{Arc, Mutex};
+ use std::thread;
+@@ -14,9 +15,12 @@ pub trait AgentBackend {
+         agent_id: &AgentId,
+         command: &str,
+     ) -> Result<ChatMessage, AgentError> {
+-        Err(AgentError::UnsupportedCommand {
+-            agent_id: agent_id.clone(),
+-            command: command.to_string(),
++        Err(AgentError::ProcessFailed {
++            program: PathBuf::from("agent backend command"),
++            status: None,
++            stderr: format!(
++                "agent session `{agent_id}` does not support backend command `{command}`"
++            ),
+         })
+     }
+ 

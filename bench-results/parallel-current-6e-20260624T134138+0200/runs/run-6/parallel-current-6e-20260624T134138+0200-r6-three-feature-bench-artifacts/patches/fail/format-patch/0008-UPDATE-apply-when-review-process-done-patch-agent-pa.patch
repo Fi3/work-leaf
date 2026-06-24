@@ -1,0 +1,51 @@
+From c3cee74cfdf851e6bec8ca333eec1946aec75570 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 14:09:37 +0200
+Subject: [PATCH 8/8] UPDATE apply when-review-process-done-patch-agent patch
+ from user-3
+
+Agent-ID: user-3
+Feature: when-review-process-done-patch-agent
+Reason: FIX terminal feature-completion test to ignore reviewer rows when checking patch-agent READY state
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `when-review-process-done-patch-agent`. The agent stated the reason as `FIX terminal feature-completion test to ignore reviewer rows when checking patch-agent READY state`. The patch touched tests/terminal_app.rs and changed the working tree with 9 added line(s) and 3 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ tests/terminal_app.rs | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index 77085a7..ca5558a 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -990,7 +990,9 @@ fn terminal_app_feature_completion_closes_reviewed_feature_on_yes_and_reopens_on
+     assert!(
+         !left_pane
+             .lines()
+-            .any(|line| line.contains("user-1") && line.contains("READY")),
++            .any(|line| line.contains("user-1")
++                && !line.contains("review-user-1")
++                && line.contains("READY")),
+         "{left_pane}"
+     );
+ 
+@@ -1004,7 +1006,9 @@ fn terminal_app_feature_completion_closes_reviewed_feature_on_yes_and_reopens_on
+     assert!(
+         left_pane
+             .lines()
+-            .any(|line| line.contains("user-1") && line.contains("READY")),
++            .any(|line| line.contains("user-1")
++                && !line.contains("review-user-1")
++                && line.contains("READY")),
+         "{left_pane}"
+     );
+ 
+@@ -1016,7 +1020,9 @@ fn terminal_app_feature_completion_closes_reviewed_feature_on_yes_and_reopens_on
+     assert!(
+         !left_pane
+             .lines()
+-            .any(|line| line.contains("user-1") && line.contains("READY")),
++            .any(|line| line.contains("user-1")
++                && !line.contains("review-user-1")
++                && line.contains("READY")),
+         "{left_pane}"
+     );
+ }

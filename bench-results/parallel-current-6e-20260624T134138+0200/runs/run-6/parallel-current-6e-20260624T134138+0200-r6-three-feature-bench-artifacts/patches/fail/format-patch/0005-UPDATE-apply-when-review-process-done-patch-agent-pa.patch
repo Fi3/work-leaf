@@ -1,0 +1,193 @@
+From e76887bd67a5272012d3b8373b89ebccf58c9b03 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 13:54:53 +0200
+Subject: [PATCH 5/8] UPDATE apply when-review-process-done-patch-agent patch
+ from user-3
+
+Agent-ID: user-3
+Feature: when-review-process-done-patch-agent
+Reason: FIX repeated feature completion cycles so second close/reopen markers are not dropped as duplicate transcript lines
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `when-review-process-done-patch-agent`. The agent stated the reason as `FIX repeated feature completion cycles so second close/reopen markers are not dropped as duplicate transcript lines`. The patch touched src/terminal_app.rs, src/workspace.rs, tests/terminal_app.rs, tests/workspace.rs and changed the working tree with 69 added line(s) and 10 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs   |  8 +++++++-
+ src/workspace.rs      | 35 ++++++++++++++++++++++++++++++-----
+ tests/terminal_app.rs | 16 ++++++++++++++--
+ tests/workspace.rs    | 20 ++++++++++++++++++--
+ 4 files changed, 69 insertions(+), 10 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 07a9e24..818dd11 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -784,7 +784,9 @@ where
+         else {
+             return;
+         };
+-        if !session.lines.iter().any(|existing| existing == &line) {
++        if is_repeatable_feature_completion_line(&line)
++            || !session.lines.iter().any(|existing| existing == &line)
++        {
+             session.lines.push(line);
+         }
+         self.apply_cached_session_ready_state(agent_id);
+@@ -1117,6 +1119,10 @@ fn feature_completion_closed(lines: &[String]) -> bool {
+         .unwrap_or(false)
+ }
+ 
++fn is_repeatable_feature_completion_line(line: &str) -> bool {
++    line == FEATURE_COMPLETION_CLOSED_LINE || line == FEATURE_COMPLETION_REOPENED_LINE
++}
++
+ #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+ enum TerminalAppInput {
+     Key(UiKey),
+diff --git a/src/workspace.rs b/src/workspace.rs
+index a045af4..e835f5b 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -537,7 +537,10 @@ where
+                 self.append_agent_line(agent_id, format!("user: {message}"));
+                 self.feature_completion_pending.remove(agent_id);
+                 self.feature_completion_closed.insert(agent_id.clone());
+-                self.append_agent_line(agent_id, FEATURE_COMPLETION_CLOSED_LINE.to_string());
++                self.append_agent_line_allowing_duplicate(
++                    agent_id,
++                    FEATURE_COMPLETION_CLOSED_LINE.to_string(),
++                );
+                 return true;
+             }
+ 
+@@ -545,16 +548,25 @@ where
+             self.feature_completion_closed.remove(agent_id);
+             if is_negative_completion_reply(message) {
+                 self.append_agent_line(agent_id, format!("user: {message}"));
+-                self.append_agent_line(agent_id, FEATURE_COMPLETION_REOPENED_LINE.to_string());
++                self.append_agent_line_allowing_duplicate(
++                    agent_id,
++                    FEATURE_COMPLETION_REOPENED_LINE.to_string(),
++                );
+                 return true;
+             }
+ 
+-            self.append_agent_line(agent_id, FEATURE_COMPLETION_REOPENED_LINE.to_string());
++            self.append_agent_line_allowing_duplicate(
++                agent_id,
++                FEATURE_COMPLETION_REOPENED_LINE.to_string(),
++            );
+             return false;
+         }
+ 
+         if self.feature_completion_closed.remove(agent_id) {
+-            self.append_agent_line(agent_id, FEATURE_COMPLETION_REOPENED_LINE.to_string());
++            self.append_agent_line_allowing_duplicate(
++                agent_id,
++                FEATURE_COMPLETION_REOPENED_LINE.to_string(),
++            );
+         }
+         false
+     }
+@@ -756,6 +768,19 @@ where
+     }
+ 
+     fn append_agent_line(&mut self, agent_id: &AgentId, line: String) {
++        self.append_agent_line_with_duplicate_policy(agent_id, line, false);
++    }
++
++    fn append_agent_line_allowing_duplicate(&mut self, agent_id: &AgentId, line: String) {
++        self.append_agent_line_with_duplicate_policy(agent_id, line, true);
++    }
++
++    fn append_agent_line_with_duplicate_policy(
++        &mut self,
++        agent_id: &AgentId,
++        line: String,
++        allow_duplicate: bool,
++    ) {
+         if line.is_empty() {
+             return;
+         }
+@@ -770,7 +795,7 @@ where
+             .sessions
+             .get_mut(agent_id)
+             .expect("session was inserted before appending a line");
+-        if session.lines.iter().any(|existing| existing == &line) {
++        if !allow_duplicate && session.lines.iter().any(|existing| existing == &line) {
+             return;
+         }
+         session.lines.push(line.clone());
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index ae70119..316f1e4 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -965,7 +965,9 @@ fn terminal_app_closes_reviewed_feature_on_yes_and_reopens_on_new_message() {
+         "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+         "summary: README changes from before to after",
+         "NO_FINDINGS",
+-        "follow-up reply",
++        "second patch\n@work-leaf patch update readme again\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-after\n+after again\n@work-leaf end\n@work-leaf done",
++        "summary: README changes from after to after again",
++        "NO_FINDINGS",
+     ]);
+     let chat = CommandChat::new(root, backend);
+     let mut app = TerminalApp::new(chat, 100, 24);
+@@ -991,8 +993,18 @@ fn terminal_app_closes_reviewed_feature_on_yes_and_reopens_on_new_message() {
+     let reopened_frame = app.render_frame();
+     assert!(reopened_frame.contains("work-leaf: feature reopened"));
+     assert!(reopened_frame.contains("user: follow up"));
+-    assert!(reopened_frame.contains("follow-up reply"));
++    assert!(reopened_frame.contains("Is this feature done? yes/no"));
+     assert!(app.ui().render_left_pane().contains("READY"));
++
++    app.handle_bytes(b"yes\n");
++    assert!(app.wait_for_idle(Duration::from_secs(1)));
++    let second_closed_frame = app.render_frame();
++    assert!(second_closed_frame.contains("work-leaf: feature closed"));
++    assert!(
++        !app.ui().render_left_pane().contains("READY"),
++        "{}",
++        app.ui().render_left_pane()
++    );
+ }
+ 
+ #[test]
+diff --git a/tests/workspace.rs b/tests/workspace.rs
+index 6fb7374..cfe553b 100644
+--- a/tests/workspace.rs
++++ b/tests/workspace.rs
+@@ -277,7 +277,9 @@ fn controller_prompts_for_feature_completion_after_clean_review() {
+         "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+         "summary: README changes from before to after",
+         "NO_FINDINGS",
+-        "follow-up reply",
++        "second patch\n@work-leaf patch update readme again\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-after\n+after again\n@work-leaf end\n@work-leaf done",
++        "summary: README changes from after to after again",
++        "NO_FINDINGS",
+     ]);
+     let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+     let mut controller = WorkLeafController::new(chat);
+@@ -326,10 +328,24 @@ fn controller_prompts_for_feature_completion_after_clean_review() {
+             .iter()
+             .any(|line| line == "user: make a follow-up update")
+     );
+-    assert!(patch_agent.lines.iter().any(|line| line == "follow-up reply"));
++    assert!(patch_agent.lines.iter().any(|line| {
++        line.contains("review complete") && line.contains("Is this feature done? yes/no")
++    }));
+     assert!(backend.sends().iter().any(|(target, prompt)| {
+         target == &agent_id && prompt == "make a follow-up update"
+     }));
++
++    controller.send_message(&agent_id, "yes").unwrap();
++    let snapshot = controller.snapshot();
++    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
++    assert_eq!(
++        patch_agent
++            .lines
++            .iter()
++            .filter(|line| line.as_str() == "work-leaf: feature closed")
++            .count(),
++        2
++    );
+ }
+ 
+ #[test]

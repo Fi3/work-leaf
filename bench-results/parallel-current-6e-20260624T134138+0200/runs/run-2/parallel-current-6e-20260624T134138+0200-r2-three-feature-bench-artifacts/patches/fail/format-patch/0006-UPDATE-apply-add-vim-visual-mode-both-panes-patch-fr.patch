@@ -1,0 +1,72 @@
+From 17cf4b7b048860e9263df003e4f3e04d4a13766d Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 14:01:58 +0200
+Subject: [PATCH 6/7] UPDATE apply add-vim-visual-mode-both-panes patch from
+ user-1
+
+Agent-ID: user-1
+Feature: add-vim-visual-mode-both-panes
+Reason: FIX bytewise arrow escape handling while visual selection is active
+Context: The orchestrator applied this provisional patch for user-1 while the agent was working on feature `add-vim-visual-mode-both-panes`. The agent stated the reason as `FIX bytewise arrow escape handling while visual selection is active`. The patch touched src/terminal_app.rs, src/ui_harness.rs, tests/ui_harness.rs and changed the working tree with 21 added line(s) and 2 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs |  3 ++-
+ src/ui_harness.rs   |  3 ++-
+ tests/ui_harness.rs | 17 +++++++++++++++++
+ 3 files changed, 21 insertions(+), 2 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 0534c8e..99e8c02 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -894,7 +894,8 @@ where
+     }
+ 
+     fn defer_escape_key(&self) -> bool {
+-        self.ui.mode() == UiMode::Prompt
++        self.ui.has_visual_selection()
++            || self.ui.mode() == UiMode::Prompt
+             || (self.ui.mode() == UiMode::Insert && self.ui.focus() == PaneFocus::Right)
+     }
+ 
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index 79f6d69..e2f70d6 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -562,7 +562,8 @@ impl UiHarness {
+     }
+ 
+     fn defer_escape_key(&self) -> bool {
+-        self.ui.mode() == UiMode::Prompt
++        self.ui.has_visual_selection()
++            || self.ui.mode() == UiMode::Prompt
+             || (self.ui.mode() == UiMode::Insert && self.ui.focus() == PaneFocus::Right)
+     }
+ 
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index 46d71e4..079e713 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -445,6 +445,23 @@ fn scripted_harness_visual_arrow_keys_extend_right_pane_selection() {
+     );
+ }
+ 
++#[test]
++fn scripted_harness_bytewise_visual_arrow_keys_keep_selection_active() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_byte(b'V');
++    harness.handle_byte(27);
++    harness.handle_byte(b'[');
++    harness.handle_byte(b'A');
++    harness.handle_byte(b'y');
++
++    assert_eq!(
++        harness.clipboard_text(),
++        Some("Esc command, i insert, : prompt, Ctrl-W h/j/k/l focus, , toggle right, q quit\nchat> ")
++    );
++}
++
+ #[test]
+ fn scripted_harness_visual_block_selection_copies_left_pane_columns() {
+     let mut harness = UiHarness::new(80, 24);

@@ -1,0 +1,102 @@
+From cd821a4c241a1fa9cc5f88a6bfb4536bdbaa1e28 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 14:01:11 +0200
+Subject: [PATCH 5/7] UPDATE apply add-vim-visual-mode-both-panes patch from
+ user-1
+
+Agent-ID: user-1
+Feature: add-vim-visual-mode-both-panes
+Reason: FIX visual-mode arrow movement routing so right-pane selections extend instead of editing chat history
+Context: The orchestrator applied this provisional patch for user-1 while the agent was working on feature `add-vim-visual-mode-both-panes`. The agent stated the reason as `FIX visual-mode arrow movement routing so right-pane selections extend instead of editing chat history`. The patch touched src/terminal_app.rs, src/ui_harness.rs, tests/ui_harness.rs and changed the working tree with 42 added line(s) and 4 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs | 28 ++++++++++++++++++++++++++--
+ src/ui_harness.rs   |  5 +++--
+ tests/ui_harness.rs | 13 +++++++++++++
+ 3 files changed, 42 insertions(+), 4 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index da77af0..0534c8e 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -888,8 +888,9 @@ where
+     }
+ 
+     fn should_route_chat_arrow(&self) -> bool {
+-        self.ui.mode() == UiMode::Insert
+-            || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right)
++        !self.ui.has_visual_selection()
++            && (self.ui.mode() == UiMode::Insert
++                || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right))
+     }
+ 
+     fn defer_escape_key(&self) -> bool {
+@@ -1463,6 +1464,29 @@ mod tests {
+         assert!(app.render_frame().starts_with("\u{1b}]52;c;"));
+     }
+ 
++    #[test]
++    fn terminal_app_visual_arrow_keys_extend_right_pane_selection() {
++        let snapshot_calls = Arc::new(AtomicUsize::new(0));
++        let drain_calls = Arc::new(AtomicUsize::new(0));
++        let controller = CountingController::new(
++            crate::WorkLeafSnapshot {
++                command_transcript: vec!["top".to_string(), "bottom".to_string()],
++                sessions: Vec::new(),
++            },
++            Arc::clone(&snapshot_calls),
++            Arc::clone(&drain_calls),
++        );
++        let mut app = TerminalAppCore::new(controller, 80, 24);
++
++        app.handle_bytes(&[23, b'l']);
++        app.handle_bytes(b"V\x1b[Ay");
++
++        assert!(
++            app.render_frame()
++                .starts_with("\u{1b}]52;c;Ym90dG9tCmNoYXQ+IA==\u{7}")
++        );
++    }
++
+     #[test]
+     fn command_surface_chat_uses_command_agent_to_spawn_codex_agent() {
+         let root =
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index bb7d595..79f6d69 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -556,8 +556,9 @@ impl UiHarness {
+     }
+ 
+     fn should_route_chat_arrow(&self) -> bool {
+-        self.ui.mode() == UiMode::Insert
+-            || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right)
++        !self.ui.has_visual_selection()
++            && (self.ui.mode() == UiMode::Insert
++                || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right))
+     }
+ 
+     fn defer_escape_key(&self) -> bool {
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index fa0dd3a..46d71e4 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -432,6 +432,19 @@ fn scripted_harness_visual_line_selection_copies_right_pane_lines() {
+     assert!(copied.ends_with("chat> "));
+ }
+ 
++#[test]
++fn scripted_harness_visual_arrow_keys_extend_right_pane_selection() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_bytes(b"V\x1b[Ay");
++
++    assert_eq!(
++        harness.clipboard_text(),
++        Some("Esc command, i insert, : prompt, Ctrl-W h/j/k/l focus, , toggle right, q quit\nchat> ")
++    );
++}
++
+ #[test]
+ fn scripted_harness_visual_block_selection_copies_left_pane_columns() {
+     let mut harness = UiHarness::new(80, 24);

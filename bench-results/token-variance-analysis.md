@@ -1,6 +1,6 @@
 # Abstract
 
-This document analyzes the Work Leaf Codex three-feature benchmark baseline and evaluates whether the observed token variance is expected for this specific multi-agent workflow. The candidate baseline group is the 36-report set listed by `bench-results/baseline-manifest.json`: the `parallel-current-12`, `parallel-current-6a`, `parallel-current-6b-retry`, `parallel-current-6c`, and `parallel-current-6d` batches from June 24, 2026.
+This document analyzes the Work Leaf Codex three-feature benchmark baseline and evaluates whether the observed token variance is expected for this specific multi-agent workflow. The fitted baseline group is the 36-report training set listed by `bench-results/baseline-manifest.json`: the `parallel-current-12`, `parallel-current-6a`, `parallel-current-6b-retry`, `parallel-current-6c`, and `parallel-current-6d` batches from June 24, 2026.
 
 Only completed successful reports are used for token-distribution fitting. The fitted set contains 28 passing reports and excludes 8 failed reports. No successful report is removed as a token outlier in this baseline. Every fitted report contains the required reviewed patch work from `review-user-1`, `review-user-2`, and `review-user-3`, and every fitted report reached the final pass path with 3 commits after the base commit and successful final checks.
 
@@ -11,6 +11,8 @@ T_valid ~= Gamma(alpha = 32.518, theta = 383,572)
 ```
 
 where `T_valid = input + output` tokens for a successful full benchmark run. The fitted mean is `12.47M`, the sample standard deviation is `2.19M`, the coefficient of variation is `17.5%`, and the fitted central 95% interval is approximately `8.56M` to `17.11M` tokens.
+
+The fitted model is validated against the independent `parallel-current-6e-20260624T134138+0200` holdout batch. That holdout has 6 reports: 4 successful full-workflow reports and 2 stalled failed reports. The 4 successful holdout reports all fall inside the fitted central 95% interval, and their mean is near the middle of the fitted distribution: lower-tail probability `56.1%`, two-sided probability `87.7%`. The failed holdout reports are reliability failures and are not successful-run token validation samples.
 
 A changed-lines split is useful for post-run diagnosis:
 
@@ -25,7 +27,7 @@ The changed-lines model is diagnostic rather than the primary gate because the f
 
 This analysis uses saved bench result artifacts only.
 
-Candidate result roots:
+Fitted training result roots:
 
 - `bench-results/parallel-current-12-20260624T010102+0200`
 - `bench-results/parallel-current-6a-20260624T020421+0200`
@@ -33,14 +35,23 @@ Candidate result roots:
 - `bench-results/parallel-current-6c-20260624T104153+0200`
 - `bench-results/parallel-current-6d-20260624T121434+0200`
 
-Candidate baseline group:
+Independent validation result root:
+
+- `bench-results/parallel-current-6e-20260624T134138+0200`
+
+Training and validation groups:
 
 ```text
-candidate reports:             36
-passing reports fitted:        28
-failed reports excluded:        8
-passing reports missing user-3: 0
-successful token outliers:      0
+baseline manifest reports:             36
+dashboard comparison reports:           6
+training candidate reports:            36
+training passing reports fitted:       28
+training failed reports excluded:       8
+training passing reports missing user-3: 0
+training successful token outliers:     0
+validation candidate reports:           6
+validation successful reports:          4
+validation failed reports:              2
 ```
 
 The report schema is the JSON written by `bench-three-features` into each `three-feature-bench.jsonl` file. The candidate reports share `base_commit = c92a0b7060a36eac6db2d869b85e589a7a9480f9` in the saved reports. The benched binary commit varies by batch and is recorded in each report, so the reports themselves remain the authority for the exact executed artifacts.
@@ -279,6 +290,39 @@ Simulated quantiles from the fitted diagnostic mixture:
 
 The diagnostic mixture is close to the pooled model. For regression gating, the pooled successful-run model is the safer primary baseline. The changed-line mixture explains shape after the run and helps classify whether a high-token pass came from a larger final work product.
 
+# Independent Holdout Validation
+
+The fitted model is validated against the `parallel-current-6e-20260624T134138+0200` batch. This batch is not used to estimate `alpha`, `theta`, the mean, the standard deviation, or the changed-line diagnostic split.
+
+The holdout contains 6 reports:
+
+```text
+run    result  token_sessions  commits  changed  duration_s  total     linearize_input  fitted percentile  interpretation
+run-1  pass    7               3        1699     2304         9812374  3658971          10.46%             successful validation sample
+run-2  fail    6               7        1675     2207         6489736        0           excluded           idle stalled before linearize
+run-3  pass    7               3        1528     2094        14624336  5246467          83.89%             successful validation sample
+run-4  pass    7               3        1489     2043        11125777  4570127          28.08%             successful validation sample
+run-5  pass    7               3        1532     2283        14878466  6863757          86.30%             successful validation sample
+run-6  fail    6               8        1409     2176         4396737        0           excluded           idle stalled before linearize
+```
+
+Successful holdout statistics:
+
+```text
+n:                         4
+mean total:        12,610,238
+stddev total:       2,532,003
+min total:          9,812,374
+median total:      12,875,057
+max total:         14,878,466
+mean lower-tail probability: 56.129%
+mean two-sided probability:  87.742%
+central 95% membership:      4 / 4
+central 98% membership:      4 / 4
+```
+
+The successful-run token model passes this independent holdout check for completed trajectories. The validation is not a six-successful-run validation: two holdout reports stalled before linearize and are reliability failures outside the successful-run token model.
+
 # Phase Dependency And Covariance
 
 The model must not derive total variance by linearly adding independent patch, review, and linearize variances. The workflow is path-dependent: patch and review behavior changes the linearizer's context.
@@ -390,7 +434,7 @@ theta_g = sigma_g^2 / mu_g
 
 But `theta_g` must be fitted from Work Leaf data. It cannot be imported from the literature. The literature justifies expecting stochasticity and path dependence; the local bench artifacts define the parameters.
 
-For the current three-feature bench, 28 successful samples are enough for a pooled successful-run baseline and a diagnostic changed-line split. They are not enough for a stable high-dimensional orchestrator model over all fields in `g`. The fitted model has no independent validation holdout because the successful `parallel-current-6d` reports are included as training samples.
+For the current three-feature bench, 28 successful training samples are enough for a pooled successful-run baseline and a diagnostic changed-line split. They are not enough for a stable high-dimensional orchestrator model over all fields in `g`. The fitted model has an independent holdout check from `parallel-current-6e-20260624T134138+0200`; the successful holdout trajectories validate the token model, while the failed holdout reports remain reliability failures outside the successful-run token distribution.
 
 # Regression Interpretation
 
@@ -441,7 +485,7 @@ No claim in this document depends on vendor blog posts, forum posts, or anecdota
 
 # Conclusion
 
-The current Work Leaf three-feature baseline group contains 36 candidate reports and 28 successful reports used for token-distribution fitting. The 8 failed reports are excluded from successful-run parameter fitting because they are not completed successful trajectories. No successful report is excluded as a token outlier.
+The current Work Leaf three-feature fitted baseline group contains 36 training candidate reports and 28 successful reports used for token-distribution fitting. The 8 failed training reports are excluded from successful-run parameter fitting because they are not completed successful trajectories. No successful report is excluded as a token outlier. The independent `parallel-current-6e-20260624T134138+0200` holdout contributes 4 successful validation reports and 2 failed reliability reports; it is not used to fit the distribution.
 
 The fitted successful-run baseline supports the conclusion that substantial token variance is expected for this workflow. The primary model is:
 
@@ -449,6 +493,6 @@ The fitted successful-run baseline supports the conclusion that substantial toke
 T_valid ~= Gamma(alpha = 32.518, theta = 383,572)
 ```
 
-This model gives a central 95% expected range of approximately `8.56M` to `17.11M` `input + output` tokens for successful full-workflow runs. The observed successful-run range, `8.83M` to `17.80M`, is consistent with that fitted distribution, with the maximum run sitting in the watch zone but still below the 99% pooled Gamma quantile of `18.12M`.
+This model gives a central 95% expected range of approximately `8.56M` to `17.11M` `input + output` tokens for successful full-workflow runs. The observed successful training-run range, `8.83M` to `17.80M`, is consistent with that fitted distribution, with the maximum run sitting in the watch zone but still below the 99% pooled Gamma quantile of `18.12M`. The 4 successful independent holdout totals range from `9.81M` to `14.88M`; all four are inside the fitted central 95% interval, and the holdout mean has lower-tail probability `56.1%`.
 
 The operational conclusion is to treat successful runs inside the fitted interval as ordinary baseline variation, to treat repeated mean shifts as regression evidence, and to investigate failed/stalled runs separately as reliability failures rather than mixing them into the successful-run token baseline.

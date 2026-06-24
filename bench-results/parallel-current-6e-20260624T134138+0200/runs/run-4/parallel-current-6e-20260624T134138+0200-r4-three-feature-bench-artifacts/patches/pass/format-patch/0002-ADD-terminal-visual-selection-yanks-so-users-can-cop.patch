@@ -1,0 +1,988 @@
+From 213fb386629c443fc3c4d8e0a8167daea34d54eb Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 14:12:29 +0200
+Subject: [PATCH 2/3] ADD terminal visual selection yanks so users can copy
+ either pane
+
+The terminal UI treats the focused pane as selectable rendered text and routes visual-mode movement, line/block selection, and yanks through the shared terminal state machine. Copy output is queued through OSC52 so wrapped transcript rows and left-pane rows can be copied without leaving Work Leaf.
+---
+ docs/architecture.md  |   7 +
+ src/terminal_app.rs   |  17 +-
+ src/ui.rs             | 554 +++++++++++++++++++++++++++++++++++++++++-
+ src/ui_harness.rs     |  17 +-
+ tests/terminal_app.rs |  40 +++
+ tests/ui_harness.rs   |  73 ++++++
+ 6 files changed, 696 insertions(+), 12 deletions(-)
+
+diff --git a/docs/architecture.md b/docs/architecture.md
+index 9e48703..0433ac7 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -305,6 +305,13 @@ again.
+   terminal navigation actions. The right pane keeps the chat prompt visible while scroll offsets
+   reveal earlier transcript rows.
+ 
++In command mode, `TerminalUi` supports vim-style visual selection in the focused pane. `v`, `V`, and
++Ctrl-V start character, line, and block selection; h/j/k/l and arrow keys move the visual cursor; `y`
++copies the selection; and `Y` copies complete rendered lines. Left-pane selections copy the rendered
++agent/control rows, while right-pane selections copy the visible wrapped transcript text. The
++terminal adapters call `TerminalUi::take_pending_copy` after handling UI actions so copied text is
++queued for OSC52 clipboard output and the selection is cleared.
++
+ `src/ui_harness.rs::UiHarness` is the test harness for terminal behavior. It exercises the same
+ `TerminalUi` frame path used by the interactive example. UI tests should drive
+ `UiHarness::handle_byte` or `UiHarness::handle_bytes` rather than duplicating terminal input logic.
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 5c32836..411e810 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -666,6 +666,14 @@ where
+             self.controller.push_transcript_line(ui_action_text(action));
+         }
+         self.apply_controller_events();
++        self.copy_pending_selection();
++    }
++
++    fn copy_pending_selection(&mut self) {
++        let right_content = self.right_content();
++        if self.ui.take_pending_copy(&right_content).is_some() {
++            self.dirty = true;
++        }
+     }
+ 
+     fn apply_controller_events(&mut self) {
+@@ -826,12 +834,14 @@ where
+     }
+ 
+     fn should_route_chat_arrow(&self) -> bool {
+-        self.ui.mode() == UiMode::Insert
+-            || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right)
++        !self.ui.has_visual_selection()
++            && (self.ui.mode() == UiMode::Insert
++                || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right))
+     }
+ 
+     fn defer_escape_key(&self) -> bool {
+-        self.ui.mode() == UiMode::Prompt
++        self.ui.has_visual_selection()
++            || self.ui.mode() == UiMode::Prompt
+             || (self.ui.mode() == UiMode::Insert && self.ui.focus() == PaneFocus::Right)
+     }
+ 
+@@ -1086,6 +1096,7 @@ impl TerminalAppInput {
+             13 | 10 => Some(Self::Enter),
+             27 => Some(Self::Key(UiKey::Esc)),
+             23 => Some(Self::Key(UiKey::CtrlW)),
++            22 => Some(Self::Key(UiKey::CtrlV)),
+             8 | 127 => Some(Self::Backspace),
+             byte if byte.is_ascii_graphic() || byte == b' ' => Some(Self::Char(byte as char)),
+             _ => None,
+diff --git a/src/ui.rs b/src/ui.rs
+index 910361a..2f88a85 100644
+--- a/src/ui.rs
++++ b/src/ui.rs
+@@ -1,5 +1,5 @@
+ use std::{
+-    cell::Cell,
++    cell::{Cell, RefCell},
+     path::PathBuf,
+     time::{Duration, Instant},
+ };
+@@ -39,6 +39,7 @@ pub enum UiKey {
+     Char(char),
+     Esc,
+     CtrlW,
++    CtrlV,
+     Up,
+     Down,
+     Left,
+@@ -132,6 +133,43 @@ struct StatusNotice {
+     expires_at: Instant,
+ }
+ 
++#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++enum VisualKind {
++    Character,
++    Line,
++    Block,
++}
++
++impl VisualKind {
++    fn status_name(self) -> &'static str {
++        match self {
++            Self::Character => "visual",
++            Self::Line => "visual-line",
++            Self::Block => "visual-block",
++        }
++    }
++}
++
++#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++struct TextPosition {
++    row: usize,
++    column: usize,
++}
++
++#[derive(Clone, Debug, Eq, PartialEq)]
++struct VisualSelection {
++    pane: PaneFocus,
++    kind: VisualKind,
++    anchor: TextPosition,
++    cursor: TextPosition,
++}
++
++#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++enum VisualCopyIntent {
++    Selection,
++    Line,
++}
++
+ const STATUS_NOTICE_SECONDS: u64 = 5;
+ const COMMAND_MODE_TYPING_NOTICE_THRESHOLD: usize = 5;
+ const COMMAND_MODE_TYPING_NOTICE: &str = "command mode: press i for insert mode before typing";
+@@ -188,6 +226,9 @@ pub struct TerminalUi {
+     pending: Option<PendingKey>,
+     pending_bell: Cell<bool>,
+     status_notice: Option<StatusNotice>,
++    visual_selection: Option<VisualSelection>,
++    pending_copy: Option<VisualCopyIntent>,
++    pending_clipboard: RefCell<Option<String>>,
+     command_mode_typing_count: usize,
+     command_mode_typing_controls_only: bool,
+ }
+@@ -210,6 +251,9 @@ impl TerminalUi {
+             pending: None,
+             pending_bell: Cell::new(false),
+             status_notice: None,
++            visual_selection: None,
++            pending_copy: None,
++            pending_clipboard: RefCell::new(None),
+             command_mode_typing_count: 0,
+             command_mode_typing_controls_only: true,
+         }
+@@ -245,6 +289,10 @@ impl TerminalUi {
+         self.status_notice.is_some()
+     }
+ 
++    pub(crate) fn has_visual_selection(&self) -> bool {
++        self.visual_selection.is_some()
++    }
++
+     pub(crate) fn clear_expired_status_notice(&mut self) {
+         if self.status_notice_expired() {
+             self.status_notice = None;
+@@ -313,6 +361,7 @@ impl TerminalUi {
+ 
+     pub fn select_agent(&mut self, agent_id: &AgentId) -> Result<(), String> {
+         if self.agents.iter().any(|agent| &agent.id == agent_id) {
++            self.clear_visual_selection();
+             self.selected_agent = Some(agent_id.clone());
+             self.windows[self.active_window] = UiWindow::chat(agent_id.clone());
+             self.control_selected = self
+@@ -336,6 +385,7 @@ impl TerminalUi {
+     }
+ 
+     pub fn select_command_interface(&mut self) {
++        self.clear_visual_selection();
+         self.selected_agent = None;
+         self.windows[self.active_window] = UiWindow::command();
+         self.control_selected = 0;
+@@ -353,15 +403,18 @@ impl TerminalUi {
+         match key {
+             UiKey::MouseClick { column, row } => {
+                 self.pending = None;
++                self.clear_visual_selection();
+                 return self.handle_mouse_click(column, row);
+             }
+             UiKey::MouseScrollUp { column, row } => {
+                 self.pending = None;
++                self.clear_visual_selection();
+                 self.handle_mouse_scroll(column, row, true);
+                 return Vec::new();
+             }
+             UiKey::MouseScrollDown { column, row } => {
+                 self.pending = None;
++                self.clear_visual_selection();
+                 self.handle_mouse_scroll(column, row, false);
+                 return Vec::new();
+             }
+@@ -372,6 +425,10 @@ impl TerminalUi {
+             return self.handle_pending_key(pending, key);
+         }
+ 
++        if self.visual_selection.is_some() {
++            return self.handle_visual_key(key);
++        }
++
+         match key {
+             UiKey::Esc => {
+                 self.mode = UiMode::Command;
+@@ -393,7 +450,25 @@ impl TerminalUi {
+                 self.mode = UiMode::Prompt;
+                 Vec::new()
+             }
++            UiKey::Char('v') if self.mode == UiMode::Command => {
++                self.start_visual_selection(VisualKind::Character);
++                Vec::new()
++            }
++            UiKey::Char('V') if self.mode == UiMode::Command => {
++                self.start_visual_selection(VisualKind::Line);
++                Vec::new()
++            }
++            UiKey::CtrlV if self.mode == UiMode::Command => {
++                self.start_visual_selection(VisualKind::Block);
++                Vec::new()
++            }
++            UiKey::Char('Y') if self.mode == UiMode::Command => {
++                self.start_visual_selection(VisualKind::Line);
++                self.pending_copy = Some(VisualCopyIntent::Line);
++                Vec::new()
++            }
+             UiKey::Char(',') if self.mode == UiMode::Command => {
++                self.clear_visual_selection();
+                 self.left_visible = !self.left_visible;
+                 self.focus = if self.left_visible {
+                     PaneFocus::Left
+@@ -506,7 +581,7 @@ impl TerminalUi {
+         let prompt_cursor = prompt.len();
+         let buffer = self.render_tui_buffer(&visible_right_content, prompt, prompt_cursor);
+         let mut rendered = String::new();
+-        rendered.push_str(self.bell_prefix());
++        rendered.push_str(&self.terminal_prefix());
+         rendered.push_str("\u{1b}[H");
+         rendered.push_str(&buffer_to_string(&buffer));
+         rendered.push_str(&self.cursor_sequence(&visible_right_content, prompt));
+@@ -523,7 +598,7 @@ impl TerminalUi {
+         let visible_right_content = self.visible_right_content(right_content);
+         let buffer = self.render_tui_buffer(&visible_right_content, prompt, prompt_cursor);
+         let mut rendered = String::new();
+-        rendered.push_str(self.bell_prefix());
++        rendered.push_str(&self.terminal_prefix());
+         rendered.push_str("\u{1b}[H");
+         rendered.push_str(&buffer_to_string(&buffer));
+         rendered.push_str(&self.cursor_sequence_with_cursors(
+@@ -591,7 +666,9 @@ impl TerminalUi {
+                 );
+             })
+             .expect("test backend draw succeeds");
+-        terminal.backend().buffer().clone()
++        let mut buffer = terminal.backend().buffer().clone();
++        self.apply_visual_selection(&mut buffer, right_content);
++        buffer
+     }
+ 
+     fn left_widget(&self) -> List<'static> {
+@@ -680,6 +757,8 @@ impl TerminalUi {
+                 self.height,
+                 self.prompt_view(prompt, prompt_cursor).cursor_column,
+             )
++        } else if let Some(position) = self.visual_cursor_position() {
++            position
+         } else {
+             match self.focus {
+                 PaneFocus::Left => (self.control_cursor_row(), 2),
+@@ -716,6 +795,15 @@ impl TerminalUi {
+         }
+     }
+ 
++    fn terminal_prefix(&self) -> String {
++        let mut prefix = String::new();
++        prefix.push_str(self.bell_prefix());
++        if let Some(text) = self.pending_clipboard.borrow_mut().take() {
++            prefix.push_str(&osc52_clipboard_sequence(&text));
++        }
++        prefix
++    }
++
+     fn bell_prefix(&self) -> &'static str {
+         if self.pending_bell.replace(false) {
+             "\u{7}"
+@@ -760,6 +848,84 @@ impl TerminalUi {
+         }
+     }
+ 
++    fn handle_visual_key(&mut self, key: UiKey) -> Vec<UiAction> {
++        match key {
++            UiKey::Esc => {
++                self.clear_visual_selection();
++            }
++            UiKey::Char('v') => {
++                if self
++                    .visual_selection
++                    .as_ref()
++                    .is_some_and(|selection| selection.kind == VisualKind::Character)
++                {
++                    self.clear_visual_selection();
++                } else {
++                    self.set_visual_kind(VisualKind::Character);
++                }
++            }
++            UiKey::Char('V') => self.set_visual_kind(VisualKind::Line),
++            UiKey::CtrlV => self.set_visual_kind(VisualKind::Block),
++            UiKey::Char('h') | UiKey::Left => self.move_visual_cursor(0, -1),
++            UiKey::Char('l') | UiKey::Right => self.move_visual_cursor(0, 1),
++            UiKey::Char('j') | UiKey::Down => self.move_visual_cursor(1, 0),
++            UiKey::Char('k') | UiKey::Up => self.move_visual_cursor(-1, 0),
++            UiKey::Char('y') => self.pending_copy = Some(VisualCopyIntent::Selection),
++            UiKey::Char('Y') => self.pending_copy = Some(VisualCopyIntent::Line),
++            _ => {}
++        }
++        Vec::new()
++    }
++
++    fn start_visual_selection(&mut self, kind: VisualKind) {
++        let position = match self.focus {
++            PaneFocus::Left => TextPosition {
++                row: self.left_control_selected_visual_row(),
++                column: 0,
++            },
++            PaneFocus::Right => TextPosition { row: 0, column: 0 },
++        };
++        self.visual_selection = Some(VisualSelection {
++            pane: self.focus,
++            kind,
++            anchor: position,
++            cursor: position,
++        });
++        self.pending_copy = None;
++    }
++
++    fn set_visual_kind(&mut self, kind: VisualKind) {
++        if let Some(selection) = self.visual_selection.as_mut() {
++            selection.kind = kind;
++        }
++    }
++
++    fn move_visual_cursor(&mut self, row_delta: isize, column_delta: isize) {
++        if let Some(selection) = self.visual_selection.as_mut() {
++            selection.cursor.row = position_with_delta(selection.cursor.row, row_delta);
++            selection.cursor.column = position_with_delta(selection.cursor.column, column_delta);
++        }
++    }
++
++    pub(crate) fn take_pending_copy(&mut self, right_content: &str) -> Option<String> {
++        let intent = self.pending_copy.take()?;
++        let selection = self.visual_selection.clone()?;
++        let visible_right_content = self.visible_right_content(right_content);
++        let rows = self.visual_rows_for_pane(selection.pane, &visible_right_content);
++        let text = selected_text_from_rows(&rows, &selection, intent);
++        self.clear_visual_selection();
++        if text.is_empty() {
++            return None;
++        }
++
++        self.pending_clipboard.borrow_mut().replace(text.clone());
++        self.show_status_notice(
++            format!("copied {} chars", text.chars().count()),
++            Duration::from_secs(STATUS_NOTICE_SECONDS),
++        );
++        Some(text)
++    }
++
+     fn command_mode_text_key_control_status(&self, key: UiKey) -> Option<bool> {
+         if self.mode != UiMode::Command || self.pending.is_some() {
+             return None;
+@@ -767,12 +933,17 @@ impl TerminalUi {
+         let UiKey::Char(ch) = key else {
+             return None;
+         };
++        if self.visual_selection.is_some() {
++            return Some(true);
++        }
+         (ch.is_ascii_alphanumeric() || ch == ' ').then(|| self.is_command_control_char(ch))
+     }
+ 
+     fn is_command_control_char(&self, ch: char) -> bool {
+-        matches!(ch, 'i' | ':' | ',' | 's' | 't' | 'f' | 'g')
+-            || (self.focus == PaneFocus::Left && matches!(ch, 'j' | 'k' | 'l' | 'x'))
++        matches!(
++            ch,
++            'i' | ':' | ',' | 's' | 't' | 'f' | 'g' | 'v' | 'V' | 'y' | 'Y'
++        ) || (self.focus == PaneFocus::Left && matches!(ch, 'j' | 'k' | 'l' | 'x'))
+     }
+ 
+     fn update_command_mode_typing_notice(&mut self, command_mode_text_key_control: Option<bool>) {
+@@ -974,6 +1145,35 @@ impl TerminalUi {
+             .map(|index| self.agents[index].id.clone())
+     }
+ 
++    fn left_control_selected_visual_row(&self) -> usize {
++        if self.control_selected == 0 {
++            return 0;
++        }
++
++        let mut current_row = 1;
++        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
++            if self.control_selected == visible_position + 1 {
++                return current_row;
++            }
++            current_row =
++                current_row.saturating_add(self.left_agent_visual_row_count(*agent_index));
++        }
++        0
++    }
++
++    fn left_agent_visual_row_count(&self, agent_index: usize) -> usize {
++        let agent = &self.agents[agent_index];
++        1 + usize::from(!agent.modified_files.is_empty())
++            + [
++                &agent.conflicting_agents,
++                &agent.depends_on,
++                &agent.depended_on_by,
++            ]
++            .into_iter()
++            .filter(|agents| !agents.is_empty())
++            .count()
++    }
++
+     fn left_pane_click_target(&mut self, row: u16) -> Option<LeftPaneClickTarget> {
+         let list_row = usize::from(row.saturating_sub(2));
+         if row < 2 {
+@@ -1071,6 +1271,152 @@ impl TerminalUi {
+         (inner_width, inner_height)
+     }
+ 
++    fn pane_inner_rect(&self, pane: PaneFocus) -> Option<Rect> {
++        let layout = self.layout();
++        let body_height = self.height.saturating_sub(1);
++        let rect = match pane {
++            PaneFocus::Left if layout.left_width > 0 => Rect::new(
++                1,
++                1,
++                layout.left_width.saturating_sub(2),
++                body_height.saturating_sub(2),
++            ),
++            PaneFocus::Right => {
++                let x = if layout.left_width > 0 {
++                    layout.left_width
++                } else {
++                    0
++                };
++                Rect::new(
++                    x.saturating_add(1),
++                    1,
++                    layout.right_width.saturating_sub(2),
++                    body_height.saturating_sub(2),
++                )
++            }
++            _ => return None,
++        };
++        (rect.width > 0 && rect.height > 0).then_some(rect)
++    }
++
++    fn visual_rows_for_pane(&self, pane: PaneFocus, right_content: &str) -> Vec<String> {
++        let Some(rect) = self.pane_inner_rect(pane) else {
++            return Vec::new();
++        };
++        match pane {
++            PaneFocus::Left => self
++                .left_visual_rows(usize::from(rect.width))
++                .into_iter()
++                .take(usize::from(rect.height))
++                .collect(),
++            PaneFocus::Right => wrapped_rows(right_content, rect.width, usize::from(rect.height)),
++        }
++    }
++
++    fn left_visual_rows(&self, width: usize) -> Vec<String> {
++        let mut rows = vec![if self.control_selected == 0 {
++            "> work-leaf  command".to_string()
++        } else {
++            "  work-leaf  command".to_string()
++        }];
++        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
++            let agent = &self.agents[*agent_index];
++            rows.push(compact_agent_row(
++                agent,
++                self.control_selected == visible_position + 1,
++                width,
++            ));
++            if !agent.modified_files.is_empty() {
++                rows.push(truncate_to_width(
++                    &format!(
++                        "    files: {}",
++                        agent
++                            .modified_files
++                            .iter()
++                            .map(|path| path.display().to_string())
++                            .collect::<Vec<_>>()
++                            .join(", ")
++                    ),
++                    width,
++                ));
++            }
++            for (label, agents) in [
++                ("conflicts", &agent.conflicting_agents),
++                ("depends-on", &agent.depends_on),
++                ("depended-on-by", &agent.depended_on_by),
++            ] {
++                if !agents.is_empty() {
++                    rows.push(truncate_to_width(
++                        &format!(
++                            "    {label}: {}",
++                            agents
++                                .iter()
++                                .map(AgentId::as_str)
++                                .collect::<Vec<_>>()
++                                .join(", ")
++                        ),
++                        width,
++                    ));
++                }
++            }
++        }
++        rows
++    }
++
++    fn apply_visual_selection(&self, buffer: &mut Buffer, right_content: &str) {
++        let Some(selection) = self.visual_selection.as_ref() else {
++            return;
++        };
++        let Some(rect) = self.pane_inner_rect(selection.pane) else {
++            return;
++        };
++        let rows = self.visual_rows_for_pane(selection.pane, right_content);
++        for row in 0..usize::from(rect.height) {
++            let row_width = rows
++                .get(row)
++                .map(|line| line.chars().count())
++                .unwrap_or_default();
++            let Some((start, end)) =
++                selected_column_range(selection, row, row_width, usize::from(rect.width))
++            else {
++                continue;
++            };
++            let y = rect.y.saturating_add(row.min(usize::from(u16::MAX)) as u16);
++            for column in start..end {
++                let x = rect
++                    .x
++                    .saturating_add(column.min(usize::from(u16::MAX)) as u16);
++                buffer.get_mut(x, y).modifier.insert(Modifier::REVERSED);
++            }
++        }
++    }
++
++    fn visual_cursor_position(&self) -> Option<(u16, u16)> {
++        let selection = self.visual_selection.as_ref()?;
++        let rect = self.pane_inner_rect(selection.pane)?;
++        let row = selection
++            .cursor
++            .row
++            .min(usize::from(rect.height.saturating_sub(1))) as u16;
++        let column = if selection.kind == VisualKind::Line {
++            0
++        } else {
++            selection
++                .cursor
++                .column
++                .min(usize::from(rect.width.saturating_sub(1))) as u16
++        };
++        Some((
++            rect.y.saturating_add(row).saturating_add(1),
++            rect.x.saturating_add(column).saturating_add(1),
++        ))
++    }
++
++    fn clear_visual_selection(&mut self) {
++        self.visual_selection = None;
++        self.pending_copy = None;
++    }
++
+     fn next_window(&mut self) {
+         if !self.windows.is_empty() {
+             self.active_window = (self.active_window + 1) % self.windows.len();
+@@ -1108,6 +1454,16 @@ impl TerminalUi {
+             return notice.to_string();
+         }
+ 
++        if let Some(selection) = self.visual_selection.as_ref() {
++            return format!(
++                "mode={} focus={} window={}/{}",
++                selection.kind.status_name(),
++                self.focus.as_str(),
++                self.active_window + 1,
++                self.windows.len()
++            );
++        }
++
+         format!(
+             "mode={} focus={} window={}/{}",
+             self.mode.as_str(),
+@@ -1246,6 +1602,173 @@ fn cursor_char_count(text: &str, cursor: usize) -> usize {
+         .count()
+ }
+ 
++fn position_with_delta(position: usize, delta: isize) -> usize {
++    if delta.is_negative() {
++        position.saturating_sub(delta.unsigned_abs())
++    } else {
++        position.saturating_add(delta as usize)
++    }
++}
++
++fn selected_text_from_rows(
++    rows: &[String],
++    selection: &VisualSelection,
++    intent: VisualCopyIntent,
++) -> String {
++    let kind = match intent {
++        VisualCopyIntent::Selection => selection.kind,
++        VisualCopyIntent::Line => VisualKind::Line,
++    };
++    let start_row = selection.anchor.row.min(selection.cursor.row);
++    let end_row = selection.anchor.row.max(selection.cursor.row);
++    let mut selected = Vec::new();
++    for row in start_row..=end_row {
++        let Some(line) = rows.get(row) else {
++            continue;
++        };
++        match kind {
++            VisualKind::Line => selected.push(line.clone()),
++            VisualKind::Block => {
++                let start_column = selection.anchor.column.min(selection.cursor.column);
++                let end_column = selection.anchor.column.max(selection.cursor.column) + 1;
++                selected.push(slice_chars(line, start_column, end_column));
++            }
++            VisualKind::Character => {
++                let row_len = line.chars().count();
++                let Some((start, end)) =
++                    selected_character_columns(selection, row, row_len, row_len)
++                else {
++                    continue;
++                };
++                selected.push(slice_chars(line, start, end));
++            }
++        }
++    }
++    selected.join("\n")
++}
++
++fn selected_column_range(
++    selection: &VisualSelection,
++    row: usize,
++    row_width: usize,
++    pane_width: usize,
++) -> Option<(usize, usize)> {
++    match selection.kind {
++        VisualKind::Line => {
++            let start_row = selection.anchor.row.min(selection.cursor.row);
++            let end_row = selection.anchor.row.max(selection.cursor.row);
++            (start_row <= row && row <= end_row).then_some((0, pane_width))
++        }
++        VisualKind::Block => {
++            let start_row = selection.anchor.row.min(selection.cursor.row);
++            let end_row = selection.anchor.row.max(selection.cursor.row);
++            if row < start_row || row > end_row {
++                return None;
++            }
++            let start_column = selection.anchor.column.min(selection.cursor.column);
++            let end_column = selection.anchor.column.max(selection.cursor.column) + 1;
++            (start_column < pane_width).then_some((start_column, end_column.min(pane_width)))
++        }
++        VisualKind::Character => selected_character_columns(selection, row, row_width, pane_width),
++    }
++}
++
++fn selected_character_columns(
++    selection: &VisualSelection,
++    row: usize,
++    row_width: usize,
++    pane_width: usize,
++) -> Option<(usize, usize)> {
++    let start_row = selection.anchor.row.min(selection.cursor.row);
++    let end_row = selection.anchor.row.max(selection.cursor.row);
++    if row < start_row || row > end_row || row_width == 0 {
++        return None;
++    }
++
++    let anchor_before_cursor = (selection.anchor.row, selection.anchor.column)
++        <= (selection.cursor.row, selection.cursor.column);
++    let (start_column, end_column) = if start_row == end_row {
++        (
++            selection.anchor.column.min(selection.cursor.column),
++            selection.anchor.column.max(selection.cursor.column) + 1,
++        )
++    } else if row == start_row {
++        let first_column = if anchor_before_cursor {
++            selection.anchor.column
++        } else {
++            selection.cursor.column
++        };
++        (first_column, row_width)
++    } else if row == end_row {
++        let last_column = if anchor_before_cursor {
++            selection.cursor.column
++        } else {
++            selection.anchor.column
++        };
++        (0, last_column + 1)
++    } else {
++        (0, row_width)
++    };
++
++    let start_column = start_column.min(pane_width).min(row_width);
++    let end_column = end_column.min(pane_width).min(row_width);
++    (start_column < end_column).then_some((start_column, end_column))
++}
++
++fn slice_chars(text: &str, start: usize, end: usize) -> String {
++    text.chars()
++        .skip(start)
++        .take(end.saturating_sub(start))
++        .collect()
++}
++
++fn wrapped_rows(content: &str, width: u16, height: usize) -> Vec<String> {
++    let width = usize::from(width.max(1));
++    let mut rows = Vec::new();
++    for line in content.lines() {
++        if line.is_empty() {
++            rows.push(String::new());
++            continue;
++        }
++        let chars = line.chars().collect::<Vec<_>>();
++        for chunk in chars.chunks(width) {
++            rows.push(chunk.iter().collect());
++        }
++    }
++    if content.is_empty() {
++        rows.push(String::new());
++    }
++    rows.truncate(height);
++    rows
++}
++
++fn osc52_clipboard_sequence(text: &str) -> String {
++    format!("\u{1b}]52;c;{}\u{7}", base64_encode(text.as_bytes()))
++}
++
++fn base64_encode(bytes: &[u8]) -> String {
++    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
++    let mut encoded = String::new();
++    for chunk in bytes.chunks(3) {
++        let first = chunk[0];
++        let second = *chunk.get(1).unwrap_or(&0);
++        let third = *chunk.get(2).unwrap_or(&0);
++        encoded.push(TABLE[(first >> 2) as usize] as char);
++        encoded.push(TABLE[(((first & 0b0000_0011) << 4) | (second >> 4)) as usize] as char);
++        if chunk.len() > 1 {
++            encoded.push(TABLE[(((second & 0b0000_1111) << 2) | (third >> 6)) as usize] as char);
++        } else {
++            encoded.push('=');
++        }
++        if chunk.len() > 2 {
++            encoded.push(TABLE[(third & 0b0011_1111) as usize] as char);
++        } else {
++            encoded.push('=');
++        }
++    }
++    encoded
++}
++
+ fn visible_content(content: &str, width: u16, height: u16, scroll_rows: usize) -> String {
+     let height = usize::from(height);
+     let Some((history, prompt)) = split_chat_prompt(content) else {
+@@ -1333,4 +1856,23 @@ mod tests {
+             );
+         }
+     }
++
++    #[test]
++    fn visual_line_copy_queues_osc52_clipboard_output() {
++        let mut ui = TerminalUi::new(80, 24);
++        ui.handle_key(UiKey::CtrlW);
++        ui.handle_key(UiKey::Char('l'));
++        ui.handle_key(UiKey::Char('V'));
++        ui.handle_key(UiKey::Char('j'));
++        ui.handle_key(UiKey::Char('y'));
++
++        assert_eq!(
++            ui.take_pending_copy("alpha\nbeta\nchat> "),
++            Some("alpha\nbeta".to_string())
++        );
++        assert!(
++            ui.render_screen("alpha\nbeta\nchat> ")
++                .starts_with("\u{1b}]52;c;YWxwaGEKYmV0YQ==\u{7}\u{1b}[H")
++        );
++    }
+ }
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index 20029f6..6b59afd 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -470,6 +470,14 @@ impl UiHarness {
+     fn record_actions(&mut self, actions: Vec<crate::UiAction>) {
+         self.transcript
+             .extend(actions.into_iter().map(|action| format!("{action:?}")));
++        self.record_pending_copy();
++    }
++
++    fn record_pending_copy(&mut self) {
++        let right_content = self.right_content();
++        if let Some(text) = self.ui.take_pending_copy(&right_content) {
++            self.transcript.push(format!("fixture copied: {text}"));
++        }
+     }
+ 
+     fn should_start_agent_slash_command(&self) -> bool {
+@@ -486,12 +494,14 @@ impl UiHarness {
+     }
+ 
+     fn should_route_chat_arrow(&self) -> bool {
+-        self.ui.mode() == UiMode::Insert
+-            || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right)
++        !self.ui.has_visual_selection()
++            && (self.ui.mode() == UiMode::Insert
++                || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right))
+     }
+ 
+     fn defer_escape_key(&self) -> bool {
+-        self.ui.mode() == UiMode::Prompt
++        self.ui.has_visual_selection()
++            || self.ui.mode() == UiMode::Prompt
+             || (self.ui.mode() == UiMode::Insert && self.ui.focus() == PaneFocus::Right)
+     }
+ 
+@@ -633,6 +643,7 @@ impl HarnessInput {
+             13 | 10 => Some(Self::Enter),
+             27 => Some(Self::Key(UiKey::Esc)),
+             23 => Some(Self::Key(UiKey::CtrlW)),
++            22 => Some(Self::Key(UiKey::CtrlV)),
+             8 | 127 => Some(Self::Backspace),
+             byte if byte.is_ascii_graphic() || byte == b' ' => Some(Self::Char(byte as char)),
+             _ => None,
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index c312a5b..e4c7ea7 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -585,6 +585,46 @@ fn terminal_app_mouse_wheel_scrolls_chat_history() {
+     assert!(bottom_again.contains("chat> "));
+ }
+ 
++#[test]
++fn terminal_app_visual_yank_emits_osc52_clipboard_sequence() {
++    let backend = FakeBackend::new(["launch reply"]);
++    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
++    let mut app = TerminalApp::new(chat, 100, 24);
++
++    app.handle_bytes(b":new copy output\n");
++    app.wait_for_idle(Duration::from_secs(1));
++    let _ = app.render_frame();
++
++    app.handle_bytes(&[27, 23, b'l']);
++    app.handle_bytes(b"Vjy");
++
++    let frame = app.render_frame();
++    assert!(frame.starts_with("\u{1b}]52;c;"), "{frame:?}");
++    assert!(frame.contains("\u{7}\u{1b}[H"));
++    assert!(frame.contains("copied "));
++}
++
++#[test]
++fn terminal_app_visual_arrow_keys_extend_right_pane_selection() {
++    let backend = FakeBackend::new(["launch reply"]);
++    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
++    let mut app = TerminalApp::new(chat, 100, 24);
++
++    app.handle_bytes(b":new copy output\n");
++    app.wait_for_idle(Duration::from_secs(1));
++    let _ = app.render_frame();
++
++    app.handle_bytes(&[27, 23, b'l']);
++    app.handle_bytes(b"v\x1b[C\x1b[Cy");
++
++    let frame = app.render_frame();
++    assert!(
++        frame.starts_with("\u{1b}]52;c;bGF1\u{7}\u{1b}[H"),
++        "{frame:?}"
++    );
++    assert!(frame.contains("copied 3 chars"));
++}
++
+ #[test]
+ fn terminal_app_new_adds_agent_immediately_while_backend_is_loading() {
+     let backend = SlowBackend;
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index 0be4d80..92e73b9 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -574,6 +574,79 @@ fn scripted_harness_left_right_arrows_move_left_pane_selection_like_j_k() {
+     );
+ }
+ 
++#[test]
++fn scripted_harness_visual_mode_copies_right_pane_character_line_and_block_selections() {
++    let mut character = UiHarness::new(80, 24);
++    character.handle_bytes(&[23, b'l']);
++    character.handle_bytes(b"vlly");
++    assert!(
++        character
++            .transcript()
++            .iter()
++            .any(|line| line == "fixture copied: UI ")
++    );
++
++    let mut line = UiHarness::new(80, 24);
++    line.handle_bytes(&[23, b'l']);
++    line.handle_bytes(b"Vjy");
++    assert!(line.transcript().iter().any(|entry| {
++        entry == "fixture copied: UI harness\nEsc command, i insert, : prompt, Ctrl-W h/j/k/l focus, , toggl"
++    }));
++
++    let mut block = UiHarness::new(80, 24);
++    block.handle_bytes(&[23, b'l', 22, b'l', b'j', b'y']);
++    assert!(
++        block
++            .transcript()
++            .iter()
++            .any(|entry| entry == "fixture copied: UI\nEs")
++    );
++
++    let mut arrows = UiHarness::new(80, 24);
++    arrows.handle_bytes(&[23, b'l']);
++    arrows.handle_bytes(b"v\x1b[C\x1b[Cy");
++    assert!(
++        arrows
++            .transcript()
++            .iter()
++            .any(|line| line == "fixture copied: UI ")
++    );
++}
++
++#[test]
++fn scripted_harness_visual_line_copy_works_in_left_pane() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_bytes(b"V");
++    assert!(
++        harness
++            .render_frame()
++            .contains("mode=visual-line focus=left")
++    );
++    harness.handle_bytes(b"y");
++
++    assert!(
++        harness
++            .transcript()
++            .iter()
++            .any(|line| line.starts_with("fixture copied: ") && line.contains("user-1"))
++    );
++}
++
++#[test]
++fn scripted_harness_left_visual_line_starts_on_focused_agent_row() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_bytes(b"jVy");
++
++    assert!(
++        harness
++            .transcript()
++            .iter()
++            .any(|line| line == "fixture copied: >tests user-2")
++    );
++}
++
+ fn strip_ansi(input: &str) -> String {
+     let mut output = String::new();
+     let mut chars = input.chars();

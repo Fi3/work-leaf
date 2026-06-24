@@ -121,9 +121,14 @@ The project-root `bench-dashboard` script serves saved benchmark reports from `b
 It reads top-level report files and nested run directories such as parallel benchmark batches,
 keeps report links as relative paths under the configured results directory, and rejects report
 requests that escape that directory. When `bench-results/baseline-manifest.json` exists, the
-dashboard treats the listed report paths as the active regression baseline, computes token variance
-and repeated-run regression thresholds from those rows, and shows every other discovered report in a
-separate old/invalid table.
+dashboard treats the listed report paths as the fixed regression baseline and computes token
+variance, model-fit intervals, and repeated-run regression thresholds from those rows. Benchmark
+reports that share the fitted baseline base commit but are not listed in the manifest are shown in a
+model-comparison table above the baseline; successful comparison rows are classified against the
+fitted token model, and failed comparison rows are treated as reliability failures. Other discovered
+reports remain in a separate old/invalid table for auditability. `bench-three-features` writes the
+same token-model classification, distance from the fitted mean, and rerun recommendation into each
+new saved report when the baseline manifest is available.
 
 ## Agent Domain
 
