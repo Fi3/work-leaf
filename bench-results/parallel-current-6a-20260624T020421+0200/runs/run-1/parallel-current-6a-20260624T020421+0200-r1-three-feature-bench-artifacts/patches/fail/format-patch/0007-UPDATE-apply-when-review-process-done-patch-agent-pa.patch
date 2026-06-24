@@ -1,0 +1,74 @@
+From 910b1b53540709fe28b4ba19b0f7fabfb6e6f05c Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 02:46:37 +0200
+Subject: [PATCH 7/7] UPDATE apply when-review-process-done-patch-agent patch
+ from user-3
+
+Agent-ID: user-3
+Feature: when-review-process-done-patch-agent
+Reason: FIX recognize real reviewer clean verdicts with leading explanation so review completion can reach feature confirmation
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `when-review-process-done-patch-agent`. The agent stated the reason as `FIX recognize real reviewer clean verdicts with leading explanation so review completion can reach feature confirmation`. The patch touched src/review.rs, tests/reviews.rs and changed the working tree with 36 added line(s) and 3 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/review.rs    |  3 +--
+ tests/reviews.rs | 34 ++++++++++++++++++++++++++++++++++
+ 2 files changed, 35 insertions(+), 2 deletions(-)
+
+diff --git a/src/review.rs b/src/review.rs
+index 0bdd7a5..8756206 100644
+--- a/src/review.rs
++++ b/src/review.rs
+@@ -372,8 +372,7 @@ fn metadata_value(body: &str, prefix: &str) -> Option<String> {
+ 
+ pub(crate) fn has_no_findings(text: &str) -> bool {
+     text.lines()
+-        .find(|line| !line.trim().is_empty())
+-        .is_some_and(|line| line.trim().eq_ignore_ascii_case("NO_FINDINGS"))
++        .any(|line| line.trim().eq_ignore_ascii_case("NO_FINDINGS"))
+ }
+ 
+ #[derive(Debug)]
+diff --git a/tests/reviews.rs b/tests/reviews.rs
+index 8ef391e..ee752ff 100644
+--- a/tests/reviews.rs
++++ b/tests/reviews.rs
+@@ -109,6 +109,40 @@ fn review_coordinator_loops_until_reviewer_reports_no_findings() {
+     assert!(backend.sends[2].1.contains("check the patch again"));
+ }
+ 
++#[test]
++fn review_coordinator_accepts_no_findings_after_reviewer_explanation() {
++    let root = git_repo("review-clean-with-explanation");
++    fs::write(root.join("lib.rs"), "pub fn value() -> u8 { 1 }\n").unwrap();
++    git(&root, ["add", "."]);
++    git(
++        &root,
++        [
++            "commit",
++            "-m",
++            "UPDATE apply parser patch from chat-a",
++            "-m",
++            "Agent-ID: chat-a\nFeature: parser\nReason: return value",
++        ],
++    );
++
++    let backend = FakeBackend::new([
++        "summary: returns a parser value",
++        "I inspected the patch and found no defects.\n\nNO_FINDINGS",
++    ]);
++    let mut coordinator = ReviewCoordinator::new(root, backend).with_max_rounds(4);
++
++    let results = coordinator.review_latest_agent_commits().unwrap();
++    let backend = coordinator.into_backend();
++
++    assert_eq!(results.len(), 1);
++    assert_eq!(results[0].rounds, 1);
++    assert!(results[0].findings_resolved);
++    assert_eq!(backend.launches.len(), 1);
++    assert_eq!(backend.sends.len(), 1);
++    assert_eq!(backend.sends[0].0.as_str(), "chat-a");
++    assert!(backend.sends[0].1.contains("summarize"));
++}
++
+ #[test]
+ fn git_history_builds_agent_review_scope_since_baseline() {
+     let root = git_repo("review-history-scope");

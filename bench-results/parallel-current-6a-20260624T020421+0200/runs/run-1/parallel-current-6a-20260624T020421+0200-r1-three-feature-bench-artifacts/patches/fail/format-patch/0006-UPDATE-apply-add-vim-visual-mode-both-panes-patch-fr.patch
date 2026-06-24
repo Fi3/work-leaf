@@ -1,0 +1,50 @@
+From 081cc1389df13d836d447d3ef7de9f93957f9dde Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 02:29:08 +0200
+Subject: [PATCH 6/7] UPDATE apply add-vim-visual-mode-both-panes patch from
+ user-1
+
+Agent-ID: user-1
+Feature: add-vim-visual-mode-both-panes
+Reason: FIX block normal command bindings while private visual selection is active
+Context: The orchestrator applied this provisional patch for user-1 while the agent was working on feature `add-vim-visual-mode-both-panes`. The agent stated the reason as `FIX block normal command bindings while private visual selection is active`. The patch touched src/ui.rs, tests/ui_harness.rs and changed the working tree with 13 added line(s) and 0 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/ui.rs           |  1 +
+ tests/ui_harness.rs | 12 ++++++++++++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/src/ui.rs b/src/ui.rs
+index 6c081dc..98ae0d1 100644
+--- a/src/ui.rs
++++ b/src/ui.rs
+@@ -459,6 +459,7 @@ impl TerminalUi {
+                 self.move_visual_cursor(0, 1, right_content);
+                 Vec::new()
+             }
++            _ if self.is_visual_mode() => Vec::new(),
+             UiKey::Char('v') if self.mode == UiMode::Command => {
+                 self.start_visual_selection(
+                     VisualSelectionKind::Character,
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index c2e5241..9cf5662 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -427,6 +427,18 @@ fn scripted_harness_visual_line_mode_copies_right_pane_text() {
+     assert!(copied.ends_with('\n'));
+ }
+ 
++#[test]
++fn scripted_harness_visual_mode_blocks_insert_mode_switch() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_byte(b'v');
++    harness.handle_byte(b'i');
++
++    assert_eq!(harness.ui().mode(), UiMode::Command);
++    assert!(harness.render_frame().contains("mode=visual-character focus=right"));
++}
++
+ #[test]
+ fn scripted_harness_ctrl_v_block_mode_copies_left_pane_columns() {
+     let mut harness = UiHarness::new(80, 24);

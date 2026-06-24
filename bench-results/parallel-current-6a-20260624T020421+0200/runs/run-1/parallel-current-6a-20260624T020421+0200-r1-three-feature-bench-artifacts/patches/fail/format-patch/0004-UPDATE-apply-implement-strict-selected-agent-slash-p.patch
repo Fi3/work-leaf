@@ -1,0 +1,157 @@
+From 178065fbadd245074b544a465aede5ad5ebfacf7 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 02:18:04 +0200
+Subject: [PATCH 4/7] UPDATE apply implement-strict-selected-agent-slash patch
+ from user-2
+
+Agent-ID: user-2
+Feature: implement-strict-selected-agent-slash
+Reason: FIX selected-agent slash commands for Codex so backend commands do not use the normal resume prompt path
+Context: The orchestrator applied this provisional patch for user-2 while the agent was working on feature `implement-strict-selected-agent-slash`. The agent stated the reason as `FIX selected-agent slash commands for Codex so backend commands do not use the normal resume prompt path`. The patch touched src/codex.rs and changed the working tree with 81 added line(s) and 16 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/codex.rs | 97 +++++++++++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 81 insertions(+), 16 deletions(-)
+
+diff --git a/src/codex.rs b/src/codex.rs
+index ec07577..4e6bae7 100644
+--- a/src/codex.rs
++++ b/src/codex.rs
+@@ -150,8 +150,13 @@ impl CodexBackend {
+         &self,
+         agent_id: &AgentId,
+         command: &str,
+-    ) -> Result<CodexInvocation, AgentError> {
+-        self.build_send_invocation(agent_id, command)
++    ) -> Result<String, AgentError> {
++        let command_token = command.split_whitespace().next().unwrap_or(command);
++        match command_token {
++            "/status" => self.status_command_output(agent_id),
++            "/fork" => self.fork_command_output(agent_id, command),
++            other => Ok(format!("unsupported Codex backend command `{other}`")),
++        }
+     }
+ 
+     pub fn record_launch_reply(
+@@ -250,6 +255,64 @@ impl CodexBackend {
+         })
+     }
+ 
++    fn status_command_output(&self, agent_id: &AgentId) -> Result<String, AgentError> {
++        let state = self
++            .state
++            .lock()
++            .expect("codex backend state mutex poisoned");
++        let session = state
++            .sessions
++            .get(agent_id)
++            .ok_or_else(|| AgentError::UnknownSession(agent_id.clone()))?;
++        let thread_id = state
++            .thread_ids
++            .get(agent_id)
++            .map(String::as_str)
++            .unwrap_or("not recorded");
++        let process = if state.active_processes.contains_key(agent_id) {
++            "running"
++        } else {
++            "idle"
++        };
++        Ok(format!(
++            "Codex status for {agent_id}\nfeature: {}\nstate: {:?}\nthread: {thread_id}\nprocess: {process}\nmessages: {}",
++            session.feature,
++            session.state,
++            session.messages.len()
++        ))
++    }
++
++    fn fork_command_output(&self, agent_id: &AgentId, command: &str) -> Result<String, AgentError> {
++        let state = self
++            .state
++            .lock()
++            .expect("codex backend state mutex poisoned");
++        let session = state
++            .sessions
++            .get(agent_id)
++            .ok_or_else(|| AgentError::UnknownSession(agent_id.clone()))?;
++        let thread_id = state
++            .thread_ids
++            .get(agent_id)
++            .map(String::as_str)
++            .unwrap_or("not recorded");
++        let fork_args = command
++            .split_whitespace()
++            .skip(1)
++            .collect::<Vec<_>>()
++            .join(" ");
++        let mut output = format!(
++            "Codex fork requested for {agent_id}\nfeature: {}\nsource thread: {thread_id}",
++            session.feature
++        );
++        if !fork_args.is_empty() {
++            output.push_str("\narguments: ");
++            output.push_str(&fork_args);
++        }
++        output.push_str("\nCodex exec does not expose a non-interactive fork command; no new session was created.");
++        Ok(output)
++    }
++
+     fn run_invocation_streaming(
+         &self,
+         invocation: &CodexInvocation,
+@@ -388,9 +451,7 @@ impl AgentBackend for CodexBackend {
+         agent_id: &AgentId,
+         command: &str,
+     ) -> Result<ChatMessage, AgentError> {
+-        let invocation = self.build_command_invocation(agent_id, command)?;
+-        let output = self.run_invocation_streaming(&invocation, Some(agent_id), &mut |_| {})?;
+-        let reply = parse_codex_output(&output).agent_reply.unwrap_or(output);
++        let reply = self.build_command_invocation(agent_id, command)?;
+         self.record_agent_reply(agent_id, command, reply)
+     }
+ 
+@@ -440,9 +501,8 @@ impl AgentBackend for CodexBackend {
+         command: &str,
+         sink: &mut dyn FnMut(AgentStreamEvent),
+     ) -> Result<ChatMessage, AgentError> {
+-        let invocation = self.build_command_invocation(agent_id, command)?;
+-        let output = self.run_invocation_streaming(&invocation, Some(agent_id), sink)?;
+-        let reply = parse_codex_output(&output).agent_reply.unwrap_or(output);
++        let reply = self.build_command_invocation(agent_id, command)?;
++        sink(AgentStreamEvent::AgentMessage(reply.clone()));
+         self.record_agent_reply(agent_id, command, reply)
+     }
+ }
+@@ -611,9 +671,9 @@ mod tests {
+     }
+ 
+     #[test]
+-    fn slash_backend_command_resume_invocation_uses_command_stdin() {
++    fn codex_backend_commands_execute_without_resume_invocation() {
+         let mut backend = CodexBackend::new(
+-            CodexCommandConfig::new(PathBuf::from("/repo")),
++            CodexCommandConfig::new(PathBuf::from("/repo")).with_binary("/missing-codex"),
+             PromptPolicy::for_restricted_agents(),
+         );
+         let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+@@ -624,11 +684,16 @@ mod tests {
+             )
+             .expect("test launch output records the thread id");
+ 
+-        let invocation = backend
+-            .build_command_invocation(&agent_id, "/status")
+-            .expect("slash command invocation is built");
+-
+-        assert_eq!(invocation.stdin, "/status");
+-        assert!(invocation.args.iter().any(|arg| arg == "thread-user-1"));
++        let status = backend
++            .execute_command(&agent_id, "/status")
++            .expect("status command executes without spawning codex");
++        let fork = backend
++            .execute_command(&agent_id, "/fork experiment")
++            .expect("fork command executes without spawning codex");
++
++        assert!(status.text.contains("Codex status for user-1"));
++        assert!(status.text.contains("thread: thread-user-1"));
++        assert!(fork.text.contains("Codex fork requested for user-1"));
++        assert!(fork.text.contains("arguments: experiment"));
+     }
+ }
