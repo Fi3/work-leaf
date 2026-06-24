@@ -1429,6 +1429,70 @@ fn controller_command_linearize_requires_closed_patch_chats_unless_forced() {
 }
 
 #[test]
+fn controller_keeps_linearize_turn_running_until_done_directive() {
+    let root = git_repo("workspace-linearize-requires-done");
+    fs::write(root.join("README.md"), "before\n").unwrap();
+    git(&root, ["add", "README.md"]);
+    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+    let backend = FakeBackend::new([
+        "patch ready\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+        "summary: README changes from before to after",
+        "NO_FINDINGS",
+        "linearizer ready",
+        "I rewrote the final history and ran verification.",
+        "Final commits and verification complete.\n@work-leaf done",
+    ]);
+    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(5);
+    let mut controller = WorkLeafController::new(chat);
+
+    let agent_id = controller.create_agent("update readme").unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+    controller.send_message(&agent_id, "yes").unwrap();
+    assert!(controller.start_linearize().unwrap().is_some());
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    let linearize = AgentId::new("linearize").unwrap();
+    controller
+        .send_message(&linearize, "Accept the proposed linearization plan.")
+        .unwrap();
+    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+
+    let sends = backend.sends();
+    let linearize_sends = sends
+        .iter()
+        .filter(|(target, _)| target == &linearize)
+        .collect::<Vec<_>>();
+    assert_eq!(linearize_sends.len(), 2, "{linearize_sends:?}");
+    assert_eq!(
+        linearize_sends[0].1,
+        "Accept the proposed linearization plan."
+    );
+    assert!(
+        linearize_sends[1]
+            .1
+            .contains("linearize turn is not complete"),
+        "{}",
+        linearize_sends[1].1
+    );
+    assert!(
+        linearize_sends[1].1.contains("@work-leaf done"),
+        "{}",
+        linearize_sends[1].1
+    );
+
+    let snapshot = controller.snapshot();
+    let session = snapshot.session(&linearize).expect("linearize session");
+    assert_eq!(session.loading, None);
+    assert!(
+        session
+            .lines
+            .iter()
+            .any(|line| line.contains("agent linearize reported done")),
+        "{session:?}"
+    );
+}
+
+#[test]
 fn controller_linearize_preserves_cumulative_review_scope_for_one_done() {
     let root = git_repo("workspace-linearize-cumulative-review-scope");
     fs::write(root.join("README.md"), "before\n").unwrap();

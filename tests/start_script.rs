@@ -163,15 +163,27 @@ fn start_script_delegates_daemon_lifecycle_to_single_binary() {
 fn start_script_bench_mode_lists_available_benchs_binaries() {
     let root = temp_dir("start-script-bench-mode");
     let results_dir = root.path().join("bench-results");
-    let bin_dir = results_dir.join("20260101T000000-artifacts/bin");
-    fs::create_dir_all(&bin_dir).unwrap();
+    let old_bin_dir = results_dir.join("20260101T000000-artifacts/bin");
+    fs::create_dir_all(&old_bin_dir).unwrap();
     write_executable(
-        &bin_dir.join("work-leaf"),
-        "#!/usr/bin/env bash\necho fake work-leaf \"$@\"\n",
+        &old_bin_dir.join("work-leaf"),
+        "#!/usr/bin/env bash\necho old fake work-leaf \"$@\"\n",
     );
     write_executable(
-        &bin_dir.join("work-leaf-orchestrator"),
+        &old_bin_dir.join("work-leaf-orchestrator"),
         "#!/usr/bin/env bash\necho fake orchestrator\n",
+    );
+    let nested_bin_dir = results_dir
+        .join("parallel-fixed-base-12-20260623T195828+0200")
+        .join("runs/run-1/20260623T195828+0200-fixedbase12-r1-three-feature-bench-artifacts/bin");
+    fs::create_dir_all(&nested_bin_dir).unwrap();
+    write_executable(
+        &nested_bin_dir.join("work-leaf"),
+        "#!/usr/bin/env bash\necho nested fake work-leaf \"$@\"\n",
+    );
+    write_executable(
+        &nested_bin_dir.join("work-leaf-orchestrator"),
+        "#!/usr/bin/env bash\necho nested fake orchestrator\n",
     );
 
     let mut child = Command::new(Path::new(env!("CARGO_MANIFEST_DIR")).join("start"))
@@ -195,8 +207,9 @@ fn start_script_bench_mode_lists_available_benchs_binaries() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Available benchs binaries:"));
     assert!(!stdout.contains("Available bench binaries:"));
-    assert!(stdout.contains("  1) 20260101T000000"));
-    assert!(stdout.contains("fake work-leaf --from-test"));
+    assert!(stdout.contains("20260101T000000"));
+    assert!(stdout.contains("20260623T195828+0200-fixedbase12-r1-three-feature-bench"));
+    assert!(stdout.contains("nested fake work-leaf --from-test"));
 }
 
 #[test]

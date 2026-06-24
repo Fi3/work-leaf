@@ -541,6 +541,12 @@ struct ProcessedAgentReply {
     final_reply: String,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum AgentCompletionPolicy {
+    Optional,
+    RequireLinearizeDone,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum CommandAgentDecision {
     Execute {
@@ -897,7 +903,15 @@ where
         }
         .map_err(CliError::Agent)?
         .text;
-        let reply = self.process_agent_reply_streaming(agent_id, &feature, reply, stream)?;
+        let reply = self
+            .process_agent_reply_streaming_result(
+                agent_id,
+                &feature,
+                reply,
+                stream,
+                completion_policy_for_agent_send(agent_id),
+            )?
+            .transcript;
         Ok(CommandChatResult::AgentMessage {
             agent_id: agent_id.clone(),
             reply,
@@ -1000,7 +1014,13 @@ where
         stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
     ) -> Result<String, CliError> {
         Ok(self
-            .process_agent_reply_streaming_result(agent_id, feature, reply, stream)?
+            .process_agent_reply_streaming_result(
+                agent_id,
+                feature,
+                reply,
+                stream,
+                AgentCompletionPolicy::Optional,
+            )?
             .transcript)
     }
 
@@ -1010,6 +1030,7 @@ where
         feature: &str,
         reply: String,
         stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+        completion_policy: AgentCompletionPolicy,
     ) -> Result<ProcessedAgentReply, CliError> {
         let mut text = reply.clone();
         let mut final_reply = reply.clone();
@@ -1046,7 +1067,7 @@ where
                             "user-agent".to_string()
                         }
                     });
-            let run = {
+            let mut run = {
                 let backend = self
                     .backend
                     .as_mut()
@@ -1068,6 +1089,37 @@ where
                     stream,
                 )?
             };
+
+            let needs_linearize_done = completion_policy
+                == AgentCompletionPolicy::RequireLinearizeDone
+                && current.agent_id == *agent_id
+                && !run.completed
+                && !run
+                    .follow_up_replies
+                    .iter()
+                    .any(|follow_up| follow_up.agent_id == *agent_id);
+            if needs_linearize_done {
+                let reply = {
+                    let backend = self
+                        .backend
+                        .as_mut()
+                        .expect("command chat backend is present");
+                    send_agent_streaming_interruptible(
+                        backend,
+                        agent_id,
+                        render_linearize_completion_required_prompt(),
+                        stream,
+                    )
+                }
+                .map_err(CliError::Agent)?;
+                text.push_str(
+                    "\n\norchestrator:\nlinearize turn is not complete; requested explicit completion signal",
+                );
+                run.follow_up_replies.push(AgentFollowUp {
+                    agent_id: agent_id.clone(),
+                    text: reply.text,
+                });
+            }
 
             append_orchestrator_events(&mut text, &run.events);
             append_follow_ups(&mut text, &run.follow_up_replies);
@@ -1191,6 +1243,7 @@ where
                 &review_feature,
                 review_text,
                 stream,
+                AgentCompletionPolicy::Optional,
             )?
             .final_reply;
         self.reviewers.insert(reviewer_id.clone());
@@ -1254,6 +1307,7 @@ where
                     &review_feature,
                     recheck_reply,
                     stream,
+                    AgentCompletionPolicy::Optional,
                 )?
                 .final_reply;
             rounds += 1;
@@ -1358,6 +1412,23 @@ pub(crate) fn build_user_agent_launch(
 
 fn user_agent_number(agent_id: &AgentId) -> Option<usize> {
     agent_id.as_str().strip_prefix("user-")?.parse().ok()
+}
+
+fn completion_policy_for_agent_send(agent_id: &AgentId) -> AgentCompletionPolicy {
+    if is_linearize_agent_id(agent_id) {
+        AgentCompletionPolicy::RequireLinearizeDone
+    } else {
+        AgentCompletionPolicy::Optional
+    }
+}
+
+fn is_linearize_agent_id(agent_id: &AgentId) -> bool {
+    let value = agent_id.as_str();
+    value == "linearize" || value.starts_with("linearize-")
+}
+
+fn render_linearize_completion_required_prompt() -> &'static str {
+    "Your accepted or continued linearize turn is not complete because your last response did not include the required top-level completion signal.\n\nContinue the linearization work with direct workspace tools. Do not use `@work-leaf read`, `@work-leaf edit`, `@work-leaf patch`, or `@work-leaf locks run`. When the final history, documentation/plain-text updates, and repository verification required by the project instructions are complete, report the final commits and verification, then emit `@work-leaf done` as a top-level line."
 }
 
 fn reviewer_id_for(agent_id: &AgentId) -> Result<AgentId, CliError> {

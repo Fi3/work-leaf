@@ -486,6 +486,7 @@ fn linearize_preamble() -> String {
         "Use direct workspace tools for code, documentation, plain-text files, checks, and git operations.",
         "Documentation and plain-text updates deferred by patch agents are part of your responsibility when they are required by the final reviewed behavior.",
         "Keep the final history minimal, preserve reviewed behavior, follow repository commit-message and verification instructions, and report the final commits and checks.",
+        "After an accepted or continued linearize request is fully satisfied, emit `@work-leaf done` as a top-level line. Do not use other `@work-leaf` directives as a linearize agent.",
     ]
     .join("\n")
 }

@@ -98,6 +98,8 @@ fn prompt_policy_gives_linearize_agent_direct_workspace_access() {
     assert!(wrapped.contains(
         "without using `@work-leaf read`, `@work-leaf edit`, `@work-leaf patch`, or `@work-leaf locks run`"
     ));
+    assert!(wrapped.contains("emit `@work-leaf done` as a top-level line"));
+    assert!(wrapped.contains("Do not use other `@work-leaf` directives as a linearize agent"));
     assert!(wrapped.contains("Documentation and plain-text updates deferred by patch agents"));
     assert!(!wrapped.contains("not allowed to write files directly"));
 }

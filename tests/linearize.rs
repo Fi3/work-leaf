@@ -86,6 +86,7 @@ fn interactive_linearize_prompt_requires_user_accepted_plan_before_rewrite() {
             "do not use `@work-leaf read`, `@work-leaf edit`, `@work-leaf patch`, or `@work-leaf locks run`"
         )
     );
+    assert!(prompt.contains("The only Work Leaf directive you use is the final top-level `@work-leaf done` completion signal"));
     assert!(prompt.contains("Agent-ID: chat-a"));
     assert!(prompt.contains("Subject: UPDATE apply parser patch from chat-a"));
 }

@@ -531,7 +531,10 @@ A normal development session in default read-permission mode follows this shape:
     explicitly accepts a different grouping; support, validation, test-hygiene, and documentation
     updates needed for that feature are folded into that feature's final commit. The rewritten final
     stack stays on the parent or common base of the reviewed commits unless the user explicitly
-    requests a different target branch.
+    requests a different target branch. After the user accepts or continues linearization, the
+    controller treats only a top-level `@work-leaf done` from the linearizer as the completion
+    signal; a linearizer response without that signal receives a continuation prompt in the same
+    worker turn.
 
 In direct-read mode, steps 4 and 5 are replaced by direct filesystem inspection from the agent. The
 write, review, and linearization steps remain orchestrator-controlled.

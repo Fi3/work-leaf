@@ -73,9 +73,10 @@ binary in daemon mode, and `-c`/`--cli <http-api-url>` attaches the terminal CLI
 API endpoint. `--agent <codex|claude>` and `-a <codex|claude>` select the daemon's default agent
 provider for terminal and web UI sessions. With `--bench`, the script searches
 `WORK_LEAF_START_BENCH_RESULTS_DIR` or
-`bench-results` for timestamped `*-artifacts` directories that contain executable `bin/work-leaf`
-and `bin/work-leaf-orchestrator` files. It lists those saved benchmark binary sets newest first by
-artifact name, prompts for a selection, skips the release build, and executes the selected
+`bench-results` recursively for timestamped `*-artifacts` directories that contain executable
+`bin/work-leaf` and `bin/work-leaf-orchestrator` files. This includes top-level historical bench
+artifacts and nested parallel-batch run artifacts. It lists those saved benchmark binary sets newest
+first by artifact path, prompts for a selection, skips the release build, and executes the selected
 artifact's `bin/work-leaf`.
 
 The project-root `build-target` script packages the user-facing `work-leaf` binary for the Rust host
@@ -618,6 +619,9 @@ active instance, the linearizer receives one final target for that patch agent a
 lists every reviewed hash that must be preserved. The linearizer owns documentation and plain-text
 updates deferred by patch agents, uses direct workspace access instead of orchestrator mediation, and
 rewrites provisional work-leaf commits into final commits after the user accepts its proposed plan.
+Accepted or continued linearize turns are terminal only when the linearizer emits `@work-leaf done`
+as a top-level completion signal; ordinary prose without that signal receives an automatic
+linearize-continuation prompt from `CommandChat` and remains part of the same controller worker turn.
 The rewritten stack stays rooted at the parent or common base of the reviewed commits unless the user
 explicitly requests retargeting to another branch tip; branch names such as `main` or `master` are
 context for discovering that base, not automatic rewrite targets.
