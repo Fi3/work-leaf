@@ -1,0 +1,63 @@
+From c7f3eb269470a2f81dc327e1df72b8d50c93af2a Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 12:38:41 +0200
+Subject: [PATCH 10/11] UPDATE apply add-vim-visual-mode-both-panes patch from
+ user-1
+
+Agent-ID: user-1
+Feature: add-vim-visual-mode-both-panes
+Reason: FIX right-pane Ctrl-V visual block selection to refresh current content before starting block mode
+Context: The orchestrator applied this provisional patch for user-1 while the agent was working on feature `add-vim-visual-mode-both-panes`. The agent stated the reason as `FIX right-pane Ctrl-V visual block selection to refresh current content before starting block mode`. The patch touched src/terminal_app.rs, src/ui_harness.rs, tests/ui_harness.rs and changed the working tree with 14 added line(s) and 0 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs |  1 +
+ src/ui_harness.rs   |  1 +
+ tests/ui_harness.rs | 12 ++++++++++++
+ 3 files changed, 14 insertions(+)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 29b1ea6..8bba795 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -686,6 +686,7 @@ where
+         self.ui.visual_selection_active() || matches!(
+             input,
+             TerminalAppInput::Key(UiKey::Left | UiKey::Right | UiKey::Up | UiKey::Down)
++                | TerminalAppInput::Key(UiKey::Char('\u{16}'))
+                 | TerminalAppInput::Char('v' | 'V' | 'Y' | '\u{16}')
+         )
+     }
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index a79b74d..606ee7a 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -433,6 +433,7 @@ impl UiHarness {
+         self.ui.visual_selection_active() || matches!(
+             input,
+             HarnessInput::Key(UiKey::Left | UiKey::Right | UiKey::Up | UiKey::Down)
++                | HarnessInput::Key(UiKey::Char('\u{16}'))
+                 | HarnessInput::Char('v' | 'V' | 'Y' | '\u{16}')
+         )
+     }
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index d4fd704..68c9b07 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -579,6 +579,18 @@ fn scripted_harness_visual_character_mode_yanks_right_pane_without_prior_render(
+     assert_eq!(harness.ui().yanked_text(), Some("cdef"));
+ }
+ 
++#[test]
++fn scripted_harness_visual_block_mode_yanks_right_pane_without_prior_render() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_bytes(b"iabcdef\x1b");
++    harness.handle_byte(22);
++    harness.handle_bytes(b"hhhy");
++
++    assert_eq!(harness.ui().yanked_text(), Some("cdef"));
++}
++
+ #[test]
+ fn scripted_harness_visual_line_mode_yanks_left_pane_lines() {
+     let mut harness = UiHarness::new(100, 24);

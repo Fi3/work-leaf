@@ -1,0 +1,449 @@
+From f519e1e5013acc2c925ef265938096a3550af3bc Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 12:22:01 +0200
+Subject: [PATCH 02/11] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: ADD reviewed-feature completion prompt so patch agents can close or reopen after review
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `ADD reviewed-feature completion prompt so patch agents can close or reopen after review`. The patch touched src/terminal_app.rs, src/ui.rs, src/ui_harness.rs, src/workspace.rs, tests/terminal_app.rs, tests/ui_harness.rs, tests/workspace.rs and changed the working tree with 262 added line(s) and 2 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs   | 32 +++++++++++++++
+ src/ui.rs             | 25 +++++++++++
+ src/ui_harness.rs     |  5 +++
+ src/workspace.rs      | 96 ++++++++++++++++++++++++++++++++++++++++++-
+ tests/terminal_app.rs | 64 +++++++++++++++++++++++++++++
+ tests/ui_harness.rs   | 17 ++++++++
+ tests/workspace.rs    | 23 +++++++++++
+ 7 files changed, 261 insertions(+), 1 deletion(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 0fc8a53..09e1c3f 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -8,6 +8,7 @@ use crate::cli::{CommandChat, terminal_right_content, ui_action_text};
+ use crate::http_controller::HttpControllerClient;
+ use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode};
+ use crate::workspace::{
++    FEATURE_CLOSED_MESSAGE, FEATURE_DONE_CONFIRMATION_PROMPT, FEATURE_REOPENED_MESSAGE,
+     WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession, WorkLeafSnapshot,
+ };
+ 
+@@ -642,6 +643,7 @@ where
+ 
+         self.chat_history.push(message.clone());
+         if let Some(agent_id) = self.ui.selected_agent().cloned() {
++            let _ = self.ui.set_agent_hidden_state(&agent_id, false);
+             self.controller.send_message(&agent_id, &message);
+         } else {
+             self.controller.send_command_agent_message(&message);
+@@ -762,6 +764,7 @@ where
+         if line.is_empty() {
+             return;
+         }
++        self.apply_agent_line_ui_state(agent_id, &line);
+         let Some(session) = self
+             .snapshot
+             .sessions
+@@ -789,6 +792,35 @@ where
+         let _ = self
+             .ui
+             .set_agent_ready_state(&session.id, session.loading.is_none());
++        self.apply_session_completion_state_to_ui(session);
++    }
++
++    fn apply_agent_line_ui_state(&mut self, agent_id: &AgentId, line: &str) {
++        match line {
++            FEATURE_CLOSED_MESSAGE => {
++                let _ = self.ui.set_agent_hidden_state(agent_id, true);
++            }
++            FEATURE_DONE_CONFIRMATION_PROMPT | FEATURE_REOPENED_MESSAGE => {
++                let _ = self.ui.set_agent_hidden_state(agent_id, false);
++            }
++            _ => {}
++        }
++    }
++
++    fn apply_session_completion_state_to_ui(&mut self, session: &WorkLeafSession) {
++        for line in session.lines.iter().rev() {
++            match line.as_str() {
++                FEATURE_CLOSED_MESSAGE => {
++                    let _ = self.ui.set_agent_hidden_state(&session.id, true);
++                    break;
++                }
++                FEATURE_DONE_CONFIRMATION_PROMPT | FEATURE_REOPENED_MESSAGE => {
++                    let _ = self.ui.set_agent_hidden_state(&session.id, false);
++                    break;
++                }
++                _ => {}
++            }
++        }
+     }
+ 
+     fn should_start_agent_slash_command(&self) -> bool {
+diff --git a/src/ui.rs b/src/ui.rs
+index 537c9b0..a62f106 100644
+--- a/src/ui.rs
++++ b/src/ui.rs
+@@ -298,6 +298,31 @@ impl TerminalUi {
+         Ok(())
+     }
+ 
++    pub(crate) fn set_agent_hidden_state(
++        &mut self,
++        agent_id: &AgentId,
++        hidden: bool,
++    ) -> Result<(), String> {
++        let Some(agent_index) = self.agents.iter().position(|agent| &agent.id == agent_id) else {
++            return Err(format!("unknown agent `{agent_id}`"));
++        };
++        self.agents[agent_index].hidden = hidden;
++        if hidden {
++            self.clamp_control_selection();
++        } else if self
++            .selected_agent
++            .as_ref()
++            .is_some_and(|selected| selected == agent_id)
++            && let Some(position) = self
++                .visible_agent_indices()
++                .iter()
++                .position(|index| self.agents[*index].id == *agent_id)
++        {
++            self.control_selected = position + 1;
++        }
++        Ok(())
++    }
++
+     pub fn select_agent(&mut self, agent_id: &AgentId) -> Result<(), String> {
+         if self.agents.iter().any(|agent| &agent.id == agent_id) {
+             self.selected_agent = Some(agent_id.clone());
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index b9bdcb9..654e56b 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -68,6 +68,11 @@ impl UiHarness {
+         self.ui.set_agent_ready_state(&agent_id, true)
+     }
+ 
++    pub fn set_agent_hidden(&mut self, agent_id: &str, hidden: bool) -> Result<(), String> {
++        let agent_id = AgentId::new(agent_id).map_err(|error| error.to_string())?;
++        self.ui.set_agent_hidden_state(&agent_id, hidden)
++    }
++
+     pub fn is_quit(&self) -> bool {
+         self.quit
+     }
+diff --git a/src/workspace.rs b/src/workspace.rs
+index f8f9985..a523918 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -15,6 +15,11 @@ use crate::cli::{
+ };
+ use crate::review::{AgentCommit, GitHistory, ReviewResult};
+ 
++pub(crate) const FEATURE_DONE_CONFIRMATION_PROMPT: &str =
++    "work-leaf: is this feature done? yes/no";
++pub(crate) const FEATURE_CLOSED_MESSAGE: &str = "work-leaf: feature closed";
++pub(crate) const FEATURE_REOPENED_MESSAGE: &str = "work-leaf: feature reopened";
++
+ #[derive(Debug)]
+ pub struct WorkLeafController<B>
+ where
+@@ -32,6 +37,8 @@ where
+     review_commits_in_progress: BTreeMap<AgentId, String>,
+     reviewed_agent_commits: BTreeMap<AgentId, String>,
+     agent_review_baselines: BTreeMap<AgentId, String>,
++    feature_done_confirmations: BTreeSet<AgentId>,
++    closed_feature_agents: BTreeSet<AgentId>,
+ }
+ 
+ impl<B> WorkLeafController<B>
+@@ -53,6 +60,8 @@ where
+             review_commits_in_progress: BTreeMap::new(),
+             reviewed_agent_commits: BTreeMap::new(),
+             agent_review_baselines: BTreeMap::new(),
++            feature_done_confirmations: BTreeSet::new(),
++            closed_feature_agents: BTreeSet::new(),
+         }
+     }
+ 
+@@ -246,6 +255,10 @@ where
+         if message.is_empty() {
+             return Ok(());
+         }
++        if self.handle_feature_done_confirmation(agent_id, message) {
++            return Ok(());
++        }
++        self.reopen_closed_feature(agent_id);
+         if self
+             .sessions
+             .get(agent_id)
+@@ -520,6 +533,48 @@ where
+         }
+     }
+ 
++    fn handle_feature_done_confirmation(&mut self, agent_id: &AgentId, message: &str) -> bool {
++        if !self.feature_done_confirmations.contains(agent_id) {
++            return false;
++        }
++
++        if is_feature_done_yes(message) {
++            self.feature_done_confirmations.remove(agent_id);
++            self.closed_feature_agents.insert(agent_id.clone());
++            self.append_agent_line(agent_id, format!("user: {message}"));
++            self.append_agent_line_allowing_repeated(
++                agent_id,
++                FEATURE_CLOSED_MESSAGE.to_string(),
++            );
++            return true;
++        }
++
++        if is_feature_done_no(message) {
++            self.feature_done_confirmations.remove(agent_id);
++            self.closed_feature_agents.remove(agent_id);
++            self.append_agent_line(agent_id, format!("user: {message}"));
++            self.append_agent_line_allowing_repeated(
++                agent_id,
++                FEATURE_REOPENED_MESSAGE.to_string(),
++            );
++            return true;
++        }
++
++        self.feature_done_confirmations.remove(agent_id);
++        self.closed_feature_agents.remove(agent_id);
++        self.append_agent_line_allowing_repeated(agent_id, FEATURE_REOPENED_MESSAGE.to_string());
++        false
++    }
++
++    fn reopen_closed_feature(&mut self, agent_id: &AgentId) {
++        if self.closed_feature_agents.remove(agent_id) {
++            self.append_agent_line_allowing_repeated(
++                agent_id,
++                FEATURE_REOPENED_MESSAGE.to_string(),
++            );
++        }
++    }
++
+     fn add_session(&mut self, session: WorkLeafSession) {
+         self.sessions.insert(session.id.clone(), session.clone());
+         self.pending_events
+@@ -690,6 +745,9 @@ where
+                 for review in results {
+                     self.record_review_result(review);
+                     self.append_agent_line(&review.commit.agent_id, format!("review: {text}"));
++                    if review.findings_resolved {
++                        self.prompt_feature_done_confirmation(&review.commit.agent_id);
++                    }
+                 }
+             }
+             other => {
+@@ -714,6 +772,14 @@ where
+     }
+ 
+     fn append_agent_line(&mut self, agent_id: &AgentId, line: String) {
++        self.append_agent_line_inner(agent_id, line, true);
++    }
++
++    fn append_agent_line_allowing_repeated(&mut self, agent_id: &AgentId, line: String) {
++        self.append_agent_line_inner(agent_id, line, false);
++    }
++
++    fn append_agent_line_inner(&mut self, agent_id: &AgentId, line: String, deduplicate: bool) {
+         if line.is_empty() {
+             return;
+         }
+@@ -728,7 +794,7 @@ where
+             .sessions
+             .get_mut(agent_id)
+             .expect("session was inserted before appending a line");
+-        if session.lines.iter().any(|existing| existing == &line) {
++        if deduplicate && session.lines.iter().any(|existing| existing == &line) {
+             return;
+         }
+         session.lines.push(line.clone());
+@@ -738,6 +804,19 @@ where
+         });
+     }
+ 
++    fn prompt_feature_done_confirmation(&mut self, agent_id: &AgentId) {
++        self.closed_feature_agents.remove(agent_id);
++        if self.feature_done_confirmations.insert(agent_id.clone()) {
++            self.append_agent_line_allowing_repeated(
++                agent_id,
++                FEATURE_DONE_CONFIRMATION_PROMPT.to_string(),
++            );
++        }
++        self.pending_events.push(WorkLeafEvent::AgentSelected {
++            agent_id: agent_id.clone(),
++        });
++    }
++
+     fn record_review_result(&mut self, review: &ReviewResult) {
+         self.review_commits_in_progress.remove(&review.agent_id);
+         let latest_commit = self
+@@ -979,6 +1058,21 @@ fn contains_done_directive(text: &str) -> bool {
+         .any(|line| line.trim_start() == "@work-leaf done")
+ }
+ 
++fn is_feature_done_yes(message: &str) -> bool {
++    matches!(clean_feature_done_answer(message).as_str(), "yes" | "y")
++}
++
++fn is_feature_done_no(message: &str) -> bool {
++    matches!(clean_feature_done_answer(message).as_str(), "no" | "n")
++}
++
++fn clean_feature_done_answer(message: &str) -> String {
++    message
++        .trim()
++        .trim_matches(|ch: char| !ch.is_ascii_alphanumeric())
++        .to_ascii_lowercase()
++}
++
+ #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+ pub struct WorkLeafSnapshot {
+     pub command_transcript: Vec<String>,
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index c312a5b..27ffdad 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -947,6 +947,70 @@ fn terminal_app_review_adds_reviewer_chat_and_streams_output_immediately() {
+     ));
+ }
+ 
++#[test]
++fn terminal_app_closes_reviewed_patch_agent_on_yes_and_reopens_on_typing() {
++    let root = git_repo("terminal-app-feature-done-prompt");
++    fs::write(root.join("README.md"), "before\n").unwrap();
++    Command::new("git")
++        .current_dir(&root)
++        .args(["add", "README.md"])
++        .status()
++        .unwrap();
++    Command::new("git")
++        .current_dir(&root)
++        .args(["commit", "-m", "ADD initial feature done fixture"])
++        .status()
++        .unwrap();
++
++    let backend = FakeBackend::new([
++        "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
++        "summary: README changes",
++        "NO_FINDINGS",
++        "follow reply",
++    ]);
++    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
++    let mut app = TerminalApp::new(chat, 100, 24);
++
++    app.handle_bytes(b":new update readme\n");
++    assert!(app.wait_for_idle(Duration::from_secs(2)));
++
++    assert_eq!(
++        app.ui().selected_agent().map(AgentId::as_str),
++        Some("user-1")
++    );
++    assert!(
++        app.render_frame()
++            .contains("work-leaf: is this feature done? yes/no")
++    );
++    let left_pane = app.ui().render_left_pane();
++    assert!(left_pane.contains("user-1"));
++    assert!(left_pane.contains("READY"));
++    assert!(left_pane.contains("\u{1b}[7m"));
++
++    app.handle_bytes(b"yes\n");
++
++    assert!(app.render_frame().contains("work-leaf: feature closed"));
++    assert!(!app.ui().render_left_pane().contains("user-1"));
++
++    app.handle_bytes(b"please continue\n");
++    assert!(app.wait_for_idle(Duration::from_secs(2)));
++
++    let frame = app.render_frame();
++    assert!(app.ui().render_left_pane().contains("user-1"));
++    assert!(frame.contains("work-leaf: feature reopened"));
++    assert!(frame.contains("user: please continue"));
++    assert!(frame.contains("follow reply"));
++
++    let backend = app.into_chat().into_backend();
++    let sends = backend.sends();
++    assert!(
++        sends
++            .iter()
++            .any(|(agent_id, prompt)| agent_id.as_str() == "user-1" && prompt == "please continue")
++    );
++    assert!(!sends.iter().any(|(_, prompt)| prompt == "yes"));
++}
++
+ #[test]
+ fn terminal_app_names_user_session_from_first_prompt_immediately() {
+     let backend = FakeBackend::new(["launch reply"]);
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index dd7a280..645231d 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -34,6 +34,23 @@ fn scripted_harness_rings_and_highlights_ready_chat() {
+     assert!(!harness.render_frame().starts_with('\u{7}'));
+ }
+ 
++#[test]
++fn scripted_harness_can_reopen_hidden_agent_chat() {
++    let mut harness = UiHarness::new(100, 24);
++
++    harness
++        .set_agent_hidden("user-1", true)
++        .expect("fixture user-1 agent is registered");
++
++    assert!(!harness.ui().render_left_pane().contains("user-1"));
++
++    harness
++        .set_agent_hidden("user-1", false)
++        .expect("fixture user-1 agent is registered");
++
++    assert!(harness.ui().render_left_pane().contains("user-1"));
++}
++
+ #[test]
+ fn scripted_harness_switches_modes_without_enter() {
+     let mut harness = UiHarness::new(80, 24);
+diff --git a/tests/workspace.rs b/tests/workspace.rs
+index 5724d95..5389ece 100644
+--- a/tests/workspace.rs
++++ b/tests/workspace.rs
+@@ -253,6 +253,12 @@ fn controller_starts_review_after_patch_agent_done_and_loops_until_clean() {
+             line.contains("user-1 reviewed by review-user-1: rounds=2 resolved=yes")
+         })
+     );
++    assert!(
++        patch_agent
++            .lines
++            .iter()
++            .any(|line| line == "work-leaf: is this feature done? yes/no")
++    );
+ 
+     let sends = backend.sends();
+     assert!(sends.iter().any(|(target, prompt)| {
+@@ -265,6 +271,23 @@ fn controller_starts_review_after_patch_agent_done_and_loops_until_clean() {
+             && prompt.contains("The original agent has responded to the findings")
+             && prompt.contains("Please check the patch again")
+     }));
++
++    let sends_before_close = backend.sends().len();
++    controller.send_message(&agent_id, "yes").unwrap();
++    let snapshot = controller.snapshot();
++    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
++    assert!(patch_agent.lines.iter().any(|line| line == "user: yes"));
++    assert!(
++        patch_agent
++            .lines
++            .iter()
++            .any(|line| line == "work-leaf: feature closed")
++    );
++    assert_eq!(
++        backend.sends().len(),
++        sends_before_close,
++        "yes closes the reviewed feature without sending a new prompt to the agent"
++    );
+ }
+ 
+ #[test]

@@ -1,0 +1,77 @@
+From 585b43149cb3f0dfd58747360bb9e4e18cf1ccf4 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 12:26:45 +0200
+Subject: [PATCH 05/11] UPDATE apply when-review-process-done-patch-agent patch
+ from user-3
+
+Agent-ID: user-3
+Feature: when-review-process-done-patch-agent
+Reason: FIX repeated feature-done prompts so later clean review cycles remain visible in terminal chat
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `when-review-process-done-patch-agent`. The agent stated the reason as `FIX repeated feature-done prompts so later clean review cycles remain visible in terminal chat`. The patch touched src/terminal_app.rs, tests/terminal_app.rs and changed the working tree with 23 added line(s) and 3 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs   | 11 ++++++++++-
+ tests/terminal_app.rs | 15 +++++++++++++--
+ 2 files changed, 23 insertions(+), 3 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 6b28c75..41b19c4 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -776,7 +776,9 @@ where
+         else {
+             return;
+         };
+-        if !session.lines.iter().any(|existing| existing == &line) {
++        if preserves_repeated_agent_line(&line)
++            || !session.lines.iter().any(|existing| existing == &line)
++        {
+             session.lines.push(line);
+         }
+     }
+@@ -1031,6 +1033,13 @@ const SPINNER: [&str; 4] = ["|", "/", "-", "\\"];
+ 
+ const MAX_ESCAPE_SEQUENCE: usize = 64;
+ 
++fn preserves_repeated_agent_line(line: &str) -> bool {
++    matches!(
++        line,
++        FEATURE_DONE_CONFIRMATION_PROMPT | FEATURE_CLOSED_MESSAGE | FEATURE_REOPENED_MESSAGE
++    )
++}
++
+ fn is_complete_control_sequence(sequence: &[u8]) -> bool {
+     sequence.len() > 1
+         && sequence
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index a15158e..0609ca4 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -966,7 +966,9 @@ fn terminal_app_closes_reviewed_patch_agent_on_yes_and_reopens_on_typing() {
+         "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+         "summary: README changes",
+         "NO_FINDINGS",
+-        "follow reply",
++        "second patch\n@work-leaf patch update readme again\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-after\n+after again\n@work-leaf end\n@work-leaf done",
++        "summary: second README change",
++        "NO_FINDINGS",
+     ]);
+     let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+     let mut app = TerminalApp::new(chat, 100, 24);
+@@ -1000,7 +1002,16 @@ fn terminal_app_closes_reviewed_patch_agent_on_yes_and_reopens_on_typing() {
+     assert!(app.ui().render_left_pane().contains("chat-title user-1"));
+     assert!(frame.contains("work-leaf: feature reopened"));
+     assert!(frame.contains("user: please continue"));
+-    assert!(frame.contains("follow reply"));
++    assert!(frame.contains("second patch"));
++    assert!(
++        frame.matches("work-leaf: is this feature done? yes/no").count() >= 2,
++        "{frame}"
++    );
++
++    app.handle_bytes(b"yes\n");
++
++    assert!(app.render_frame().contains("work-leaf: feature closed"));
++    assert!(!app.ui().render_left_pane().contains("chat-title user-1"));
+ 
+     let backend = app.into_chat().into_backend();
+     let sends = backend.sends();

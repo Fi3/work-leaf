@@ -1,25 +1,25 @@
 # Abstract
 
-This document analyzes the Work Leaf Codex three-feature benchmark baseline and evaluates whether the observed token variance is expected for this specific multi-agent workflow. The candidate baseline group is the 30-report set listed by `bench-results/baseline-manifest.json`: the `parallel-current-12`, `parallel-current-6a`, `parallel-current-6b-retry`, and `parallel-current-6c` batches from June 24, 2026.
+This document analyzes the Work Leaf Codex three-feature benchmark baseline and evaluates whether the observed token variance is expected for this specific multi-agent workflow. The candidate baseline group is the 36-report set listed by `bench-results/baseline-manifest.json`: the `parallel-current-12`, `parallel-current-6a`, `parallel-current-6b-retry`, `parallel-current-6c`, and `parallel-current-6d` batches from June 24, 2026.
 
-Only completed successful reports are used for token-distribution fitting. The fitted set contains 24 passing reports and excludes 6 failed reports. No successful report is removed as a token outlier in this baseline. Every fitted report contains the required reviewed patch work from `review-user-1`, `review-user-2`, and `review-user-3`, and every fitted report reached the final pass path with 3 commits after the base commit and successful final checks.
+Only completed successful reports are used for token-distribution fitting. The fitted set contains 28 passing reports and excludes 8 failed reports. No successful report is removed as a token outlier in this baseline. Every fitted report contains the required reviewed patch work from `review-user-1`, `review-user-2`, and `review-user-3`, and every fitted report reached the final pass path with 3 commits after the base commit and successful final checks.
 
 The primary regression model is the pooled successful-run Gamma fit:
 
 ```text
-T_valid ~= Gamma(alpha = 39.171, theta = 328,808)
+T_valid ~= Gamma(alpha = 32.518, theta = 383,572)
 ```
 
-where `T_valid = input + output` tokens for a successful full benchmark run. The fitted mean is `12.88M`, the sample standard deviation is `2.06M`, the coefficient of variation is `16.0%`, and the fitted central 95% interval is approximately `9.16M` to `17.23M` tokens.
+where `T_valid = input + output` tokens for a successful full benchmark run. The fitted mean is `12.47M`, the sample standard deviation is `2.19M`, the coefficient of variation is `17.5%`, and the fitted central 95% interval is approximately `8.56M` to `17.11M` tokens.
 
 A changed-lines split is useful for post-run diagnosis:
 
 ```text
-T_shape ~= 0.542 * Gamma(alpha = 33.583, theta = 358,247)   # changed <= 1500
-        + 0.458 * Gamma(alpha = 76.289, theta = 181,971)   # changed > 1500
+T_shape ~= 0.571 * Gamma(alpha = 34.411, theta = 340,925)   # changed <= 1500
+        + 0.429 * Gamma(alpha = 40.962, theta = 328,633)   # changed > 1500
 ```
 
-The changed-lines model is diagnostic rather than the primary gate because the fitted set has only 24 successful observations. The pooled model is the regression baseline; the split explains work-shape differences after a run completes.
+The changed-lines model is diagnostic rather than the primary gate because the fitted set has only 28 successful observations. The pooled model is the regression baseline; the split explains work-shape differences after a run completes.
 
 # Scope And Data
 
@@ -31,18 +31,19 @@ Candidate result roots:
 - `bench-results/parallel-current-6a-20260624T020421+0200`
 - `bench-results/parallel-current-6b-retry-20260624T053754+0200`
 - `bench-results/parallel-current-6c-20260624T104153+0200`
+- `bench-results/parallel-current-6d-20260624T121434+0200`
 
 Candidate baseline group:
 
 ```text
-candidate reports:             30
-passing reports fitted:        24
-failed reports excluded:        6
+candidate reports:             36
+passing reports fitted:        28
+failed reports excluded:        8
 passing reports missing user-3: 0
 successful token outliers:      0
 ```
 
-The report schema is the JSON written by `bench-three-features` into each `three-feature-bench.jsonl` file. The candidate reports share `base_commit = c92a0b7060a36eac6db2d869b85e589a7a9480f9` in the saved reports. The bench binary reports `benched_binary_commit = d4cb33d9cae99387831c690ca3b5201450558634`; the saved reports also mark `benched_binary_dirty = yes`, so the reports themselves remain the authority for the exact executed artifacts.
+The report schema is the JSON written by `bench-three-features` into each `three-feature-bench.jsonl` file. The candidate reports share `base_commit = c92a0b7060a36eac6db2d869b85e589a7a9480f9` in the saved reports. The benched binary commit varies by batch and is recorded in each report, so the reports themselves remain the authority for the exact executed artifacts.
 
 Valid successful result definition:
 
@@ -99,7 +100,7 @@ The `token_sessions` column in this document counts named token-usage entries, n
 
 # Included Baseline Runs
 
-The fitted baseline includes these 24 successful full-workflow runs. `total` is `input + output`.
+The fitted baseline includes these 28 successful full-workflow runs. `total` is `input + output`.
 
 ```text
 batch                                      run     token_sessions  commits  changed  duration_s  input     output  total     linearize_input
@@ -127,6 +128,10 @@ parallel-current-6c-20260624T104153+0200  run-2   7               3        1330 
 parallel-current-6c-20260624T104153+0200  run-4   7               3        1533     2798        12112437   81066  12193503  5422644
 parallel-current-6c-20260624T104153+0200  run-5   7               3        1518     2634        13039611  102405  13142016  3678071
 parallel-current-6c-20260624T104153+0200  run-6   7               3        1617     3308        17680608  122009  17802617  4776943
+parallel-current-6d-20260624T121434+0200  run-2   7               3        1311     2351        11449150   97039  11546189  5928326
+parallel-current-6d-20260624T121434+0200  run-3   7               3        1454     2470         9498658   70465   9569123  4107274
+parallel-current-6d-20260624T121434+0200  run-4   7               3        1223     1967        10107922   76075  10183997  5758581
+parallel-current-6d-20260624T121434+0200  run-6   7               3        1618     2065         8749974   79901   8829875  3164228
 ```
 
 # Excluded Failed Reports
@@ -141,6 +146,8 @@ parallel-current-6a-20260624T020421+0200  run-3  1743     2134        15259766  
 parallel-current-6b-retry-20260624T053754+0200 run-3 1330 1997       10775822  3        7               final repository checks failed
 parallel-current-6b-retry-20260624T053754+0200 run-4 1325 1952       11421588  3        7               final repository checks failed
 parallel-current-6c-20260624T104153+0200  run-3  1366     2343        10744811  3        7               final repository checks failed
+parallel-current-6d-20260624T121434+0200  run-1  1428     2032        11497236  3        7               final repository checks failed
+parallel-current-6d-20260624T121434+0200  run-5  1397     1855         5195938 11        5               idle stalled after terminal_users=2 done_users=2 ready_users=2
 ```
 
 Failed reports can still contain token usage, but using them to fit successful-run token totals would mix different stopping conditions. Failure rate and failure causes require a separate reliability analysis.
@@ -150,12 +157,12 @@ Failed reports can still contain token usage, but using them to fit successful-r
 Fitted successful-run totals:
 
 ```text
-n:                 24
-mean total:        12,879,602
-stddev total:       2,057,890
-coefficient var:        16.0%
-min total:          9,404,172
-median total:      13,051,416
+n:                 28
+mean total:        12,472,844
+stddev total:       2,187,288
+coefficient var:        17.5%
+min total:          8,829,875
+median total:      12,678,526
 max total:         17,802,617
 ```
 
@@ -163,25 +170,25 @@ Token fields:
 
 ```text
 metric       n   min        median      mean        stddev     coefficient var  max
-input       24   9,318,203  12,959,934  12,789,840  2,050,392  16.0%            17,680,608
-output      24      65,731      90,924      89,762     13,090  14.6%               122,009
-reasoning   24      28,034      52,038      53,144     10,881  20.5%                80,257
+input       28   8,749,974  12,593,166  12,384,352  2,179,307  17.6%            17,680,608
+output      28      65,731      88,808      88,491     13,061  14.8%               122,009
+reasoning   28      28,034      51,451      52,589     10,791  20.5%                80,257
 ```
 
 Workflow fields:
 
 ```text
 metric             n   min        median     mean       stddev     coefficient var  max
-changed lines     24       1222       1487       1477        121    8.2%               1672
-duration seconds  24       1419       2139       2273        557   24.5%               3744
-patch input       24  2,362,847  4,257,571  4,360,340  1,503,642  34.5%          9,334,863
-review input      24  1,604,853  3,068,376  3,056,746    778,824  25.5%          4,689,532
-linearize input   24  2,744,682  5,267,886  5,372,754  1,591,047  29.6%          8,761,554
+changed lines     28       1222       1470       1466        129    8.8%               1672
+duration seconds  28       1419       2139       2264        520   23.0%               3744
+patch input       28  1,501,135  3,858,672  4,130,540  1,528,593  37.0%          9,334,863
+review input      28  1,604,853  2,904,472  2,971,508    760,527  25.6%          4,689,532
+linearize input   28  2,744,682  5,267,886  5,282,304  1,550,751  29.4%          8,761,554
 ```
 
-Token usage is input-dominated. Mean output is `89,762`, which is less than `1%` of mean `input + output`.
+Token usage is input-dominated. Mean output is `88,491`, which is less than `1%` of mean `input + output`.
 
-Session count is not a useful primary split in this baseline. Twenty-three fitted reports have 7 token sessions and one fitted report has 8 token sessions. No successful 6-token-session report exists in this baseline, so a session-only mixture would either be degenerate or overfit a one-sample component.
+Session count is not a useful primary split in this baseline. Twenty-seven fitted reports have 7 token sessions and one fitted report has 8 token sessions. No successful 6-token-session report exists in this baseline, so a session-only mixture would either be degenerate or overfit a one-sample component.
 
 # Distribution Derivation
 
@@ -200,41 +207,41 @@ theta = variance / mean
 
 ## Pooled Successful-Run Fit
 
-Using all 24 successful runs:
+Using all 28 successful runs:
 
 ```text
-T_valid ~= Gamma(alpha = 39.171, theta = 328,808)
+T_valid ~= Gamma(alpha = 32.518, theta = 383,572)
 ```
 
 This pooled fit has:
 
 ```text
-mean:   12.88M
-stddev:  2.06M
+mean:   12.47M
+stddev:  2.19M
 ```
 
 Moment-matched Gamma quantiles:
 
 ```text
-1%:      8.58M
-2.5%:    9.16M
-5%:      9.69M
-10%:    10.32M
-25%:    11.44M
-50%:    12.77M
-75%:    14.21M
-90%:    15.59M
-95%:    16.45M
-97.5%:  17.23M
-99%:    18.16M
+1%:      7.95M
+2.5%:    8.56M
+5%:      9.11M
+10%:     9.76M
+25%:    10.94M
+50%:    12.35M
+75%:    13.87M
+90%:    15.35M
+95%:    16.28M
+97.5%:  17.11M
+99%:    18.12M
 ```
 
 Operational interpretation:
 
 ```text
-normal successful run:        about 9.16M to 17.23M  (central 95%)
-watch zone:                   below 9.16M or above 17.23M
-strong single-run anomaly:    below 8.58M or above 18.16M  (outside central 98%)
+normal successful run:        about 8.56M to 17.11M  (central 95%)
+watch zone:                   below 8.56M or above 17.11M
+strong single-run anomaly:    below 7.95M or above 18.12M  (outside central 98%)
 ```
 
 ## Changed-Line Diagnostic Fit
@@ -243,34 +250,34 @@ Changed lines are a post-run work-shape covariate, not a pre-run predictor. They
 
 ```text
 bucket            n   weight  mean total  stddev total  coefficient var  alpha   theta    observed min  observed max
-changed <= 1500  13   0.542   12,031,116  2,076,081     17.3%            33.583  358,247   9,404,172    14,770,040
-changed > 1500   11   0.458   13,882,358  1,589,397     11.4%            76.289  181,971  12,193,503    17,802,617
+changed <= 1500  16   0.571   11,731,488  1,999,889     17.0%            34.411  340,925   9,404,172    14,770,040
+changed > 1500   12   0.429   13,461,318  2,103,290     15.6%            40.962  328,633   8,829,875    17,802,617
 ```
 
 The diagnostic mixture is:
 
 ```text
-T_shape ~= 0.542 * Gamma(alpha = 33.583, theta = 358,247)   # changed <= 1500
-        + 0.458 * Gamma(alpha = 76.289, theta = 181,971)   # changed > 1500
+T_shape ~= 0.571 * Gamma(alpha = 34.411, theta = 340,925)   # changed <= 1500
+        + 0.429 * Gamma(alpha = 40.962, theta = 328,633)   # changed > 1500
 ```
 
 Simulated quantiles from the fitted diagnostic mixture:
 
 ```text
-1%:      8.11M
-2.5%:    8.78M
-5%:      9.38M
-10%:    10.13M
-25%:    11.47M
-50%:    12.93M
-75%:    14.30M
-90%:    15.52M
-95%:    16.25M
-97.5%:  16.91M
-99%:    17.67M
+1%:      7.89M
+2.5%:    8.49M
+5%:      9.04M
+10%:     9.71M
+25%:    10.91M
+50%:    12.35M
+75%:    13.90M
+90%:    15.39M
+95%:    16.32M
+97.5%:  17.14M
+99%:    18.13M
 ```
 
-The diagnostic mixture has a narrower high tail than the pooled model because each bucket is fitted from fewer observations. For regression gating, the pooled successful-run model is the safer primary baseline. The changed-line mixture explains shape after the run and helps classify whether a high-token pass came from a larger final work product.
+The diagnostic mixture is close to the pooled model. For regression gating, the pooled successful-run model is the safer primary baseline. The changed-line mixture explains shape after the run and helps classify whether a high-token pass came from a larger final work product.
 
 # Phase Dependency And Covariance
 
@@ -294,13 +301,13 @@ Observed fitted-baseline covariance diagnostics:
 
 ```text
 group                n   corr(U,L)  sd if independent  observed sd
-all included runs   24   -0.321          2.48M          2.06M
-changed <= 1500     13   -0.041          2.11M          2.08M
-changed > 1500      11   -0.689          2.74M          1.59M
-7 token sessions    23   -0.346          2.50M          2.04M
+all included runs   28   -0.232          2.48M          2.19M
+changed <= 1500     16   -0.135          2.13M          2.00M
+changed > 1500      12   -0.452          2.81M          2.10M
+7 token sessions    27   -0.241          2.50M          2.19M
 ```
 
-This shows that phase dependency is real and bucket-dependent. In this fitted baseline, upstream and linearize token totals are negatively correlated, especially in the `changed > 1500` bucket. Assuming independent phase noise would overestimate standard deviation for this sample.
+This shows that phase dependency is real and bucket-dependent. In this fitted baseline, upstream and linearize token totals are negatively correlated. Assuming independent phase noise would overestimate standard deviation for this sample.
 
 The fitted distribution handles this by fitting whole successful trajectories. It does not assume independent phase noise. The phase decomposition is diagnostic; the fitted parameters come from full-run totals.
 
@@ -314,23 +321,23 @@ The expected-variance argument has two kinds of premises: literature premises an
 
 3. Agentic coding token usage is expected to be highly stochastic. Bai et al., [How Do AI Agents Spend Your Money?](https://arxiv.org/abs/2604.22750), analyze token consumption in agentic coding tasks and support the premise that same-task coding-agent runs can consume substantially different tokens. Work Leaf's bench is in that class because `bench-three-features` starts coding agents, review agents, and a linearizer rather than one fixed completion.
 
-4. The token variance should be mostly input-token driven. Bai et al., [How Do AI Agents Spend Your Money?](https://arxiv.org/abs/2604.22750), support focusing on input-token-heavy agent costs. The local artifacts match this premise: the fitted 24-run baseline has mean `input = 12.79M` and mean `output = 89.8K`, so output is less than `1%` of `input + output`.
+4. The token variance should be mostly input-token driven. Bai et al., [How Do AI Agents Spend Your Money?](https://arxiv.org/abs/2604.22750), support focusing on input-token-heavy agent costs. The local artifacts match this premise: the fitted 28-run baseline has mean `input = 12.38M` and mean `output = 88.5K`, so output is less than `1%` of `input + output`.
 
 5. Base model-call nondeterminism can seed different trajectories. Gond et al., [LLM-42](https://arxiv.org/abs/2601.17768), discuss nondeterminism in LLM inference from system-level effects such as batching and numerical behavior. This does not by itself explain the whole Work Leaf spread, but it supports the first branching point: two runs with the same prompt and code can begin to diverge.
 
 6. Multi-turn agent trajectories can amplify early differences through context and tool history. Li et al., [Benchmark Test-Time Scaling of General LLM Agents](https://arxiv.org/abs/2602.18998), study general LLM agents in long tool-using trajectories, which supports treating path history as part of the system being evaluated. In Work Leaf, patch/review history becomes linearize input; therefore earlier variation can affect later token cost.
 
-7. The local workflow has measured work-shape variation even when all successful reports have the required three reviewed patch agents. This is measured from the artifacts. The lower changed-line bucket averages `12.03M`; the higher changed-line bucket averages `13.88M`. This supports a post-run changed-line diagnostic split without replacing the primary pooled fit.
+7. The local workflow has measured work-shape variation even when all successful reports have the required three reviewed patch agents. This is measured from the artifacts. The lower changed-line bucket averages `11.73M`; the higher changed-line bucket averages `13.46M`. This supports a post-run changed-line diagnostic split without replacing the primary pooled fit.
 
-8. The local downstream linearize phase is a large token consumer, so upstream path differences matter. This is measured from the artifacts: linearize input averages `5.37M`, patch input averages `4.36M`, and review input averages `3.06M`. The phase dependency is measured locally through covariance diagnostics. Therefore the model cannot be a linear sum of independent patch/review/linearize variances.
+8. The local downstream linearize phase is a large token consumer, so upstream path differences matter. This is measured from the artifacts: linearize input averages `5.28M`, patch input averages `4.13M`, and review input averages `2.97M`. The phase dependency is measured locally through covariance diagnostics. Therefore the model cannot be a linear sum of independent patch/review/linearize variances.
 
 9. The fitted distribution therefore has to be empirical and workflow-specific. Madaan et al. justify estimating variance from repeated runs; Bai et al. justify expecting stochastic agentic coding token consumption; Li et al. justify path-dependent trajectories; the Work Leaf artifacts determine the parameters. This is why the primary fitted model uses whole-run totals:
 
 ```text
-T_valid ~= Gamma(alpha = 39.171, theta = 328,808)
+T_valid ~= Gamma(alpha = 32.518, theta = 383,572)
 ```
 
-Therefore, assuming the cited literature is accurate, the fitted-baseline observed range of `9.40M` to `17.80M` successful-run tokens is expected for this bench. It is not by itself evidence of a regression. Evidence of regression requires a repeated upward shift in successful-run means, repeated high-tail samples, or a reliability regression in pass/fail behavior.
+Therefore, assuming the cited literature is accurate, the fitted-baseline observed range of `8.83M` to `17.80M` successful-run tokens is expected for this bench. It is not by itself evidence of a regression. Evidence of regression requires a repeated upward shift in successful-run means, repeated high-tail samples, or a reliability regression in pass/fail behavior.
 
 # Expected Distribution For Work Leaf Orchestrator Generally
 
@@ -383,37 +390,37 @@ theta_g = sigma_g^2 / mu_g
 
 But `theta_g` must be fitted from Work Leaf data. It cannot be imported from the literature. The literature justifies expecting stochasticity and path dependence; the local bench artifacts define the parameters.
 
-For the current three-feature bench, 24 successful samples are enough for a pooled successful-run baseline and a diagnostic changed-line split. They are not enough for a stable high-dimensional orchestrator model over all fields in `g`.
+For the current three-feature bench, 28 successful samples are enough for a pooled successful-run baseline and a diagnostic changed-line split. They are not enough for a stable high-dimensional orchestrator model over all fields in `g`. The fitted model has no independent validation holdout because the successful `parallel-current-6d` reports are included as training samples.
 
 # Regression Interpretation
 
 For the current fitted bench baseline:
 
 ```text
-included successful runs: 24
-baseline mean:           12.88M
-baseline stddev:          2.06M
-baseline CV:             16.0%
-central 95%:             9.16M to 17.23M
+included successful runs: 28
+baseline mean:           12.47M
+baseline stddev:          2.19M
+baseline CV:             17.5%
+central 95%:             8.56M to 17.11M
 ```
 
 Approximate post-patch detection sensitivity using this variance scale:
 
 ```text
 future successful runs   detectable upward shift   upper mean threshold
-1                        4.41M / 34.2%             17.29M
-3                        2.65M / 20.5%             15.53M
-6                        1.97M / 15.3%             14.85M
-9                        1.69M / 13.1%             14.57M
-12                       1.53M / 11.9%             14.41M
-24                       1.25M /  9.7%             14.13M
+1                        4.67M / 37.5%             17.15M
+3                        2.79M / 22.4%             15.26M
+6                        2.07M / 16.6%             14.54M
+9                        1.76M / 14.1%             14.23M
+12                       1.58M / 12.7%             14.06M
+24                       1.28M / 10.2%             13.75M
 ```
 
 This means:
 
 - A single successful run around `17M` can be normal.
-- A single successful run above `17.23M` is in the watch zone.
-- A single successful run above `18.16M` is a strong single-run anomaly under the pooled fit.
+- A single successful run above `17.11M` is in the watch zone.
+- A single successful run above `18.12M` is a strong single-run anomaly under the pooled fit.
 - Failed/stalled runs must not be mixed into successful-run token baselines.
 - Failed/stalled runs still indicate benchmark or orchestrator reliability issues and should be investigated independently.
 - Repeated post-patch successful runs should be compared by mean shift, and by work-shape bucket when enough samples exist.
@@ -434,14 +441,14 @@ No claim in this document depends on vendor blog posts, forum posts, or anecdota
 
 # Conclusion
 
-The current Work Leaf three-feature baseline group contains 30 candidate reports and 24 successful reports used for token-distribution fitting. The 6 failed reports are excluded from successful-run parameter fitting because they are not completed successful trajectories. No successful report is excluded as a token outlier.
+The current Work Leaf three-feature baseline group contains 36 candidate reports and 28 successful reports used for token-distribution fitting. The 8 failed reports are excluded from successful-run parameter fitting because they are not completed successful trajectories. No successful report is excluded as a token outlier.
 
 The fitted successful-run baseline supports the conclusion that substantial token variance is expected for this workflow. The primary model is:
 
 ```text
-T_valid ~= Gamma(alpha = 39.171, theta = 328,808)
+T_valid ~= Gamma(alpha = 32.518, theta = 383,572)
 ```
 
-This model gives a central 95% expected range of approximately `9.16M` to `17.23M` `input + output` tokens for successful full-workflow runs. The observed successful-run range, `9.40M` to `17.80M`, is consistent with that fitted distribution, with the maximum run sitting in the watch zone but still below the 99% pooled Gamma quantile of `18.16M`.
+This model gives a central 95% expected range of approximately `8.56M` to `17.11M` `input + output` tokens for successful full-workflow runs. The observed successful-run range, `8.83M` to `17.80M`, is consistent with that fitted distribution, with the maximum run sitting in the watch zone but still below the 99% pooled Gamma quantile of `18.12M`.
 
 The operational conclusion is to treat successful runs inside the fitted interval as ordinary baseline variation, to treat repeated mean shifts as regression evidence, and to investigate failed/stalled runs separately as reliability failures rather than mixing them into the successful-run token baseline.

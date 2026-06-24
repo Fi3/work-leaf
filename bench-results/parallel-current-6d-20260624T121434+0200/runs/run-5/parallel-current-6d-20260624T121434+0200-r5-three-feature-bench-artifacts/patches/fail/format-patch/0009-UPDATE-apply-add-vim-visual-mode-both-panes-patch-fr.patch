@@ -1,0 +1,75 @@
+From 032afe931bd5f09d2ceb0f456d2d7609167ae5d9 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 12:36:50 +0200
+Subject: [PATCH 09/11] UPDATE apply add-vim-visual-mode-both-panes patch from
+ user-1
+
+Agent-ID: user-1
+Feature: add-vim-visual-mode-both-panes
+Reason: FIX right-pane visual cache syncing to avoid per-byte transcript rebuilds during normal typing and paste
+Context: The orchestrator applied this provisional patch for user-1 while the agent was working on feature `add-vim-visual-mode-both-panes`. The agent stated the reason as `FIX right-pane visual cache syncing to avoid per-byte transcript rebuilds during normal typing and paste`. The patch touched src/terminal_app.rs, src/ui_harness.rs and changed the working tree with 22 added line(s) and 2 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs | 12 +++++++++++-
+ src/ui_harness.rs   | 12 +++++++++++-
+ 2 files changed, 22 insertions(+), 2 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 6c7871f..29b1ea6 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -499,7 +499,9 @@ where
+     }
+ 
+     fn handle_input(&mut self, input: TerminalAppInput) {
+-        self.sync_right_visual_content();
++        if self.input_needs_right_visual_sync(input) {
++            self.sync_right_visual_content();
++        }
+         match input {
+             TerminalAppInput::Quit => {
+                 self.request_quit();
+@@ -680,6 +682,14 @@ where
+             .then_some(6 + self.chat_buffer.cursor_char_count())
+     }
+ 
++    fn input_needs_right_visual_sync(&self, input: TerminalAppInput) -> bool {
++        self.ui.visual_selection_active() || matches!(
++            input,
++            TerminalAppInput::Key(UiKey::Left | UiKey::Right | UiKey::Up | UiKey::Down)
++                | TerminalAppInput::Char('v' | 'V' | 'Y' | '\u{16}')
++        )
++    }
++
+     fn apply_controller_events(&mut self) {
+         let events = self.controller.drain_events();
+         if events.is_empty() {
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index 6711059..a79b74d 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -132,7 +132,9 @@ impl UiHarness {
+     }
+ 
+     fn handle_input(&mut self, input: HarnessInput) {
+-        self.sync_right_visual_content();
++        if self.input_needs_right_visual_sync(input) {
++            self.sync_right_visual_content();
++        }
+         match input {
+             HarnessInput::Quit => self.quit = true,
+             HarnessInput::Interrupt => {
+@@ -427,6 +429,14 @@ impl UiHarness {
+             .cache_right_content_for_selection(&self.right_content(), self.right_cursor_column_for_ui());
+     }
+ 
++    fn input_needs_right_visual_sync(&self, input: HarnessInput) -> bool {
++        self.ui.visual_selection_active() || matches!(
++            input,
++            HarnessInput::Key(UiKey::Left | UiKey::Right | UiKey::Up | UiKey::Down)
++                | HarnessInput::Char('v' | 'V' | 'Y' | '\u{16}')
++        )
++    }
++
+     fn record_actions(&mut self, actions: Vec<crate::UiAction>) {
+         self.transcript
+             .extend(actions.into_iter().map(|action| format!("{action:?}")));

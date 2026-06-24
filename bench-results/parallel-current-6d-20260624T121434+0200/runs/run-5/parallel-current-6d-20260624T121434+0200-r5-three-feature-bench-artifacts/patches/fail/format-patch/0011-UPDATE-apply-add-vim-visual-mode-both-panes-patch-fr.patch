@@ -1,0 +1,69 @@
+From 7f54c480bffb294aa0fe79df58dcbb0723a505bf Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 12:40:05 +0200
+Subject: [PATCH 11/11] UPDATE apply add-vim-visual-mode-both-panes patch from
+ user-1
+
+Agent-ID: user-1
+Feature: add-vim-visual-mode-both-panes
+Reason: FIX visual sync predicates to avoid rebuilding right-pane content for insert-mode pasted v characters
+Context: The orchestrator applied this provisional patch for user-1 while the agent was working on feature `add-vim-visual-mode-both-panes`. The agent stated the reason as `FIX visual sync predicates to avoid rebuilding right-pane content for insert-mode pasted v characters`. The patch touched src/terminal_app.rs, src/ui_harness.rs and changed the working tree with 20 added line(s) and 12 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs | 16 ++++++++++------
+ src/ui_harness.rs   | 16 ++++++++++------
+ 2 files changed, 20 insertions(+), 12 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 8bba795..a6b1362 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -683,12 +683,16 @@ where
+     }
+ 
+     fn input_needs_right_visual_sync(&self, input: TerminalAppInput) -> bool {
+-        self.ui.visual_selection_active() || matches!(
+-            input,
+-            TerminalAppInput::Key(UiKey::Left | UiKey::Right | UiKey::Up | UiKey::Down)
+-                | TerminalAppInput::Key(UiKey::Char('\u{16}'))
+-                | TerminalAppInput::Char('v' | 'V' | 'Y' | '\u{16}')
+-        )
++        if self.ui.visual_selection_active() {
++            return true;
++        }
++        self.ui.mode() == UiMode::Command
++            && self.ui.focus() == PaneFocus::Right
++            && matches!(
++                input,
++                TerminalAppInput::Key(UiKey::Char('\u{16}'))
++                    | TerminalAppInput::Char('v' | 'V' | 'Y' | '\u{16}')
++            )
+     }
+ 
+     fn apply_controller_events(&mut self) {
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index 606ee7a..71d98c9 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -430,12 +430,16 @@ impl UiHarness {
+     }
+ 
+     fn input_needs_right_visual_sync(&self, input: HarnessInput) -> bool {
+-        self.ui.visual_selection_active() || matches!(
+-            input,
+-            HarnessInput::Key(UiKey::Left | UiKey::Right | UiKey::Up | UiKey::Down)
+-                | HarnessInput::Key(UiKey::Char('\u{16}'))
+-                | HarnessInput::Char('v' | 'V' | 'Y' | '\u{16}')
+-        )
++        if self.ui.visual_selection_active() {
++            return true;
++        }
++        self.ui.mode() == UiMode::Command
++            && self.ui.focus() == PaneFocus::Right
++            && matches!(
++                input,
++                HarnessInput::Key(UiKey::Char('\u{16}'))
++                    | HarnessInput::Char('v' | 'V' | 'Y' | '\u{16}')
++            )
+     }
+ 
+     fn record_actions(&mut self, actions: Vec<crate::UiAction>) {

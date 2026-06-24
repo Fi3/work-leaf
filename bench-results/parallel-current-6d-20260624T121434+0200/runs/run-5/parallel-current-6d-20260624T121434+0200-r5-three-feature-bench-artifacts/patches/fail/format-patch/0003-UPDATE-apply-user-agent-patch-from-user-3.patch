@@ -1,0 +1,34 @@
+From 3353ed5968babd182f024e0b5a01871c6204cd64 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 12:22:43 +0200
+Subject: [PATCH 03/11] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: FIX feature-done terminal test so reviewer ids do not mask the hidden patch-agent row
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `FIX feature-done terminal test so reviewer ids do not mask the hidden patch-agent row`. The patch touched tests/terminal_app.rs and changed the working tree with 3 added line(s) and 2 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ tests/terminal_app.rs | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index 27ffdad..a15158e 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -990,13 +990,14 @@ fn terminal_app_closes_reviewed_patch_agent_on_yes_and_reopens_on_typing() {
+     app.handle_bytes(b"yes\n");
+ 
+     assert!(app.render_frame().contains("work-leaf: feature closed"));
+-    assert!(!app.ui().render_left_pane().contains("user-1"));
++    assert!(!app.ui().render_left_pane().contains("chat-title user-1"));
++    assert!(app.ui().render_left_pane().contains("review-user-1"));
+ 
+     app.handle_bytes(b"please continue\n");
+     assert!(app.wait_for_idle(Duration::from_secs(2)));
+ 
+     let frame = app.render_frame();
+-    assert!(app.ui().render_left_pane().contains("user-1"));
++    assert!(app.ui().render_left_pane().contains("chat-title user-1"));
+     assert!(frame.contains("work-leaf: feature reopened"));
+     assert!(frame.contains("user: please continue"));
+     assert!(frame.contains("follow reply"));

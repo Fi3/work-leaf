@@ -1,0 +1,34 @@
+From 03cb804a8f63060660cf99d7fcf8afc0bde177ce Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Wed, 24 Jun 2026 12:23:11 +0200
+Subject: [PATCH 04/11] UPDATE apply user-agent patch from user-3
+
+Agent-ID: user-3
+Feature: user-agent
+Reason: FIX terminal idle waiting so final controller events are applied before returning
+Context: The orchestrator applied this provisional patch for user-3 while the agent was working on feature `user-agent`. The agent stated the reason as `FIX terminal idle waiting so final controller events are applied before returning`. The patch touched src/terminal_app.rs and changed the working tree with 4 added line(s) and 1 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 09e1c3f..6b28c75 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -399,12 +399,15 @@ where
+         while start.elapsed() < timeout {
+             self.apply_controller_events();
+             if !self.controller.is_busy() {
++                self.apply_controller_events();
+                 return true;
+             }
+             thread::sleep(Duration::from_millis(10));
+         }
+         self.apply_controller_events();
+-        !self.controller.is_busy()
++        let idle = !self.controller.is_busy();
++        self.apply_controller_events();
++        idle
+     }
+ 
+     fn wait_for_frame_contains(&mut self, needle: &str, timeout: Duration) -> bool {

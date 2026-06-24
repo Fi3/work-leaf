@@ -1,0 +1,16 @@
+ Spec.md                            |   3 +
+ docs/architecture.md               |  60 ++++---
+ docs/orchestrator-file-workflow.md |   4 +-
+ src/agent_runtime.rs               |  21 ++-
+ src/cli.rs                         |  20 +++
+ src/codex.rs                       |  58 ++++++-
+ src/lib.rs                         |   3 +-
+ src/terminal_app.rs                | 291 ++++++++++++++++++++++++++++++--
+ src/ui.rs                          | 328 ++++++++++++++++++++++++++++++++++++-
+ src/ui_harness.rs                  |  29 +++-
+ src/workspace.rs                   | 143 +++++++++++++++-
+ tests/agent_provider_interface.rs  |  32 ++++
+ tests/terminal_app.rs              |  28 +++-
+ tests/ui_harness.rs                |  81 +++++++++
+ tests/workspace.rs                 | 122 +++++++++++++-
+ 15 files changed, 1169 insertions(+), 54 deletions(-)
