@@ -5,7 +5,7 @@ on:
     inputs:
       tag:
         description: "Release tag to publish, for example v0.1.0. Required when running from a branch."
-        required: false
+        required: true
         type: string
   push:
     tags:
@@ -51,6 +51,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Install Linux build tools
         if: startsWith(matrix.runner, 'ubuntu-')
@@ -115,6 +117,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
           fetch-depth: 0
 
       - name: Resolve release tag
@@ -150,9 +153,10 @@ jobs:
 
           if git rev-parse --verify --quiet "refs/tags/$RELEASE_TAG" >/dev/null; then
             tag_commit="$(git rev-list -n 1 "$RELEASE_TAG")"
-            if [[ "$tag_commit" != "$GITHUB_SHA" ]]; then
-              echo "::error::Tag '$RELEASE_TAG' points to $tag_commit, but this workflow built $GITHUB_SHA."
-              echo "::error::Run the workflow from that tag, or use a tag that points at this commit."
+            built_commit="$(git rev-parse HEAD)"
+            if [[ "$tag_commit" != "$built_commit" ]]; then
+              echo "::error::Tag '$RELEASE_TAG' points to $tag_commit, but this workflow checked out $built_commit."
+              echo "::error::Run the workflow from that tag, or use a tag that points at the checked-out commit."
               exit 1
             fi
 

@@ -51,10 +51,11 @@ targets before building each package. The release-binaries GitHub Actions workfl
 Ubuntu, macOS, and Windows runners for the Linux, Darwin, and MSVC packages.
 
 `./release` prepares a patch release from a clean git worktree. It increments the package version by
-`0.0.1`, refreshes `Cargo.lock`, runs `cargo fmt`, `cargo clippy --all-targets --all-features -- -D
-warnings`, `cargo test --all-targets --all-features`, and `./build-target`, then commits the version
-bump and creates the matching `v<version>` tag. Pass `--push` to push `HEAD` and the tag to `origin`
-after the local release is created.
+`0.0.1`, refreshes `Cargo.lock`, verifies the refreshed lockfile with `cargo check --locked`, runs
+`cargo fmt`, `cargo clippy --all-targets --all-features -- -D warnings`,
+`cargo test --all-targets --all-features`, and `./build-target`, then commits the version bump and
+creates the matching `v<version>` tag. Pass `--push` to push `HEAD` and the tag to `origin` after the
+local release is created.
 
 `./smoke-three-features` builds the current release binaries, creates a temporary checkout at the
 three-feature smoke-test base commit, and runs `./start` from that temporary checkout. The script

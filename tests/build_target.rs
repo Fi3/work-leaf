@@ -157,6 +157,7 @@ fi
             "git status --porcelain",
             "git tag --list v1.2.4",
             "cargo check",
+            "cargo check --locked",
             "cargo fmt",
             "cargo clippy --all-targets --all-features -- -D warnings",
             "cargo test --all-targets --all-features",
@@ -336,6 +337,26 @@ fn github_release_workflow_builds_each_binary_on_its_native_runner() {
     assert!(
         workflow.contains("build-essential"),
         "linux runners should install the native compiler/linker package explicitly"
+    );
+}
+
+#[test]
+fn github_release_workflow_builds_the_requested_tag_ref() {
+    let workflow_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(".github")
+        .join("workflows")
+        .join("release-binaries.yml");
+    let workflow = fs::read_to_string(&workflow_path).expect("release workflow exists");
+
+    assert!(
+        workflow.contains(
+            "ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}"
+        ),
+        "release builds must checkout the requested tag/ref before running build-target so --locked builds use the tag's Cargo.lock"
+    );
+    assert!(
+        workflow.contains("built_commit=\"$(git rev-parse HEAD)\""),
+        "release tag verification must compare against the checked-out ref, not the workflow dispatch branch SHA"
     );
 }
 
