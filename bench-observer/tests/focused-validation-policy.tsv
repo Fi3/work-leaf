@@ -1,0 +1,102 @@
+# expected<TAB>command
+accept	cargo test --test terminal_ui visual_mode
+accept	cargo test --test terminal_ui
+accept	cargo test --all-targets --all-features done
+accept	cargo test --timings focused_case
+accept	cargo test -- --nocapture visual_mode
+accept	cargo test --package work-leaf
+accept	cargo check --package work-leaf --lib
+accept	cargo test --package work-leaf --doc
+accept	cargo clippy --package work-leaf
+accept	cargo build --bin work-leaf
+accept	cargo fmt --package work-leaf -- --check
+accept	cargo --color never test focused_case
+accept	cargo +stable --color=never t focused_case
+accept	cargo -q c --package work-leaf
+accept	cargo --locked b --bin work-leaf
+accept	cargo --offline d --package work-leaf
+accept	cargo --config net.retry=2 clippy --package work-leaf
+accept	cargo --config=net.retry=2 fmt --package work-leaf -- --check
+accept	cargo -vv --frozen test focused_case
+accept	cargo +nightly -Zunstable-options -C. c --package work-leaf
+accept	cargo -- t focused_case
+accept	cargo test --workspace focused_case
+accept	cargo check --all --test focused_target
+accept	cargo nextest run --filter-expr 'test(focused)'
+accept	cargo nextest run --package work-leaf
+accept	env cargo test focused_case
+accept	env -a cargo-check cargo test focused_case
+accept	env WORK_LEAF_CASE=focused sh -c 'cargo test focused_case'
+accept	WORK_LEAF_CASE=focused cargo test focused_case
+accept	command cargo test focused_case
+accept	command cargo --color never t focused_case
+accept	bash -o pipefail -c 'cargo test focused_case'
+accept	cargo test focused_case # cargo test
+accept	cargo test focused_case > cargo test
+accept	sh -c 'cargo test > validation.log focused_case'
+accept	cargo test focused_case # sh -c 'cargo test'
+accept	cargo test focused_case > sh -c 'cargo test'
+accept	cargo test focused_case sh -c 'cargo test'
+accept	cargo test focused_case # $(cargo test)
+accept	cargo test 'focused_$(literal)'
+accept	cargo test focused_case 2>&1
+accept	cargo test focused_case 2<&0
+reject	printf %s cargo test focused_case
+reject	command -v cargo test focused_case
+reject	env sh -c 'cargo test'
+reject	env -S 'cargo test focused_case'
+reject	cargo test focused_case; env -a cargo-check cargo test
+reject	cargo test focused_case; eval 'cargo test'
+reject	cargo test focused_case `cargo test`
+reject	cargo test focused_case $(cargo test)
+reject	cargo test focused_case >(cargo test)
+reject	cargo test "focused_$(cargo test)"
+reject	cargo test focused_case; bash -o pipefail -c 'cargo test'
+reject	cargo test focused_case; cargo --color never t
+reject	cargo test focused_case; cargo -q c
+reject	cargo test focused_case; cargo --locked b
+reject	cargo test focused_case; cargo --offline d
+reject	cargo test focused_case; env cargo --color never t
+reject	cargo test focused_case; cargo -- t
+reject	cargo fmt
+reject	cargo fmt -- --check
+reject	cargo fmt --package work-leaf
+reject	cargo clippy
+reject	cargo clippy --all-targets --all-features
+reject	cargo check
+reject	cargo build
+reject	cargo doc
+reject	cargo d
+reject	cargo test
+reject	cargo --color never t
+reject	cargo -q c
+reject	cargo --locked b
+reject	cargo --offline d
+reject	cargo -- t
+reject	cargo test --all-targets --all-features
+reject	cargo check --lib
+reject	cargo check --doc
+reject	cargo check --workspace --lib
+reject	cargo check --all --lib
+reject	cargo test --workspace --doc
+reject	cargo test --all --doc
+reject	cargo test --test=
+reject	cargo test -- --nocapture
+reject	cargo test -- --test-threads 1
+reject	cargo test -- --skip visual_mode
+reject	cargo test -F focused_case
+reject	cargo test -- --logfile focused_case
+reject	cargo test -- --shuffle-seed 123
+reject	cargo test > validation.log
+reject	cargo test 2>/dev/null
+reject	cargo test 2>&1
+reject	cargo test >&2
+reject	cargo test 2<&0
+reject	cargo test # visual_mode
+reject	cargo test # --test terminal_ui
+reject	cargo test ""
+reject	cargo test --test ""
+reject	cargo test --package ""
+reject	cargo nextest run
+reject	cargo nextest run --filter-expr ""
+reject	cargo nextest list --filter-expr 'test(focused)'

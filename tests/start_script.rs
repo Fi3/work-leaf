@@ -333,24 +333,25 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains(
         "WORK_LEAF_BENCH_IDLE_STALL_SECS no-progress timeout while agents are idle, default 300"
     ));
-    assert!(script.contains("three-feature-bench.jsonl"));
+    assert!(script.contains("index_path=\"$results_dir/${report_stem}.jsonl\""));
     assert!(script.contains("WORK_LEAF_BENCH_WEB_UI"));
     assert!(script.contains("web-ui/serve.py"));
     assert!(script.contains("WORK_LEAF_BENCH_SUPERVISED=1"));
     assert!(script.contains("WORK_LEAF_BENCH_RUN_ID"));
     assert!(script.contains("tmux new-session -d -s"));
     assert!(script.contains("\"bash -lc $(shell_quote \"$command_text\")\""));
-    assert!(script.contains("three-feature-bench-supervisor.log"));
-    assert!(script.contains("three-feature-bench-supervisor.status"));
-    assert!(script.contains("three-feature-bench-supervisor.command"));
+    assert!(script.contains("${report_stem}-supervisor.log"));
+    assert!(script.contains("${report_stem}-supervisor.status"));
+    assert!(script.contains("${report_stem}-supervisor.command"));
     assert!(script.contains("work-leaf-orchestrator"));
-    assert!(script.contains("$artifact_dir/bin"));
-    assert!(script.contains("cp \"$bin_dir/$binary\" \"$artifact_dir/bin/$binary\""));
+    assert!(script.contains("$artifact_dir/runner-bin"));
+    assert!(script.contains(
+        "cp --no-dereference -- \"$bin_dir/$binary\" \"$artifact_dir/runner-bin/$binary\""
+    ));
     assert!(script.contains("sha256sum * > SHA256SUMS"));
     assert!(script.contains("save_repo_snapshot()"));
     assert!(script.contains("$artifact_dir/patches/$safe_label"));
-    assert!(script.contains("implement strict selected-agent slash command execution"));
-    assert!(script.contains("normal agent send/resume/model prompt path is insufficient"));
+    assert!(script.contains("implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt."));
     assert!(
         script.contains("format-patch --no-signature -o \"$patch_dir\" \"$base_commit\"..HEAD")
     );
@@ -360,7 +361,7 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains("patch_artifacts"));
     assert!(script.contains("WORK_LEAF_CODEX_TRACE=1"));
     assert!(script.contains(
-        "exec env WORK_LEAF_CONTEXT_BUNDLE_DIR=\"$tmp_root/context-bundles\" WORK_LEAF_COMMAND_TMPDIR=\"$child_tmp_dir\" WORK_LEAF_CODEX_TRACE=1 WORK_LEAF_CODEX_LINEARIZE_SANDBOX=danger-full-access"
+        "exec env WORK_LEAF_OBSERVER_PRIMARY_MARKER=\"$observer_primary_marker\" WORK_LEAF_CONTEXT_BUNDLE_DIR=\"$tmp_root/context-bundles\" WORK_LEAF_COMMAND_TMPDIR=\"$child_tmp_dir\" WORK_LEAF_CODEX_TRACE=1 WORK_LEAF_CODEX_LINEARIZE_SANDBOX=danger-full-access"
     ));
     assert!(!script.contains("ensure_codex_sdk_python"));
     assert!(!script.contains("codex-sdk-venv"));

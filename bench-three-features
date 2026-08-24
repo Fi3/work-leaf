@@ -13,8 +13,8 @@ time it runs, and always removes the temporary checkout.
 Environment:
   WORK_LEAF_BENCH_TMPDIR        parent directory for the temporary checkout
   WORK_LEAF_BENCH_RESULTS_DIR   report directory, default bench-results
-  WORK_LEAF_BENCH_SKIP_BUILD    set to 1 to skip cargo build --release --bins
-  WORK_LEAF_BENCH_BIN_DIR       directory containing current Work Leaf binaries
+  WORK_LEAF_BENCH_SKIP_BUILD    set to 1 to skip the pre-benchmark runner build
+  WORK_LEAF_BENCH_BIN_DIR       directory containing Work Leaf runner binaries
   WORK_LEAF_BENCH_LISTEN        daemon listen address, default 127.0.0.1:0
   WORK_LEAF_BENCH_TIMEOUT_SECS  total timeout, default 7200
   WORK_LEAF_BENCH_BUSY_STALL_SECS no-progress timeout while agents are busy, default 1800
@@ -24,6 +24,9 @@ Environment:
   WORK_LEAF_BENCH_OPERATOR_NOTES optional human notes saved in the report
   WORK_LEAF_BENCH_WEB_UI       set to 0 to skip the local web UI helper
   WORK_LEAF_BENCH_WEB_LISTEN   web UI listen address, default 127.0.0.1:0
+  WORK_LEAF_BENCH_OBSERVER_BIN bench-observer executable; defaults to bench-observer/target/release/bench-observer
+  WORK_LEAF_BENCH_STUDY_ID    observer study identity, default efficiency-causal-study
+  WORK_LEAF_BENCH_PAIR_ID     observer pair identity, default unpaired-<run-id>
 
 The benchmark target base is fixed at c92a0b7060a36eac6db2d869b85e589a7a9480f9.
 WORK_LEAF_BENCH_BASE is intentionally unsupported so saved runs are comparable.
@@ -50,7 +53,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$repo_root/bench-candidate-common"
+source "$repo_root/bench-validation-common"
 readonly base_commit="c92a0b7060a36eac6db2d869b85e589a7a9480f9"
+readonly candidate_schema="$bench_candidate_schema"
+readonly minimum_candidate_commits=1
 if [[ -n "${WORK_LEAF_BENCH_BASE+x}" ]]; then
   echo "error: WORK_LEAF_BENCH_BASE is not supported; bench-three-features always uses $base_commit" >&2
   exit 2
@@ -62,6 +69,7 @@ busy_stall_secs="${WORK_LEAF_BENCH_BUSY_STALL_SECS:-${WORK_LEAF_BENCH_STALL_SECS
 idle_stall_secs="${WORK_LEAF_BENCH_IDLE_STALL_SECS:-300}"
 listen_addr="${WORK_LEAF_BENCH_LISTEN:-127.0.0.1:0}"
 bin_dir="${WORK_LEAF_BENCH_BIN_DIR:-$repo_root/target/release}"
+candidate_cargo_bin="$(command -v cargo 2>/dev/null || true)"
 requested_bench_model="${WORK_LEAF_BENCH_MODEL:-default}"
 bench_model="unresolved"
 bench_model_source="unresolved"
@@ -71,6 +79,18 @@ codex_cli_path="unknown"
 codex_cli_version="unknown"
 no_read_permission="${WORK_LEAF_BENCH_NO_READ_PERMISSION:-0}"
 run_id="${WORK_LEAF_BENCH_RUN_ID:-$(date +%Y%m%dT%H%M%S%z)}"
+observer_study_id="${WORK_LEAF_BENCH_STUDY_ID:-efficiency-causal-study}"
+observer_pair_id="${WORK_LEAF_BENCH_PAIR_ID:-unpaired-$run_id}"
+readonly feature_schedule="concurrent"
+readonly bench_mode="work-leaf"
+readonly report_stem="three-feature-bench"
+readonly report_title="Three-Feature Smoke Bench"
+observer_bin="${WORK_LEAF_BENCH_OBSERVER_BIN:-$repo_root/bench-observer/target/release/bench-observer}"
+observer_config=""
+observer_root=""
+observer_proxy_dir=""
+observer_primary_marker=""
+observer_enabled=0
 web_ui_enabled="${WORK_LEAF_BENCH_WEB_UI:-1}"
 web_ui_listen="${WORK_LEAF_BENCH_WEB_LISTEN:-127.0.0.1:0}"
 mkdir -p "$tmp_parent" "$results_dir"
@@ -80,6 +100,10 @@ worktree_source_dirty="no"
 
 shell_quote() {
   printf '%q' "$1"
+}
+
+monotonic_seconds() {
+  python3 -c 'import time; print(int(time.monotonic()))'
 }
 
 tiny_pid_namespace() {
@@ -123,16 +147,18 @@ launch_tmux_supervisor_if_needed() {
   fi
 
   local session="work-leaf-bench-${run_id//[^A-Za-z0-9_]/_}"
-  local supervisor_log="$results_dir/${run_id}-three-feature-bench-supervisor.log"
-  local supervisor_status="$results_dir/${run_id}-three-feature-bench-supervisor.status"
-  local supervisor_command="$results_dir/${run_id}-three-feature-bench-supervisor.command"
+  local supervisor_log="$results_dir/${run_id}-${report_stem}-supervisor.log"
+  local supervisor_status="$results_dir/${run_id}-${report_stem}-supervisor.status"
+  local supervisor_command="$results_dir/${run_id}-${report_stem}-supervisor.command"
   local command_text="cd $(shell_quote "$repo_root") && "
   local name
   for name in WORK_LEAF_BENCH_TMPDIR WORK_LEAF_BENCH_RESULTS_DIR \
     WORK_LEAF_BENCH_SKIP_BUILD WORK_LEAF_BENCH_BIN_DIR WORK_LEAF_BENCH_LISTEN \
     WORK_LEAF_BENCH_TIMEOUT_SECS WORK_LEAF_BENCH_STALL_SECS \
     WORK_LEAF_BENCH_BUSY_STALL_SECS WORK_LEAF_BENCH_IDLE_STALL_SECS WORK_LEAF_BENCH_MODEL \
-    WORK_LEAF_BENCH_NO_READ_PERMISSION WORK_LEAF_BENCH_WEB_UI WORK_LEAF_BENCH_WEB_LISTEN; do
+    WORK_LEAF_BENCH_NO_READ_PERMISSION WORK_LEAF_BENCH_WEB_UI WORK_LEAF_BENCH_WEB_LISTEN \
+    WORK_LEAF_BENCH_OBSERVER_BIN \
+    WORK_LEAF_BENCH_STUDY_ID WORK_LEAF_BENCH_PAIR_ID; do
     if [[ -n "${!name+x}" ]]; then
       command_text+="$name=$(shell_quote "${!name}") "
     fi
@@ -164,14 +190,17 @@ find "$tmp_parent" -maxdepth 1 -type d -name 'work-leaf-3feature-bench.*' -mmin 
 tmp_root="$(mktemp -d "$tmp_parent/work-leaf-3feature-bench.XXXXXX")"
 checkout_dir="$tmp_root/repo"
 child_tmp_dir="$tmp_root/tmp"
-artifact_dir="$results_dir/${run_id}-three-feature-bench-artifacts"
-report_path="$results_dir/${run_id}-three-feature-bench.md"
-index_path="$results_dir/three-feature-bench.jsonl"
+artifact_dir="$results_dir/${run_id}-${report_stem}-artifacts"
+report_path="$results_dir/${run_id}-${report_stem}.md"
+index_path="$results_dir/${report_stem}.jsonl"
+artifact_final_dir="$artifact_dir"
+human_report_name=".human-report.md"
 daemon_pid=""
 url=""
 web_ui_pid=""
 web_ui_url="unavailable"
 start_epoch="$(date +%s)"
+start_active_seconds="$(monotonic_seconds)"
 review_completed="no"
 linearize_completed="no"
 code_quality="not run"
@@ -193,9 +222,129 @@ token_model_rerun="unknown"
 token_model_comment="baseline model unavailable"
 operator_notes="${WORK_LEAF_BENCH_OPERATOR_NOTES:-}"
 reported=0
+report_attempted=0
+completed_active_seconds=""
+observer_finalized=0
+observer_app_server_expected=0
+observer_app_server_stopped=0
 
 log() {
   printf '[%s] %s\n' "$(date '+%H:%M:%S')" "$*"
+}
+
+setup_observer() {
+  [[ -x "$observer_bin" ]] || fail_bench "required benchmark observer is not executable: $observer_bin"
+  [[ "$codex_cli_path" != "unavailable" ]] || fail_bench "observer requires a real Codex executable"
+  local real_sh real_cargo experiment_commit
+  real_sh="$(command -v sh 2>/dev/null || true)"
+  [[ -n "$real_sh" ]] || fail_bench "observer could not resolve sh from PATH"
+  real_cargo="$(command -v cargo 2>/dev/null || true)"
+  [[ -n "$real_cargo" ]] || fail_bench "observer could not resolve cargo from PATH"
+  experiment_commit="$(git -C "$repo_root" rev-parse HEAD 2>/dev/null || printf 'unknown')"
+  observer_root="$artifact_dir/observation"
+  mkdir -p "$observer_root"
+  "$observer_bin" init \
+    --root "$observer_root" \
+    --study-id "$observer_study_id" \
+    --pair-id "$observer_pair_id" \
+    --condition work-leaf \
+    --run-id "$run_id" \
+    --real-codex "$codex_cli_path" \
+    --real-sh "$real_sh" \
+    --real-cargo "$real_cargo" \
+    --base-commit "$base_commit" \
+    --experiment-commit "$experiment_commit" \
+    --model "$bench_model" \
+    --effort "$agent_reasoning_effort" >/dev/null \
+    || fail_bench "failed to initialize benchmark observer"
+  observer_config="$observer_root/observer-config.json"
+  observer_proxy_dir="$observer_root/proxy-bin"
+  observer_primary_marker="$(jq -er '.primary_invocation_marker' "$observer_config")" \
+    || fail_bench "observer configuration has no primary invocation marker"
+  export WORK_LEAF_OBSERVER_CONFIG="$observer_config"
+  export PATH="$observer_proxy_dir:$PATH"
+  observer_enabled=1
+  observer_timeline condition-start "schedule=$feature_schedule"
+}
+
+disable_iteration_validation_budget() {
+  [[ "$observer_enabled" == "1" ]] || return 0
+  "$observer_bin" validation-budget --config "$observer_config" --state disabled
+}
+
+observer_timeline() {
+  [[ "$observer_enabled" == "1" ]] || return 0
+  local event="$1"
+  local detail="${2:-}"
+  "$observer_bin" timeline --config "$observer_config" --event "$event" --detail "$detail"
+}
+
+observer_checkpoint() {
+  [[ "$observer_enabled" == "1" ]] || return 0
+  local label="$1"
+  "$observer_bin" git-checkpoint \
+    --config "$observer_config" --repo "$checkout_dir" --label "$label"
+}
+
+archive_observation_bundles() {
+  [[ "$observer_enabled" == "1" ]] || return 0
+  "$observer_bin" archive-bundles \
+    --config "$observer_config" --source "$tmp_root/context-bundles" >/dev/null
+}
+
+capture_observation_controller_state() {
+  [[ "$observer_enabled" == "1" ]] || return 0
+  local state_file
+  state_file="$(best_state_snapshot 2>/dev/null || true)"
+  [[ -n "$state_file" ]] || return 1
+  "$observer_bin" controller-state --config "$observer_config" --state "$state_file" >/dev/null
+}
+
+stop_observed_app_server() {
+  [[ "$observer_enabled" == "1" ]] || return 0
+  [[ "$observer_app_server_expected" == "1" ]] || return 0
+  [[ "$observer_app_server_stopped" == "0" ]] || return 0
+  "$observer_bin" stop-app-server --config "$observer_config" >/dev/null
+  observer_app_server_stopped=1
+}
+
+finalize_observation() {
+  [[ "$observer_enabled" == "1" ]] || return 0
+  local sessions_root="${CODEX_HOME:-$HOME/.codex}/sessions"
+  "$observer_bin" analyze --config "$observer_config" \
+    >"$artifact_dir/observation/analysis-pre-rollout.json" \
+    2>"$artifact_dir/observation/analysis-pre-rollout.err" || true
+  "$observer_bin" extract-rollouts --config "$observer_config" --sessions-root "$sessions_root" \
+    >"$artifact_dir/observation/rollout-extraction.json" \
+    2>"$artifact_dir/observation/rollout-extraction.err" || true
+  if ! "$observer_bin" analyze --config "$observer_config" \
+    >"$artifact_dir/observation/analysis.json" 2>"$artifact_dir/observation/analysis.err"; then
+    return 1
+  fi
+  observer_finalized=1
+}
+
+stop_bench_runtime() {
+  if [[ -n "${url:-}" ]]; then
+    curl -fsS -X POST -H 'Content-Type: application/json' --data '{}' "$url/shutdown" >/dev/null 2>&1 || true
+  fi
+  if [[ -n "${web_ui_pid:-}" ]] && kill -0 "$web_ui_pid" 2>/dev/null; then
+    kill "$web_ui_pid" 2>/dev/null || true
+    wait "$web_ui_pid" 2>/dev/null || true
+  fi
+  web_ui_pid=""
+  if [[ -n "${daemon_pid:-}" ]] && kill -0 "$daemon_pid" 2>/dev/null; then
+    for _ in {1..100}; do
+      kill -0 "$daemon_pid" 2>/dev/null || break
+      sleep 0.05
+    done
+    if kill -0 "$daemon_pid" 2>/dev/null; then
+      kill "$daemon_pid" 2>/dev/null || true
+    fi
+    wait "$daemon_pid" 2>/dev/null || true
+  fi
+  daemon_pid=""
+  url=""
 }
 
 cleanup_daemon_tmp() {
@@ -255,7 +404,9 @@ save_final_state_snapshot() {
 
 cleanup() {
   local status=$?
-  if [[ "$status" -ne 0 && "$reported" == "0" ]]; then
+  local should_report=0
+  if [[ "$status" -ne 0 && "$reported" == "0" && "$report_attempted" == "0" \
+    && "$bench_artifact_transaction_active" == "1" ]]; then
     result="fail"
     failure_reason="${failure_reason:-bench exited unexpectedly with status $status}"
     if [[ -n "${url:-}" ]]; then
@@ -263,43 +414,143 @@ cleanup() {
     fi
     git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt" 2>/dev/null || true
     git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt" 2>/dev/null || true
+    should_report=1
+  fi
+  if [[ "$observer_finalized" != "1" ]]; then
+    archive_observation_bundles || log "observer context-bundle archive failed"
+    capture_observation_controller_state || log "observer controller-usage capture failed"
+    observer_timeline condition-end "status=$status result=$result" \
+      || log "observer final timeline event failed"
+  fi
+  stop_observed_app_server || log "observer app-server finalization failed"
+  stop_bench_runtime
+  if [[ "$observer_finalized" != "1" ]]; then
+    finalize_observation || log "observer analysis rejected this capture; see observation/capture-audit.txt"
+  fi
+  if [[ "$should_report" == "1" ]]; then
     write_report "$failure_reason" || true
   fi
-  if [[ -n "${url:-}" ]]; then
-    curl -fsS -X POST -H 'Content-Type: application/json' --data '{}' "$url/shutdown" >/dev/null 2>&1 || true
-  fi
-  if [[ -n "${web_ui_pid:-}" ]] && kill -0 "$web_ui_pid" 2>/dev/null; then
-    kill "$web_ui_pid" 2>/dev/null || true
-    wait "$web_ui_pid" 2>/dev/null || true
-  fi
-  if [[ -n "${daemon_pid:-}" ]] && kill -0 "$daemon_pid" 2>/dev/null; then
-    kill "$daemon_pid" 2>/dev/null || true
-    wait "$daemon_pid" 2>/dev/null || true
-  fi
   cleanup_daemon_tmp
+  bench_abort_artifact_transaction
   rm -rf "$tmp_root"
   exit "$status"
 }
 trap cleanup EXIT INT TERM
 
+stage_candidate_binary() {
+  local source_commit source_tree base_tree checkout_status commits_after_base
+
+  [[ -n "$candidate_cargo_bin" ]] || return 1
+  rm -rf "$tmp_root/candidate-target" "$tmp_root/candidate" "$tmp_root/candidate-runtime" \
+    || return 1
+  checkout_status="$(git -C "$checkout_dir" status --porcelain=v1 --untracked-files=all)" \
+    || return 1
+  [[ -z "$checkout_status" ]] || return 1
+  source_commit="$(git -C "$checkout_dir" rev-parse --verify 'HEAD^{commit}')" || return 1
+  git -C "$checkout_dir" merge-base --is-ancestor "$base_commit" "$source_commit" \
+    || return 1
+  base_tree="$(git -C "$checkout_dir" rev-parse --verify "$base_commit^{tree}")" || return 1
+  source_tree="$(git -C "$checkout_dir" rev-parse --verify "$source_commit^{tree}")" \
+    || return 1
+  [[ "$source_tree" != "$base_tree" ]] || return 1
+  commits_after_base="$(git -C "$checkout_dir" rev-list --count "$source_commit" "^$base_commit")" \
+    || return 1
+  [[ "$commits_after_base" =~ ^[0-9]+$ ]] || return 1
+  (( commits_after_base >= minimum_candidate_commits )) || return 1
+
+  mkdir -p \
+    "$tmp_root/candidate-target" \
+    "$tmp_root/candidate" \
+    "$tmp_root/candidate-runtime" \
+    || return 1
+  log "building and smoking final candidate replay runtime"
+  if ! bench_stage_candidate_runtime \
+    "$checkout_dir" \
+    "$candidate_cargo_bin" \
+    "$source_commit" \
+    "$tmp_root/candidate-target" \
+    "$child_tmp_dir" \
+    "$tmp_root/candidate" \
+    "$tmp_root/candidate-runtime" \
+    "$tmp_root/candidate-build.log"; then
+    log "candidate runtime staging failed: ${bench_runtime_error_reason:-unknown error}"
+    rm -rf "$tmp_root/candidate"
+    return 1
+  fi
+  jq -n \
+    --arg schema "$candidate_schema" \
+    --arg source_commit "$source_commit" \
+    --arg entrypoint "candidate/bin/work-leaf" \
+    --argjson executables "$bench_runtime_executables" \
+    --arg target_sha256 "$bench_runtime_target_manifest_digest" \
+    --arg smoke_schema "$bench_candidate_smoke_schema" \
+    --arg smoke_stdout_sha256 "$bench_runtime_smoke_stdout_digest" \
+    --arg smoke_stderr_sha256 "$bench_runtime_smoke_stderr_digest" \
+    --arg stdin_sha256 "$bench_runtime_stdin_digest" \
+    '{
+      schema:$schema,
+      source_commit:$source_commit,
+      entrypoint:$entrypoint,
+      executables:$executables,
+      targets:{path:"candidate/SOURCE_TARGETS.json",sha256:$target_sha256},
+      smoke:{
+        schema:$smoke_schema,
+        gate:"bounded-startup-quit",
+        command:[$entrypoint],
+        stdin_sha256:$stdin_sha256,
+        timeout_seconds:20,
+        exit_code:0,
+        stdout:{path:"candidate/SMOKE.stdout",sha256:$smoke_stdout_sha256},
+        stderr:{path:"candidate/SMOKE.stderr",sha256:$smoke_stderr_sha256}
+      }
+    }' \
+    > "$tmp_root/candidate/PROVENANCE" || return 1
+}
+
 copy_artifacts() {
-  mkdir -p "$artifact_dir"
-  for file in state.json final-state.json daemon.out daemon.err daemon-env.txt daemon-ps.txt web-ui.out web-ui.err web-ui-url.txt final-status.txt final-log.txt checks.log; do
-    if [[ -f "$tmp_root/$file" ]]; then
-      cp "$tmp_root/$file" "$artifact_dir/$file"
+  local candidate_admission="${1:-}"
+
+  [[ "$bench_artifact_transaction_active" == "1" \
+    && "$(stat -Lc '%d:%i' "$artifact_dir" 2>/dev/null)" \
+      == "$bench_artifact_transaction_stage_identity" ]] || return 1
+  for file in state.json final-state.json daemon.out daemon.err daemon-env.txt daemon-ps.txt web-ui.out web-ui.err web-ui-url.txt final-status.txt final-log.txt checks.log candidate-build.log; do
+    if [[ -f "$tmp_root/$file" && ! -L "$tmp_root/$file" ]]; then
+      cp --no-dereference -- "$tmp_root/$file" "$artifact_dir/$file"
     fi
   done
   if ! state_snapshot_is_valid "$artifact_dir/final-state.json" && state_snapshot_is_valid "$artifact_dir/state.json"; then
-    cp "$artifact_dir/state.json" "$artifact_dir/final-state.json" 2>/dev/null || true
+    cp --no-dereference -- \
+      "$artifact_dir/state.json" "$artifact_dir/final-state.json" 2>/dev/null || true
   fi
-  mkdir -p "$artifact_dir/bin"
+  mkdir -p "$artifact_dir/runner-bin"
   for binary in work-leaf work-leaf-orchestrator; do
-    if [[ -x "$bin_dir/$binary" ]]; then
-      cp "$bin_dir/$binary" "$artifact_dir/bin/$binary"
+    if [[ -f "$bin_dir/$binary" && ! -L "$bin_dir/$binary" && -x "$bin_dir/$binary" ]]; then
+      cp --no-dereference -- "$bin_dir/$binary" "$artifact_dir/runner-bin/$binary"
     fi
   done
-  if compgen -G "$artifact_dir/bin/*" >/dev/null; then
-    (cd "$artifact_dir/bin" && sha256sum * > SHA256SUMS)
+  if compgen -G "$artifact_dir/runner-bin/*" >/dev/null; then
+    (cd "$artifact_dir/runner-bin" && sha256sum * > SHA256SUMS)
+  fi
+
+  if [[ "$result" == "pass" && -x "$tmp_root/candidate/bin/work-leaf" ]]; then
+    jq -e --arg schema "$candidate_schema" '
+      type == "object"
+      and keys == ["entrypoint", "executables", "schema", "smoke", "source_commit", "targets"]
+      and .schema == $schema
+      and .entrypoint == "candidate/bin/work-leaf"
+      and (.executables | type == "array" and length > 0)
+      and .targets.path == "candidate/SOURCE_TARGETS.json"
+      and .smoke.gate == "bounded-startup-quit"
+    ' "$tmp_root/candidate/PROVENANCE" >/dev/null || return 1
+    (
+      cd "$tmp_root/candidate"
+      sha256sum --check --strict --status SHA256SUMS
+    ) || return 1
+    bench_publish_candidate_runtime \
+      "$artifact_dir" \
+      "$tmp_root/candidate" \
+      "$candidate_admission" \
+      "$bench_artifact_transaction_stage_identity" || return 1
   fi
 }
 
@@ -423,7 +674,7 @@ session_summary() {
 compute_token_model_fit() {
   local output key value_
   output="$(
-    python3 - "$results_dir" "$result" "$token_usage" <<'PY'
+    python3 - "$results_dir" "$result" "$token_usage" "$bench_model" "$agent_reasoning_effort" <<'PY'
 import json
 import math
 import re
@@ -433,6 +684,11 @@ from pathlib import Path
 results_dir = Path(sys.argv[1])
 current_result = sys.argv[2]
 current_token_usage = sys.argv[3]
+current_model = sys.argv[4].strip().lower()
+current_reasoning = sys.argv[5].strip().lower()
+accepted_baseline_model = "gpt-5.5"
+accepted_baseline_reasoning = "xhigh"
+accepted_baseline_workflow = ("work-leaf", "concurrent", "codex", "app-server")
 manifest_path = results_dir / "baseline-manifest.json"
 token_re = re.compile(r"(cached_input|reasoning_output|input|output)=(\d+)")
 meta_re = re.compile(r"^- ([A-Za-z0-9_]+):\s*(.*)$")
@@ -463,6 +719,24 @@ def parse_metadata(path: Path) -> dict[str, str]:
         if match:
             fields[match.group(1)] = match.group(2).strip()
     return fields
+
+
+def normalized_metadata_value(fields: dict[str, str], *keys: str) -> str:
+    for key in keys:
+        value = fields.get(key, "").strip()
+        if value:
+            return value.lower()
+    return ""
+
+
+def is_normal_work_leaf_product_report(fields: dict[str, str]) -> bool:
+    workflow = (
+        normalized_metadata_value(fields, "bench_mode"),
+        normalized_metadata_value(fields, "feature_schedule"),
+        normalized_metadata_value(fields, "agent_backend", "backend"),
+        normalized_metadata_value(fields, "agent_transport", "transport"),
+    )
+    return workflow == accepted_baseline_workflow
 
 
 def sample_stddev(values: list[int], mean: float) -> float:
@@ -542,6 +816,13 @@ def unavailable(reason: str) -> None:
     emit("token_model_comment", reason)
 
 
+if (current_model, current_reasoning) != (
+    accepted_baseline_model,
+    accepted_baseline_reasoning,
+):
+    unavailable("different model or reasoning profile cannot be fitted against the accepted baseline")
+    raise SystemExit(0)
+
 if not manifest_path.exists():
     unavailable("baseline-manifest.json not found")
     raise SystemExit(0)
@@ -559,6 +840,13 @@ for item in manifest.get("reports") or []:
         continue
     fields = parse_metadata(results_dir / str(report_name))
     if fields.get("result", "").lower() != "pass":
+        continue
+    if not is_normal_work_leaf_product_report(fields):
+        continue
+    if (
+        fields.get("agent_model", "").strip().lower(),
+        fields.get("agent_reasoning_effort", "").strip().lower(),
+    ) != (accepted_baseline_model, accepted_baseline_reasoning):
         continue
     tokens = parse_tokens(fields.get("token_usage"))
     total = tokens["input"] + tokens["output"]
@@ -661,11 +949,18 @@ PY
 
 write_report() {
   local comment="$1"
-  local end_epoch elapsed commits status_lines recent_log benched_commit benched_dirty
+  local end_epoch active_end_seconds elapsed commits status_lines recent_log benched_commit benched_dirty
   local changed_files changed_lines_added changed_lines_deleted changed_lines_total
   local binaries_produced effective_notes read_permission_mode patch_artifacts report_state_file
+  local candidate_json="null" candidate_admission=""
+  local machine_report_staging="$tmp_root/machine-report.json"
+  report_attempted=1
   end_epoch="$(date +%s)"
-  elapsed=$((end_epoch - start_epoch))
+  active_end_seconds="$(monotonic_seconds)"
+  if [[ -n "$completed_active_seconds" ]]; then
+    active_end_seconds="$completed_active_seconds"
+  fi
+  elapsed=$((active_end_seconds - start_active_seconds))
   commits="$(git -C "$checkout_dir" rev-list --count HEAD ^"$base_commit" 2>/dev/null || printf '0')"
   status_lines="$(cat "$tmp_root/final-status.txt" 2>/dev/null || true)"
   recent_log="$(cat "$tmp_root/final-log.txt" 2>/dev/null || true)"
@@ -681,11 +976,35 @@ write_report() {
       awk '{ if ($1 ~ /^[0-9]+$/) added += $1; if ($2 ~ /^[0-9]+$/) deleted += $2 } END { printf "%d %d\n", added, deleted }'
   )
   changed_lines_total=$((changed_lines_added + changed_lines_deleted))
-  copy_artifacts
+  if [[ "$result" == "pass" ]]; then
+    candidate_json="$(jq -ce '.' "$tmp_root/candidate/PROVENANCE")" || return 1
+    candidate_admission="$tmp_root/candidate-admission.json"
+    jq -n \
+      --arg run_id "$run_id" \
+      --arg result "$result" \
+      --argjson commits_after_base "$commits" \
+      --argjson changed_files "$changed_files" \
+      --argjson candidate "$candidate_json" \
+      '{
+        run_id:$run_id,
+        result:$result,
+        commits_after_base:$commits_after_base,
+        changed_files:$changed_files,
+        candidate:$candidate
+      }' > "$candidate_admission" || return 1
+  fi
+  copy_artifacts "$candidate_admission" || return 1
   save_repo_snapshot "$result"
   report_state_file="$(best_state_snapshot 2>/dev/null || printf '%s\n' "$tmp_root/final-state.json")"
-  binaries_produced="$(find "$artifact_dir/bin" -maxdepth 1 -type f -perm -111 -printf '%f ' 2>/dev/null | sed 's/[[:space:]]*$//')"
-  patch_artifacts="$artifact_dir/patches/$result"
+  if [[ -d "$artifact_dir/candidate/bin" ]]; then
+    binaries_produced="$(find "$artifact_dir/candidate/bin" -maxdepth 1 -type f -perm -111 -printf '%f ' | sed 's/[[:space:]]*$//')"
+  else
+    binaries_produced=""
+  fi
+  if [[ "$result" == "pass" ]]; then
+    [[ "$(jq -ce '.' "$artifact_dir/candidate/PROVENANCE")" == "$candidate_json" ]] || return 1
+  fi
+  patch_artifacts="$artifact_final_dir/patches/$result"
   effective_notes="${operator_notes:-$comment}"
   if [[ "$no_read_permission" == "1" || "$no_read_permission" == "true" || "$no_read_permission" == "yes" ]]; then
     read_permission_mode="direct agent file reads enabled (--no-read-permission)"
@@ -693,10 +1012,12 @@ write_report() {
     read_permission_mode="orchestrator-mediated file reads"
   fi
   compute_token_model_fit
-  cat > "$report_path" <<EOF
-# Three-Feature Smoke Bench
+  cat > "$artifact_dir/$human_report_name" <<EOF
+# $report_title
 
 - result: $result
+- bench_mode: $bench_mode
+- feature_schedule: $feature_schedule
 - started_at: $(date -d "@$start_epoch" -Iseconds)
 - finished_at: $(date -d "@$end_epoch" -Iseconds)
 - duration_seconds: $elapsed
@@ -743,9 +1064,12 @@ write_report() {
 - code_quality: $code_quality
 - comment: $comment
 - operator_notes: $effective_notes
-- artifacts: $artifact_dir
-- binaries: $artifact_dir/bin
+- artifacts: $artifact_final_dir
+- observation: $artifact_final_dir/observation
+- machine_report: $artifact_final_dir/report.json
+- binaries: $artifact_final_dir/candidate/bin
 - binaries_produced: ${binaries_produced:-none}
+- runner_binaries: $artifact_final_dir/runner-bin
 - patch_artifacts: $patch_artifacts
 
 ## Token Model Fit
@@ -781,9 +1105,11 @@ $recent_log
 $status_lines
 \`\`\`
 EOF
-  jq -n \
+  jq -cn \
     --arg run_id "$run_id" \
     --arg result "$result" \
+    --arg bench_mode "$bench_mode" \
+    --arg feature_schedule "$feature_schedule" \
     --arg benched_binary_commit "$benched_commit" \
     --arg benched_binary_dirty "$benched_dirty" \
     --arg worktree_source_commit "$source_head" \
@@ -816,6 +1142,8 @@ EOF
     --arg operator_notes "$effective_notes" \
     --arg binaries_produced "${binaries_produced:-none}" \
     --arg patch_artifacts "$patch_artifacts" \
+    --arg observation "$artifact_final_dir/observation" \
+    --argjson candidate "$candidate_json" \
     --argjson duration_seconds "$elapsed" \
     --argjson commits_after_base "$commits" \
     --argjson changed_files "$changed_files" \
@@ -829,8 +1157,15 @@ EOF
     --argjson token_model_delta_tokens "$token_model_delta_tokens" \
     --argjson token_model_central95_low "$token_model_central95_low" \
     --argjson token_model_central95_high "$token_model_central95_high" \
-    '{run_id:$run_id,result:$result,benched_binary_commit:$benched_binary_commit,benched_binary_dirty:$benched_binary_dirty,worktree_source_commit:$worktree_source_commit,worktree_source_dirty:$worktree_source_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,codex_cli_path:$codex_cli_path,codex_cli_version:$codex_cli_version,agent_model:$agent_model,agent_model_source:$agent_model_source,agent_reasoning_effort:$agent_reasoning_effort,agent_reasoning_effort_source:$agent_reasoning_effort_source,requested_agent_model:$requested_agent_model,no_read_permission:$no_read_permission,read_permission_mode:$read_permission_mode,web_ui_url:$web_ui_url,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,token_model_status:$token_model_status,token_model_label:$token_model_label,token_model_total:$token_model_total,token_model_baseline_count:$token_model_baseline_count,token_model_mean:$token_model_mean,token_model_stddev:$token_model_stddev,token_model_delta_tokens:$token_model_delta_tokens,token_model_z:$token_model_z,token_model_percentile:$token_model_percentile,token_model_central95_low:$token_model_central95_low,token_model_central95_high:$token_model_central95_high,token_model_rerun:$token_model_rerun,token_model_comment:$token_model_comment,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,report:$report}' \
-    >> "$index_path"
+    '{run_id:$run_id,result:$result,bench_mode:$bench_mode,feature_schedule:$feature_schedule,benched_binary_commit:$benched_binary_commit,benched_binary_dirty:$benched_binary_dirty,worktree_source_commit:$worktree_source_commit,worktree_source_dirty:$worktree_source_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,codex_cli_path:$codex_cli_path,codex_cli_version:$codex_cli_version,agent_model:$agent_model,agent_model_source:$agent_model_source,agent_reasoning_effort:$agent_reasoning_effort,agent_reasoning_effort_source:$agent_reasoning_effort_source,requested_agent_model:$requested_agent_model,no_read_permission:$no_read_permission,read_permission_mode:$read_permission_mode,web_ui_url:$web_ui_url,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,token_model_status:$token_model_status,token_model_label:$token_model_label,token_model_total:$token_model_total,token_model_baseline_count:$token_model_baseline_count,token_model_mean:$token_model_mean,token_model_stddev:$token_model_stddev,token_model_delta_tokens:$token_model_delta_tokens,token_model_z:$token_model_z,token_model_percentile:$token_model_percentile,token_model_central95_low:$token_model_central95_low,token_model_central95_high:$token_model_central95_high,token_model_rerun:$token_model_rerun,token_model_comment:$token_model_comment,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,observation:$observation,report:$report,candidate:$candidate}' \
+    > "$machine_report_staging" || return 1
+  bench_publish_regular_file \
+    "$artifact_dir" \
+    "$machine_report_staging" \
+    "report.json" \
+    "$bench_artifact_transaction_stage_identity" || return 1
+  bench_commit_artifact_transaction "$human_report_name" || return 1
+  artifact_dir="$artifact_final_dir"
   reported=1
   log "bench report: $report_path"
 }
@@ -878,6 +1213,52 @@ post_agent() {
     curl -fsS -H 'Content-Type: application/json' --data-binary @- "$url/agent/message" >/dev/null
 }
 
+feature_prompt() {
+  case "$1" in
+    1)
+      printf '%s\n' 'add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select'
+      ;;
+    2)
+      printf '%s\n' 'implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt.'
+      ;;
+    3)
+      printf '%s\n' 'when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it'
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+benchmark_validation_policy() {
+  cat <<'EOF'
+Validation policy for this implementation/fix turn:
+- Run exactly one focused Cargo validation command that covers the behavior or tests changed in this turn.
+- Starting no Cargo validation, or starting more than one, invalidates the benchmark.
+- Rerunning the same command still counts as a second validation and invalidates the benchmark.
+- If code changes after validation, do not validate again; report that the final edit was not rerun.
+- Do not combine formatting, Clippy, and the full test suite into one command.
+- Do not run the three-command full repository check suite during this feature iteration.
+- The benchmark driver owns the one final full repository check suite.
+EOF
+}
+
+post_feature_command() {
+  local feature_number="$1"
+  post_command "new $(feature_prompt "$feature_number")
+
+$(benchmark_validation_policy)"
+}
+
+start_benchmark_features() {
+  post_feature_command 1 || fail_bench "failed to post first patch-agent command"
+  post_feature_command 2 || fail_bench "failed to post second patch-agent command"
+  post_feature_command 3 || fail_bench "failed to post third patch-agent command"
+  launched_features=3
+  observer_timeline feature-start "features=1,2,3" || fail_bench "failed to record observer timeline"
+  log "started 3 concurrent patch agents"
+}
+
 start_web_ui() {
   case "$web_ui_enabled" in
     0|false|False|no|No)
@@ -913,6 +1294,18 @@ start_web_ui() {
   log "web UI helper did not print a URL before timeout; continuing without it"
 }
 
+if ! bench_begin_artifact_transaction \
+  "$results_dir" \
+  "${artifact_final_dir##*/}" \
+  "${report_path##*/}" \
+  "${index_path##*/}"; then
+  reported=1
+  report_attempted=1
+  echo "error: benchmark artifact output already exists or could not be reserved" >&2
+  exit 1
+fi
+artifact_dir="$bench_artifact_transaction_stage_fd_path"
+
 if [[ "$dry_run" == "1" ]]; then
   log "WORK_LEAF_BENCH_TEMP=$tmp_root"
   log "WORK_LEAF_BENCH_SOURCE_HEAD=$source_head"
@@ -940,12 +1333,17 @@ detect_codex_cli_version
 if [[ "${WORK_LEAF_BENCH_SKIP_BUILD:-}" != "1" ]]; then
   (cd "$repo_root" && cargo build --release --bins)
 fi
+if [[ -z "${WORK_LEAF_BENCH_OBSERVER_BIN+x}" ]]; then
+  cargo build --manifest-path "$repo_root/bench-observer/Cargo.toml" --release --bin bench-observer
+fi
 
 log "WORK_LEAF_BENCH_TEMP=$tmp_root"
 log "WORK_LEAF_BENCH_SOURCE_HEAD=$source_head"
 prepare_base_checkout
 log "WORK_LEAF_BENCH_BASE=$base_commit"
 mkdir -p "$child_tmp_dir"
+setup_observer || fail_bench "failed to start required benchmark observer"
+observer_checkpoint base || fail_bench "failed to capture observer base checkpoint"
 
 daemon_args=("--listen" "$listen_addr")
 daemon_args+=("--model" "$bench_model")
@@ -954,7 +1352,7 @@ if [[ "$no_read_permission" == "1" || "$no_read_permission" == "true" || "$no_re
 fi
 (
   cd "$checkout_dir"
-  exec env WORK_LEAF_CONTEXT_BUNDLE_DIR="$tmp_root/context-bundles" WORK_LEAF_COMMAND_TMPDIR="$child_tmp_dir" WORK_LEAF_CODEX_TRACE=1 WORK_LEAF_CODEX_LINEARIZE_SANDBOX=danger-full-access "$bin_dir/work-leaf-orchestrator" "${daemon_args[@]}" >"$tmp_root/daemon.out" 2>"$tmp_root/daemon.err"
+  exec env WORK_LEAF_OBSERVER_PRIMARY_MARKER="$observer_primary_marker" WORK_LEAF_CONTEXT_BUNDLE_DIR="$tmp_root/context-bundles" WORK_LEAF_COMMAND_TMPDIR="$child_tmp_dir" WORK_LEAF_CODEX_TRACE=1 WORK_LEAF_CODEX_LINEARIZE_SANDBOX=danger-full-access "$bin_dir/work-leaf-orchestrator" "${daemon_args[@]}" >"$tmp_root/daemon.out" 2>"$tmp_root/daemon.err"
 ) &
 daemon_pid=$!
 {
@@ -979,33 +1377,36 @@ for _ in $(seq 1 200); do
 done
 [[ -n "$url" ]] || fail_bench "timed out waiting for orchestrator URL"
 log "daemon URL: $url"
+observer_app_server_expected=1
+observer_timeline daemon-ready "url=$url" || fail_bench "failed to record daemon readiness"
 start_web_ui
 
-post_command 'new add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select' || fail_bench "failed to post first patch-agent command"
-post_command 'new implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt.' || fail_bench "failed to post second patch-agent command"
-post_command 'new when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it' || fail_bench "failed to post third patch-agent command"
-log "started 3 patch agents"
+launched_features=0
+start_benchmark_features
 
 linearize_started=0
 accepted_linearize=0
 expected_final_commits=3
 last_sig=""
-last_progress_epoch="$start_epoch"
+last_progress_active_seconds="$start_active_seconds"
 
 while true; do
-  now="$(date +%s)"
-  elapsed=$((now - start_epoch))
+  now_active="$(monotonic_seconds)"
+  elapsed=$((now_active - start_active_seconds))
   (( elapsed <= timeout_secs )) || fail_bench "timed out after ${elapsed}s"
 
   fetch_state_snapshot "$tmp_root/state.json" || fail_bench "orchestrator state request failed"
   if [[ -f "$tmp_root/abort-reason" ]]; then
     fail_bench "$(cat "$tmp_root/abort-reason")"
   fi
+  if [[ -n "$observer_root" && -f "$observer_root/validation-budget-violation.txt" ]]; then
+    fail_bench "$(cat "$observer_root/validation-budget-violation.txt")"
+  fi
   busy="$(jq -r '.busy' "$tmp_root/state.json")"
   sig="$(jq -r '[.snapshot.sessions[] | "\(.id):\(.loading // "-"):\(.completion // "-"):lines=\(.lines|length):title=\(.title)"] | join(" | ")' "$tmp_root/state.json")"
   if [[ "$sig" != "$last_sig" ]]; then
     last_sig="$sig"
-    last_progress_epoch="$now"
+    last_progress_active_seconds="$now_active"
     log "elapsed=${elapsed}s busy=$busy $sig"
   fi
   reviews="$(jq '[.snapshot.sessions[] | select(.id|startswith("review-"))] | length' "$tmp_root/state.json")"
@@ -1024,13 +1425,12 @@ while true; do
     active_stall_secs="$idle_stall_secs"
     active_stall_kind="idle"
   fi
-  if (( now - last_progress_epoch > active_stall_secs )); then
+  if (( now_active - last_progress_active_seconds > active_stall_secs )); then
     fail_bench "${active_stall_kind} stalled for more than ${active_stall_secs}s without session state changes; user_count=${user_count} terminal_users=${terminal_users} done_users=${done_users} ready_users=${ready_users} patch_agents_with_commits=${patch_agents_with_commits}"
   fi
   if [[ "$busy" == "false" && "$user_count" == "3" && "$launch_errors" == "3" && "$commits_after_base" == "0" ]]; then
     fail_bench "all three initial Codex launches failed before producing work"
   fi
-
   if [[ "$linearize_started" == "0" && "$busy" == "false" && "$user_count" == "3" && "$terminal_users" == "$user_count" && "$ready_users" -ge "$patch_agents_with_commits" ]]; then
     review_completed="yes"
     if [[ "$patch_agents_with_commits" != "3" ]]; then
@@ -1038,6 +1438,10 @@ while true; do
     fi
     expected_final_commits=3
     log "all patch agents done and ${patch_agents_with_commits} patch-agent commit(s) reviewed; launching force-linearize"
+    disable_iteration_validation_budget || fail_bench "failed to disable the iteration validation budget"
+    observer_timeline feature-cycle-complete "feature=3" || fail_bench "failed to record completed feature cycle"
+    observer_checkpoint pre-linearize || fail_bench "failed to capture pre-linearize checkpoint"
+    observer_timeline linearize-start "reviewed-features=3" || fail_bench "failed to record linearize start"
     post_command 'force-linearize' || fail_bench "failed to post force-linearize command"
     linearize_started=1
     sleep 5
@@ -1047,7 +1451,8 @@ while true; do
   linearize_ready="$(jq '[.snapshot.sessions[] | select(.id == "linearize" and .loading == null)] | length' "$tmp_root/state.json")"
   if [[ "$linearize_started" == "1" && "$accepted_linearize" == "0" && "$linearize_ready" != "0" && "$busy" == "false" ]]; then
     log "linearizer ready; accepting plan"
-    post_agent 'linearize' 'Accept the proposed linearization plan. Rewrite the reviewed provisional agent commits into final commits now, preserving all three reviewed features. Run the repository required checks and report the final commit messages and verification.' || fail_bench "failed to accept linearize plan"
+    observer_timeline linearize-accept "reviewed-features=3" || fail_bench "failed to record linearize acceptance"
+    post_agent 'linearize' 'Accept the proposed linearization plan. Rewrite the reviewed provisional agent commits into final commits now, preserving all three reviewed features. Do not run Cargo validation or the full repository check suite. The benchmark driver owns the one final gate. Leave the repository clean and report the final commit messages.' || fail_bench "failed to accept linearize plan"
     accepted_linearize=1
     sleep 5
     continue
@@ -1068,19 +1473,28 @@ while true; do
       fail_bench "workflow produced ${commits_after_base} commits after base; expected ${expected_final_commits} final commit(s) for patch agents that changed code"
     fi
     log "running final code quality checks"
-    (
-      cd "$checkout_dir"
-      export TMPDIR="$child_tmp_dir"
-      cargo fmt -- --check
-      cargo clippy --all-targets --all-features -- -D warnings
-      cargo test --all-targets --all-features
-    ) >"$tmp_root/checks.log" 2>&1 || {
+    bench_run_final_gate "$checkout_dir" "$child_tmp_dir" "$tmp_root/checks.log" || {
       code_quality="failed; see checks.log"
       fail_bench "final repository checks failed"
     }
-    code_quality="passed cargo fmt -- --check; cargo clippy --all-targets --all-features -- -D warnings; cargo test --all-targets --all-features"
+    git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt"
+    if [[ -s "$tmp_root/final-status.txt" ]]; then
+      code_quality="failed; cargo fmt changed the final repository"
+      fail_bench "final repository changed during the final gate"
+    fi
+    code_quality="passed cargo fmt; cargo clippy --all-targets --all-features -- -D warnings; cargo test --all-targets --all-features"
+    completed_active_seconds="$(monotonic_seconds)"
+    observer_timeline final-checks-complete "status=pass" || fail_bench "failed to record final checks"
+    observer_checkpoint final || fail_bench "failed to capture final checkpoint"
+    stage_candidate_binary || fail_bench "final candidate release build failed"
     result="pass"
     collect_token_usage
+    archive_observation_bundles || fail_bench "failed to archive observer context bundles"
+    capture_observation_controller_state || fail_bench "failed to capture observer controller usage"
+    observer_timeline condition-end "status=0 result=$result" || fail_bench "failed to record observer completion"
+    stop_observed_app_server || fail_bench "failed to finalize observed app-server"
+    stop_bench_runtime
+    finalize_observation || fail_bench "observer analysis rejected this capture; see observation/capture-audit.txt"
     write_report "review and linearize completed; final repository checks passed"
     exit 0
   fi

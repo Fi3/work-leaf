@@ -63,19 +63,22 @@ prints the three `:new` commands used by the real-agent smoke and removes the te
 when Work Leaf exits, fails, or is interrupted. Set `WORK_LEAF_SMOKE_BASE` to choose a different
 base commit, or pass daemon options after `--`.
 
-`./bench-three-features` runs the same three-feature scenario through the localhost HTTP API with
-the real configured Codex backend. It creates a temporary clean Git checkout from the current
-working directory, commits that snapshot as the benchmark base, uses the default mediated-read
-workflow, records pass/fail, duration, review and linearize completion, commit churn, code-quality
-checks, the Codex CLI path and version, resolved model, reasoning effort, and observed inefficiencies
-under `bench-results`, and enables Codex child-process trace output in the saved daemon artifacts.
-Busy agent silence and idle orchestrator silence have separate stall limits through
-`WORK_LEAF_BENCH_BUSY_STALL_SECS` and `WORK_LEAF_BENCH_IDLE_STALL_SECS`.
-Untracked benchmark output under `bench-results` remains saved output rather than source input for
-the temporary checkout. The script always removes its temporary checkout. `./bench-dashboard` serves
-saved benchmark reports from `bench-results`, including nested parallel-run result directories. When
-`bench-results/baseline-manifest.json` is present, reports listed there form the regression baseline;
-other discovered reports are shown separately as old or invalid data.
+`./bench-three-features` runs the fixed three-feature workload through the localhost HTTP API with
+the real configured Codex backend. It launches the three Work Leaf requests together.
+`./bench-three-features-sequential` runs the same frozen requests one after another through normal
+direct Codex sessions, without Work Leaf. Both drivers use the fixed base commit, require the passive
+benchmark observer, give every implementation or fix cycle exactly one focused Cargo validation,
+and run the same final `cargo fmt`, Clippy, and test gate once after linearization. Busy agent silence
+and idle orchestrator silence have separate limits through `WORK_LEAF_BENCH_BUSY_STALL_SECS` and
+`WORK_LEAF_BENCH_IDLE_STALL_SECS`.
+
+Reports and admitted candidate runtimes are written under `bench-results`. The driver always removes
+its temporary checkout. `./materialize-bench-candidate` can reconstruct one verified historical
+candidate from a saved report, Git bundle, and patch evidence when no admitted runtime was retained.
+`./bench-dashboard` serves saved reports. Its fitted baseline uses only listed GPT-5.5/xhigh rows
+that explicitly record the normal concurrent Work Leaf Codex app-server path. Its product summary
+compares those rows with explicitly recorded direct sequential Codex rows. Other modes stay visible,
+and other model or reasoning profiles remain in a raw-comparison section without fitted judgments.
 
 `work-leaf-orchestrator` owns the controller, agent backend, locks, review routing, and patch
 workflow. It prints `WORK_LEAF_ORCHESTRATOR_URL=http://...` after binding its localhost HTTP API.

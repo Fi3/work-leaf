@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+bench_run_final_gate() {
+  local checkout_dir="$1"
+  local child_tmp_dir="$2"
+  local checks_log="$3"
+
+  (
+    cd "$checkout_dir" || exit $?
+    export TMPDIR="$child_tmp_dir" || exit $?
+    cargo fmt || exit $?
+    cargo clippy --all-targets --all-features -- -D warnings || exit $?
+    cargo test --all-targets --all-features || exit $?
+  ) >"$checks_log" 2>&1
+}

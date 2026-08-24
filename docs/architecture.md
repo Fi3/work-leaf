@@ -116,36 +116,71 @@ the current checkout unless `WORK_LEAF_SMOKE_SKIP_BUILD=1`, passes those binarie
 `WORK_LEAF_START_BIN_DIR`, prints the three real-agent `:new` prompts, and removes the temporary
 checkout on normal exit, launch failure, or interruption.
 
-The project-root `bench-three-features` script runs the same three-feature scenario through the
-localhost HTTP API with the real configured Codex backend. It builds the current release binaries
-unless `WORK_LEAF_BENCH_SKIP_BUILD=1`, creates a temporary clean Git checkout from the current
-working directory, commits that snapshot as the benchmark base, runs the binaries against that
-snapshot, polls the daemon through `GET /state`, records pass/fail, duration, review and linearize
-completion, commit churn, code-quality checks, the Codex CLI path and version, resolved model,
-reasoning effort, and efficiency notes under `bench-results`, enables Codex app-server tracing in
-the daemon artifacts, runs Codex through
-the local app-server JSON-RPC interface, gives only the linearize agent a `danger-full-access` Codex
-sandbox through
-`WORK_LEAF_CODEX_LINEARIZE_SANDBOX`, and removes the temporary checkout before exit. The bench driver
-uses a total timeout plus separate no-progress limits for busy agent work and idle orchestrator
-states through `WORK_LEAF_BENCH_BUSY_STALL_SECS` and `WORK_LEAF_BENCH_IDLE_STALL_SECS`. A patch
-agent is treated as terminal for linearization when its session is ready for a completion decision or
-the transcript records the agent as done, so no-op agents and patch-producing agents can finish
-through different terminal states. Untracked benchmark output under `bench-results` is treated as
-saved output rather than source input when the snapshot is assembled.
+The project-root `bench-three-features` script measures the normal Work Leaf path. It checks out the
+fixed benchmark base, starts the current release binaries, posts the three frozen feature requests
+together through the localhost HTTP API, and polls `GET /state` until review and linearization finish.
+Codex runs through the local app-server JSON-RPC interface. Only the linearizer receives the
+`danger-full-access` sandbox selected by `WORK_LEAF_CODEX_LINEARIZE_SANDBOX`. The driver records the
+resolved model, reasoning effort, process versions, duration, commit shape, token use, and final gate
+result under `bench-results`, then removes the temporary checkout.
 
-The project-root `bench-dashboard` script serves saved benchmark reports from `bench-results`.
-It reads top-level report files and nested run directories such as parallel benchmark batches,
-keeps report links as relative paths under the configured results directory, and rejects report
-requests that escape that directory. When `bench-results/baseline-manifest.json` exists, the
-dashboard treats the listed report paths as the fixed regression baseline and computes token
-variance, model-fit intervals, and repeated-run regression thresholds from those rows. Benchmark
-reports that share the fitted baseline base commit but are not listed in the manifest are shown in a
-model-comparison table above the baseline; successful comparison rows are classified against the
-fitted token model, and failed comparison rows are treated as reliability failures. Other discovered
-reports remain in a separate old/invalid table for auditability. `bench-three-features` writes the
-same token-model classification, distance from the fitted mean, and rerun recommendation into each
-new saved report when the baseline manifest is available.
+`bench-three-features-sequential` invokes `bench-three-features-direct-common` for the comparison
+path. Three normal Codex implementation sessions handle the frozen requests one after another.
+Separate Codex review sessions inspect each result, and an implementation session resumes for a fix
+when review finds a problem. The direct path does not start Work Leaf or use its mediated commands.
+Its linearizer rewrites the reviewed provisional history into three final commits.
+
+Both paths require `bench-observer` for non-dry runs. The driver builds the default observer binary
+or uses the executable named by `WORK_LEAF_BENCH_OBSERVER_BIN`. The observer supplies the same Cargo
+proxy to both paths. Every implementation or review-fix cycle must execute exactly one focused Cargo
+validation. Focus requires a named package, one named Cargo target, or a named test filter; a focused
+format command must also use `--check`. Broad flags, test-runner display flags, and empty target or
+filter values do not supply focus. The target-kind flags `--lib` and `--doc` and the package-set
+flags `--workspace` and `--all` do not supply focus by themselves. `cargo nextest` must use `run`; a
+nonempty `--filter-expr` can provide named-test focus. Discovery skips Cargo global options before
+the subcommand and recognizes Cargo's built-in `b`, `c`, `d`, and `t` validation aliases. It does
+not assume aliases for Clippy or fmt because Cargo does not define them. Validation discovery also
+recognizes direct shell command segments,
+leading environment assignments, and `env` or `command` wrappers. Redirection targets, including
+file-descriptor duplication, and shell comments are ignored before commands and filters are counted.
+Dynamic `eval` commands and command substitution are ineligible because the audit cannot prove a
+single validation process. `env` split-string execution and heredocs are ineligible for the same
+reason. Discovery follows at most four nested shell payloads. A broad first validation is blocked
+before real Cargo starts. A second validation inside one process allowance is also blocked, and
+analysis rejects extra Work Leaf cycle validations.
+The direct driver checks each Codex JSONL turn with `bench-audit-agent-validation`; observer analysis
+checks Work Leaf validation cycles across their provider turns. Both linearizers leave Cargo
+validation to the driver. Each driver calls `bench-validation-common::bench_run_final_gate` once,
+which runs `cargo fmt`, `cargo clippy --all-targets --all-features -- -D warnings`, and
+`cargo test --all-targets --all-features` in that order, stopping and returning failure after the
+first command that fails. The normal comparison is therefore
+concurrent Work Leaf against direct sequential Codex with the same validation rules.
+
+`bench-candidate-common` owns candidate staging, digest checks, admission metadata, and atomic report
+publication for both drivers. `materialize-bench-candidate` can reconstruct at most one historical
+candidate from a passing report, a report-pinned Git bundle, and matching patch evidence. It verifies
+the linear history, patch identities, clean checkout, release runtime, and provenance before the
+shared helper admits the runtime. The runtime smoke starts the staged executable with a 20-second
+bound, sends `quit`, and requires a successful exit. Admission checks the recorded command, bound,
+exit status, executable set, provenance, and file digests. It does not depend on terminal wording.
+Failed regular-file publication moves its owned staging name into a unique private quarantine. The
+quarantine is terminal: cleanup does not unlink or remove paths after checking their identities, so
+a concurrent replacement is preserved. A quarantine can remain after a failed publication for
+manual inspection.
+
+The project-root `bench-dashboard` script serves saved benchmark reports from `bench-results`. It
+keeps report links inside the configured results directory. A baseline manifest can select accepted
+reports, but only normal Work Leaf rows recorded as GPT-5.5 with xhigh reasoning can train the
+baseline. Normalized records retain `bench_mode`, `feature_schedule`, `agent_backend`, and
+`agent_transport`. The product summary accepts Work Leaf rows only when those fields are
+`work-leaf`, `concurrent`, `codex`, and `app-server`. It accepts direct rows only when they are
+`sequential`, `sequential`, `codex`, and `direct-codex-cli`. Sequential Work Leaf, direct Claude,
+worktree, and missing-schedule rows remain visible but do not enter that summary or its fitted data.
+Reports from another model or reasoning profile are shown separately with raw measurements and
+cannot receive fitted deltas, percentiles, or regression classifications against the accepted
+profile. Other unselected reports remain in an old or invalid section for auditability.
+`bench-three-features` applies the same workflow and accepted-profile admission rule when it writes
+a token-model classification into a saved report.
 
 ## Agent Domain
 

@@ -1,0 +1,1069 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$repo_root/bench-candidate-common"
+
+usage() {
+  cat <<'EOF'
+Usage: materialize-bench-candidate [options]
+
+Rebuild at most one verified historical benchmark candidate from saved source evidence.
+
+Options:
+  --results-dir PATH  Benchmark results root (default: ./bench-results)
+  --source-repo PATH  Git object source for report-pinned base commits (default: repository root)
+  --artifact PATH     Verify and materialize only this artifact directory
+  --max-builds N      Maximum candidate compilation attempts (default: 1)
+  --inventory-only    Verify evidence without building and write candidate-inventory.json
+  -h, --help          Show this help
+EOF
+}
+
+results_dir="$repo_root/bench-results"
+source_repo="$repo_root"
+artifact_filter=""
+max_builds=1
+inventory_only=0
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --results-dir)
+      [[ "$#" -ge 2 ]] || { usage >&2; exit 2; }
+      results_dir="$2"
+      shift 2
+      ;;
+    --source-repo)
+      [[ "$#" -ge 2 ]] || { usage >&2; exit 2; }
+      source_repo="$2"
+      shift 2
+      ;;
+    --artifact)
+      [[ "$#" -ge 2 ]] || { usage >&2; exit 2; }
+      artifact_filter="$2"
+      shift 2
+      ;;
+    --max-builds)
+      [[ "$#" -ge 2 ]] || { usage >&2; exit 2; }
+      max_builds="$2"
+      shift 2
+      ;;
+    --inventory-only)
+      inventory_only=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+[[ "$max_builds" =~ ^[1-9][0-9]*$ ]] || {
+  echo "--max-builds must be a positive integer" >&2
+  exit 2
+}
+for required_command in awk cmp env find flock git jq mktemp python3 sha256sum sort stat timeout; do
+  command -v "$required_command" >/dev/null 2>&1 || {
+    echo "$required_command is required to materialize benchmark candidates" >&2
+    exit 1
+  }
+done
+[[ -d "$results_dir" && ! -L "$results_dir" ]] || {
+  echo "benchmark results directory is not a real directory: $results_dir" >&2
+  exit 1
+}
+results_dir="$(cd "$results_dir" && pwd -P)"
+source_repo="$(git -C "$source_repo" rev-parse --show-toplevel 2>/dev/null)" || {
+  echo "candidate base object source is not a Git repository: $source_repo" >&2
+  exit 1
+}
+source_repo="$(cd "$source_repo" && pwd -P)"
+
+if [[ -n "$artifact_filter" ]]; then
+  [[ -d "$artifact_filter" && ! -L "$artifact_filter" ]] || {
+    echo "artifact is not a real directory: $artifact_filter" >&2
+    exit 1
+  }
+  artifact_filter="$(cd "$artifact_filter" && pwd -P)"
+  case "$artifact_filter/" in
+    "$results_dir/"*) ;;
+    *)
+      echo "artifact is outside the benchmark results directory: $artifact_filter" >&2
+      exit 1
+      ;;
+  esac
+  if [[ "$inventory_only" == "0" ]] && bench_candidate_is_runnable "$artifact_filter"; then
+    echo "candidate already materialized and valid: $artifact_filter"
+    exit 0
+  fi
+fi
+
+exec 9<"$results_dir"
+if ! flock -n 9; then
+  echo "another benchmark candidate materialization is already running" >&2
+  exit 1
+fi
+work_root="$(mktemp -d "${TMPDIR:-/tmp}/work-leaf-bench-materialize.XXXXXX")"
+[[ -d "$work_root" && ! -L "$work_root" ]] || {
+  echo "materialization work directory is not a real directory: $work_root" >&2
+  exit 1
+}
+
+active_candidate_staging=""
+active_candidate_staging_fd_path=""
+active_candidate_staging_identity=""
+active_candidate_staging_owner_fd=""
+active_candidate_staging_owner_fd_path=""
+active_candidate_staging_owner_identity=""
+active_candidate_staging_name=""
+
+staging_directory_is_current() {
+  local path="$1"
+  local fd_path="$2"
+  local identity="$3"
+  [[ -n "$path" && -n "$fd_path" && -n "$identity" ]] || return 1
+  [[ -d "$path" && ! -L "$path" && -d "$fd_path" ]] || return 1
+  [[ "$(stat -c '%d:%i' "$path" 2>/dev/null)" == "$identity" ]] || return 1
+  [[ "$(stat -Lc '%d:%i' "$fd_path" 2>/dev/null)" == "$identity" ]]
+}
+
+open_candidate_staging() {
+  local path="$1"
+  local owner_dir entry_name owner_fd owner_fd_path owner_identity entry_identity
+  [[ -d "$path" && ! -L "$path" ]] || return 1
+  entry_name="${path##*/}"
+  [[ "$entry_name" =~ ^[.]candidate[.]materialize[.][A-Za-z0-9]+$ ]] || return 1
+  owner_dir="${path%/*}"
+  [[ -d "$owner_dir" && ! -L "$owner_dir" ]] || return 1
+  exec {owner_fd}<"$owner_dir" || return 1
+  owner_fd_path="$(bench_directory_fd_path "$owner_fd")" || {
+    eval "exec ${owner_fd}<&-"
+    return 1
+  }
+  owner_identity="$(stat -Lc '%d:%i' "$owner_fd_path" 2>/dev/null)" || {
+    eval "exec ${owner_fd}<&-"
+    return 1
+  }
+  bench_directory_matches_identity "$owner_dir" "$owner_fd_path" "$owner_identity" || {
+    eval "exec ${owner_fd}<&-"
+    return 1
+  }
+  entry_identity="$(stat -c '%d:%i' "$owner_fd_path/$entry_name" 2>/dev/null)" || {
+    eval "exec ${owner_fd}<&-"
+    return 1
+  }
+  if ! bench_pin_owned_directory "$owner_fd" "$owner_identity" "$entry_name"; then
+    bench_remove_owned_directory \
+      "$owner_fd_path" "$owner_identity" "$entry_name" "$entry_identity" 2>/dev/null || true
+    eval "exec ${owner_fd}<&-"
+    return 1
+  fi
+  [[ "$bench_pinned_directory_identity" == "$entry_identity" ]] || {
+    bench_close_pinned_directory
+    bench_remove_owned_directory \
+      "$owner_fd_path" "$owner_identity" "$entry_name" "$entry_identity" 2>/dev/null || true
+    eval "exec ${owner_fd}<&-"
+    return 1
+  }
+  active_candidate_staging="$path"
+  active_candidate_staging_fd_path="$bench_pinned_directory_fd_path"
+  active_candidate_staging_identity="$bench_pinned_directory_identity"
+  active_candidate_staging_owner_fd="$owner_fd"
+  active_candidate_staging_owner_fd_path="$owner_fd_path"
+  active_candidate_staging_owner_identity="$owner_identity"
+  active_candidate_staging_name="$entry_name"
+}
+
+close_candidate_staging() {
+  local disposition="${1:-keep}"
+  if [[ "$disposition" == "cleanup" \
+    && -n "$active_candidate_staging_owner_fd_path" \
+    && -n "$active_candidate_staging_owner_identity" \
+    && -n "$active_candidate_staging_name" \
+    && -n "$active_candidate_staging_identity" ]]; then
+    bench_remove_owned_directory \
+      "$active_candidate_staging_owner_fd_path" \
+      "$active_candidate_staging_owner_identity" \
+      "$active_candidate_staging_name" \
+      "$active_candidate_staging_identity" 2>/dev/null || true
+    bench_remove_owned_directory \
+      "$active_candidate_staging_owner_fd_path" \
+      "$active_candidate_staging_owner_identity" \
+      candidate \
+      "$active_candidate_staging_identity" 1 2>/dev/null || true
+  fi
+  bench_close_pinned_directory
+  if [[ "$active_candidate_staging_owner_fd" =~ ^[0-9]+$ ]]; then
+    eval "exec ${active_candidate_staging_owner_fd}<&-"
+  fi
+  active_candidate_staging=""
+  active_candidate_staging_fd_path=""
+  active_candidate_staging_identity=""
+  active_candidate_staging_owner_fd=""
+  active_candidate_staging_owner_fd_path=""
+  active_candidate_staging_owner_identity=""
+  active_candidate_staging_name=""
+}
+
+migrate_legacy_materialized_admission() (
+  local artifact_dir="$1"
+  local candidate_dir="$artifact_dir/candidate"
+  local raw_report="$artifact_dir/report.json"
+  local admission_path="$candidate_dir/$bench_materialized_admission_name"
+  local schema fd fd_path identity admission_staging=""
+
+  [[ -d "$candidate_dir" && ! -L "$candidate_dir" ]] || return 1
+  [[ -f "$raw_report" && ! -L "$raw_report" ]] || return 1
+  [[ ! -e "$admission_path" && ! -L "$admission_path" ]] || return 1
+  schema="$(jq -er '.schema | select(type == "string")' "$candidate_dir/PROVENANCE")" \
+    || return 1
+  [[ "$schema" == "$bench_materialized_candidate_schema" ]] || return 1
+  bench_candidate_paths_are_runnable "$artifact_dir" "$candidate_dir" "$raw_report" \
+    || return 1
+
+  exec {fd}<"$candidate_dir" || return 1
+  if [[ -d "/proc/self/fd/$fd" ]]; then
+    fd_path="/proc/self/fd/$fd"
+  elif [[ -d "/dev/fd/$fd" ]]; then
+    fd_path="/dev/fd/$fd"
+  else
+    return 1
+  fi
+  identity="$(stat -c '%d:%i' "$candidate_dir" 2>/dev/null)" || return 1
+  [[ "$(stat -Lc '%d:%i' "$fd_path" 2>/dev/null)" == "$identity" ]] || return 1
+  admission_staging="$(mktemp "$fd_path/.admission.migrate.XXXXXX")" || return 1
+  trap '[[ -z "$admission_staging" ]] || rm -f "$admission_staging"' EXIT
+  [[ -f "$admission_staging" && ! -L "$admission_staging" ]] || return 1
+  cp "$raw_report" "$admission_staging" || return 1
+  cmp -s "$raw_report" "$admission_staging" || return 1
+  bench_candidate_paths_are_runnable "$artifact_dir" "$candidate_dir" "$admission_staging" \
+    || return 1
+  staging_directory_is_current "$candidate_dir" "$fd_path" "$identity" || return 1
+  [[ ! -e "$fd_path/$bench_materialized_admission_name" \
+    && ! -L "$fd_path/$bench_materialized_admission_name" ]] || return 1
+  mv -T "$admission_staging" "$fd_path/$bench_materialized_admission_name" || return 1
+  admission_staging=""
+  staging_directory_is_current "$candidate_dir" "$fd_path" "$identity" || return 1
+  bench_candidate_is_runnable "$artifact_dir"
+)
+
+cleanup() {
+  close_candidate_staging cleanup
+  rm -rf "$work_root"
+}
+trap cleanup EXIT INT TERM
+
+report_map="$work_root/report-map"
+artifact_report_map="$work_root/artifact-report-map"
+artifact_root_map="$work_root/artifact-roots"
+report_dir_map="$work_root/report-dirs"
+mkdir -p "$report_map" "$artifact_report_map" "$artifact_root_map" "$report_dir_map"
+
+record_path_by_digest() {
+  local map_dir="$1"
+  local path="$2"
+  local key
+  [[ "$path" != *$'\n'* ]] || return 0
+  key="$(printf '%s' "$path" | sha256sum | awk '{print $1}')"
+  printf '%s\n' "$path" > "$map_dir/$key"
+}
+
+record_artifact_root() {
+  local artifact_dir="$1"
+  local report_dir
+  case "$artifact_dir/" in
+    "$results_dir/"*) ;;
+    *) return 0 ;;
+  esac
+  bench_path_has_private_publication_component "$artifact_dir" && return 0
+  [[ -d "$artifact_dir" && ! -L "$artifact_dir" ]] || return 0
+  record_path_by_digest "$artifact_root_map" "$artifact_dir"
+  report_dir="$(dirname "$artifact_dir")"
+  while [[ "$report_dir" == "$results_dir" || "$report_dir" == "$results_dir/"* ]]; do
+    record_path_by_digest "$report_dir_map" "$report_dir"
+    [[ "$report_dir" != "$results_dir" ]] || break
+    report_dir="$(dirname "$report_dir")"
+  done
+}
+
+while IFS= read -r -d '' evidence_path; do
+  record_artifact_root "${evidence_path%/final-status.txt}"
+done < <(find "$results_dir" -type f -name 'final-status.txt' -print0)
+while IFS= read -r -d '' evidence_path; do
+  artifact_dir="${evidence_path%/bin/work-leaf}"
+  if [[ "${artifact_dir##*/}" == "candidate" && -e "$artifact_dir/PROVENANCE" ]]; then
+    continue
+  fi
+  record_artifact_root "$artifact_dir"
+done < <(find "$results_dir" -type f -path '*/bin/work-leaf' -print0)
+while IFS= read -r -d '' evidence_path; do
+  record_artifact_root "${evidence_path%/runner-bin/work-leaf}"
+done < <(find "$results_dir" -type f -path '*/runner-bin/work-leaf' -print0)
+while IFS= read -r -d '' evidence_path; do
+  record_artifact_root "${evidence_path%/patches/pass/commits.bundle}"
+done < <(find "$results_dir" -type f -path '*/patches/pass/commits.bundle' -print0)
+while IFS= read -r -d '' evidence_path; do
+  record_artifact_root "${evidence_path%/candidate/PROVENANCE}"
+done < <(find "$results_dir" -type f -path '*/candidate/PROVENANCE' -print0)
+if [[ -n "$artifact_filter" ]]; then
+  record_artifact_root "$artifact_filter"
+fi
+
+index_report_file() {
+  local report_file="$1"
+  local parsed="$work_root/parsed-report.$$"
+  local record patch_artifacts patch_parent artifact_dir key artifact_key
+  [[ -f "$report_file" && ! -L "$report_file" ]] || return 0
+  if ! jq -cS '
+    select(
+      type == "object"
+      and (.patch_artifacts | type == "string")
+      and (has("candidate") | not)
+    )
+  ' "$report_file" > "$parsed" 2>/dev/null; then
+    rm -f "$parsed"
+    return 0
+  fi
+  while IFS= read -r record; do
+    [[ -n "$record" ]] || continue
+    patch_artifacts="$(jq -r '.patch_artifacts' <<< "$record")" || continue
+    [[ "$patch_artifacts" != *$'\n'* ]] || continue
+    key="$(printf '%s' "$patch_artifacts" | sha256sum | awk '{print $1}')"
+    printf '%s\n' "$record" >> "$report_map/$key.jsonl"
+    patch_parent="${patch_artifacts%/*}"
+    if [[ "${patch_parent##*/}" == "patches" ]]; then
+      artifact_dir="${patch_parent%/patches}"
+      case "$artifact_dir/" in
+        "$results_dir/"*)
+          artifact_key="$(printf '%s' "$artifact_dir" | sha256sum | awk '{print $1}')"
+          printf '%s\n' "$record" >> "$artifact_report_map/$artifact_key.jsonl"
+          ;;
+      esac
+    fi
+  done < "$parsed"
+  rm -f "$parsed"
+}
+
+shopt -s nullglob
+for path_file in "$report_dir_map"/*; do
+  report_dir="$(<"$path_file")"
+  for report_file in "$report_dir"/*.jsonl; do
+    index_report_file "$report_file"
+  done
+done
+for path_file in "$artifact_root_map"/*; do
+  artifact_dir="$(<"$path_file")"
+  if [[ -f "$artifact_dir/report.json" ]]; then
+    index_report_file "$artifact_dir/report.json"
+  fi
+done
+shopt -u nullglob
+
+reject_evidence() {
+  local artifact_dir="$1"
+  local reason="$2"
+  last_rejection_code="${3:-invalid_source_evidence}"
+  last_rejection_reason="$reason"
+  if [[ "${inventory_mode:-0}" == "0" ]]; then
+    echo "rejecting historical source evidence in $artifact_dir: $reason" >&2
+  fi
+  return 20
+}
+
+reject_build() {
+  local artifact_dir="$1"
+  local reason="$2"
+  last_rejection_code="${3:-candidate_build_failed}"
+  last_rejection_reason="$reason"
+  close_candidate_staging cleanup
+  echo "rejecting historical candidate build in $artifact_dir: $reason" >&2
+  return 30
+}
+
+build_attempts=0
+verify_only=0
+inventory_mode=0
+verified_evidence_json=""
+last_rejection_code=""
+last_rejection_reason=""
+materialize_artifact() {
+  local artifact_dir="$1"
+  local patch_dir="$artifact_dir/patches/pass"
+  local bundle="$patch_dir/commits.bundle"
+  local format_patch_dir="$patch_dir/format-patch"
+  local final_log="$artifact_dir/final-log.txt"
+  local final_status="$artifact_dir/final-status.txt"
+  local patch_status="$patch_dir/git-status.txt"
+  local patch_log="$patch_dir/git-log.txt"
+  local report_key report_records_file source_record report_document
+  local base_commit expected_commits expected_changed_files expected_added expected_deleted expected_total
+  local attempt_root checkout_dir target_dir build_tmp cargo_bin
+  local bundle_commit bundle_ref bundle_extra fetched_base final_commit
+  local base_tree final_tree actual_commits actual_changed_files actual_added actual_deleted actual_total
+  local saved_final saved_subject patch_saved_final patch_saved_subject
+  local patch_file patch_from patch_commit patch_rest saved_patch_id commit_patch_id
+  local patch_relative patch_digest patch_manifest_records patch_manifest
+  local source_report source_report_digest bundle_digest final_log_digest patch_manifest_digest
+  local target_manifest target_manifest_digest entrypoint_digest executables provenance
+  local candidate_staging admission_path
+  local smoke_stdout_digest smoke_stderr_digest stdin_digest
+  local -a matching_records=() bundle_heads=() history=() patch_files=() commit_parents=() target_names=()
+
+  if [[ "$verify_only" == "0" ]] && bench_candidate_is_runnable "$artifact_dir"; then
+    echo "candidate already materialized and valid: $artifact_dir"
+    return 10
+  fi
+  [[ -d "$artifact_dir" && ! -L "$artifact_dir" ]] \
+    || reject_evidence "$artifact_dir" "artifact directory is missing or symlinked" || return $?
+  if [[ "$verify_only" == "0" ]] && migrate_legacy_materialized_admission "$artifact_dir"; then
+    echo "migrated historical candidate admission without rebuilding: $artifact_dir"
+    return 0
+  fi
+  if [[ "$verify_only" == "0" \
+    && ( -e "$artifact_dir/candidate" || -L "$artifact_dir/candidate" ) ]]; then
+    reject_build \
+      "$artifact_dir" \
+      "pre-existing candidate path is not a valid derived runtime; refusing to replace it" \
+      "invalid_existing_candidate"
+    return $?
+  fi
+  [[ -d "$patch_dir" && ! -L "$artifact_dir/patches" && ! -L "$patch_dir" ]] \
+    || reject_evidence "$artifact_dir" "missing real patches/pass directory" || return $?
+  [[ -f "$bundle" && ! -L "$bundle" ]] \
+    || reject_evidence "$artifact_dir" "missing regular pass commit bundle" || return $?
+  [[ -d "$format_patch_dir" && ! -L "$format_patch_dir" ]] \
+    || reject_evidence "$artifact_dir" "missing real pass format-patch directory" || return $?
+  for evidence_file in "$final_log" "$final_status" "$patch_status" "$patch_log"; do
+    [[ -f "$evidence_file" && ! -L "$evidence_file" ]] \
+      || reject_evidence "$artifact_dir" "missing regular $(basename "$evidence_file")" || return $?
+  done
+  [[ ! -s "$final_status" && ! -s "$patch_status" ]] \
+    || reject_evidence "$artifact_dir" "saved candidate checkout was not clean" || return $?
+
+  report_key="$(printf '%s' "$patch_dir" | sha256sum | awk '{print $1}')"
+  report_records_file="$report_map/$report_key.jsonl"
+  if [[ -f "$report_records_file" ]]; then
+    while IFS= read -r source_record; do
+      if jq -e --arg patch_artifacts "$patch_dir" \
+        '.patch_artifacts == $patch_artifacts' <<< "$source_record" >/dev/null; then
+        matching_records+=("$source_record")
+      fi
+    done < "$report_records_file"
+  fi
+  [[ "${#matching_records[@]}" -eq 1 ]] \
+    || reject_evidence "$artifact_dir" "expected exactly one structured report record for patches/pass" || return $?
+  source_record="${matching_records[0]}"
+  jq -e --arg patch_artifacts "$patch_dir" '
+    type == "object"
+    and .result == "pass"
+    and (.run_id | type == "string" and length > 0)
+    and (.base_commit | type == "string" and test("^([0-9a-f]{40}|[0-9a-f]{64})$"))
+    and .worktree_source_commit == .base_commit
+    and .worktree_source_dirty == "no"
+    and .review_completed == "yes"
+    and .linearize_completed == "yes"
+    and ((.commits_after_base | type) == "number")
+    and .commits_after_base > 0
+    and .commits_after_base == (.commits_after_base | floor)
+    and ((.changed_files | type) == "number")
+    and .changed_files > 0
+    and .changed_files == (.changed_files | floor)
+    and (.code_quality | type == "string" and startswith("passed"))
+    and .patch_artifacts == $patch_artifacts
+    and (.report | type == "string" and length > 0)
+  ' <<< "$source_record" >/dev/null \
+    || reject_evidence "$artifact_dir" \
+      "structured report does not describe a clean passing candidate" \
+      "report_inconsistent_with_pass_contract" || return $?
+
+  report_document="$(jq -r '.report' <<< "$source_record")"
+  case "$report_document" in
+    "$results_dir"/*) ;;
+    *) reject_evidence "$artifact_dir" "report document is outside the results directory"; return $? ;;
+  esac
+  [[ -f "$report_document" && ! -L "$report_document" ]] \
+    || reject_evidence "$artifact_dir" "report document is missing or symlinked" || return $?
+
+  base_commit="$(jq -r '.base_commit' <<< "$source_record")"
+  expected_commits="$(jq -r '.commits_after_base' <<< "$source_record")"
+  expected_changed_files="$(jq -r '.changed_files' <<< "$source_record")"
+  expected_added="$(jq -r '.changed_lines_added // empty' <<< "$source_record")"
+  expected_deleted="$(jq -r '.changed_lines_deleted // empty' <<< "$source_record")"
+  expected_total="$(jq -r '.changed_lines_total // empty' <<< "$source_record")"
+  git -C "$source_repo" cat-file -e "$base_commit^{commit}" 2>/dev/null \
+    || reject_evidence "$artifact_dir" "report-pinned base commit is unavailable" || return $?
+
+  mapfile -t bundle_heads < <(git bundle list-heads "$bundle" 2>/dev/null) || true
+  [[ "${#bundle_heads[@]}" -eq 1 ]] \
+    || reject_evidence "$artifact_dir" "bundle must advertise exactly one candidate head" || return $?
+  read -r bundle_commit bundle_ref bundle_extra <<< "${bundle_heads[0]}"
+  [[ "$bundle_commit" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ \
+    && "$bundle_ref" == "HEAD" && -z "$bundle_extra" ]] \
+    || reject_evidence "$artifact_dir" "bundle head is not an exact Git HEAD commit" || return $?
+
+  read -r saved_final saved_subject < "$final_log" \
+    || reject_evidence "$artifact_dir" "final log has no candidate commit" || return $?
+  read -r patch_saved_final patch_saved_subject < "$patch_log" \
+    || reject_evidence "$artifact_dir" "patch log has no candidate commit" || return $?
+  [[ "$saved_final" =~ ^[0-9a-f]{7,64}$ && "$bundle_commit" == "$saved_final"* \
+    && "$patch_saved_final" =~ ^[0-9a-f]{7,64}$ && "$bundle_commit" == "$patch_saved_final"* ]] \
+    || reject_evidence "$artifact_dir" "saved final commit does not match the bundle head" || return $?
+
+  attempt_root="$(mktemp -d "$work_root/attempt-${bundle_commit:0:12}.XXXXXX")"
+  checkout_dir="$attempt_root/checkout"
+  target_dir="$attempt_root/target"
+  build_tmp="$attempt_root/tmp"
+  mkdir -p "$checkout_dir" "$target_dir" "$build_tmp"
+  git -C "$checkout_dir" init --quiet \
+    || reject_evidence "$artifact_dir" "could not initialize isolated source repository" || return $?
+  git -C "$checkout_dir" fetch --quiet --no-tags "$source_repo" "$base_commit" \
+    || reject_evidence "$artifact_dir" "could not fetch report-pinned base object" || return $?
+  fetched_base="$(git -C "$checkout_dir" rev-parse --verify FETCH_HEAD 2>/dev/null)" \
+    || reject_evidence "$artifact_dir" "fetched base object is not a commit" || return $?
+  [[ "$fetched_base" == "$base_commit" ]] \
+    || reject_evidence "$artifact_dir" "fetched base object differs from report metadata" || return $?
+  git -C "$checkout_dir" update-ref refs/materialization/base "$base_commit" \
+    || reject_evidence "$artifact_dir" "could not retain report-pinned base ref" || return $?
+  git -C "$checkout_dir" bundle verify "$bundle" > "$attempt_root/bundle-verify.log" 2>&1 \
+    || reject_evidence "$artifact_dir" "commit bundle failed Git verification" || return $?
+  git -C "$checkout_dir" fetch --quiet --no-tags "$bundle" HEAD:refs/materialization/candidate \
+    || reject_evidence "$artifact_dir" "verified bundle candidate could not be fetched" || return $?
+  final_commit="$(git -C "$checkout_dir" rev-parse --verify 'refs/materialization/candidate^{commit}' 2>/dev/null)" \
+    || reject_evidence "$artifact_dir" "bundle candidate head is not a commit" || return $?
+  [[ "$final_commit" == "$bundle_commit" ]] \
+    || reject_evidence "$artifact_dir" "fetched candidate differs from bundle head" || return $?
+  git -C "$checkout_dir" merge-base --is-ancestor "$base_commit" "$final_commit" \
+    || reject_evidence "$artifact_dir" "candidate is not descended from report-pinned base" || return $?
+  actual_commits="$(git -C "$checkout_dir" rev-list --count "$final_commit" "^$base_commit")" \
+    || reject_evidence "$artifact_dir" "candidate commit count could not be computed" || return $?
+  [[ "$actual_commits" == "$expected_commits" && "$actual_commits" -gt 0 ]] \
+    || reject_evidence "$artifact_dir" "candidate commit count differs from report metadata" || return $?
+  base_tree="$(git -C "$checkout_dir" rev-parse --verify "$base_commit^{tree}")" \
+    || reject_evidence "$artifact_dir" "base tree is unavailable" || return $?
+  final_tree="$(git -C "$checkout_dir" rev-parse --verify "$final_commit^{tree}")" \
+    || reject_evidence "$artifact_dir" "candidate tree is unavailable" || return $?
+  [[ "$base_tree" != "$final_tree" ]] \
+    || reject_evidence "$artifact_dir" "candidate tree is identical to the benchmark base" || return $?
+  actual_changed_files="$(git -C "$checkout_dir" diff --name-only "$base_commit..$final_commit" | wc -l | tr -d ' ')"
+  [[ "$actual_changed_files" == "$expected_changed_files" && "$actual_changed_files" -gt 0 ]] \
+    || reject_evidence "$artifact_dir" "changed-file count differs from report metadata" || return $?
+  read -r actual_added actual_deleted < <(
+    git -C "$checkout_dir" diff --numstat "$base_commit..$final_commit" \
+      | awk '{ if ($1 ~ /^[0-9]+$/) added += $1; if ($2 ~ /^[0-9]+$/) deleted += $2 } END { printf "%d %d\n", added, deleted }'
+  )
+  actual_total=$((actual_added + actual_deleted))
+  [[ -z "$expected_added" || "$actual_added" == "$expected_added" ]] \
+    || reject_evidence "$artifact_dir" "added-line count differs from report metadata" || return $?
+  [[ -z "$expected_deleted" || "$actual_deleted" == "$expected_deleted" ]] \
+    || reject_evidence "$artifact_dir" "deleted-line count differs from report metadata" || return $?
+  [[ -z "$expected_total" || "$actual_total" == "$expected_total" ]] \
+    || reject_evidence "$artifact_dir" "changed-line count differs from report metadata" || return $?
+
+  mapfile -t history < <(git -C "$checkout_dir" rev-list --reverse "$final_commit" "^$base_commit")
+  [[ "${#history[@]}" -eq "$actual_commits" ]] \
+    || reject_evidence "$artifact_dir" "candidate history is incomplete" || return $?
+  local expected_parent="$base_commit"
+  for final_commit in "${history[@]}"; do
+    read -r -a commit_parents <<< "$(git -C "$checkout_dir" rev-list --parents -n 1 "$final_commit")"
+    [[ "${#commit_parents[@]}" -eq 2 && "${commit_parents[1]}" == "$expected_parent" ]] \
+      || reject_evidence "$artifact_dir" "candidate history is not one linear chain from the base" || return $?
+    expected_parent="$final_commit"
+  done
+  final_commit="$bundle_commit"
+
+  while IFS= read -r -d '' patch_file; do
+    patch_files+=("$patch_file")
+  done < <(find "$format_patch_dir" -maxdepth 1 -type f -name '*.patch' -print0 | sort -z)
+  [[ "${#patch_files[@]}" -eq "$actual_commits" ]] \
+    || reject_evidence "$artifact_dir" "format-patch count differs from candidate history" || return $?
+  patch_manifest_records="$attempt_root/source-patches.jsonl"
+  : > "$patch_manifest_records"
+  for index in "${!patch_files[@]}"; do
+    patch_file="${patch_files[$index]}"
+    [[ -f "$patch_file" && ! -L "$patch_file" ]] \
+      || reject_evidence "$artifact_dir" "format patch is missing or symlinked" || return $?
+    read -r patch_from patch_commit patch_rest < "$patch_file" \
+      || reject_evidence "$artifact_dir" "format patch has no commit header" || return $?
+    [[ "$patch_from" == "From" && "$patch_commit" == "${history[$index]}" ]] \
+      || reject_evidence "$artifact_dir" "format patch commit order differs from bundle history" || return $?
+    saved_patch_id="$(git patch-id --stable < "$patch_file" | awk '{print $1}')" \
+      || reject_evidence "$artifact_dir" "saved format patch cannot be hashed" || return $?
+    commit_patch_id="$(git -C "$checkout_dir" show --pretty=format: --binary "${history[$index]}" \
+      | git patch-id --stable | awk '{print $1}')" \
+      || reject_evidence "$artifact_dir" "bundle commit patch cannot be hashed" || return $?
+    [[ -n "$saved_patch_id" && "$saved_patch_id" == "$commit_patch_id" ]] \
+      || reject_evidence "$artifact_dir" "format patch content differs from bundle commit" || return $?
+    patch_relative="${patch_file#"$artifact_dir/"}"
+    [[ "$patch_relative" == patches/pass/format-patch/*.patch && "$patch_relative" != *$'\n'* ]] \
+      || reject_evidence "$artifact_dir" "format patch path is outside the pass evidence directory" || return $?
+    patch_digest="$(bench_sha256_file "$patch_file")" \
+      || reject_evidence "$artifact_dir" "format patch digest failed" || return $?
+    jq -cn --arg path "$patch_relative" --arg sha256 "$patch_digest" \
+      '{path:$path,sha256:$sha256}' >> "$patch_manifest_records"
+  done
+  patch_manifest="$attempt_root/SOURCE_PATCHES.json"
+  jq -s 'sort_by(.path)' "$patch_manifest_records" > "$patch_manifest" \
+    || reject_evidence "$artifact_dir" "format patch manifest generation failed" || return $?
+
+  git -C "$checkout_dir" checkout --quiet --detach "$bundle_commit" \
+    || reject_evidence "$artifact_dir" "candidate checkout failed" || return $?
+  [[ "$(git -C "$checkout_dir" rev-parse --verify 'HEAD^{commit}')" == "$bundle_commit" ]] \
+    || reject_evidence "$artifact_dir" "candidate checkout resolved the wrong commit" || return $?
+  [[ -z "$(git -C "$checkout_dir" status --porcelain=v1 --untracked-files=all)" ]] \
+    || reject_evidence "$artifact_dir" "isolated candidate checkout is not clean" || return $?
+
+  verified_evidence_json="$(jq -cn \
+    --arg base_commit "$base_commit" \
+    --arg final_commit "$bundle_commit" \
+    --arg bundle "${bundle#"$results_dir/"}" \
+    --arg bundle_sha256 "$(bench_sha256_file "$bundle")" \
+    --argjson commits_after_base "$actual_commits" \
+    --argjson changed_files "$actual_changed_files" \
+    '{
+      base_commit:$base_commit,
+      final_commit:$final_commit,
+      commits_after_base:$commits_after_base,
+      changed_files:$changed_files,
+      bundle:$bundle,
+      bundle_sha256:$bundle_sha256
+    }')" || return 1
+  if [[ "$verify_only" == "1" ]]; then
+    rm -rf "$attempt_root"
+    return 40
+  fi
+
+  build_attempts=$((build_attempts + 1))
+  cargo_bin="${WORK_LEAF_BENCH_MATERIALIZE_CARGO:-$(command -v cargo 2>/dev/null || true)}"
+  candidate_staging="$(mktemp -d "$artifact_dir/.candidate.materialize.XXXXXX")" \
+    || reject_build "$artifact_dir" "candidate staging directory could not be created" \
+    || return $?
+  if ! open_candidate_staging "$candidate_staging"; then
+    reject_build \
+      "$artifact_dir" \
+      "secure candidate staging directory was replaced or could not be pinned" \
+      "unsafe_candidate_staging"
+    return $?
+  fi
+  mkdir "$attempt_root/runtime"
+  if ! bench_stage_candidate_runtime \
+    "$checkout_dir" \
+    "$cargo_bin" \
+    "$bundle_commit" \
+    "$target_dir" \
+    "$build_tmp" \
+    "$active_candidate_staging_fd_path" \
+    "$attempt_root/runtime" \
+    "$attempt_root/candidate-build.log"; then
+    reject_build \
+      "$artifact_dir" \
+      "${bench_runtime_error_reason:-candidate runtime staging failed}" \
+      "${bench_runtime_error_code:-candidate_build_failed}"
+    return $?
+  fi
+  if ! staging_directory_is_current \
+    "$candidate_staging" \
+    "$active_candidate_staging_fd_path" \
+    "$active_candidate_staging_identity"; then
+    reject_build \
+      "$artifact_dir" \
+      "candidate staging pathname changed during runtime construction" \
+      "unsafe_candidate_staging"
+    return $?
+  fi
+  target_manifest="$active_candidate_staging_fd_path/SOURCE_TARGETS.json"
+  mapfile -t target_names < <(jq -r '.[]' "$target_manifest")
+  executables="$bench_runtime_executables"
+  entrypoint_digest="$bench_runtime_entrypoint_digest"
+  target_manifest_digest="$bench_runtime_target_manifest_digest"
+  smoke_stdout_digest="$bench_runtime_smoke_stdout_digest"
+  smoke_stderr_digest="$bench_runtime_smoke_stderr_digest"
+  stdin_digest="$bench_runtime_stdin_digest"
+
+  source_report="$active_candidate_staging_fd_path/SOURCE_REPORT.json"
+  printf '%s\n' "$source_record" > "$source_report"
+  cp "$patch_manifest" "$active_candidate_staging_fd_path/SOURCE_PATCHES.json"
+  source_report_digest="$(bench_sha256_file "$source_report")"
+  patch_manifest_digest="$(bench_sha256_file "$active_candidate_staging_fd_path/SOURCE_PATCHES.json")"
+  bundle_digest="$(bench_sha256_file "$bundle")"
+  final_log_digest="$(bench_sha256_file "$final_log")"
+  jq -n \
+    --arg schema "$bench_materialized_candidate_schema" \
+    --arg source_commit "$bundle_commit" \
+    --arg entrypoint "candidate/bin/work-leaf" \
+    --argjson executables "$executables" \
+    --arg smoke_schema "$bench_candidate_smoke_schema" \
+    --arg smoke_stdout_sha256 "$smoke_stdout_digest" \
+    --arg smoke_stderr_sha256 "$smoke_stderr_digest" \
+    --arg stdin_sha256 "$stdin_digest" \
+    --arg materialization_schema "$bench_materialization_schema" \
+    --arg base_commit "$base_commit" \
+    --arg bundle "patches/pass/commits.bundle" \
+    --arg bundle_sha256 "$bundle_digest" \
+    --arg final_log "final-log.txt" \
+    --arg final_log_sha256 "$final_log_digest" \
+    --arg format_patches "candidate/SOURCE_PATCHES.json" \
+    --arg format_patches_sha256 "$patch_manifest_digest" \
+    --arg source_report "candidate/SOURCE_REPORT.json" \
+    --arg source_report_sha256 "$source_report_digest" \
+    --arg targets "candidate/SOURCE_TARGETS.json" \
+    --arg targets_sha256 "$target_manifest_digest" \
+    --argjson commits_after_base "$actual_commits" \
+    --argjson changed_files "$actual_changed_files" \
+    '{
+      schema:$schema,
+      source_commit:$source_commit,
+      entrypoint:$entrypoint,
+      executables:$executables,
+      smoke:{
+        schema:$smoke_schema,
+        gate:"bounded-startup-quit",
+        command:[$entrypoint],
+        stdin_sha256:$stdin_sha256,
+        timeout_seconds:20,
+        exit_code:0,
+        stdout:{path:"candidate/SMOKE.stdout",sha256:$smoke_stdout_sha256},
+        stderr:{path:"candidate/SMOKE.stderr",sha256:$smoke_stderr_sha256}
+      },
+      materialization:{
+        schema:$materialization_schema,
+        base_commit:$base_commit,
+        commits_after_base:$commits_after_base,
+        changed_files:$changed_files,
+        bundle:$bundle,
+        bundle_sha256:$bundle_sha256,
+        final_log:$final_log,
+        final_log_sha256:$final_log_sha256,
+        format_patches:$format_patches,
+        format_patches_sha256:$format_patches_sha256,
+        source_report:$source_report,
+        source_report_sha256:$source_report_sha256,
+        targets:$targets,
+        targets_sha256:$targets_sha256
+      }
+    }' > "$active_candidate_staging_fd_path/PROVENANCE"
+  provenance="$(jq -ce '.' "$active_candidate_staging_fd_path/PROVENANCE")"
+  admission_path="$active_candidate_staging_fd_path/$bench_materialized_admission_name"
+  jq -n --argjson source "$source_record" --argjson candidate "$provenance" \
+    '$source + {candidate:$candidate,materialization:$candidate.materialization}' \
+    > "$admission_path"
+
+  if bench_candidate_is_runnable "$artifact_dir"; then
+    echo "candidate already materialized and valid: $artifact_dir"
+    return 0
+  fi
+  if ! staging_directory_is_current \
+    "$candidate_staging" \
+    "$active_candidate_staging_fd_path" \
+    "$active_candidate_staging_identity"; then
+    reject_build \
+      "$artifact_dir" \
+      "candidate publication staging identity changed before validation" \
+      "unsafe_candidate_staging"
+    return $?
+  fi
+  if ! bench_candidate_paths_are_runnable \
+    "$artifact_dir" \
+    "$active_candidate_staging_fd_path/." \
+    "$admission_path"; then
+    reject_build "$artifact_dir" "staged candidate failed replay validation" "invalid_staged_candidate"
+    return $?
+  fi
+  if [[ -e "$artifact_dir/candidate" || -L "$artifact_dir/candidate" ]]; then
+    reject_build \
+      "$artifact_dir" \
+      "candidate path appeared before publication; refusing to replace it" \
+      "candidate_publication_conflict"
+    return $?
+  fi
+  if ! bench_publish_owned_directory_noreplace \
+    "$active_candidate_staging_owner_fd_path" \
+    "$active_candidate_staging_owner_identity" \
+    "$active_candidate_staging_name" \
+    "$active_candidate_staging_identity" \
+    candidate; then
+    reject_build "$artifact_dir" "atomic candidate publication failed"
+    return $?
+  fi
+  active_candidate_staging="$artifact_dir/candidate"
+  if ! staging_directory_is_current \
+    "$active_candidate_staging" \
+    "$active_candidate_staging_fd_path" \
+    "$active_candidate_staging_identity"; then
+    reject_build \
+      "$artifact_dir" \
+      "published candidate directory does not match pinned staging identity" \
+      "unsafe_candidate_staging"
+    return $?
+  fi
+  if ! bench_candidate_is_runnable "$artifact_dir"; then
+    reject_build "$artifact_dir" "published candidate failed replay validation"
+    return $?
+  fi
+  close_candidate_staging
+  echo "materialized historical candidate: source_commit=$bundle_commit entrypoint_sha256=$entrypoint_digest executables=${#target_names[@]} artifact=$artifact_dir"
+  return 0
+}
+
+inventory_runner_snapshot() {
+  local artifact_dir="$1"
+  local snapshot_name snapshot_dir executable executable_relative digest records
+
+  records="$work_root/inventory-runner.$$.jsonl"
+  : > "$records"
+  for snapshot_name in bin runner-bin; do
+    snapshot_dir="$artifact_dir/$snapshot_name"
+    [[ -d "$snapshot_dir" && ! -L "$snapshot_dir" ]] || continue
+    while IFS= read -r -d '' executable; do
+      [[ -f "$executable" && ! -L "$executable" && -x "$executable" ]] || continue
+      digest="$(bench_sha256_file "$executable")" || continue
+      executable_relative="${executable#"$artifact_dir/"}"
+      jq -cn --arg path "$executable_relative" --arg sha256 "$digest" \
+        '{path:$path,sha256:$sha256}' >> "$records"
+    done < <(
+      find "$snapshot_dir" -mindepth 1 -maxdepth 1 -type f -perm /111 -print0 | sort -z
+    )
+  done
+  if [[ ! -s "$records" ]]; then
+    rm -f "$records"
+    jq -cn '{category:"none",present:false,replay_eligible:false,executables:[]}'
+    return 0
+  fi
+  jq -cs '{
+    category:"runner_snapshot",
+    present:true,
+    replay_eligible:false,
+    executables:sort_by(.path)
+  }' "$records"
+  rm -f "$records"
+}
+
+inventory_candidate_status() {
+  local artifact_dir="$1"
+  local provenance
+  if bench_candidate_is_runnable "$artifact_dir"; then
+    provenance="$(jq -ce '.' "$artifact_dir/candidate/PROVENANCE")" || return 1
+    jq -cn --argjson provenance "$provenance" '{
+      category:"materialized_runnable_candidate",
+      replay_eligible:true,
+      source_commit:$provenance.source_commit,
+      entrypoint:($provenance.entrypoint // $provenance.binary),
+      executables:($provenance.executables // [{path:$provenance.binary,sha256:$provenance.sha256}])
+    }'
+  elif [[ -e "$artifact_dir/candidate" || -L "$artifact_dir/candidate" ]]; then
+    jq -cn '{
+      category:"rejected_candidate",
+      replay_eligible:false,
+      reason_code:"invalid_candidate_runtime_or_provenance",
+      reason:"candidate publication does not satisfy replay admission"
+    }'
+  else
+    jq -cn '{
+      category:"not_materialized",
+      replay_eligible:false,
+      reason_code:"candidate_not_materialized",
+      reason:"no candidate runtime set has been published"
+    }'
+  fi
+}
+
+inventory_source_evidence() {
+  local artifact_dir="$1"
+  local artifact_key records_file record_count source_record result commits patch_artifacts status
+
+  artifact_key="$(printf '%s' "$artifact_dir" | sha256sum | awk '{print $1}')"
+  records_file="$artifact_report_map/$artifact_key.jsonl"
+  if [[ ! -f "$records_file" ]]; then
+    jq -cn '{
+      category:"rejected_candidate",
+      reason_code:"missing_machine_report",
+      reason:"no structured benchmark report identifies this artifact"
+    }'
+    return 0
+  fi
+  record_count="$(wc -l < "$records_file" | tr -d ' ')"
+  if [[ "$record_count" -ne 1 ]]; then
+    jq -cn --argjson count "$record_count" '{
+      category:"rejected_candidate",
+      reason_code:"ambiguous_machine_report",
+      reason:"multiple structured benchmark reports identify this artifact",
+      matching_reports:$count
+    }'
+    return 0
+  fi
+  source_record="$(<"$records_file")"
+  commits="$(jq -r '.commits_after_base // empty' <<< "$source_record")"
+  if [[ ! "$commits" =~ ^[0-9]+$ || "$commits" -eq 0 ]]; then
+    jq -cn '{
+      category:"rejected_candidate",
+      reason_code:"no_candidate_commits",
+      reason:"the benchmark report records no commit output from the base"
+    }'
+    return 0
+  fi
+  result="$(jq -r '.result // empty' <<< "$source_record")"
+  if [[ "$result" != "pass" ]]; then
+    jq -cn --arg result "$result" '{
+      category:"rejected_candidate",
+      reason_code:"report_result_not_pass",
+      reason:"the benchmark machine report is not passing",
+      report_result:$result
+    }'
+    return 0
+  fi
+  patch_artifacts="$(jq -r '.patch_artifacts // empty' <<< "$source_record")"
+  if [[ "$patch_artifacts" != "$artifact_dir/patches/pass" ]]; then
+    jq -cn '{
+      category:"rejected_candidate",
+      reason_code:"missing_pass_source_evidence",
+      reason:"the passing report does not identify pass evidence for this artifact"
+    }'
+    return 0
+  fi
+  if [[ ! -f "$artifact_dir/patches/pass/commits.bundle" \
+    || -L "$artifact_dir/patches/pass/commits.bundle" ]]; then
+    jq -cn '{
+      category:"rejected_candidate",
+      reason_code:"missing_pass_bundle",
+      reason:"no regular pass commit bundle is available"
+    }'
+    return 0
+  fi
+
+  verify_only=1
+  verified_evidence_json=""
+  last_rejection_code=""
+  last_rejection_reason=""
+  set +e
+  materialize_artifact "$artifact_dir"
+  status=$?
+  set -e
+  verify_only=0
+  if [[ "$status" -eq 40 ]]; then
+    jq -cn --argjson evidence "$verified_evidence_json" \
+      '$evidence + {
+        category:"reconstructible_candidate",
+        reason_code:"verified_pass_source_evidence",
+        reason:"saved report, bundle, final commit, and patch evidence agree"
+      }'
+    return 0
+  fi
+  jq -cn \
+    --arg code "${last_rejection_code:-invalid_source_evidence}" \
+    --arg reason "${last_rejection_reason:-source evidence verification failed}" '{
+      category:"rejected_candidate",
+      reason_code:$code,
+      reason:$reason
+    }'
+}
+
+write_inventory() {
+  local records="$work_root/candidate-inventory.jsonl"
+  local staging="$work_root/candidate-inventory.json"
+  local artifact_dir artifact_relative runner candidate source
+  : > "$records"
+  inventory_mode=1
+  shopt -s nullglob
+  for path_file in "$artifact_root_map"/*; do
+    artifact_dir="$(<"$path_file")"
+    artifact_relative="${artifact_dir#"$results_dir/"}"
+    runner="$(inventory_runner_snapshot "$artifact_dir")" || return 1
+    candidate="$(inventory_candidate_status "$artifact_dir")" || return 1
+    source="$(inventory_source_evidence "$artifact_dir")" || return 1
+    jq -cn \
+      --arg artifact "$artifact_relative" \
+      --argjson runner "$runner" \
+      --argjson candidate "$candidate" \
+      --argjson source "$source" '{
+        artifact:$artifact,
+        runner_snapshot:$runner,
+        source_evidence:$source,
+        candidate:$candidate
+      }' >> "$records"
+  done
+  shopt -u nullglob
+  inventory_mode=0
+
+  if ! jq -s --arg schema "work-leaf-benchmark-candidate-inventory-v1" \
+    --arg results_dir "$results_dir" '
+    sort_by(.artifact) as $artifacts
+    | {
+        schema:$schema,
+        results_dir:$results_dir,
+        artifacts:$artifacts,
+        summary:{
+          artifacts:($artifacts | length),
+          runner_snapshots:([$artifacts[] | select(.runner_snapshot.category == "runner_snapshot")] | length),
+          reconstructible_candidates:([$artifacts[] | select(.source_evidence.category == "reconstructible_candidate")] | length),
+          rejected_candidates:([$artifacts[] | select(.source_evidence.category == "rejected_candidate")] | length),
+          materialized_runnable_candidates:([$artifacts[] | select(.candidate.category == "materialized_runnable_candidate")] | length)
+        }
+      }
+  ' "$records" > "$staging"; then
+    return 1
+  fi
+  bench_publish_regular_file \
+    "$results_dir" "$staging" "candidate-inventory.json" || return 1
+  echo "wrote benchmark candidate inventory: $results_dir/candidate-inventory.json"
+}
+
+if [[ "$inventory_only" == "1" ]]; then
+  write_inventory
+  exit 0
+fi
+
+artifacts=()
+if [[ -n "$artifact_filter" ]]; then
+  artifacts+=("$artifact_filter")
+else
+  while IFS= read -r -d '' bundle; do
+    artifacts+=("${bundle%/patches/pass/commits.bundle}")
+  done < <(
+    find "$results_dir" -type f -path '*/patches/pass/commits.bundle' -print0 \
+      | sort -z
+  )
+fi
+
+[[ "${#artifacts[@]}" -gt 0 ]] || {
+  echo "no historical pass commit bundles found in $results_dir" >&2
+  exit 1
+}
+
+for artifact_dir in "${artifacts[@]}"; do
+  set +e
+  materialize_artifact "$artifact_dir"
+  status=$?
+  set -e
+  case "$status" in
+    0)
+      exit 0
+      ;;
+    10)
+      if [[ -n "$artifact_filter" ]]; then
+        exit 0
+      fi
+      ;;
+    20)
+      ;;
+    30)
+      if (( build_attempts >= max_builds )); then
+        break
+      fi
+      ;;
+    *)
+      echo "unexpected materialization status $status for $artifact_dir" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if (( build_attempts >= max_builds )); then
+  echo "historical candidate build limit reached without a materialized candidate" >&2
+else
+  echo "no historical artifact had complete, unambiguous, passing candidate source evidence" >&2
+fi
+exit 1

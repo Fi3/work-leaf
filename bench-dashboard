@@ -11,6 +11,7 @@ import os
 import re
 import sys
 import tempfile
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,8 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parent
 DEFAULT_RESULTS_DIR = ROOT / "bench-results"
 BASELINE_MANIFEST_NAME = "baseline-manifest.json"
+ACCEPTED_BASELINE_MODEL = "gpt-5.5"
+ACCEPTED_BASELINE_REASONING = "xhigh"
 TOKEN_RE = re.compile(r"(cached_input|reasoning_output|input|output)=(\d+)")
 META_RE = re.compile(r"^- ([A-Za-z0-9_]+):\s*(.*)$")
 REGRESSION_RUN_COUNTS = (1, 3, 6, 9, 12, 24)
@@ -87,6 +90,135 @@ def int_or_none(value: Any) -> int | None:
         return None
 
 
+def nonnegative_json_int(value: Any) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        return None
+    return value
+
+
+def observer_total_workflow_usage(
+    results_dir: Path,
+    report_path: Path,
+    fields: dict[str, Any],
+) -> dict[str, Any] | None:
+    observation = value(fields, "observation")
+    if not observation:
+        return None
+
+    observation_path = Path(str(observation))
+    if not observation_path.is_absolute():
+        observation_path = report_path.parent / observation_path
+    analysis_path = observation_path / "analysis.json"
+    try:
+        analysis_path = analysis_path.resolve()
+        analysis_path.relative_to(results_dir.resolve())
+        if not analysis_path.is_file() or analysis_path.stat().st_size > 16 * 1024 * 1024:
+            return None
+        analysis = json.loads(analysis_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+
+    if not isinstance(analysis, dict):
+        return None
+    if analysis.get("capture_complete") is not True or analysis.get("errors") != []:
+        return None
+    report_run_id = str(value(fields, "run_id") or report_path.name.split("-three-feature", 1)[0])
+    observed_run_id = str(analysis.get("run_id") or "")
+    if observed_run_id and observed_run_id != report_run_id:
+        return None
+
+    usage_scopes = analysis.get("usage_scopes")
+    scope = usage_scopes.get("total_workflow") if isinstance(usage_scopes, dict) else None
+    if not isinstance(scope, dict):
+        return None
+    names = (
+        "thread_count",
+        "input_tokens",
+        "cached_input_tokens",
+        "uncached_input_tokens",
+        "output_tokens",
+        "reasoning_output_tokens",
+        "raw_input_plus_output",
+        "uncached_input_plus_output",
+    )
+    parsed = {name: nonnegative_json_int(scope.get(name)) for name in names}
+    if any(parsed[name] is None for name in names):
+        return None
+    if parsed["cached_input_tokens"] > parsed["input_tokens"]:
+        return None
+    if parsed["uncached_input_tokens"] != parsed["input_tokens"] - parsed["cached_input_tokens"]:
+        return None
+    if parsed["raw_input_plus_output"] != parsed["input_tokens"] + parsed["output_tokens"]:
+        return None
+    if (
+        parsed["uncached_input_plus_output"]
+        != parsed["uncached_input_tokens"] + parsed["output_tokens"]
+    ):
+        return None
+    return parsed
+
+
+def apply_observer_total_workflow_usage(
+    record: dict[str, Any],
+    observed_usage: dict[str, Any] | None,
+) -> None:
+    if observed_usage is None:
+        return
+    record.update(
+        {
+            "input_tokens": observed_usage["input_tokens"],
+            "cached_input_tokens": observed_usage["cached_input_tokens"],
+            "uncached_input_tokens": observed_usage["uncached_input_tokens"],
+            "output_tokens": observed_usage["output_tokens"],
+            "reasoning_output_tokens": observed_usage["reasoning_output_tokens"],
+            "usage_source": "observer total_workflow",
+            "workflow_threads": observed_usage["thread_count"],
+        }
+    )
+
+
+def parse_timestamp(value_: Any) -> float | None:
+    if value_ in (None, ""):
+        return None
+    text = str(value_).strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.timestamp()
+
+
+def parse_run_id_timestamp(value_: Any) -> float | None:
+    if value_ in (None, ""):
+        return None
+    match = re.search(r"(\d{8}T\d{6}[+-]\d{4})", str(value_))
+    if not match:
+        return None
+    try:
+        return datetime.strptime(match.group(1), "%Y%m%dT%H%M%S%z").timestamp()
+    except ValueError:
+        return None
+
+
+def record_sort_key(record: dict[str, Any]) -> tuple[float, str, str]:
+    timestamp = parse_timestamp(record.get("started_at"))
+    if timestamp is None:
+        timestamp = parse_run_id_timestamp(record.get("run_id"))
+    if timestamp is None:
+        timestamp = float("-inf")
+    return (
+        timestamp,
+        str(record.get("run_id") or ""),
+        str(record.get("report_file") or ""),
+    )
+
+
 def value(fields: dict[str, Any], *keys: str) -> Any:
     for key in keys:
         if fields.get(key) not in (None, ""):
@@ -95,11 +227,19 @@ def value(fields: dict[str, Any], *keys: str) -> Any:
 
 
 def classify_bench(report_name: str, fields: dict[str, Any]) -> str:
+    mode = str(value(fields, "bench_mode") or "").strip().lower()
+    transport = str(value(fields, "agent_transport") or "").strip().lower()
+    if mode == "work-leaf" or transport == "app-server":
+        return "Work Leaf"
+    if mode == "sequential":
+        return "Sequential"
+    if mode == "worktree":
+        return "Worktree"
+
     hints = " ".join(
         str(part)
         for part in (
             report_name,
-            value(fields, "bench_mode"),
             value(fields, "bench_kind"),
             value(fields, "report"),
             value(fields, "patch_artifacts"),
@@ -168,48 +308,154 @@ def load_baseline_manifest(results_dir: Path) -> dict[str, Any]:
 def split_benchmark_records(
     records: list[dict[str, Any]],
     manifest: dict[str, Any],
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+) -> tuple[
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+]:
     baseline: list[dict[str, Any]] = []
     comparisons: list[dict[str, Any]] = []
+    profile_comparisons: list[dict[str, Any]] = []
     old_invalid: list[dict[str, Any]] = []
     configured = bool(manifest.get("configured"))
     report_set = set(manifest.get("report_set") or [])
+    baseline_report_set = {
+        record["report_file"]
+        for record in records
+        if (not configured or record["report_file"] in report_set)
+        and accepted_baseline_profile(record)
+        and is_normal_work_leaf_product_record(record)
+    }
     baseline_base_commits = {
         base_commit
         for record in records
-        if record["report_file"] in report_set
+        if record["report_file"] in baseline_report_set
         for base_commit in [str(record.get("base_commit") or "")]
         if base_commit and base_commit != "unknown"
     }
 
     for record in records:
         copy = dict(record)
+        profile_is_accepted = accepted_baseline_profile(copy)
+        is_normal_work_leaf = is_normal_work_leaf_product_record(copy)
         if configured:
             if copy["report_file"] in report_set:
-                copy["baseline_status"] = "baseline"
-                copy["baseline_reason"] = "listed in baseline manifest"
-                baseline.append(copy)
+                if profile_is_accepted and is_normal_work_leaf:
+                    copy["baseline_status"] = "baseline"
+                    copy["baseline_reason"] = (
+                        "listed in baseline manifest as a normal Work Leaf run with the accepted profile"
+                    )
+                    baseline.append(copy)
+                elif is_normal_work_leaf:
+                    copy["baseline_status"] = "profile-comparison"
+                    copy["baseline_reason"] = (
+                        "listed normal Work Leaf run uses a different or unrecorded "
+                        "model/reasoning profile; raw comparison only"
+                    )
+                    profile_comparisons.append(copy)
+                else:
+                    copy["baseline_status"] = "old-invalid"
+                    copy["baseline_reason"] = (
+                        "listed report is not an explicit normal concurrent Work Leaf Codex run"
+                    )
+                    old_invalid.append(copy)
             elif is_model_comparison_record(copy, baseline_base_commits):
-                copy["baseline_status"] = "comparison"
-                copy["baseline_reason"] = "same benchmark base as fitted baseline; not used for fitting"
-                comparisons.append(copy)
+                if profile_is_accepted:
+                    copy["baseline_status"] = "comparison"
+                    copy["baseline_reason"] = "same benchmark base and accepted model/reasoning profile"
+                    comparisons.append(copy)
+                else:
+                    copy["baseline_status"] = "profile-comparison"
+                    copy["baseline_reason"] = (
+                        "same benchmark base but different or unrecorded model/reasoning profile; "
+                        "raw comparison only"
+                    )
+                    profile_comparisons.append(copy)
             else:
                 copy["baseline_status"] = "old-invalid"
                 copy["baseline_reason"] = "not listed in baseline manifest"
                 old_invalid.append(copy)
         else:
-            copy["baseline_status"] = "baseline"
-            copy["baseline_reason"] = "no baseline manifest configured"
-            baseline.append(copy)
+            if profile_is_accepted and is_normal_work_leaf:
+                copy["baseline_status"] = "baseline"
+                copy["baseline_reason"] = (
+                    "normal Work Leaf run with the accepted profile; no baseline manifest configured"
+                )
+                baseline.append(copy)
+            elif is_model_comparison_record(copy, baseline_base_commits):
+                if profile_is_accepted:
+                    copy["baseline_status"] = "comparison"
+                    copy["baseline_reason"] = (
+                        "same benchmark base and accepted model/reasoning profile"
+                    )
+                    comparisons.append(copy)
+                else:
+                    copy["baseline_status"] = "profile-comparison"
+                    copy["baseline_reason"] = (
+                        "same benchmark base but different or unrecorded model/reasoning profile; "
+                        "raw comparison only"
+                    )
+                    profile_comparisons.append(copy)
+            else:
+                copy["baseline_status"] = "old-invalid"
+                copy["baseline_reason"] = "not an explicit normal row on the fitted benchmark base"
+                old_invalid.append(copy)
 
-    return baseline, comparisons, old_invalid
+    return baseline, comparisons, profile_comparisons, old_invalid
+
+
+def agent_profile(record: dict[str, Any]) -> tuple[str, str] | None:
+    missing_values = {"", "unknown", "not recorded"}
+    model = str(record.get("agent_model") or "").strip().lower()
+    reasoning = str(record.get("agent_reasoning_effort") or "").strip().lower()
+    if model in missing_values or reasoning in missing_values:
+        return None
+    return model, reasoning
+
+
+def accepted_baseline_profile(record: dict[str, Any]) -> bool:
+    return agent_profile(record) == (
+        ACCEPTED_BASELINE_MODEL,
+        ACCEPTED_BASELINE_REASONING,
+    )
+
+
+def normalized_record_value(record: dict[str, Any], key: str) -> str:
+    return str(record.get(key) or "").strip().lower()
+
+
+def is_normal_work_leaf_product_record(record: dict[str, Any]) -> bool:
+    return (
+        record.get("kind") == "Work Leaf"
+        and normalized_record_value(record, "bench_mode") == "work-leaf"
+        and normalized_record_value(record, "feature_schedule") == "concurrent"
+        and normalized_record_value(record, "agent_backend") == "codex"
+        and normalized_record_value(record, "agent_transport") == "app-server"
+    )
+
+
+def is_normal_direct_sequential_product_record(record: dict[str, Any]) -> bool:
+    return (
+        record.get("kind") == "Sequential"
+        and normalized_record_value(record, "bench_mode") == "sequential"
+        and normalized_record_value(record, "feature_schedule") == "sequential"
+        and normalized_record_value(record, "agent_backend") == "codex"
+        and normalized_record_value(record, "agent_transport") == "direct-codex-cli"
+    )
+
+
+def is_normal_product_record(record: dict[str, Any]) -> bool:
+    return is_normal_work_leaf_product_record(
+        record
+    ) or is_normal_direct_sequential_product_record(record)
 
 
 def is_model_comparison_record(record: dict[str, Any], baseline_base_commits: set[str]) -> bool:
     base_commit = str(record.get("base_commit") or "")
     if not base_commit or base_commit == "unknown" or base_commit not in baseline_base_commits:
         return False
-    return str(record.get("kind") or "") in {"Work Leaf", "Parallel"}
+    return is_normal_product_record(record)
 
 
 def rounded(value_: float) -> int:
@@ -292,6 +538,8 @@ def baseline_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
         int(record["input_tokens"]) + int(record["output_tokens"])
         for record in records
         if str(record.get("result")).lower() == "pass"
+        and accepted_baseline_profile(record)
+        and is_normal_work_leaf_product_record(record)
         and int(record.get("input_tokens") or 0) > 0
         and int(record.get("output_tokens") or 0) > 0
     )
@@ -370,7 +618,15 @@ def annotate_token_model(records: list[dict[str, Any]], summary: dict[str, Any],
             record["token_model_status"] = "unavailable"
             record["token_model_label"] = "excluded"
             record["token_model_rerun"] = "not applicable"
-            record["token_model_reason"] = "not a same-base model comparison"
+            record["token_model_reason"] = str(
+                record.get("baseline_reason") or "not eligible for the fitted product comparison"
+            )
+            continue
+        if source == "profile-comparison":
+            record["token_model_status"] = "unavailable"
+            record["token_model_label"] = "comparison only"
+            record["token_model_rerun"] = "not applicable"
+            record["token_model_reason"] = "model/reasoning profile differs from the fitted baseline"
             continue
         if str(record.get("result") or "").lower() != "pass":
             record["token_model_status"] = "reliability"
@@ -433,6 +689,133 @@ def comparison_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def input_output_total(record: dict[str, Any]) -> int:
+    return int(record.get("input_tokens") or 0) + int(record.get("output_tokens") or 0)
+
+
+def has_averageable_usage(record: dict[str, Any]) -> bool:
+    return input_output_total(record) > 0 and int(record.get("duration_seconds") or 0) > 0
+
+
+def mean_int(values: list[int]) -> int:
+    return rounded(sum(values) / len(values))
+
+
+def format_token_count(value_: int) -> str:
+    if abs(value_) >= 1_000_000:
+        return f"{value_ / 1_000_000:.2f}M"
+    return f"{value_:,}"
+
+
+def format_duration_count(seconds: int) -> str:
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    remaining = seconds % 60
+    if hours:
+        return f"{hours}h {minutes:02d}m {remaining:02d}s"
+    return f"{minutes}m {remaining:02d}s"
+
+
+def relative_percent_phrase(delta: int, baseline: int) -> str:
+    if baseline == 0 or delta == 0:
+        return "the same"
+    direction = "higher" if delta > 0 else "lower"
+    return f"{abs(delta) / baseline * 100:.1f}% {direction}"
+
+
+def relative_duration_phrase(sequential_seconds: int, non_sequential_seconds: int) -> str:
+    if sequential_seconds == non_sequential_seconds:
+        return "the same"
+    if sequential_seconds > non_sequential_seconds:
+        return f"{sequential_seconds / non_sequential_seconds:.1f}x slower"
+    return f"{non_sequential_seconds / sequential_seconds:.1f}x faster"
+
+
+def sequential_comparison_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
+    sequential_candidates = sorted(
+        (
+            record
+            for record in records
+            if is_normal_direct_sequential_product_record(record)
+            and str(record.get("result") or "").lower() == "pass"
+            and str(record.get("base_commit") or "") not in {"", "unknown"}
+            and accepted_baseline_profile(record)
+            and has_averageable_usage(record)
+        ),
+        key=record_sort_key,
+        reverse=True,
+    )
+    if not sequential_candidates:
+        return {
+            "available": False,
+            "note": (
+                "Product comparison needs a passing GPT-5.5/xhigh direct sequential "
+                "Codex report with explicit normal run metadata."
+            ),
+        }
+
+    reference = sequential_candidates[0]
+    base_commit = str(reference.get("base_commit") or "")
+    transport = str(reference.get("agent_transport") or "")
+    profile = agent_profile(reference)
+
+    def matching_record(record: dict[str, Any]) -> bool:
+        return (
+            str(record.get("base_commit") or "") == base_commit
+            and agent_profile(record) == profile
+            and str(record.get("result") or "").lower() == "pass"
+            and has_averageable_usage(record)
+        )
+
+    sequential_rows = [record for record in sequential_candidates if matching_record(record)]
+    work_leaf_rows = sorted(
+        (
+            record
+            for record in records
+            if is_normal_work_leaf_product_record(record)
+            and matching_record(record)
+        ),
+        key=record_sort_key,
+        reverse=True,
+    )
+    sample_size = min(3, len(sequential_rows), len(work_leaf_rows))
+    if sample_size == 0:
+        return {
+            "available": False,
+            "note": (
+                "Product comparison needs a matching passing concurrent Work Leaf "
+                "Codex app-server report with explicit normal run metadata."
+            ),
+        }
+
+    sequential_sample = sequential_rows[:sample_size]
+    work_leaf_sample = work_leaf_rows[:sample_size]
+    sequential_tokens = mean_int([input_output_total(record) for record in sequential_sample])
+    work_leaf_tokens = mean_int([input_output_total(record) for record in work_leaf_sample])
+    sequential_seconds = mean_int([int(record.get("duration_seconds") or 0) for record in sequential_sample])
+    work_leaf_seconds = mean_int([int(record.get("duration_seconds") or 0) for record in work_leaf_sample])
+    sample_label = "Latest passing" if sample_size == 1 else f"Newest {sample_size} passing"
+    note = (
+        f"{sample_label} same-base GPT-5.5/xhigh rows: direct sequential Codex averages "
+        f"{format_token_count(sequential_tokens)} input+output tokens and {format_duration_count(sequential_seconds)}; "
+        f"concurrent Work Leaf Codex app-server averages {format_token_count(work_leaf_tokens)} input+output tokens and "
+        f"{format_duration_count(work_leaf_seconds)}. Sequential token use is "
+        f"{relative_percent_phrase(sequential_tokens - work_leaf_tokens, work_leaf_tokens)}; "
+        f"wall time is {relative_duration_phrase(sequential_seconds, work_leaf_seconds)}."
+    )
+    return {
+        "available": True,
+        "note": note,
+        "sample_size": sample_size,
+        "base_commit": base_commit,
+        "transport": transport,
+        "sequential_input_output_mean": sequential_tokens,
+        "non_sequential_input_output_mean": work_leaf_tokens,
+        "sequential_duration_mean": sequential_seconds,
+        "non_sequential_duration_mean": work_leaf_seconds,
+    }
+
+
 def baseline_manifest_payload(manifest: dict[str, Any]) -> dict[str, Any]:
     return {
         "configured": bool(manifest.get("configured")),
@@ -465,6 +848,21 @@ def infer_report_name(
     else:
         report_name = f"{run_id}-three-feature-bench.md"
     return safe_relative_report_name(results_dir, index_path.parent / report_name)
+
+
+def codex_cli_identity(fields: dict[str, Any]) -> tuple[str, str]:
+    path = str(value(fields, "codex_cli_path") or "").strip()
+    version = str(value(fields, "codex_cli_version") or "").strip()
+    legacy = str(value(fields, "agent_cli_version") or "")
+    if not path:
+        match = re.search(r"(?:^|[;\s])agent_bin=([^;\s]+)", legacy)
+        if match:
+            path = match.group(1)
+    if not version:
+        match = re.search(r"\bcodex-cli\s+([^;\s]+)", legacy)
+        if match:
+            version = f"codex-cli {match.group(1)}"
+    return path or "unknown", version or "unknown"
 
 
 def report_files(results_dir: Path) -> list[Path]:
@@ -503,12 +901,15 @@ def normalize_record(
     code_quality = str(value(fields, "code_quality") or "")
     final_checks = "pass" if code_quality.startswith("passed ") else ("not run" if code_quality == "not run" else code_quality or "unknown")
     kind = classify_bench(report_name, fields)
+    codex_cli_path, codex_cli_version = codex_cli_identity(fields)
 
     return {
         "id": report_name,
         "report_file": report_name,
         "kind": kind,
         "run_id": run_id,
+        "started_at": str(value(fields, "started_at") or ""),
+        "finished_at": str(value(fields, "finished_at") or ""),
         "result": result,
         "duration_seconds": int_or_none(value(fields, "duration_seconds")),
         "input_tokens": tokens["input"],
@@ -516,6 +917,8 @@ def normalize_record(
         "uncached_input_tokens": tokens["uncached_input"],
         "output_tokens": tokens["output"],
         "reasoning_output_tokens": tokens["reasoning_output"],
+        "usage_source": "report token_usage",
+        "workflow_threads": None,
         "base_commit": str(value(fields, "base_commit") or "unknown"),
         "review_completed": str(value(fields, "review_completed") or "unknown"),
         "linearize_completed": str(value(fields, "linearize_completed") or "unknown"),
@@ -528,9 +931,12 @@ def normalize_record(
         "agent_model": str(value(fields, "agent_model") or "not recorded"),
         "agent_reasoning_effort": str(value(fields, "agent_reasoning_effort") or "not recorded"),
         "agent_reasoning_effort_source": str(value(fields, "agent_reasoning_effort_source") or "not recorded"),
-        "agent_transport": str(value(fields, "agent_transport") or "unknown"),
-        "codex_cli_path": str(value(fields, "codex_cli_path") or "unknown"),
-        "codex_cli_version": str(value(fields, "codex_cli_version") or "unknown"),
+        "bench_mode": str(value(fields, "bench_mode") or "unknown"),
+        "feature_schedule": str(value(fields, "feature_schedule") or "unknown"),
+        "agent_backend": str(value(fields, "agent_backend", "backend") or "unknown"),
+        "agent_transport": str(value(fields, "agent_transport", "transport") or "unknown"),
+        "codex_cli_path": codex_cli_path,
+        "codex_cli_version": codex_cli_version,
         "no_read_permission": str(value(fields, "no_read_permission") or "unknown"),
         "benched_binary_commit": str(value(fields, "benched_binary_commit", "bench_driver_commit") or "unknown"),
         "benched_binary_dirty": str(value(fields, "benched_binary_dirty", "bench_driver_dirty") or "unknown"),
@@ -554,7 +960,10 @@ def collect_bench_records(results_dir: Path) -> list[dict[str, Any]]:
                 md_text = md_path.read_text(encoding="utf-8", errors="replace") if md_path.exists() else None
                 md_fields = parse_markdown_metadata(md_text) if md_text else {}
                 combined = {**md_fields, **fields}
-                merged[report_name] = normalize_record(combined, report_name, md_text)
+                record = normalize_record(combined, report_name, md_text)
+                observed_usage = observer_total_workflow_usage(results_dir, md_path, combined)
+                apply_observer_total_workflow_usage(record, observed_usage)
+                merged[report_name] = record
 
     for md_path in report_files(results_dir):
         report_name = safe_relative_report_name(results_dir, md_path)
@@ -562,11 +971,14 @@ def collect_bench_records(results_dir: Path) -> list[dict[str, Any]]:
             continue
         md_text = md_path.read_text(encoding="utf-8", errors="replace")
         fields = parse_markdown_metadata(md_text)
-        merged[report_name] = normalize_record(fields, report_name, md_text)
+        record = normalize_record(fields, report_name, md_text)
+        observed_usage = observer_total_workflow_usage(results_dir, md_path, fields)
+        apply_observer_total_workflow_usage(record, observed_usage)
+        merged[report_name] = record
 
     return sorted(
         merged.values(),
-        key=lambda record: str(record.get("run_id") or record.get("report_file") or ""),
+        key=record_sort_key,
         reverse=True,
     )
 
@@ -849,15 +1261,18 @@ def render_index_html() -> str:
         <h1>Work Leaf Three-Feature Benchmarks</h1>
         <p>This dashboard reads <code>bench-results</code> and compares the same three requested features across benchmark modes.</p>
         <p><strong>Work Leaf</strong> rows run the orchestrator release under test against the fixed base commit. There are many Work Leaf rows because every new candidate release can be benchmarked and saved.</p>
-        <p><strong>Sequential</strong> runs direct Codex on request 1, review/fix/commit, then request 2, then request 3, followed by a final linearization pass. <strong>Worktree</strong> runs the direct Codex patch/review loops in parallel worktrees and then asks a direct Codex linearizer to integrate the reviewed branches.</p>
+        <p>The product summary compares only two normal paths. Work Leaf must record <code>bench_mode: work-leaf</code>, <code>feature_schedule: concurrent</code>, <code>agent_backend: codex</code>, and <code>agent_transport: app-server</code>. Direct sequential Codex must record <code>bench_mode: sequential</code>, <code>feature_schedule: sequential</code>, <code>agent_backend: codex</code>, and <code>agent_transport: direct-codex-cli</code>.</p>
+        <p>The normal direct path runs one feature at a time without starting Work Leaf. Sequential Work Leaf runs, reports with missing schedule metadata, direct Claude runs, and worktree runs do not enter the product summary. They remain visible in the report tables.</p>
+        <p id="sequential-comparison-note">Loading sequential comparison...</p>
+        <p>Latest saved comparison report: <code id="latest-reference">loading...</code>.</p>
         <p>To run a saved Work Leaf benchmark output, use <code>./start --bench</code> and select one of the saved artifact directories.</p>
-        <p>The benchmark commands are intentionally not perfectly written so we can see whether agents can still produce the intended feature. The only tightly written command is the <code>/&lt;command&gt;</code> feature request. As of the latest recorded bench, <span id="latest-reference">loading...</span>, no recorded output has implemented that request fully correctly: not sequential, not worktree, and not any saved Work Leaf run.</p>
+        <p>The benchmark commands are intentionally not perfectly written so we can see whether agents can still produce the intended feature. The <code>/&lt;command&gt;</code> request is tightly written so the saved runs can be compared on behavior as well as completion.</p>
       </div>
       <section class="panel" aria-labelledby="variance-title">
         <h2 id="variance-title">Variance</h2>
         <p id="baseline-notes">Loading baseline manifest...</p>
         <div id="baseline-metrics" class="metric-grid"></div>
-        <p>The regression baseline uses only passing reports listed in <code>baseline-manifest.json</code>. New benchmark runs are model comparisons above the baseline table; they do not refit the baseline unless the manifest is changed deliberately.</p>
+        <p>The accepted regression baseline profile is <code>GPT-5.5</code> with <code>xhigh</code> reasoning. The regression baseline uses only passing reports listed in <code>baseline-manifest.json</code> with that profile. Other model/reasoning profiles remain available as raw comparisons and do not receive baseline fit judgments.</p>
         <p id="comparison-summary">Loading comparison results...</p>
         <p>The detection estimates are rough two-sample thresholds from the observed baseline standard deviation. Smaller regressions need more repeated runs; a single run is only useful for large changes.</p>
         <ul id="thresholds" class="threshold-list"></ul>
@@ -868,10 +1283,45 @@ def render_index_html() -> str:
       </div>
       <div id="mode-filters" class="mode-filters"></div>
       <div class="section-title">
-        <h2>Model Comparisons</h2>
+        <h2>Model / Reasoning Comparisons</h2>
+        <span id="profile-comparison-count" class="summary"></span>
+      </div>
+      <p>These runs share the fitted benchmark base but use a different or unrecorded model/reasoning profile. Their measurements are shown for direct inspection without baseline fit labels, deltas, percentiles, or rerun judgments.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Mode</th>
+              <th>Run</th>
+              <th>Result</th>
+              <th class="num">Time</th>
+              <th class="num">Input</th>
+              <th class="num">Uncached</th>
+              <th class="num">Output</th>
+              <th class="num">Reasoning</th>
+              <th>Review</th>
+              <th>Linearize</th>
+              <th class="num">Commits</th>
+              <th class="num">Files</th>
+              <th class="num">Lines</th>
+              <th>Checks</th>
+              <th>Codex CLI</th>
+              <th>Model</th>
+              <th>Reasoning</th>
+              <th>Transport</th>
+              <th>Dirty</th>
+            </tr>
+          </thead>
+          <tbody id="profile-comparison-body">
+            <tr><td colspan="19">Loading model and reasoning comparison reports...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="section-title">
+        <h2>Baseline Comparisons</h2>
         <span id="comparison-count" class="summary"></span>
       </div>
-      <p>These runs share the fitted benchmark base but are not part of <code>baseline-manifest.json</code>. Successful rows are compared against the fitted token model; failed rows are reliability failures.</p>
+      <p>These runs share the fitted benchmark base and its model/reasoning profile but are not part of <code>baseline-manifest.json</code>. Successful rows are compared against the fitted token model; failed rows are reliability failures.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -901,7 +1351,7 @@ def render_index_html() -> str:
             </tr>
           </thead>
           <tbody id="comparison-body">
-            <tr><td colspan="22">Loading model comparison reports...</td></tr>
+            <tr><td colspan="22">Loading baseline comparison reports...</td></tr>
           </tbody>
         </table>
       </div>
@@ -992,6 +1442,7 @@ def render_index_html() -> str:
   <script>
     const body = document.getElementById('bench-body');
     const comparisonBody = document.getElementById('comparison-body');
+    const profileComparisonBody = document.getElementById('profile-comparison-body');
     const oldBody = document.getElementById('old-bench-body');
     const filter = document.getElementById('filter');
     const summary = document.getElementById('summary');
@@ -999,10 +1450,12 @@ def render_index_html() -> str:
     const latestReference = document.getElementById('latest-reference');
     const baselineNotes = document.getElementById('baseline-notes');
     const comparisonSummary = document.getElementById('comparison-summary');
+    const sequentialComparisonNote = document.getElementById('sequential-comparison-note');
     const baselineMetrics = document.getElementById('baseline-metrics');
     const thresholds = document.getElementById('thresholds');
     const baselineCount = document.getElementById('baseline-count');
     const comparisonCount = document.getElementById('comparison-count');
+    const profileComparisonCount = document.getElementById('profile-comparison-count');
     const oldCount = document.getElementById('old-count');
     const home = document.getElementById('home');
     const report = document.getElementById('report');
@@ -1011,6 +1464,7 @@ def render_index_html() -> str:
     const back = document.getElementById('back');
     let records = [];
     let comparisonRecords = [];
+    let profileComparisonRecords = [];
     let oldRecords = [];
     let activeMode = 'All';
 
@@ -1072,7 +1526,8 @@ def render_index_html() -> str:
 
     function searchable(record) {
       return [
-        record.kind, record.run_id, record.result, record.agent_model, record.agent_reasoning_effort, record.agent_transport,
+        record.kind, record.run_id, record.result, record.bench_mode, record.feature_schedule,
+        record.agent_backend, record.agent_model, record.agent_reasoning_effort, record.agent_transport,
         record.codex_cli_version, record.codex_cli_path,
         record.benched_binary_commit, record.benched_binary_dirty, record.operator_notes,
         record.report_file, record.baseline_status, record.baseline_reason,
@@ -1081,7 +1536,7 @@ def render_index_html() -> str:
     }
 
     function modeCounts() {
-      const all = [...comparisonRecords, ...records, ...oldRecords];
+      const all = [...profileComparisonRecords, ...comparisonRecords, ...records, ...oldRecords];
       const counts = { All: all.length, 'Work Leaf': 0, Parallel: 0, Sequential: 0, Worktree: 0 };
       for (const record of all) counts[record.kind] = (counts[record.kind] || 0) + 1;
       return counts;
@@ -1152,16 +1607,54 @@ def render_index_html() -> str:
       }
     }
 
+    function renderProfileComparisonRows(visible) {
+      if (visible.length === 0) {
+        profileComparisonBody.innerHTML = '<tr><td colspan="19">No model or reasoning comparison reports match the filter.</td></tr>';
+        return;
+      }
+      profileComparisonBody.innerHTML = '';
+      for (const record of visible) {
+        const tr = document.createElement('tr');
+        tr.title = 'Open saved benchmark report';
+        tr.innerHTML = `
+          <td><span class="badge">${escapeHtml(record.kind)}</span></td>
+          <td><code>${escapeHtml(record.run_id)}</code></td>
+          <td><span class="${statusClass(record.result)}">${record.result}</span></td>
+          <td class="num">${duration(record.duration_seconds)}</td>
+          <td class="num">${number(record.input_tokens)}</td>
+          <td class="num">${number(record.uncached_input_tokens)}</td>
+          <td class="num">${number(record.output_tokens)}</td>
+          <td class="num">${number(record.reasoning_output_tokens)}</td>
+          <td><span class="${statusClass(record.review_completed)}">${record.review_completed}</span></td>
+          <td><span class="${statusClass(record.linearize_completed)}">${record.linearize_completed}</span></td>
+          <td class="num">${number(record.commits_after_base)}</td>
+          <td class="num">${number(record.changed_files)}</td>
+          <td class="num">${lineDelta(record)}</td>
+          <td>${escapeHtml(record.final_checks)}</td>
+          <td>${escapeHtml(record.codex_cli_version)}</td>
+          <td>${escapeHtml(record.agent_model)}</td>
+          <td>${escapeHtml(record.agent_reasoning_effort)}</td>
+          <td>${escapeHtml(record.agent_transport)}</td>
+          <td>${escapeHtml(record.benched_binary_dirty)}</td>
+        `;
+        tr.addEventListener('click', () => openReport(record.report_file));
+        profileComparisonBody.appendChild(tr);
+      }
+    }
+
     function renderRows() {
       const counts = modeCounts();
+      const profileComparisonVisible = visibleRows(profileComparisonRecords);
       const comparisonVisible = visibleRows(comparisonRecords);
       const visible = visibleRows(records);
       const oldVisible = visibleRows(oldRecords);
-      summary.textContent = `${comparisonVisible.length} of ${comparisonRecords.length} comparisons; ${visible.length} of ${records.length} baseline reports; ${oldVisible.length} of ${oldRecords.length} old/invalid reports; Work Leaf ${counts['Work Leaf'] || 0}, Parallel ${counts.Parallel || 0}, Sequential ${counts.Sequential || 0}, Worktree ${counts.Worktree || 0}`;
+      summary.textContent = `${profileComparisonVisible.length} of ${profileComparisonRecords.length} model/reasoning comparisons; ${comparisonVisible.length} of ${comparisonRecords.length} baseline comparisons; ${visible.length} of ${records.length} baseline reports; ${oldVisible.length} of ${oldRecords.length} old/invalid reports; Work Leaf ${counts['Work Leaf'] || 0}, Parallel ${counts.Parallel || 0}, Sequential ${counts.Sequential || 0}, Worktree ${counts.Worktree || 0}`;
+      profileComparisonCount.textContent = `${profileComparisonVisible.length} shown`;
       comparisonCount.textContent = `${comparisonVisible.length} shown`;
       baselineCount.textContent = `${visible.length} shown`;
       oldCount.textContent = `${oldVisible.length} shown`;
-      renderTableRows(comparisonBody, comparisonVisible, 'No model comparison bench reports match the filter.');
+      renderProfileComparisonRows(profileComparisonVisible);
+      renderTableRows(comparisonBody, comparisonVisible, 'No baseline comparison bench reports match the filter.');
       renderTableRows(body, visible, 'No baseline bench reports match the filter.');
       renderTableRows(oldBody, oldVisible, 'No old or invalid bench reports match the filter.');
     }
@@ -1171,7 +1664,7 @@ def render_index_html() -> str:
       const manifestName = manifest && manifest.name ? manifest.name : 'regression baseline';
       baselineNotes.textContent = configured
         ? `${manifestName}: ${manifest.reports.length} report paths listed. ${manifest.notes || ''}`.trim()
-        : 'No baseline manifest is configured; all discovered reports are treated as baseline rows.';
+        : 'No baseline manifest is configured; accepted-profile reports are baseline rows and other profiles remain raw comparisons.';
       if (!baselineSummary || !baselineSummary.count) {
         baselineMetrics.innerHTML = '<div class="metric"><span class="metric-label">Baseline runs</span><span class="metric-value">0</span></div>';
         thresholds.innerHTML = '<li>No passing baseline reports with token usage are available.</li>';
@@ -1237,10 +1730,13 @@ def render_index_html() -> str:
       const payload = await response.json();
       records = payload.records || [];
       comparisonRecords = payload.comparison_records || [];
+      profileComparisonRecords = payload.profile_comparison_records || [];
       oldRecords = payload.old_invalid_records || [];
       latestReference.textContent = payload.latest_reference || 'no benchmark report found';
       const comparisons = payload.comparison_summary || {};
       comparisonSummary.textContent = `${comparisons.successful_count || 0} successful comparison runs, ${comparisons.failed_count || 0} failed/stalled comparison runs; ${comparisons.fit_count || 0} fit, ${comparisons.watch_count || 0} watch, ${comparisons.anomaly_count || 0} anomaly.`;
+      const sequentialComparison = payload.sequential_comparison || {};
+      sequentialComparisonNote.textContent = sequentialComparison.note || 'Product comparison needs matching explicit normal rows.';
       renderBaselineSummary(payload.baseline_manifest || {}, payload.baseline_summary || {});
       renderModeFilters();
       renderRows();
@@ -1248,6 +1744,7 @@ def render_index_html() -> str:
     }
 
     load().catch(error => {
+      profileComparisonBody.innerHTML = `<tr><td colspan="19">Failed to load bench reports: ${error}</td></tr>`;
       comparisonBody.innerHTML = `<tr><td colspan="22">Failed to load bench reports: ${error}</td></tr>`;
       body.innerHTML = `<tr><td colspan="22">Failed to load bench reports: ${error}</td></tr>`;
       oldBody.innerHTML = `<tr><td colspan="22">Failed to load bench reports: ${error}</td></tr>`;
@@ -1281,19 +1778,26 @@ class BenchDashboardHandler(BaseHTTPRequestHandler):
         if path == "/api/benches":
             all_records = collect_bench_records(self.results_dir)
             manifest = load_baseline_manifest(self.results_dir)
-            baseline_records, comparison_records, old_invalid_records = split_benchmark_records(all_records, manifest)
+            baseline_records, comparison_records, profile_comparison_records, old_invalid_records = (
+                split_benchmark_records(all_records, manifest)
+            )
             summary = baseline_summary(baseline_records)
             annotate_token_model(baseline_records, summary, "training")
             annotate_token_model(comparison_records, summary, "comparison")
+            annotate_token_model(profile_comparison_records, summary, "profile-comparison")
             annotate_token_model(old_invalid_records, summary, "old-invalid")
             payload = {
                 "results_dir": str(self.results_dir),
-                "latest_reference": latest_reference(comparison_records or baseline_records or all_records),
+                "latest_reference": latest_reference(all_records),
                 "baseline_manifest": baseline_manifest_payload(manifest),
                 "baseline_summary": summary,
                 "comparison_summary": comparison_summary(comparison_records),
+                "sequential_comparison": sequential_comparison_summary(
+                    [*baseline_records, *comparison_records]
+                ),
                 "records": baseline_records,
                 "comparison_records": comparison_records,
+                "profile_comparison_records": profile_comparison_records,
                 "old_invalid_records": old_invalid_records,
                 "all_records": all_records,
             }
@@ -1330,6 +1834,204 @@ def write(path: Path, text: str) -> None:
 
 
 def run_self_test() -> None:
+    normalized_metadata = normalize_record(
+        {
+            "bench_mode": "work-leaf",
+            "feature_schedule": "concurrent",
+            "agent_backend": "codex",
+            "agent_transport": "app-server",
+        },
+        "20260601T000000+0200-three-feature-bench.md",
+    )
+    assert normalized_metadata["bench_mode"] == "work-leaf", normalized_metadata
+    assert normalized_metadata["feature_schedule"] == "concurrent", normalized_metadata
+    assert normalized_metadata["agent_backend"] == "codex", normalized_metadata
+    assert normalized_metadata["agent_transport"] == "app-server", normalized_metadata
+
+    normal_work_leaf = {
+        "kind": "Work Leaf",
+        "run_id": "20260601T010000+0200",
+        "started_at": "2026-06-01T01:00:00+02:00",
+        "result": "pass",
+        "bench_mode": "work-leaf",
+        "feature_schedule": "concurrent",
+        "agent_backend": "codex",
+        "agent_transport": "app-server",
+        "agent_model": "gpt-5.5",
+        "agent_reasoning_effort": "xhigh",
+        "base_commit": "product-base",
+        "input_tokens": 275,
+        "output_tokens": 27,
+        "duration_seconds": 1809,
+    }
+    normal_sequential = {
+        "kind": "Sequential",
+        "run_id": "20260601T020000+0200",
+        "started_at": "2026-06-01T02:00:00+02:00",
+        "result": "pass",
+        "bench_mode": "sequential",
+        "feature_schedule": "sequential",
+        "agent_backend": "codex",
+        "agent_transport": "direct-codex-cli",
+        "agent_model": "gpt-5.5",
+        "agent_reasoning_effort": "xhigh",
+        "base_commit": "product-base",
+        "input_tokens": 500,
+        "output_tokens": 50,
+        "duration_seconds": 2600,
+    }
+    product_decoys: dict[str, dict[str, Any]] = {}
+    for offset, (name, changes) in enumerate(
+        (
+            (
+                "sequential-work-leaf",
+                {
+                    "kind": "Work Leaf",
+                    "bench_mode": "work-leaf",
+                    "feature_schedule": "sequential",
+                    "agent_transport": "app-server",
+                },
+            ),
+            (
+                "direct-claude",
+                {
+                    "kind": "Sequential",
+                    "bench_mode": "sequential",
+                    "feature_schedule": "sequential",
+                    "agent_backend": "claude",
+                    "agent_transport": "direct-claude-cli",
+                },
+            ),
+            (
+                "worktree",
+                {
+                    "kind": "Worktree",
+                    "bench_mode": "worktree",
+                    "feature_schedule": "concurrent",
+                    "agent_transport": "direct-codex-cli",
+                },
+            ),
+            (
+                "missing-work-leaf-schedule",
+                {
+                    "kind": "Work Leaf",
+                    "bench_mode": "work-leaf",
+                    "feature_schedule": "unknown",
+                    "agent_transport": "app-server",
+                },
+            ),
+            (
+                "missing-direct-schedule",
+                {
+                    "kind": "Sequential",
+                    "bench_mode": "sequential",
+                    "feature_schedule": "unknown",
+                    "agent_transport": "direct-codex-cli",
+                },
+            ),
+            (
+                "other-profile-work-leaf",
+                {
+                    "kind": "Work Leaf",
+                    "bench_mode": "work-leaf",
+                    "feature_schedule": "concurrent",
+                    "agent_transport": "app-server",
+                    "agent_model": "gpt-5.6-sol",
+                    "agent_reasoning_effort": "max",
+                },
+            ),
+            (
+                "other-profile-direct",
+                {
+                    "kind": "Sequential",
+                    "bench_mode": "sequential",
+                    "feature_schedule": "sequential",
+                    "agent_transport": "direct-codex-cli",
+                    "agent_model": "gpt-5.6-sol",
+                    "agent_reasoning_effort": "max",
+                },
+            ),
+        ),
+        start=3,
+    ):
+        decoy = dict(normal_work_leaf if changes["kind"] != "Sequential" else normal_sequential)
+        decoy.update(changes)
+        decoy.update(
+            {
+                "run_id": f"20260601T0{offset}0000+0200",
+                "started_at": f"2026-06-01T0{offset}:00:00+02:00",
+                "input_tokens": 9_000 + offset,
+                "output_tokens": 900 + offset,
+                "duration_seconds": 9_000 + offset,
+            }
+        )
+        product_decoys[name] = decoy
+
+    assert is_normal_work_leaf_product_record(normal_work_leaf), normal_work_leaf
+    assert is_normal_direct_sequential_product_record(normal_sequential), normal_sequential
+    assert all(
+        not is_normal_work_leaf_product_record(record)
+        and not is_normal_direct_sequential_product_record(record)
+        for name, record in product_decoys.items()
+        if not name.startswith("other-profile-")
+    ), product_decoys
+    assert is_normal_work_leaf_product_record(product_decoys["other-profile-work-leaf"])
+    assert is_normal_direct_sequential_product_record(product_decoys["other-profile-direct"])
+
+    product_summary = sequential_comparison_summary(
+        [normal_work_leaf, normal_sequential, *product_decoys.values()]
+    )
+    assert product_summary["available"] is True, product_summary
+    assert product_summary["sample_size"] == 1, product_summary
+    assert product_summary["base_commit"] == "product-base", product_summary
+    assert product_summary["sequential_input_output_mean"] == 550, product_summary
+    assert product_summary["non_sequential_input_output_mean"] == 302, product_summary
+    assert product_summary["sequential_duration_mean"] == 2600, product_summary
+    assert product_summary["non_sequential_duration_mean"] == 1809, product_summary
+
+    manifest_records: list[dict[str, Any]] = []
+    for report_file, source in (
+        ("normal-work-leaf-three-feature-bench.md", normal_work_leaf),
+        ("normal-direct-three-feature-sequential-bench.md", normal_sequential),
+        ("sequential-work-leaf-three-feature-bench.md", product_decoys["sequential-work-leaf"]),
+        ("worktree-three-feature-bench.md", product_decoys["worktree"]),
+        (
+            "missing-schedule-three-feature-bench.md",
+            product_decoys["missing-work-leaf-schedule"],
+        ),
+        (
+            "other-profile-three-feature-bench.md",
+            product_decoys["other-profile-work-leaf"],
+        ),
+    ):
+        record = dict(source)
+        record["report_file"] = report_file
+        manifest_records.append(record)
+    decoy_manifest = {
+        "configured": True,
+        "name": "product baseline isolation",
+        "notes": "",
+        "reports": [record["report_file"] for record in manifest_records],
+        "report_set": {record["report_file"] for record in manifest_records},
+    }
+    manifest_baseline, _, manifest_profiles, manifest_old = split_benchmark_records(
+        manifest_records,
+        decoy_manifest,
+    )
+    assert {record["report_file"] for record in manifest_baseline} == {
+        "normal-work-leaf-three-feature-bench.md"
+    }, manifest_baseline
+    assert {record["report_file"] for record in manifest_profiles} == {
+        "other-profile-three-feature-bench.md"
+    }, manifest_profiles
+    assert {record["report_file"] for record in manifest_old} == {
+        "normal-direct-three-feature-sequential-bench.md",
+        "sequential-work-leaf-three-feature-bench.md",
+        "worktree-three-feature-bench.md",
+        "missing-schedule-three-feature-bench.md",
+    }, manifest_old
+    assert baseline_summary(manifest_records)["count"] == 1, manifest_records
+
     with tempfile.TemporaryDirectory(prefix="work-leaf-bench-dashboard-test.") as tmp:
         results = Path(tmp) / "bench-results"
         results.mkdir()
@@ -1338,10 +2040,13 @@ def run_self_test() -> None:
             """# Three-Feature Smoke Bench
 
 - result: pass
+- bench_mode: work-leaf
+- feature_schedule: concurrent
 - duration_seconds: 2130
 - benched_binary_commit: abc123
 - benched_binary_dirty: no
-- agent_transport: sdk
+- agent_backend: codex
+- agent_transport: app-server
 - codex_cli_path: /usr/bin/codex
 - codex_cli_version: codex-cli 0.141.0
 - agent_model: gpt-5.5
@@ -1357,16 +2062,60 @@ def run_self_test() -> None:
 - changed_lines_deleted: 45
 - changed_lines_total: 1454
 - token_usage: user-1: input=100 cached_input=80 output=5 reasoning_output=3; linearize: input=50 cached_input=40 output=4 reasoning_output=2
+- observation: 20260611T113324+0200-three-feature-bench-artifacts/observation
 - code_quality: passed cargo test
 """,
         )
+        observed_usage_dir = (
+            results / "20260611T113324+0200-three-feature-bench-artifacts" / "observation"
+        )
+        observed_usage_dir.mkdir(parents=True)
+        write(
+            observed_usage_dir / "analysis.json",
+            json.dumps(
+                {
+                    "capture_complete": True,
+                    "errors": [],
+                    "usage_scopes": {
+                        "total_workflow": {
+                            "thread_count": 3,
+                            "input_tokens": 180,
+                            "cached_input_tokens": 120,
+                            "uncached_input_tokens": 60,
+                            "output_tokens": 20,
+                            "reasoning_output_tokens": 8,
+                            "raw_input_plus_output": 200,
+                            "uncached_input_plus_output": 80,
+                        }
+                    },
+                },
+                indent=2,
+            )
+            + "\n",
+        )
+        outside_observation_dir = Path(tmp) / "outside-observation"
+        outside_observation_dir.mkdir()
+        write(
+            outside_observation_dir / "analysis.json",
+            (observed_usage_dir / "analysis.json").read_text(encoding="utf-8"),
+        )
+        assert (
+            observer_total_workflow_usage(
+                results,
+                results / "20260611T113324+0200-three-feature-bench.md",
+                {"observation": str(outside_observation_dir)},
+            )
+            is None
+        ), "observer usage must not read outside the configured results directory"
         write(
             results / "20260610T194209+0200-three-feature-sequential-bench.md",
             """# Three-Feature Direct Codex Bench
 
 - result: pass
 - bench_mode: sequential
+- feature_schedule: sequential
 - duration_seconds: 3867
+- agent_backend: codex
 - agent_transport: direct-codex-cli
 - agent_model: gpt-5.5
 - review_completed: yes
@@ -1386,7 +2135,9 @@ def run_self_test() -> None:
 
 - result: fail
 - bench_mode: worktree
+- feature_schedule: concurrent
 - duration_seconds: 1500
+- agent_backend: codex
 - agent_transport: direct-codex-cli
 - agent_model: gpt-5.5
 - review_completed: yes
@@ -1406,8 +2157,11 @@ def run_self_test() -> None:
                 {
                     "run_id": "20260611T113324+0200",
                     "result": "pass",
+                    "bench_mode": "work-leaf",
+                    "feature_schedule": "concurrent",
                     "duration_seconds": 2130,
-                    "agent_transport": "sdk",
+                    "agent_backend": "codex",
+                    "agent_transport": "app-server",
                     "codex_cli_path": "/usr/bin/codex",
                     "codex_cli_version": "codex-cli 0.141.0",
                     "agent_model": "gpt-5.5",
@@ -1432,7 +2186,10 @@ def run_self_test() -> None:
             """# Three-Feature Smoke Bench
 
 - result: pass
+- bench_mode: work-leaf
+- feature_schedule: concurrent
 - duration_seconds: 2400
+- agent_backend: codex
 - agent_transport: app-server
 - codex_cli_path: /usr/bin/codex
 - codex_cli_version: codex-cli 0.141.0
@@ -1456,7 +2213,10 @@ def run_self_test() -> None:
                 {
                     "run_id": "20260622T221828+0200-parallel-1",
                     "result": "pass",
+                    "bench_mode": "work-leaf",
+                    "feature_schedule": "concurrent",
                     "duration_seconds": 2400,
+                    "agent_backend": "codex",
                     "agent_transport": "app-server",
                     "codex_cli_path": "/usr/bin/codex",
                     "codex_cli_version": "codex-cli 0.141.0",
@@ -1478,6 +2238,7 @@ def run_self_test() -> None:
         baseline_reports = [
             "20260611T113324+0200-three-feature-bench.md",
             "parallel-20260622T221828+0200/run-1/20260622T221828+0200-parallel-1-three-feature-bench.md",
+            "20260626T010000+0200-three-feature-bench.md",
         ]
         write(
             results / "baseline-manifest.json",
@@ -1499,7 +2260,10 @@ def run_self_test() -> None:
             """# Three-Feature Smoke Bench
 
 - result: pass
+- bench_mode: work-leaf
+- feature_schedule: concurrent
 - duration_seconds: 2100
+- agent_backend: codex
 - agent_transport: app-server
 - codex_cli_path: /usr/bin/codex
 - codex_cli_version: codex-cli 0.141.0
@@ -1522,7 +2286,10 @@ def run_self_test() -> None:
                 {
                     "run_id": "20260624T134138+0200-parallel-1",
                     "result": "pass",
+                    "bench_mode": "work-leaf",
+                    "feature_schedule": "concurrent",
                     "duration_seconds": 2100,
+                    "agent_backend": "codex",
                     "agent_transport": "app-server",
                     "codex_cli_path": "/usr/bin/codex",
                     "codex_cli_version": "codex-cli 0.141.0",
@@ -1540,44 +2307,217 @@ def run_self_test() -> None:
             )
             + "\n",
         )
+        timestamped_comparison = results / "20260625T190023+0200-three-feature-bench.md"
+        write(
+            timestamped_comparison,
+            """# Three-Feature Smoke Bench
+
+- result: pass
+- bench_mode: work-leaf
+- feature_schedule: concurrent
+- started_at: 2026-06-25T19:00:23+02:00
+- duration_seconds: 1809
+- agent_backend: codex
+- agent_transport: app-server
+- codex_cli_path: /usr/bin/codex
+- codex_cli_version: codex-cli 0.142.1
+- agent_model: gpt-5.5
+- agent_reasoning_effort: xhigh
+- review_completed: yes
+- linearize_completed: yes
+- base_commit: fixed-base
+- commits_after_base: 3
+- changed_files: 12
+- changed_lines_added: 1226
+- changed_lines_deleted: 112
+- token_usage: user-1: input=275 cached_input=220 output=27 reasoning_output=9
+- code_quality: passed cargo test
+""",
+        )
+        timestamped_sequential_comparison = results / "20260625T230023+0200-three-feature-sequential-bench.md"
+        write(
+            timestamped_sequential_comparison,
+            """# Three-Feature Direct Agent Bench
+
+- result: pass
+- bench_mode: sequential
+- feature_schedule: sequential
+- started_at: 2026-06-25T23:00:23+02:00
+- duration_seconds: 2600
+- agent_backend: codex
+- agent_transport: direct-codex-cli
+- agent_cli_version: agent_bin=/usr/bin/codex; codex-cli 0.142.1
+- agent_model: gpt-5.5
+- agent_reasoning_effort: xhigh
+- review_completed: yes
+- linearize_completed: yes
+- base_commit: fixed-base
+- commits_after_base: 3
+- changed_files: 14
+- changed_lines_added: 2320
+- changed_lines_deleted: 164
+- token_usage: sequential: input=500 cached_input=420 output=50 reasoning_output=18
+- code_quality: passed cargo test
+""",
+        )
+        different_profile_comparison = results / "20260626T010000+0200-three-feature-bench.md"
+        write(
+            different_profile_comparison,
+            """# Three-Feature Smoke Bench
+
+- result: pass
+- bench_mode: work-leaf
+- feature_schedule: concurrent
+- started_at: 2026-06-26T01:00:00+02:00
+- duration_seconds: 3200
+- agent_backend: codex
+- agent_transport: app-server
+- codex_cli_path: /usr/bin/codex
+- codex_cli_version: codex-cli 0.145.0
+- agent_model: gpt-5.6-sol
+- agent_reasoning_effort: max
+- review_completed: yes
+- linearize_completed: yes
+- base_commit: fixed-base
+- commits_after_base: 3
+- changed_files: 15
+- changed_lines_added: 2500
+- changed_lines_deleted: 180
+- token_usage: user-1: input=900 cached_input=800 output=90 reasoning_output=60
+- code_quality: passed cargo test
+""",
+        )
 
         records = collect_bench_records(results)
         manifest = load_baseline_manifest(results)
-        baseline_records, comparison_records, old_invalid_records = split_benchmark_records(records, manifest)
+        baseline_records, comparison_records, profile_comparison_records, old_invalid_records = (
+            split_benchmark_records(records, manifest)
+        )
         summary = baseline_summary(baseline_records)
         annotate_token_model(baseline_records, summary, "training")
         annotate_token_model(comparison_records, summary, "comparison")
+        annotate_token_model(profile_comparison_records, summary, "profile-comparison")
         annotate_token_model(old_invalid_records, summary, "old-invalid")
-        assert len(records) == 5, records
+        assert len(records) == 8, records
         assert len(baseline_records) == 2, baseline_records
-        assert len(comparison_records) == 1, comparison_records
+        assert len(comparison_records) == 3, comparison_records
+        assert len(profile_comparison_records) == 1, profile_comparison_records
         assert len(old_invalid_records) == 2, old_invalid_records
         assert {record["baseline_status"] for record in baseline_records} == {"baseline"}, baseline_records
         assert {record["baseline_status"] for record in comparison_records} == {"comparison"}, comparison_records
+        assert {record["baseline_status"] for record in profile_comparison_records} == {
+            "profile-comparison"
+        }, profile_comparison_records
         assert {record["baseline_status"] for record in old_invalid_records} == {"old-invalid"}, old_invalid_records
+        profile_comparison = profile_comparison_records[0]
+        assert profile_comparison["agent_model"] == "gpt-5.6-sol", profile_comparison
+        assert profile_comparison["agent_reasoning_effort"] == "max", profile_comparison
+        assert profile_comparison["token_model_status"] == "unavailable", profile_comparison
+        assert profile_comparison["token_model_label"] == "comparison only", profile_comparison
+        assert profile_comparison["token_model_delta_tokens"] is None, profile_comparison
+        assert profile_comparison["token_model_z"] is None, profile_comparison
+        assert profile_comparison["token_model_percentile"] is None, profile_comparison
+        assert profile_comparison["token_model_rerun"] == "not applicable", profile_comparison
+        assert (
+            different_profile_comparison.name not in {
+                record["report_file"] for record in baseline_records + comparison_records
+            }
+        ), "different model or reasoning profile cannot train the baseline"
+        no_manifest = {
+            "configured": False,
+            "name": "all discovered reports",
+            "notes": "",
+            "reports": [],
+            "report_set": set(),
+        }
+        (
+            no_manifest_baseline,
+            no_manifest_comparisons,
+            no_manifest_profile_comparisons,
+            no_manifest_old_invalid,
+        ) = split_benchmark_records(records, no_manifest)
+        assert len(no_manifest_baseline) == 4, no_manifest_baseline
+        assert all(
+            accepted_baseline_profile(record)
+            and is_normal_work_leaf_product_record(record)
+            for record in no_manifest_baseline
+        ), no_manifest_baseline
+        assert {
+            record["report_file"] for record in no_manifest_comparisons
+        } == {
+            timestamped_sequential_comparison.name
+        }, no_manifest_comparisons
+        assert {
+            record["report_file"] for record in no_manifest_profile_comparisons
+        } == {
+            different_profile_comparison.name
+        }, no_manifest_profile_comparisons
+        assert {record["kind"] for record in no_manifest_old_invalid} == {
+            "Sequential",
+            "Worktree",
+        }, no_manifest_old_invalid
         assert summary["count"] == 2, summary
-        assert summary["input_output_mean"] == 300, summary
+        assert summary["input_output_mean"] == 320, summary
         assert summary["central95_low"] is not None, summary
+        assert comparison_records[0]["kind"] == "Sequential", comparison_records
+        assert comparison_records[0]["run_id"] == "20260625T230023+0200", comparison_records
+        assert comparison_records[0]["started_at"] == "2026-06-25T23:00:23+02:00", comparison_records
+        assert comparison_records[0]["bench_mode"] == "sequential", comparison_records
+        assert comparison_records[0]["feature_schedule"] == "sequential", comparison_records
+        assert comparison_records[0]["agent_backend"] == "codex", comparison_records
+        assert comparison_records[0]["agent_transport"] == "direct-codex-cli", comparison_records
+        assert comparison_records[0]["codex_cli_path"] == "/usr/bin/codex", comparison_records
+        assert comparison_records[0]["codex_cli_version"] == "codex-cli 0.142.1", comparison_records
         assert comparison_records[0]["token_model_status"] in {"fit", "watch", "anomaly"}, comparison_records
-        assert comparison_summary(comparison_records)["successful_count"] == 1, comparison_records
+        work_leaf_comparison = next(record for record in comparison_records if record["run_id"] == "20260625T190023+0200")
+        assert work_leaf_comparison["bench_mode"] == "work-leaf", work_leaf_comparison
+        assert work_leaf_comparison["feature_schedule"] == "concurrent", work_leaf_comparison
+        assert work_leaf_comparison["agent_backend"] == "codex", work_leaf_comparison
+        assert work_leaf_comparison["agent_transport"] == "app-server", work_leaf_comparison
+        assert work_leaf_comparison["token_model_status"] in {"fit", "watch", "anomaly"}, comparison_records
+        assert comparison_summary(comparison_records)["successful_count"] == 3, comparison_records
+        parallel_decoy = dict(work_leaf_comparison)
+        parallel_decoy.update(
+            {
+                "kind": "Parallel",
+                "run_id": "20260626T000000+0200-parallel-decoy",
+                "started_at": "2026-06-26T00:00:00+02:00",
+                "input_tokens": 9_000,
+                "output_tokens": 999,
+                "duration_seconds": 9_999,
+            }
+        )
+        sequential_summary = sequential_comparison_summary(
+            [*baseline_records, *comparison_records, parallel_decoy]
+        )
+        assert sequential_summary["available"] is True, sequential_summary
+        assert sequential_summary["sample_size"] == 1, sequential_summary
+        assert sequential_summary["non_sequential_input_output_mean"] == 302, sequential_summary
+        assert sequential_summary["non_sequential_duration_mean"] == 1809, sequential_summary
+        assert "same-base GPT-5.5/xhigh" in sequential_summary["note"], sequential_summary
+        assert "Sequential token use" in sequential_summary["note"], sequential_summary
         latest = records[0]
-        assert latest["kind"] == "Parallel", latest
-        assert latest["run_id"] == "20260624T134138+0200-parallel-1", latest
-        assert latest["codex_cli_version"] == "codex-cli 0.141.0", latest
-        assert latest["agent_model"] == "gpt-5.5", latest
-        assert latest["agent_reasoning_effort"] == "xhigh", latest
-        comparison_report = "parallel-20260624T134138+0200/run-1/20260624T134138+0200-parallel-1-three-feature-bench.md"
-        assert latest["report_file"] == comparison_report, latest
+        assert latest["kind"] == "Work Leaf", latest
+        assert latest["run_id"] == "20260626T010000+0200", latest
+        assert latest["codex_cli_version"] == "codex-cli 0.145.0", latest
+        assert latest["agent_model"] == "gpt-5.6-sol", latest
+        assert latest["agent_reasoning_effort"] == "max", latest
+        assert latest["report_file"] == "20260626T010000+0200-three-feature-bench.md", latest
         work_leaf = next(record for record in records if record["run_id"] == "20260611T113324+0200")
         assert work_leaf["kind"] == "Work Leaf", work_leaf
         assert work_leaf["codex_cli_version"] == "codex-cli 0.141.0", work_leaf
         assert work_leaf["agent_model"] == "gpt-5.5", work_leaf
         assert work_leaf["agent_reasoning_effort"] == "xhigh", work_leaf
-        assert work_leaf["input_tokens"] == 150, work_leaf
-        assert work_leaf["uncached_input_tokens"] == 30, work_leaf
+        assert work_leaf["input_tokens"] == 180, work_leaf
+        assert work_leaf["cached_input_tokens"] == 120, work_leaf
+        assert work_leaf["uncached_input_tokens"] == 60, work_leaf
+        assert work_leaf["output_tokens"] == 20, work_leaf
+        assert work_leaf["reasoning_output_tokens"] == 8, work_leaf
+        assert work_leaf["usage_source"] == "observer total_workflow", work_leaf
+        assert work_leaf["workflow_threads"] == 3, work_leaf
         assert work_leaf["changed_lines_total"] == 1454, work_leaf
         kinds = {record["kind"] for record in records}
-        assert kinds == {"Work Leaf", "Parallel", "Sequential", "Worktree"}, kinds
+        assert kinds == {"Work Leaf", "Sequential", "Worktree"}, kinds
         html = render_index_html()
         for expected in (
             "bench-results",
@@ -1586,17 +2526,25 @@ def run_self_test() -> None:
             "Sequential",
             "Worktree",
             "Regression Baseline",
-            "Model Comparisons",
+            "Baseline Comparisons",
+            "Model / Reasoning Comparisons",
             "Old / Invalid Benchmarks",
             "Variance",
             "Model Fit",
             "runs are needed",
             "./start --bench",
+            "The product summary compares only two normal paths.",
+            "feature_schedule: concurrent",
+            "feature_schedule: sequential",
+            "do not enter the product summary",
             "/&lt;command&gt;",
-            "not sequential, not worktree, and not any saved Work Leaf run",
+            "without starting Work Leaf",
+            "sequential-comparison-note",
+            "latest-reference",
         ):
             assert expected in html, expected
-        assert "20260624T134138+0200-parallel-1" in latest_reference(records)
+        assert "Codex or Claude" not in html, html
+        assert "20260626T010000+0200" in latest_reference(records)
         assert read_report(results, "20260611T113324+0200-three-feature-bench.md").startswith("# Three-Feature")
         parallel_report = "parallel-20260622T221828+0200/run-1/20260622T221828+0200-parallel-1-three-feature-bench.md"
         assert read_report(results, parallel_report).startswith("# Three-Feature")

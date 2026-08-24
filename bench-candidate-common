@@ -1,0 +1,1620 @@
+#!/usr/bin/env bash
+
+readonly bench_candidate_schema="work-leaf-benchmark-candidate-v2"
+readonly bench_materialized_candidate_schema="work-leaf-benchmark-materialized-candidate-v1"
+readonly bench_materialization_schema="work-leaf-benchmark-bundle-materialization-v1"
+readonly bench_candidate_smoke_schema="work-leaf-benchmark-candidate-smoke-v2"
+readonly bench_materialized_admission_name="ADMISSION.json"
+
+bench_path_has_private_publication_component() {
+  local path="$1"
+  local component
+  local -a components=()
+  IFS='/' read -r -a components <<< "$path"
+  for component in "${components[@]}"; do
+    case "$component" in
+      .bench-artifact-publish.*|.candidate.publish.*|.candidate.materialize.*) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+bench_sha256_file() {
+  local path="$1"
+  local digest
+  digest="$(sha256sum "$path" | awk '{print $1}')" || return 1
+  [[ "$digest" =~ ^[0-9a-f]{64}$ ]] || return 1
+  printf '%s\n' "$digest"
+}
+
+bench_runtime_error_code=""
+bench_runtime_error_reason=""
+bench_runtime_executables=""
+bench_runtime_entrypoint_digest=""
+bench_runtime_target_manifest_digest=""
+bench_runtime_smoke_stdout_digest=""
+bench_runtime_smoke_stderr_digest=""
+bench_runtime_stdin_digest=""
+
+bench_runtime_fail() {
+  bench_runtime_error_reason="$1"
+  bench_runtime_error_code="${2:-candidate_build_failed}"
+  return 1
+}
+
+bench_checkout_matches_commit() {
+  local checkout_dir="$1"
+  local expected_commit="$2"
+  local actual_commit checkout_status
+  actual_commit="$(git -C "$checkout_dir" rev-parse --verify 'HEAD^{commit}' 2>/dev/null)" \
+    || return 1
+  [[ "$actual_commit" == "$expected_commit" ]] || return 1
+  checkout_status="$(git -C "$checkout_dir" status --porcelain=v1 --untracked-files=all)" \
+    || return 1
+  [[ -z "$checkout_status" ]]
+}
+
+bench_fd_path() {
+  local fd="$1"
+  if [[ -e "/proc/self/fd/$fd" ]]; then
+    printf '/proc/self/fd/%s\n' "$fd"
+  elif [[ -e "/dev/fd/$fd" ]]; then
+    printf '/dev/fd/%s\n' "$fd"
+  else
+    return 1
+  fi
+}
+
+bench_directory_fd_path() {
+  local fd_path
+  fd_path="$(bench_fd_path "$1")" || return 1
+  [[ -d "$fd_path" ]] || return 1
+  printf '%s\n' "$fd_path"
+}
+
+bench_directory_matches_identity() {
+  local path="$1"
+  local fd_path="$2"
+  local identity="$3"
+  [[ -d "$path" && ! -L "$path" && -d "$fd_path" ]] || return 1
+  [[ "$(stat -c '%d:%i' "$path" 2>/dev/null)" == "$identity" ]] || return 1
+  [[ "$(stat -Lc '%d:%i' "$fd_path" 2>/dev/null)" == "$identity" ]]
+}
+
+bench_remove_owned_directory() {
+  local owner_fd_path="$1"
+  local owner_identity="$2"
+  local entry_name="$3"
+  local entry_identity="$4"
+  local allow_candidate="${5:-0}"
+
+  [[ -d "$owner_fd_path" \
+    && "$owner_identity" =~ ^[0-9]+:[0-9]+$ \
+    && "$entry_identity" =~ ^[0-9]+:[0-9]+$ ]] || return 1
+  if [[ "$entry_name" == "candidate" ]]; then
+    [[ "$allow_candidate" == "1" ]] || return 1
+  else
+    [[ "$allow_candidate" == "0" \
+      && "$entry_name" =~ ^([.]bench-artifact-publish[.][0-9a-f]{32}|[.]candidate[.](publish|materialize)[.][A-Za-z0-9]+)$ ]] \
+      || return 1
+  fi
+  python3 - "$owner_fd_path" "$owner_identity" "$entry_name" "$entry_identity" <<'PY'
+import os
+import stat
+import sys
+
+
+# Rechecking a fixed-size ancestor chain keeps cleanup linear in the number of
+# entries while still detecting renames and replacements before every unlink.
+MAX_IDENTITY_CHAIN_DEPTH = 64
+
+
+def identity(value):
+    return tuple(map(int, value.split(":")))
+
+
+def same_identity(value, expected):
+    return (value.st_dev, value.st_ino) == expected
+
+
+def chain_is_current(chain):
+    for parent_fd, name, expected in chain:
+        try:
+            current = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            return False
+        if not stat.S_ISDIR(current.st_mode) or not same_identity(current, expected):
+            return False
+    return True
+
+
+def remove_contents(directory_fd, chain):
+    if len(chain) > MAX_IDENTITY_CHAIN_DEPTH:
+        raise RuntimeError("publication staging nesting exceeds cleanup safety bound")
+    for name in sorted(os.listdir(directory_fd)):
+        if not chain_is_current(chain):
+            raise RuntimeError("publication staging path changed during cleanup")
+        entry = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+        expected = (entry.st_dev, entry.st_ino)
+        if stat.S_ISDIR(entry.st_mode):
+            child_fd = os.open(
+                name,
+                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                dir_fd=directory_fd,
+            )
+            try:
+                child = os.fstat(child_fd)
+                if not same_identity(child, expected):
+                    raise RuntimeError("publication child directory identity changed")
+                child_chain = chain + [(directory_fd, name, expected)]
+                if not chain_is_current(child_chain):
+                    raise RuntimeError("publication child path changed before cleanup")
+                remove_contents(child_fd, child_chain)
+                if not chain_is_current(child_chain):
+                    raise RuntimeError("publication child path changed after cleanup")
+                os.rmdir(name, dir_fd=directory_fd)
+            finally:
+                os.close(child_fd)
+        else:
+            current = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+            if not same_identity(current, expected) or not chain_is_current(chain):
+                raise RuntimeError("publication entry identity changed before cleanup")
+            os.unlink(name, dir_fd=directory_fd)
+
+
+owner_path, owner_identity, entry_name, entry_identity = sys.argv[1:]
+owner_expected = identity(owner_identity)
+entry_expected = identity(entry_identity)
+owner_fd = os.open(owner_path, os.O_RDONLY | os.O_DIRECTORY)
+entry_fd = -1
+try:
+    owner = os.fstat(owner_fd)
+    if not same_identity(owner, owner_expected):
+        raise RuntimeError("publication owner identity changed before cleanup")
+    entry = os.stat(entry_name, dir_fd=owner_fd, follow_symlinks=False)
+    if not stat.S_ISDIR(entry.st_mode) or not same_identity(entry, entry_expected):
+        raise RuntimeError("publication staging identity changed before cleanup")
+    entry_fd = os.open(
+        entry_name,
+        os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+        dir_fd=owner_fd,
+    )
+    opened = os.fstat(entry_fd)
+    if not same_identity(opened, entry_expected):
+        raise RuntimeError("publication staging identity changed while opening cleanup")
+    chain = [(owner_fd, entry_name, entry_expected)]
+    if not chain_is_current(chain):
+        raise RuntimeError("publication staging path changed before cleanup")
+    remove_contents(entry_fd, chain)
+    if not chain_is_current(chain):
+        raise RuntimeError("publication staging path changed after cleanup")
+    os.rmdir(entry_name, dir_fd=owner_fd)
+finally:
+    if entry_fd >= 0:
+        os.close(entry_fd)
+    os.close(owner_fd)
+PY
+}
+
+bench_remove_owned_regular_file() {
+  local owner_fd_path="$1"
+  local owner_identity="$2"
+  local entry_name="$3"
+  local entry_identity="$4"
+
+  [[ -d "$owner_fd_path" \
+    && "$owner_identity" =~ ^[0-9]+:[0-9]+$ \
+    && "$entry_name" =~ ^[.][A-Za-z0-9._-]+[.]publish[.][A-Za-z0-9]+$ \
+    && "$entry_identity" =~ ^[0-9]+:[0-9]+$ ]] || return 1
+  python3 - "$owner_fd_path" "$owner_identity" "$entry_name" "$entry_identity" <<'PY'
+import ctypes
+import errno
+import os
+import secrets
+import stat
+import sys
+
+
+# Linux has no inode-conditional unlink. A private directory therefore makes
+# this a terminal quarantine operation: an owned staging file can be moved out
+# of its publication name, but no pathname in the quarantine is ever deleted.
+# A replacement is moved back without ever being overwritten or unlinked.
+def rename_no_replace(source_fd, source, destination_fd, destination):
+    libc = ctypes.CDLL(None, use_errno=True)
+    renameat2 = libc.renameat2
+    renameat2.argtypes = [
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint,
+    ]
+    renameat2.restype = ctypes.c_int
+    if renameat2(
+        source_fd,
+        os.fsencode(source),
+        destination_fd,
+        os.fsencode(destination),
+        1,
+    ) != 0:
+        error = ctypes.get_errno()
+        if error == errno.EEXIST:
+            raise RuntimeError("publication staging name appeared during cleanup")
+        raise OSError(error, os.strerror(error))
+
+
+owner_path, owner_identity, entry_name, entry_identity = sys.argv[1:]
+owner_expected = tuple(map(int, owner_identity.split(":")))
+entry_expected = tuple(map(int, entry_identity.split(":")))
+owner_fd = os.open(owner_path, os.O_RDONLY | os.O_DIRECTORY)
+quarantine_fd = -1
+quarantine_name = ""
+quarantine_identity = None
+try:
+    owner = os.fstat(owner_fd)
+    if (owner.st_dev, owner.st_ino) != owner_expected:
+        raise RuntimeError("publication owner directory identity changed before cleanup")
+
+    for _ in range(128):
+        quarantine_name = ".bench-file-cleanup." + secrets.token_hex(16)
+        try:
+            os.mkdir(quarantine_name, mode=0o700, dir_fd=owner_fd)
+            break
+        except FileExistsError:
+            continue
+    else:
+        raise RuntimeError("could not reserve publication cleanup quarantine")
+
+    quarantine = os.stat(quarantine_name, dir_fd=owner_fd, follow_symlinks=False)
+    if not stat.S_ISDIR(quarantine.st_mode) or quarantine.st_uid != os.geteuid():
+        raise RuntimeError("publication cleanup quarantine is unsafe")
+    quarantine_identity = (quarantine.st_dev, quarantine.st_ino)
+    quarantine_fd = os.open(
+        quarantine_name,
+        os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+        dir_fd=owner_fd,
+    )
+    opened_quarantine = os.fstat(quarantine_fd)
+    if (opened_quarantine.st_dev, opened_quarantine.st_ino) != quarantine_identity:
+        raise RuntimeError("publication cleanup quarantine identity changed")
+    os.fchmod(quarantine_fd, 0o700)
+
+    try:
+        rename_no_replace(owner_fd, entry_name, quarantine_fd, "entry")
+    except FileNotFoundError:
+        pass
+    else:
+        moved = os.stat("entry", dir_fd=quarantine_fd, follow_symlinks=False)
+        moved_identity = (moved.st_dev, moved.st_ino)
+        terminal_quarantine = stat.S_ISREG(moved.st_mode) and moved_identity == entry_expected
+        if not terminal_quarantine:
+            rename_no_replace(quarantine_fd, "entry", owner_fd, entry_name)
+            raise RuntimeError("publication staging identity changed before cleanup")
+finally:
+    if quarantine_fd >= 0:
+        os.close(quarantine_fd)
+    os.close(owner_fd)
+PY
+}
+
+bench_publish_owned_directory_noreplace() {
+  local owner_fd_path="$1"
+  local owner_identity="$2"
+  local source_name="$3"
+  local source_identity="$4"
+  local target_name="$5"
+
+  [[ -d "$owner_fd_path" \
+    && "$owner_identity" =~ ^[0-9]+:[0-9]+$ \
+    && "$source_name" =~ ^[.]candidate[.](publish|materialize)[.][A-Za-z0-9]+$ \
+    && "$source_identity" =~ ^[0-9]+:[0-9]+$ \
+    && "$target_name" == "candidate" ]] || return 1
+  python3 - \
+    "$owner_fd_path" "$owner_identity" "$source_name" "$source_identity" "$target_name" <<'PY'
+import ctypes
+import errno
+import os
+import stat
+import sys
+
+owner, owner_identity, source_name, source_identity, target_name = sys.argv[1:]
+owner_dev, owner_ino = map(int, owner_identity.split(":"))
+source_dev, source_ino = map(int, source_identity.split(":"))
+owner_fd = os.open(owner, os.O_RDONLY | os.O_DIRECTORY)
+try:
+    owner_stat = os.fstat(owner_fd)
+    if (owner_stat.st_dev, owner_stat.st_ino) != (owner_dev, owner_ino):
+        raise RuntimeError("candidate owner directory identity changed")
+    source_stat = os.stat(source_name, dir_fd=owner_fd, follow_symlinks=False)
+    if not stat.S_ISDIR(source_stat.st_mode):
+        raise RuntimeError("candidate staging entry is not a directory")
+    if (source_stat.st_dev, source_stat.st_ino) != (source_dev, source_ino):
+        raise RuntimeError("candidate staging directory identity changed")
+    try:
+        os.stat(target_name, dir_fd=owner_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        pass
+    else:
+        raise RuntimeError("candidate destination already exists")
+
+    libc = ctypes.CDLL(None, use_errno=True)
+    renameat2 = libc.renameat2
+    renameat2.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    renameat2.restype = ctypes.c_int
+    if renameat2(
+        owner_fd,
+        os.fsencode(source_name),
+        owner_fd,
+        os.fsencode(target_name),
+        1,
+    ) != 0:
+        error = ctypes.get_errno()
+        if error == errno.EEXIST:
+            raise RuntimeError("candidate destination appeared during publication")
+        raise OSError(error, os.strerror(error))
+    published_stat = os.stat(target_name, dir_fd=owner_fd, follow_symlinks=False)
+    if not stat.S_ISDIR(published_stat.st_mode):
+        raise RuntimeError("published candidate is not a directory")
+    if (published_stat.st_dev, published_stat.st_ino) != (source_dev, source_ino):
+        raise RuntimeError("published candidate identity differs from staging")
+finally:
+    os.close(owner_fd)
+PY
+}
+
+bench_pinned_directory_guard_pid=""
+bench_pinned_directory_guard_read_fd=""
+bench_pinned_directory_guard_write_fd=""
+bench_pinned_directory_fd_path=""
+bench_pinned_directory_identity=""
+
+bench_close_pinned_directory() {
+  if [[ "$bench_pinned_directory_guard_write_fd" =~ ^[0-9]+$ ]]; then
+    printf '\n' >&"$bench_pinned_directory_guard_write_fd" 2>/dev/null || true
+    exec {bench_pinned_directory_guard_write_fd}>&- 2>/dev/null || true
+  fi
+  if [[ "$bench_pinned_directory_guard_read_fd" =~ ^[0-9]+$ ]]; then
+    exec {bench_pinned_directory_guard_read_fd}<&- 2>/dev/null || true
+  fi
+  if [[ "$bench_pinned_directory_guard_pid" =~ ^[0-9]+$ ]]; then
+    wait "$bench_pinned_directory_guard_pid" 2>/dev/null || true
+  fi
+  bench_pinned_directory_guard_pid=""
+  bench_pinned_directory_guard_read_fd=""
+  bench_pinned_directory_guard_write_fd=""
+  bench_pinned_directory_fd_path=""
+  bench_pinned_directory_identity=""
+}
+
+bench_pin_owned_directory() {
+  local owner_fd="$1"
+  local owner_identity="$2"
+  local entry_name="$3"
+  local guard_line guard_process_pid guard_directory_fd guard_identity
+
+  bench_close_pinned_directory
+  coproc BENCH_PINNED_DIRECTORY_GUARD {
+    python3 -c '
+import os
+import stat
+import sys
+
+owner_fd = int(sys.argv[1])
+owner_dev, owner_ino = map(int, sys.argv[2].split(":"))
+entry_name = sys.argv[3]
+owner_stat = os.fstat(owner_fd)
+if (owner_stat.st_dev, owner_stat.st_ino) != (owner_dev, owner_ino):
+    raise RuntimeError("publication owner directory identity changed")
+entry_stat = os.stat(entry_name, dir_fd=owner_fd, follow_symlinks=False)
+if not stat.S_ISDIR(entry_stat.st_mode):
+    raise RuntimeError("publication staging entry is not a directory")
+if not hasattr(os, "O_NOFOLLOW"):
+    raise RuntimeError("platform does not support no-follow directory opens")
+flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+directory_fd = os.open(entry_name, flags, dir_fd=owner_fd)
+try:
+    directory_stat = os.fstat(directory_fd)
+    if (directory_stat.st_dev, directory_stat.st_ino) != (
+        entry_stat.st_dev,
+        entry_stat.st_ino,
+    ):
+        raise RuntimeError("publication staging directory identity changed")
+    print(
+        f"{os.getpid()}\t{directory_fd}\t{directory_stat.st_dev}:{directory_stat.st_ino}",
+        flush=True,
+    )
+    sys.stdin.buffer.read(1)
+finally:
+    os.close(directory_fd)
+' "$owner_fd" "$owner_identity" "$entry_name"
+  }
+  bench_pinned_directory_guard_pid="$BENCH_PINNED_DIRECTORY_GUARD_PID"
+  bench_pinned_directory_guard_read_fd="${BENCH_PINNED_DIRECTORY_GUARD[0]}"
+  bench_pinned_directory_guard_write_fd="${BENCH_PINNED_DIRECTORY_GUARD[1]}"
+  if ! IFS= read -r guard_line <&"$bench_pinned_directory_guard_read_fd"; then
+    bench_close_pinned_directory
+    return 1
+  fi
+  IFS=$'\t' read -r guard_process_pid guard_directory_fd guard_identity <<< "$guard_line"
+  if [[ ! "$guard_process_pid" =~ ^[0-9]+$ \
+    || ! "$guard_directory_fd" =~ ^[0-9]+$ \
+    || ! "$guard_identity" =~ ^[0-9]+:[0-9]+$ ]]; then
+    bench_close_pinned_directory
+    return 1
+  fi
+  bench_pinned_directory_fd_path="/proc/$guard_process_pid/fd/$guard_directory_fd"
+  bench_pinned_directory_identity="$guard_identity"
+  if [[ ! -d "$bench_pinned_directory_fd_path" \
+    || "$(stat -Lc '%d:%i' "$bench_pinned_directory_fd_path" 2>/dev/null)" != "$guard_identity" ]]; then
+    bench_close_pinned_directory
+    return 1
+  fi
+}
+
+bench_artifact_transaction_guard_pid=""
+bench_artifact_transaction_guard_read_fd=""
+bench_artifact_transaction_guard_write_fd=""
+bench_artifact_transaction_root_fd_path=""
+bench_artifact_transaction_root_identity=""
+bench_artifact_transaction_stage_fd_path=""
+bench_artifact_transaction_stage_identity=""
+bench_artifact_transaction_stage_name=""
+bench_artifact_transaction_artifact_name=""
+bench_artifact_transaction_report_name=""
+bench_artifact_transaction_index_name=""
+bench_artifact_transaction_active=0
+
+bench_close_artifact_transaction_guard() {
+  local disposition="${1:-abort}"
+
+  if [[ "$disposition" == "abort" \
+    && -n "$bench_artifact_transaction_root_fd_path" \
+    && -n "$bench_artifact_transaction_root_identity" \
+    && -n "$bench_artifact_transaction_stage_name" \
+    && -n "$bench_artifact_transaction_stage_identity" ]]; then
+    bench_remove_owned_directory \
+      "$bench_artifact_transaction_root_fd_path" \
+      "$bench_artifact_transaction_root_identity" \
+      "$bench_artifact_transaction_stage_name" \
+      "$bench_artifact_transaction_stage_identity" 2>/dev/null || true
+  fi
+  if [[ "$bench_artifact_transaction_guard_write_fd" =~ ^[0-9]+$ ]]; then
+    printf '%s\n' "$disposition" \
+      >&"$bench_artifact_transaction_guard_write_fd" 2>/dev/null || true
+    exec {bench_artifact_transaction_guard_write_fd}>&- 2>/dev/null || true
+  fi
+  if [[ "$bench_artifact_transaction_guard_read_fd" =~ ^[0-9]+$ ]]; then
+    exec {bench_artifact_transaction_guard_read_fd}<&- 2>/dev/null || true
+  fi
+  if [[ "$bench_artifact_transaction_guard_pid" =~ ^[0-9]+$ ]]; then
+    wait "$bench_artifact_transaction_guard_pid" 2>/dev/null || true
+  fi
+  bench_artifact_transaction_guard_pid=""
+  bench_artifact_transaction_guard_read_fd=""
+  bench_artifact_transaction_guard_write_fd=""
+  bench_artifact_transaction_root_fd_path=""
+  bench_artifact_transaction_root_identity=""
+  bench_artifact_transaction_stage_fd_path=""
+  bench_artifact_transaction_stage_identity=""
+  bench_artifact_transaction_stage_name=""
+  bench_artifact_transaction_artifact_name=""
+  bench_artifact_transaction_report_name=""
+  bench_artifact_transaction_index_name=""
+  bench_artifact_transaction_active=0
+}
+
+bench_abort_artifact_transaction() {
+  bench_close_artifact_transaction_guard abort
+}
+
+bench_begin_artifact_transaction() {
+  local results_dir="$1"
+  local artifact_name="$2"
+  local report_name="$3"
+  local index_name="$4"
+  local guard_line guard_process_pid root_fd root_identity stage_fd stage_identity stage_name
+
+  [[ "$bench_artifact_transaction_active" == "0" ]] || return 1
+  [[ "$artifact_name" =~ ^[A-Za-z0-9._+-]+$ \
+    && "$report_name" =~ ^[A-Za-z0-9._+-]+$ \
+    && "$index_name" =~ ^[A-Za-z0-9._+-]+$ ]] || return 1
+  [[ -d "$results_dir" && ! -L "$results_dir" ]] || return 1
+  results_dir="$(cd "$results_dir" && pwd -P)" || return 1
+
+  coproc BENCH_ARTIFACT_TRANSACTION_GUARD {
+    python3 -c '
+import fcntl
+import hashlib
+import os
+import secrets
+import stat
+import sys
+
+results_dir, artifact_name, report_name = sys.argv[1:4]
+root_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+root_fd = os.open(results_dir, root_flags)
+lock_fd = -1
+stage_fd = -1
+stage_name = ""
+try:
+    root = os.fstat(root_fd)
+    if root.st_uid != os.geteuid():
+        raise RuntimeError("benchmark results directory is not owned by the current user")
+    lock_name = ".bench-artifact-lock." + hashlib.sha256(
+        artifact_name.encode("utf-8")
+    ).hexdigest()
+    lock_flags = os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW
+    lock_fd = os.open(lock_name, lock_flags, 0o600, dir_fd=root_fd)
+    lock = os.fstat(lock_fd)
+    if not stat.S_ISREG(lock.st_mode) or lock.st_uid != os.geteuid() or lock.st_nlink != 1:
+        raise RuntimeError("benchmark artifact lock is unsafe")
+    fcntl.flock(lock_fd, fcntl.LOCK_EX)
+    for completed_name in (artifact_name, report_name):
+        try:
+            os.stat(completed_name, dir_fd=root_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        else:
+            raise RuntimeError(f"benchmark output already exists: {completed_name}")
+    for _ in range(128):
+        stage_name = ".bench-artifact-publish." + secrets.token_hex(16)
+        try:
+            os.mkdir(stage_name, 0o700, dir_fd=root_fd)
+            break
+        except FileExistsError:
+            continue
+    else:
+        raise RuntimeError("could not reserve benchmark artifact staging directory")
+    stage_entry = os.stat(stage_name, dir_fd=root_fd, follow_symlinks=False)
+    if not stat.S_ISDIR(stage_entry.st_mode) or stage_entry.st_uid != os.geteuid():
+        raise RuntimeError("benchmark artifact staging entry is unsafe")
+    stage_fd = os.open(stage_name, root_flags, dir_fd=root_fd)
+    stage = os.fstat(stage_fd)
+    if (stage.st_dev, stage.st_ino) != (stage_entry.st_dev, stage_entry.st_ino):
+        raise RuntimeError("benchmark artifact staging identity changed")
+    print(
+        f"{os.getpid()}\t{root_fd}\t{root.st_dev}:{root.st_ino}"
+        f"\t{stage_fd}\t{stage.st_dev}:{stage.st_ino}\t{stage_name}",
+        flush=True,
+    )
+    sys.stdin.buffer.readline()
+finally:
+    if stage_fd >= 0:
+        os.close(stage_fd)
+    if lock_fd >= 0:
+        os.close(lock_fd)
+    os.close(root_fd)
+' "$results_dir" "$artifact_name" "$report_name"
+  }
+  bench_artifact_transaction_guard_pid="$BENCH_ARTIFACT_TRANSACTION_GUARD_PID"
+  bench_artifact_transaction_guard_read_fd="${BENCH_ARTIFACT_TRANSACTION_GUARD[0]}"
+  bench_artifact_transaction_guard_write_fd="${BENCH_ARTIFACT_TRANSACTION_GUARD[1]}"
+  if ! IFS= read -r guard_line <&"$bench_artifact_transaction_guard_read_fd"; then
+    bench_close_artifact_transaction_guard abort
+    return 1
+  fi
+  IFS=$'\t' read -r \
+    guard_process_pid root_fd root_identity stage_fd stage_identity stage_name <<< "$guard_line"
+  if [[ ! "$guard_process_pid" =~ ^[0-9]+$ \
+    || ! "$root_fd" =~ ^[0-9]+$ \
+    || ! "$root_identity" =~ ^[0-9]+:[0-9]+$ \
+    || ! "$stage_fd" =~ ^[0-9]+$ \
+    || ! "$stage_identity" =~ ^[0-9]+:[0-9]+$ \
+    || ! "$stage_name" =~ ^[.]bench-artifact-publish[.][0-9a-f]{32}$ ]]; then
+    bench_close_artifact_transaction_guard abort
+    return 1
+  fi
+  bench_artifact_transaction_root_fd_path="/proc/$guard_process_pid/fd/$root_fd"
+  bench_artifact_transaction_root_identity="$root_identity"
+  bench_artifact_transaction_stage_fd_path="/proc/$guard_process_pid/fd/$stage_fd"
+  bench_artifact_transaction_stage_identity="$stage_identity"
+  bench_artifact_transaction_stage_name="$stage_name"
+  bench_artifact_transaction_artifact_name="$artifact_name"
+  bench_artifact_transaction_report_name="$report_name"
+  bench_artifact_transaction_index_name="$index_name"
+  if [[ ! -d "$bench_artifact_transaction_root_fd_path" \
+    || ! -d "$bench_artifact_transaction_stage_fd_path" \
+    || "$(stat -Lc '%d:%i' "$bench_artifact_transaction_root_fd_path" 2>/dev/null)" != "$root_identity" \
+    || "$(stat -Lc '%d:%i' "$bench_artifact_transaction_stage_fd_path" 2>/dev/null)" != "$stage_identity" ]]; then
+    bench_close_artifact_transaction_guard abort
+    return 1
+  fi
+  bench_artifact_transaction_active=1
+}
+
+bench_commit_artifact_transaction() {
+  local human_report_name="$1"
+
+  [[ "$bench_artifact_transaction_active" == "1" ]] || return 1
+  [[ "$human_report_name" =~ ^[A-Za-z0-9._+-]+$ ]] || return 1
+  if ! python3 - \
+    "$bench_artifact_transaction_root_fd_path" \
+    "$bench_artifact_transaction_root_identity" \
+    "$bench_artifact_transaction_stage_fd_path" \
+    "$bench_artifact_transaction_stage_identity" \
+    "$bench_artifact_transaction_stage_name" \
+    "$bench_artifact_transaction_artifact_name" \
+    "$bench_artifact_transaction_report_name" \
+    "$bench_artifact_transaction_index_name" \
+    "$human_report_name" <<'PY'
+import ctypes
+import errno
+import fcntl
+import json
+import os
+import secrets
+import stat
+import sys
+
+
+def identity(value):
+    return tuple(map(int, value.split(":")))
+
+
+def checked_stat(directory_fd, name, expected_kind, expected_identity=None):
+    value = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+    if expected_kind == "directory" and not stat.S_ISDIR(value.st_mode):
+        raise RuntimeError(f"{name} is not a directory")
+    if expected_kind == "file" and not stat.S_ISREG(value.st_mode):
+        raise RuntimeError(f"{name} is not a regular file")
+    if expected_identity is not None and (value.st_dev, value.st_ino) != expected_identity:
+        raise RuntimeError(f"{name} identity changed")
+    return value
+
+
+def rename_no_replace(directory_fd, source, destination):
+    libc = ctypes.CDLL(None, use_errno=True)
+    renameat2 = libc.renameat2
+    renameat2.argtypes = [
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint,
+    ]
+    renameat2.restype = ctypes.c_int
+    if renameat2(
+        directory_fd,
+        os.fsencode(source),
+        directory_fd,
+        os.fsencode(destination),
+        1,
+    ) != 0:
+        error = ctypes.get_errno()
+        if error == errno.EEXIST:
+            raise RuntimeError(f"benchmark output appeared during publication: {destination}")
+        raise OSError(error, os.strerror(error))
+
+
+(
+    root_path,
+    root_identity,
+    stage_path,
+    stage_identity,
+    stage_name,
+    artifact_name,
+    report_name,
+    index_name,
+    human_report_name,
+) = sys.argv[1:]
+root_expected = identity(root_identity)
+stage_expected = identity(stage_identity)
+directory_flags = os.O_RDONLY | os.O_DIRECTORY
+root_fd = os.open(root_path, directory_flags)
+stage_fd = os.open(stage_path, directory_flags)
+report_source_fd = -1
+report_staging_fd = -1
+machine_fd = -1
+index_fd = -1
+report_staging_name = ""
+report_staging_identity = None
+index_identity = None
+index_original_size = 0
+index_created = False
+index_touched = False
+report_published = False
+artifact_published = False
+try:
+    root = os.fstat(root_fd)
+    stage = os.fstat(stage_fd)
+    if (root.st_dev, root.st_ino) != root_expected:
+        raise RuntimeError("benchmark results directory identity changed")
+    if (stage.st_dev, stage.st_ino) != stage_expected:
+        raise RuntimeError("benchmark artifact staging identity changed")
+    checked_stat(root_fd, stage_name, "directory", stage_expected)
+    for completed_name in (artifact_name, report_name):
+        try:
+            os.stat(completed_name, dir_fd=root_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        else:
+            raise RuntimeError(f"benchmark output already exists: {completed_name}")
+    report_source = checked_stat(stage_fd, human_report_name, "file")
+    machine_report = checked_stat(stage_fd, "report.json", "file")
+    if report_source.st_uid != os.geteuid() or machine_report.st_uid != os.geteuid():
+        raise RuntimeError("benchmark report staging files have unsafe ownership")
+    report_source_fd = os.open(
+        human_report_name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=stage_fd
+    )
+    if (os.fstat(report_source_fd).st_dev, os.fstat(report_source_fd).st_ino) != (
+        report_source.st_dev,
+        report_source.st_ino,
+    ):
+        raise RuntimeError("benchmark human report identity changed")
+    machine_fd = os.open("report.json", os.O_RDONLY | os.O_NOFOLLOW, dir_fd=stage_fd)
+    pinned_machine_report = os.fstat(machine_fd)
+    if (pinned_machine_report.st_dev, pinned_machine_report.st_ino) != (
+        machine_report.st_dev,
+        machine_report.st_ino,
+    ):
+        raise RuntimeError("benchmark machine report identity changed")
+    machine_chunks = []
+    while True:
+        chunk = os.read(machine_fd, 1024 * 1024)
+        if not chunk:
+            break
+        machine_chunks.append(chunk)
+    machine_bytes = b"".join(machine_chunks)
+    machine_value = json.loads(machine_bytes)
+    if not isinstance(machine_value, dict):
+        raise RuntimeError("benchmark machine report is not a JSON object")
+    index_record = machine_bytes.rstrip(b"\n") + b"\n"
+    for _ in range(128):
+        report_staging_name = ".bench-report-publish." + secrets.token_hex(16)
+        try:
+            report_staging_fd = os.open(
+                report_staging_name,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                0o644,
+                dir_fd=root_fd,
+            )
+            break
+        except FileExistsError:
+            continue
+    else:
+        raise RuntimeError("could not reserve benchmark report staging file")
+    report_staging = os.fstat(report_staging_fd)
+    report_staging_identity = (report_staging.st_dev, report_staging.st_ino)
+    while True:
+        chunk = os.read(report_source_fd, 1024 * 1024)
+        if not chunk:
+            break
+        view = memoryview(chunk)
+        while view:
+            written = os.write(report_staging_fd, view)
+            view = view[written:]
+    os.fsync(report_staging_fd)
+    checked_stat(root_fd, report_staging_name, "file", report_staging_identity)
+
+    try:
+        index_entry = os.stat(index_name, dir_fd=root_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        index_fd = os.open(
+            index_name,
+            os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+            0o644,
+            dir_fd=root_fd,
+        )
+        index_created = True
+    else:
+        if not stat.S_ISREG(index_entry.st_mode):
+            raise RuntimeError("benchmark report index is not a regular file")
+        index_fd = os.open(
+            index_name, os.O_WRONLY | os.O_APPEND | os.O_NOFOLLOW, dir_fd=root_fd
+        )
+        opened_index = os.fstat(index_fd)
+        if (opened_index.st_dev, opened_index.st_ino) != (
+            index_entry.st_dev,
+            index_entry.st_ino,
+        ):
+            raise RuntimeError("benchmark report index identity changed")
+    index = os.fstat(index_fd)
+    if not stat.S_ISREG(index.st_mode) or index.st_uid != os.geteuid() or index.st_nlink != 1:
+        raise RuntimeError("benchmark report index is unsafe")
+    fcntl.flock(index_fd, fcntl.LOCK_EX)
+    index = os.fstat(index_fd)
+    index_identity = (index.st_dev, index.st_ino)
+    index_original_size = index.st_size
+    checked_stat(root_fd, index_name, "file", index_identity)
+    checked_stat(root_fd, stage_name, "directory", stage_expected)
+    checked_stat(stage_fd, human_report_name, "file", (report_source.st_dev, report_source.st_ino))
+    checked_stat(stage_fd, "report.json", "file", (machine_report.st_dev, machine_report.st_ino))
+
+    index_touched = True
+    view = memoryview(index_record)
+    while view:
+        written = os.write(index_fd, view)
+        view = view[written:]
+    os.fsync(index_fd)
+    os.unlink(human_report_name, dir_fd=stage_fd)
+    os.fsync(stage_fd)
+    rename_no_replace(root_fd, report_staging_name, report_name)
+    report_published = True
+    rename_no_replace(root_fd, stage_name, artifact_name)
+    artifact_published = True
+    checked_stat(root_fd, report_name, "file", report_staging_identity)
+    checked_stat(root_fd, artifact_name, "directory", stage_expected)
+    os.fsync(root_fd)
+finally:
+    if not artifact_published and index_fd >= 0 and index_touched:
+        os.ftruncate(index_fd, index_original_size)
+        os.fsync(index_fd)
+    if not artifact_published and report_published and report_staging_identity is not None:
+        try:
+            published_report = os.stat(report_name, dir_fd=root_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        else:
+            if (published_report.st_dev, published_report.st_ino) == report_staging_identity:
+                os.unlink(report_name, dir_fd=root_fd)
+    if not report_published and report_staging_name and report_staging_identity is not None:
+        try:
+            staged_report = os.stat(
+                report_staging_name, dir_fd=root_fd, follow_symlinks=False
+            )
+        except FileNotFoundError:
+            pass
+        else:
+            if (staged_report.st_dev, staged_report.st_ino) == report_staging_identity:
+                os.unlink(report_staging_name, dir_fd=root_fd)
+    if not artifact_published and index_fd >= 0 and index_created and index_identity is not None:
+        try:
+            current_index = os.stat(index_name, dir_fd=root_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        else:
+            if (current_index.st_dev, current_index.st_ino) == index_identity:
+                os.unlink(index_name, dir_fd=root_fd)
+    if index_fd >= 0:
+        os.close(index_fd)
+    if machine_fd >= 0:
+        os.close(machine_fd)
+    if report_staging_fd >= 0:
+        os.close(report_staging_fd)
+    if report_source_fd >= 0:
+        os.close(report_source_fd)
+    os.close(stage_fd)
+    os.close(root_fd)
+PY
+  then
+    bench_close_artifact_transaction_guard abort
+    return 1
+  fi
+  bench_close_artifact_transaction_guard commit
+}
+
+bench_publish_candidate_runtime() (
+  local artifact_dir="$1"
+  local source_candidate="$2"
+  local admission_path="$3"
+  local trusted_artifact_identity="${4:-}"
+  local artifact_fd="" artifact_fd_path="" artifact_identity=""
+  local source_fd="" source_fd_path="" source_identity=""
+  local staging_path="" staging_name="" staging_fd_path="" staging_identity=""
+  local published=0
+
+  artifact_owner_matches() {
+    [[ -d "$artifact_fd_path" \
+      && "$(stat -Lc '%d:%i' "$artifact_fd_path" 2>/dev/null)" == "$artifact_identity" ]] \
+      || return 1
+    if [[ -n "$trusted_artifact_identity" ]]; then
+      return 0
+    fi
+    bench_directory_matches_identity "$artifact_dir" "$artifact_fd_path" "$artifact_identity"
+  }
+
+  cleanup_candidate_publication() {
+    if [[ "$published" == "0" \
+      && -n "$artifact_fd_path" \
+      && -n "$artifact_identity" \
+      && -n "$staging_name" \
+      && -n "$staging_identity" ]]; then
+      bench_remove_owned_directory \
+        "$artifact_fd_path" "$artifact_identity" "$staging_name" "$staging_identity" \
+        2>/dev/null || true
+      bench_remove_owned_directory \
+        "$artifact_fd_path" "$artifact_identity" candidate "$staging_identity" 1 \
+        2>/dev/null || true
+    fi
+    bench_close_pinned_directory
+  }
+  trap cleanup_candidate_publication EXIT
+
+  if [[ -n "$trusted_artifact_identity" ]]; then
+    [[ "$trusted_artifact_identity" =~ ^[0-9]+:[0-9]+$ \
+      && -d "$artifact_dir" \
+      && "$(stat -Lc '%d:%i' "$artifact_dir" 2>/dev/null)" == "$trusted_artifact_identity" ]] \
+      || return 1
+    artifact_identity="$trusted_artifact_identity"
+  else
+    [[ -d "$artifact_dir" && ! -L "$artifact_dir" ]] || return 1
+    artifact_dir="$(cd "$artifact_dir" && pwd -P)" || return 1
+  fi
+  [[ -d "$source_candidate" && ! -L "$source_candidate" ]] || return 1
+  source_candidate="$(cd "$source_candidate" && pwd -P)" || return 1
+  [[ -f "$admission_path" && ! -L "$admission_path" ]] || return 1
+  [[ -z "$(find "$source_candidate" -xdev -type l -print -quit)" ]] || return 1
+  [[ ! -e "$artifact_dir/candidate" && ! -L "$artifact_dir/candidate" ]] || return 1
+
+  exec {artifact_fd}<"$artifact_dir" || return 1
+  artifact_fd_path="$(bench_directory_fd_path "$artifact_fd")" || return 1
+  if [[ -n "$trusted_artifact_identity" ]]; then
+    [[ "$(stat -Lc '%d:%i' "$artifact_fd_path" 2>/dev/null)" == "$artifact_identity" ]] \
+      || return 1
+  else
+    artifact_identity="$(stat -Lc '%d:%i' "$artifact_fd_path")" || return 1
+  fi
+  artifact_owner_matches || return 1
+
+  exec {source_fd}<"$source_candidate" || return 1
+  source_fd_path="$(bench_directory_fd_path "$source_fd")" || return 1
+  source_identity="$(stat -Lc '%d:%i' "$source_fd_path")" || return 1
+  bench_directory_matches_identity "$source_candidate" "$source_fd_path" "$source_identity" \
+    || return 1
+
+  staging_path="$(mktemp -d "$artifact_fd_path/.candidate.publish.XXXXXX")" || return 1
+  staging_name="${staging_path##*/}"
+  [[ "$staging_name" =~ ^[.]candidate[.]publish[.][A-Za-z0-9]+$ ]] || return 1
+  [[ -d "$staging_path" && ! -L "$staging_path" ]] || return 1
+  bench_pin_owned_directory "$artifact_fd" "$artifact_identity" "$staging_name" || return 1
+  staging_fd_path="$bench_pinned_directory_fd_path"
+  staging_identity="$bench_pinned_directory_identity"
+  bench_directory_matches_identity \
+    "$artifact_fd_path/$staging_name" "$staging_fd_path" "$staging_identity" || return 1
+
+  cp -a --no-dereference --no-preserve=ownership -- \
+    "$source_fd_path/." "$staging_fd_path/." || return 1
+  artifact_owner_matches || return 1
+  bench_directory_matches_identity "$source_candidate" "$source_fd_path" "$source_identity" \
+    || return 1
+  bench_directory_matches_identity \
+    "$artifact_fd_path/$staging_name" "$staging_fd_path" "$staging_identity" || return 1
+  [[ -z "$(find "$staging_fd_path/." -xdev -type l -print -quit)" ]] || return 1
+  bench_candidate_paths_are_runnable \
+    "$artifact_dir" "$staging_fd_path/." "$admission_path" "$artifact_identity" || return 1
+  [[ ! -e "$artifact_fd_path/candidate" && ! -L "$artifact_fd_path/candidate" ]] || return 1
+
+  bench_publish_owned_directory_noreplace \
+    "$artifact_fd_path" "$artifact_identity" "$staging_name" "$staging_identity" candidate \
+    || return 1
+  [[ -d "$artifact_fd_path/candidate" && ! -L "$artifact_fd_path/candidate" \
+    && "$(stat -c '%d:%i' "$artifact_fd_path/candidate" 2>/dev/null)" == "$staging_identity" \
+    && "$(stat -Lc '%d:%i' "$staging_fd_path" 2>/dev/null)" == "$staging_identity" ]] \
+    || return 1
+  bench_candidate_paths_are_runnable \
+    "$artifact_dir" "$artifact_fd_path/candidate" "$admission_path" "$artifact_identity" || return 1
+  published=1
+)
+
+bench_publish_regular_file() (
+  local owner_dir="$1"
+  local source_file="$2"
+  local target_name="$3"
+  local trusted_owner_identity="${4:-}"
+  local owner_fd owner_fd_path owner_identity
+  local source_fd source_fd_path source_identity
+  local staging_path="" staging_name="" staging_fd="" staging_fd_path="" staging_identity=""
+  local published=0
+
+  owner_matches() {
+    [[ -d "$owner_fd_path" \
+      && "$(stat -Lc '%d:%i' "$owner_fd_path" 2>/dev/null)" == "$owner_identity" ]] \
+      || return 1
+    if [[ -n "$trusted_owner_identity" ]]; then
+      return 0
+    fi
+    bench_directory_matches_identity "$owner_dir" "$owner_fd_path" "$owner_identity"
+  }
+
+  cleanup_file_publication() {
+    [[ "$published" == "0" && -n "$owner_fd_path" && -n "$staging_name" ]] || return 0
+    [[ -n "$owner_identity" && -n "$staging_identity" ]] || return 0
+    bench_remove_owned_regular_file \
+      "$owner_fd_path" "$owner_identity" "$staging_name" "$staging_identity" \
+      2>/dev/null || true
+  }
+  trap cleanup_file_publication EXIT
+
+  [[ "$target_name" =~ ^[A-Za-z0-9._-]+$ ]] || return 1
+  if [[ -n "$trusted_owner_identity" ]]; then
+    [[ "$trusted_owner_identity" =~ ^[0-9]+:[0-9]+$ \
+      && -d "$owner_dir" \
+      && "$(stat -Lc '%d:%i' "$owner_dir" 2>/dev/null)" == "$trusted_owner_identity" ]] \
+      || return 1
+  else
+    [[ -d "$owner_dir" && ! -L "$owner_dir" ]] || return 1
+    owner_dir="$(cd "$owner_dir" && pwd -P)" || return 1
+  fi
+  [[ -f "$source_file" && ! -L "$source_file" ]] || return 1
+
+  exec {owner_fd}<"$owner_dir" || return 1
+  owner_fd_path="$(bench_directory_fd_path "$owner_fd")" || return 1
+  if [[ -n "$trusted_owner_identity" ]]; then
+    owner_identity="$trusted_owner_identity"
+  else
+    owner_identity="$(stat -Lc '%d:%i' "$owner_fd_path")" || return 1
+  fi
+  owner_matches || return 1
+  if [[ -e "$owner_fd_path/$target_name" || -L "$owner_fd_path/$target_name" ]]; then
+    [[ -f "$owner_fd_path/$target_name" && ! -L "$owner_fd_path/$target_name" ]] || return 1
+  fi
+
+  exec {source_fd}<"$source_file" || return 1
+  source_fd_path="$(bench_fd_path "$source_fd")" || return 1
+  source_identity="$(stat -Lc '%d:%i' "$source_fd_path")" || return 1
+  [[ "$(stat -c '%d:%i' "$source_file" 2>/dev/null)" == "$source_identity" ]] || return 1
+
+  staging_path="$(mktemp "$owner_fd_path/.${target_name}.publish.XXXXXX")" || return 1
+  staging_name="${staging_path##*/}"
+  [[ -f "$staging_path" && ! -L "$staging_path" ]] || return 1
+  exec {staging_fd}<"$staging_path" || return 1
+  staging_fd_path="$(bench_fd_path "$staging_fd")" || return 1
+  staging_identity="$(stat -Lc '%d:%i' "$staging_fd_path")" || return 1
+  [[ "$(stat -c '%d:%i' "$owner_fd_path/$staging_name" 2>/dev/null)" == "$staging_identity" ]] \
+    || return 1
+
+  cat "$source_fd_path" > "$staging_fd_path" || return 1
+  cmp -s "$source_fd_path" "$staging_fd_path" || return 1
+  owner_matches || return 1
+  [[ "$(stat -c '%d:%i' "$source_file" 2>/dev/null)" == "$source_identity" ]] || return 1
+  [[ "$(stat -c '%d:%i' "$owner_fd_path/$staging_name" 2>/dev/null)" == "$staging_identity" ]] \
+    || return 1
+
+  python3 - \
+    "$owner_fd_path" "$owner_identity" "$staging_name" "$staging_identity" "$target_name" <<'PY'
+import os
+import stat
+import sys
+
+owner, owner_identity, source_name, source_identity, target_name = sys.argv[1:]
+owner_dev, owner_ino = map(int, owner_identity.split(":"))
+source_dev, source_ino = map(int, source_identity.split(":"))
+flags = os.O_RDONLY | os.O_DIRECTORY
+owner_fd = os.open(owner, flags)
+try:
+    owner_stat = os.fstat(owner_fd)
+    if (owner_stat.st_dev, owner_stat.st_ino) != (owner_dev, owner_ino):
+        raise RuntimeError("publication owner directory identity changed")
+    source_stat = os.stat(source_name, dir_fd=owner_fd, follow_symlinks=False)
+    if not stat.S_ISREG(source_stat.st_mode):
+        raise RuntimeError("publication staging entry is not a regular file")
+    if (source_stat.st_dev, source_stat.st_ino) != (source_dev, source_ino):
+        raise RuntimeError("publication staging file identity changed")
+    try:
+        target_stat = os.stat(target_name, dir_fd=owner_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        pass
+    else:
+        if not stat.S_ISREG(target_stat.st_mode):
+            raise RuntimeError("publication target is not a regular file")
+    os.replace(source_name, target_name, src_dir_fd=owner_fd, dst_dir_fd=owner_fd)
+    published_stat = os.stat(target_name, dir_fd=owner_fd, follow_symlinks=False)
+    if not stat.S_ISREG(published_stat.st_mode):
+        raise RuntimeError("published target is not a regular file")
+    if (published_stat.st_dev, published_stat.st_ino) != (source_dev, source_ino):
+        raise RuntimeError("published file identity differs from staging")
+finally:
+    os.close(owner_fd)
+PY
+  [[ "$(stat -c '%d:%i' "$owner_fd_path/$target_name" 2>/dev/null)" == "$staging_identity" ]] \
+    || return 1
+  cmp -s "$source_fd_path" "$owner_fd_path/$target_name" || return 1
+  published=1
+)
+
+bench_stage_candidate_runtime() {
+  local checkout_dir="$1"
+  local cargo_bin="$2"
+  local expected_commit="$3"
+  local target_dir="$4"
+  local build_tmp="$5"
+  local candidate_dir="$6"
+  local runtime_work_dir="$7"
+  local build_log="$8"
+  local root_manifest metadata_path target_manifest executable_records
+  local executable_name executable_path executable_digest smoke_project smoke_stdout smoke_stderr
+  local -a target_names=()
+
+  bench_runtime_error_code=""
+  bench_runtime_error_reason=""
+  bench_runtime_executables=""
+  bench_runtime_entrypoint_digest=""
+  bench_runtime_target_manifest_digest=""
+  bench_runtime_smoke_stdout_digest=""
+  bench_runtime_smoke_stderr_digest=""
+  bench_runtime_stdin_digest=""
+
+  [[ -d "$checkout_dir" && ! -L "$checkout_dir" ]] \
+    || bench_runtime_fail "candidate checkout is not a real directory" || return $?
+  checkout_dir="$(cd "$checkout_dir" && pwd -P)" \
+    || bench_runtime_fail "candidate checkout could not be resolved" || return $?
+  [[ -x "$cargo_bin" && ! -d "$cargo_bin" ]] \
+    || bench_runtime_fail "Cargo executable is unavailable" || return $?
+  [[ "$expected_commit" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] \
+    || bench_runtime_fail "candidate source commit is invalid" || return $?
+  [[ -d "$target_dir" && ! -L "$target_dir" ]] \
+    || bench_runtime_fail "candidate target directory is not secure" || return $?
+  [[ -d "$build_tmp" && ! -L "$build_tmp" ]] \
+    || bench_runtime_fail "candidate build temporary directory is not secure" || return $?
+  [[ -d "$candidate_dir" ]] \
+    || bench_runtime_fail "candidate staging directory is unavailable" || return $?
+  [[ -d "$runtime_work_dir" && ! -L "$runtime_work_dir" ]] \
+    || bench_runtime_fail "candidate runtime work directory is not secure" || return $?
+  [[ -z "$(find "$candidate_dir" -mindepth 1 -maxdepth 1 -print -quit)" ]] \
+    || bench_runtime_fail "candidate staging directory is not empty" || return $?
+  bench_checkout_matches_commit "$checkout_dir" "$expected_commit" \
+    || bench_runtime_fail "candidate checkout is not clean at the expected final commit" || return $?
+
+  root_manifest="$checkout_dir/Cargo.toml"
+  [[ -f "$root_manifest" && ! -L "$root_manifest" ]] \
+    || bench_runtime_fail "candidate checkout has no regular root Cargo manifest" || return $?
+  metadata_path="$runtime_work_dir/cargo-metadata.json"
+  : > "$build_log" || bench_runtime_fail "candidate build log could not be created" || return $?
+  if ! (
+    cd "$checkout_dir"
+    export CARGO_TARGET_DIR="$target_dir"
+    export TMPDIR="$build_tmp"
+    "$cargo_bin" metadata --no-deps --format-version 1 --locked
+  ) > "$metadata_path" 2>> "$build_log"; then
+    bench_runtime_fail "candidate Cargo metadata failed" "candidate_metadata_failed"
+    return $?
+  fi
+  target_manifest="$candidate_dir/SOURCE_TARGETS.json"
+  if ! jq -e --arg manifest "$root_manifest" '
+    [
+      .packages[]
+      | select(.manifest_path == $manifest)
+    ] as $packages
+    | select($packages | length == 1)
+    | [
+        $packages[0].targets[]
+        | select(.kind | index("bin"))
+        | .name
+      ]
+    | sort
+    | select(length > 0)
+    | select(index("work-leaf") != null)
+    | select(. == unique)
+    | select(all(.[]; type == "string" and test("^[A-Za-z0-9._-]+$")))
+  ' "$metadata_path" > "$target_manifest"; then
+    bench_runtime_fail \
+      "candidate Cargo metadata has no unambiguous Work Leaf binary target set" \
+      "invalid_candidate_targets"
+    return $?
+  fi
+  mapfile -t target_names < <(jq -r '.[]' "$target_manifest")
+  [[ "${#target_names[@]}" -gt 0 ]] \
+    || bench_runtime_fail "candidate Cargo target set is empty" "invalid_candidate_targets" \
+    || return $?
+  bench_checkout_matches_commit "$checkout_dir" "$expected_commit" \
+    || bench_runtime_fail "candidate source changed during metadata inspection" || return $?
+
+  if ! (
+    cd "$checkout_dir"
+    export CARGO_TARGET_DIR="$target_dir"
+    export TMPDIR="$build_tmp"
+    "$cargo_bin" build --release --locked --bins
+  ) >> "$build_log" 2>&1; then
+    bench_runtime_fail "candidate release compilation failed"
+    return $?
+  fi
+  for executable_name in "${target_names[@]}"; do
+    executable_path="$target_dir/release/$executable_name"
+    [[ -f "$executable_path" && ! -L "$executable_path" && -x "$executable_path" ]] \
+      || bench_runtime_fail \
+        "candidate build omitted declared executable $executable_name" \
+        "incomplete_candidate_runtime" \
+      || return $?
+  done
+  bench_checkout_matches_commit "$checkout_dir" "$expected_commit" \
+    || bench_runtime_fail "candidate source changed during compilation" || return $?
+
+  mkdir "$candidate_dir/bin" \
+    || bench_runtime_fail "candidate executable staging directory could not be created" || return $?
+  executable_records="$runtime_work_dir/executables.jsonl"
+  : > "$executable_records"
+  : > "$candidate_dir/SHA256SUMS"
+  for executable_name in "${target_names[@]}"; do
+    executable_path="$candidate_dir/bin/$executable_name"
+    cp "$target_dir/release/$executable_name" "$executable_path" \
+      || bench_runtime_fail "candidate executable staging failed" || return $?
+    chmod 0755 "$executable_path" \
+      || bench_runtime_fail "candidate executable mode could not be set" || return $?
+    executable_digest="$(bench_sha256_file "$executable_path")" \
+      || bench_runtime_fail "candidate executable digest failed" || return $?
+    printf '%s  bin/%s\n' "$executable_digest" "$executable_name" \
+      >> "$candidate_dir/SHA256SUMS"
+    jq -cn \
+      --arg path "candidate/bin/$executable_name" \
+      --arg sha256 "$executable_digest" \
+      '{path:$path,sha256:$sha256}' >> "$executable_records"
+  done
+  bench_runtime_executables="$(jq -sc 'sort_by(.path)' "$executable_records")" \
+    || bench_runtime_fail "candidate executable manifest generation failed" || return $?
+  bench_runtime_entrypoint_digest="$(
+    jq -er '.[] | select(.path == "candidate/bin/work-leaf") | .sha256' \
+      <<< "$bench_runtime_executables"
+  )" || bench_runtime_fail "candidate entrypoint digest is unavailable" || return $?
+
+  smoke_project="$runtime_work_dir/smoke-project"
+  mkdir "$smoke_project" \
+    || bench_runtime_fail "candidate smoke project directory could not be created" || return $?
+  git -C "$smoke_project" init --quiet \
+    || bench_runtime_fail "candidate smoke project initialization failed" || return $?
+  git -C "$smoke_project" \
+    -c user.name='Work Leaf Candidate Smoke' \
+    -c user.email='candidate-smoke@invalid' \
+    commit --quiet --allow-empty -m 'candidate smoke fixture' \
+    || bench_runtime_fail "candidate smoke project commit failed" || return $?
+  smoke_stdout="$candidate_dir/SMOKE.stdout"
+  smoke_stderr="$candidate_dir/SMOKE.stderr"
+  if ! (
+    cd "$smoke_project"
+    printf 'quit\n' \
+      | timeout --kill-after=5s 20s \
+        env -u WORK_LEAF_IN_PROCESS -u WORK_LEAF_ORCHESTRATOR_URL \
+        WORK_LEAF_START_LISTEN=127.0.0.1:0 \
+        "$candidate_dir/bin/work-leaf"
+  ) > "$smoke_stdout" 2> "$smoke_stderr"; then
+    bench_runtime_fail \
+      "staged candidate failed bounded scripted startup" \
+      "candidate_smoke_failed"
+    return $?
+  fi
+  bench_checkout_matches_commit "$checkout_dir" "$expected_commit" \
+    || bench_runtime_fail "candidate source changed during staged startup" || return $?
+
+  bench_runtime_target_manifest_digest="$(bench_sha256_file "$target_manifest")" \
+    || bench_runtime_fail "candidate target manifest digest failed" || return $?
+  bench_runtime_smoke_stdout_digest="$(bench_sha256_file "$smoke_stdout")" \
+    || bench_runtime_fail "candidate smoke stdout digest failed" || return $?
+  bench_runtime_smoke_stderr_digest="$(bench_sha256_file "$smoke_stderr")" \
+    || bench_runtime_fail "candidate smoke stderr digest failed" || return $?
+  bench_runtime_stdin_digest="$(printf 'quit\n' | sha256sum | awk '{print $1}')"
+  [[ "$bench_runtime_stdin_digest" =~ ^[0-9a-f]{64}$ ]] \
+    || bench_runtime_fail "candidate smoke stdin digest failed" || return $?
+}
+
+bench_candidate_is_runnable() {
+  local artifact_dir="$1"
+  local provenance_path="$artifact_dir/candidate/PROVENANCE"
+  local schema report_path
+  bench_path_has_private_publication_component "$artifact_dir" && return 1
+  [[ -f "$provenance_path" && ! -L "$provenance_path" ]] || return 1
+  schema="$(jq -er '.schema | select(type == "string")' "$provenance_path")" || return 1
+  case "$schema" in
+    "$bench_candidate_schema")
+      report_path="$artifact_dir/report.json"
+      ;;
+    "$bench_materialized_candidate_schema")
+      report_path="$artifact_dir/candidate/$bench_materialized_admission_name"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+  bench_candidate_paths_are_runnable \
+    "$artifact_dir" \
+    "$artifact_dir/candidate" \
+    "$report_path"
+}
+
+bench_candidate_paths_are_runnable() {
+  local artifact_dir="$1"
+  local candidate_dir="$2"
+  local report_path="$3"
+  local trusted_artifact_identity="${4:-}"
+  local provenance_path checksums_path
+  local provenance schema entrypoint executable_path executable_relative executable_digest
+  local expected_count actual_count actual_name expected_name index
+  local source_commit materialization bundle_path final_log_path source_report_path
+  local format_patches_path target_manifest_path target_manifest_digest smoke_stdout_path smoke_stderr_path
+  local expected_patch_digest patch_relative_path patch_path
+  local bundle_commit bundle_ref bundle_extra saved_final saved_subject
+  local -a bundle_heads=() actual_names=() expected_names=()
+
+  if [[ -n "$trusted_artifact_identity" ]]; then
+    [[ "$trusted_artifact_identity" =~ ^[0-9]+:[0-9]+$ \
+      && -d "$artifact_dir" \
+      && "$(stat -Lc '%d:%i' "$artifact_dir" 2>/dev/null)" == "$trusted_artifact_identity" ]] \
+      || return 1
+  else
+    [[ -d "$artifact_dir" && ! -L "$artifact_dir" ]] || return 1
+    artifact_dir="$(cd "$artifact_dir" && pwd -P)" || return 1
+  fi
+  provenance_path="$candidate_dir/PROVENANCE"
+  checksums_path="$candidate_dir/SHA256SUMS"
+  [[ -d "$candidate_dir" && ! -L "$candidate_dir" ]] || return 1
+  [[ -d "$candidate_dir/bin" && ! -L "$candidate_dir/bin" ]] || return 1
+  [[ -f "$provenance_path" && ! -L "$provenance_path" ]] || return 1
+  [[ -f "$checksums_path" && ! -L "$checksums_path" ]] || return 1
+  [[ -f "$report_path" && ! -L "$report_path" ]] || return 1
+
+  schema="$(jq -er '.schema | select(type == "string")' "$provenance_path")" || return 1
+  if [[ "$schema" == "$bench_candidate_schema" ]]; then
+    provenance="$(jq -ce \
+      --arg schema "$bench_candidate_schema" \
+      --arg smoke_schema "$bench_candidate_smoke_schema" '
+      select(
+        type == "object"
+        and keys == ["entrypoint", "executables", "schema", "smoke", "source_commit", "targets"]
+        and .schema == $schema
+        and .entrypoint == "candidate/bin/work-leaf"
+        and (.source_commit | type == "string" and test("^([0-9a-f]{40}|[0-9a-f]{64})$"))
+        and (.executables | type == "array" and length > 0)
+        and all(
+          .executables[];
+          type == "object"
+          and keys == ["path", "sha256"]
+          and (.path | type == "string" and test("^candidate/bin/[A-Za-z0-9._-]+$"))
+          and (.sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+        )
+        and ([.executables[].path] | unique | length) == (.executables | length)
+        and [.executables[].path] == ([.executables[].path] | sort)
+        and (.entrypoint as $entrypoint | [.executables[].path] | index($entrypoint)) != null
+        and (.targets | type == "object" and keys == ["path", "sha256"])
+        and .targets.path == "candidate/SOURCE_TARGETS.json"
+        and (.targets.sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+        and (.smoke | type == "object")
+        and (.smoke | keys) == [
+          "command",
+          "exit_code",
+          "gate",
+          "schema",
+          "stderr",
+          "stdin_sha256",
+          "stdout",
+          "timeout_seconds"
+        ]
+        and .smoke.schema == $smoke_schema
+        and .smoke.gate == "bounded-startup-quit"
+        and .smoke.command == ["candidate/bin/work-leaf"]
+        and .smoke.exit_code == 0
+        and .smoke.timeout_seconds == 20
+        and (.smoke.stdin_sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+        and (.smoke.stdout | type == "object" and keys == ["path", "sha256"])
+        and .smoke.stdout.path == "candidate/SMOKE.stdout"
+        and (.smoke.stdout.sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+        and (.smoke.stderr | type == "object" and keys == ["path", "sha256"])
+        and .smoke.stderr.path == "candidate/SMOKE.stderr"
+        and (.smoke.stderr.sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+      )
+    ' "$provenance_path")" || return 1
+  elif [[ "$schema" == "$bench_materialized_candidate_schema" ]]; then
+    provenance="$(jq -ce \
+      --arg schema "$bench_materialized_candidate_schema" \
+      --arg materialization_schema "$bench_materialization_schema" \
+      --arg smoke_schema "$bench_candidate_smoke_schema" '
+      select(
+        type == "object"
+        and keys == ["entrypoint", "executables", "materialization", "schema", "smoke", "source_commit"]
+        and .schema == $schema
+        and .entrypoint == "candidate/bin/work-leaf"
+        and (.source_commit | type == "string" and test("^([0-9a-f]{40}|[0-9a-f]{64})$"))
+        and (.executables | type == "array" and length > 0)
+        and all(
+          .executables[];
+          type == "object"
+          and keys == ["path", "sha256"]
+          and (.path | type == "string" and test("^candidate/bin/[A-Za-z0-9._-]+$"))
+          and (.sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+        )
+        and ([.executables[].path] | unique | length) == (.executables | length)
+        and [.executables[].path] == ([.executables[].path] | sort)
+        and (.entrypoint as $entrypoint | [.executables[].path] | index($entrypoint)) != null
+        and (.smoke | type == "object")
+        and (.smoke | keys) == [
+          "command",
+          "exit_code",
+          "gate",
+          "schema",
+          "stderr",
+          "stdin_sha256",
+          "stdout",
+          "timeout_seconds"
+        ]
+        and .smoke.schema == $smoke_schema
+        and .smoke.gate == "bounded-startup-quit"
+        and .smoke.command == ["candidate/bin/work-leaf"]
+        and .smoke.exit_code == 0
+        and .smoke.timeout_seconds == 20
+        and (.smoke.stdin_sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+        and (.smoke.stdout | type == "object" and keys == ["path", "sha256"])
+        and .smoke.stdout.path == "candidate/SMOKE.stdout"
+        and (.smoke.stdout.sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+        and (.smoke.stderr | type == "object" and keys == ["path", "sha256"])
+        and .smoke.stderr.path == "candidate/SMOKE.stderr"
+        and (.smoke.stderr.sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+        and (.materialization | type == "object")
+        and (.materialization | keys) == [
+          "base_commit",
+          "bundle",
+          "bundle_sha256",
+          "changed_files",
+          "commits_after_base",
+          "final_log",
+          "final_log_sha256",
+          "format_patches",
+          "format_patches_sha256",
+          "schema",
+          "source_report",
+          "source_report_sha256",
+          "targets",
+          "targets_sha256"
+        ]
+        and .materialization.schema == $materialization_schema
+        and (.materialization.base_commit | type == "string" and test("^([0-9a-f]{40}|[0-9a-f]{64})$"))
+        and .materialization.bundle == "patches/pass/commits.bundle"
+        and (.materialization.bundle_sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+        and .materialization.final_log == "final-log.txt"
+        and (.materialization.final_log_sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+        and .materialization.format_patches == "candidate/SOURCE_PATCHES.json"
+        and (.materialization.format_patches_sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+        and .materialization.source_report == "candidate/SOURCE_REPORT.json"
+        and (.materialization.source_report_sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+        and .materialization.targets == "candidate/SOURCE_TARGETS.json"
+        and (.materialization.targets_sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+        and ((.materialization.commits_after_base | type) == "number")
+        and .materialization.commits_after_base > 0
+        and .materialization.commits_after_base == (.materialization.commits_after_base | floor)
+        and ((.materialization.changed_files | type) == "number")
+        and .materialization.changed_files > 0
+        and .materialization.changed_files == (.materialization.changed_files | floor)
+      )
+    ' "$provenance_path")" || return 1
+
+  else
+    return 1
+  fi
+
+  entrypoint="$(jq -r '.entrypoint' <<< "$provenance")" || return 1
+  [[ "$entrypoint" == "candidate/bin/work-leaf" ]] || return 1
+  cmp -s \
+    <(jq -r '.executables[] | "\(.sha256)  \(.path | sub("^candidate/"; ""))"' <<< "$provenance") \
+    "$checksums_path" || return 1
+  while IFS=$'\t' read -r executable_path executable_digest; do
+    executable_relative="${executable_path#candidate/}"
+    executable_path="$candidate_dir/$executable_relative"
+    [[ -f "$executable_path" && ! -L "$executable_path" && -x "$executable_path" ]] || return 1
+    [[ "$(bench_sha256_file "$executable_path")" == "$executable_digest" ]] || return 1
+  done < <(jq -r '.executables[] | [.path, .sha256] | @tsv' <<< "$provenance")
+  mapfile -t expected_names < <(jq -r '.executables[].path | sub("^candidate/bin/"; "")' <<< "$provenance")
+  mapfile -t actual_names < <(find "$candidate_dir/bin" -mindepth 1 -maxdepth 1 -printf '%f\n' | sort)
+  expected_count="${#expected_names[@]}"
+  actual_count="${#actual_names[@]}"
+  [[ "$actual_count" -eq "$expected_count" ]] || return 1
+  for index in "${!expected_names[@]}"; do
+    expected_name="${expected_names[$index]}"
+    actual_name="${actual_names[$index]}"
+    [[ "$actual_name" == "$expected_name" ]] || return 1
+  done
+
+  target_manifest_path="$candidate_dir/SOURCE_TARGETS.json"
+  smoke_stdout_path="$candidate_dir/SMOKE.stdout"
+  smoke_stderr_path="$candidate_dir/SMOKE.stderr"
+  [[ -f "$target_manifest_path" && ! -L "$target_manifest_path" ]] || return 1
+  [[ -f "$smoke_stdout_path" && ! -L "$smoke_stdout_path" ]] || return 1
+  [[ -f "$smoke_stderr_path" && ! -L "$smoke_stderr_path" ]] || return 1
+  if [[ "$schema" == "$bench_candidate_schema" ]]; then
+    target_manifest_digest="$(jq -r '.targets.sha256' <<< "$provenance")" || return 1
+  else
+    target_manifest_digest="$(jq -r '.materialization.targets_sha256' <<< "$provenance")" \
+      || return 1
+  fi
+  [[ "$(bench_sha256_file "$target_manifest_path")" == "$target_manifest_digest" ]] || return 1
+  [[ "$(bench_sha256_file "$smoke_stdout_path")" == "$(jq -r '.smoke.stdout.sha256' <<< "$provenance")" ]] \
+    || return 1
+  [[ "$(bench_sha256_file "$smoke_stderr_path")" == "$(jq -r '.smoke.stderr.sha256' <<< "$provenance")" ]] \
+    || return 1
+  [[ "$(printf 'quit\n' | sha256sum | awk '{print $1}')" == "$(jq -r '.smoke.stdin_sha256' <<< "$provenance")" ]] \
+    || return 1
+  jq -e --argjson paths "$(jq '[.executables[].path | sub("^candidate/bin/"; "")]' <<< "$provenance")" '
+    type == "array"
+    and length > 0
+    and all(.[]; type == "string" and test("^[A-Za-z0-9._-]+$"))
+    and . == (sort | unique)
+    and . == $paths
+  ' "$target_manifest_path" >/dev/null || return 1
+
+  if [[ "$schema" == "$bench_materialized_candidate_schema" ]]; then
+    materialization="$(jq -ce '.materialization' <<< "$provenance")" || return 1
+    source_commit="$(jq -r '.source_commit' <<< "$provenance")" || return 1
+    bundle_path="$artifact_dir/$(jq -r '.bundle' <<< "$materialization")"
+    final_log_path="$artifact_dir/$(jq -r '.final_log' <<< "$materialization")"
+    format_patches_path="$candidate_dir/SOURCE_PATCHES.json"
+    source_report_path="$candidate_dir/SOURCE_REPORT.json"
+    target_manifest_path="$candidate_dir/SOURCE_TARGETS.json"
+    smoke_stdout_path="$candidate_dir/SMOKE.stdout"
+    smoke_stderr_path="$candidate_dir/SMOKE.stderr"
+    [[ -d "$artifact_dir/patches" && ! -L "$artifact_dir/patches" ]] || return 1
+    [[ -d "$artifact_dir/patches/pass" && ! -L "$artifact_dir/patches/pass" ]] || return 1
+    [[ -d "$artifact_dir/patches/pass/format-patch" \
+      && ! -L "$artifact_dir/patches/pass/format-patch" ]] || return 1
+    [[ -f "$bundle_path" && ! -L "$bundle_path" ]] || return 1
+    [[ -f "$final_log_path" && ! -L "$final_log_path" ]] || return 1
+    [[ -f "$format_patches_path" && ! -L "$format_patches_path" ]] || return 1
+    [[ -f "$source_report_path" && ! -L "$source_report_path" ]] || return 1
+    [[ -f "$target_manifest_path" && ! -L "$target_manifest_path" ]] || return 1
+    [[ -f "$smoke_stdout_path" && ! -L "$smoke_stdout_path" ]] || return 1
+    [[ -f "$smoke_stderr_path" && ! -L "$smoke_stderr_path" ]] || return 1
+    [[ "$(bench_sha256_file "$bundle_path")" == "$(jq -r '.bundle_sha256' <<< "$materialization")" ]] \
+      || return 1
+    [[ "$(bench_sha256_file "$final_log_path")" == "$(jq -r '.final_log_sha256' <<< "$materialization")" ]] \
+      || return 1
+    [[ "$(bench_sha256_file "$format_patches_path")" == "$(jq -r '.format_patches_sha256' <<< "$materialization")" ]] \
+      || return 1
+    [[ "$(bench_sha256_file "$source_report_path")" == "$(jq -r '.source_report_sha256' <<< "$materialization")" ]] \
+      || return 1
+    [[ "$(bench_sha256_file "$target_manifest_path")" == "$(jq -r '.targets_sha256' <<< "$materialization")" ]] \
+      || return 1
+    [[ "$(bench_sha256_file "$smoke_stdout_path")" == "$(jq -r '.smoke.stdout.sha256' <<< "$provenance")" ]] \
+      || return 1
+    [[ "$(bench_sha256_file "$smoke_stderr_path")" == "$(jq -r '.smoke.stderr.sha256' <<< "$provenance")" ]] \
+      || return 1
+    [[ "$(printf 'quit\n' | sha256sum | awk '{print $1}')" == "$(jq -r '.smoke.stdin_sha256' <<< "$provenance")" ]] \
+      || return 1
+    jq -e --argjson paths "$(jq '[.executables[].path | sub("^candidate/bin/"; "")]' <<< "$provenance")" '
+      type == "array"
+      and length > 0
+      and all(.[]; type == "string" and test("^[A-Za-z0-9._-]+$"))
+      and . == (sort | unique)
+      and . == $paths
+    ' "$target_manifest_path" >/dev/null || return 1
+    jq -e --argjson count "$(jq '.commits_after_base' <<< "$materialization")" '
+      type == "array"
+      and length == $count
+      and all(
+        .[];
+        type == "object"
+        and keys == ["path", "sha256"]
+        and (.path | type == "string" and test("^patches/pass/format-patch/[A-Za-z0-9._-]+[.]patch$"))
+        and (.sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+      )
+      and ([.[].path] | unique | length) == $count
+    ' "$format_patches_path" >/dev/null || return 1
+    while IFS=$'\t' read -r expected_patch_digest patch_relative_path; do
+      patch_path="$artifact_dir/$patch_relative_path"
+      [[ -f "$patch_path" && ! -L "$patch_path" ]] || return 1
+      [[ "$(bench_sha256_file "$patch_path")" == "$expected_patch_digest" ]] || return 1
+    done < <(jq -r '.[] | [.sha256, .path] | @tsv' "$format_patches_path")
+    read -r saved_final saved_subject < "$final_log_path" || return 1
+    [[ "$saved_final" =~ ^[0-9a-f]{7,64}$ && "$source_commit" == "$saved_final"* ]] || return 1
+    mapfile -t bundle_heads < <(git bundle list-heads "$bundle_path" 2>/dev/null) || return 1
+    [[ "${#bundle_heads[@]}" -eq 1 ]] || return 1
+    read -r bundle_commit bundle_ref bundle_extra <<< "${bundle_heads[0]}"
+    [[ "$bundle_commit" == "$source_commit" && "$bundle_ref" == "HEAD" && -z "$bundle_extra" ]] \
+      || return 1
+    jq -e \
+      --arg patch_artifacts "$artifact_dir/patches/pass" \
+      --argjson materialization "$materialization" '
+      type == "object"
+      and .result == "pass"
+      and (.run_id | type == "string" and length > 0)
+      and .base_commit == $materialization.base_commit
+      and .worktree_source_commit == $materialization.base_commit
+      and .worktree_source_dirty == "no"
+      and .patch_artifacts == $patch_artifacts
+      and .commits_after_base == $materialization.commits_after_base
+      and .changed_files == $materialization.changed_files
+    ' "$source_report_path" >/dev/null || return 1
+  fi
+
+  jq -e \
+    --arg materialized_schema "$bench_materialized_candidate_schema" \
+    --argjson candidate "$provenance" '
+    type == "object"
+    and .result == "pass"
+    and (.run_id | type == "string" and length > 0)
+    and ((.commits_after_base | type) == "number")
+    and .commits_after_base > 0
+    and .commits_after_base == (.commits_after_base | floor)
+    and ((.changed_files | type) == "number")
+    and .changed_files > 0
+    and .changed_files == (.changed_files | floor)
+    and .candidate == $candidate
+    and (
+      $candidate.schema != $materialized_schema
+      or .materialization == $candidate.materialization
+    )
+  ' "$report_path" >/dev/null
+}

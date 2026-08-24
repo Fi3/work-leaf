@@ -1,0 +1,43 @@
+{
+  "observed_hypotheses": [
+    "H1",
+    "H2",
+    "H3",
+    "H4",
+    "H5",
+    "H6",
+    "H7",
+    "H8",
+    "H9",
+    "H10",
+    "H11",
+    "H12",
+    "H13",
+    "H14",
+    "H15",
+    "H16"
+  ],
+  "counterfactual_statuses": [
+    ["H1", "requires-snapshot-resolution"],
+    ["H2", "requires-diff-verification"],
+    ["H3", "descriptive-observed-path"],
+    ["H4", "requires-locked-command-pairing"],
+    ["H7", "requires-target-reconstruction"],
+    ["H8", "requires-ablation"]
+  ],
+  "command_classes": {
+    "source-read": 1
+  },
+  "repeated_commands": 1,
+  "reviews": {
+    "prompts": 1,
+    "unique_targets": 0,
+    "duplicate_targets": 0,
+    "validated_targets": 0,
+    "unresolved_targets": 0
+  },
+  "errors": [
+    "H1 snapshot resolution failed for thread unscoped path src/lib.rs",
+    "review prompt contains no parseable target commit"
+  ]
+}
