@@ -1,0 +1,1434 @@
+#!/usr/bin/env python3
+
+import ctypes
+import hashlib
+import json
+import math
+import os
+import re
+import signal
+import stat
+import struct
+import subprocess
+import sys
+
+
+SNAPSHOT_SCHEMA = "work-leaf-benchmark-candidate-launch-v2"
+PRODUCER_SCHEMA = "work-leaf-benchmark-candidate-v2"
+MATERIALIZED_SCHEMA = "work-leaf-benchmark-materialized-candidate-v1"
+MATERIALIZATION_SCHEMA = "work-leaf-benchmark-bundle-materialization-v1"
+PRODUCER_SMOKE_SCHEMA = "work-leaf-benchmark-candidate-smoke-v2"
+PRODUCER_SMOKE_GATE = "bounded-startup-quit"
+HISTORICAL_SMOKE_SCHEMA = "work-leaf-benchmark-candidate-smoke-v1"
+HISTORICAL_SMOKE_GATE = "scripted-command-chat"
+ENTRYPOINT = "candidate/bin/work-leaf"
+SAFE_EXECUTABLE = re.compile(r"candidate/bin/[A-Za-z0-9._-]+\Z")
+SAFE_PATCH = re.compile(
+    r"patches/pass/format-patch/[A-Za-z0-9._-]+[.]patch\Z"
+)
+SHA256 = re.compile(r"[0-9a-f]{64}\Z")
+COMMIT = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
+ABBREVIATED_COMMIT = re.compile(r"[0-9a-f]{7,64}\Z")
+
+
+def reject(message):
+    raise RuntimeError(message)
+
+
+def read_all(file_descriptor):
+    chunks = []
+    offset = 0
+    while True:
+        chunk = os.pread(file_descriptor, 1024 * 1024, offset)
+        if not chunk:
+            return b"".join(chunks)
+        chunks.append(chunk)
+        offset += len(chunk)
+
+
+def safe_relative_components(path):
+    if not isinstance(path, str) or not path or path.startswith("/"):
+        reject("candidate snapshot contains a non-relative path")
+    components = path.split("/")
+    if any(not component or component in (".", "..") for component in components):
+        reject("candidate snapshot contains an unsafe path component")
+    return components
+
+
+def open_absolute_directory(path):
+    if not isinstance(path, str) or not os.path.isabs(path):
+        reject("candidate artifact path is not absolute")
+    if os.path.normpath(path) != path:
+        reject("candidate artifact path is not normalized")
+    file_descriptor = os.open(
+        "/", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    )
+    try:
+        for component in path.split("/")[1:]:
+            if not component or component in (".", ".."):
+                reject("candidate artifact path has an unsafe component")
+            next_descriptor = os.open(
+                component,
+                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                dir_fd=file_descriptor,
+            )
+            os.close(file_descriptor)
+            file_descriptor = next_descriptor
+        return file_descriptor
+    except Exception:
+        os.close(file_descriptor)
+        raise
+
+
+def open_relative(root_descriptor, path, directory):
+    if path == ".":
+        if not directory:
+            reject("artifact root cannot be opened as a file")
+        return os.dup(root_descriptor)
+    components = safe_relative_components(path)
+    parent_descriptor = os.dup(root_descriptor)
+    try:
+        for component in components[:-1]:
+            next_descriptor = os.open(
+                component,
+                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                dir_fd=parent_descriptor,
+            )
+            os.close(parent_descriptor)
+            parent_descriptor = next_descriptor
+        flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC
+        if directory:
+            flags |= os.O_DIRECTORY
+        result = os.open(components[-1], flags, dir_fd=parent_descriptor)
+    finally:
+        os.close(parent_descriptor)
+    information = os.fstat(result)
+    expected_type = stat.S_ISDIR if directory else stat.S_ISREG
+    if not expected_type(information.st_mode):
+        os.close(result)
+        reject(f"candidate snapshot path has the wrong file type: {path}")
+    return result
+
+
+def parse_json(data, label):
+    try:
+        return json.loads(
+            data,
+            parse_constant=lambda value: reject(
+                f"{label} contains an unsupported number: {value}"
+            ),
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        reject(f"{label} is not valid JSON: {error}")
+
+
+def runtime_paths(provenance):
+    if not isinstance(provenance, dict):
+        reject("candidate provenance is not an object")
+    if provenance.get("schema") not in (PRODUCER_SCHEMA, MATERIALIZED_SCHEMA):
+        reject("candidate provenance has an unsupported schema")
+    if provenance.get("entrypoint") != ENTRYPOINT:
+        reject("candidate provenance has an unsupported entrypoint")
+    executables = provenance.get("executables")
+    if not isinstance(executables, list) or not executables:
+        reject("candidate provenance has no executable set")
+    paths = []
+    for executable in executables:
+        if not isinstance(executable, dict) or set(executable) != {"path", "sha256"}:
+            reject("candidate executable record has an unsupported shape")
+        path = executable["path"]
+        digest = executable["sha256"]
+        if not isinstance(path, str) or not SAFE_EXECUTABLE.fullmatch(path):
+            reject("candidate executable path is unsafe")
+        if not isinstance(digest, str) or not SHA256.fullmatch(digest):
+            reject("candidate executable digest is invalid")
+        paths.append(path)
+    if paths != sorted(set(paths)) or ENTRYPOINT not in paths:
+        reject("candidate executable paths are not a sorted unique runtime set")
+    return paths
+
+
+def patch_paths(source_patches):
+    if not isinstance(source_patches, list) or not source_patches:
+        reject("candidate source patch manifest is empty")
+    paths = []
+    for patch in source_patches:
+        if not isinstance(patch, dict) or set(patch) != {"path", "sha256"}:
+            reject("candidate source patch record has an unsupported shape")
+        path = patch["path"]
+        digest = patch["sha256"]
+        if not isinstance(path, str) or not SAFE_PATCH.fullmatch(path):
+            reject("candidate source patch path is unsafe")
+        if not isinstance(digest, str) or not SHA256.fullmatch(digest):
+            reject("candidate source patch digest is invalid")
+        paths.append(path)
+    if len(paths) != len(set(paths)):
+        reject("candidate source patch paths are duplicated")
+    return paths
+
+
+def snapshot_layout(provenance, source_patches):
+    executable_paths = runtime_paths(provenance)
+    directories = {".", "candidate", "candidate/bin"}
+    files = {
+        "candidate/PROVENANCE",
+        "candidate/SHA256SUMS",
+        "candidate/SMOKE.stderr",
+        "candidate/SMOKE.stdout",
+        "candidate/SOURCE_TARGETS.json",
+        *executable_paths,
+    }
+    schema = provenance["schema"]
+    if schema == PRODUCER_SCHEMA:
+        if source_patches is not None:
+            reject("producer candidate unexpectedly has materialized patch metadata")
+        report_path = "report.json"
+        files.add(report_path)
+    else:
+        if source_patches is None:
+            reject("materialized candidate is missing its source patch manifest")
+        directories.update({"patches", "patches/pass", "patches/pass/format-patch"})
+        report_path = "candidate/ADMISSION.json"
+        files.update(
+            {
+                report_path,
+                "candidate/SOURCE_PATCHES.json",
+                "candidate/SOURCE_REPORT.json",
+                "final-log.txt",
+                "patches/pass/commits.bundle",
+                *patch_paths(source_patches),
+            }
+        )
+    return sorted(directories), sorted(files), report_path
+
+
+def require_object_keys(value, keys, label):
+    if not isinstance(value, dict) or set(value) != set(keys):
+        reject(f"{label} has an unsupported shape")
+
+
+def is_integer_number(value):
+    return (
+        not isinstance(value, bool)
+        and isinstance(value, (int, float))
+        and math.isfinite(value)
+        and value == int(value)
+    )
+
+
+def is_positive_integer_number(value):
+    return is_integer_number(value) and value > 0
+
+
+def json_equal(left, right):
+    if isinstance(left, bool) or isinstance(right, bool):
+        return isinstance(left, bool) and isinstance(right, bool) and left == right
+    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+        return math.isfinite(left) and math.isfinite(right) and left == right
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        return set(left) == set(right) and all(
+            json_equal(left[key], right[key]) for key in left
+        )
+    if isinstance(left, list):
+        return len(left) == len(right) and all(
+            json_equal(left_item, right_item)
+            for left_item, right_item in zip(left, right)
+        )
+    return left == right
+
+
+def require_file_digest(file_data, path, expected, label):
+    if not isinstance(expected, str) or not SHA256.fullmatch(expected):
+        reject(f"{label} has an invalid digest")
+    if hashlib.sha256(file_data[path]).hexdigest() != expected:
+        reject(f"{label} differs from candidate provenance")
+
+
+def validate_smoke(smoke, materialized):
+    require_object_keys(
+        smoke,
+        {
+            "command",
+            "exit_code",
+            "gate",
+            "schema",
+            "stderr",
+            "stdin_sha256",
+            "stdout",
+            "timeout_seconds",
+        },
+        "candidate smoke record",
+    )
+    accepted_identity = (
+        smoke.get("schema") == PRODUCER_SMOKE_SCHEMA
+        and smoke.get("gate") == PRODUCER_SMOKE_GATE
+    )
+    if materialized:
+        accepted_identity = accepted_identity or (
+            smoke.get("schema") == HISTORICAL_SMOKE_SCHEMA
+            and smoke.get("gate") == HISTORICAL_SMOKE_GATE
+        )
+    if not accepted_identity:
+        reject("candidate smoke record has an unsupported schema or gate")
+    if smoke.get("command") != [ENTRYPOINT]:
+        reject("candidate smoke record has an unsupported command")
+    if not is_integer_number(smoke.get("exit_code")) or smoke["exit_code"] != 0:
+        reject("candidate smoke record did not exit successfully")
+    if (
+        not is_integer_number(smoke.get("timeout_seconds"))
+        or smoke["timeout_seconds"] != 20
+    ):
+        reject("candidate smoke record has an unsupported timeout")
+    if smoke.get("stdin_sha256") != hashlib.sha256(b"quit\n").hexdigest():
+        reject("candidate smoke record does not bind the scripted quit input")
+    for stream in ("stdout", "stderr"):
+        record = smoke.get(stream)
+        require_object_keys(record, {"path", "sha256"}, f"candidate smoke {stream}")
+        if record.get("path") != f"candidate/SMOKE.{stream}":
+            reject(f"candidate smoke {stream} has an unsupported path")
+        if not isinstance(record.get("sha256"), str) or not SHA256.fullmatch(
+            record["sha256"]
+        ):
+            reject(f"candidate smoke {stream} has an invalid digest")
+
+
+def validate_materialization(materialization):
+    require_object_keys(
+        materialization,
+        {
+            "base_commit",
+            "bundle",
+            "bundle_sha256",
+            "changed_files",
+            "commits_after_base",
+            "final_log",
+            "final_log_sha256",
+            "format_patches",
+            "format_patches_sha256",
+            "schema",
+            "source_report",
+            "source_report_sha256",
+            "targets",
+            "targets_sha256",
+        },
+        "candidate materialization record",
+    )
+    if materialization.get("schema") != MATERIALIZATION_SCHEMA:
+        reject("candidate materialization has an unsupported schema")
+    if not isinstance(materialization.get("base_commit"), str) or not COMMIT.fullmatch(
+        materialization["base_commit"]
+    ):
+        reject("candidate materialization has an invalid base commit")
+    fixed_paths = {
+        "bundle": "patches/pass/commits.bundle",
+        "final_log": "final-log.txt",
+        "format_patches": "candidate/SOURCE_PATCHES.json",
+        "source_report": "candidate/SOURCE_REPORT.json",
+        "targets": "candidate/SOURCE_TARGETS.json",
+    }
+    for key, expected in fixed_paths.items():
+        if materialization.get(key) != expected:
+            reject(f"candidate materialization has an unsupported {key} path")
+        digest = materialization.get(f"{key}_sha256")
+        if not isinstance(digest, str) or not SHA256.fullmatch(digest):
+            reject(f"candidate materialization has an invalid {key} digest")
+    for key in ("commits_after_base", "changed_files"):
+        if not is_positive_integer_number(materialization.get(key)):
+            reject(f"candidate materialization has an invalid {key}")
+
+
+def validate_provenance(provenance):
+    if not isinstance(provenance, dict):
+        reject("candidate provenance is not an object")
+    schema = provenance.get("schema")
+    if schema == PRODUCER_SCHEMA:
+        require_object_keys(
+            provenance,
+            {"entrypoint", "executables", "schema", "smoke", "source_commit", "targets"},
+            "producer candidate provenance",
+        )
+        targets = provenance.get("targets")
+        require_object_keys(targets, {"path", "sha256"}, "candidate target record")
+        if targets.get("path") != "candidate/SOURCE_TARGETS.json":
+            reject("candidate target record has an unsupported path")
+        if not isinstance(targets.get("sha256"), str) or not SHA256.fullmatch(
+            targets["sha256"]
+        ):
+            reject("candidate target record has an invalid digest")
+        validate_smoke(provenance.get("smoke"), False)
+    elif schema == MATERIALIZED_SCHEMA:
+        require_object_keys(
+            provenance,
+            {"entrypoint", "executables", "materialization", "schema", "smoke", "source_commit"},
+            "materialized candidate provenance",
+        )
+        validate_smoke(provenance.get("smoke"), True)
+        validate_materialization(provenance.get("materialization"))
+    else:
+        reject("candidate provenance has an unsupported schema")
+    if provenance.get("entrypoint") != ENTRYPOINT:
+        reject("candidate provenance has an unsupported entrypoint")
+    if not isinstance(provenance.get("source_commit"), str) or not COMMIT.fullmatch(
+        provenance["source_commit"]
+    ):
+        reject("candidate provenance has an invalid source commit")
+    return runtime_paths(provenance)
+
+
+def descriptor_path(file_descriptor):
+    for root in ("/proc/self/fd", "/dev/fd"):
+        path = f"{root}/{file_descriptor}"
+        if os.path.exists(path):
+            return path
+    reject("descriptor paths are unavailable for candidate bundle validation")
+
+
+def descriptor_target(file_descriptor):
+    for root in ("/proc/self/fd", "/dev/fd"):
+        path = f"{root}/{file_descriptor}"
+        if os.path.lexists(path):
+            target = os.readlink(path)
+            if target.endswith(" (deleted)"):
+                target = target.removesuffix(" (deleted)")
+            if not os.path.isabs(target):
+                reject("candidate descriptor target is not absolute")
+            return os.path.normpath(target)
+    reject("descriptor target is unavailable during candidate supervision")
+
+
+def descriptor_is_executable(file_descriptor):
+    options = {"effective_ids": True} if os.access in os.supports_effective_ids else {}
+    return os.access(descriptor_path(file_descriptor), os.X_OK, **options)
+
+
+def validate_bundle_head(file_descriptor, source_commit):
+    result = subprocess.run(
+        ["git", "bundle", "list-heads", descriptor_path(file_descriptor)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        pass_fds=(file_descriptor,),
+    )
+    lines = result.stdout.splitlines()
+    if result.returncode != 0 or len(lines) != 1:
+        reject("candidate bundle does not contain exactly one advertised head")
+    fields = lines[0].split()
+    if len(fields) != 2 or fields[0] != source_commit.encode() or fields[1] != b"HEAD":
+        reject("candidate bundle head differs from candidate provenance")
+
+
+def validate_final_log(data, source_commit):
+    newline = data.find(b"\n")
+    if newline < 0:
+        reject("candidate final log has no complete first line")
+    fields = data[:newline].split(maxsplit=1)
+    if not fields:
+        reject("candidate final log has no saved commit")
+    try:
+        saved_final = fields[0].decode("ascii")
+    except UnicodeDecodeError:
+        reject("candidate final log has an invalid saved commit")
+    if not ABBREVIATED_COMMIT.fullmatch(saved_final) or not source_commit.startswith(
+        saved_final
+    ):
+        reject("candidate final log differs from candidate provenance")
+
+
+def validate_candidate_contract(
+    artifact, directory_descriptors, file_descriptors, file_data
+):
+    for component in artifact.split("/"):
+        if component.startswith(
+            (".bench-artifact-publish.", ".candidate.publish.", ".candidate.materialize.")
+        ):
+            reject("candidate artifact path belongs to private publication staging")
+
+    provenance = parse_json(file_data["candidate/PROVENANCE"], "candidate provenance")
+    executable_paths = validate_provenance(provenance)
+    source_patches = None
+    if provenance["schema"] == MATERIALIZED_SCHEMA:
+        source_patches = parse_json(
+            file_data["candidate/SOURCE_PATCHES.json"],
+            "candidate source patch manifest",
+        )
+    expected_directories, expected_files, report_path = snapshot_layout(
+        provenance, source_patches
+    )
+    if sorted(directory_descriptors) != expected_directories:
+        reject("candidate snapshot does not cover its complete directory set")
+    if sorted(file_descriptors) != expected_files or sorted(file_data) != expected_files:
+        reject("candidate snapshot does not cover its complete admission file set")
+
+    expected_checksums = b"".join(
+        (
+            executable["sha256"]
+            + "  bin/"
+            + executable["path"].removeprefix("candidate/bin/")
+            + "\n"
+        ).encode()
+        for executable in provenance["executables"]
+    )
+    if file_data["candidate/SHA256SUMS"] != expected_checksums:
+        reject("candidate checksum manifest differs from provenance")
+    executable_names = [
+        path.removeprefix("candidate/bin/") for path in executable_paths
+    ]
+    if sorted(os.listdir(directory_descriptors["candidate/bin"])) != executable_names:
+        reject("candidate bin directory differs from the listed runtime set")
+    for executable in provenance["executables"]:
+        path = executable["path"]
+        require_file_digest(
+            file_data, path, executable["sha256"], f"candidate executable {path}"
+        )
+        executable_descriptor = file_descriptors[path]
+        information = os.fstat(executable_descriptor)
+        if (
+            information.st_mode & 0o111 == 0
+            or not descriptor_is_executable(executable_descriptor)
+        ):
+            reject(f"candidate executable is not executable: {path}")
+        if path != ENTRYPOINT and not file_data[path].startswith(b"\x7fELF"):
+            reject(
+                "candidate companion runtime is not a directly verifiable ELF "
+                f"executable: {path}"
+            )
+
+    target_digest = (
+        provenance["targets"]["sha256"]
+        if provenance["schema"] == PRODUCER_SCHEMA
+        else provenance["materialization"]["targets_sha256"]
+    )
+    require_file_digest(
+        file_data,
+        "candidate/SOURCE_TARGETS.json",
+        target_digest,
+        "candidate target manifest",
+    )
+    targets = parse_json(
+        file_data["candidate/SOURCE_TARGETS.json"], "candidate target manifest"
+    )
+    if (
+        not isinstance(targets, list)
+        or not targets
+        or any(
+            not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9._-]+", name)
+            for name in targets
+        )
+        or targets != sorted(set(targets))
+        or targets != executable_names
+    ):
+        reject("candidate target manifest differs from the runtime set")
+
+    smoke = provenance["smoke"]
+    for stream in ("stdout", "stderr"):
+        require_file_digest(
+            file_data,
+            f"candidate/SMOKE.{stream}",
+            smoke[stream]["sha256"],
+            f"candidate smoke {stream}",
+        )
+
+    if provenance["schema"] == MATERIALIZED_SCHEMA:
+        materialization = provenance["materialization"]
+        materialized_files = {
+            "bundle": "patches/pass/commits.bundle",
+            "final_log": "final-log.txt",
+            "format_patches": "candidate/SOURCE_PATCHES.json",
+            "source_report": "candidate/SOURCE_REPORT.json",
+            "targets": "candidate/SOURCE_TARGETS.json",
+        }
+        for key, path in materialized_files.items():
+            require_file_digest(
+                file_data,
+                path,
+                materialization[f"{key}_sha256"],
+                f"candidate materialization {key}",
+            )
+        if not isinstance(source_patches, list) or len(source_patches) != materialization[
+            "commits_after_base"
+        ]:
+            reject("candidate source patch manifest has the wrong commit count")
+        patch_paths(source_patches)
+        for patch in source_patches:
+            require_file_digest(
+                file_data,
+                patch["path"],
+                patch["sha256"],
+                f"candidate source patch {patch['path']}",
+            )
+        source_commit = provenance["source_commit"]
+        validate_final_log(file_data["final-log.txt"], source_commit)
+        validate_bundle_head(
+            file_descriptors["patches/pass/commits.bundle"], source_commit
+        )
+        source_report = parse_json(
+            file_data["candidate/SOURCE_REPORT.json"], "candidate source report"
+        )
+        if (
+            not isinstance(source_report, dict)
+            or source_report.get("result") != "pass"
+            or not isinstance(source_report.get("run_id"), str)
+            or not source_report["run_id"]
+            or source_report.get("base_commit") != materialization["base_commit"]
+            or source_report.get("worktree_source_commit")
+            != materialization["base_commit"]
+            or source_report.get("worktree_source_dirty") != "no"
+            or source_report.get("patch_artifacts") != f"{artifact}/patches/pass"
+            or not json_equal(
+                source_report.get("commits_after_base"),
+                materialization["commits_after_base"],
+            )
+            or not json_equal(
+                source_report.get("changed_files"), materialization["changed_files"]
+            )
+        ):
+            reject("candidate source report differs from materialization evidence")
+
+    report = parse_json(file_data[report_path], "candidate admission record")
+    if (
+        not isinstance(report, dict)
+        or report.get("result") != "pass"
+        or not isinstance(report.get("run_id"), str)
+        or not report["run_id"]
+        or not is_positive_integer_number(report.get("commits_after_base"))
+        or not is_positive_integer_number(report.get("changed_files"))
+        or not json_equal(report.get("candidate"), provenance)
+    ):
+        reject("candidate admission record does not admit the pinned runtime")
+    if provenance["schema"] == MATERIALIZED_SCHEMA and not json_equal(
+        report.get("materialization"), provenance.get("materialization")
+    ):
+        reject("candidate admission record has different materialization evidence")
+    return provenance, executable_paths, report_path
+
+
+def file_record_from_descriptor(file_descriptor, path):
+    information = os.fstat(file_descriptor)
+    data = read_all(file_descriptor)
+    return (
+        {
+            "path": path,
+            "device": information.st_dev,
+            "inode": information.st_ino,
+            "mode": information.st_mode,
+            "size": information.st_size,
+            "sha256": hashlib.sha256(data).hexdigest(),
+        },
+        data,
+    )
+
+
+def create_snapshot(artifact):
+    root_descriptor = open_absolute_directory(artifact)
+    directory_descriptors = {}
+    file_descriptors = {}
+    try:
+        provenance_path = "candidate/PROVENANCE"
+        provenance_descriptor = open_relative(root_descriptor, provenance_path, False)
+        file_descriptors[provenance_path] = provenance_descriptor
+        provenance_record, provenance_data = file_record_from_descriptor(
+            provenance_descriptor, provenance_path
+        )
+        provenance = parse_json(provenance_data, "candidate provenance")
+        source_patches = None
+        records = {provenance_path: provenance_record}
+        captured = {provenance_path: provenance_data}
+        if provenance.get("schema") == MATERIALIZED_SCHEMA:
+            source_patch_path = "candidate/SOURCE_PATCHES.json"
+            source_patch_descriptor = open_relative(
+                root_descriptor, source_patch_path, False
+            )
+            file_descriptors[source_patch_path] = source_patch_descriptor
+            source_patch_record, source_patch_data = file_record_from_descriptor(
+                source_patch_descriptor, source_patch_path
+            )
+            records[source_patch_path] = source_patch_record
+            captured[source_patch_path] = source_patch_data
+            source_patches = parse_json(
+                source_patch_data, "candidate source patch manifest"
+            )
+        directory_paths, file_paths, report_path = snapshot_layout(
+            provenance, source_patches
+        )
+        directories = []
+        for path in directory_paths:
+            file_descriptor = open_relative(root_descriptor, path, True)
+            directory_descriptors[path] = file_descriptor
+            information = os.fstat(file_descriptor)
+            directories.append(
+                {
+                    "path": path,
+                    "device": information.st_dev,
+                    "inode": information.st_ino,
+                    "mode": information.st_mode,
+                }
+            )
+        for path in file_paths:
+            if path not in file_descriptors:
+                file_descriptor = open_relative(root_descriptor, path, False)
+                file_descriptors[path] = file_descriptor
+                record, data = file_record_from_descriptor(file_descriptor, path)
+                records[path] = record
+                captured[path] = data
+        files = [records[path] for path in file_paths]
+        admitted_provenance, _, admitted_report = validate_candidate_contract(
+            artifact, directory_descriptors, file_descriptors, captured
+        )
+        if admitted_report != report_path:
+            reject("candidate snapshot identifies the wrong admission record")
+        return json.dumps(
+            {
+                "schema": SNAPSHOT_SCHEMA,
+                "artifact": artifact,
+                "candidate_schema": admitted_provenance["schema"],
+                "entrypoint": ENTRYPOINT,
+                "report": report_path,
+                "directories": directories,
+                "files": files,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    finally:
+        for file_descriptor in file_descriptors.values():
+            os.close(file_descriptor)
+        for file_descriptor in directory_descriptors.values():
+            os.close(file_descriptor)
+        os.close(root_descriptor)
+
+
+def validate_directory_record(record):
+    if not isinstance(record, dict) or set(record) != {
+        "path",
+        "device",
+        "inode",
+        "mode",
+    }:
+        reject("candidate directory snapshot has an unsupported shape")
+    if record["path"] != ".":
+        safe_relative_components(record["path"])
+    for key in ("device", "inode", "mode"):
+        if type(record[key]) is not int or record[key] < 0:
+            reject(f"candidate directory snapshot has an invalid {key}")
+
+
+def validate_file_record(record):
+    if not isinstance(record, dict) or set(record) != {
+        "path",
+        "device",
+        "inode",
+        "mode",
+        "size",
+        "sha256",
+    }:
+        reject("candidate file snapshot has an unsupported shape")
+    safe_relative_components(record["path"])
+    for key in ("device", "inode", "mode", "size"):
+        if type(record[key]) is not int or record[key] < 0:
+            reject(f"candidate file snapshot has an invalid {key}")
+    if not isinstance(record["sha256"], str) or not SHA256.fullmatch(record["sha256"]):
+        reject("candidate file snapshot has an invalid digest")
+
+
+def require_stat(information, record, label):
+    actual = (
+        information.st_dev,
+        information.st_ino,
+        information.st_mode,
+    )
+    expected = (record["device"], record["inode"], record["mode"])
+    if actual != expected:
+        reject(f"{label} identity changed after it was listed")
+    if "size" in record and information.st_size != record["size"]:
+        reject(f"{label} size changed after it was listed")
+
+
+PTRACE_TRACEME = 0
+PTRACE_CONT = 7
+PTRACE_SETOPTIONS = 0x4200
+PTRACE_GETEVENTMSG = 0x4201
+PTRACE_O_TRACEFORK = 0x00000002
+PTRACE_O_TRACEVFORK = 0x00000004
+PTRACE_O_TRACECLONE = 0x00000008
+PTRACE_O_TRACEEXEC = 0x00000010
+PTRACE_O_EXITKILL = 0x00100000
+PTRACE_EVENT_FORK = 1
+PTRACE_EVENT_VFORK = 2
+PTRACE_EVENT_CLONE = 3
+PTRACE_EVENT_EXEC = 4
+WAIT_ALL_TRACED = 0x40000000
+IN_MODIFY = 0x00000002
+IN_ATTRIB = 0x00000004
+IN_CLOSE_WRITE = 0x00000008
+IN_MOVED_FROM = 0x00000040
+IN_MOVED_TO = 0x00000080
+IN_CREATE = 0x00000100
+IN_DELETE = 0x00000200
+IN_DELETE_SELF = 0x00000400
+IN_MOVE_SELF = 0x00000800
+IN_UNMOUNT = 0x00002000
+IN_Q_OVERFLOW = 0x00004000
+IN_IGNORED = 0x00008000
+INOTIFY_SELF_MASK = IN_ATTRIB | IN_DELETE_SELF | IN_MOVE_SELF | IN_UNMOUNT
+INOTIFY_CHILD_MASK = (
+    IN_MODIFY
+    | IN_ATTRIB
+    | IN_CLOSE_WRITE
+    | IN_MOVED_FROM
+    | IN_MOVED_TO
+    | IN_CREATE
+    | IN_DELETE
+)
+INOTIFY_FATAL_MASK = IN_UNMOUNT | IN_Q_OVERFLOW | IN_IGNORED
+INOTIFY_EVENT = struct.Struct("=iIII")
+
+
+def ptrace_call(request, process_id, address=0, data=0):
+    libc = ctypes.CDLL(None, use_errno=True)
+    libc.ptrace.restype = ctypes.c_long
+    ctypes.set_errno(0)
+    address_value = (
+        address if not isinstance(address, int) else ctypes.c_void_p(address)
+    )
+    data_value = data if not isinstance(data, int) else ctypes.c_void_p(data)
+    result = libc.ptrace(request, process_id, address_value, data_value)
+    if result == -1:
+        error_number = ctypes.get_errno()
+        raise OSError(error_number, os.strerror(error_number))
+    return result
+
+
+def ptrace_options(process_id):
+    options = (
+        PTRACE_O_TRACEFORK
+        | PTRACE_O_TRACEVFORK
+        | PTRACE_O_TRACECLONE
+        | PTRACE_O_TRACEEXEC
+        | PTRACE_O_EXITKILL
+    )
+    ptrace_call(PTRACE_SETOPTIONS, process_id, 0, options)
+
+
+def ptrace_continue(process_id, delivered_signal=0):
+    ptrace_call(PTRACE_CONT, process_id, 0, delivered_signal)
+
+
+def ptrace_event_process(process_id):
+    event_process = ctypes.c_ulong()
+    ptrace_call(PTRACE_GETEVENTMSG, process_id, 0, ctypes.byref(event_process))
+    return event_process.value
+
+
+def inotify_call(function, *arguments):
+    ctypes.set_errno(0)
+    result = function(*arguments)
+    if result < 0:
+        error_number = ctypes.get_errno()
+        raise OSError(error_number, os.strerror(error_number))
+    return result
+
+
+def create_runtime_watch(directory_descriptors, runtime_paths, file_descriptors):
+    libc = ctypes.CDLL(None, use_errno=True)
+    libc.inotify_init1.argtypes = [ctypes.c_int]
+    libc.inotify_init1.restype = ctypes.c_int
+    libc.inotify_add_watch.argtypes = [
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint32,
+    ]
+    libc.inotify_add_watch.restype = ctypes.c_int
+    watch_descriptor = inotify_call(
+        libc.inotify_init1, os.O_NONBLOCK | os.O_CLOEXEC
+    )
+    watch_roles = {}
+
+    def add_watch(file_descriptor, mask, role, child_name=None):
+        watch = inotify_call(
+            libc.inotify_add_watch,
+            watch_descriptor,
+            os.fsencode(descriptor_path(file_descriptor)),
+            mask,
+        )
+        watch_roles.setdefault(watch, []).append((role, child_name))
+
+    try:
+        directory_mask = INOTIFY_SELF_MASK | INOTIFY_CHILD_MASK
+        add_watch(directory_descriptors["."], directory_mask, "parent", b"candidate")
+        add_watch(
+            directory_descriptors["candidate"], directory_mask, "parent", b"bin"
+        )
+        add_watch(
+            directory_descriptors["candidate/bin"],
+            directory_mask,
+            "runtime-directory",
+        )
+        runtime_mask = INOTIFY_SELF_MASK | IN_MODIFY | IN_CLOSE_WRITE
+        for path in runtime_paths:
+            add_watch(file_descriptors[path], runtime_mask, "runtime-file")
+        return watch_descriptor, watch_roles
+    except BaseException:
+        os.close(watch_descriptor)
+        raise
+
+
+def drain_runtime_watch(watch_descriptor, watch_roles):
+    while True:
+        try:
+            events = os.read(watch_descriptor, 1024 * 1024)
+        except BlockingIOError:
+            return
+        if not events:
+            reject("candidate runtime filesystem watch ended unexpectedly")
+        offset = 0
+        while offset < len(events):
+            if len(events) - offset < INOTIFY_EVENT.size:
+                reject("candidate runtime filesystem watch returned a partial event")
+            watch, mask, _cookie, name_size = INOTIFY_EVENT.unpack_from(events, offset)
+            event_size = INOTIFY_EVENT.size + name_size
+            if event_size > len(events) - offset:
+                reject("candidate runtime filesystem watch returned a partial name")
+            name = events[
+                offset + INOTIFY_EVENT.size : offset + event_size
+            ].split(b"\0", 1)[0]
+            offset += event_size
+            if mask & INOTIFY_FATAL_MASK:
+                reject("candidate runtime filesystem watch lost mutation coverage")
+            roles = watch_roles.get(watch)
+            if roles is None:
+                reject("candidate runtime filesystem watch returned an unknown target")
+            for role, child_name in roles:
+                self_change = mask & (IN_DELETE_SELF | IN_MOVE_SELF | IN_UNMOUNT) or (
+                    not name and mask & IN_ATTRIB
+                )
+                if self_change:
+                    reject("candidate runtime path changed during supervised replay")
+                if role in ("runtime-directory", "runtime-file"):
+                    if mask & INOTIFY_CHILD_MASK:
+                        reject("candidate runtime path changed during supervised replay")
+                elif name == child_name and mask & INOTIFY_CHILD_MASK:
+                    reject("candidate runtime path changed during supervised replay")
+
+
+def process_executable(process_id):
+    path = os.readlink(f"/proc/{process_id}/exe")
+    information = os.stat(f"/proc/{process_id}/exe")
+    if path.endswith(" (deleted)"):
+        path = path.removesuffix(" (deleted)")
+    return path, (information.st_dev, information.st_ino)
+
+
+def process_memory_string(process_id, address, label):
+    if address <= 0:
+        reject(f"candidate {label} address is invalid")
+    memory_descriptor = os.open(
+        f"/proc/{process_id}/mem", os.O_RDONLY | os.O_CLOEXEC
+    )
+    try:
+        data = bytearray()
+        while len(data) <= 4096:
+            chunk = os.pread(
+                memory_descriptor,
+                min(256, 4097 - len(data)),
+                address + len(data),
+            )
+            if not chunk:
+                reject(f"candidate {label} is not NUL-terminated")
+            nul = chunk.find(b"\0")
+            if nul >= 0:
+                data.extend(chunk[:nul])
+                return os.fsdecode(bytes(data))
+            data.extend(chunk)
+        reject(f"candidate {label} exceeds PATH_MAX")
+    finally:
+        os.close(memory_descriptor)
+
+
+def process_execfn(process_id):
+    with open(f"/proc/{process_id}/exe", "rb") as executable:
+        identification = executable.read(5)
+    if identification[:4] != b"\x7fELF" or identification[4] not in (1, 2):
+        reject("candidate loaded image has an unsupported executable format")
+    word_size = 4 if identification[4] == 1 else 8
+    entry_format = "=II" if word_size == 4 else "=QQ"
+    entry_size = struct.calcsize(entry_format)
+    with open(f"/proc/{process_id}/auxv", "rb") as auxiliary_vector:
+        data = auxiliary_vector.read()
+    if len(data) % entry_size != 0:
+        reject("candidate auxiliary vector has an unsupported shape")
+    execfn_address = None
+    terminated = False
+    for offset in range(0, len(data), entry_size):
+        entry_type, entry_value = struct.unpack_from(entry_format, data, offset)
+        if entry_type == 0:
+            terminated = True
+            break
+        if entry_type == 31:
+            if execfn_address is not None:
+                reject("candidate auxiliary vector has duplicate AT_EXECFN records")
+            execfn_address = entry_value
+    if not terminated or execfn_address is None:
+        reject("candidate auxiliary vector has no AT_EXECFN record")
+    return process_memory_string(process_id, execfn_address, "AT_EXECFN")
+
+
+def resolve_execfn(process_id, execfn):
+    if not execfn:
+        reject("candidate AT_EXECFN is empty")
+    if re.fullmatch(r"/(?:dev/fd|proc/(?:self|[0-9]+)/fd)/[0-9]+(?:/.*)?", execfn):
+        return None
+    if os.path.isabs(execfn):
+        return os.path.normpath(execfn)
+    working_directory = os.readlink(f"/proc/{process_id}/cwd")
+    if working_directory.endswith(" (deleted)"):
+        working_directory = working_directory.removesuffix(" (deleted)")
+    return os.path.normpath(os.path.join(working_directory, execfn))
+
+
+def initial_loaded_identity(entrypoint_descriptor, entrypoint_identity):
+    header = os.pread(entrypoint_descriptor, 4096, 0)
+    if header.startswith(b"\x7fELF"):
+        return entrypoint_identity, None
+    if not header.startswith(b"#!"):
+        reject("candidate entrypoint is neither native ELF nor a supported script")
+    first_line = header[2:].split(b"\n", 1)[0].strip()
+    fields = first_line.split()
+    if not fields:
+        reject("candidate entrypoint has an empty script interpreter")
+    try:
+        interpreter = os.fsdecode(fields[0])
+    except UnicodeDecodeError:
+        reject("candidate entrypoint has an invalid script interpreter")
+    if not os.path.isabs(interpreter):
+        reject("candidate entrypoint script interpreter is not absolute")
+    interpreter = os.path.realpath(interpreter)
+    interpreter_descriptor = os.open(
+        interpreter, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC
+    )
+    information = os.fstat(interpreter_descriptor)
+    if not stat.S_ISREG(information.st_mode) or not descriptor_is_executable(
+        interpreter_descriptor
+    ):
+        os.close(interpreter_descriptor)
+        reject("candidate entrypoint script interpreter is not executable")
+    return (information.st_dev, information.st_ino), interpreter_descriptor
+
+
+def verify_runtime_descriptor(path, runtime_records, file_descriptors):
+    record = runtime_records[path]
+    file_descriptor = file_descriptors[path]
+    require_stat(os.fstat(file_descriptor), record, f"candidate runtime {path}")
+    if hashlib.sha256(read_all(file_descriptor)).hexdigest() != record["sha256"]:
+        reject(f"candidate runtime {path} changed while it was supervised")
+
+
+def verify_runtime_descriptors(runtime_records, file_descriptors):
+    for path in runtime_records:
+        verify_runtime_descriptor(path, runtime_records, file_descriptors)
+
+
+def verify_runtime_paths(snapshot, runtime_records):
+    directory_records = {
+        record["path"]: record for record in snapshot["directories"]
+    }
+    current_root = open_absolute_directory(snapshot["artifact"])
+    try:
+        require_stat(
+            os.fstat(current_root), directory_records["."], "candidate artifact root"
+        )
+        for path in ("candidate", "candidate/bin"):
+            current_directory = open_relative(current_root, path, True)
+            try:
+                require_stat(
+                    os.fstat(current_directory),
+                    directory_records[path],
+                    f"candidate directory {path}",
+                )
+            finally:
+                os.close(current_directory)
+        for path, record in runtime_records.items():
+            current_file = open_relative(current_root, path, False)
+            try:
+                require_stat(
+                    os.fstat(current_file), record, f"candidate runtime path {path}"
+                )
+                if not descriptor_is_executable(current_file):
+                    reject(f"candidate runtime path is not executable: {path}")
+                if hashlib.sha256(read_all(current_file)).hexdigest() != record["sha256"]:
+                    reject(f"candidate runtime path changed before supervised replay: {path}")
+            finally:
+                os.close(current_file)
+    finally:
+        os.close(current_root)
+
+
+def kill_traced_processes(processes):
+    for process_id in processes:
+        try:
+            os.kill(process_id, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    while True:
+        try:
+            os.waitpid(-1, WAIT_ALL_TRACED)
+        except ChildProcessError:
+            return
+        except InterruptedError:
+            continue
+
+
+def finish_with_wait_status(status):
+    if os.WIFEXITED(status):
+        raise SystemExit(os.WEXITSTATUS(status))
+    if os.WIFSIGNALED(status):
+        terminating_signal = os.WTERMSIG(status)
+        if terminating_signal not in (signal.SIGKILL, signal.SIGSTOP):
+            signal.signal(terminating_signal, signal.SIG_DFL)
+        try:
+            signal.pthread_sigmask(signal.SIG_UNBLOCK, {terminating_signal})
+        except (AttributeError, OSError, ValueError):
+            pass
+        os.kill(os.getpid(), terminating_signal)
+        os._exit(128 + terminating_signal)
+    reject("candidate entrypoint ended without an exit status")
+
+
+def supervise_entrypoint(
+    entrypoint_descriptor,
+    arguments,
+    environment,
+    snapshot,
+    runtime_paths,
+    file_descriptors,
+    directory_descriptors,
+):
+    if sys.platform != "linux" or not os.path.isdir("/proc/self"):
+        reject("safe benchmark candidate process supervision requires Linux procfs")
+    runtime_path_set = set(runtime_paths)
+    runtime_records = {
+        record["path"]: record
+        for record in snapshot["files"]
+        if record["path"] in runtime_path_set
+    }
+    runtime_identities = {
+        path: (record["device"], record["inode"])
+        for path, record in runtime_records.items()
+    }
+    expected_identities = set(runtime_identities.values())
+    path_for_identity = {
+        identity: path for path, identity in runtime_identities.items()
+    }
+    entrypoint_identity = runtime_identities[ENTRYPOINT]
+    runtime_names = {
+        path.removeprefix("candidate/bin/"): path for path in runtime_paths
+    }
+    runtime_directories = {
+        os.path.normpath(os.path.join(snapshot["artifact"], "candidate", "bin")),
+        descriptor_target(directory_descriptors["candidate/bin"]),
+    }
+    initial_identity, interpreter_descriptor = initial_loaded_identity(
+        entrypoint_descriptor, entrypoint_identity
+    )
+    watch_descriptor = None
+    try:
+        watch_descriptor, watch_roles = create_runtime_watch(
+            directory_descriptors, runtime_paths, file_descriptors
+        )
+        verify_runtime_descriptors(runtime_records, file_descriptors)
+        verify_runtime_paths(snapshot, runtime_records)
+        drain_runtime_watch(watch_descriptor, watch_roles)
+        root_process = os.fork()
+    except BaseException:
+        if watch_descriptor is not None:
+            os.close(watch_descriptor)
+        if interpreter_descriptor is not None:
+            os.close(interpreter_descriptor)
+        raise
+    if root_process == 0:
+        try:
+            ptrace_call(PTRACE_TRACEME, 0, 0, 0)
+            os.kill(os.getpid(), signal.SIGSTOP)
+            os.set_inheritable(entrypoint_descriptor, True)
+            os.execve(entrypoint_descriptor, arguments, environment)
+        except BaseException as error:
+            try:
+                os.write(2, f"benchmark candidate exec failed: {error}\n".encode())
+            finally:
+                os._exit(127)
+
+    try:
+        _, initial_status = os.waitpid(root_process, 0)
+        if not os.WIFSTOPPED(initial_status) or os.WSTOPSIG(
+            initial_status
+        ) != signal.SIGSTOP:
+            reject("candidate entrypoint did not enter its supervised launch stop")
+        ptrace_options(root_process)
+        ptrace_continue(root_process)
+        active_processes = {root_process}
+        new_processes = set()
+        root_exec_seen = False
+        root_wait_status = None
+        while active_processes:
+            try:
+                process_id, status = os.waitpid(-1, WAIT_ALL_TRACED)
+            except InterruptedError:
+                continue
+            if os.WIFEXITED(status) or os.WIFSIGNALED(status):
+                active_processes.discard(process_id)
+                new_processes.discard(process_id)
+                if process_id == root_process:
+                    root_wait_status = status
+                continue
+            if not os.WIFSTOPPED(status):
+                continue
+
+            event = status >> 16
+            stopped_signal = os.WSTOPSIG(status)
+            if process_id not in active_processes:
+                active_processes.add(process_id)
+                new_processes.add(process_id)
+            if event in (
+                PTRACE_EVENT_FORK,
+                PTRACE_EVENT_VFORK,
+                PTRACE_EVENT_CLONE,
+            ):
+                new_process = ptrace_event_process(process_id)
+                active_processes.add(new_process)
+                new_processes.add(new_process)
+                ptrace_continue(process_id)
+                continue
+            if event == PTRACE_EVENT_EXEC:
+                drain_runtime_watch(watch_descriptor, watch_roles)
+                former_process = ptrace_event_process(process_id)
+                if former_process and former_process != process_id:
+                    active_processes.discard(former_process)
+                    new_processes.discard(former_process)
+                    active_processes.add(process_id)
+                executable_path, executable_identity = process_executable(process_id)
+                execfn = process_execfn(process_id)
+                resolved_execfn = resolve_execfn(process_id, execfn)
+                runtime_directories.add(
+                    descriptor_target(directory_descriptors["candidate/bin"])
+                )
+                if process_id == root_process and not root_exec_seen:
+                    root_exec_seen = True
+                    if executable_identity != initial_identity:
+                        reject(
+                            "candidate entrypoint loaded a different executable inode: "
+                            f"{executable_path}"
+                        )
+                else:
+                    declared_path = None
+                    if resolved_execfn is not None:
+                        name = os.path.basename(resolved_execfn)
+                        if (
+                            os.path.dirname(resolved_execfn) in runtime_directories
+                            and name in runtime_names
+                        ):
+                            declared_path = runtime_names[name]
+                    executable_name = os.path.basename(executable_path)
+                    if (
+                        declared_path is None
+                        and os.path.dirname(executable_path) in runtime_directories
+                        and executable_name in runtime_names
+                    ):
+                        declared_path = runtime_names[executable_name]
+                    if declared_path is not None and executable_identity != runtime_identities[
+                        declared_path
+                    ]:
+                        reject(
+                            "declared candidate runtime exec loaded a different inode: "
+                            f"{executable_path}"
+                        )
+                    if resolved_execfn is None and executable_identity not in expected_identities:
+                        reject(
+                            "candidate descriptor-based exec could not be bound to the "
+                            f"saved runtime: {executable_path}"
+                        )
+                if executable_identity in expected_identities:
+                    verify_runtime_descriptor(
+                        path_for_identity[executable_identity],
+                        runtime_records,
+                        file_descriptors,
+                    )
+                    executable_name = os.path.basename(executable_path)
+                    expected_path = runtime_names.get(executable_name)
+                    if (
+                        expected_path is not None
+                        and runtime_identities[expected_path] == executable_identity
+                    ):
+                        runtime_directories.add(
+                            os.path.normpath(os.path.dirname(executable_path))
+                        )
+                drain_runtime_watch(watch_descriptor, watch_roles)
+                ptrace_continue(process_id)
+                continue
+            if process_id in new_processes and stopped_signal == signal.SIGSTOP:
+                new_processes.discard(process_id)
+                ptrace_options(process_id)
+                ptrace_continue(process_id)
+                continue
+            ptrace_continue(process_id, stopped_signal)
+
+        if not root_exec_seen:
+            reject("candidate entrypoint never completed its supervised exec")
+        if root_wait_status is None:
+            reject("candidate entrypoint exit status was not observed")
+        drain_runtime_watch(watch_descriptor, watch_roles)
+        verify_runtime_descriptors(runtime_records, file_descriptors)
+        drain_runtime_watch(watch_descriptor, watch_roles)
+        finish_with_wait_status(root_wait_status)
+    except BaseException:
+        if "active_processes" in locals():
+            kill_traced_processes(active_processes)
+        else:
+            try:
+                os.kill(root_process, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            try:
+                os.waitpid(root_process, 0)
+            except (ChildProcessError, InterruptedError):
+                pass
+        raise
+    finally:
+        os.close(watch_descriptor)
+        if interpreter_descriptor is not None:
+            os.close(interpreter_descriptor)
+
+
+def execute_snapshot(snapshot_data, arguments):
+    snapshot = parse_json(snapshot_data, "candidate launch snapshot")
+    expected_keys = {
+        "schema",
+        "artifact",
+        "candidate_schema",
+        "entrypoint",
+        "report",
+        "directories",
+        "files",
+    }
+    if not isinstance(snapshot, dict) or set(snapshot) != expected_keys:
+        reject("candidate launch snapshot has an unsupported shape")
+    if snapshot["schema"] != SNAPSHOT_SCHEMA:
+        reject("candidate launch snapshot has an unsupported schema")
+    if snapshot["candidate_schema"] not in (PRODUCER_SCHEMA, MATERIALIZED_SCHEMA):
+        reject("candidate launch snapshot has an unsupported candidate schema")
+    if snapshot["entrypoint"] != ENTRYPOINT:
+        reject("candidate launch snapshot has an unsupported entrypoint")
+    if not isinstance(snapshot["directories"], list) or not snapshot["directories"]:
+        reject("candidate launch snapshot has no directories")
+    if not isinstance(snapshot["files"], list) or not snapshot["files"]:
+        reject("candidate launch snapshot has no files")
+    for record in snapshot["directories"]:
+        validate_directory_record(record)
+    for record in snapshot["files"]:
+        validate_file_record(record)
+    directory_paths = [record["path"] for record in snapshot["directories"]]
+    file_paths = [record["path"] for record in snapshot["files"]]
+    if directory_paths != sorted(set(directory_paths)):
+        reject("candidate directory snapshot paths are not sorted and unique")
+    if file_paths != sorted(set(file_paths)):
+        reject("candidate file snapshot paths are not sorted and unique")
+
+    root_descriptor = open_absolute_directory(snapshot["artifact"])
+    directory_descriptors = {}
+    file_descriptors = {}
+    file_data = {}
+    try:
+        for record in snapshot["directories"]:
+            path = record["path"]
+            file_descriptor = open_relative(root_descriptor, path, True)
+            require_stat(os.fstat(file_descriptor), record, f"candidate directory {path}")
+            directory_descriptors[path] = file_descriptor
+        for record in snapshot["files"]:
+            path = record["path"]
+            file_descriptor = open_relative(root_descriptor, path, False)
+            information = os.fstat(file_descriptor)
+            require_stat(information, record, f"candidate file {path}")
+            data = read_all(file_descriptor)
+            if hashlib.sha256(data).hexdigest() != record["sha256"]:
+                reject(f"candidate file {path} changed after it was listed")
+            file_descriptors[path] = file_descriptor
+            file_data[path] = data
+
+        provenance, executable_paths, expected_report = validate_candidate_contract(
+            snapshot["artifact"],
+            directory_descriptors,
+            file_descriptors,
+            file_data,
+        )
+        if expected_report != snapshot["report"]:
+            reject("candidate launch snapshot identifies the wrong admission record")
+        if provenance["schema"] != snapshot["candidate_schema"]:
+            reject("candidate provenance schema changed after it was listed")
+
+        entrypoint_descriptor = file_descriptors[ENTRYPOINT]
+        entrypoint_record = next(
+            record for record in snapshot["files"] if record["path"] == ENTRYPOINT
+        )
+        require_stat(
+            os.fstat(entrypoint_descriptor),
+            entrypoint_record,
+            "candidate entrypoint",
+        )
+        if hashlib.sha256(read_all(entrypoint_descriptor)).hexdigest() != entrypoint_record[
+            "sha256"
+        ]:
+            reject("candidate entrypoint changed immediately before launch")
+        argv_zero = os.path.join(snapshot["artifact"], ENTRYPOINT)
+        supervise_entrypoint(
+            entrypoint_descriptor,
+            [argv_zero, *arguments],
+            os.environ.copy(),
+            snapshot,
+            executable_paths,
+            file_descriptors,
+            directory_descriptors,
+        )
+    finally:
+        for file_descriptor in file_descriptors.values():
+            os.close(file_descriptor)
+        for file_descriptor in directory_descriptors.values():
+            os.close(file_descriptor)
+        os.close(root_descriptor)
+
+
+def read_snapshot_descriptor(value):
+    if not isinstance(value, str) or not re.fullmatch(r"[0-9]+", value):
+        reject("candidate snapshot descriptor is invalid")
+    file_descriptor = int(value)
+    if file_descriptor <= 2:
+        reject("candidate snapshot descriptor must not replace standard input or output")
+    chunks = []
+    try:
+        while True:
+            chunk = os.read(file_descriptor, 1024 * 1024)
+            if not chunk:
+                return b"".join(chunks)
+            chunks.append(chunk)
+    finally:
+        os.close(file_descriptor)
+
+
+def main():
+    if len(sys.argv) < 3:
+        reject("usage: bench-candidate-replay <snapshot|exec-fd> <value> [arguments...]")
+    mode = sys.argv[1]
+    if mode == "snapshot" and len(sys.argv) == 3:
+        print(create_snapshot(sys.argv[2]))
+        return
+    if mode == "exec-fd":
+        snapshot_data = read_snapshot_descriptor(sys.argv[2])
+        execute_snapshot(snapshot_data, sys.argv[3:])
+        reject("candidate execution returned unexpectedly")
+    reject("unsupported benchmark candidate replay operation")
+
+
+try:
+    main()
+except Exception as error:
+    print(f"benchmark candidate launch rejected: {error}", file=sys.stderr)
+    sys.exit(1)

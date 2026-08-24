@@ -210,12 +210,136 @@ close_candidate_staging() {
   active_candidate_staging_name=""
 }
 
+publish_legacy_admission_noreplace() {
+  local owner_fd_path="$1"
+  local owner_identity="$2"
+  local source_name="$3"
+  local source_identity="$4"
+  local source_digest="$5"
+  local target_name="$6"
+
+  [[ -d "$owner_fd_path" \
+    && "$owner_identity" =~ ^[0-9]+:[0-9]+$ \
+    && "$source_name" =~ ^[.]ADMISSION[.]json[.]publish[.][A-Za-z0-9]+$ \
+    && "$source_identity" =~ ^[0-9]+:[0-9]+$ \
+    && "$source_digest" =~ ^[0-9a-f]{64}$ \
+    && "$target_name" == "$bench_materialized_admission_name" ]] || return 1
+  python3 - \
+    "$owner_fd_path" "$owner_identity" "$source_name" "$source_identity" \
+    "$source_digest" "$target_name" <<'PY'
+import ctypes
+import errno
+import hashlib
+import os
+import stat
+import sys
+
+
+def digest_file(descriptor):
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    digest = hashlib.sha256()
+    while True:
+        chunk = os.read(descriptor, 1024 * 1024)
+        if not chunk:
+            return digest.hexdigest()
+        digest.update(chunk)
+
+
+(
+    owner_path,
+    owner_identity,
+    source_name,
+    source_identity,
+    source_digest,
+    target_name,
+) = sys.argv[1:]
+owner_expected = tuple(map(int, owner_identity.split(":")))
+source_expected = tuple(map(int, source_identity.split(":")))
+owner_fd = os.open(owner_path, os.O_RDONLY | os.O_DIRECTORY)
+source_fd = -1
+try:
+    owner = os.fstat(owner_fd)
+    if (owner.st_dev, owner.st_ino) != owner_expected:
+        raise RuntimeError("legacy admission owner directory identity changed")
+    source = os.stat(source_name, dir_fd=owner_fd, follow_symlinks=False)
+    if not stat.S_ISREG(source.st_mode):
+        raise RuntimeError("legacy admission staging entry is not a regular file")
+    if (source.st_dev, source.st_ino) != source_expected:
+        raise RuntimeError("legacy admission staging identity changed")
+    source_fd = os.open(source_name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=owner_fd)
+    opened_source = os.fstat(source_fd)
+    if (opened_source.st_dev, opened_source.st_ino) != source_expected:
+        raise RuntimeError("legacy admission staging identity changed while opening")
+    if opened_source.st_uid != os.geteuid() or opened_source.st_nlink != 1:
+        raise RuntimeError("legacy admission staging file is unsafe")
+    if digest_file(source_fd) != source_digest:
+        raise RuntimeError("legacy admission staging content changed")
+    try:
+        os.stat(target_name, dir_fd=owner_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        pass
+    else:
+        raise RuntimeError("legacy admission destination already exists")
+
+    libc = ctypes.CDLL(None, use_errno=True)
+    renameat2 = libc.renameat2
+    renameat2.argtypes = [
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint,
+    ]
+    renameat2.restype = ctypes.c_int
+    if renameat2(
+        owner_fd,
+        os.fsencode(source_name),
+        owner_fd,
+        os.fsencode(target_name),
+        1,
+    ) != 0:
+        error = ctypes.get_errno()
+        if error == errno.EEXIST:
+            raise RuntimeError(
+                "legacy admission destination appeared during publication"
+            )
+        raise OSError(error, os.strerror(error))
+    published = os.stat(target_name, dir_fd=owner_fd, follow_symlinks=False)
+    if not stat.S_ISREG(published.st_mode):
+        raise RuntimeError("published legacy admission is not a regular file")
+    if (published.st_dev, published.st_ino) != source_expected:
+        raise RuntimeError("published legacy admission identity differs from staging")
+    if digest_file(source_fd) != source_digest:
+        raise RuntimeError("published legacy admission content changed")
+    os.fsync(source_fd)
+    os.fsync(owner_fd)
+finally:
+    if source_fd >= 0:
+        os.close(source_fd)
+    os.close(owner_fd)
+PY
+}
+
 migrate_legacy_materialized_admission() (
   local artifact_dir="$1"
   local candidate_dir="$artifact_dir/candidate"
   local raw_report="$artifact_dir/report.json"
   local admission_path="$candidate_dir/$bench_materialized_admission_name"
-  local schema fd fd_path identity admission_staging=""
+  local schema fd="" fd_path="" identity=""
+  local report_fd="" report_fd_path="" report_identity="" report_digest=""
+  local admission_staging="" admission_staging_name=""
+  local admission_staging_fd="" admission_staging_fd_path=""
+  local admission_staging_identity="" admission_digest=""
+  local admission_staging_read_fd="" attempt suffix
+
+  cleanup_legacy_admission_staging() {
+    [[ -n "$admission_staging_name" \
+      && -n "$admission_staging_identity" ]] || return 0
+    bench_remove_owned_regular_file \
+      "$fd_path" "$identity" "$admission_staging_name" "$admission_staging_identity" \
+      2>/dev/null || true
+  }
+  trap cleanup_legacy_admission_staging EXIT
 
   [[ -d "$candidate_dir" && ! -L "$candidate_dir" ]] || return 1
   [[ -f "$raw_report" && ! -L "$raw_report" ]] || return 1
@@ -236,18 +360,55 @@ migrate_legacy_materialized_admission() (
   fi
   identity="$(stat -c '%d:%i' "$candidate_dir" 2>/dev/null)" || return 1
   [[ "$(stat -Lc '%d:%i' "$fd_path" 2>/dev/null)" == "$identity" ]] || return 1
-  admission_staging="$(mktemp "$fd_path/.admission.migrate.XXXXXX")" || return 1
-  trap '[[ -z "$admission_staging" ]] || rm -f "$admission_staging"' EXIT
+
+  exec {report_fd}<"$raw_report" || return 1
+  report_fd_path="$(bench_fd_path "$report_fd")" || return 1
+  report_identity="$(stat -Lc '%d:%i' "$report_fd_path")" || return 1
+  [[ "$(stat -c '%d:%i' "$raw_report" 2>/dev/null)" == "$report_identity" ]] || return 1
+  report_digest="$(bench_sha256_file "$report_fd_path")" || return 1
+
+  for attempt in {1..128}; do
+    printf -v suffix '%04x%04x%08x' "$RANDOM" "$RANDOM" "$BASHPID"
+    admission_staging_name=".ADMISSION.json.publish.$suffix"
+    admission_staging="$fd_path/$admission_staging_name"
+    set -o noclobber
+    if exec {admission_staging_fd}>"$admission_staging"; then
+      set +o noclobber
+      break
+    fi
+    set +o noclobber
+    admission_staging=""
+    admission_staging_name=""
+    admission_staging_fd=""
+  done
+  [[ -n "$admission_staging_fd" ]] || return 1
   [[ -f "$admission_staging" && ! -L "$admission_staging" ]] || return 1
-  cp "$raw_report" "$admission_staging" || return 1
-  cmp -s "$raw_report" "$admission_staging" || return 1
+  admission_staging_fd_path="$(bench_fd_path "$admission_staging_fd")" || return 1
+  admission_staging_identity="$(stat -Lc '%d:%i' "$admission_staging_fd_path")" || return 1
+  [[ "$(stat -c '%d:%i' "$fd_path/$admission_staging_name" 2>/dev/null)" \
+    == "$admission_staging_identity" ]] || return 1
+  cat "$report_fd_path" >&"$admission_staging_fd" || return 1
+  exec {admission_staging_read_fd}<"$admission_staging" || return 1
+  admission_staging_fd_path="$(bench_fd_path "$admission_staging_read_fd")" || return 1
+  [[ "$(stat -Lc '%d:%i' "$admission_staging_fd_path")" \
+    == "$admission_staging_identity" ]] || return 1
+  cmp -s "$report_fd_path" "$admission_staging_fd_path" || return 1
+  admission_digest="$(bench_sha256_file "$admission_staging_fd_path")" || return 1
+  [[ "$admission_digest" == "$report_digest" ]] || return 1
   bench_candidate_paths_are_runnable "$artifact_dir" "$candidate_dir" "$admission_staging" \
     || return 1
   staging_directory_is_current "$candidate_dir" "$fd_path" "$identity" || return 1
-  [[ ! -e "$fd_path/$bench_materialized_admission_name" \
-    && ! -L "$fd_path/$bench_materialized_admission_name" ]] || return 1
-  mv -T "$admission_staging" "$fd_path/$bench_materialized_admission_name" || return 1
+  [[ "$(stat -c '%d:%i' "$raw_report" 2>/dev/null)" == "$report_identity" ]] || return 1
+  [[ "$(bench_sha256_file "$report_fd_path")" == "$report_digest" ]] || return 1
+  [[ "$(stat -c '%d:%i' "$fd_path/$admission_staging_name" 2>/dev/null)" \
+    == "$admission_staging_identity" ]] || return 1
+  [[ "$(bench_sha256_file "$admission_staging_fd_path")" == "$admission_digest" ]] || return 1
+  publish_legacy_admission_noreplace \
+    "$fd_path" "$identity" "$admission_staging_name" "$admission_staging_identity" \
+    "$admission_digest" "$bench_materialized_admission_name" || return 1
   admission_staging=""
+  admission_staging_name=""
+  admission_staging_identity=""
   staging_directory_is_current "$candidate_dir" "$fd_path" "$identity" || return 1
   bench_candidate_is_runnable "$artifact_dir"
 )

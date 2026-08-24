@@ -2,6 +2,9 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$repo_root/bench-candidate-common"
+
+candidate_replay="$repo_root/bench-candidate-replay"
 
 bench_mode=0
 remote_cli_mode=0
@@ -28,30 +31,56 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-select_bench_bin_dir() {
+capture_bench_candidate_snapshot() {
+  local artifact_dir="$1"
+  local first_snapshot second_snapshot
+
+  bench_candidate_is_runnable "$artifact_dir" || return 1
+  first_snapshot="$("$candidate_replay" snapshot "$artifact_dir")" || return 1
+  bench_candidate_is_runnable "$artifact_dir" || return 1
+  second_snapshot="$("$candidate_replay" snapshot "$artifact_dir")" || return 1
+  [[ "$second_snapshot" == "$first_snapshot" ]] || return 1
+  printf '%s\n' "$first_snapshot"
+}
+
+select_bench_candidate() {
   local results_dir="${WORK_LEAF_START_BENCH_RESULTS_DIR:-$repo_root/bench-results}"
   if [[ ! -d "$results_dir" ]]; then
     echo "no bench results directory found: $results_dir" >&2
     exit 1
   fi
-
-  local artifact_dirs=()
-  local orchestrator_bin="work-leaf-"
-  orchestrator_bin+="orchestrator"
-  while IFS= read -r artifact_dir; do
-    if [[ -x "$artifact_dir/bin/work-leaf" && -x "$artifact_dir/bin/$orchestrator_bin" ]]; then
-      artifact_dirs+=("$artifact_dir")
+  results_dir="$(cd "$results_dir" && pwd -P)"
+  for required_command in awk cmp find git jq python3 sha256sum sort stat; do
+    if ! command -v "$required_command" >/dev/null 2>&1; then
+      echo "$required_command is required to validate benchmark candidates" >&2
+      exit 1
     fi
-  done < <(
-    find "$results_dir" -mindepth 1 -type d -name '*-artifacts' -print | sort -Vr
-  )
-
-  if [[ "${#artifact_dirs[@]}" -eq 0 ]]; then
-    echo "no bench artifacts with saved Work Leaf binaries found in $results_dir" >&2
+  done
+  if [[ ! -x "$candidate_replay" ]]; then
+    echo "benchmark candidate replay helper is not executable: $candidate_replay" >&2
     exit 1
   fi
 
-  echo "Available benchs binaries:"
+  local artifact_dirs=()
+  local candidate_snapshots=()
+  local artifact_dir provenance_path snapshot
+  while IFS= read -r -d '' provenance_path; do
+    artifact_dir="${provenance_path%/candidate/PROVENANCE}"
+    if snapshot="$(capture_bench_candidate_snapshot "$artifact_dir")"; then
+      artifact_dirs+=("$artifact_dir")
+      candidate_snapshots+=("$snapshot")
+    fi
+  done < <(
+    find "$results_dir" -mindepth 3 -type f -path '*/candidate/PROVENANCE' -print0 \
+      | sort -zVr
+  )
+
+  if [[ "${#artifact_dirs[@]}" -eq 0 ]]; then
+    echo "no runnable benchmark candidates found in $results_dir" >&2
+    exit 1
+  fi
+
+  echo "Available benchmark candidates:"
   local index=1
   local artifact_name
   local display_name
@@ -63,22 +92,47 @@ select_bench_bin_dir() {
   done
 
   local choice
-  printf 'Choose a bench to run [1-%d]: ' "${#artifact_dirs[@]}"
+  printf 'Choose a benchmark to run [1-%d]: ' "${#artifact_dirs[@]}"
   if ! read -r choice; then
-    echo "no bench selection received" >&2
+    echo "no benchmark selection received" >&2
     exit 1
   fi
-  if [[ ! "$choice" =~ ^[0-9]+$ ]] || (( choice < 1 || choice > ${#artifact_dirs[@]} )); then
-    echo "invalid bench selection: $choice" >&2
+  if [[ ! "$choice" =~ ^[0-9]+$ ]]; then
+    echo "invalid benchmark selection: $choice" >&2
+    exit 1
+  fi
+  local leading_zeros="${choice%%[!0]*}"
+  local decimal_choice="${choice#"$leading_zeros"}"
+  [[ -n "$decimal_choice" ]] || decimal_choice="0"
+  local maximum_choice="${#artifact_dirs[@]}"
+  if [[ "$decimal_choice" == "0" \
+    || "${#decimal_choice}" -gt "${#maximum_choice}" \
+    || ( "${#decimal_choice}" -eq "${#maximum_choice}" \
+      && "$decimal_choice" > "$maximum_choice" ) ]]; then
+    echo "invalid benchmark selection: $choice" >&2
     exit 1
   fi
 
-  bin_dir="${artifact_dirs[$((choice - 1))]}/bin"
-  echo "Running Work Leaf binaries from $bin_dir"
+  local selected_index=$((10#$decimal_choice - 1))
+  local selected_artifact="${artifact_dirs[$selected_index]}"
+  local selected_snapshot="${candidate_snapshots[$selected_index]}"
+  local current_snapshot
+  if ! bench_candidate_is_runnable "$selected_artifact" \
+    || ! current_snapshot="$("$candidate_replay" snapshot "$selected_artifact")" \
+    || [[ "$current_snapshot" != "$selected_snapshot" ]]; then
+    echo "selected benchmark candidate changed after it was listed: $selected_artifact" >&2
+    exit 1
+  fi
+
+  echo "Running benchmark candidate from $selected_artifact/candidate/bin"
+  local snapshot_fd
+  exec {snapshot_fd}< <(printf '%s' "$selected_snapshot")
+  set -- "${start_args[@]}"
+  exec "$candidate_replay" exec-fd "$snapshot_fd" "$@"
 }
 
 if [[ "$bench_mode" == "1" ]]; then
-  select_bench_bin_dir
+  select_bench_candidate
 elif [[ "${WORK_LEAF_START_SKIP_BUILD:-}" != "1" ]]; then
   (cd "$repo_root" && cargo build --release --bin work-leaf)
   bin_dir="${WORK_LEAF_START_BIN_DIR:-$repo_root/target/release}"

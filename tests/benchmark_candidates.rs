@@ -1,9 +1,10 @@
 #![cfg(unix)]
 
 use std::fs;
+use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[test]
@@ -599,8 +600,21 @@ fn candidate_admission_uses_structure_provenance_and_digests_not_ui_text() {
     ] {
         let implementation = fs::read_to_string(path).unwrap();
         assert!(implementation.contains("bounded-startup-quit"));
-        assert!(!implementation.contains("scripted-command-chat"));
         assert!(!implementation.contains("Command chat:"));
+    }
+    let admission = fs::read_to_string("bench-candidate-common").unwrap();
+    assert!(admission.contains("work-leaf-benchmark-candidate-smoke-v1"));
+    assert!(admission.contains("scripted-command-chat"));
+    for path in [
+        "bench-three-features",
+        "bench-three-features-direct-common",
+        "materialize-bench-candidate",
+    ] {
+        assert!(
+            !fs::read_to_string(path)
+                .unwrap()
+                .contains("scripted-command-chat")
+        );
     }
 
     let root = test_dir("candidate-admission-contract");
@@ -724,6 +738,202 @@ fn materializer_accepts_a_bounded_startup_quit_without_fixed_ui_output() {
 }
 
 #[test]
+fn admission_accepts_exact_historical_smoke_metadata_without_reading_ui_text() {
+    let root = test_dir("historical-smoke-admission");
+    let fixture = HistoricalFixture::new(root.path());
+    let fake_cargo = root.path().join("fake-cargo");
+    write_fake_cargo(&fake_cargo, true);
+
+    let output = fixture.run_materializer(&fake_cargo);
+    assert_success(&output, "historical fixture materialization");
+    let candidate = fixture.artifact.join("candidate");
+    let provenance_path = candidate.join("PROVENANCE");
+    let admission_path = candidate.join("ADMISSION.json");
+    let mut provenance: serde_json::Value =
+        serde_json::from_slice(&fs::read(&provenance_path).unwrap()).unwrap();
+    provenance["smoke"]["schema"] = serde_json::json!("work-leaf-benchmark-candidate-smoke-v1");
+    provenance["smoke"]["gate"] = serde_json::json!("scripted-command-chat");
+    fs::write(
+        &provenance_path,
+        serde_json::to_vec_pretty(&provenance).unwrap(),
+    )
+    .unwrap();
+    let mut admission: serde_json::Value =
+        serde_json::from_slice(&fs::read(&admission_path).unwrap()).unwrap();
+    admission["candidate"] = provenance.clone();
+    admission["materialization"] = provenance["materialization"].clone();
+    fs::write(
+        &admission_path,
+        serde_json::to_vec_pretty(&admission).unwrap(),
+    )
+    .unwrap();
+
+    let admitted = bash_harness(
+        concat!(
+            "set -euo pipefail\n",
+            "source \"$1/bench-candidate-common\"\n",
+            "bench_candidate_is_runnable \"$2\"\n",
+        ),
+        &[fixture.artifact.as_os_str()],
+    );
+    assert_success(&admitted, "exact historical smoke admission");
+
+    let mut replay = Command::new(Path::new(env!("CARGO_MANIFEST_DIR")).join("start"))
+        .arg("--bench")
+        .env("WORK_LEAF_START_BENCH_RESULTS_DIR", &fixture.results)
+        .env("WORK_LEAF_START_SKIP_BUILD", "1")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    replay
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(b"1\nquit\n")
+        .unwrap();
+    let replay = replay.wait_with_output().unwrap();
+    assert_success(&replay, "exact historical candidate replay");
+    assert!(String::from_utf8_lossy(&replay.stdout).contains("application startup completed"));
+
+    provenance["smoke"]["gate"] = serde_json::json!("unknown-historical-gate");
+    fs::write(
+        &provenance_path,
+        serde_json::to_vec_pretty(&provenance).unwrap(),
+    )
+    .unwrap();
+    admission["candidate"] = provenance;
+    fs::write(
+        &admission_path,
+        serde_json::to_vec_pretty(&admission).unwrap(),
+    )
+    .unwrap();
+    let rejected = bash_harness(
+        concat!(
+            "set -euo pipefail\n",
+            "source \"$1/bench-candidate-common\"\n",
+            "if bench_candidate_is_runnable \"$2\"; then exit 93; fi\n",
+        ),
+        &[fixture.artifact.as_os_str()],
+    );
+    assert_success(&rejected, "unknown historical smoke rejection");
+}
+
+#[test]
+fn legacy_admission_migration_publishes_the_saved_report_without_rebuilding() {
+    let root = test_dir("legacy-admission-success");
+    let fixture = HistoricalFixture::new(root.path());
+    let fake_cargo = root.path().join("fake-cargo");
+    write_fake_cargo(&fake_cargo, true);
+    prepare_legacy_materialized_candidate(&fixture, &fake_cargo);
+
+    let output = fixture.run_materializer(&fake_cargo);
+    assert_success(&output, "legacy admission migration");
+    assert!(
+        String::from_utf8_lossy(&output.stdout)
+            .contains("migrated historical candidate admission without rebuilding")
+    );
+    assert_eq!(
+        fs::read(fixture.artifact.join("candidate/ADMISSION.json")).unwrap(),
+        fs::read(fixture.artifact.join("report.json")).unwrap()
+    );
+}
+
+#[test]
+fn legacy_admission_migration_never_replaces_a_destination_that_appears() {
+    let root = test_dir("legacy-admission-destination-race");
+    let fixture = HistoricalFixture::new(root.path());
+    let fake_cargo = root.path().join("fake-cargo");
+    let fake_bin = root.path().join("fake-bin");
+    let attack_marker = root.path().join("attack-ran");
+    let staging_record = root.path().join("staging-path");
+    let renamed_staging = root.path().join("renamed-owned-staging");
+    fs::create_dir(&fake_bin).unwrap();
+    write_fake_cargo(&fake_cargo, true);
+    prepare_legacy_materialized_candidate(&fixture, &fake_cargo);
+    write_legacy_admission_attack_wrappers(&fake_bin);
+
+    let admission = fixture.artifact.join("candidate/ADMISSION.json");
+    let output = fixture
+        .command(&fake_cargo)
+        .env(
+            "PATH",
+            format!("{}:{}", fake_bin.display(), std::env::var("PATH").unwrap()),
+        )
+        .env("REAL_MV", command_path("mv"))
+        .env("REAL_PYTHON", command_path("python3"))
+        .env("ATTACK_KIND", "destination")
+        .env("ATTACK_MARKER", &attack_marker)
+        .env("ADMISSION_PATH", &admission)
+        .env("CANDIDATE_DIR", fixture.artifact.join("candidate"))
+        .env("STAGING_RECORD", &staging_record)
+        .env("RENAMED_STAGING", &renamed_staging)
+        .output()
+        .unwrap();
+
+    assert!(
+        !output.status.success(),
+        "legacy migration replaced a destination that appeared\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(attack_marker.exists(), "destination race hook did not run");
+    assert_eq!(fs::read(&admission).unwrap(), b"unowned admission bytes\n");
+}
+
+#[test]
+fn legacy_admission_migration_never_unlinks_a_staging_replacement() {
+    let root = test_dir("legacy-admission-staging-race");
+    let fixture = HistoricalFixture::new(root.path());
+    let fake_cargo = root.path().join("fake-cargo");
+    let fake_bin = root.path().join("fake-bin");
+    let attack_marker = root.path().join("attack-ran");
+    let staging_record = root.path().join("staging-path");
+    let renamed_staging = root.path().join("renamed-owned-staging");
+    fs::create_dir(&fake_bin).unwrap();
+    write_fake_cargo(&fake_cargo, true);
+    prepare_legacy_materialized_candidate(&fixture, &fake_cargo);
+    write_legacy_admission_attack_wrappers(&fake_bin);
+
+    let admission = fixture.artifact.join("candidate/ADMISSION.json");
+    let output = fixture
+        .command(&fake_cargo)
+        .env(
+            "PATH",
+            format!("{}:{}", fake_bin.display(), std::env::var("PATH").unwrap()),
+        )
+        .env("REAL_MV", command_path("mv"))
+        .env("REAL_PYTHON", command_path("python3"))
+        .env("ATTACK_KIND", "staging")
+        .env("ATTACK_MARKER", &attack_marker)
+        .env("ADMISSION_PATH", &admission)
+        .env("CANDIDATE_DIR", fixture.artifact.join("candidate"))
+        .env("STAGING_RECORD", &staging_record)
+        .env("RENAMED_STAGING", &renamed_staging)
+        .output()
+        .unwrap();
+
+    assert!(
+        !output.status.success(),
+        "legacy migration accepted a replaced staging path\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(attack_marker.exists(), "staging race hook did not run");
+    let staging_path = PathBuf::from(fs::read_to_string(&staging_record).unwrap());
+    assert_eq!(
+        fs::read(staging_path).unwrap(),
+        b"unowned staging replacement\n"
+    );
+    assert!(
+        renamed_staging.is_file(),
+        "owned staging inode was not preserved"
+    );
+    assert!(!admission.exists());
+}
+
+#[test]
 fn materializer_rolls_back_a_post_rename_admission_failure() {
     let root = test_dir("materializer-post-rename-cleanup");
     let fixture = HistoricalFixture::new(root.path());
@@ -825,6 +1035,74 @@ fn command_path(command: &str) -> String {
         .unwrap();
     assert_success(&output, "command lookup");
     String::from_utf8(output.stdout).unwrap().trim().to_owned()
+}
+
+fn prepare_legacy_materialized_candidate(fixture: &HistoricalFixture, fake_cargo: &Path) {
+    let output = fixture.run_materializer(fake_cargo);
+    assert_success(&output, "legacy migration source fixture");
+    let admission = fixture.artifact.join("candidate/ADMISSION.json");
+    fs::copy(&admission, fixture.artifact.join("report.json")).unwrap();
+    fs::remove_file(admission).unwrap();
+}
+
+fn write_legacy_admission_attack_wrappers(fake_bin: &Path) {
+    write_executable(
+        &fake_bin.join("mv"),
+        concat!(
+            "#!/usr/bin/env bash\n",
+            "set -euo pipefail\n",
+            "target=${!#}\n",
+            "if [[ \"$target\" == \"$ADMISSION_PATH\" && ! -e \"$ATTACK_MARKER\" ]]; then\n",
+            "  case \"$ATTACK_KIND\" in\n",
+            "    destination)\n",
+            "      printf 'unowned admission bytes\\n' > \"$ADMISSION_PATH\"\n",
+            "      : > \"$ATTACK_MARKER\"\n",
+            "      ;;\n",
+            "    staging)\n",
+            "      source_path=${@: -2:1}\n",
+            "      printf '%s' \"$source_path\" > \"$STAGING_RECORD\"\n",
+            "      \"$REAL_MV\" -T -- \"$source_path\" \"$RENAMED_STAGING\"\n",
+            "      printf 'unowned staging replacement\\n' > \"$source_path\"\n",
+            "      : > \"$ATTACK_MARKER\"\n",
+            "      exit 73\n",
+            "      ;;\n",
+            "  esac\n",
+            "fi\n",
+            "exec \"$REAL_MV\" \"$@\"\n",
+        ),
+    );
+    write_executable(
+        &fake_bin.join("python3"),
+        concat!(
+            "#!/usr/bin/env bash\n",
+            "set -euo pipefail\n",
+            "if [[ \"${1:-}\" != - ]]; then exec \"$REAL_PYTHON\" \"$@\"; fi\n",
+            "program=$(mktemp)\n",
+            "trap 'rm -f -- \"$program\"' EXIT\n",
+            "cat > \"$program\"\n",
+            "if grep -q 'legacy admission destination appeared during publication' \"$program\" \\\n",
+            "  && [[ ! -e \"$ATTACK_MARKER\" ]]; then\n",
+            "  case \"$ATTACK_KIND\" in\n",
+            "    destination)\n",
+            "      printf 'unowned admission bytes\\n' > \"$ADMISSION_PATH\"\n",
+            "      ;;\n",
+            "    staging)\n",
+            "      stages=(\"$CANDIDATE_DIR\"/.ADMISSION.json.publish.*)\n",
+            "      [[ \"${#stages[@]}\" == 1 ]]\n",
+            "      printf '%s' \"${stages[0]}\" > \"$STAGING_RECORD\"\n",
+            "      \"$REAL_MV\" -T -- \"${stages[0]}\" \"$RENAMED_STAGING\"\n",
+            "      printf 'unowned staging replacement\\n' > \"${stages[0]}\"\n",
+            "      ;;\n",
+            "  esac\n",
+            "  : > \"$ATTACK_MARKER\"\n",
+            "fi\n",
+            "set +e\n",
+            "\"$REAL_PYTHON\" \"$program\" \"${@:2}\"\n",
+            "status=$?\n",
+            "set -e\n",
+            "exit \"$status\"\n",
+        ),
+    );
 }
 
 fn git(path: &Path, args: &[&str]) -> Output {

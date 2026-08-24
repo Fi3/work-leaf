@@ -4,6 +4,8 @@ readonly bench_candidate_schema="work-leaf-benchmark-candidate-v2"
 readonly bench_materialized_candidate_schema="work-leaf-benchmark-materialized-candidate-v1"
 readonly bench_materialization_schema="work-leaf-benchmark-bundle-materialization-v1"
 readonly bench_candidate_smoke_schema="work-leaf-benchmark-candidate-smoke-v2"
+readonly bench_historical_candidate_smoke_schema="work-leaf-benchmark-candidate-smoke-v1"
+readonly bench_historical_candidate_smoke_gate="scripted-command-chat"
 readonly bench_materialized_admission_name="ADMISSION.json"
 
 bench_path_has_private_publication_component() {
@@ -1384,7 +1386,9 @@ bench_candidate_paths_are_runnable() {
     provenance="$(jq -ce \
       --arg schema "$bench_materialized_candidate_schema" \
       --arg materialization_schema "$bench_materialization_schema" \
-      --arg smoke_schema "$bench_candidate_smoke_schema" '
+      --arg smoke_schema "$bench_candidate_smoke_schema" \
+      --arg historical_smoke_schema "$bench_historical_candidate_smoke_schema" \
+      --arg historical_smoke_gate "$bench_historical_candidate_smoke_gate" '
       select(
         type == "object"
         and keys == ["entrypoint", "executables", "materialization", "schema", "smoke", "source_commit"]
@@ -1413,8 +1417,16 @@ bench_candidate_paths_are_runnable() {
           "stdout",
           "timeout_seconds"
         ]
-        and .smoke.schema == $smoke_schema
-        and .smoke.gate == "bounded-startup-quit"
+        and (
+          (
+            .smoke.schema == $smoke_schema
+            and .smoke.gate == "bounded-startup-quit"
+          )
+          or (
+            .smoke.schema == $historical_smoke_schema
+            and .smoke.gate == $historical_smoke_gate
+          )
+        )
         and .smoke.command == ["candidate/bin/work-leaf"]
         and .smoke.exit_code == 0
         and .smoke.timeout_seconds == 20

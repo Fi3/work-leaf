@@ -38,11 +38,30 @@ available on `PATH` for the default agent, or Claude available on `PATH` when la
 API and web UI daemon, or pass `-c` or `--cli` with an API URL to attach the terminal CLI to an
 existing daemon.
 
-`./start --bench` lists saved benchmark artifact directories that contain executable Work Leaf
-binaries, newest first by the timestamped artifact name, and prompts for the benchmark to run. The
-selected artifact's `bin/work-leaf` is executed with any remaining arguments, so the session uses the
-binaries saved by that benchmark instead of binaries built from the current checkout. Set
-`WORK_LEAF_START_BENCH_RESULTS_DIR` to search a results directory other than `bench-results`.
+`./start --bench` lists physically present `candidate` runtimes that pass the benchmark candidate
+admission checks. Producer candidates require their exact v2 provenance and passing `report.json`;
+historically materialized candidates require their exact materialized provenance, source evidence,
+and candidate-local `ADMISSION.json`. Both formats bind the complete executable set and supporting
+records by SHA-256. Historical smoke records are admitted by their structured saved metadata, not by
+matching terminal output text. Reports with a missing, incomplete, changed, or rejected candidate
+are not listed, and generic artifact or runner binaries are not replay candidates.
+
+The displayed numbers belong to one fixed inventory. Selection revalidates the saved identities and
+digests, opens every runtime and evidence path without following symlinks, and executes the selected
+`candidate/bin/work-leaf` through its pinned file descriptor. The runtime tree remains watched for
+changes during the session, and direct launches of distinct declared native companion executables are
+checked against their saved inodes before they can continue. A path replacement cannot redirect the
+menu choice or such a companion launch: it is rejected, or the already opened original inode remains
+the execution target. Distinct saved companions must be native executables. Replay requires Linux
+process tracing, filesystem watches, and procfs and fails without launching the candidate when those
+facilities are unavailable. The direct-native-exec checks apply only to processes that produce
+ptrace events: a Linux child created with `CLONE_UNTRACED` does not produce a ptrace clone event and
+is outside that supervision guarantee. Files passed as data to an interpreter or dynamic loader are
+also outside the direct-exec guarantee. Replay preserves the identity of supported saved runtime
+launches; it is not hostile-code containment or a general security sandbox. Remaining arguments are
+passed to the entrypoint. Set
+`WORK_LEAF_START_BENCH_RESULTS_DIR` to search a results directory other than `bench-results`; an empty
+inventory or invalid selection exits without using current checkout binaries.
 
 `./build-target` packages the `work-leaf` binary for the current Rust host target and writes it under
 `dist/work-leaf-<target>`. Set `WORK_LEAF_BUILD_TARGETS` to an explicit whitespace-separated target

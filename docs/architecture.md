@@ -73,11 +73,50 @@ binary in daemon mode, and `-c`/`--cli <http-api-url>` attaches the terminal CLI
 API endpoint. `--agent <codex|claude>` and `-a <codex|claude>` select the daemon's default agent
 provider for terminal and web UI sessions. With `--bench`, the script searches
 `WORK_LEAF_START_BENCH_RESULTS_DIR` or
-`bench-results` recursively for timestamped `*-artifacts` directories that contain executable
-`bin/work-leaf` and `bin/work-leaf-orchestrator` files. This includes top-level historical bench
-artifacts and nested parallel-batch run artifacts. It lists those saved benchmark binary sets newest
-first by artifact path, prompts for a selection, skips the release build, and executes the selected
-artifact's `bin/work-leaf`.
+`bench-results` recursively for `candidate/PROVENANCE` records. Discovery calls
+`bench-candidate-common::bench_candidate_is_runnable`, which selects the schema-owned report,
+validates the exact provenance shape, requires a passing nonempty result, checks the complete runtime
+set, and rehashes the candidate and its supporting evidence. Current producer output uses the v2
+bounded start-and-quit smoke record with artifact `report.json`. Materialized historical output uses
+its exact saved smoke record and candidate-local `ADMISSION.json`; replay validates the record and
+its digest-bound transcript without interpreting terminal text. Missing, incomplete, stale,
+symlinked, or rejected candidates are excluded. Artifact `bin`, `runner-bin`, and current checkout
+binaries are not fallback replay sources.
+
+`start` captures a `bench-candidate-replay` launch snapshot for every admitted artifact during the
+single sorted discovery pass. Each snapshot binds the artifact and candidate directory inodes plus
+every admission file and executable inode, mode, size, and digest. Menu numbers index those snapshots
+without rescanning. After a valid selection, the shared admission check runs again and the current
+snapshot must equal the discovery snapshot. The replay helper walks the absolute artifact path with
+component-relative `O_NOFOLLOW` opens, verifies the complete snapshot from pinned descriptors,
+installs filesystem watches on the pinned artifact, candidate, runtime directory, and executable
+inodes, and then repeats no-follow runtime path and digest validation. It drains those watches before
+launch and at every later executable stop, so a rename-and-restore sequence remains a recorded fatal
+mutation. The helper descriptor-executes `candidate/bin/work-leaf` as a traced child. Distinct
+non-entrypoint runtime files must be native ELF executables.
+
+The Linux process-tree supervisor follows fork, vfork, clone, and exec events delivered through
+ptrace. A child created with `CLONE_UNTRACED` does not produce a ptrace clone event and remains outside
+this direct-native-exec supervision guarantee. At each delivered exec stop, the supervisor reads the
+kernel-provided direct executable request from `AT_EXECFN`, compares a direct declared native runtime
+launch with the pinned executable inode and digest, and compares the loaded image through procfs
+before allowing user code to continue. Arbitrary files passed as data to an explicit interpreter or
+dynamic loader are not classified as direct runtime launches. These checks preserve identity for
+supported saved-runtime launches; they do not contain hostile candidate code or form a general
+security sandbox. The supported benchmark producers stage native Cargo binaries, and replay excludes
+a distinct script companion during discovery. The supervisor preserves the entrypoint's exit code or
+terminating signal and kills traced descendants if validation fails or the supervisor exits.
+
+The snapshot reaches the replay helper through a dedicated inherited file descriptor that is closed
+before launch, so snapshot size does not consume one command-line argument and candidate standard
+input remains available. Renaming or replacing a selected path either leaves the already opened inode
+as the execution target or rejects the launch. Replay fails closed before candidate code runs when
+Linux procfs, inotify, or child process tracing is unavailable. An empty inventory, end-of-input, or
+an invalid number exits without building or executing another binary. For total evidence bytes `E`,
+candidate paths `n`, and admission paths `m`, discovery is O(E + n log n + m log m); selected
+validation applies the same hashing and path sorting to one candidate, and process supervision
+validates only the runtime named by each exec event. It does not compare every candidate or runtime
+with every other one.
 
 The project-root `build-target` script packages the user-facing `work-leaf` binary for the Rust host
 target reported by `rustc -vV`. `WORK_LEAF_BUILD_TARGETS` accepts an explicit whitespace-separated
