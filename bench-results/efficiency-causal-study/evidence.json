@@ -1,0 +1,403 @@
+{
+  "schema": "work-leaf-efficiency-causal-study-v1",
+  "accepted_step_3_head": "81d28af5d5e506175941956326c21e4787b10367",
+  "definitions": {
+    "raw_tokens": "input_tokens + output_tokens; cached input remains included",
+    "uncached_tokens": "input_tokens - cached_input_tokens + output_tokens",
+    "matched_pair": "one sequential row and one Work Leaf row with the same explicit study block and attempt",
+    "controlled_feature_off_test": "a fixed task with one declared mechanism changed between conditions",
+    "reduction_percent": "100 * (control - normal) / control",
+    "workflow_pass": "the saved driver completed review, linearization, three final commits, the required checks, and a clean worktree",
+    "feature_score": "the number of the three original requested behaviors that pass the frozen step-228 fixtures",
+    "exact_usage": "provider counters are complete or independently recovered and reconcile for the stated scope"
+  },
+  "fair_comparison": {
+    "model": "gpt-5.5",
+    "reasoning_effort": "xhigh",
+    "benchmark_base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+    "sequential": {
+      "workflow": "sequential direct Codex",
+      "product_condition": "normal direct path without Work Leaf",
+      "schedule": "sequential",
+      "transport": "direct-codex-cli"
+    },
+    "work_leaf": {
+      "workflow": "concurrent Work Leaf",
+      "product_condition": "normal Work Leaf path",
+      "schedule": "concurrent",
+      "transport": "codex app-server"
+    },
+    "shared_validation": {
+      "focused_cargo_validations_per_implementation_or_fix_turn": 1,
+      "final_gate": [
+        "cargo fmt",
+        "cargo clippy --all-targets --all-features -- -D warnings",
+        "cargo test --all-targets --all-features"
+      ]
+    }
+  },
+  "prompt_contracts": {
+    "driver": {
+      "source_ref": "origin/master",
+      "source_commit": "fc1a7e731d68a68b838c27f6e29f8709a6a2c0fa",
+      "serialization": "compact JSON array followed by LF",
+      "tasks": [
+        "add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select",
+        "implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt.",
+        "when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it"
+      ],
+      "lengths": [
+        189,
+        609,
+        149
+      ],
+      "json_lf_bytes": 958,
+      "json_lf_sha256": "c27bb64412deeee646d8d25753b599bf1650050e7b761c9dc119611abac58d1a"
+    },
+    "analysis_scorer": {
+      "source_commit": "e70c933ff0313fafb771ff214d06734845537b86",
+      "later_driver_expansion_commit": "c72536a",
+      "manifest": "frozen-original-task-scorer/manifest.json",
+      "lengths": [
+        189,
+        204,
+        149
+      ],
+      "json_lf_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a",
+      "authority": "offline feature scoring only; it does not authorize or edit benchmark driver prompts",
+      "supplemental_only": [
+        "/fork execution",
+        "fork continuation",
+        "rejection of ordinary send/resume slash passthrough"
+      ]
+    }
+  },
+  "quality": {
+    "frozen_result": "frozen-original-task-scorer/result.json",
+    "current_expected_ids": [
+      "r15-direct-attempt-01",
+      "r15-direct-attempt-02",
+      "r15-wl-000-attempt-01",
+      "r16-direct-attempt-01",
+      "r18-direct-attempt-01",
+      "r18-wl-000-attempt-01",
+      "r19-direct-attempt-01",
+      "r19-direct-attempt-02",
+      "r19-wl-000-attempt-01",
+      "r19-wl-000-attempt-02"
+    ],
+    "historical_work_leaf_expected_ids": [
+      "historical-work-leaf-20260626-091036",
+      "historical-work-leaf-20260626-131213",
+      "historical-work-leaf-20260626-141318"
+    ],
+    "scored_features": [
+      "visual",
+      "commands",
+      "completion"
+    ],
+    "command_score_check": "slash_status",
+    "no_row_filter": "retain saved report passes, failures, partial implementations, and any zero-feature result",
+    "observed_zero_feature_rows": 0,
+    "retained_outcomes": {
+      "saved_workflow_results": [
+        "fail",
+        "pass"
+      ],
+      "observed_feature_scores": [
+        1,
+        2,
+        3
+      ],
+      "zero_feature_rows_are_eligible": true,
+      "zero_feature_rows_observed": 0
+    },
+    "retry_and_row_admission": {
+      "uniform_predeclared_retry_cap": false,
+      "observed_attempt_numbers": [
+        1,
+        2
+      ],
+      "rule": "all ten saved normal-product candidates enter the feature comparison regardless of saved workflow result or feature score",
+      "limit": "the archive contains at most two attempts for any current condition; this is an observed boundary, not a uniform predeclared retry cap"
+    },
+    "saved_report_result_note": "The scorer's workflow_result is the saved report result. It is neither the feature score nor the Step 226 historical workflow-PASS reclassification."
+  },
+  "exact_token_pair": {
+    "block": "r19",
+    "attempt": 2,
+    "accounting_scope": "non_title_workflow",
+    "sequential": {
+      "quality_row_id": "r19-direct-attempt-02",
+      "historical_workflow_pass": true,
+      "raw": 43009498,
+      "uncached": 2105178,
+      "analysis_sha256": "7c2c6d6e59a51bb94da9b04d4b8513eb5bc26bdaec45502d3bb96ada8bd6a4dd",
+      "report_sha256": "80132f4deae89f424ad8918c9b80a120a44b29679985ea78e894e4a38e0a9786",
+      "recovery_sha256": "b89fe092f59b55c007a0c237314a4d93f43b14073ca733a667253dbe2157c1e5"
+    },
+    "work_leaf": {
+      "quality_row_id": "r19-wl-000-attempt-02",
+      "historical_workflow_pass": true,
+      "raw": 12018293,
+      "uncached": 1072757,
+      "analysis_sha256": "731895b79aa3d35c6fe05a3d7edd79e65a1e91cb266df8a9f70d9c1c34ea9a2c",
+      "report_sha256": "009989258d00e3f9df2ed4eecfb0543fa1401b73baee94e3c8e4f556b934ee9c"
+    },
+    "interpretation": "exact accounting for one unequal-score pair; broader quality rows are context, not proof of formal equivalence"
+  },
+  "isolated_mechanisms": {
+    "changed_repeated_read": {
+      "scope": "provider turn 4 of the fixed explicit changed-reread task",
+      "normal": {
+        "prompt_bytes": 695,
+        "input": 23619,
+        "cached_input": 22912,
+        "output": 19,
+        "raw": 23638,
+        "uncached": 726
+      },
+      "control_full_current": {
+        "prompt_bytes": 16385,
+        "input": 27752,
+        "cached_input": 22912,
+        "output": 19,
+        "raw": 27771,
+        "uncached": 4859
+      },
+      "source": "step56_changed_read_comparison"
+    },
+    "unchanged_repeated_read": {
+      "scope": "provider turn 4 of the fixed explicit unchanged-reread task",
+      "normal": {
+        "prompt_bytes": 266,
+        "input": 23502,
+        "cached_input": 22912,
+        "output": 29,
+        "raw": 23531,
+        "uncached": 619
+      },
+      "control_full_resend": {
+        "prompt_bytes": 16254,
+        "input": 27722,
+        "cached_input": 22912,
+        "output": 29,
+        "raw": 27751,
+        "uncached": 4839
+      },
+      "source": "step63_unchanged_read_comparison"
+    },
+    "inline_review_provenance": {
+      "scope": "complete fixed one-commit Rust reviewer thread",
+      "normal_inline_exact": {
+        "provider_turns": 1,
+        "prompt_bytes": 14402,
+        "input": 15932,
+        "cached_input": 9600,
+        "output": 525,
+        "raw": 16457,
+        "uncached": 6857
+      },
+      "control_git_reconstruct": {
+        "provider_turns": 4,
+        "prompt_bytes": 17234,
+        "input": 64740,
+        "cached_input": 55808,
+        "output": 1930,
+        "raw": 66670,
+        "uncached": 10862
+      },
+      "source": "step86_review_provenance_comparison"
+    }
+  },
+  "isolated_mechanism_limits": {
+    "separate_scopes": true,
+    "percentages_can_be_added": false,
+    "percentages_are_whole_gap_shares": false,
+    "cross_project_generalization": "deferred"
+  },
+  "screens": {
+    "large_read_bundle": {
+      "classification": "mixed",
+      "inline": {
+        "input": 80221,
+        "cached_input": 28416,
+        "output": 432,
+        "raw": 80653,
+        "uncached": 52237
+      },
+      "bundle": {
+        "input": 91392,
+        "cached_input": 71168,
+        "output": 1067,
+        "raw": 92459,
+        "uncached": 21291
+      },
+      "archive_bundle_vs_inline_direction": {
+        "raw_increase_percent": 14.638,
+        "uncached_reduction_percent": 59.242
+      },
+      "requested_feature_off_direction": {
+        "raw_reduction_percent": 14.638,
+        "uncached_increase_percent": 59.242
+      },
+      "direction_note": "The requested feature-off wording reverses the signs of the archive's bundle-minus-inline convention while retaining its percentage magnitudes.",
+      "source": "step50_large_read_comparison"
+    },
+    "patch_acknowledgement": {
+      "classification": "no-observed-raw-or-behavioral-effect-cache-confounded",
+      "formal_causal_pair_admitted": false,
+      "normal": {
+        "prompt_bytes": 950,
+        "raw": 19333,
+        "uncached": 517,
+        "duplicate_patches": 0,
+        "output": 9
+      },
+      "neutral": {
+        "prompt_bytes": 42,
+        "raw": 19153,
+        "uncached": 9553,
+        "duplicate_patches": 0,
+        "output": 9
+      },
+      "capture_limit": "neutral final chunk-index JSON record was truncated",
+      "source": "step70_patch_ack_decision"
+    },
+    "linearization_compaction": {
+      "classification": "inactive-in-target-workflow-cannot-explain-gap",
+      "complete_prompt_bytes": 20106,
+      "target_block_bytes": 5240,
+      "rendered_targets": 3,
+      "unique_agent_ids": 3,
+      "grouped_reviewed_commit_markers": 0,
+      "verified_h7_records": 0,
+      "h7_records_requiring_reconstruction": 10,
+      "source": "step77_linearization_decision"
+    },
+    "command_output_compaction": {
+      "classification": "zero-byte-opportunity-in-accepted-trace",
+      "verified_components": 7,
+      "actual_component_sizes": [
+        1168,
+        376,
+        4418,
+        639,
+        879,
+        376,
+        2722
+      ],
+      "counterfactual_component_sizes": [
+        1168,
+        376,
+        4418,
+        639,
+        879,
+        376,
+        2722
+      ],
+      "source": "step36_mechanism_summary"
+    },
+    "directive_interruption": {
+      "classification": "no-observed-post-directive-generation-token-effect-unavailable",
+      "canonical_prompt_sha256": "74310e6fef6ac895ab7b3aed4524a635b0eb1b6b9847f1e635b5c398e422e1c0",
+      "interrupt": {
+        "turn_status": "interrupted",
+        "interrupts": 1,
+        "post_directive_generation": 0,
+        "usage_available": false
+      },
+      "natural": {
+        "turn_status": "completed",
+        "interrupts": 0,
+        "post_directive_generation": 0,
+        "usage_available": true,
+        "raw": 19639
+      },
+      "accepted_trace_context": {
+        "interrupted_turns": 44,
+        "with_same_turn_usage": 38,
+        "without_same_turn_usage": 6
+      },
+      "sources": [
+        "step40_interrupt_result",
+        "step40_natural_result"
+      ]
+    }
+  },
+  "factorial": {
+    "block": "r19",
+    "required_cells": [
+      "direct",
+      "wl-000",
+      "wl-001",
+      "wl-010",
+      "wl-011",
+      "wl-100",
+      "wl-101",
+      "wl-110",
+      "wl-111"
+    ],
+    "exact_cells": [
+      "direct",
+      "wl-000",
+      "wl-001",
+      "wl-010",
+      "wl-100",
+      "wl-110"
+    ],
+    "missing_exact_cells": [
+      "wl-011",
+      "wl-101",
+      "wl-111"
+    ],
+    "attempt_ledger": [
+      {"condition": "wl-001", "attempt": 1, "workflow_pass": false, "exact": true, "raw": 12680934, "uncached": 933862},
+      {"condition": "wl-001", "attempt": 2, "workflow_pass": true, "exact": true, "raw": 7447038, "uncached": 763902},
+      {"condition": "wl-111", "attempt": 1, "workflow_pass": true, "exact": false, "raw": null, "uncached": null},
+      {"condition": "wl-111", "attempt": 2, "workflow_pass": true, "exact": false, "raw": null, "uncached": null},
+      {"condition": "direct", "attempt": 1, "workflow_pass": false, "exact": true, "raw": 3662491, "uncached": 382235},
+      {"condition": "direct", "attempt": 2, "workflow_pass": true, "exact": true, "raw": 43009498, "uncached": 2105178},
+      {"condition": "wl-000", "attempt": 1, "workflow_pass": true, "exact": true, "raw": 15965727, "uncached": 1037343},
+      {"condition": "wl-000", "attempt": 2, "workflow_pass": true, "exact": true, "raw": 12018293, "uncached": 1072757},
+      {"condition": "wl-100", "attempt": 1, "workflow_pass": true, "exact": true, "raw": 13113472, "uncached": 894592},
+      {"condition": "wl-100", "attempt": 2, "workflow_pass": true, "exact": true, "raw": 10862773, "uncached": 791733},
+      {"condition": "wl-010", "attempt": 1, "workflow_pass": true, "exact": true, "raw": 11015883, "uncached": 943563},
+      {"condition": "wl-010", "attempt": 2, "workflow_pass": true, "exact": true, "raw": 18814791, "uncached": 1094087},
+      {"condition": "wl-110", "attempt": 1, "workflow_pass": true, "exact": true, "raw": 14360843, "uncached": 1205515},
+      {"condition": "wl-101", "attempt": 1, "workflow_pass": true, "exact": false, "raw": null, "uncached": null},
+      {"condition": "wl-011", "attempt": 1, "workflow_pass": true, "exact": false, "raw": null, "uncached": null}
+    ],
+    "incomplete_attempt_directories": [
+      "step190-full-workflow-attribution-r19/runs/07-wl-110/attempt-02"
+    ],
+    "admission_and_retries": {
+      "completed_attempts": 15,
+      "workflow_passes": 13,
+      "exact_accounted_attempts": 11,
+      "exact_accounted_workflow_passes": 9,
+      "uniform_predeclared_retry_cap": false,
+      "observed_completed_attempts_per_condition": [
+        1,
+        2
+      ],
+      "collection_rule": "the then-active runner retained every attempt, retried pending conditions in fewest-attempt order, stopped a condition after its first admission, and required one explicit paid authorization per launch",
+      "offline_interpretation": "the later historical workflow-PASS reanalysis does not create missing counters or new attempts",
+      "excluded_interruption": "wl-110 attempt 2 has no completed report and contributes no result or token value",
+      "current_paid_authorization": false
+    },
+    "mixed_block_substitution_valid": false,
+    "reason": "wl-111 would come from R16 and wl-101/wl-011 from R15, mixing time blocks and observer identities"
+  },
+  "limitations": {
+    "formal_quality_equivalence_available": false,
+    "quality_reasons": [
+      "only four matched pairs",
+      "no predeclared equivalence margin",
+      "retries and dependent observations",
+      "wide descriptive intervals"
+    ],
+    "exact_whole_gap_allocation_available": false,
+    "cross_project_generalization": "deferred"
+  }
+}

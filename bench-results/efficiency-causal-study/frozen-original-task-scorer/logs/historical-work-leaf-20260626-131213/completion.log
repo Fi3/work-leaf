@@ -1,0 +1,59 @@
+command: cargo test --test quality_completion quality_completion_behavior -- --exact
+cwd: /tmp/work-leaf-quality-audit-lssd2tv4/checkouts/historical-work-leaf-20260626-131213
+exit_code: 101
+duration_seconds: 0.398
+
+[stdout]
+
+running 1 test
+test quality_completion_behavior ... FAILED
+
+failures:
+
+---- quality_completion_behavior stdout ----
+
+thread 'quality_completion_behavior' (211630) panicked at tests/quality_completion.rs:23:5:
+[H┌work-leaf─────────────┐┌chat──────────────────────────────────────────────────────────────────────────────────────────┐
+│  work-leaf  command  ││chat>                                                                                         │
+│[7m re user-1 READY DONE?[0m││                                                                                              │
+│[7m>review-user-1 r READY[0m││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+└──────────────────────┘└──────────────────────────────────────────────────────────────────────────────────────────────┘
+mode=insert focus=right window=1/1                                                                                      [2;32H
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    quality_completion_behavior
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+
+[stderr]
+   Compiling work-leaf v0.1.0 (/tmp/work-leaf-quality-audit-lssd2tv4/checkouts/historical-work-leaf-20260626-131213)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.34s
+     Running tests/quality_completion.rs (/tmp/work-leaf-quality-audit-lssd2tv4/cargo-target/debug/deps/quality_completion-dedde6b96f0e96d0)
+error: test failed, to rerun pass `--test quality_completion`

@@ -1,0 +1,58 @@
+command: cargo test --test quality_commands quality_fork_continuation_behavior -- --exact
+cwd: /tmp/work-leaf-quality-audit-lssd2tv4/checkouts/r19-direct-attempt-01
+exit_code: 101
+duration_seconds: 0.063
+
+[stdout]
+
+running 1 test
+test quality_fork_continuation_behavior ... FAILED
+
+failures:
+
+---- quality_fork_continuation_behavior stdout ----
+
+thread 'quality_fork_continuation_behavior' (207858) panicked at tests/quality_commands.rs:51:5:
+[H┌work-leaf─────────────┐┌chat──────────────────────────────────────────────────────────────────────────────────────────┐
+│  work-leaf  command  ││codex: Codex session thread-source                                                            │
+│[7m>launch-p user-1 READY[0m││launch provider reply                                                                         │
+│                      ││user: /fork                                                                                   │
+│                      ││MODEL_PATH_FOR_FORK                                                                           │
+│                      ││chat>                                                                                         │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+└──────────────────────┘└──────────────────────────────────────────────────────────────────────────────────────────────┘
+mode=insert focus=right window=1/1                                                                                      [6;32H
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    quality_fork_continuation_behavior
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.04s
+
+
+[stderr]
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running tests/quality_commands.rs (/tmp/work-leaf-quality-audit-lssd2tv4/cargo-target/debug/deps/quality_commands-0246edbb28c72c13)
+error: test failed, to rerun pass `--test quality_commands`

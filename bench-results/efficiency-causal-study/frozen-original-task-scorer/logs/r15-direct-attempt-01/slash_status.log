@@ -1,0 +1,128 @@
+command: cargo test --test quality_commands quality_status_behavior -- --exact
+cwd: /tmp/work-leaf-quality-audit-lssd2tv4/checkouts/r15-direct-attempt-01
+exit_code: 101
+duration_seconds: 0.227
+
+[stdout]
+
+running 1 test
+test quality_status_behavior ... FAILED
+
+failures:
+
+---- quality_status_behavior stdout ----
+
+thread 'quality_status_behavior' (203372) panicked at tests/quality_commands.rs:30:5:
+selected backend did not show a response for /status
+frame:
+[H┌work-leaf─────────────┐┌chat──────────────────────────────────────────────────────────────────────────────────────────┐
+│  work-leaf  command  ││codex: Codex session thread-source                                                            │
+│[7m>launch-p user-1 READY[0m││launch provider reply                                                                         │
+│                      ││user: /status                                                                                 │
+│                      ││chat>                                                                                         │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+└──────────────────────┘└──────────────────────────────────────────────────────────────────────────────────────────────┘
+mode=insert focus=right window=1/1                                                                                      [5;32H
+log:
+argv:--cd /tmp/work-leaf-quality-commands-status-203371 --sandbox read-only --ask-for-approval never exec --color never --json -
+argv:--cd /tmp/work-leaf-quality-commands-status-203371 --sandbox read-only --ask-for-approval never exec --color never --json -
+input:You are running under the work-leaf orchestrator.
+You are not allowed to read files directly; ask the orchestrator to provide file text.
+You are not allowed to write files directly; provide a unified diff patch for every file you want to change.
+Commands that create, update, delete, format, build, test, or otherwise write files require orchestrator mediation.
+Keep every patch focused on the current feature and explain the specific reason for the patch.
+`@work-leaf` is an orchestrator response protocol, not an executable command. Do not run `@work-leaf` in a shell or ask the user to run it.
+Emit every `@work-leaf ...` request as a top-level plain response line, without quotes, prose, or code fences, so the orchestrator can parse it.
+Never claim that you are switching to local workspace tools; keep using orchestrator directives until the orchestrator responds.
+Use `@work-leaf read <path>` to request file text from the orchestrator.
+Request related files together, because `@work-leaf read <path> <path...>` returns multiple file snapshots in one orchestrator response.
+Use `@work-leaf patch <reason>` followed by a unified diff and `@work-leaf end` to request a write.
+Use `@work-leaf locks classify <command>` only when you are unsure whether a command writes project files.
+Use `@work-leaf locks run <path> <path...> -- <command>` to run a command while the orchestrator holds write locks for every path the command may write.
+This command-lock rule is language- and tool-agnostic: use it for any formatter, build, test, code generator, package manager, installer, cache-producing tool, or repository-required check that may write files.
+Choose the command from the repository instructions and project context; choose the lock paths from the files, directories, caches, build outputs, dependency folders, or lockfiles that command may write.
+Locked command runs are limited to five minutes; user authorization is required for longer lock-holding commands.
+Do not use command locks for manual feature edits; manual code or documentation changes must still be submitted with the unified-diff patch directive.
+Use `@work-leaf send <agent-id> <message>` to route context to another agent.
+You are responsible for following the project instructions, including running the repository's required checks before you submit a patch or report work done.
+Use `@work-leaf done` when no more orchestrator work is required.
+
+Agent-ID: title-user-1
+Feature: chat-title
+
+User prompt:
+Name this work-leaf chat from the user's first prompt.
+Rules:
+- Return only the chat name, no prose and no quotes.
+- Derive the name from the first prompt only.
+- Use at most 80 characters.
+- Use lowercase words separated by hyphens.
+- Do not use spaces.
+
+First prompt:
+provider command fixture
+input:You are running under the work-leaf orchestrator.
+You are not allowed to read files directly; ask the orchestrator to provide file text.
+You are not allowed to write files directly; provide a unified diff patch for every file you want to change.
+Commands that create, update, delete, format, build, test, or otherwise write files require orchestrator mediation.
+Keep every patch focused on the current feature and explain the specific reason for the patch.
+`@work-leaf` is an orchestrator response protocol, not an executable command. Do not run `@work-leaf` in a shell or ask the user to run it.
+Emit every `@work-leaf ...` request as a top-level plain response line, without quotes, prose, or code fences, so the orchestrator can parse it.
+Never claim that you are switching to local workspace tools; keep using orchestrator directives until the orchestrator responds.
+Use `@work-leaf read <path>` to request file text from the orchestrator.
+Request related files together, because `@work-leaf read <path> <path...>` returns multiple file snapshots in one orchestrator response.
+Use `@work-leaf patch <reason>` followed by a unified diff and `@work-leaf end` to request a write.
+Use `@work-leaf locks classify <command>` only when you are unsure whether a command writes project files.
+Use `@work-leaf locks run <path> <path...> -- <command>` to run a command while the orchestrator holds write locks for every path the command may write.
+This command-lock rule is language- and tool-agnostic: use it for any formatter, build, test, code generator, package manager, installer, cache-producing tool, or repository-required check that may write files.
+Choose the command from the repository instructions and project context; choose the lock paths from the files, directories, caches, build outputs, dependency folders, or lockfiles that command may write.
+Locked command runs are limited to five minutes; user authorization is required for longer lock-holding commands.
+Do not use command locks for manual feature edits; manual code or documentation changes must still be submitted with the unified-diff patch directive.
+Use `@work-leaf send <agent-id> <message>` to route context to another agent.
+You are responsible for following the project instructions, including running the repository's required checks before you submit a patch or report work done.
+Use `@work-leaf done` when no more orchestrator work is required.
+
+Agent-ID: user-1
+Feature: user-agent
+
+User prompt:
+provider command fixture
+argv:--cd /tmp/work-leaf-quality-commands-status-203371 --sandbox read-only --ask-for-approval never exec status --json thread-source
+input:
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    quality_status_behavior
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.03s
+
+
+[stderr]
+   Compiling work-leaf v0.1.0 (/tmp/work-leaf-quality-audit-lssd2tv4/checkouts/r15-direct-attempt-01)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.18s
+     Running tests/quality_commands.rs (/tmp/work-leaf-quality-audit-lssd2tv4/cargo-target/debug/deps/quality_commands-0246edbb28c72c13)
+error: test failed, to rerun pass `--test quality_commands`
