@@ -1,0 +1,196 @@
+2715:    fn start_review_for_agent(
+2716:        &mut self,
+2717:        target_agent_id: Option<&AgentId>,
+2718:    ) -> Result<Vec<AgentId>, CliError> {
+2719:        let (project_dir, agent_profile) = {
+2720:            let chat = self
+2721:                .chat
+2722:                .as_ref()
+2723:                .expect("work-leaf controller command chat is present");
+2724:            (
+2725:                chat.project_dir().to_path_buf(),
+2726:                chat.agent_profile().clone(),
+2727:            )
+2728:        };
+2729:        let empty_baselines = BTreeMap::new();
+2730:        let agent_baselines = if target_agent_id.is_some() {
+2731:            &self.agent_review_baselines
+2732:        } else {
+2733:            &empty_baselines
+2734:        };
+2735:        let commits = GitHistory::new(project_dir)
+2736:            .latest_agent_review_commits(&self.reviewed_agent_commits, agent_baselines)?;
+2737:        if commits.is_empty() {
+2738:            self.push_command_line("no agent commits found".to_string());
+2739:            return Ok(Vec::new());
+2740:        }
+2741:
+2742:        let mut reviewer_ids = Vec::new();
+2743:        for commit in commits {
+2744:            if target_agent_id.is_some_and(|agent_id| &commit.agent_id != agent_id) {
+2745:                continue;
+2746:            }
+2747:            if self
+2748:                .reviewed_agent_commits
+2749:                .get(&commit.agent_id)
+2750:                .is_some_and(|hash| hash == &commit.hash)
+2751:                || self
+2752:                    .review_commits_in_progress
+2753:                    .get(&commit.agent_id)
+2754:                    .is_some_and(|hash| hash == &commit.hash)
+2755:            {
+2756:                continue;
+2757:            }
+2758:            let reviewer_id = AgentId::new(format!("review-{}", commit.agent_id.as_str()))
+2759:                .map_err(CliError::Agent)?;
+2760:            let reviewer_busy = self
+2761:                .sessions
+2762:                .get(&reviewer_id)
+2763:                .and_then(|session| session.loading)
+2764:                .is_some();
+2765:            if reviewer_busy {
+2766:                continue;
+2767:            }
+2768:            let session_exists = self.sessions.contains_key(&reviewer_id);
+2769:            let reuse_reviewer = self.reviewers.contains(&reviewer_id);
+2770:            if session_exists {
+2771:                self.set_session_loading(&reviewer_id, Some(WorkLeafLoading::WaitingForReply));
+2772:            } else {
+2773:                self.add_session(WorkLeafSession {
+2774:                    id: reviewer_id.clone(),
+2775:                    kind: agent_profile.kind.clone(),
+2776:                    title: format!("review {}", commit.feature),
+2777:                    feature: format!("review {}", commit.feature),
+2778:                    lines: Vec::new(),
+2779:                    loading: Some(WorkLeafLoading::WaitingForReply),
+2780:                });
+2781:            }
+2782:            if reviewer_ids.is_empty() {
+2783:                self.pending_events.push(WorkLeafEvent::AgentSelected {
+2784:                    agent_id: reviewer_id.clone(),
+2785:                });
+2786:            }
+2787:            self.review_commits_in_progress
+2788:                .insert(commit.agent_id.clone(), commit.hash.clone());
+2789:            self.start_review_worker(commit, reviewer_id.clone(), reuse_reviewer);
+2790:            reviewer_ids.push(reviewer_id);
+2791:        }
+2792:        Ok(reviewer_ids)
+2793:    }
+2794:
+2795:    pub fn start_linearize(&mut self) -> Result<Option<AgentId>, CliError> {
+2796:        let launch = {
+2797:            let chat = self
+2798:                .chat
+2799:                .as_mut()
+2800:                .expect("work-leaf controller command chat is present");
+2801:            chat.prepare_linearize_launch()?
+2802:        };
+2803:        let Some(launch) = launch else {
+2804:            self.push_command_line("no reviewed agent commits found".to_string());
+2805:            return Ok(None);
+2806:        };
+2807:
+2808:        let agent_id = launch.id.clone();
+2809:        let title = launch.feature.clone();
+2810:        self.register_agent_feature(agent_id.clone(), title.clone());
+2811:        self.add_session(WorkLeafSession {
+2812:            id: agent_id.clone(),
+2813:            kind: launch.kind.clone(),
+2814:            title: title.clone(),
+2815:            feature: title,
+2816:            lines: Vec::new(),
+2817:            loading: Some(WorkLeafLoading::Launching),
+2818:        });
+2819:        self.pending_events.push(WorkLeafEvent::AgentSelected {
+2820:            agent_id: agent_id.clone(),
+2821:        });
+2822:        self.start_launch_worker(launch);
+2823:        Ok(Some(agent_id))
+2824:    }
+2825:
+2826:    pub fn loading_text(&self, loading: WorkLeafLoading) -> String {
+2827:        match loading {
+2828:            WorkLeafLoading::Launching => {
+2829:                format!("Starting {} session", self.agent_display_name())
+2830:            }
+2831:            WorkLeafLoading::WaitingForReply => {
+2832:                format!("Waiting for {}", self.agent_display_name())
+2833:            }
+2834:        }
+2835:    }
+2836:
+2837:    pub fn shutdown(&mut self) {
+2838:        self.shutdown.shutdown();
+2839:    }
+2840:
+2841:    fn poll_worker(&mut self) {
+2842:        let mut events = Vec::new();
+2843:        for worker in &self.workers {
+2844:            while let Ok(event) = worker.receiver.try_recv() {
+2845:                events.push(event);
+2846:            }
+2847:        }
+2848:        for event in events {
+2849:            self.apply_worker_event(event);
+2850:        }
+2851:
+2852:        let mut index = 0;
+2853:        while index < self.workers.len() {
+2854:            if self.workers[index].handle.is_finished() {
+2855:                let worker = self.workers.swap_remove(index);
+2856:                while let Ok(event) = worker.receiver.try_recv() {
+2857:                    self.apply_worker_event(event);
+2858:                }
+2859:                worker
+2860:                    .handle
+2861:                    .join()
+2862:                    .expect("work-leaf worker did not panic");
+2863:            } else {
+2864:                index += 1;
+2865:            }
+2866:        }
+2867:    }
+2868:
+2869:    fn session_contains(&self, agent_id: &AgentId, needle: &str) -> bool {
+2870:        self.sessions
+2871:            .get(agent_id)
+2872:            .is_some_and(|session| session.lines.iter().any(|line| line.contains(needle)))
+2873:    }
+2874:
+2875:    fn reserve_launch_title_prompt(
+2876:        &mut self,
+2877:        launch: &AgentLaunch,
+2878:        title_pending: bool,
+2879:    ) -> Option<String> {
+2880:        if title_pending {
+2881:            None
+2882:        } else {
+2883:            self.title_agent.mark_named(&launch.id);
+2884:            Some(launch.prompt.clone())
+2885:        }
+2886:    }
+2887:
+2888:    fn register_agent_feature(&mut self, agent_id: AgentId, feature: String) {
+2889:        if let Some(chat) = self.chat.as_mut() {
+2890:            chat.register_agent_feature(agent_id, feature);
+2891:        }
+2892:    }
+2893:
+2894:    fn reserve_first_chat_title_prompt(
+2895:        &mut self,
+2896:        agent_id: &AgentId,
+2897:        prompt: &str,
+2898:    ) -> Option<String> {
+2899:        if !agent_id.as_str().starts_with("user-") {
+2900:            return None;
+2901:        }
+2902:        if !self.title_agent.reserve_first_prompt_title(agent_id) {
+2903:            return None;
+2904:        }
+2905:        Some(prompt.to_string())
+2906:    }
+2907:
+2908:    fn remember_agent_review_baseline(&mut self, agent_id: &AgentId) {
+2909:        if !agent_id.as_str().starts_with("user-")
+2910:            || self.agent_review_baselines.contains_key(agent_id)

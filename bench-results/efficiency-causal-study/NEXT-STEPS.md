@@ -52,6 +52,23 @@ Run one new pair only after the fixes above are green:
 Stop after scoring that pair. A larger batch starts only after confirming that model strata,
 per-invocation accounting, candidate replay, quality scoring, and live status are all correct.
 
+## Latest Gate Outcome
+
+The one-pair gate in
+`../efficiency-fair-normal-workflow-pilot-rerun-20260827T151135Z` is complete but not green. It cannot
+support a token comparison:
+
+- direct Codex could not start write-capable tools because its nested sandbox registry was mounted
+  read-only by the outer environment; and
+- Work Leaf's active feature-3 turn was terminated by the 30-minute visible-state stall guard even
+  though the captured provider stream was still growing.
+
+The next one-pair gate requires isolated writable provider temporary directories for both conditions,
+a bounded real workspace-write smoke for the direct path, and busy-progress detection that recognizes
+active app-server capture growth. The original task, Work Leaf implementation, direct workflow,
+quality scorer, GPT-5.5/xhigh profile, and fixed base remain unchanged. Steps 8 and 9 stay stopped
+until that replacement gate is green.
+
 ## Later Collection
 
 For the normal-product comparison, treat all independently launched direct runs as one group and

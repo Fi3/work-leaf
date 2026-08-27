@@ -1,0 +1,299 @@
+5:----- BEGIN FILE Cargo.toml -----
+30:----- END FILE Cargo.toml -----
+32:----- BEGIN FILE docs/architecture.md -----
+48:- `codex` defines the Codex provider implementation.
+98:tests and embedders that construct a `CommandChat<B>` directly.
+117:- `PromptPolicy` injects project instructions and worktree access rules into agent prompts.
+133:  sink of `AgentStreamEvent` values. Their default implementations call the non-streaming methods.
+143:kill to remaining processes. This behavior is used by provider implementations that spawn real
+146:New agent providers implement `AgentBackend`; they do not add provider logic to `src/codex.rs`.
+147:Providers that need real-time UI output should override the streaming methods. Providers implemented
+149:Providers outside this crate can implement launch, send, and streaming through the public trait; a
+155:`src/codex.rs` contains the Codex-specific implementation of the neutral agent runtime interface:
+159:- `CodexBackend` stores Codex session history and implements `AgentBackend`.
+160:- `CodexBackend::build_launch_invocation` and `CodexBackend::build_send_invocation` construct
+163:  Codex thread already contains the launch-time policy and repository instructions.
+171:`CodexBackend` is a provider implementation, not the owner of the generic agent contract. Callers
+191:- `CommandChat::new` for constructing command chat state with a backend.
+231:instruction files into agent prompts, and the active backend agent is responsible for choosing and
+232:requesting the repository checks required by those instructions before reporting work done.
+388:`src/instructions.rs` is crate-private. It loads project instruction files used by `PromptPolicy`
+399:1. Construct a `CommandChat<B>` with the desired backend.
+421:should only implement launch, send, streaming, and shutdown behavior.
+425:A breaking public API change requires human authorization before implementation. Public API includes
+429:public enum matching behavior, changing public struct construction behavior, or changing documented
+436:An architecture change requires human authorization before implementation when the requested work can
+445:Provider-interface changes should have tests that prove an external provider can implement
+462:----- END FILE docs/architecture.md -----
+464:----- BEGIN FILE src/ui.rs -----
+485:pub enum UiMode {
+492:pub enum PaneFocus {
+498:pub enum UiSurface {
+504:pub enum UiKey {
+518:pub enum UiAction {
+525:pub struct TerminalLayout {
+533:pub struct AgentListEntry {
+544:impl AgentListEntry {
+545:    pub fn new(id: AgentId, feature: impl Into<String>) -> Self {
+558:    pub fn with_ready(mut self, ready: bool) -> Self {
+563:    pub fn with_hidden(mut self, hidden: bool) -> Self {
+568:    pub fn with_modified_file(mut self, path: impl Into<PathBuf>) -> Self {
+573:    pub fn with_conflicting_agent(mut self, agent_id: AgentId) -> Self {
+578:    pub fn with_dependency(mut self, agent_id: AgentId) -> Self {
+583:    pub fn with_dependent(mut self, agent_id: AgentId) -> Self {
+590:enum PendingKey {
+596:struct StatusNotice {
+607:enum LeftPaneClickTarget {
+613:struct UiWindow {
+618:impl UiWindow {
+619:    fn command() -> Self {
+626:    fn chat(agent_id: AgentId) -> Self {
+635:struct PromptView {
+641:pub struct TerminalUi {
+661:impl TerminalUi {
+662:    pub fn new(width: u16, height: u16) -> Self {
+684:    pub fn layout(&self) -> TerminalLayout {
+695:    pub fn mode(&self) -> UiMode {
+699:    pub fn focus(&self) -> PaneFocus {
+703:    pub(crate) fn show_ctrl_c_exit_notice(&mut self) {
+710:    pub(crate) fn has_status_notice(&self) -> bool {
+714:    pub(crate) fn clear_expired_status_notice(&mut self) {
+720:    pub fn window_count(&self) -> usize {
+724:    pub fn active_window(&self) -> usize {
+728:    pub fn selected_agent(&self) -> Option<&AgentId> {
+732:    pub fn control_selected_row(&self) -> usize {
+736:    pub fn add_agent(&mut self, agent: AgentListEntry) {
+740:    pub(crate) fn set_agent_feature(
+743:        feature: impl Into<String>,
+752:    pub(crate) fn set_agent_ready_state(
+767:    pub fn select_agent(&mut self, agent_id: &AgentId) -> Result<(), String> {
+784:    pub fn activate_agent_chat(&mut self, agent_id: &AgentId) -> Result<(), String> {
+791:    pub fn select_command_interface(&mut self) {
+798:    pub fn handle_key(&mut self, key: UiKey) -> Vec<UiAction> {
+805:    fn handle_key_inner(&mut self, key: UiKey) -> Vec<UiAction> {
+903:    pub fn render_left_pane(&self) -> String {
+910:        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
+953:    pub fn render_screen(&self, right_content: &str) -> String {
+957:    pub fn render_screen_with_prompt(&self, right_content: &str, prompt: &str) -> String {
+969:    pub fn render_screen_with_cursors(
+991:    pub fn scroll_right_pane_up(&mut self) {
+995:    pub fn scroll_right_pane_down(&mut self) {
+999:    pub fn reset_right_scroll(&mut self) {
+1003:    fn visible_right_content(&self, right_content: &str) -> String {
+1013:    fn render_tui_buffer(&self, right_content: &str, prompt: &str, prompt_cursor: usize) -> Buffer {
+1050:    fn left_widget(&self) -> List<'static> {
+1057:        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
+1102:    fn right_widget(&self, right_content: &str) -> Paragraph<'static> {
+1112:    fn bottom_line(&self, prompt: &str, prompt_cursor: usize) -> String {
+1120:    fn cursor_sequence(&self, right_content: &str, prompt: &str) -> String {
+1124:    fn cursor_sequence_with_cursors(
+1149:    fn prompt_view(&self, prompt: &str, prompt_cursor: usize) -> PromptView {
+1172:    fn bell_prefix(&self) -> &'static str {
+1180:    fn handle_pending_key(&mut self, pending: PendingKey, key: UiKey) -> Vec<UiAction> {
+1216:    fn command_mode_text_key_control_status(&self, key: UiKey) -> Option<bool> {
+1226:    fn is_command_control_char(&self, ch: char) -> bool {
+1231:    fn update_command_mode_typing_notice(&mut self, command_mode_text_key_control: Option<bool>) {
+1254:    fn show_status_notice(&mut self, message: impl Into<String>, duration: Duration) {
+1261:    fn active_status_notice(&self) -> Option<&str> {
+1268:    fn status_notice_expired(&self) -> bool {
+1274:    fn open_selected_same_pane(&mut self) -> Vec<UiAction> {
+1282:    fn open_selected_new_window(&mut self) -> Vec<UiAction> {
+1291:    fn fork_selected_agent(&self) -> Vec<UiAction> {
+1298:    fn open_control_selection(&mut self) {
+1310:    fn select_control_row_surface(&mut self) {
+1322:    fn handle_mouse_click(&mut self, column: u16, row: u16) -> Vec<UiAction> {
+1358:    fn handle_mouse_scroll(&mut self, column: u16, row: u16, up: bool) {
+1375:    fn hide_control_selection(&mut self) {
+1394:    fn move_control_selection(&mut self, delta: isize) {
+1401:    fn clamp_control_selection(&mut self) {
+1408:    fn visible_agent_indices(&self) -> Vec<usize> {
+1411:            .enumerate()
+1416:    fn control_selected_agent_index(&self) -> Option<usize> {
+1425:    fn control_selected_agent_id(&self) -> Option<AgentId> {
+1430:    fn left_pane_click_target(&mut self, row: u16) -> Option<LeftPaneClickTarget> {
+1441:        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
+1478:    fn action_agent_id(&self) -> Option<AgentId> {
+1483:    fn control_cursor_row(&self) -> u16 {
+1487:    fn right_cursor_position_with_cursor(
+1519:    fn right_inner_size(&self) -> (u16, u16) {
+1527:    fn next_window(&mut self) {
+1533:    fn previous_window(&mut self) {
+1543:    fn render_agent_links(&self, label: &str, agents: &[AgentId], rendered: &mut String) {
+1550:        for (index, agent_id) in agents.iter().enumerate() {
+1559:    fn render_status_line(&self) -> String {
+1574:impl UiMode {
+1575:    fn as_str(&self) -> &'static str {
+1584:impl PaneFocus {
+1585:    fn as_str(&self) -> &'static str {
+1593:fn agent_list_labels(agent: &AgentListEntry) -> (&str, &str) {
+1601:fn compact_agent_row(agent: &AgentListEntry, selected: bool, width: usize) -> String {
+1615:fn compact_fixed_first(
+1634:fn compact_fixed_last(
+1653:fn truncate_to_width(text: &str, width: usize) -> String {
+1657:fn buffer_to_string(buffer: &Buffer) -> String {
+1686:fn visual_rows(line: &str, width: u16) -> u16 {
+1690:fn visual_row_count(line: &str, width: u16) -> usize {
+1696:fn cursor_char_count(text: &str, cursor: usize) -> usize {
+1702:fn visible_content(content: &str, width: u16, height: u16, scroll_rows: usize) -> String {
+1718:fn split_chat_prompt(content: &str) -> Option<(&str, &str)> {
+1723:fn tail_visible_content(content: &str, width: u16, height: usize, scroll_rows: usize) -> String {
+1761:    fn setting_agent_ready_queues_one_bell_for_next_render() {
+1774:    fn ready_agent_row_is_reversed_across_the_tui_left_pane() {
+1790:----- END FILE src/ui.rs -----
+1792:----- BEGIN FILE src/ui_harness.rs -----
+1801:pub struct UiHarness {
+1820:impl UiHarness {
+1821:    pub fn new(width: u16, height: u16) -> Self {
+1852:    pub fn ui(&self) -> &TerminalUi {
+1856:    pub fn transcript(&self) -> &[String] {
+1860:    pub fn mark_agent_ready(&mut self, agent_id: &str) -> Result<(), String> {
+1865:    pub fn is_quit(&self) -> bool {
+1869:    pub fn handle_bytes(&mut self, bytes: &[u8]) -> bool {
+1885:    pub fn handle_byte(&mut self, byte: u8) -> bool {
+1914:    pub fn render_frame(&self) -> String {
+1923:    fn handle_input(&mut self, input: HarnessInput) {
+2028:    fn execute_prompt(&mut self, line: &str) {
+2069:    fn name_chat_from_first_prompt(&mut self, agent_id: &AgentId, prompt: &str) {
+2077:    fn insert_prompt_char(&mut self, ch: char) {
+2083:    fn backspace_prompt_char(&mut self) {
+2095:    fn move_prompt_cursor_left(&mut self) {
+2103:    fn move_prompt_cursor_right(&mut self) {
+2114:    fn recall_prompt_history(&mut self, delta: isize) {
+2138:    fn insert_chat_char(&mut self, ch: char) {
+2145:    fn backspace_chat_char(&mut self) {
+2158:    fn move_chat_cursor_left(&mut self) {
+2167:    fn move_chat_cursor_right(&mut self) {
+2179:    fn recall_chat_history(&mut self, delta: isize) {
+2204:    fn chat_cursor_column(&self) -> usize {
+2207:    fn record_actions(&mut self, actions: Vec<crate::UiAction>) {
+2212:    fn should_start_agent_slash_command(&self) -> bool {
+2216:    fn start_agent_slash_command(&mut self) {
+2225:    fn should_route_chat_arrow(&self) -> bool {
+2230:    fn defer_escape_key(&self) -> bool {
+2235:    fn finish_pending_escape_sequence(&mut self) {
+2249:    fn dispatch_pending_escape_if_needed(&mut self, sequence: &PendingEscapeSequence) {
+2255:    fn continue_escape_sequence(&mut self, byte: u8) -> bool {
+2296:    fn right_content(&self) -> String {
+2308:struct PendingEscapeSequence {
+2317:fn parse_key_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
+2327:fn parse_sgr_mouse_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
+2356:enum HarnessInput {
+2365:impl HarnessInput {
+2366:    fn from_byte(byte: u8) -> Option<Self> {
+2380:fn cursor_char_count(text: &str, cursor: usize) -> usize {
+2385:fn fixture_ui(width: u16, height: u16, parser: AgentId, tests: AgentId) -> TerminalUi {
+2403:----- END FILE src/ui_harness.rs -----
+2405:----- BEGIN FILE src/workspace.rs -----
+2426:pub struct WorkLeafController<B>
+2444:impl<B> WorkLeafController<B>
+2448:    pub fn new(chat: CommandChat<B>) -> Self {
+2466:    pub fn into_chat(mut self) -> CommandChat<B> {
+2474:    pub fn transcript(&self) -> &[String] {
+2478:    pub fn push_transcript_line(&mut self, line: impl Into<String>) {
+2482:    pub fn snapshot(&self) -> WorkLeafSnapshot {
+2489:    pub fn drain_events(&mut self) -> Vec<WorkLeafEvent> {
+2496:    pub fn is_busy(&mut self) -> bool {
+2501:    pub fn wait_for_idle(&mut self, timeout: Duration) -> bool {
+2514:    pub fn wait_for_session_line(
+2532:    pub fn execute_command_line(&mut self, line: &str) {
+2565:    pub fn send_command_agent_message(&mut self, message: &str) {
+2601:    pub fn interrupt_agent(&mut self, agent_id: &AgentId) {
+2617:    pub fn create_agent(&mut self, prompt: impl Into<String>) -> Result<AgentId, CliError> {
+2651:    pub fn send_message(&mut self, agent_id: &AgentId, message: &str) -> Result<(), CliError> {
+2704:    pub fn start_review(&mut self) -> Result<Vec<AgentId>, CliError> {
+2708:    fn start_review_for_patch_agent(
+2715:    fn start_review_for_agent(
+2795:    pub fn start_linearize(&mut self) -> Result<Option<AgentId>, CliError> {
+2826:    pub fn loading_text(&self, loading: WorkLeafLoading) -> String {
+2837:    pub fn shutdown(&mut self) {
+2841:    fn poll_worker(&mut self) {
+2869:    fn session_contains(&self, agent_id: &AgentId, needle: &str) -> bool {
+2875:    fn reserve_launch_title_prompt(
+2888:    fn register_agent_feature(&mut self, agent_id: AgentId, feature: String) {
+2894:    fn reserve_first_chat_title_prompt(
+2908:    fn remember_agent_review_baseline(&mut self, agent_id: &AgentId) {
+2926:    fn add_session(&mut self, session: WorkLeafSession) {
+2932:    fn start_launch_worker(&mut self, launch: AgentLaunch) {
+2961:    fn start_title_worker(&mut self, agent_id: AgentId, first_prompt: String) {
+2970:    fn start_review_worker(
+3009:    fn start_command_worker(&mut self, line: String) {
+3026:    fn start_worker<F>(&mut self, operation: F)
+3038:    fn apply_worker_event(&mut self, event: WorkerEvent) {
+3082:    fn apply_agent_result(&mut self, agent_id: &AgentId, result: &CommandChatResult) {
+3104:    fn apply_agent_title(&mut self, agent_id: &AgentId, title: String) {
+3119:    fn append_agent_line(&mut self, agent_id: &AgentId, line: String) {
+3144:    fn record_review_result(&mut self, review: &ReviewResult) {
+3159:    fn latest_agent_review_commit(&self, agent_id: &AgentId) -> Option<AgentCommit> {
+3174:    fn set_session_loading(&mut self, agent_id: &AgentId, loading: Option<WorkLeafLoading>) {
+3196:    fn push_command_line(&mut self, line: String) {
+3205:    fn request_quit(&mut self) {
+3210:    fn agent_display_name(&self) -> String {
+3217:    fn agent_kind(&self) -> AgentKind {
+3225:impl<B> Drop for WorkLeafController<B>
+3229:    fn drop(&mut self) {
+3236:fn should_start_review(agent_id: &AgentId, result: &CommandChatResult) -> bool {
+3247:fn contains_applied_patch(agent_id: &AgentId, text: &str) -> bool {
+3253:fn contains_done_directive(text: &str) -> bool {
+3259:pub struct WorkLeafSnapshot {
+3264:impl WorkLeafSnapshot {
+3265:    pub fn session(&self, agent_id: &AgentId) -> Option<&WorkLeafSession> {
+3271:pub struct WorkLeafSession {
+3280:impl WorkLeafSession {
+3281:    fn unknown(agent_id: AgentId, kind: AgentKind) -> Self {
+3294:pub enum WorkLeafLoading {
+3300:pub enum WorkLeafEvent {
+3328:struct Worker {
+3334:enum WorkerEvent {
+3358:fn stream_event_text(event: AgentStreamEvent, agent_display_name: &str) -> String {
+3368:enum CommandAgentResponse {
+3374:struct CommandAgentNewRequest {
+3379:fn command_agent_response(message: &str, agent_display_name: &str) -> CommandAgentResponse {
+3427:fn literal_command_line(message: &str) -> Option<String> {
+3436:fn asks_for_new_agent(lower: &str) -> bool {
+3443:fn command_agent_new_request(message: &str) -> Option<CommandAgentNewRequest> {
+3458:fn asks_for_agent_launch_request(lower: &str) -> bool {
+3465:fn command_agent_launch_prompt(message: &str) -> String {
+3508:fn command_agent_new_command_line(prompt: &str) -> String {
+3516:fn command_agent_launch_reply(
+3541:fn agent_launch_count(text: &str) -> Option<usize> {
+3545:fn strip_agent_launch_count_and_noun(prompt: &str) -> String {
+3562:fn agent_count_word(word: &str) -> Option<usize> {
+3583:fn is_agent_noun(word: &str) -> bool {
+3587:fn normalize_common_agent_typos(text: &str) -> String {
+3600:fn clean_agent_word(word: &str) -> String {
+3605:fn command_agent_new_prompt(message: &str) -> String {
+3626:fn strip_polite_prefix(message: &str) -> &str {
+3633:fn strip_ascii_prefix_case_insensitive<'a>(message: &'a str, prefix: &str) -> Option<&'a str> {
+3640:fn split_command_line(line: &str) -> Vec<String> {
+3643:----- END FILE src/workspace.rs -----
+3645:----- BEGIN FILE tests/ui_harness.rs -----
+3651:fn scripted_harness_renders_full_width_crlf_frame() {
+3669:fn scripted_harness_rings_and_highlights_ready_chat() {
+3685:fn scripted_harness_switches_modes_without_enter() {
+3704:fn scripted_harness_prompt_arrow_keys_move_visible_cursor() {
+3715:fn scripted_harness_long_prompt_arrows_keep_rendered_cursor_at_edit_position() {
+3734:fn scripted_harness_prompt_arrow_keys_recall_prompt_history() {
+3749:fn scripted_harness_prompt_history_down_restores_in_progress_prompt() {
+3763:fn scripted_harness_bytewise_prompt_arrow_keys_edit_without_leaving_prompt() {
+3784:fn scripted_harness_drives_ctrl_w_navigation_and_left_toggle() {
+3812:fn scripted_harness_ctrl_c_never_quits_and_only_right_focus_interrupts_agent() {
+3838:fn scripted_harness_command_mode_typing_shows_insert_mode_notice() {
+3852:fn scripted_harness_ctrl_c_shows_quit_notice() {
+3865:fn scripted_harness_structural_command_keys_do_not_show_typing_notice() {
+3875:fn scripted_harness_left_pane_navigation_does_not_show_typing_notice() {
+3889:fn scripted_harness_quits_only_through_colon_q() {
+3900:fn scripted_harness_new_commands_select_new_agent_chat() {
+3930:fn scripted_harness_names_new_chat_from_first_inserted_prompt() {
+3959:fn scripted_harness_insert_mode_records_chat_text_and_literal_colons() {
+3980:fn scripted_harness_slash_command_starts_agent_chat_command_from_chat_view() {
+4002:fn scripted_harness_mouse_wheel_scrolls_chat_history() {
+4033:fn scripted_harness_arrow_keys_edit_focused_chat_without_switching_to_command() {
+4049:fn scripted_harness_insert_arrow_keys_move_visible_chat_cursor() {
+4060:fn scripted_harness_arrow_keys_recall_chat_history() {
+4078:fn scripted_harness_chat_history_down_restores_in_progress_message() {
+4092:fn scripted_harness_bytewise_arrow_keys_edit_focused_chat_without_switching_to_command() {
+4115:fn scripted_harness_bytewise_arrow_prefix_keeps_focused_chat_in_insert_mode() {
+4138:fn scripted_harness_arrow_keys_move_left_pane_selection_like_j_k() {
+4161:fn scripted_harness_left_right_arrows_move_left_pane_selection_like_j_k() {
+4183:fn strip_ansi(input: &str) -> String {
+4199:----- END FILE tests/ui_harness.rs -----

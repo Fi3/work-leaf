@@ -1,0 +1,1574 @@
+----- BEGIN FILE src/ui.rs -----
+digest: fnv64:9ee9f02c5bc43f7d; bytes:43323
+
+use std::{
+    cell::Cell,
+    path::PathBuf,
+    time::{Duration, Instant},
+};
+
+use crate::agent::AgentId;
+use tui::{
+    Terminal,
+    backend::TestBackend,
+    buffer::Buffer,
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Modifier, Style},
+    text::{Span, Spans},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+};
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum UiMode {
+    Command,
+    Insert,
+    Prompt,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PaneFocus {
+    Left,
+    Right,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum UiSurface {
+    WorkLeafCommand,
+    AgentChat,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum UiKey {
+    Char(char),
+    Esc,
+    CtrlW,
+    Up,
+    Down,
+    Left,
+    Right,
+    MouseClick { column: u16, row: u16 },
+    MouseScrollUp { column: u16, row: u16 },
+    MouseScrollDown { column: u16, row: u16 },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum UiAction {
+    OpenChatSamePane(AgentId),
+    OpenChatNewWindow(AgentId),
+    ForkAgent(AgentId),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TerminalLayout {
+    pub left_width: u16,
+    pub right_width: u16,
+    pub height: u16,
+    pub right_surface: Option<UiSurface>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AgentListEntry {
+    pub id: AgentId,
+    pub feature: String,
+    pub ready: bool,
+    pub hidden: bool,
+    pub modified_files: Vec<PathBuf>,
+    pub conflicting_agents: Vec<AgentId>,
+    pub depends_on: Vec<AgentId>,
+    pub depended_on_by: Vec<AgentId>,
+}
+
+impl AgentListEntry {
+    pub fn new(id: AgentId, feature: impl Into<String>) -> Self {
+        Self {
+            id,
+            feature: feature.into(),
+            ready: false,
+            hidden: false,
+            modified_files: Vec::new(),
+            conflicting_agents: Vec::new(),
+            depends_on: Vec::new(),
+            depended_on_by: Vec::new(),
+        }
+    }
+
+    pub fn with_ready(mut self, ready: bool) -> Self {
+        self.ready = ready;
+        self
+    }
+
+    pub fn with_hidden(mut self, hidden: bool) -> Self {
+        self.hidden = hidden;
+        self
+    }
+
+    pub fn with_modified_file(mut self, path: impl Into<PathBuf>) -> Self {
+        self.modified_files.push(path.into());
+        self
+    }
+
+    pub fn with_conflicting_agent(mut self, agent_id: AgentId) -> Self {
+        self.conflicting_agents.push(agent_id);
+        self
+    }
+
+    pub fn with_dependency(mut self, agent_id: AgentId) -> Self {
+        self.depends_on.push(agent_id);
+        self
+    }
+
+    pub fn with_dependent(mut self, agent_id: AgentId) -> Self {
+        self.depended_on_by.push(agent_id);
+        self
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PendingKey {
+    CtrlW,
+    G,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct StatusNotice {
+    message: String,
+    expires_at: Instant,
+}
+
+const STATUS_NOTICE_SECONDS: u64 = 5;
+const COMMAND_MODE_TYPING_NOTICE_THRESHOLD: usize = 5;
+const COMMAND_MODE_TYPING_NOTICE: &str = "command mode: press i for insert mode before typing";
+const CTRL_C_EXIT_NOTICE: &str = "to exit, press Esc then :q then Enter";
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum LeftPaneClickTarget {
+    Command,
+    Agent(AgentId),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct UiWindow {
+    surface: UiSurface,
+    agent_id: Option<AgentId>,
+}
+
+impl UiWindow {
+    fn command() -> Self {
+        Self {
+            surface: UiSurface::WorkLeafCommand,
+            agent_id: None,
+        }
+    }
+
+    fn chat(agent_id: AgentId) -> Self {
+        Self {
+            surface: UiSurface::AgentChat,
+            agent_id: Some(agent_id),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct PromptView {
+    line: String,
+    cursor_column: u16,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TerminalUi {
+    width: u16,
+    height: u16,
+    mode: UiMode,
+    focus: PaneFocus,
+    left_visible: bool,
+    agents: Vec<AgentListEntry>,
+    selected_agent: Option<AgentId>,
+    control_selected: usize,
+    split_chats: Vec<AgentId>,
+    windows: Vec<UiWindow>,
+    active_window: usize,
+    right_scroll_rows: usize,
+    pending: Option<PendingKey>,
+    pending_bell: Cell<bool>,
+    status_notice: Option<StatusNotice>,
+    command_mode_typing_count: usize,
+    command_mode_typing_controls_only: bool,
+}
+
+impl TerminalUi {
+    pub fn new(width: u16, height: u16) -> Self {
+        Self {
+            width,
+            height,
+            mode: UiMode::Command,
+            focus: PaneFocus::Left,
+            left_visible: true,
+            agents: Vec::new(),
+            selected_agent: None,
+            control_selected: 0,
+            split_chats: Vec::new(),
+            windows: vec![UiWindow::command()],
+            active_window: 0,
+            right_scroll_rows: 0,
+            pending: None,
+            pending_bell: Cell::new(false),
+            status_notice: None,
+            command_mode_typing_count: 0,
+            command_mode_typing_controls_only: true,
+        }
+    }
+
+    pub fn layout(&self) -> TerminalLayout {
+        let left_width = if self.left_visible { self.width / 5 } else { 0 };
+        let right_width = self.width.saturating_sub(left_width);
+        TerminalLayout {
+            left_width,
+            right_width,
+            height: self.height,
+            right_surface: Some(self.windows[self.active_window].surface),
+        }
+    }
+
+    pub fn mode(&self) -> UiMode {
+        self.mode
+    }
+
+    pub fn focus(&self) -> PaneFocus {
+        self.focus
+    }
+
+    pub(crate) fn show_ctrl_c_exit_notice(&mut self) {
+        self.show_status_notice(
+            CTRL_C_EXIT_NOTICE,
+            Duration::from_secs(STATUS_NOTICE_SECONDS),
+        );
+    }
+
+    pub(crate) fn has_status_notice(&self) -> bool {
+        self.status_notice.is_some()
+    }
+
+    pub(crate) fn clear_expired_status_notice(&mut self) {
+        if self.status_notice_expired() {
+            self.status_notice = None;
+        }
+    }
+
+    pub fn window_count(&self) -> usize {
+        self.windows.len()
+    }
+
+    pub fn active_window(&self) -> usize {
+        self.active_window
+    }
+
+    pub fn selected_agent(&self) -> Option<&AgentId> {
+        self.selected_agent.as_ref()
+    }
+
+    pub fn control_selected_row(&self) -> usize {
+        self.control_selected
+    }
+
+    pub fn add_agent(&mut self, agent: AgentListEntry) {
+        self.agents.push(agent);
+    }
+
+    pub(crate) fn set_agent_feature(
+        &mut self,
+        agent_id: &AgentId,
+        feature: impl Into<String>,
+    ) -> Result<(), String> {
+        let Some(agent) = self.agents.iter_mut().find(|agent| &agent.id == agent_id) else {
+            return Err(format!("unknown agent `{agent_id}`"));
+        };
+        agent.feature = feature.into();
+        Ok(())
+    }
+
+    pub(crate) fn set_agent_ready_state(
+        &mut self,
+        agent_id: &AgentId,
+        ready: bool,
+    ) -> Result<(), String> {
+        let Some(agent) = self.agents.iter_mut().find(|agent| &agent.id == agent_id) else {
+            return Err(format!("unknown agent `{agent_id}`"));
+        };
+        if ready && !agent.ready {
+            self.pending_bell.set(true);
+        }
+        agent.ready = ready;
+        Ok(())
+    }
+
+    pub fn select_agent(&mut self, agent_id: &AgentId) -> Result<(), String> {
+        if self.agents.iter().any(|agent| &agent.id == agent_id) {
+            self.selected_agent = Some(agent_id.clone());
+            self.windows[self.active_window] = UiWindow::chat(agent_id.clone());
+            self.control_selected = self
+                .visible_agent_indices()
+                .iter()
+                .position(|index| self.agents[*index].id == *agent_id)
+                .map(|position| position + 1)
+                .unwrap_or(self.control_selected);
+            self.reset_right_scroll();
+            Ok(())
+        } else {
+            Err(format!("unknown agent `{agent_id}`"))
+        }
+    }
+
+    pub fn activate_agent_chat(&mut self, agent_id: &AgentId) -> Result<(), String> {
+        self.select_agent(agent_id)?;
+        self.focus = PaneFocus::Right;
+        self.mode = UiMode::Insert;
+        Ok(())
+    }
+
+    pub fn select_command_interface(&mut self) {
+        self.selected_agent = None;
+        self.windows[self.active_window] = UiWindow::command();
+        self.control_selected = 0;
+        self.reset_right_scroll();
+    }
+
+    pub fn handle_key(&mut self, key: UiKey) -> Vec<UiAction> {
+        let command_mode_text_key = self.command_mode_text_key_control_status(key);
+        let actions = self.handle_key_inner(key);
+        self.update_command_mode_typing_notice(command_mode_text_key);
+        actions
+    }
+
+    fn handle_key_inner(&mut self, key: UiKey) -> Vec<UiAction> {
+        match key {
+            UiKey::MouseClick { column, row } => {
+                self.pending = None;
+                return self.handle_mouse_click(column, row);
+            }
+            UiKey::MouseScrollUp { column, row } => {
+                self.pending = None;
+                self.handle_mouse_scroll(column, row, true);
+                return Vec::new();
+            }
+            UiKey::MouseScrollDown { column, row } => {
+                self.pending = None;
+                self.handle_mouse_scroll(column, row, false);
+                return Vec::new();
+            }
+            _ => {}
+        }
+
+        if let Some(pending) = self.pending.take() {
+            return self.handle_pending_key(pending, key);
+        }
+
+        match key {
+            UiKey::Esc => {
+                self.mode = UiMode::Command;
+                Vec::new()
+            }
+            UiKey::CtrlW if self.mode == UiMode::Command => {
+                self.pending = Some(PendingKey::CtrlW);
+                Vec::new()
+            }
+            UiKey::Char('g') if self.mode == UiMode::Command => {
+                self.pending = Some(PendingKey::G);
+                Vec::new()
+            }
+            UiKey::Char('i') if self.mode == UiMode::Command => {
+                self.mode = UiMode::Insert;
+                Vec::new()
+            }
+            UiKey::Char(':') if self.mode == UiMode::Command => {
+                self.mode = UiMode::Prompt;
+                Vec::new()
+            }
+            UiKey::Char(',') if self.mode == UiMode::Command => {
+                self.left_visible = !self.left_visible;
+                self.focus = if self.left_visible {
+                    PaneFocus::Left
+                } else {
+                    PaneFocus::Right
+                };
+                Vec::new()
+            }
+            UiKey::Char('j') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(1);
+                self.select_control_row_surface();
+                Vec::new()
+            }
+            UiKey::Down if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(1);
+                self.select_control_row_surface();
+                Vec::new()
+            }
+            UiKey::Right if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(1);
+                self.select_control_row_surface();
+                Vec::new()
+            }
+            UiKey::Char('k') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(-1);
+                self.select_control_row_surface();
+                Vec::new()
+            }
+            UiKey::Up if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(-1);
+                self.select_control_row_surface();
+                Vec::new()
+            }
+            UiKey::Left if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(-1);
+                self.select_control_row_surface();
+                Vec::new()
+            }
+            UiKey::Char('l') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.open_control_selection();
+                Vec::new()
+            }
+            UiKey::Char('x') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.hide_control_selection();
+                Vec::new()
+            }
+            UiKey::Char('s') if self.mode == UiMode::Command => self.open_selected_same_pane(),
+            UiKey::Char('t') if self.mode == UiMode::Command => self.open_selected_new_window(),
+            UiKey::Char('f') if self.mode == UiMode::Command => self.fork_selected_agent(),
+            _ => Vec::new(),
+        }
+    }
+
+    pub fn render_left_pane(&self) -> String {
+        let mut rendered = String::new();
+        if self.control_selected == 0 {
+            rendered.push_str("> work-leaf  command\n");
+        } else {
+            rendered.push_str("  work-leaf  command\n");
+        }
+        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
+            let agent = &self.agents[*agent_index];
+            let mut row = String::new();
+            row.push(if self.control_selected == visible_position + 1 {
+                '>'
+            } else {
+                ' '
+            });
+            let (primary, secondary) = agent_list_labels(agent);
+            row.push_str(primary);
+            row.push(' ');
+            row.push_str(secondary);
+            row.push_str("  working: ");
+            row.push_str(&agent.feature);
+            if agent.ready {
+                row.push_str("  READY");
+                rendered.push_str("\u{1b}[7m");
+                rendered.push_str(&row);
+                rendered.push_str("\u{1b}[0m");
+            } else {
+                rendered.push_str(&row);
+            }
+            rendered.push('\n');
+            if !agent.modified_files.is_empty() {
+                rendered.push_str("    ");
+                rendered.push_str("files: ");
+                rendered.push_str(
+                    &agent
+                        .modified_files
+                        .iter()
+                        .map(|path| path.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                );
+                rendered.push('\n');
+            }
+            self.render_agent_links("conflicts", &agent.conflicting_agents, &mut rendered);
+            self.render_agent_links("depends-on", &agent.depends_on, &mut rendered);
+            self.render_agent_links("depended-on-by", &agent.depended_on_by, &mut rendered);
+        }
+        rendered
+    }
+
+    pub fn render_screen(&self, right_content: &str) -> String {
+        self.render_screen_with_prompt(right_content, "")
+    }
+
+    pub fn render_screen_with_prompt(&self, right_content: &str, prompt: &str) -> String {
+        let visible_right_content = self.visible_right_content(right_content);
+        let prompt_cursor = prompt.len();
+        let buffer = self.render_tui_buffer(&visible_right_content, prompt, prompt_cursor);
+        let mut rendered = String::new();
+        rendered.push_str(self.bell_prefix());
+        rendered.push_str("\u{1b}[H");
+        rendered.push_str(&buffer_to_string(&buffer));
+        rendered.push_str(&self.cursor_sequence(&visible_right_content, prompt));
+        rendered
+    }
+
+    pub fn render_screen_with_cursors(
+        &self,
+        right_content: &str,
+        prompt: &str,
+        prompt_cursor: usize,
+        right_cursor_column: Option<usize>,
+    ) -> String {
+        let visible_right_content = self.visible_right_content(right_content);
+        let buffer = self.render_tui_buffer(&visible_right_content, prompt, prompt_cursor);
+        let mut rendered = String::new();
+        rendered.push_str(self.bell_prefix());
+        rendered.push_str("\u{1b}[H");
+        rendered.push_str(&buffer_to_string(&buffer));
+        rendered.push_str(&self.cursor_sequence_with_cursors(
+            &visible_right_content,
+            prompt,
+            prompt_cursor,
+            right_cursor_column,
+        ));
+        rendered
+    }
+
+    pub fn scroll_right_pane_up(&mut self) {
+        self.right_scroll_rows = self.right_scroll_rows.saturating_add(3);
+    }
+
+    pub fn scroll_right_pane_down(&mut self) {
+        self.right_scroll_rows = self.right_scroll_rows.saturating_sub(3);
+    }
+
+    pub fn reset_right_scroll(&mut self) {
+        self.right_scroll_rows = 0;
+    }
+
+    fn visible_right_content(&self, right_content: &str) -> String {
+        let (inner_width, inner_height) = self.right_inner_size();
+        visible_content(
+            right_content,
+            inner_width,
+            inner_height,
+            self.right_scroll_rows,
+        )
+    }
+
+    fn render_tui_buffer(&self, right_content: &str, prompt: &str, prompt_cursor: usize) -> Buffer {
+        let backend = TestBackend::new(self.width, self.height);
+        let mut terminal = Terminal::new(backend).expect("test backend is valid");
+        terminal
+            .draw(|frame| {
+                let area = frame.size();
+                let body_height = area.height.saturating_sub(1);
+                let body = Rect::new(area.x, area.y, area.width, body_height);
+                let bottom = Rect::new(area.x, body_height, area.width, 1);
+                let layout = self.layout();
+                let panes = if layout.left_width > 0 {
+                    Layout::default()
+                        .direction(Direction::Horizontal)
+                        .constraints([
+                            Constraint::Length(layout.left_width),
+                            Constraint::Length(layout.right_width),
+                        ])
+                        .split(body)
+                } else {
+                    vec![body]
+                };
+
+                if layout.left_width > 0 {
+                    frame.render_widget(self.left_widget(), panes[0]);
+                    frame.render_widget(self.right_widget(right_content), panes[1]);
+                } else {
+                    frame.render_widget(self.right_widget(right_content), panes[0]);
+                }
+                frame.render_widget(
+                    Paragraph::new(self.bottom_line(prompt, prompt_cursor)),
+                    bottom,
+                );
+            })
+            .expect("test backend draw succeeds");
+        terminal.backend().buffer().clone()
+    }
+
+    fn left_widget(&self) -> List<'static> {
+        let inner_width = usize::from(self.layout().left_width.saturating_sub(2).max(1));
+        let mut items = vec![ListItem::new(if self.control_selected == 0 {
+            Spans::from(vec![Span::raw("> work-leaf  command")])
+        } else {
+            Spans::from(vec![Span::raw("  work-leaf  command")])
+        })];
+        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
+            let agent = &self.agents[*agent_index];
+            let selected = self.control_selected == visible_position + 1;
+            let item = ListItem::new(Spans::from(vec![Span::raw(compact_agent_row(
+                agent,
+                selected,
+                inner_width,
+            ))]));
+            let item = if agent.ready {
+                item.style(Style::default().add_modifier(Modifier::REVERSED))
+            } else {
+                item
+            };
+            items.push(item);
+            if !agent.modified_files.is_empty() {
+                items.push(ListItem::new(Spans::from(vec![Span::raw(format!(
+                    "    files: {}",
+                    agent
+                        .modified_files
+                        .iter()
+                        .map(|path| path.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ))])));
+            }
+            for (label, agents) in [
+                ("conflicts", &agent.conflicting_agents),
+                ("depends-on", &agent.depends_on),
+                ("depended-on-by", &agent.depended_on_by),
+            ] {
+                if !agents.is_empty() {
+                    items.push(ListItem::new(Spans::from(vec![Span::raw(format!(
+                        "    {label}: {}",
+                        agents
+                            .iter()
+                            .map(AgentId::as_str)
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ))])));
+                }
+            }
+        }
+        List::new(items).block(Block::default().title("work-leaf").borders(Borders::ALL))
+    }
+
+    fn right_widget(&self, right_content: &str) -> Paragraph<'static> {
+        let title = match self.windows[self.active_window].surface {
+            UiSurface::WorkLeafCommand => "command",
+            UiSurface::AgentChat => "chat",
+        };
+        Paragraph::new(right_content.to_string())
+            .block(Block::default().title(title).borders(Borders::ALL))
+            .wrap(Wrap { trim: false })
+    }
+
+    fn bottom_line(&self, prompt: &str, prompt_cursor: usize) -> String {
+        if self.mode == UiMode::Prompt {
+            self.prompt_view(prompt, prompt_cursor).line
+        } else {
+            self.render_status_line()
+        }
+    }
+
+    fn cursor_sequence(&self, right_content: &str, prompt: &str) -> String {
+        self.cursor_sequence_with_cursors(right_content, prompt, prompt.len(), None)
+    }
+
+    fn cursor_sequence_with_cursors(
+        &self,
+        right_content: &str,
+        prompt: &str,
+        prompt_cursor: usize,
+        right_cursor_column: Option<usize>,
+    ) -> String {
+        let (row, column) = if self.mode == UiMode::Prompt {
+            (
+                self.height,
+                self.prompt_view(prompt, prompt_cursor).cursor_column,
+            )
+        } else {
+            match self.focus {
+                PaneFocus::Left => (self.control_cursor_row(), 2),
+                PaneFocus::Right => {
+                    self.right_cursor_position_with_cursor(right_content, right_cursor_column)
+                }
+            }
+        };
+        let row = row.clamp(1, self.height.max(1));
+        let column = column.clamp(1, self.width.max(1));
+        format!("\u{1b}[{row};{column}H")
+    }
+
+    fn prompt_view(&self, prompt: &str, prompt_cursor: usize) -> PromptView {
+        let width = usize::from(self.width.max(1));
+        let input_width = width.saturating_sub(1);
+        let max_cursor_offset = width.saturating_sub(2);
+        let cursor_chars = cursor_char_count(prompt, prompt_cursor);
+        let start = cursor_chars.saturating_sub(max_cursor_offset);
+        let visible_prompt = prompt
+            .chars()
+            .skip(start)
+            .take(input_width)
+            .collect::<String>();
+        let cursor_offset = cursor_chars.saturating_sub(start).min(max_cursor_offset);
+        let cursor_column = if self.width <= 1 {
+            1
+        } else {
+            cursor_offset.saturating_add(2).min(width) as u16
+        };
+        PromptView {
+            line: format!(":{visible_prompt}"),
+            cursor_column,
+        }
+    }
+
+    fn bell_prefix(&self) -> &'static str {
+        if self.pending_bell.replace(false) {
+            "\u{7}"
+        } else {
+            ""
+        }
+    }
+
+    fn handle_pending_key(&mut self, pending: PendingKey, key: UiKey) -> Vec<UiAction> {
+        match (pending, key) {
+            (PendingKey::CtrlW, UiKey::Char('h')) if self.mode == UiMode::Command => {
+                if self.left_visible {
+                    self.focus = PaneFocus::Left;
+                }
+                Vec::new()
+            }
+            (PendingKey::CtrlW, UiKey::Char('k')) if self.mode == UiMode::Command => {
+                if self.left_visible {
+                    self.focus = PaneFocus::Left;
+                }
+                Vec::new()
+            }
+            (PendingKey::CtrlW, UiKey::Char('l')) if self.mode == UiMode::Command => {
+                self.focus = PaneFocus::Right;
+                self.mode = UiMode::Command;
+                Vec::new()
+            }
+            (PendingKey::CtrlW, UiKey::Char('j')) if self.mode == UiMode::Command => {
+                self.focus = PaneFocus::Right;
+                self.mode = UiMode::Command;
+                Vec::new()
+            }
+            (PendingKey::G, UiKey::Char('t')) if self.mode == UiMode::Command => {
+                self.next_window();
+                Vec::new()
+            }
+            (PendingKey::G, UiKey::Char('T')) if self.mode == UiMode::Command => {
+                self.previous_window();
+                Vec::new()
+            }
+            _ => Vec::new(),
+        }
+    }
+
+    fn command_mode_text_key_control_status(&self, key: UiKey) -> Option<bool> {
+        if self.mode != UiMode::Command || self.pending.is_some() {
+            return None;
+        }
+        let UiKey::Char(ch) = key else {
+            return None;
+        };
+        (ch.is_ascii_alphanumeric() || ch == ' ').then(|| self.is_command_control_char(ch))
+    }
+
+    fn is_command_control_char(&self, ch: char) -> bool {
+        matches!(ch, 'i' | ':' | ',' | 's' | 't' | 'f' | 'g')
+            || (self.focus == PaneFocus::Left && matches!(ch, 'j' | 'k' | 'l' | 'x'))
+    }
+
+    fn update_command_mode_typing_notice(&mut self, command_mode_text_key_control: Option<bool>) {
+        if let Some(command_mode_text_key_control) = command_mode_text_key_control
+            && self.mode == UiMode::Command
+            && self.pending.is_none()
+        {
+            self.command_mode_typing_count = self.command_mode_typing_count.saturating_add(1);
+            self.command_mode_typing_controls_only &= command_mode_text_key_control;
+            if self.command_mode_typing_count >= COMMAND_MODE_TYPING_NOTICE_THRESHOLD {
+                if !self.command_mode_typing_controls_only {
+                    self.show_status_notice(
+                        COMMAND_MODE_TYPING_NOTICE,
+                        Duration::from_secs(STATUS_NOTICE_SECONDS),
+                    );
+                }
+                self.command_mode_typing_count = 0;
+                self.command_mode_typing_controls_only = true;
+            }
+        } else {
+            self.command_mode_typing_count = 0;
+            self.command_mode_typing_controls_only = true;
+            .char_indices()
+            .next_back()
+        {
+            self.chat_cursor = previous;
+        }
+    }
+
+    fn move_chat_cursor_right(&mut self) {
+        if self.chat_cursor >= self.chat_buffer.len() {
+            return;
+        }
+        let next = self.chat_buffer[self.chat_cursor..]
+            .chars()
+            .next()
+            .map(|ch| self.chat_cursor + ch.len_utf8())
+            .unwrap_or(self.chat_buffer.len());
+        self.chat_cursor = next;
+    }
+
+    fn recall_chat_history(&mut self, delta: isize) {
+        if self.chat_history.is_empty() {
+            return;
+        }
+
+        if self.chat_history_index.is_none() {
+            self.chat_history_draft = Some(self.chat_buffer.clone());
+        }
+
+        let current = self.chat_history_index.unwrap_or(self.chat_history.len()) as isize;
+        let next = current + delta;
+        if next < 0 {
+            self.chat_history_index = Some(0);
+            self.chat_buffer = self.chat_history[0].clone();
+        } else if next >= self.chat_history.len() as isize {
+            self.chat_history_index = None;
+            self.chat_buffer = self.chat_history_draft.take().unwrap_or_default();
+        } else {
+            let next = next as usize;
+            self.chat_history_index = Some(next);
+            self.chat_buffer = self.chat_history[next].clone();
+        }
+        self.chat_cursor = self.chat_buffer.len();
+    }
+
+    fn chat_cursor_column(&self) -> usize {
+        CHAT_PROMPT.chars().count() + cursor_char_count(&self.chat_buffer, self.chat_cursor)
+    }
+    fn record_actions(&mut self, actions: Vec<crate::UiAction>) {
+        self.transcript
+            .extend(actions.into_iter().map(|action| format!("{action:?}")));
+    }
+
+    fn should_start_agent_slash_command(&self) -> bool {
+        self.ui.mode() == UiMode::Command && self.ui.selected_agent().is_some()
+    }
+
+    fn start_agent_slash_command(&mut self) {
+        let Some(agent_id) = self.ui.selected_agent().cloned() else {
+            return;
+        };
+        if self.ui.activate_agent_chat(&agent_id).is_ok() {
+            self.insert_chat_char('/');
+        }
+    }
+
+    fn should_route_chat_arrow(&self) -> bool {
+        self.ui.mode() == UiMode::Insert
+            || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right)
+    }
+
+    fn defer_escape_key(&self) -> bool {
+        self.ui.mode() == UiMode::Prompt
+            || (self.ui.mode() == UiMode::Insert && self.ui.focus() == PaneFocus::Right)
+    }
+
+    fn finish_pending_escape_sequence(&mut self) {
+        let should_finish = self
+            .escape_sequence
+            .as_ref()
+            .is_some_and(|sequence| sequence.bytes.len() == 1);
+        if should_finish {
+            let sequence = self
+                .escape_sequence
+                .take()
+                .expect("escape sequence is present");
+            self.dispatch_pending_escape_if_needed(&sequence);
+        }
+    }
+
+    fn dispatch_pending_escape_if_needed(&mut self, sequence: &PendingEscapeSequence) {
+        if !sequence.escape_dispatched {
+            self.handle_input(HarnessInput::Key(UiKey::Esc));
+        }
+    }
+
+    fn continue_escape_sequence(&mut self, byte: u8) -> bool {
+        let Some(sequence) = self.escape_sequence.as_mut() else {
+            return false;
+        };
+
+        if sequence.bytes.len() == 1 && byte != b'[' {
+            let sequence = self
+                .escape_sequence
+                .take()
+                .expect("escape sequence is present");
+            self.dispatch_pending_escape_if_needed(&sequence);
+            return false;
+        }
+
+        sequence.bytes.push(byte);
+        if let Some((key, len)) = parse_key_sequence(&sequence.bytes) {
+            if len == sequence.bytes.len() {
+                let sequence = self
+                    .escape_sequence
+                    .take()
+                    .expect("escape sequence is present");
+                if sequence.escape_dispatched
+                    && sequence.mode_before == UiMode::Insert
+                    && self.ui.mode() != UiMode::Insert
+                {
+                    let actions = self.ui.handle_key(UiKey::Char('i'));
+                    self.record_actions(actions);
+                }
+                self.handle_input(HarnessInput::Key(key));
+            }
+        } else if sequence.bytes.len() > MAX_ESCAPE_SEQUENCE {
+            let sequence = self
+                .escape_sequence
+                .take()
+                .expect("escape sequence is present");
+            self.dispatch_pending_escape_if_needed(&sequence);
+        }
+
+        true
+    }
+
+    fn right_content(&self) -> String {
+        let mut content = self.transcript.join("\n");
+        if !content.is_empty() {
+            content.push('\n');
+        }
+        content.push_str(CHAT_PROMPT);
+        content.push_str(&self.chat_buffer);
+        content
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct PendingEscapeSequence {
+    bytes: Vec<u8>,
+    mode_before: UiMode,
+    escape_dispatched: bool,
+}
+
+const CHAT_PROMPT: &str = "chat> ";
+const MAX_ESCAPE_SEQUENCE: usize = 64;
+
+fn parse_key_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
+    match bytes {
+        [27, b'[', b'A', ..] => Some((UiKey::Up, 3)),
+        [27, b'[', b'B', ..] => Some((UiKey::Down, 3)),
+        [27, b'[', b'C', ..] => Some((UiKey::Right, 3)),
+        [27, b'[', b'D', ..] => Some((UiKey::Left, 3)),
+        _ => parse_sgr_mouse_sequence(bytes),
+    }
+}
+
+fn parse_sgr_mouse_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
+    if !bytes.starts_with(b"\x1b[<") {
+        return None;
+    }
+
+    let final_index = bytes.iter().position(|byte| matches!(byte, b'M' | b'm'))?;
+    let final_byte = bytes[final_index];
+    let body = std::str::from_utf8(&bytes[3..final_index]).ok()?;
+    let mut parts = body.split(';');
+    let button = parts.next()?.parse::<u16>().ok()?;
+    let column = parts.next()?.parse::<u16>().ok()?;
+    let row = parts.next()?.parse::<u16>().ok()?;
+    if parts.next().is_some() {
+        return None;
+    }
+
+    let button_kind = button & !0b0001_1100_u16;
+    let key = match (button_kind, final_byte) {
+        (64, b'M') => UiKey::MouseScrollUp { column, row },
+        (65, b'M') => UiKey::MouseScrollDown { column, row },
+        (_, b'M' | b'm') if button_kind < 64 && button & 0b11 == 0 => {
+            UiKey::MouseClick { column, row }
+        }
+        _ => return None,
+    };
+    Some((key, final_index + 1))
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum HarnessInput {
+    Key(UiKey),
+    Char(char),
+    Enter,
+    Backspace,
+    Interrupt,
+    Quit,
+}
+
+impl HarnessInput {
+    fn from_byte(byte: u8) -> Option<Self> {
+        match byte {
+            3 => Some(Self::Interrupt),
+            4 => Some(Self::Quit),
+            13 | 10 => Some(Self::Enter),
+            27 => Some(Self::Key(UiKey::Esc)),
+            23 => Some(Self::Key(UiKey::CtrlW)),
+            8 | 127 => Some(Self::Backspace),
+            byte if byte.is_ascii_graphic() || byte == b' ' => Some(Self::Char(byte as char)),
+            _ => None,
+        }
+    }
+}
+
+fn cursor_char_count(text: &str, cursor: usize) -> usize {
+    text.char_indices()
+        .take_while(|(index, _)| *index < cursor)
+        .count()
+}
+fn fixture_ui(width: u16, height: u16, parser: AgentId, tests: AgentId) -> TerminalUi {
+    let mut ui = TerminalUi::new(width, height);
+    ui.add_agent(
+        AgentListEntry::new(parser.clone(), "parser")
+            .with_ready(true)
+            .with_modified_file("src/parser.rs")
+            .with_conflicting_agent(tests.clone())
+            .with_dependent(tests.clone()),
+    );
+    ui.add_agent(
+        AgentListEntry::new(tests.clone(), "tests")
+            .with_modified_file("tests/parser.rs")
+            .with_dependency(parser.clone()),
+    );
+    ui.select_agent(&parser)
+        .expect("fixture parser agent is registered");
+    ui
+}
+----- END FILE src/ui_harness.rs -----
+
+----- BEGIN FILE src/workspace.rs -----
+digest: fnv64:001c1f08f5fa26bd; bytes:40263
+
+use std::collections::{BTreeMap, BTreeSet};
+use std::sync::mpsc::{self, Receiver, Sender};
+use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
+
+use serde::{Deserialize, Serialize};
+
+use crate::agent::{
+    AgentBackend, AgentId, AgentKind, AgentLaunch, AgentShutdownHandle, AgentStreamEvent,
+};
+use crate::chat_title::{ChatTitleAgent, fallback_chat_title_from_prompt};
+use crate::cli::{
+    CliError, CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
+    render_command_chat_help,
+};
+use crate::review::{AgentCommit, GitHistory, ReviewResult};
+
+#[derive(Debug)]
+pub struct WorkLeafController<B>
+where
+    B: AgentBackend + Clone + Send + 'static,
+{
+    chat: Option<CommandChat<B>>,
+    shutdown: AgentShutdownHandle,
+    shutdown_on_drop: bool,
+    workers: Vec<Worker>,
+    command_transcript: Vec<String>,
+    sessions: BTreeMap<AgentId, WorkLeafSession>,
+    title_agent: ChatTitleAgent,
+    pending_events: Vec<WorkLeafEvent>,
+    reviewers: BTreeSet<AgentId>,
+    review_commits_in_progress: BTreeMap<AgentId, String>,
+    reviewed_agent_commits: BTreeMap<AgentId, String>,
+    agent_review_baselines: BTreeMap<AgentId, String>,
+}
+
+impl<B> WorkLeafController<B>
+where
+    B: AgentBackend + Clone + Send + 'static,
+{
+    pub fn new(chat: CommandChat<B>) -> Self {
+        let shutdown = chat.shutdown_handle();
+        Self {
+            chat: Some(chat),
+            shutdown,
+            shutdown_on_drop: true,
+            workers: Vec::new(),
+            command_transcript: vec![render_command_chat_help()],
+            sessions: BTreeMap::new(),
+            title_agent: ChatTitleAgent::new(),
+            pending_events: Vec::new(),
+            reviewers: BTreeSet::new(),
+            review_commits_in_progress: BTreeMap::new(),
+            reviewed_agent_commits: BTreeMap::new(),
+            agent_review_baselines: BTreeMap::new(),
+        }
+    }
+
+    pub fn into_chat(mut self) -> CommandChat<B> {
+        self.wait_for_idle(Duration::from_secs(5));
+        self.shutdown_on_drop = false;
+        self.chat
+            .take()
+            .expect("work-leaf controller command chat is present")
+    }
+
+    pub fn transcript(&self) -> &[String] {
+        &self.command_transcript
+    }
+
+    pub fn push_transcript_line(&mut self, line: impl Into<String>) {
+        self.push_command_line(line.into());
+    }
+    }
+
+    pub fn snapshot(&self) -> WorkLeafSnapshot {
+        WorkLeafSnapshot {
+            command_transcript: self.command_transcript.clone(),
+            sessions: self.sessions.values().cloned().collect(),
+        }
+    }
+
+    pub fn drain_events(&mut self) -> Vec<WorkLeafEvent> {
+        if self.pending_events.is_empty() {
+            self.poll_worker();
+        }
+        self.pending_events.drain(..).collect()
+    }
+
+    pub fn is_busy(&mut self) -> bool {
+        self.poll_worker();
+        !self.workers.is_empty()
+    }
+
+    pub fn wait_for_idle(&mut self, timeout: Duration) -> bool {
+        let start = Instant::now();
+        while start.elapsed() < timeout {
+            self.poll_worker();
+            if self.workers.is_empty() {
+                return true;
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        self.poll_worker();
+        self.workers.is_empty()
+    }
+
+    pub fn wait_for_session_line(
+        &mut self,
+        agent_id: &AgentId,
+        needle: &str,
+        timeout: Duration,
+    ) -> bool {
+        let start = Instant::now();
+        while start.elapsed() < timeout {
+            self.poll_worker();
+            if self.session_contains(agent_id, needle) {
+                return true;
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        self.poll_worker();
+        self.session_contains(agent_id, needle)
+    }
+
+    pub fn execute_command_line(&mut self, line: &str) {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            return;
+        }
+        self.push_command_line(format!("work-leaf> {trimmed}"));
+        let parts = split_command_line(trimmed);
+        let Some(command) = parts.first().map(String::as_str) else {
+            return;
+        };
+
+        match command {
+            "quit" | "exit" | "q" => self.request_quit(),
+            "new" => {
+                let prompt = parts[1..].join(" ");
+                if let Err(error) = self.create_agent(prompt) {
+                    self.push_command_line(command_chat_error_text(&error));
+                }
+            }
+            "review" => {
+                if let Err(error) = self.start_review() {
+                    self.push_command_line(command_chat_error_text(&error));
+                }
+            }
+            "linearize" => {
+                if let Err(error) = self.start_linearize() {
+                    self.push_command_line(command_chat_error_text(&error));
+                }
+            }
+            _ => self.start_command_worker(trimmed.to_string()),
+        }
+    }
+
+    pub fn send_command_agent_message(&mut self, message: &str) {
+        let message = message.trim();
+        if message.is_empty() {
+            return;
+        }
+
+        self.push_command_line(format!("user: {message}"));
+        let display_name = self.agent_display_name();
+        if literal_command_line(message).is_none()
+            && let Some(request) = command_agent_new_request(message)
+        {
+            self.push_command_line(format!(
+                "command-agent: {}",
+                command_agent_launch_reply(&display_name, &request)
+            ));
+            let command_line = command_agent_new_command_line(&request.prompt);
+            for _ in 0..request.count {
+                self.execute_command_line(&command_line);
+            }
+            return;
+        }
+
+        match command_agent_response(message, &display_name) {
+            CommandAgentResponse::Execute {
+                command_line,
+                reply,
+            } => {
+                self.push_command_line(format!("command-agent: {reply}"));
+                self.execute_command_line(&command_line);
+            }
+            CommandAgentResponse::Reply(reply) => {
+                self.push_command_line(format!("command-agent: {reply}"));
+            }
+        }
+    }
+
+    pub fn interrupt_agent(&mut self, agent_id: &AgentId) {
+        let display_name = self.agent_display_name();
+        let result = self
+            .chat
+            .as_mut()
+            .expect("work-leaf controller command chat is present")
+            .interrupt_agent(agent_id);
+        match result {
+            Ok(()) => self.append_agent_line(
+                agent_id,
+                format!("work-leaf: sent Ctrl-C to {display_name}"),
+            ),
+            Err(error) => self.append_agent_line(agent_id, command_chat_error_text(&error)),
+        }
+    }
+
+    pub fn create_agent(&mut self, prompt: impl Into<String>) -> Result<AgentId, CliError> {
+        let prompt = prompt.into();
+        let args = split_command_line(&prompt);
+        let title_pending = args.is_empty();
+        let launch = {
+            let chat = self
+                .chat
+                .as_mut()
+                .expect("work-leaf controller command chat is present");
+            chat.prepare_agent_launch(&args)?
+        };
+        let agent_id = launch.id.clone();
+        self.remember_agent_review_baseline(&agent_id);
+        let title_prompt = self.reserve_launch_title_prompt(&launch, title_pending);
+        let title = launch.feature.clone();
+        self.register_agent_feature(agent_id.clone(), title.clone());
+        self.add_session(WorkLeafSession {
+            id: agent_id.clone(),
+            kind: launch.kind.clone(),
+            title,
+            feature: launch.feature.clone(),
+            lines: Vec::new(),
+            loading: Some(WorkLeafLoading::Launching),
+        });
+        self.pending_events.push(WorkLeafEvent::AgentSelected {
+            agent_id: agent_id.clone(),
+        });
+        if let Some(first_prompt) = title_prompt {
+            self.start_title_worker(agent_id.clone(), first_prompt);
+        }
+        self.start_launch_worker(launch);
+        Ok(agent_id)
+    }
+
+    pub fn send_message(&mut self, agent_id: &AgentId, message: &str) -> Result<(), CliError> {
+        let message = message.trim();
+        if message.is_empty() {
+            return Ok(());
+        }
+        if self
+            .sessions
+            .get(agent_id)
+            .and_then(|session| session.loading)
+            .is_some()
+        {
+            self.append_agent_line(
+                agent_id,
+                format!("work-leaf: {} is still working", self.agent_display_name()),
+            );
+            return Ok(());
+        }
+
+        let title_prompt = self.reserve_first_chat_title_prompt(agent_id, message);
+        self.set_session_loading(agent_id, Some(WorkLeafLoading::WaitingForReply));
+        self.append_agent_line(agent_id, format!("user: {message}"));
+        let agent_id = agent_id.clone();
+        let message = message.to_string();
+        if let Some(first_prompt) = title_prompt {
+            self.start_title_worker(agent_id.clone(), first_prompt);
+        }
+        self.start_worker(move |mut chat, sender| {
+            let stream_sender = sender.clone();
+            let display_name = chat.agent_profile().display_name.clone();
+            let mut stream = move |event_agent_id: &AgentId, event| {
+                let _ = stream_sender.send(WorkerEvent::Stream {
+                    agent_id: event_agent_id.clone(),
+                    text: stream_event_text(event, &display_name),
+                });
+            };
+            match chat.send_to_agent_streaming_with_ids(&agent_id, &message, &mut stream) {
+                Ok(result) => {
+                    let _ = sender.send(WorkerEvent::Complete {
+                        agent_id: Some(agent_id),
+                        result,
+                    });
+                }
+                Err(error) => {
+                    let _ = sender.send(WorkerEvent::Error {
+                        agent_id: Some(agent_id),
+                        message: command_chat_error_text(&error),
+                    });
+                }
+            }
+        });
+        Ok(())
+    }
+
+    pub fn start_review(&mut self) -> Result<Vec<AgentId>, CliError> {
+        self.start_review_for_agent(None)
+    }
+
+    fn start_review_for_patch_agent(
+        &mut self,
+        agent_id: &AgentId,
+    ) -> Result<Vec<AgentId>, CliError> {
+        self.start_review_for_agent(Some(agent_id))
+    }
+
+    fn start_review_for_agent(
+        &mut self,
+        target_agent_id: Option<&AgentId>,
+    ) -> Result<Vec<AgentId>, CliError> {
+        let (project_dir, agent_profile) = {
+            let chat = self
+                .chat
+                .as_ref()
+                .expect("work-leaf controller command chat is present");
+            (
+                chat.project_dir().to_path_buf(),
+                chat.agent_profile().clone(),
+            )
+        };
+        let empty_baselines = BTreeMap::new();
+        let agent_baselines = if target_agent_id.is_some() {
+            &self.agent_review_baselines
+        } else {
+            &empty_baselines
+        };
+        let commits = GitHistory::new(project_dir)
+            .latest_agent_review_commits(&self.reviewed_agent_commits, agent_baselines)?;
+        if commits.is_empty() {
+            self.push_command_line("no agent commits found".to_string());
+            return Ok(Vec::new());
+        }
+
+        let mut reviewer_ids = Vec::new();
+        for commit in commits {
+            if target_agent_id.is_some_and(|agent_id| &commit.agent_id != agent_id) {
+                continue;
+            }
+            if self
+                .reviewed_agent_commits
+                .get(&commit.agent_id)
+                .is_some_and(|hash| hash == &commit.hash)
+                || self
+                    .review_commits_in_progress
+                    .get(&commit.agent_id)
+                    .is_some_and(|hash| hash == &commit.hash)
+            {
+                continue;
+            }
+            let reviewer_id = AgentId::new(format!("review-{}", commit.agent_id.as_str()))
+                .map_err(CliError::Agent)?;
+            let reviewer_busy = self
+                .sessions
+                .get(&reviewer_id)
+                .and_then(|session| session.loading)
+                .is_some();
+            if reviewer_busy {
+                continue;
+            }
+            let session_exists = self.sessions.contains_key(&reviewer_id);
+            let reuse_reviewer = self.reviewers.contains(&reviewer_id);
+            if session_exists {
+                self.set_session_loading(&reviewer_id, Some(WorkLeafLoading::WaitingForReply));
+            } else {
+                self.add_session(WorkLeafSession {
+                    id: reviewer_id.clone(),
+                    kind: agent_profile.kind.clone(),
+                    title: format!("review {}", commit.feature),
+                    feature: format!("review {}", commit.feature),
+                    lines: Vec::new(),
+                    loading: Some(WorkLeafLoading::WaitingForReply),
+                });
+            }
+            if reviewer_ids.is_empty() {
+                self.pending_events.push(WorkLeafEvent::AgentSelected {
+                    agent_id: reviewer_id.clone(),
+                });
+            }
+            self.review_commits_in_progress
+                .insert(commit.agent_id.clone(), commit.hash.clone());
+            self.start_review_worker(commit, reviewer_id.clone(), reuse_reviewer);
+            reviewer_ids.push(reviewer_id);
+        }
+        Ok(reviewer_ids)
+    }
+
+    pub fn start_linearize(&mut self) -> Result<Option<AgentId>, CliError> {
+        let launch = {
+            let chat = self
+                .chat
+                .as_mut()
+                .expect("work-leaf controller command chat is present");
+            chat.prepare_linearize_launch()?
+        };
+        let Some(launch) = launch else {
+            self.push_command_line("no reviewed agent commits found".to_string());
+            return Ok(None);
+        };
+
+        let agent_id = launch.id.clone();
+        let title = launch.feature.clone();
+        self.register_agent_feature(agent_id.clone(), title.clone());
+        self.add_session(WorkLeafSession {
+            id: agent_id.clone(),
+            kind: launch.kind.clone(),
+            title: title.clone(),
+            feature: title,
+            lines: Vec::new(),
+            loading: Some(WorkLeafLoading::Launching),
+        });
+        self.pending_events.push(WorkLeafEvent::AgentSelected {
+            agent_id: agent_id.clone(),
+        });
+        self.start_launch_worker(launch);
+        Ok(Some(agent_id))
+    }
+
+    pub fn loading_text(&self, loading: WorkLeafLoading) -> String {
+        match loading {
+            WorkLeafLoading::Launching => {
+                format!("Starting {} session", self.agent_display_name())
+            }
+            WorkLeafLoading::WaitingForReply => {
+                format!("Waiting for {}", self.agent_display_name())
+            }
+        }
+    }
+
+    pub fn shutdown(&mut self) {
+        self.shutdown.shutdown();
+    }
+
+    fn poll_worker(&mut self) {
+        let mut events = Vec::new();
+        for worker in &self.workers {
+            while let Ok(event) = worker.receiver.try_recv() {
+                events.push(event);
+            }
+        }
+        for event in events {
+            self.apply_worker_event(event);
+        }
+
+        let mut index = 0;
+        while index < self.workers.len() {
+            if self.workers[index].handle.is_finished() {
+                let worker = self.workers.swap_remove(index);
+                while let Ok(event) = worker.receiver.try_recv() {
+                    self.apply_worker_event(event);
+                }
+                worker
+                    .handle
+                    .handle
+                    .join()
+                    .expect("work-leaf worker did not panic");
+            } else {
+                index += 1;
+            }
+        }
+    }
+
+    fn session_contains(&self, agent_id: &AgentId, needle: &str) -> bool {
+        self.sessions
+            .get(agent_id)
+            .is_some_and(|session| session.lines.iter().any(|line| line.contains(needle)))
+    }
+
+    fn reserve_launch_title_prompt(
+        &mut self,
+        launch: &AgentLaunch,
+        title_pending: bool,
+    ) -> Option<String> {
+        if title_pending {
+            None
+        } else {
+            self.title_agent.mark_named(&launch.id);
+            Some(launch.prompt.clone())
+        }
+    }
+
+    fn register_agent_feature(&mut self, agent_id: AgentId, feature: String) {
+        if let Some(chat) = self.chat.as_mut() {
+            chat.register_agent_feature(agent_id, feature);
+        }
+    }
+
+    fn reserve_first_chat_title_prompt(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+    ) -> Option<String> {
+        if !agent_id.as_str().starts_with("user-") {
+            return None;
+        }
+        if !self.title_agent.reserve_first_prompt_title(agent_id) {
+            return None;
+        }
+        Some(prompt.to_string())
+    }
+
+    fn remember_agent_review_baseline(&mut self, agent_id: &AgentId) {
+        if !agent_id.as_str().starts_with("user-")
+            || self.agent_review_baselines.contains_key(agent_id)
+        {
+            return;
+        }
+        let Some(root) = self
+            .chat
+            .as_ref()
+            .map(|chat| chat.project_dir().to_path_buf())
+        else {
+            return;
+        };
+        if let Ok(Some(hash)) = GitHistory::new(root).head_hash() {
+            self.agent_review_baselines.insert(agent_id.clone(), hash);
+        }
+    }
+
+    fn add_session(&mut self, session: WorkLeafSession) {
+        self.sessions.insert(session.id.clone(), session.clone());
+        self.pending_events
+            .push(WorkLeafEvent::AgentAdded { session });
+    }
+
+    fn start_launch_worker(&mut self, launch: AgentLaunch) {
+        let agent_id = launch.id.clone();
+        self.set_session_loading(&agent_id, Some(WorkLeafLoading::Launching));
+        self.start_worker(move |mut chat, sender| {
+            let stream_sender = sender.clone();
+            let display_name = chat.agent_profile().display_name.clone();
+            let mut stream = move |event_agent_id: &AgentId, event| {
+                let _ = stream_sender.send(WorkerEvent::Stream {
+                    agent_id: event_agent_id.clone(),
+                    text: stream_event_text(event, &display_name),
+                });
+            };
+            match chat.launch_prepared_ag

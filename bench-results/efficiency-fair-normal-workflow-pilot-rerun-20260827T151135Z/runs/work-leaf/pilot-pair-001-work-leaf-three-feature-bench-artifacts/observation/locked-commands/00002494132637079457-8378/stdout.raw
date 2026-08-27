@@ -1,0 +1,706 @@
+2420:    CliError, CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
+2421:    render_command_chat_help,
+2422:};
+2423:use crate::review::{AgentCommit, GitHistory, ReviewResult};
+2424:
+2425:#[derive(Debug)]
+2426:pub struct WorkLeafController<B>
+2427:where
+2428:    B: AgentBackend + Clone + Send + 'static,
+2429:{
+2430:    chat: Option<CommandChat<B>>,
+2431:    shutdown: AgentShutdownHandle,
+2432:    shutdown_on_drop: bool,
+2433:    workers: Vec<Worker>,
+2434:    command_transcript: Vec<String>,
+2435:    sessions: BTreeMap<AgentId, WorkLeafSession>,
+2436:    title_agent: ChatTitleAgent,
+2437:    pending_events: Vec<WorkLeafEvent>,
+2438:    reviewers: BTreeSet<AgentId>,
+2439:    review_commits_in_progress: BTreeMap<AgentId, String>,
+2440:    reviewed_agent_commits: BTreeMap<AgentId, String>,
+2441:    agent_review_baselines: BTreeMap<AgentId, String>,
+2442:}
+2443:
+2444:impl<B> WorkLeafController<B>
+2445:where
+2446:    B: AgentBackend + Clone + Send + 'static,
+2447:{
+2448:    pub fn new(chat: CommandChat<B>) -> Self {
+2449:        let shutdown = chat.shutdown_handle();
+2450:        Self {
+2451:            chat: Some(chat),
+2452:            shutdown,
+2453:            shutdown_on_drop: true,
+2454:            workers: Vec::new(),
+2455:            command_transcript: vec![render_command_chat_help()],
+2456:            sessions: BTreeMap::new(),
+2457:            title_agent: ChatTitleAgent::new(),
+2458:            pending_events: Vec::new(),
+2459:            reviewers: BTreeSet::new(),
+2460:            review_commits_in_progress: BTreeMap::new(),
+2461:            reviewed_agent_commits: BTreeMap::new(),
+2462:            agent_review_baselines: BTreeMap::new(),
+2463:        }
+2464:    }
+2465:
+2466:    pub fn into_chat(mut self) -> CommandChat<B> {
+2467:        self.wait_for_idle(Duration::from_secs(5));
+2468:        self.shutdown_on_drop = false;
+2469:        self.chat
+2470:            .take()
+2471:            .expect("work-leaf controller command chat is present")
+2472:    }
+2473:
+2474:    pub fn transcript(&self) -> &[String] {
+2475:        &self.command_transcript
+2476:    }
+2477:
+2478:    pub fn push_transcript_line(&mut self, line: impl Into<String>) {
+2479:        self.push_command_line(line.into());
+2480:    }
+2481:
+2482:    pub fn snapshot(&self) -> WorkLeafSnapshot {
+2483:        WorkLeafSnapshot {
+2484:            command_transcript: self.command_transcript.clone(),
+2485:            sessions: self.sessions.values().cloned().collect(),
+2486:        }
+2487:    }
+2488:
+2489:    pub fn drain_events(&mut self) -> Vec<WorkLeafEvent> {
+2490:        if self.pending_events.is_empty() {
+2491:            self.poll_worker();
+2492:        }
+2493:        self.pending_events.drain(..).collect()
+2494:    }
+2495:
+2496:    pub fn is_busy(&mut self) -> bool {
+2497:        self.poll_worker();
+2498:        !self.workers.is_empty()
+2499:    }
+2500:
+2501:    pub fn wait_for_idle(&mut self, timeout: Duration) -> bool {
+2502:        let start = Instant::now();
+2503:        while start.elapsed() < timeout {
+2504:            self.poll_worker();
+2505:            if self.workers.is_empty() {
+2506:                return true;
+2507:            }
+2508:            thread::sleep(Duration::from_millis(10));
+2509:        }
+2510:        self.poll_worker();
+2511:        self.workers.is_empty()
+2512:    }
+2513:
+2514:    pub fn wait_for_session_line(
+2515:        &mut self,
+2516:        agent_id: &AgentId,
+2517:        needle: &str,
+2518:        timeout: Duration,
+2519:    ) -> bool {
+2520:        let start = Instant::now();
+2521:        while start.elapsed() < timeout {
+2522:            self.poll_worker();
+2523:            if self.session_contains(agent_id, needle) {
+2524:                return true;
+2525:            }
+2526:            thread::sleep(Duration::from_millis(10));
+2527:        }
+2528:        self.poll_worker();
+2529:        self.session_contains(agent_id, needle)
+2530:    }
+2531:
+2532:    pub fn execute_command_line(&mut self, line: &str) {
+2533:        let trimmed = line.trim();
+2534:        if trimmed.is_empty() {
+2535:            return;
+2536:        }
+2537:        self.push_command_line(format!("work-leaf> {trimmed}"));
+2538:        let parts = split_command_line(trimmed);
+2539:        let Some(command) = parts.first().map(String::as_str) else {
+2540:            return;
+2541:        };
+2542:
+2543:        match command {
+2544:            "quit" | "exit" | "q" => self.request_quit(),
+2545:            "new" => {
+2546:                let prompt = parts[1..].join(" ");
+2547:                if let Err(error) = self.create_agent(prompt) {
+2548:                    self.push_command_line(command_chat_error_text(&error));
+2549:                }
+2550:            }
+2551:            "review" => {
+2552:                if let Err(error) = self.start_review() {
+2553:                    self.push_command_line(command_chat_error_text(&error));
+2554:                }
+2555:            }
+2556:            "linearize" => {
+2557:                if let Err(error) = self.start_linearize() {
+2558:                    self.push_command_line(command_chat_error_text(&error));
+2559:                }
+2560:            }
+2561:            _ => self.start_command_worker(trimmed.to_string()),
+2562:        }
+2563:    }
+2564:
+2565:    pub fn send_command_agent_message(&mut self, message: &str) {
+2566:        let message = message.trim();
+2567:        if message.is_empty() {
+2568:            return;
+2569:        }
+2570:
+2571:        self.push_command_line(format!("user: {message}"));
+2572:        let display_name = self.agent_display_name();
+2573:        if literal_command_line(message).is_none()
+2574:            && let Some(request) = command_agent_new_request(message)
+2575:        {
+2576:            self.push_command_line(format!(
+2577:                "command-agent: {}",
+2578:                command_agent_launch_reply(&display_name, &request)
+2579:            ));
+2580:            let command_line = command_agent_new_command_line(&request.prompt);
+2581:            for _ in 0..request.count {
+2582:                self.execute_command_line(&command_line);
+2583:            }
+2584:            return;
+2585:        }
+2586:
+2587:        match command_agent_response(message, &display_name) {
+2588:            CommandAgentResponse::Execute {
+2589:                command_line,
+2590:                reply,
+2591:            } => {
+2592:                self.push_command_line(format!("command-agent: {reply}"));
+2593:                self.execute_command_line(&command_line);
+2594:            }
+2595:            CommandAgentResponse::Reply(reply) => {
+2596:                self.push_command_line(format!("command-agent: {reply}"));
+2597:            }
+2598:        }
+2599:    }
+2600:
+2601:    pub fn interrupt_agent(&mut self, agent_id: &AgentId) {
+2602:        let display_name = self.agent_display_name();
+2603:        let result = self
+2604:            .chat
+2605:            .as_mut()
+2606:            .expect("work-leaf controller command chat is present")
+2607:            .interrupt_agent(agent_id);
+2608:        match result {
+2609:            Ok(()) => self.append_agent_line(
+2610:                agent_id,
+2611:                format!("work-leaf: sent Ctrl-C to {display_name}"),
+2612:            ),
+2613:            Err(error) => self.append_agent_line(agent_id, command_chat_error_text(&error)),
+2614:        }
+2615:    }
+2616:
+2617:    pub fn create_agent(&mut self, prompt: impl Into<String>) -> Result<AgentId, CliError> {
+2618:        let prompt = prompt.into();
+2619:        let args = split_command_line(&prompt);
+2620:        let title_pending = args.is_empty();
+2621:        let launch = {
+2622:            let chat = self
+2623:                .chat
+2624:                .as_mut()
+2625:                .expect("work-leaf controller command chat is present");
+2626:            chat.prepare_agent_launch(&args)?
+2627:        };
+2628:        let agent_id = launch.id.clone();
+2629:        self.remember_agent_review_baseline(&agent_id);
+2630:        let title_prompt = self.reserve_launch_title_prompt(&launch, title_pending);
+2631:        let title = launch.feature.clone();
+2632:        self.register_agent_feature(agent_id.clone(), title.clone());
+2633:        self.add_session(WorkLeafSession {
+2634:            id: agent_id.clone(),
+2635:            kind: launch.kind.clone(),
+2636:            title,
+2637:            feature: launch.feature.clone(),
+2638:            lines: Vec::new(),
+2639:            loading: Some(WorkLeafLoading::Launching),
+2640:        });
+2641:        self.pending_events.push(WorkLeafEvent::AgentSelected {
+2642:            agent_id: agent_id.clone(),
+2643:        });
+2644:        if let Some(first_prompt) = title_prompt {
+2645:            self.start_title_worker(agent_id.clone(), first_prompt);
+2646:        }
+2647:        self.start_launch_worker(launch);
+2648:        Ok(agent_id)
+2649:    }
+2650:
+2651:    pub fn send_message(&mut self, agent_id: &AgentId, message: &str) -> Result<(), CliError> {
+2652:        let message = message.trim();
+2653:        if message.is_empty() {
+2654:            return Ok(());
+2655:        }
+2656:        if self
+2657:            .sessions
+2658:            .get(agent_id)
+2659:            .and_then(|session| session.loading)
+2660:            .is_some()
+2661:        {
+2662:            self.append_agent_line(
+2663:                agent_id,
+2664:                format!("work-leaf: {} is still working", self.agent_display_name()),
+2665:            );
+2666:            return Ok(());
+2667:        }
+2668:
+2669:        let title_prompt = self.reserve_first_chat_title_prompt(agent_id, message);
+2670:        self.set_session_loading(agent_id, Some(WorkLeafLoading::WaitingForReply));
+2671:        self.append_agent_line(agent_id, format!("user: {message}"));
+2672:        let agent_id = agent_id.clone();
+2673:        let message = message.to_string();
+2674:        if let Some(first_prompt) = title_prompt {
+2675:            self.start_title_worker(agent_id.clone(), first_prompt);
+2676:        }
+2677:        self.start_worker(move |mut chat, sender| {
+2678:            let stream_sender = sender.clone();
+2679:            let display_name = chat.agent_profile().display_name.clone();
+2680:            let mut stream = move |event_agent_id: &AgentId, event| {
+2681:                let _ = stream_sender.send(WorkerEvent::Stream {
+2682:                    agent_id: event_agent_id.clone(),
+2683:                    text: stream_event_text(event, &display_name),
+2684:                });
+2685:            };
+2686:            match chat.send_to_agent_streaming_with_ids(&agent_id, &message, &mut stream) {
+2687:                Ok(result) => {
+2688:                    let _ = sender.send(WorkerEvent::Complete {
+2689:                        agent_id: Some(agent_id),
+2690:                        result,
+2691:                    });
+2692:                }
+2693:                Err(error) => {
+2694:                    let _ = sender.send(WorkerEvent::Error {
+2695:                        agent_id: Some(agent_id),
+2696:                        message: command_chat_error_text(&error),
+2697:                    });
+2698:                }
+2699:            }
+2700:        });
+2701:        Ok(())
+2702:    }
+2703:
+2704:    pub fn start_review(&mut self) -> Result<Vec<AgentId>, CliError> {
+2705:        self.start_review_for_agent(None)
+2706:    }
+2707:
+2708:    fn start_review_for_patch_agent(
+2709:        &mut self,
+2710:        agent_id: &AgentId,
+2711:    ) -> Result<Vec<AgentId>, CliError> {
+2712:        self.start_review_for_agent(Some(agent_id))
+2713:    }
+2714:
+2715:    fn start_review_for_agent(
+2716:        &mut self,
+2717:        target_agent_id: Option<&AgentId>,
+2718:    ) -> Result<Vec<AgentId>, CliError> {
+2719:        let (project_dir, agent_profile) = {
+2720:            let chat = self
+2721:                .chat
+2722:                .as_ref()
+2723:                .expect("work-leaf controller command chat is present");
+2724:            (
+2725:                chat.project_dir().to_path_buf(),
+2726:                chat.agent_profile().clone(),
+2727:            )
+2728:        };
+2729:        let empty_baselines = BTreeMap::new();
+2730:        let agent_baselines = if target_agent_id.is_some() {
+2731:            &self.agent_review_baselines
+2732:        } else {
+2733:            &empty_baselines
+2734:        };
+2735:        let commits = GitHistory::new(project_dir)
+2736:            .latest_agent_review_commits(&self.reviewed_agent_commits, agent_baselines)?;
+2737:        if commits.is_empty() {
+2738:            self.push_command_line("no agent commits found".to_string());
+2739:            return Ok(Vec::new());
+2740:        }
+2741:
+2742:        let mut reviewer_ids = Vec::new();
+2743:        for commit in commits {
+2744:            if target_agent_id.is_some_and(|agent_id| &commit.agent_id != agent_id) {
+2745:                continue;
+2746:            }
+2747:            if self
+2748:                .reviewed_agent_commits
+2749:                .get(&commit.agent_id)
+2750:                .is_some_and(|hash| hash == &commit.hash)
+2751:                || self
+2752:                    .review_commits_in_progress
+2753:                    .get(&commit.agent_id)
+2754:                    .is_some_and(|hash| hash == &commit.hash)
+2755:            {
+2756:                continue;
+2757:            }
+2758:            let reviewer_id = AgentId::new(format!("review-{}", commit.agent_id.as_str()))
+2759:                .map_err(CliError::Agent)?;
+2760:            let reviewer_busy = self
+2761:                .sessions
+2762:                .get(&reviewer_id)
+2763:                .and_then(|session| session.loading)
+2764:                .is_some();
+2765:            if reviewer_busy {
+2766:                continue;
+2767:            }
+2768:            let session_exists = self.sessions.contains_key(&reviewer_id);
+2769:            let reuse_reviewer = self.reviewers.contains(&reviewer_id);
+2770:            if session_exists {
+2771:                self.set_session_loading(&reviewer_id, Some(WorkLeafLoading::WaitingForReply));
+2772:            } else {
+2773:                self.add_session(WorkLeafSession {
+2774:                    id: reviewer_id.clone(),
+2775:                    kind: agent_profile.kind.clone(),
+2776:                    title: format!("review {}", commit.feature),
+2777:                    feature: format!("review {}", commit.feature),
+2778:                    lines: Vec::new(),
+2779:                    loading: Some(WorkLeafLoading::WaitingForReply),
+2780:                });
+2781:            }
+2782:            if reviewer_ids.is_empty() {
+2783:                self.pending_events.push(WorkLeafEvent::AgentSelected {
+2784:                    agent_id: reviewer_id.clone(),
+2785:                });
+2786:            }
+2787:            self.review_commits_in_progress
+2788:                .insert(commit.agent_id.clone(), commit.hash.clone());
+2789:            self.start_review_worker(commit, reviewer_id.clone(), reuse_reviewer);
+2790:            reviewer_ids.push(reviewer_id);
+2791:        }
+2792:        Ok(reviewer_ids)
+2793:    }
+2794:
+2795:    pub fn start_linearize(&mut self) -> Result<Option<AgentId>, CliError> {
+2796:        let launch = {
+2797:            let chat = self
+2798:                .chat
+2799:                .as_mut()
+2800:                .expect("work-leaf controller command chat is present");
+2801:            chat.prepare_linearize_launch()?
+2802:        };
+2803:        let Some(launch) = launch else {
+2804:            self.push_command_line("no reviewed agent commits found".to_string());
+2805:            return Ok(None);
+2806:        };
+2807:
+2808:        let agent_id = launch.id.clone();
+2809:        let title = launch.feature.clone();
+2810:        self.register_agent_feature(agent_id.clone(), title.clone());
+2811:        self.add_session(WorkLeafSession {
+2812:            id: agent_id.clone(),
+2813:            kind: launch.kind.clone(),
+2814:            title: title.clone(),
+2815:            feature: title,
+2816:            lines: Vec::new(),
+2817:            loading: Some(WorkLeafLoading::Launching),
+2818:        });
+2819:        self.pending_events.push(WorkLeafEvent::AgentSelected {
+2820:            agent_id: agent_id.clone(),
+2821:        });
+2822:        self.start_launch_worker(launch);
+2823:        Ok(Some(agent_id))
+2824:    }
+2825:
+2826:    pub fn loading_text(&self, loading: WorkLeafLoading) -> String {
+2827:        match loading {
+2828:            WorkLeafLoading::Launching => {
+2829:                format!("Starting {} session", self.agent_display_name())
+2830:            }
+2831:            WorkLeafLoading::WaitingForReply => {
+2832:                format!("Waiting for {}", self.agent_display_name())
+2833:            }
+2834:        }
+2835:    }
+2836:
+2837:    pub fn shutdown(&mut self) {
+2838:        self.shutdown.shutdown();
+2839:    }
+2840:
+2841:    fn poll_worker(&mut self) {
+2842:        let mut events = Vec::new();
+2843:        for worker in &self.workers {
+2844:            while let Ok(event) = worker.receiver.try_recv() {
+2845:                events.push(event);
+2846:            }
+2847:        }
+2848:        for event in events {
+2849:            self.apply_worker_event(event);
+2850:        }
+2851:
+2852:        let mut index = 0;
+2853:        while index < self.workers.len() {
+2854:            if self.workers[index].handle.is_finished() {
+2855:                let worker = self.workers.swap_remove(index);
+2856:                while let Ok(event) = worker.receiver.try_recv() {
+2857:                    self.apply_worker_event(event);
+2858:                }
+2859:                worker
+2860:                    .handle
+2861:                    .join()
+2862:                    .expect("work-leaf worker did not panic");
+2863:            } else {
+2864:                index += 1;
+2865:            }
+2866:        }
+2867:    }
+2868:
+2869:    fn session_contains(&self, agent_id: &AgentId, needle: &str) -> bool {
+2870:        self.sessions
+2871:            .get(agent_id)
+2872:            .is_some_and(|session| session.lines.iter().any(|line| line.contains(needle)))
+2873:    }
+2874:
+2875:    fn reserve_launch_title_prompt(
+2876:        &mut self,
+2877:        launch: &AgentLaunch,
+2878:        title_pending: bool,
+2879:    ) -> Option<String> {
+2880:        if title_pending {
+2881:            None
+2882:        } else {
+2883:            self.title_agent.mark_named(&launch.id);
+2884:            Some(launch.prompt.clone())
+2885:        }
+2886:    }
+2887:
+2888:    fn register_agent_feature(&mut self, agent_id: AgentId, feature: String) {
+2889:        if let Some(chat) = self.chat.as_mut() {
+2890:            chat.register_agent_feature(agent_id, feature);
+2891:        }
+2892:    }
+2893:
+2894:    fn reserve_first_chat_title_prompt(
+2895:        &mut self,
+2896:        agent_id: &AgentId,
+2897:        prompt: &str,
+2898:    ) -> Option<String> {
+2899:        if !agent_id.as_str().starts_with("user-") {
+2900:            return None;
+2901:        }
+2902:        if !self.title_agent.reserve_first_prompt_title(agent_id) {
+2903:            return None;
+2904:        }
+2905:        Some(prompt.to_string())
+2906:    }
+2907:
+2908:    fn remember_agent_review_baseline(&mut self, agent_id: &AgentId) {
+2909:        if !agent_id.as_str().starts_with("user-")
+2910:            || self.agent_review_baselines.contains_key(agent_id)
+2911:        {
+2912:            return;
+2913:        }
+2914:        let Some(root) = self
+2915:            .chat
+2916:            .as_ref()
+2917:            .map(|chat| chat.project_dir().to_path_buf())
+2918:        else {
+2919:            return;
+2920:        };
+2921:        if let Ok(Some(hash)) = GitHistory::new(root).head_hash() {
+2922:            self.agent_review_baselines.insert(agent_id.clone(), hash);
+2923:        }
+2924:    }
+2925:
+2926:    fn add_session(&mut self, session: WorkLeafSession) {
+2927:        self.sessions.insert(session.id.clone(), session.clone());
+2928:        self.pending_events
+2929:            .push(WorkLeafEvent::AgentAdded { session });
+2930:    }
+2931:
+2932:    fn start_launch_worker(&mut self, launch: AgentLaunch) {
+2933:        let agent_id = launch.id.clone();
+2934:        self.set_session_loading(&agent_id, Some(WorkLeafLoading::Launching));
+2935:        self.start_worker(move |mut chat, sender| {
+2936:            let stream_sender = sender.clone();
+2937:            let display_name = chat.agent_profile().display_name.clone();
+2938:            let mut stream = move |event_agent_id: &AgentId, event| {
+2939:                let _ = stream_sender.send(WorkerEvent::Stream {
+2940:                    agent_id: event_agent_id.clone(),
+2941:                    text: stream_event_text(event, &display_name),
+2942:                });
+2943:            };
+2944:            match chat.launch_prepared_agent_streaming_with_ids(launch, &mut stream) {
+2945:                Ok(result) => {
+2946:                    let _ = sender.send(WorkerEvent::Complete {
+2947:                        agent_id: Some(agent_id),
+2948:                        result,
+2949:                    });
+2950:                }
+2951:                Err(error) => {
+2952:                    let _ = sender.send(WorkerEvent::Error {
+2953:                        agent_id: Some(agent_id),
+2954:                        message: command_chat_error_text(&error),
+2955:                    });
+2956:                }
+2957:            }
+2958:        });
+2959:    }
+2960:
+2961:    fn start_title_worker(&mut self, agent_id: AgentId, first_prompt: String) {
+2962:        self.start_worker(move |mut chat, sender| {
+2963:            let title = chat
+2964:                .generate_chat_title(&agent_id, &first_prompt)
+2965:                .unwrap_or_else(|_| fallback_chat_title_from_prompt(&first_prompt));
+2966:            let _ = sender.send(WorkerEvent::TitleGenerated { agent_id, title });
+2967:        });
+2968:    }
+2969:
+2970:    fn start_review_worker(
+2971:        &mut self,
+2972:        commit: crate::review::AgentCommit,
+2973:        reviewer_id: AgentId,
+2974:        reuse_reviewer: bool,
+2975:    ) {
+2976:        self.start_worker(move |mut chat, sender| {
+2977:            let stream_sender = sender.clone();
+2978:            let display_name = chat.agent_profile().display_name.clone();
+2979:            let reviewed_agent_id = commit.agent_id.clone();
+2980:            let mut stream = move |event_agent_id: &AgentId, event| {
+2981:                let _ = stream_sender.send(WorkerEvent::Stream {
+2982:                    agent_id: event_agent_id.clone(),
+2983:                    text: stream_event_text(event, &display_name),
+2984:                });
+2985:            };
+2986:            match chat.review_commit_streaming_with_ids(
+2987:                commit,
+2988:                reviewer_id.clone(),
+2989:                reuse_reviewer,
+2990:                &mut stream,
+2991:            ) {
+2992:                Ok(result) => {
+2993:                    let _ = sender.send(WorkerEvent::Complete {
+2994:                        agent_id: Some(reviewer_id),
+2995:                        result: CommandChatResult::ReviewComplete(vec![result]),
+2996:                    });
+2997:                }
+2998:                Err(error) => {
+2999:                    let _ = sender.send(WorkerEvent::ReviewError {
+3000:                        reviewer_id,
+3001:                        reviewed_agent_id,
+3002:                        message: error.to_string(),
+3003:                    });
+3004:                }
+3005:            }
+3006:        });
+3007:    }
+3008:
+3009:    fn start_command_worker(&mut self, line: String) {
+3010:        self.start_worker(move |mut chat, sender| match chat.handle_line(&line) {
+3011:            Ok(result) => {
+3012:                let _ = sender.send(WorkerEvent::Complete {
+3013:                    agent_id: None,
+3014:                    result,
+3015:                });
+3016:            }
+3017:            Err(error) => {
+3018:                let _ = sender.send(WorkerEvent::Error {
+3019:                    agent_id: None,
+3020:                    message: command_chat_error_text(&error),
+3021:                });
+3022:            }
+3023:        });
+3024:    }
+3025:
+3026:    fn start_worker<F>(&mut self, operation: F)
+3027:    where
+3028:        F: FnOnce(CommandChat<B>, Sender<WorkerEvent>) + Send + 'static,
+3029:    {
+3030:        let Some(chat) = self.chat.as_ref().cloned() else {
+3031:            return;
+3032:        };
+3033:        let (sender, receiver) = mpsc::channel();
+3034:        let handle = thread::spawn(move || operation(chat, sender));
+3035:        self.workers.push(Worker { receiver, handle });
+3036:    }
+3037:
+3038:    fn apply_worker_event(&mut self, event: WorkerEvent) {
+3039:        match event {
+3040:            WorkerEvent::Stream { agent_id, text } => {
+3041:                self.append_agent_line(&agent_id, text);
+3042:            }
+3043:            WorkerEvent::TitleGenerated { agent_id, title } => {
+3044:                self.apply_agent_title(&agent_id, title);
+3045:            }
+3046:            WorkerEvent::Complete { agent_id, result } => {
+3047:                if let Some(agent_id) = agent_id {
+3048:                    let start_review = should_start_review(&agent_id, &result);
+3049:                    self.set_session_loading(&agent_id, None);
+3050:                    self.apply_agent_result(&agent_id, &result);
+3051:                    if start_review && let Err(error) = self.start_review_for_patch_agent(&agent_id)
+3052:                    {
+3053:                        self.push_command_line(command_chat_error_text(&error));
+3054:                    }
+3055:                } else {
+3056:                    self.push_command_line(command_result_text(&result));
+3057:                    if matches!(result, CommandChatResult::Quit) {
+3058:                        self.request_quit();
+3059:                    }
+3060:                }
+3061:            }
+3062:            WorkerEvent::Error { agent_id, message } => {
+3063:                if let Some(agent_id) = agent_id {
+3064:                    self.set_session_loading(&agent_id, None);
+3065:                    self.append_agent_line(&agent_id, message);
+3066:                } else {
+3067:                    self.push_command_line(message);
+3068:                }
+3069:            }
+3070:            WorkerEvent::ReviewError {
+3071:                reviewer_id,
+3072:                reviewed_agent_id,
+3073:                message,
+3074:            } => {
+3075:                self.review_commits_in_progress.remove(&reviewed_agent_id);
+3076:                self.set_session_loading(&reviewer_id, None);
+3077:                self.append_agent_line(&reviewer_id, message);
+3078:            }
+3079:        }
+3080:    }
+3081:
+3082:    fn apply_agent_result(&mut self, agent_id: &AgentId, result: &CommandChatResult) {
+3083:        match result {
+3084:            CommandChatResult::AgentLaunched { reply, .. }
+3085:            | CommandChatResult::AgentMessage { reply, .. } => {
+3086:                if !reply.is_empty() {
+3087:                    self.append_agent_line(agent_id, reply.clone());
+3088:                }
+3089:            }
+3090:            CommandChatResult::ReviewComplete(results) => {
+3091:                let text = command_result_text(result);
+3092:                self.push_command_line(text.clone());
+3093:                for review in results {
+3094:                    self.record_review_result(review);
+3095:                    self.append_agent_line(&review.commit.agent_id, format!("review: {text}"));
+3096:                }
+3097:            }
+3098:            other => {
+3099:                self.push_command_line(command_result_text(other));
+3100:            }
+3101:        }
+3102:    }
+3103:
+3104:    fn apply_agent_title(&mut self, agent_id: &AgentId, title: String) {
+3105:        if let Some(session) = self.sessions.get_mut(agent_id) {
+3106:            session.title = title.clone();
+3107:            session.feature = title.clone();
+3108:            self.pending_events.push(WorkLeafEvent::AgentStatusUpdated {
+3109:                agent_id: session.id.clone(),
+3110:                kind: session.kind.clone(),
+3111:                title: session.title.clone(),
+3112:                feature: session.feature.clone(),
+3113:                loading: session.loading,
+3114:            });
+3115:        }
+3116:        self.register_agent_feature(agent_id.clone(), title);
+3117:    }
+3118:
+3119:    fn append_agent_line(&mut self, agent_id: &AgentId, line: String) {
+3120:        if line.is_empty() {
+3121:            return;
+3122:        }
+3123:        let fallback_kind = self.agent_kind();
+3124:        if !self.sessions.contains_key(agent_id) {
+3125:            let session = WorkLeafSession::unknown(agent_id.clone(), fallback_kind);

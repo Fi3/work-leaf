@@ -1,0 +1,29 @@
+I’ll inspect the terminal UI architecture and harness first, then add the visual-mode behavior against the existing state machine instead of introducing a parallel input path. After that I’ll run focused UI tests and any narrow terminal checks needed for this feature.
+One sandboxed read hit a transient mount-lock error, while the repository file listing and status completed. I’m retrying the architecture read directly and then I’ll trace the UI input/rendering paths.
+The UI search points to `src/ui.rs`, `src/terminal_app.rs`, and the UI harness tests as the main surface. I still need the architecture file required by this checkout’s rules, so I’m switching to a simpler read invocation before editing.
+Architecture-wise this stays inside the documented terminal frontend boundary: `TerminalApp` handles raw bytes and `TerminalUi` owns terminal presentation state. I’m reading those two layers plus the harness tests now so the implementation follows the current modal model.
+The sandbox wrapper is intermittently failing before the shell starts, so I’m avoiding parallel reads for the moment and using the commands that have worked in this environment. Once I have the file context, I’ll keep edits scoped to `src/ui.rs`/terminal adapter tests.
+I have the high-level flow now. I’m filling in the rendering details around the pane widgets/status line because visual selections need to be drawn through the existing `tui` buffer, not just tracked as mode state.
+The relevant rendering methods are concentrated in one range: `render_tui_buffer`, `left_widget`, `right_widget`, cursor placement, and pending-key handling. I’m reading those by symbol context to avoid the sandbox issue with broader file slicing.
+The harness already drives raw bytes through `TerminalApp` and `TerminalUi`, so the new tests can reproduce the feature at the same level users exercise it. Next I’m isolating where printable keys, escape sequences, Enter, and prompt buffers are mapped.
+There are two paths to keep in sync: the real terminal app and the lightweight UI harness. I’m reading the real app’s core now, especially the shared line-buffer helpers, so copy/yank can use the same buffers that rendering sees.
+The app stores prompt and chat input in a small `PromptLine` wrapper over `LineBuffer`; I can extend that wrapper with copy-friendly read helpers and cursor movement. I’m checking the dependency API briefly, then I’ll write failing focused tests for the expected visual/yank flow.
+I’m going to add the focused harness/app tests first and run them in the failing state, per the repo’s feature rule. The tests cover character visual yank in the right pane, line visual yank in the left pane, and Ctrl-v block selection through the raw terminal byte path.
+The patch tool hit the same sandbox mount-lock failure before reading the file. I’m retrying the same scoped test edit; if the wrapper keeps failing, I’ll continue with small single-file patches and verify each step.
+The sandbox failure is now blocking file edits, not the Rust work itself. I’m checking the writable `/tmp` state that the wrapper uses so I can get the normal patch path working without changing repository contents by shell redirection.
+Even a directory listing is currently failing before command startup, so this is outside the repo. I’m probing with the simplest command that succeeded earlier to see whether the wrapper recovers before I proceed.
+Read-only commands are still starting, but write-scoped commands are failing in the sandbox setup. I’m going to do one more patch-tool retry after the wrapper has recovered for reads; if that still fails, I’ll report the environment blocker clearly.
+The dedicated patch tool remains blocked by the same pre-command sandbox error. I’m checking whether any write-capable command can start at all; this is a diagnostic write under `/tmp`, not a repository edit.
+Write startup is failing before the requested command runs, so the repository cannot currently be modified through either `apply_patch` or shell writes. I’m trying a PTY invocation once because it uses a slightly different execution path; if that fails too, this turn is blocked by the sandbox wrapper.
+The PTY path has the same write-startup failure. I’m going to wait briefly and retry a tiny `/tmp` write once more; if it still fails, I can’t safely edit this checkout in the current sandbox state.
+Now even a no-op sleep is failing before shell startup, so the wrapper has stopped launching most commands. I’m doing one final read probe to distinguish total command failure from write-only failure.
+Command execution is failing before any repository command runs, with the same `Read-only file system` error on the sandbox mount registry lock. I can’t edit or run tests until that wrapper state is fixed.
+I’m blocked by the execution sandbox before any edit or test command can run.
+
+Every write attempt through `apply_patch` and shell startup is failing with:
+
+```text
+failed to open synthetic bubblewrap mount registry lock /tmp/codex-bwrap-synthetic-mount-targets-1000/lock: Read-only file system
+```
+
+I did inspect `docs/architecture.md` via `rg` before the failure became persistent, and the change belongs in the terminal frontend boundary: `src/terminal_app.rs`, `src/ui.rs`, `src/ui_harness.rs`, and focused tests under `tests/`. No repository files were changed.

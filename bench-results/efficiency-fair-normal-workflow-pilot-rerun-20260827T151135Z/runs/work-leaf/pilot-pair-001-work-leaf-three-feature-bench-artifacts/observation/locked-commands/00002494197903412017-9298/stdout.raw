@@ -1,0 +1,614 @@
+2485:trait TerminalController {
+2486:    fn snapshot(&self) -> crate::WorkLeafSnapshot;
+2487:    fn drain_events(&mut self) -> Vec<WorkLeafEvent>;
+2488:    fn execute_command_line(&mut self, line: &str);
+2489:    fn send_command_agent_message(&mut self, message: &str);
+2490:    fn send_message(&mut self, agent_id: &AgentId, message: &str);
+2491:    fn interrupt_agent(&mut self, agent_id: &AgentId);
+2492:    fn push_transcript_line(&mut self, line: String);
+2493:    fn is_busy(&mut self) -> bool;
+2494:    fn loading_text(&self, loading: WorkLeafLoading) -> String;
+2495:    fn shutdown(&mut self);
+2496:}
+2497:
+2498:impl<B> TerminalController for LocalTerminalController<B>
+2499:where
+2500:    B: AgentBackend + Clone + Send + 'static,
+2501:{
+2502:    fn snapshot(&self) -> crate::WorkLeafSnapshot {
+2503:        self.controller.snapshot()
+2504:    }
+2505:
+2506:    fn drain_events(&mut self) -> Vec<WorkLeafEvent> {
+2507:        self.controller.drain_events()
+2508:    }
+2509:
+2510:    fn execute_command_line(&mut self, line: &str) {
+2511:        self.controller.execute_command_line(line);
+2512:    }
+2513:
+2514:    fn send_command_agent_message(&mut self, message: &str) {
+2515:        self.controller.send_command_agent_message(message);
+2516:    }
+2517:
+2518:    fn send_message(&mut self, agent_id: &AgentId, message: &str) {
+2519:        let _ = self.controller.send_message(agent_id, message);
+2520:    }
+2521:
+2522:    fn interrupt_agent(&mut self, agent_id: &AgentId) {
+2523:        self.controller.interrupt_agent(agent_id);
+2524:    }
+2525:
+2526:    fn push_transcript_line(&mut self, line: String) {
+2527:        self.controller.push_transcript_line(line);
+2528:    }
+2529:
+2530:    fn is_busy(&mut self) -> bool {
+2531:        self.controller.is_busy()
+2532:    }
+2533:
+2534:    fn loading_text(&self, loading: WorkLeafLoading) -> String {
+2535:        self.controller.loading_text(loading)
+2536:    }
+2537:
+2538:    fn shutdown(&mut self) {
+2539:        self.controller.shutdown();
+2540:    }
+2541:}
+2542:
+2543:impl TerminalController for HttpControllerClient {
+2544:    fn snapshot(&self) -> crate::WorkLeafSnapshot {
+2545:        self.snapshot()
+2546:            .unwrap_or_else(|error| crate::WorkLeafSnapshot {
+2547:                command_transcript: vec![format!("error: {error}")],
+2548:                sessions: Vec::new(),
+2549:            })
+2550:    }
+2551:
+2552:    fn drain_events(&mut self) -> Vec<WorkLeafEvent> {
+2553:        HttpControllerClient::drain_events(self).unwrap_or_default()
+2554:    }
+2555:
+2556:    fn execute_command_line(&mut self, line: &str) {
+2557:        let _ = HttpControllerClient::execute_command_line(self, line);
+2558:    }
+2559:
+2560:    fn send_command_agent_message(&mut self, message: &str) {
+2561:        let _ = HttpControllerClient::send_command_agent_message(self, message);
+2562:    }
+2563:
+2564:    fn send_message(&mut self, agent_id: &AgentId, message: &str) {
+2565:        let _ = HttpControllerClient::send_message(self, agent_id, message);
+2566:    }
+2567:
+2568:    fn interrupt_agent(&mut self, agent_id: &AgentId) {
+2569:        let _ = HttpControllerClient::interrupt_agent(self, agent_id);
+2570:    }
+2571:
+2572:    fn push_transcript_line(&mut self, line: String) {
+2573:        let _ = HttpControllerClient::push_transcript_line(self, line);
+2574:    }
+2575:
+2576:    fn is_busy(&mut self) -> bool {
+2577:        HttpControllerClient::is_busy(self).unwrap_or(false)
+2578:    }
+2579:
+2580:    fn loading_text(&self, loading: WorkLeafLoading) -> String {
+2581:        HttpControllerClient::loading_text(self, loading)
+2582:            .unwrap_or_else(|_| "Waiting for agent".to_string())
+2583:    }
+2584:
+2585:    fn shutdown(&mut self) {
+2586:        let _ = HttpControllerClient::shutdown(self);
+2587:    }
+2588:}
+2589:
+2590:#[derive(Debug)]
+2591:struct TerminalAppCore<C>
+2592:where
+2593:    C: TerminalController,
+2594:{
+2595:    controller: C,
+2596:    ui: TerminalUi,
+2597:    prompt_buffer: PromptLine,
+2598:    prompt_history: Vec<String>,
+2599:    prompt_history_index: Option<usize>,
+2600:    prompt_history_draft: Option<String>,
+2601:    chat_buffer: PromptLine,
+2602:    chat_history: Vec<String>,
+2603:    chat_history_index: Option<usize>,
+2604:    chat_history_draft: Option<String>,
+2605:    escape_sequence: Option<PendingEscapeSequence>,
+2606:    paste_mode: bool,
+2607:    skip_next_paste_lf: bool,
+2608:    spinner: usize,
+2609:    snapshot: WorkLeafSnapshot,
+2610:    loading_text: [(WorkLeafLoading, String); 2],
+2611:    dirty: bool,
+2612:    quit: bool,
+2613:}
+2614:
+2615:impl<C> TerminalAppCore<C>
+2616:where
+2617:    C: TerminalController,
+2618:{
+2619:    fn new(controller: C, width: u16, height: u16) -> Self {
+2620:        let snapshot = controller.snapshot();
+2621:        let loading_text = [
+2622:            (
+2623:                WorkLeafLoading::Launching,
+2624:                controller.loading_text(WorkLeafLoading::Launching),
+2625:            ),
+2626:            (
+2627:                WorkLeafLoading::WaitingForReply,
+2628:                controller.loading_text(WorkLeafLoading::WaitingForReply),
+2629:            ),
+2630:        ];
+2631:        let mut app = Self {
+2632:            controller,
+2633:            ui: TerminalUi::new(width, height),
+2634:            prompt_buffer: PromptLine::new(),
+2635:            prompt_history: Vec::new(),
+2636:            prompt_history_index: None,
+2637:            prompt_history_draft: None,
+2638:            chat_buffer: PromptLine::new(),
+2639:            chat_history: Vec::new(),
+2640:            chat_history_index: None,
+2641:            chat_history_draft: None,
+2642:            escape_sequence: None,
+2643:            paste_mode: false,
+2644:            skip_next_paste_lf: false,
+2645:            spinner: 0,
+2646:            snapshot,
+2647:            loading_text,
+2648:            dirty: true,
+2649:            quit: false,
+2650:        };
+2651:        let sessions = app.snapshot.sessions.clone();
+2652:        for session in sessions {
+2653:            app.apply_session_to_ui(&session);
+2654:        }
+2655:        app
+2656:    }
+2657:
+2658:    fn ui(&self) -> &TerminalUi {
+2659:        &self.ui
+2660:    }
+2661:
+2662:    fn is_quit(&self) -> bool {
+2663:        self.quit
+2664:    }
+2665:
+2666:    fn is_busy(&mut self) -> bool {
+2667:        let busy = self.controller.is_busy();
+2668:        self.apply_controller_events();
+2669:        busy
+2670:    }
+2671:
+2672:    fn needs_render(&self) -> bool {
+2673:        self.dirty || self.ui.has_status_notice()
+2674:    }
+2675:
+2676:    fn mark_rendered(&mut self) {
+2677:        self.dirty = false;
+2678:        self.ui.clear_expired_status_notice();
+2679:    }
+2680:
+2681:    fn tick(&mut self) {
+2682:        let busy = self.controller.is_busy();
+2683:        self.apply_controller_events();
+2684:        if busy {
+2685:            self.spinner = (self.spinner + 1) % SPINNER.len();
+2686:            self.dirty = true;
+2687:        }
+2688:    }
+2689:
+2690:    fn wait_for_idle(&mut self, timeout: Duration) -> bool {
+2691:        let start = Instant::now();
+2692:        while start.elapsed() < timeout {
+2693:            self.apply_controller_events();
+2694:            if !self.controller.is_busy() {
+2695:                return true;
+2696:            }
+2697:            thread::sleep(Duration::from_millis(10));
+2698:        }
+2699:        self.apply_controller_events();
+2700:        !self.controller.is_busy()
+2701:    }
+2702:
+2703:    fn wait_for_frame_contains(&mut self, needle: &str, timeout: Duration) -> bool {
+2704:        let start = Instant::now();
+2705:        while start.elapsed() < timeout {
+2706:            self.apply_controller_events();
+2707:            if self.render_frame().contains(needle) {
+2708:                return true;
+2709:            }
+2710:            thread::sleep(Duration::from_millis(10));
+2711:        }
+2712:        self.apply_controller_events();
+2713:        self.render_frame().contains(needle)
+2714:    }
+2715:
+2716:    fn handle_bytes(&mut self, bytes: &[u8]) -> bool {
+2717:        if !self.handle_terminal_bytes(bytes) {
+2718:            return false;
+2719:        }
+2720:        self.finish_pending_terminal_input();
+2721:        !self.quit
+2722:    }
+2723:
+2724:    fn handle_terminal_bytes(&mut self, bytes: &[u8]) -> bool {
+2725:        self.apply_controller_events();
+2726:        for byte in bytes {
+2727:            if !self.handle_byte_without_poll(*byte) {
+2728:                self.apply_controller_events();
+2729:                return false;
+2730:            }
+2731:        }
+2732:        self.apply_controller_events();
+2733:        !self.quit
+2734:    }
+2735:
+2736:    pub fn handle_byte(&mut self, byte: u8) -> bool {
+2737:        self.apply_controller_events();
+2738:        let keep_running = self.handle_byte_without_poll(byte);
+2739:        self.apply_controller_events();
+2740:        keep_running && !self.quit
+2741:    }
+2742:
+2743:    fn finish_pending_terminal_input(&mut self) {
+2744:        self.finish_pending_escape_sequence();
+2745:        self.apply_controller_events();
+2746:    }
+2747:
+2748:    fn handle_byte_without_poll(&mut self, byte: u8) -> bool {
+2749:        if self.quit {
+2750:            return false;
+2751:        }
+2752:
+2753:        if self.continue_escape_sequence(byte) {
+2754:            return !self.quit;
+2755:        }
+2756:
+2757:        if byte == 27 {
+2758:            let defer_escape = self.defer_escape_key();
+2759:            self.escape_sequence = Some(PendingEscapeSequence {
+2760:                bytes: Vec::new(),
+2761:                mode_before: self.ui.mode(),
+2762:                escape_dispatched: !defer_escape,
+2763:            });
+2764:            if !defer_escape {
+2765:                self.handle_input(TerminalAppInput::Key(UiKey::Esc));
+2766:            }
+2767:            return !self.quit;
+2768:        }
+2769:
+2770:        let Some(input) = self.input_from_byte(byte) else {
+2771:            return true;
+2772:        };
+2773:        self.handle_input(input);
+2774:        !self.quit
+2775:    }
+2776:
+2777:    pub fn render_frame(&self) -> String {
+2778:        let right_content = self.right_content();
+2779:        let right_cursor_column = (self.ui.focus() == PaneFocus::Right
+2780:            && self.ui.mode() != UiMode::Prompt)
+2781:            .then_some(6 + self.chat_buffer.cursor_char_count());
+2782:        self.ui.render_screen_with_cursors(
+2783:            &right_content,
+2784:            self.prompt_buffer.as_str(),
+2785:            self.prompt_buffer.cursor(),
+2786:            right_cursor_column,
+2787:        )
+2788:    }
+2789:
+2790:    pub fn poll_worker(&mut self) {
+2791:        self.apply_controller_events();
+2792:    }
+2793:
+2794:    fn handle_input(&mut self, input: TerminalAppInput) {
+2795:        match input {
+2796:            TerminalAppInput::Quit => {
+2797:                self.request_quit();
+2798:            }
+2799:            TerminalAppInput::Interrupt => {
+2800:                self.ui.show_ctrl_c_exit_notice();
+2801:                if self.ui.focus() == PaneFocus::Right
+2802:                    && let Some(agent_id) = self.ui.selected_agent().cloned()
+2803:                {
+2804:                    self.controller.interrupt_agent(&agent_id);
+2805:                    self.apply_controller_events();
+2806:                }
+2807:                self.dirty = true;
+2808:            }
+2809:            TerminalAppInput::Backspace if self.ui.mode() == UiMode::Prompt => {
+2810:                self.prompt_buffer.backspace();
+2811:                self.prompt_history_index = None;
+2812:                self.prompt_history_draft = None;
+2813:                self.dirty = true;
+2814:            }
+2815:            TerminalAppInput::Backspace if self.ui.mode() == UiMode::Insert => {
+2816:                self.chat_buffer.backspace();
+2817:                self.chat_history_index = None;
+2818:                self.chat_history_draft = None;
+2819:                self.dirty = true;
+2820:            }
+2821:            TerminalAppInput::Enter if self.ui.mode() == UiMode::Prompt => {
+2822:                let line = self.prompt_buffer.trimmed_string();
+2823:                self.prompt_buffer.clear();
+2824:                self.ui.handle_key(UiKey::Esc);
+2825:                if !line.is_empty() {
+2826:                    self.prompt_history.push(line.clone());
+2827:                    self.prompt_history_index = None;
+2828:                    self.prompt_history_draft = None;
+2829:                    self.handle_command_line(&line);
+2830:                } else {
+2831:                    self.prompt_history_index = None;
+2832:                    self.prompt_history_draft = None;
+2833:                }
+2834:                self.dirty = true;
+2835:            }
+2836:            TerminalAppInput::Enter if self.ui.mode() == UiMode::Insert => {
+2837:                self.send_chat_buffer();
+2838:            }
+2839:            TerminalAppInput::Char('/') if self.should_start_agent_slash_command() => {
+2840:                self.start_agent_slash_command();
+2841:                self.dirty = true;
+2842:            }
+2843:            TerminalAppInput::LineBreak if self.ui.mode() == UiMode::Insert => {
+2844:                self.chat_buffer.push('\n');
+2845:                self.chat_history_index = None;
+2846:                self.chat_history_draft = None;
+2847:                self.dirty = true;
+2848:            }
+2849:            TerminalAppInput::PasteStart => {
+2850:                self.paste_mode = true;
+2851:                self.skip_next_paste_lf = false;
+2852:            }
+2853:            TerminalAppInput::PasteEnd => {
+2854:                self.paste_mode = false;
+2855:                self.skip_next_paste_lf = false;
+2856:            }
+2857:            TerminalAppInput::Char(ch) if self.ui.mode() == UiMode::Prompt => {
+2858:                self.prompt_buffer.push(ch);
+2859:                self.prompt_history_index = None;
+2860:                self.prompt_history_draft = None;
+2861:                self.dirty = true;
+2862:            }
+2863:            TerminalAppInput::Char(ch) if self.ui.mode() == UiMode::Insert => {
+2864:                self.chat_buffer.push(ch);
+2865:                self.chat_history_index = None;
+2866:                self.chat_history_draft = None;
+2867:                self.dirty = true;
+2868:            }
+2869:            TerminalAppInput::Key(UiKey::Left) if self.ui.mode() == UiMode::Prompt => {
+2870:                self.prompt_buffer.move_left();
+2871:                self.dirty = true;
+2872:            }
+2873:            TerminalAppInput::Key(UiKey::Right) if self.ui.mode() == UiMode::Prompt => {
+2874:                self.prompt_buffer.move_right();
+2875:                self.dirty = true;
+2876:            }
+2877:            TerminalAppInput::Key(UiKey::Up) if self.ui.mode() == UiMode::Prompt => {
+2878:                self.recall_prompt_history(-1);
+2879:                self.dirty = true;
+2880:            }
+2881:            TerminalAppInput::Key(UiKey::Down) if self.ui.mode() == UiMode::Prompt => {
+2882:                self.recall_prompt_history(1);
+2883:                self.dirty = true;
+2884:            }
+2885:            TerminalAppInput::Key(UiKey::Left) if self.should_route_chat_arrow() => {
+2886:                self.chat_buffer.move_left();
+2887:                self.dirty = true;
+2888:            }
+2889:            TerminalAppInput::Key(UiKey::Right) if self.should_route_chat_arrow() => {
+2890:                self.chat_buffer.move_right();
+2891:                self.dirty = true;
+2892:            }
+2893:            TerminalAppInput::Key(UiKey::Up) if self.should_route_chat_arrow() => {
+2894:                self.recall_chat_history(-1);
+2895:                self.dirty = true;
+2896:            }
+2897:            TerminalAppInput::Key(UiKey::Down) if self.should_route_chat_arrow() => {
+2898:                self.recall_chat_history(1);
+2899:                self.dirty = true;
+2900:            }
+2901:            TerminalAppInput::Key(UiKey::Esc) => {
+2902:                self.prompt_buffer.clear();
+2903:                let actions = self.ui.handle_key(UiKey::Esc);
+2904:                self.record_actions(actions);
+2905:                self.dirty = true;
+2906:            }
+2907:            TerminalAppInput::Key(key) => {
+2908:                let actions = self.ui.handle_key(key);
+2909:                self.record_actions(actions);
+2910:                self.dirty = true;
+2911:            }
+2912:            TerminalAppInput::Char(ch) => {
+2913:                let actions = self.ui.handle_key(UiKey::Char(ch));
+2914:                self.record_actions(actions);
+2915:                self.dirty = true;
+2916:            }
+2917:            TerminalAppInput::Backspace | TerminalAppInput::Enter | TerminalAppInput::LineBreak => {
+2918:            }
+2919:        }
+2920:    }
+2921:
+2922:    fn handle_command_line(&mut self, line: &str) {
+2923:        if is_agent_slash_command(line)
+2924:            && let Some(agent_id) = self.ui.selected_agent().cloned()
+2925:        {
+2926:            self.controller.send_message(&agent_id, line);
+2927:            self.apply_controller_events();
+2928:            return;
+2929:        }
+2930:
+2931:        self.controller.execute_command_line(line);
+2932:        self.apply_controller_events();
+2933:    }
+2934:
+2935:    fn send_chat_buffer(&mut self) {
+2936:        let message = self.chat_buffer.trimmed_string();
+2937:        self.chat_buffer.clear();
+2938:        self.chat_history_index = None;
+2939:        self.chat_history_draft = None;
+2940:        if message.is_empty() {
+2941:            self.dirty = true;
+2942:            return;
+2943:        }
+2944:
+2945:        self.chat_history.push(message.clone());
+2946:        if let Some(agent_id) = self.ui.selected_agent().cloned() {
+2947:            self.controller.send_message(&agent_id, &message);
+2948:        } else {
+2949:            self.controller.send_command_agent_message(&message);
+2950:        }
+2951:        self.apply_controller_events();
+2952:        self.dirty = true;
+2953:    }
+2954:
+2955:    #[cfg(test)]
+2956:    fn clear_agent_loading(&mut self, agent_id: &AgentId) {
+2957:        self.set_agent_loading(agent_id, None);
+2958:    }
+2959:
+2960:    #[cfg(test)]
+2961:    fn set_agent_loading(&mut self, agent_id: &AgentId, loading: Option<LoadingKind>) {
+2962:        let _ = self.ui.set_agent_ready_state(agent_id, loading.is_none());
+2963:    }
+2964:
+2965:    fn record_actions(&mut self, actions: Vec<crate::UiAction>) {
+2966:        for action in actions {
+2967:            self.controller.push_transcript_line(ui_action_text(action));
+2968:        }
+2969:        self.apply_controller_events();
+2970:    }
+2971:
+2972:    fn apply_controller_events(&mut self) {
+2973:        let events = self.controller.drain_events();
+2974:        if events.is_empty() {
+2975:            return;
+2976:        }
+2977:        for event in events {
+2978:            match event {
+2979:                WorkLeafEvent::AgentAdded { session } | WorkLeafEvent::AgentUpdated { session } => {
+2980:                    self.upsert_cached_session(session.clone());
+2981:                    self.apply_session_to_ui(&session);
+2982:                }
+2983:                WorkLeafEvent::AgentStatusUpdated {
+2984:                    agent_id,
+2985:                    kind,
+2986:                    title,
+2987:                    feature,
+2988:                    loading,
+2989:                } => {
+2990:                    let session =
+2991:                        self.upsert_cached_session_status(agent_id, kind, title, feature, loading);
+2992:                    self.apply_session_to_ui(&session);
+2993:                }
+2994:                WorkLeafEvent::AgentLineAppended { agent_id, line } => {
+2995:                    self.append_cached_agent_line(&agent_id, line);
+2996:                }
+2997:                WorkLeafEvent::AgentSelected { agent_id } => {
+2998:                    let _ = self.ui.activate_agent_chat(&agent_id);
+2999:                }
+3000:                WorkLeafEvent::CommandTranscriptLine { line } => {
+3001:                    self.snapshot.command_transcript.push(line);
+3002:                }
+3003:                WorkLeafEvent::QuitRequested => {
+3004:                    self.quit = true;
+3005:                }
+3006:            }
+3007:        }
+3008:        self.dirty = true;
+3009:    }
+3010:
+3011:    fn upsert_cached_session(&mut self, session: WorkLeafSession) {
+3012:        if let Some(existing) = self
+3013:            .snapshot
+3014:            .sessions
+3015:            .iter_mut()
+3016:            .find(|existing| existing.id == session.id)
+3017:        {
+3018:            *existing = session;
+3019:        } else {
+3020:            self.snapshot.sessions.push(session);
+3021:            self.snapshot
+3022:                .sessions
+3023:                .sort_by(|left, right| left.id.as_str().cmp(right.id.as_str()));
+3024:        }
+3025:    }
+3026:
+3027:    fn upsert_cached_session_status(
+3028:        &mut self,
+3029:        agent_id: AgentId,
+3030:        kind: crate::agent::AgentKind,
+3031:        title: String,
+3032:        feature: String,
+3033:        loading: Option<WorkLeafLoading>,
+3034:    ) -> WorkLeafSession {
+3035:        if let Some(session) = self
+3036:            .snapshot
+3037:            .sessions
+3038:            .iter_mut()
+3039:            .find(|session| session.id == agent_id)
+3040:        {
+3041:            session.kind = kind;
+3042:            session.title = title;
+3043:            session.feature = feature;
+3044:            session.loading = loading;
+3045:            return session.clone();
+3046:        }
+3047:
+3048:        let session = WorkLeafSession {
+3049:            id: agent_id,
+3050:            kind,
+3051:            title,
+3052:            feature,
+3053:            lines: Vec::new(),
+3054:            loading,
+3055:        };
+3056:        self.snapshot.sessions.push(session.clone());
+3057:        self.snapshot
+3058:            .sessions
+3059:            .sort_by(|left, right| left.id.as_str().cmp(right.id.as_str()));
+3060:        session
+3061:    }
+3062:
+3063:    fn append_cached_agent_line(&mut self, agent_id: &AgentId, line: String) {
+3064:        if line.is_empty() {
+3065:            return;
+3066:        }
+3067:        let Some(session) = self
+3068:            .snapshot
+3069:            .sessions
+3070:            .iter_mut()
+3071:            .find(|session| &session.id == agent_id)
+3072:        else {
+3073:            return;
+3074:        };
+3075:        if !session.lines.iter().any(|existing| existing == &line) {
+3076:            session.lines.push(line);
+3077:        }
+3078:    }
+3079:
+3080:    fn apply_session_to_ui(&mut self, session: &WorkLeafSession) {
+3081:        if self
+3082:            .ui
+3083:            .set_agent_feature(&session.id, session.title.clone())
+3084:            .is_err()
+3085:        {
+3086:            self.ui.add_agent(AgentListEntry::new(
+3087:                session.id.clone(),
+3088:                session.title.clone(),
+3089:            ));
+3090:        }
+3091:        let _ = self
+3092:            .ui
+3093:            .set_agent_ready_state(&session.id, session.loading.is_none());
+3094:    }
+3095:
+3096:    fn should_start_agent_slash_command(&self) -> bool {
+3097:        self.ui.mode() == UiMode::Command && self.ui.selected_agent().is_some()
+3098:    }

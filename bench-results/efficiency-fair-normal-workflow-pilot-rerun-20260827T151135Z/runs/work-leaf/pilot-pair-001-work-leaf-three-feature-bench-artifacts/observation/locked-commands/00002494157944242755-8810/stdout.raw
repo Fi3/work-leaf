@@ -1,0 +1,33 @@
+3333:#[derive(Clone, Debug, Eq, PartialEq)]
+3334:enum WorkerEvent {
+3335:    Stream {
+3336:        agent_id: AgentId,
+3337:        text: String,
+3338:    },
+3339:    TitleGenerated {
+3340:        agent_id: AgentId,
+3341:        title: String,
+3342:    },
+3343:    Complete {
+3344:        agent_id: Option<AgentId>,
+3345:        result: CommandChatResult,
+3346:    },
+3347:    Error {
+3348:        agent_id: Option<AgentId>,
+3349:        message: String,
+3350:    },
+3351:    ReviewError {
+3352:        reviewer_id: AgentId,
+3353:        reviewed_agent_id: AgentId,
+3354:        message: String,
+3355:    },
+3356:}
+3357:
+3358:fn stream_event_text(event: AgentStreamEvent, agent_display_name: &str) -> String {
+3359:    let label = agent_display_name.to_ascii_lowercase();
+3360:    match event {
+3361:        AgentStreamEvent::Status(text) => format!("{label}: {text}"),
+3362:        AgentStreamEvent::AgentMessage(text) => text,
+3363:        AgentStreamEvent::Error(text) => format!("{label} error: {text}"),
+3364:    }
+3365:}

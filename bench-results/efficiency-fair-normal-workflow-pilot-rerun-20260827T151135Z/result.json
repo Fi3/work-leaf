@@ -1,0 +1,151 @@
+{
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "comparison": {
+    "completed_features": {
+      "direct_sequential": 1,
+      "work_leaf_concurrent": 2
+    },
+    "interpretation_limit": "One pilot pair is descriptive and cannot establish an average effect or statistical confidence.",
+    "quality_match_in_this_pair": false,
+    "raw_tokens": {
+      "direct_sequential": 1931994,
+      "work_leaf_concurrent": 947745,
+      "work_leaf_reduction_percent": 50.945
+    },
+    "reasons": [
+      "Work Leaf token measurement is not usable",
+      "the two saved implementations completed different numbers of requested features"
+    ],
+    "token_measurements_usable": false,
+    "uncached_tokens": {
+      "direct_sequential": 137562,
+      "work_leaf_concurrent": 198049,
+      "work_leaf_reduction_percent": -43.971
+    },
+    "usable": false
+  },
+  "complete": true,
+  "fixtures": {
+    "completion": "4d6a19f4c6f515b9a97f184a056d08dc2882041d40d26dd82011180a949c5c87",
+    "status": "5f5295c9dec6be20abb28827b68e84342110fb748aa0cc887d8b58ffa3c6e6b5",
+    "visual": "5ce0782e37b8672e04d8016ca3fbec9caa12f6f9cfaf431cac847c1f6e6a26ca"
+  },
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "runs": [
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.44,
+          "exit_code": 101,
+          "log": "scorer/logs/pilot-pair-001-work-leaf/completion.log",
+          "log_sha256": "d641ca7083d810d98f3406cae4ece117dddb9d7c5d36f0710a747793d07a493c",
+          "status": "fail"
+        },
+        "status": {
+          "duration_seconds": 0.252,
+          "exit_code": 0,
+          "log": "scorer/logs/pilot-pair-001-work-leaf/status.log",
+          "log_sha256": "3dc777a3ef45e78f833a440ec2eaf25197397f1ba8ecbd6764b5e8807924b3ce",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 6.552,
+          "exit_code": 0,
+          "log": "scorer/logs/pilot-pair-001-work-leaf/visual.log",
+          "log_sha256": "a448cb49217dd4f90a053fb053895dd705928ae933d7f6265edb322266e0f2e6",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 2,
+      "final_commit": "2f35b04d1120560f9b416f700fe9ca0554c017b7",
+      "id": "pilot-pair-001-work-leaf",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-fair-normal-workflow-pilot-rerun-20260827T151135Z/runs/work-leaf/pilot-pair-001-work-leaf-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "7215c0484fbb71dc004e657fd1f820163a8bcbba01d59dfffda3fc144286f1c2",
+        "reasons": [
+          "measurement status is incomplete",
+          "observer analysis marks the capture incomplete"
+        ],
+        "usable": false,
+        "usage": {
+          "cached_input_tokens": 749696,
+          "input_tokens": 851171,
+          "output_tokens": 96574,
+          "raw_input_plus_output": 947745,
+          "reasoning_output_tokens": 17507,
+          "uncached_input_plus_output": 198049,
+          "uncached_input_tokens": 101475
+        }
+      },
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-fair-normal-workflow-pilot-rerun-20260827T151135Z/runs/work-leaf/pilot-pair-001-work-leaf-three-feature-bench-artifacts/report.json",
+      "report_sha256": "0d5b03153e89c04358176d34ffe279ff9cb5897ab57c9e2581853d10db677f81",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "fail"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.431,
+          "exit_code": 101,
+          "log": "scorer/logs/pilot-pair-001-direct/completion.log",
+          "log_sha256": "1bd4fab179a5b06769e52638f4fe8179508ce900240ccecb986ca297c241a109",
+          "status": "fail"
+        },
+        "status": {
+          "duration_seconds": 0.244,
+          "exit_code": 0,
+          "log": "scorer/logs/pilot-pair-001-direct/status.log",
+          "log_sha256": "38a4dd18a6bb51b50016dc31555ff92f91dbd09b33c534c2283fb9233b088e46",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.688,
+          "exit_code": 101,
+          "log": "scorer/logs/pilot-pair-001-direct/visual.log",
+          "log_sha256": "28a1c6d6f4d71725161c0913854904736f586b6c56772ec8c32b0e1996a7d08e",
+          "status": "fail"
+        }
+      },
+      "checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "fail"
+      },
+      "completed_features": 1,
+      "final_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+      "id": "pilot-pair-001-direct",
+      "materialization_notes": [
+        "no saved commit bundle; scoring starts from the fixed base"
+      ],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-fair-normal-workflow-pilot-rerun-20260827T151135Z/runs/direct/pilot-pair-001-direct-three-feature-sequential-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "24361e833c8050e926d503e58abacacf7e4c88fc38979566b43622778c4f4669",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 1794432,
+          "input_tokens": 1914451,
+          "output_tokens": 17543,
+          "raw_input_plus_output": 1931994,
+          "reasoning_output_tokens": 11657,
+          "uncached_input_plus_output": 137562,
+          "uncached_input_tokens": 120019
+        }
+      },
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-fair-normal-workflow-pilot-rerun-20260827T151135Z/runs/direct/pilot-pair-001-direct-three-feature-sequential-bench-artifacts/report.json",
+      "report_sha256": "9174fb07ec18f8d10fe167f8e126cbf87353a7e52b1c5a2159885b72deb7e1b6",
+      "workflow": "direct-sequential",
+      "workflow_result": "fail"
+    }
+  ],
+  "schema_version": 1,
+  "study": "efficiency-fair-normal-workflow-pilot-rerun-20260827T151135Z",
+  "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+}

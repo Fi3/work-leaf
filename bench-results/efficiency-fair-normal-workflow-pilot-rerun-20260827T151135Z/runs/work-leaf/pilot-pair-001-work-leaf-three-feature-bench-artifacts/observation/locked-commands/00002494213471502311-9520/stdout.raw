@@ -1,0 +1,366 @@
+3900:#[test]
+3901:fn controller_exposes_ui_neutral_events_and_snapshot_without_terminal_ui() {
+3902:    let backend = FakeBackend::new(["launch reply", "follow reply"]);
+3903:    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+3904:    let mut controller = WorkLeafController::new(chat);
+3905:
+3906:    let agent_id = controller
+3907:        .create_agent("implement parser combinator")
+3908:        .unwrap();
+3909:
+3910:    assert_eq!(agent_id, AgentId::new("user-1").unwrap());
+3911:    assert!(controller.drain_events().iter().any(|event| {
+3912:        matches!(event, WorkLeafEvent::AgentAdded { session } if session.id == agent_id)
+3913:    }));
+3914:    let starting = controller.snapshot();
+3915:    let session = starting.session(&agent_id).expect("session exists");
+3916:    assert_eq!(session.title, "user-agent");
+3917:    assert_eq!(session.loading, Some(WorkLeafLoading::Launching));
+3918:
+3919:    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+3920:    let ready = controller.snapshot();
+3921:    let session = ready.session(&agent_id).expect("session exists");
+3922:    assert_eq!(session.title, "parser-combinator");
+3923:    assert_eq!(session.loading, None);
+3924:    assert!(session.lines.iter().any(|line| line == "launch reply"));
+3925:
+3926:    controller.send_message(&agent_id, "continue").unwrap();
+3927:    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+3928:    let replied = controller.snapshot();
+3929:    let session = replied.session(&agent_id).expect("session exists");
+3930:    assert!(session.lines.iter().any(|line| line == "user: continue"));
+3931:    assert!(session.lines.iter().any(|line| line == "follow reply"));
+3932:}
+3933:
+3934:#[test]
+3935:fn controller_line_events_do_not_resend_full_session_transcripts() {
+3936:    let backend = FakeBackend::new(["launch reply"]);
+3937:    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+3938:    let mut controller = WorkLeafController::new(chat);
+3939:
+3940:    let agent_id = controller.create_agent("stream compactly").unwrap();
+3941:    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+3942:
+3943:    let events = controller.drain_events();
+3944:    assert!(events.iter().any(|event| {
+3945:        matches!(
+3946:            event,
+3947:            WorkLeafEvent::AgentLineAppended { agent_id: id, line }
+3948:                if id == &agent_id && line == "launch reply"
+3949:        )
+3950:    }));
+3951:    assert!(
+3952:        !events.iter().any(|event| {
+3953:            matches!(
+3954:                event,
+3955:                WorkLeafEvent::AgentUpdated { session }
+3956:                    if session.id == agent_id
+3957:                        && session.lines.iter().any(|line| line == "launch reply")
+3958:            )
+3959:        }),
+3960:        "line append events should not be paired with full-session transcript updates"
+3961:    );
+3962:}
+3963:
+3964:#[test]
+3965:fn controller_status_events_do_not_resend_existing_large_transcripts() {
+3966:    let large_reply = "large transcript line\n".repeat(8192);
+3967:    let backend = FakeBackend::new([large_reply.as_str(), "follow reply"]);
+3968:    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+3969:    let mut controller = WorkLeafController::new(chat);
+3970:
+3971:    let agent_id = controller.create_agent("keep status compact").unwrap();
+3972:    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+3973:    controller.drain_events();
+3974:
+3975:    controller.send_message(&agent_id, "continue").unwrap();
+3976:    let waiting_events = controller.drain_events();
+3977:    assert!(waiting_events.iter().any(|event| {
+3978:        matches!(
+3979:            event,
+3980:            WorkLeafEvent::AgentStatusUpdated {
+3981:                agent_id: id,
+3982:                loading: Some(WorkLeafLoading::WaitingForReply),
+3983:                ..
+3984:            } if id == &agent_id
+3985:        )
+3986:    }));
+3987:    assert!(
+3988:        !waiting_events.iter().any(|event| {
+3989:            matches!(
+3990:                event,
+3991:                WorkLeafEvent::AgentUpdated { session }
+3992:                    if session.id == agent_id
+3993:                        && session.lines.iter().any(|line| line == &large_reply)
+3994:            )
+3995:        }),
+3996:        "status changes should not serialize existing transcript text"
+3997:    );
+3998:
+3999:    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+4000:    let ready_events = controller.drain_events();
+4001:    assert!(ready_events.iter().any(|event| {
+4002:        matches!(
+4003:            event,
+4004:            WorkLeafEvent::AgentStatusUpdated {
+4005:                agent_id: id,
+4006:                loading: None,
+4007:                ..
+4008:            } if id == &agent_id
+4009:        )
+4010:    }));
+4011:    assert!(ready_events.iter().any(|event| {
+4012:        matches!(
+4013:            event,
+4014:            WorkLeafEvent::AgentLineAppended { agent_id: id, line }
+4015:                if id == &agent_id && line == "follow reply"
+4016:        )
+4017:    }));
+4018:    assert!(
+4019:        !ready_events.iter().any(|event| {
+4020:            matches!(
+4021:                event,
+4022:                WorkLeafEvent::AgentUpdated { session }
+4023:                    if session.id == agent_id
+4024:                        && session.lines.iter().any(|line| line == &large_reply)
+4025:            )
+4026:        }),
+4027:        "ready status changes should not serialize existing transcript text"
+4028:    );
+4029:}
+4030:
+4031:#[test]
+4032:fn controller_uses_backend_agent_to_name_chat_from_first_prompt() {
+4033:    let backend = FakeBackend::new(["launch reply"]);
+4034:    let chat = CommandChat::new(PathBuf::from("/repo"), backend.clone());
+4035:    let mut controller = WorkLeafController::new(chat);
+4036:
+4037:    let agent_id = controller
+4038:        .create_agent("please fix login callback")
+4039:        .unwrap();
+4040:
+4041:    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+4042:    let snapshot = controller.snapshot();
+4043:    let session = snapshot.session(&agent_id).expect("session exists");
+4044:    assert_eq!(session.title, "oauth-redirect-handler");
+4045:    assert!(session.lines.iter().any(|line| line == "launch reply"));
+4046:
+4047:    let launches = backend.launches();
+4048:    assert!(launches.iter().any(|launch| {
+4049:        launch.id.as_str() == "title-user-1"
+4050:            && launch.feature == "chat-title"
+4051:            && launch.prompt.contains("please fix login callback")
+4052:    }));
+4053:}
+4054:
+4055:#[test]
+4056:fn controller_uses_agent_profile_for_non_codex_launches_and_reviews() {
+4057:    let root = git_repo("workspace-custom-profile-review");
+4058:    fs::write(root.join("README.md"), "fixture\n").unwrap();
+4059:    git(&root, ["add", "README.md"]);
+4060:    git(
+4061:        &root,
+4062:        [
+4063:            "commit",
+4064:            "-m",
+4065:            "UPDATE apply parser patch from user-1",
+4066:            "-m",
+4067:            "Agent-ID: user-1\nFeature: parser\nReason: parse configs\nContext: parser context",
+4068:        ],
+4069:    );
+4070:    let backend = FakeBackend::new(["launch reply", "summary", "NO_FINDINGS"]);
+4071:    let profile = AgentProfile::new(
+4072:        AgentKind::External("local-test-agent".to_string()),
+4073:        "Local Test Agent",
+4074:        "local-agent",
+4075:    );
+4076:    let chat = CommandChat::new(root, backend.clone()).with_agent_profile(profile.clone());
+4077:    let mut controller = WorkLeafController::new(chat);
+4078:
+4079:    let agent_id = controller
+4080:        .create_agent("build custom provider path")
+4081:        .unwrap();
+4082:    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+4083:    controller.start_review().unwrap();
+4084:    assert!(controller.wait_for_idle(Duration::from_secs(1)));
+4085:
+4086:    let launches = backend.launches();
+4087:    assert!(launches.iter().any(|launch| {
+4088:        launch.id == agent_id
+4089:            && launch.kind == profile.kind
+4090:            && launch.feature == profile.default_feature
+4091:    }));
+4092:    assert!(
+4093:        launches
+4094:            .iter()
+4095:            .any(|launch| { launch.id.as_str() == "review-user-1" && launch.kind == profile.kind })
+4096:    );
+4097:}
+4098:
+4099:#[test]
+4100:fn controller_starts_review_after_patch_agent_done_and_loops_until_clean() {
+4101:    let root = git_repo("workspace-automatic-review-loop");
+4102:    fs::write(root.join("README.md"), "before\n").unwrap();
+4103:    git(&root, ["add", "README.md"]);
+4104:    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+4105:    let backend = FakeBackend::new([
+4106:        "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+4107:        "summary: README changes from before to after",
+4108:        "FINDINGS\n- missing reviewed wording",
+4109:        "fixed review finding\n@work-leaf patch address review\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-after\n+after review\n@work-leaf end\n@work-leaf done",
+4110:        "NO_FINDINGS",
+4111:    ]);
+4112:    let chat = CommandChat::new(root.clone(), backend.clone()).with_max_review_rounds(4);
+4113:    let mut controller = WorkLeafController::new(chat);
+4114:
+4115:    let agent_id = controller.create_agent("update readme").unwrap();
+4116:
+4117:    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+4118:    assert_eq!(
+4119:        fs::read_to_string(root.join("README.md")).unwrap(),
+4120:        "after review\n"
+4121:    );
+4122:
+4123:    let reviewer_id = AgentId::new("review-user-1").unwrap();
+4124:    let snapshot = controller.snapshot();
+4125:    let reviewer = snapshot
+4126:        .session(&reviewer_id)
+4127:        .expect("reviewer session exists");
+4128:    assert_eq!(reviewer.title, "review user-agent");
+4129:    assert_eq!(reviewer.loading, None);
+4130:    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+4131:    assert!(
+4132:        patch_agent
+4133:            .lines
+4134:            .iter()
+4135:            .any(|line| line.contains("missing reviewed wording"))
+4136:    );
+4137:    assert!(
+4138:        patch_agent.lines.iter().any(|line| {
+4139:            line.contains("user-1 reviewed by review-user-1: rounds=2 resolved=yes")
+4140:        })
+4141:    );
+4142:
+4143:    let sends = backend.sends();
+4144:    assert!(sends.iter().any(|(target, prompt)| {
+4145:        target == &agent_id
+4146:            && prompt.contains("missing reviewed wording")
+4147:            && prompt.contains("Please fix the patch")
+4148:    }));
+4149:    assert!(sends.iter().any(|(target, prompt)| {
+4150:        target == &reviewer_id
+4151:            && prompt.contains("The original agent has responded to the findings")
+4152:            && prompt.contains("Please check the patch again")
+4153:    }));
+4154:}
+4155:
+4156:#[test]
+4157:fn controller_does_not_start_review_until_patch_agent_reports_done() {
+4158:    let root = git_repo("workspace-review-waits-for-done");
+4159:    fs::write(root.join("README.md"), "before\n").unwrap();
+4160:    git(&root, ["add", "README.md"]);
+4161:    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+4162:    let backend = FakeBackend::new([
+4163:        "implemented patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end",
+4164:        "summary that should not be requested",
+4165:        "NO_FINDINGS",
+4166:    ]);
+4167:    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+4168:    let mut controller = WorkLeafController::new(chat);
+4169:
+4170:    let agent_id = controller.create_agent("update readme").unwrap();
+4171:
+4172:    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+4173:    let snapshot = controller.snapshot();
+4174:    assert!(
+4175:        snapshot
+4176:            .session(&AgentId::new("review-user-1").unwrap())
+4177:            .is_none(),
+4178:        "review must wait for the patch agent to report done"
+4179:    );
+4180:    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+4181:    assert_eq!(patch_agent.loading, None);
+4182:    let launches = backend.launches();
+4183:    assert!(
+4184:        !launches
+4185:            .iter()
+4186:            .any(|launch| launch.id.as_str() == "review-user-1")
+4187:    );
+4188:    let sends = backend.sends();
+4189:    assert!(sends.iter().any(|(target, prompt)| {
+4190:        target == &agent_id
+4191:            && prompt.contains("work-leaf patch applied")
+4192:            && prompt.contains("@work-leaf done")
+4193:    }));
+4194:}
+4195:
+4196:#[test]
+4197:fn controller_review_prompt_covers_all_agent_commits_since_launch() {
+4198:    let root = git_repo("workspace-review-full-agent-scope");
+4199:    fs::write(root.join("README.md"), "before\n").unwrap();
+4200:    git(&root, ["add", "README.md"]);
+4201:    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+4202:    let backend = FakeBackend::new([
+4203:        "first patch\n@work-leaf patch first step\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after first\n@work-leaf end",
+4204:        "second patch\n@work-leaf patch second step\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-after first\n+after second\n@work-leaf end\n@work-leaf done",
+4205:        "summary: full change",
+4206:        "NO_FINDINGS",
+4207:    ]);
+4208:    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+4209:    let mut controller = WorkLeafController::new(chat);
+4210:
+4211:    let agent_id = controller
+4212:        .create_agent("update readme in two steps")
+4213:        .unwrap();
+4214:
+4215:    assert_eq!(agent_id.as_str(), "user-1");
+4216:    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+4217:    let launches = backend.launches();
+4218:    let review_launch = launches
+4219:        .iter()
+4220:        .find(|launch| launch.id.as_str() == "review-user-1")
+4221:        .expect("reviewer launched");
+4222:    assert!(
+4223:        review_launch.prompt.contains("first step"),
+4224:        "{}",
+4225:        review_launch.prompt
+4226:    );
+4227:    assert!(
+4228:        review_launch.prompt.contains("second step"),
+4229:        "{}",
+4230:        review_launch.prompt
+4231:    );
+4232:}
+4233:
+4234:#[test]
+4235:fn controller_reuses_one_reviewer_for_repeated_patch_agent_iterations() {
+4236:    let root = git_repo("workspace-reuses-reviewer");
+4237:    fs::write(root.join("README.md"), "before\n").unwrap();
+4238:    git(&root, ["add", "README.md"]);
+4239:    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+4240:    let backend = FakeBackend::new([
+4241:        "first patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after first\n@work-leaf end\n@work-leaf done",
+4242:        "summary: README changes to after first",
+4243:        "NO_FINDINGS",
+4244:        "second patch\n@work-leaf patch update readme again\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-after first\n+after second\n@work-leaf end\n@work-leaf done",
+4245:        "summary: README changes to after second",
+4246:        "NO_FINDINGS",
+4247:    ]);
+4248:    let chat = CommandChat::new(root.clone(), backend.clone()).with_max_review_rounds(4);
+4249:    let mut controller = WorkLeafController::new(chat);
+4250:
+4251:    let agent_id = controller.create_agent("update readme").unwrap();
+4252:    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+4253:
+4254:    controller
+4255:        .send_message(&agent_id, "make the second update")
+4256:        .unwrap();
+4257:    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+4258:
+4259:    assert_eq!(
+4260:        fs::read_to_string(root.join("README.md")).unwrap(),
+4261:        "after second\n"
+4262:    );
+4263:    let reviewer_id = AgentId::new("review-user-1").unwrap();
+4264:    let launches = backend.launches();
+4265:    assert_eq!(

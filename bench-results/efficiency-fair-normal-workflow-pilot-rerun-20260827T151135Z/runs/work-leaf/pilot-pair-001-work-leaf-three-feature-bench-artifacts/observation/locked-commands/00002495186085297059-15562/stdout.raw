@@ -1,0 +1,193 @@
+4280:#[test]
+4281:fn controller_reviews_only_unreviewed_patch_agent_commits() {
+4282:    let root = git_repo("workspace-reviews-only-unreviewed");
+4283:    fs::write(root.join("README.md"), "readme before\n").unwrap();
+4284:    fs::write(root.join("CHANGELOG.md"), "changelog before\n").unwrap();
+4285:    git(&root, ["add", "."]);
+4286:    git(&root, ["commit", "-m", "ADD initial docs fixture"]);
+4287:    let backend = FakeBackend::new([
+4288:        "readme patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-readme before\n+readme after\n@work-leaf end\n@work-leaf done",
+4289:        "summary: README changes",
+4290:        "NO_FINDINGS",
+4291:        "changelog patch\n@work-leaf patch update changelog\n--- a/CHANGELOG.md\n+++ b/CHANGELOG.md\n@@ -1 +1 @@\n-changelog before\n+changelog after\n@work-leaf end\n@work-leaf done",
+4292:        "summary: changelog changes",
+4293:        "NO_FINDINGS",
+4294:    ]);
+4295:    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+4296:    let mut controller = WorkLeafController::new(chat);
+4297:
+4298:    let first = controller.create_agent("update readme").unwrap();
+4299:    assert_eq!(first.as_str(), "user-1");
+4300:    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+4301:
+4302:    let second = controller.create_agent("update changelog").unwrap();
+4303:    assert_eq!(second.as_str(), "user-2");
+4304:    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+4305:
+4306:    let launches = backend.launches();
+4307:    assert_eq!(
+4308:        launches
+4309:            .iter()
+4310:            .filter(|launch| launch.id.as_str() == "review-user-1")
+4311:            .count(),
+4312:        1
+4313:    );
+4314:    assert_eq!(
+4315:        launches
+4316:            .iter()
+4317:            .filter(|launch| launch.id.as_str() == "review-user-2")
+4318:            .count(),
+4319:        1
+4320:    );
+4321:}
+4322:
+4323:#[test]
+4324:fn controller_auto_review_ignores_historical_agents_outside_current_patch_agent() {
+4325:    let root = git_repo("workspace-auto-review-current-agent-only");
+4326:    fs::write(root.join("README.md"), "before\n").unwrap();
+4327:    git(&root, ["add", "README.md"]);
+4328:    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+4329:    for old_agent in ["user-2", "user-3"] {
+4330:        fs::write(
+4331:            root.join("README.md"),
+4332:            format!("historical commit from {old_agent}\n"),
+4333:        )
+4334:        .unwrap();
+4335:        git(&root, ["add", "README.md"]);
+4336:        git(
+4337:            &root,
+4338:            [
+4339:                "commit",
+4340:                "-m",
+4341:                "UPDATE apply historical patch",
+4342:                "-m",
+4343:                &format!(
+4344:                    "Agent-ID: {old_agent}\nFeature: historical\nReason: previous work\nContext: old patch"
+4345:                ),
+4346:            ],
+4347:        );
+4348:    }
+4349:    fs::write(root.join("README.md"), "before\n").unwrap();
+4350:    git(&root, ["add", "README.md"]);
+4351:    git(&root, ["commit", "-m", "UPDATE reset live fixture"]);
+4352:    let backend = FakeBackend::new([
+4353:        "live patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+4354:        "summary: live README change",
+4355:        "NO_FINDINGS",
+4356:    ]);
+4357:    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+4358:    let mut controller = WorkLeafController::new(chat);
+4359:
+4360:    let agent_id = controller.create_agent("update readme").unwrap();
+4361:    assert_eq!(agent_id.as_str(), "user-1");
+4362:    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+4363:
+4364:    let launches = backend.launches();
+4365:    assert_eq!(
+4366:        launches
+4367:            .iter()
+4368:            .filter(|launch| launch.id.as_str().starts_with("review-"))
+4369:            .map(|launch| launch.id.as_str().to_string())
+4370:            .collect::<Vec<_>>(),
+4371:        vec!["review-user-1".to_string()]
+4372:    );
+4373:}
+4374:
+4375:#[test]
+4376:fn controller_linearize_uses_only_commits_reviewed_in_this_session() {
+4377:    let root = git_repo("workspace-linearize-current-reviewed-only");
+4378:    fs::write(root.join("README.md"), "before\n").unwrap();
+4379:    fs::write(root.join("legacy.txt"), "legacy before\n").unwrap();
+4380:    git(&root, ["add", "."]);
+4381:    git(&root, ["commit", "-m", "ADD initial linearize fixture"]);
+4382:    fs::write(root.join("legacy.txt"), "legacy after\n").unwrap();
+4383:    git(&root, ["add", "legacy.txt"]);
+4384:    git(
+4385:        &root,
+4386:        [
+4387:            "commit",
+4388:            "-m",
+4389:            "UPDATE apply legacy patch from user-2",
+4390:            "-m",
+4391:            "Agent-ID: user-2\nFeature: legacy\nReason: old run\nContext: old session",
+4392:        ],
+4393:    );
+4394:    let backend = FakeBackend::new([
+4395:        "live patch\n@work-leaf patch update readme\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after\n@work-leaf end\n@work-leaf done",
+4396:        "summary: live README change",
+4397:        "NO_FINDINGS",
+4398:        "linearizer ready",
+4399:    ]);
+4400:    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+4401:    let mut controller = WorkLeafController::new(chat);
+4402:
+4403:    let agent_id = controller.create_agent("update readme").unwrap();
+4404:    assert_eq!(agent_id.as_str(), "user-1");
+4405:    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+4406:    assert!(controller.start_linearize().unwrap().is_some());
+4407:    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+4408:
+4409:    let launches = backend.launches();
+4410:    let linearize_launch = launches
+4411:        .iter()
+4412:        .find(|launch| launch.id.as_str() == "linearize")
+4413:        .expect("linearize agent launched");
+4414:    assert!(linearize_launch.prompt.contains("Agent-ID: user-1"));
+4415:    assert!(linearize_launch.prompt.contains("Commit:"));
+4416:    assert!(!linearize_launch.prompt.contains("Agent-ID: user-2"));
+4417:    assert!(!linearize_launch.prompt.contains("old session"));
+4418:}
+4419:
+4420:#[test]
+4421:fn controller_linearize_keeps_multiple_reviewed_commits_from_same_agent() {
+4422:    let root = git_repo("workspace-linearize-same-agent-multiple-reviewed");
+4423:    fs::write(root.join("README.md"), "before\n").unwrap();
+4424:    git(&root, ["add", "README.md"]);
+4425:    git(&root, ["commit", "-m", "ADD initial readme fixture"]);
+4426:    let backend = FakeBackend::new([
+4427:        "first patch\n@work-leaf patch update readme once\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-before\n+after first\n@work-leaf end\n@work-leaf done",
+4428:        "summary: first reviewed change",
+4429:        "NO_FINDINGS",
+4430:        "second patch\n@work-leaf patch update readme twice\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-after first\n+after second\n@work-leaf end\n@work-leaf done",
+4431:        "summary: second reviewed change",
+4432:        "NO_FINDINGS",
+4433:        "linearizer ready",
+4434:    ]);
+4435:    let chat = CommandChat::new(root, backend.clone()).with_max_review_rounds(4);
+4436:    let mut controller = WorkLeafController::new(chat);
+4437:
+4438:    let agent_id = controller.create_agent("update readme").unwrap();
+4439:    assert_eq!(agent_id.as_str(), "user-1");
+4440:    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+4441:    controller
+4442:        .send_message(&agent_id, "make a second reviewed update")
+4443:        .unwrap();
+4444:    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+4445:    assert!(controller.start_linearize().unwrap().is_some());
+4446:    assert!(controller.wait_for_idle(Duration::from_secs(2)));
+4447:
+4448:    let launches = backend.launches();
+4449:    let linearize_launch = launches
+4450:        .iter()
+4451:        .find(|launch| launch.id.as_str() == "linearize")
+4452:        .expect("linearize agent launched");
+4453:    assert!(
+4454:        linearize_launch
+4455:            .prompt
+4456:            .contains("Reason: update readme once"),
+4457:        "{}",
+4458:        linearize_launch.prompt
+4459:    );
+4460:    assert!(
+4461:        linearize_launch
+4462:            .prompt
+4463:            .contains("Reason: update readme twice"),
+4464:        "{}",
+4465:        linearize_launch.prompt
+4466:    );
+4467:    assert_eq!(
+4468:        linearize_launch.prompt.matches("Agent-ID: user-1").count(),
+4469:        2
+4470:    );
+4471:}
+4472:

@@ -1,0 +1,314 @@
+3720:
+3721:    assert_eq!(commits.len(), 2);
+3722:    assert_eq!(commits[0].agent_id.as_str(), "chat-a");
+3723:    assert_eq!(commits[0].reason, "second");
+3724:    assert_eq!(commits[1].agent_id.as_str(), "chat-b");
+3725:    assert_eq!(commits[1].feature, "docs");
+3726:}
+3727:
+3728:#[test]
+3729:fn review_coordinator_loops_until_reviewer_reports_no_findings() {
+3730:    let root = git_repo("review-loop");
+3731:    fs::write(root.join("lib.rs"), "pub fn value() -> u8 { 1 }\n").unwrap();
+3732:    git(&root, ["add", "."]);
+3733:    git(
+3734:        &root,
+3735:        [
+3736:            "commit",
+3737:            "-m",
+3738:            "UPDATE apply parser patch from chat-a",
+3739:            "-m",
+3740:            "Agent-ID: chat-a\nFeature: parser\nReason: return value",
+3741:        ],
+3742:    );
+3743:
+3744:    let backend = FakeBackend::new([
+3745:        "summary: returns a parser value",
+3746:        "FINDINGS\n- missing edge case",
+3747:        "fixed missing edge case",
+3748:        "NO_FINDINGS",
+3749:    ]);
+3750:    let mut coordinator = ReviewCoordinator::new(root, backend).with_max_rounds(4);
+3751:
+3752:    let results = coordinator.review_latest_agent_commits().unwrap();
+3753:    let backend = coordinator.into_backend();
+3754:
+3755:    assert_eq!(results.len(), 1);
+3756:    assert_eq!(results[0].agent_id.as_str(), "chat-a");
+3757:    assert_eq!(results[0].reviewer_id.as_str(), "review-chat-a");
+3758:    assert_eq!(results[0].rounds, 2);
+3759:    assert!(results[0].findings_resolved);
+3760:
+3761:    assert_eq!(backend.launches.len(), 1);
+3762:    assert_eq!(backend.launches[0].id.as_str(), "review-chat-a");
+3763:    assert_eq!(backend.launches[0].kind, AgentKind::Codex);
+3764:    assert!(
+3765:        backend.launches[0]
+3766:            .prompt
+3767:            .contains("summary: returns a parser value")
+3768:    );
+3769:    assert!(backend.launches[0].prompt.contains("chat-a"));
+3770:
+3771:    assert_eq!(backend.sends.len(), 3);
+3772:    assert_eq!(backend.sends[0].0.as_str(), "chat-a");
+3773:    assert!(backend.sends[0].1.contains("summarize"));
+3774:    assert_eq!(backend.sends[1].0.as_str(), "chat-a");
+3775:    assert!(backend.sends[1].1.contains("missing edge case"));
+3776:    assert_eq!(backend.sends[2].0.as_str(), "review-chat-a");
+3777:    assert!(backend.sends[2].1.contains("check the patch again"));
+3778:}
+3779:
+3780:#[test]
+3781:fn git_history_builds_agent_review_scope_since_baseline() {
+3782:    let root = git_repo("review-history-scope");
+3783:    fs::write(root.join("README.md"), "before\n").unwrap();
+3784:    git(&root, ["add", "README.md"]);
+3785:    git(&root, ["commit", "-m", "ADD initial review scope fixture"]);
+3786:    let baseline = GitHistory::new(root.clone()).head_hash().unwrap().unwrap();
+3787:    fs::write(root.join("README.md"), "after first\n").unwrap();
+3788:    git(&root, ["add", "README.md"]);
+3789:    git(
+3790:        &root,
+3791:        [
+3792:            "commit",
+3793:            "-m",
+3794:            "UPDATE apply first patch from user-1",
+3795:            "-m",
+3796:            "Agent-ID: user-1\nFeature: readme\nReason: first step\nContext: first context",
+3797:        ],
+3798:    );
+3799:    fs::write(root.join("README.md"), "after second\n").unwrap();
+3800:    git(&root, ["add", "README.md"]);
+3801:    git(
+3802:        &root,
+3803:        [
+3804:            "commit",
+3805:            "-m",
+3806:            "UPDATE apply second patch from user-1",
+3807:            "-m",
+3808:            "Agent-ID: user-1\nFeature: readme\nReason: second step\nContext: second context",
+3809:        ],
+3810:    );
+3811:
+3812:    let target = GitHistory::new(root)
+3813:        .agent_review_commit(&AgentId::new("user-1").unwrap(), Some(&baseline))
+3814:        .unwrap()
+3815:        .expect("review target");
+3816:
+3817:    assert!(target.reason.contains("2 provisional commits"));
+3818:    assert!(target.context.contains("first step"));
+3819:    assert!(target.context.contains("second step"));
+3820:    assert_eq!(target.feature, "readme");
+3821:}
+3822:
+3823:#[derive(Debug)]
+3824:struct FakeBackend {
+3825:    replies: VecDeque<String>,
+3826:    launches: Vec<AgentLaunch>,
+3827:    sends: Vec<(AgentId, String)>,
+3828:}
+3829:
+3830:impl FakeBackend {
+3831:    fn new<const N: usize>(replies: [&str; N]) -> Self {
+3832:        Self {
+3833:            replies: replies.into_iter().map(String::from).collect(),
+3834:            launches: Vec::new(),
+3835:            sends: Vec::new(),
+3836:        }
+3837:    }
+3838:
+3839:    fn next_reply(&mut self) -> String {
+3840:        self.replies.pop_front().expect("missing fake reply")
+3841:    }
+3842:}
+3843:
+3844:impl AgentBackend for FakeBackend {
+3845:    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+3846:        let reply = self.next_reply();
+3847:        self.launches.push(request.clone());
+3848:        let mut session = AgentSession::new(request);
+3849:        session.push_message(MessageRole::Agent, reply);
+3850:        Ok(session)
+3851:    }
+3852:
+3853:    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+3854:        self.sends.push((agent_id.clone(), prompt.to_string()));
+3855:        Ok(ChatMessage::new(MessageRole::Agent, self.next_reply()))
+3856:    }
+3857:}
+3858:
+3859:fn git_repo(name: &str) -> PathBuf {
+3860:    let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
+3861:    let _ = fs::remove_dir_all(&root);
+3862:    fs::create_dir_all(&root).unwrap();
+3863:    git(&root, ["init"]);
+3864:    git(&root, ["config", "user.name", "Work Leaf Test"]);
+3865:    git(&root, ["config", "user.email", "work-leaf@example.test"]);
+3866:    root
+3867:}
+3868:
+3869:fn git<const N: usize>(root: &Path, args: [&str; N]) {
+3870:    let output = Command::new("git")
+3871:        .args(args)
+3872:        .current_dir(root)
+3873:        .output()
+3874:        .unwrap();
+3875:    assert!(
+3876:        output.status.success(),
+3877:        "git failed: {}\n{}",
+3878:        String::from_utf8_lossy(&output.stdout),
+3879:        String::from_utf8_lossy(&output.stderr)
+3880:    );
+3881:}
+3882:----- END FILE tests/reviews.rs -----
+3883:
+3884:----- BEGIN FILE tests/workspace.rs -----
+3885:digest: fnv64:60e65a59fbc85f3a; bytes:28957
+3886:
+3887:use std::collections::VecDeque;
+3888:use std::fs;
+3889:use std::path::{Path, PathBuf};
+3890:use std::process::Command;
+3891:use std::sync::{Arc, Mutex};
+3892:use std::thread;
+3893:use std::time::Duration;
+3894:
+3895:use work_leaf::{
+3896:    AgentBackend, AgentError, AgentId, AgentKind, AgentLaunch, AgentProfile, AgentSession,
+3897:    ChatMessage, CommandChat, MessageRole, WorkLeafController, WorkLeafEvent, WorkLeafLoading,
+3898:};
+3899:
+3900:#[test]
+3901:fn controller_exposes_ui_neutral_events_and_snapshot_without_terminal_ui() {
+3902:    let backend = FakeBackend::new(["launch reply", "follow reply"]);
+3903:    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
+3904:    let mut controller = WorkLeafController::new(chat);
+3905:
+4538:            .iter()
+4539:            .any(|line| line.contains("still working"))
+4540:    );
+4541:}
+4542:
+4543:#[derive(Clone, Debug)]
+4544:struct FakeBackend {
+4545:    state: Arc<Mutex<FakeBackendState>>,
+4546:}
+4547:
+4548:#[derive(Debug)]
+4549:struct FakeBackendState {
+4550:    replies: VecDeque<String>,
+4551:    launches: Vec<AgentLaunch>,
+4552:    sends: Vec<(AgentId, String)>,
+4553:}
+4554:
+4555:#[derive(Clone, Debug)]
+4556:struct ConcurrentBackend;
+4557:
+4558:impl FakeBackend {
+4559:    fn new<const N: usize>(replies: [&str; N]) -> Self {
+4560:        Self {
+4561:            state: Arc::new(Mutex::new(FakeBackendState {
+4562:                replies: replies.into_iter().map(String::from).collect(),
+4563:                launches: Vec::new(),
+4564:                sends: Vec::new(),
+4565:            })),
+4566:        }
+4567:    }
+4568:
+4569:    fn launches(&self) -> Vec<AgentLaunch> {
+4570:        self.state.lock().unwrap().launches.clone()
+4571:    }
+4572:
+4573:    fn sends(&self) -> Vec<(AgentId, String)> {
+4574:        self.state.lock().unwrap().sends.clone()
+4575:    }
+4576:
+4577:    fn next_reply(&self) -> String {
+4578:        self.state
+4579:            .lock()
+4580:            .unwrap()
+4581:            .replies
+4582:            .pop_front()
+4583:            .expect("missing fake reply")
+4584:    }
+4585:
+4586:    fn title_reply(&self, prompt: &str) -> String {
+4587:        fake_title_from_title_prompt(prompt)
+4588:    }
+4589:}
+4590:
+4591:impl AgentBackend for FakeBackend {
+4592:    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+4593:        self.state.lock().unwrap().launches.push(request.clone());
+4594:        let mut session = AgentSession::new(request);
+4595:        let reply = if session.id.as_str().starts_with("title-") {
+4596:            self.title_reply(&session.messages[0].text)
+4597:        } else {
+4598:            self.next_reply()
+4599:        };
+4600:        session.push_message(MessageRole::Agent, reply);
+4601:        Ok(session)
+4602:    }
+4603:
+4604:    fn send(&mut self, agent_id: &AgentId, prompt: &str) -> Result<ChatMessage, AgentError> {
+4605:        self.state
+4606:            .lock()
+4607:            .unwrap()
+4608:            .sends
+4609:            .push((agent_id.clone(), prompt.to_string()));
+4610:        Ok(ChatMessage::new(MessageRole::Agent, self.next_reply()))
+4611:    }
+4612:}
+4613:
+4614:impl AgentBackend for ConcurrentBackend {
+4615:    fn launch(&mut self, request: AgentLaunch) -> Result<AgentSession, AgentError> {
+4616:        let mut session = AgentSession::new(request);
+4617:        session.push_message(MessageRole::Agent, "ready");
+4618:        Ok(session)
+4619:    }
+4620:
+4621:    fn send(&mut self, agent_id: &AgentId, _prompt: &str) -> Result<ChatMessage, AgentError> {
+4622:        if agent_id.as_str() == "user-2" {
+4623:            thread::sleep(Duration::from_millis(350));
+4624:            return Ok(ChatMessage::new(MessageRole::Agent, "slow reply"));
+4625:        }
+4626:        Ok(ChatMessage::new(MessageRole::Agent, "quick reply"))
+4627:    }
+4628:}
+4629:
+4630:fn git_repo(name: &str) -> PathBuf {
+4631:    let root = std::env::temp_dir().join(format!("work-leaf-{name}-{}", std::process::id()));
+4632:    let _ = fs::remove_dir_all(&root);
+4633:    fs::create_dir_all(&root).unwrap();
+4634:    git(&root, ["init", "-q"]);
+4635:    git(&root, ["config", "user.email", "test@example.com"]);
+4636:    git(&root, ["config", "user.name", "Test User"]);
+4637:    root
+4638:}
+4639:
+4640:fn git<const N: usize>(root: &Path, args: [&str; N]) {
+4641:    let output = Command::new("git")
+4642:        .current_dir(root)
+4643:        .args(args)
+4644:        .output()
+4645:        .unwrap();
+4646:    assert!(
+4647:        output.status.success(),
+4648:        "git failed: {}\n{}",
+4649:        String::from_utf8_lossy(&output.stdout),
+4650:        String::from_utf8_lossy(&output.stderr)
+4651:    );
+4652:}
+4653:
+4654:fn fake_title_from_title_prompt(prompt: &str) -> String {
+4655:    let first_prompt = prompt
+4656:        .rsplit_once("First prompt:\n")
+4657:        .map(|(_, first_prompt)| first_prompt)
+4658:        .unwrap_or(prompt);
+4659:    if first_prompt.contains("parser combinator") {
+4660:        "parser-combinator".to_string()
+4661:    } else if first_prompt.contains("login callback")
+4662:        || first_prompt.contains("OAuth redirect handler")
+4663:    {
+4664:        "oauth-redirect-handler".to_string()
+4665:    } else {

@@ -1,0 +1,503 @@
+903:    pub fn render_left_pane(&self) -> String {
+904:        let mut rendered = String::new();
+905:        if self.control_selected == 0 {
+906:            rendered.push_str("> work-leaf  command\n");
+907:        } else {
+908:            rendered.push_str("  work-leaf  command\n");
+909:        }
+910:        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
+911:            let agent = &self.agents[*agent_index];
+912:            let mut row = String::new();
+913:            row.push(if self.control_selected == visible_position + 1 {
+914:                '>'
+915:            } else {
+916:                ' '
+917:            });
+918:            let (primary, secondary) = agent_list_labels(agent);
+919:            row.push_str(primary);
+920:            row.push(' ');
+921:            row.push_str(secondary);
+922:            row.push_str("  working: ");
+923:            row.push_str(&agent.feature);
+924:            if agent.ready {
+925:                row.push_str("  READY");
+926:                rendered.push_str("\u{1b}[7m");
+927:                rendered.push_str(&row);
+928:                rendered.push_str("\u{1b}[0m");
+929:            } else {
+930:                rendered.push_str(&row);
+931:            }
+932:            rendered.push('\n');
+933:            if !agent.modified_files.is_empty() {
+934:                rendered.push_str("    ");
+935:                rendered.push_str("files: ");
+936:                rendered.push_str(
+937:                    &agent
+938:                        .modified_files
+939:                        .iter()
+940:                        .map(|path| path.display().to_string())
+941:                        .collect::<Vec<_>>()
+942:                        .join(", "),
+943:                );
+944:                rendered.push('\n');
+945:            }
+946:            self.render_agent_links("conflicts", &agent.conflicting_agents, &mut rendered);
+947:            self.render_agent_links("depends-on", &agent.depends_on, &mut rendered);
+948:            self.render_agent_links("depended-on-by", &agent.depended_on_by, &mut rendered);
+949:        }
+950:        rendered
+951:    }
+952:
+953:    pub fn render_screen(&self, right_content: &str) -> String {
+954:        self.render_screen_with_prompt(right_content, "")
+955:    }
+956:
+957:    pub fn render_screen_with_prompt(&self, right_content: &str, prompt: &str) -> String {
+958:        let visible_right_content = self.visible_right_content(right_content);
+959:        let prompt_cursor = prompt.len();
+960:        let buffer = self.render_tui_buffer(&visible_right_content, prompt, prompt_cursor);
+961:        let mut rendered = String::new();
+962:        rendered.push_str(self.bell_prefix());
+963:        rendered.push_str("\u{1b}[H");
+964:        rendered.push_str(&buffer_to_string(&buffer));
+965:        rendered.push_str(&self.cursor_sequence(&visible_right_content, prompt));
+966:        rendered
+967:    }
+968:
+969:    pub fn render_screen_with_cursors(
+970:        &self,
+971:        right_content: &str,
+972:        prompt: &str,
+973:        prompt_cursor: usize,
+974:        right_cursor_column: Option<usize>,
+975:    ) -> String {
+976:        let visible_right_content = self.visible_right_content(right_content);
+977:        let buffer = self.render_tui_buffer(&visible_right_content, prompt, prompt_cursor);
+978:        let mut rendered = String::new();
+979:        rendered.push_str(self.bell_prefix());
+980:        rendered.push_str("\u{1b}[H");
+981:        rendered.push_str(&buffer_to_string(&buffer));
+982:        rendered.push_str(&self.cursor_sequence_with_cursors(
+983:            &visible_right_content,
+984:            prompt,
+985:            prompt_cursor,
+986:            right_cursor_column,
+987:        ));
+988:        rendered
+989:    }
+990:
+991:    pub fn scroll_right_pane_up(&mut self) {
+992:        self.right_scroll_rows = self.right_scroll_rows.saturating_add(3);
+993:    }
+994:
+995:    pub fn scroll_right_pane_down(&mut self) {
+996:        self.right_scroll_rows = self.right_scroll_rows.saturating_sub(3);
+997:    }
+998:
+999:    pub fn reset_right_scroll(&mut self) {
+1000:        self.right_scroll_rows = 0;
+1001:    }
+1002:
+1003:    fn visible_right_content(&self, right_content: &str) -> String {
+1004:        let (inner_width, inner_height) = self.right_inner_size();
+1005:        visible_content(
+1006:            right_content,
+1007:            inner_width,
+1008:            inner_height,
+1009:            self.right_scroll_rows,
+1010:        )
+1011:    }
+1012:
+1013:    fn render_tui_buffer(&self, right_content: &str, prompt: &str, prompt_cursor: usize) -> Buffer {
+1014:        let backend = TestBackend::new(self.width, self.height);
+1015:        let mut terminal = Terminal::new(backend).expect("test backend is valid");
+1016:        terminal
+1017:            .draw(|frame| {
+1018:                let area = frame.size();
+1019:                let body_height = area.height.saturating_sub(1);
+1020:                let body = Rect::new(area.x, area.y, area.width, body_height);
+1021:                let bottom = Rect::new(area.x, body_height, area.width, 1);
+1022:                let layout = self.layout();
+1023:                let panes = if layout.left_width > 0 {
+1024:                    Layout::default()
+1025:                        .direction(Direction::Horizontal)
+1026:                        .constraints([
+1027:                            Constraint::Length(layout.left_width),
+1028:                            Constraint::Length(layout.right_width),
+1029:                        ])
+1030:                        .split(body)
+1031:                } else {
+1032:                    vec![body]
+1033:                };
+1034:
+1035:                if layout.left_width > 0 {
+1036:                    frame.render_widget(self.left_widget(), panes[0]);
+1037:                    frame.render_widget(self.right_widget(right_content), panes[1]);
+1038:                } else {
+1039:                    frame.render_widget(self.right_widget(right_content), panes[0]);
+1040:                }
+1041:                frame.render_widget(
+1042:                    Paragraph::new(self.bottom_line(prompt, prompt_cursor)),
+1043:                    bottom,
+1044:                );
+1045:            })
+1046:            .expect("test backend draw succeeds");
+1047:        terminal.backend().buffer().clone()
+1048:    }
+1049:
+1050:    fn left_widget(&self) -> List<'static> {
+1051:        let inner_width = usize::from(self.layout().left_width.saturating_sub(2).max(1));
+1052:        let mut items = vec![ListItem::new(if self.control_selected == 0 {
+1053:            Spans::from(vec![Span::raw("> work-leaf  command")])
+1054:        } else {
+1055:            Spans::from(vec![Span::raw("  work-leaf  command")])
+1056:        })];
+1057:        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
+1058:            let agent = &self.agents[*agent_index];
+1059:            let selected = self.control_selected == visible_position + 1;
+1060:            let item = ListItem::new(Spans::from(vec![Span::raw(compact_agent_row(
+1061:                agent,
+1062:                selected,
+1063:                inner_width,
+1064:            ))]));
+1065:            let item = if agent.ready {
+1066:                item.style(Style::default().add_modifier(Modifier::REVERSED))
+1067:            } else {
+1068:                item
+1069:            };
+1070:            items.push(item);
+1071:            if !agent.modified_files.is_empty() {
+1072:                items.push(ListItem::new(Spans::from(vec![Span::raw(format!(
+1073:                    "    files: {}",
+1074:                    agent
+1075:                        .modified_files
+1076:                        .iter()
+1077:                        .map(|path| path.display().to_string())
+1078:                        .collect::<Vec<_>>()
+1079:                        .join(", ")
+1080:                ))])));
+1081:            }
+1082:            for (label, agents) in [
+1083:                ("conflicts", &agent.conflicting_agents),
+1084:                ("depends-on", &agent.depends_on),
+1085:                ("depended-on-by", &agent.depended_on_by),
+1086:            ] {
+1087:                if !agents.is_empty() {
+1088:                    items.push(ListItem::new(Spans::from(vec![Span::raw(format!(
+1089:                        "    {label}: {}",
+1090:                        agents
+1091:                            .iter()
+1092:                            .map(AgentId::as_str)
+1093:                            .collect::<Vec<_>>()
+1094:                            .join(", ")
+1095:                    ))])));
+1096:                }
+1097:            }
+1098:        }
+1099:        List::new(items).block(Block::default().title("work-leaf").borders(Borders::ALL))
+1100:    }
+1101:
+1102:    fn right_widget(&self, right_content: &str) -> Paragraph<'static> {
+1103:        let title = match self.windows[self.active_window].surface {
+1104:            UiSurface::WorkLeafCommand => "command",
+1105:            UiSurface::AgentChat => "chat",
+1106:        };
+1107:        Paragraph::new(right_content.to_string())
+1108:            .block(Block::default().title(title).borders(Borders::ALL))
+1109:            .wrap(Wrap { trim: false })
+1110:    }
+1111:
+1112:    fn bottom_line(&self, prompt: &str, prompt_cursor: usize) -> String {
+1113:        if self.mode == UiMode::Prompt {
+1114:            self.prompt_view(prompt, prompt_cursor).line
+1115:        } else {
+1116:            self.render_status_line()
+1117:        }
+1118:    }
+1119:
+1120:    fn cursor_sequence(&self, right_content: &str, prompt: &str) -> String {
+1121:        self.cursor_sequence_with_cursors(right_content, prompt, prompt.len(), None)
+1122:    }
+1123:
+1124:    fn cursor_sequence_with_cursors(
+1125:        &self,
+1126:        right_content: &str,
+1127:        prompt: &str,
+1128:        prompt_cursor: usize,
+1129:        right_cursor_column: Option<usize>,
+1130:    ) -> String {
+1131:        let (row, column) = if self.mode == UiMode::Prompt {
+1132:            (
+1133:                self.height,
+1134:                self.prompt_view(prompt, prompt_cursor).cursor_column,
+1135:            )
+1136:        } else {
+1137:            match self.focus {
+1138:                PaneFocus::Left => (self.control_cursor_row(), 2),
+1139:                PaneFocus::Right => {
+1140:                    self.right_cursor_position_with_cursor(right_content, right_cursor_column)
+1141:                }
+1142:            }
+1143:        };
+1144:        let row = row.clamp(1, self.height.max(1));
+1145:        let column = column.clamp(1, self.width.max(1));
+1146:        format!("\u{1b}[{row};{column}H")
+1147:    }
+1148:
+1149:    fn prompt_view(&self, prompt: &str, prompt_cursor: usize) -> PromptView {
+1150:        let width = usize::from(self.width.max(1));
+1151:        let input_width = width.saturating_sub(1);
+1152:        let max_cursor_offset = width.saturating_sub(2);
+1153:        let cursor_chars = cursor_char_count(prompt, prompt_cursor);
+1154:        let start = cursor_chars.saturating_sub(max_cursor_offset);
+1155:        let visible_prompt = prompt
+1156:            .chars()
+1157:            .skip(start)
+1158:            .take(input_width)
+1159:            .collect::<String>();
+1160:        let cursor_offset = cursor_chars.saturating_sub(start).min(max_cursor_offset);
+1161:        let cursor_column = if self.width <= 1 {
+1162:            1
+1163:        } else {
+1164:            cursor_offset.saturating_add(2).min(width) as u16
+1165:        };
+1166:        PromptView {
+1167:            line: format!(":{visible_prompt}"),
+1168:            cursor_column,
+1169:        }
+1170:    }
+1171:
+1172:    fn bell_prefix(&self) -> &'static str {
+1173:        if self.pending_bell.replace(false) {
+1174:            "\u{7}"
+1175:        } else {
+1176:            ""
+1177:        }
+1178:    }
+1179:
+1180:    fn handle_pending_key(&mut self, pending: PendingKey, key: UiKey) -> Vec<UiAction> {
+1181:        match (pending, key) {
+1182:            (PendingKey::CtrlW, UiKey::Char('h')) if self.mode == UiMode::Command => {
+1183:                if self.left_visible {
+1184:                    self.focus = PaneFocus::Left;
+1185:                }
+1186:                Vec::new()
+1187:            }
+1188:            (PendingKey::CtrlW, UiKey::Char('k')) if self.mode == UiMode::Command => {
+1189:                if self.left_visible {
+1190:                    self.focus = PaneFocus::Left;
+1191:                }
+1192:                Vec::new()
+1193:            }
+1194:            (PendingKey::CtrlW, UiKey::Char('l')) if self.mode == UiMode::Command => {
+1195:                self.focus = PaneFocus::Right;
+1196:                self.mode = UiMode::Command;
+1197:                Vec::new()
+1198:            }
+1199:            (PendingKey::CtrlW, UiKey::Char('j')) if self.mode == UiMode::Command => {
+1200:                self.focus = PaneFocus::Right;
+1201:                self.mode = UiMode::Command;
+1202:                Vec::new()
+1203:            }
+1204:            (PendingKey::G, UiKey::Char('t')) if self.mode == UiMode::Command => {
+1205:                self.next_window();
+1206:                Vec::new()
+1207:            }
+1208:            (PendingKey::G, UiKey::Char('T')) if self.mode == UiMode::Command => {
+1209:                self.previous_window();
+1210:                Vec::new()
+1211:            }
+1212:            _ => Vec::new(),
+1213:        }
+1214:    }
+1215:
+1216:    fn command_mode_text_key_control_status(&self, key: UiKey) -> Option<bool> {
+1217:        if self.mode != UiMode::Command || self.pending.is_some() {
+1218:            return None;
+1219:        }
+1220:        let UiKey::Char(ch) = key else {
+1221:            return None;
+1222:        };
+1223:        (ch.is_ascii_alphanumeric() || ch == ' ').then(|| self.is_command_control_char(ch))
+1224:    }
+1225:
+1226:    fn is_command_control_char(&self, ch: char) -> bool {
+1227:        matches!(ch, 'i' | ':' | ',' | 's' | 't' | 'f' | 'g')
+1228:            || (self.focus == PaneFocus::Left && matches!(ch, 'j' | 'k' | 'l' | 'x'))
+1229:    }
+1230:
+1231:    fn update_command_mode_typing_notice(&mut self, command_mode_text_key_control: Option<bool>) {
+1232:        if let Some(command_mode_text_key_control) = command_mode_text_key_control
+1233:            && self.mode == UiMode::Command
+1234:            && self.pending.is_none()
+1235:        {
+1236:            self.command_mode_typing_count = self.command_mode_typing_count.saturating_add(1);
+1237:            self.command_mode_typing_controls_only &= command_mode_text_key_control;
+1238:            if self.command_mode_typing_count >= COMMAND_MODE_TYPING_NOTICE_THRESHOLD {
+1239:                if !self.command_mode_typing_controls_only {
+1240:                    self.show_status_notice(
+1241:                        COMMAND_MODE_TYPING_NOTICE,
+1242:                        Duration::from_secs(STATUS_NOTICE_SECONDS),
+1243:                    );
+1244:                }
+1245:                self.command_mode_typing_count = 0;
+1246:                self.command_mode_typing_controls_only = true;
+1247:            }
+1248:        } else {
+1249:            self.command_mode_typing_count = 0;
+1250:            self.command_mode_typing_controls_only = true;
+1251:        }
+1252:    }
+1253:
+1254:    fn show_status_notice(&mut self, message: impl Into<String>, duration: Duration) {
+1255:        self.status_notice = Some(StatusNotice {
+1256:            message: message.into(),
+1257:            expires_at: Instant::now() + duration,
+1258:        });
+1259:    }
+1260:
+1261:    fn active_status_notice(&self) -> Option<&str> {
+1262:        self.status_notice
+1263:            .as_ref()
+1264:            .filter(|notice| Instant::now() < notice.expires_at)
+1265:            .map(|notice| notice.message.as_str())
+1266:    }
+1267:
+1268:    fn status_notice_expired(&self) -> bool {
+1269:        self.status_notice
+1270:            .as_ref()
+1271:            .is_some_and(|notice| Instant::now() >= notice.expires_at)
+1272:    }
+1273:
+1274:    fn open_selected_same_pane(&mut self) -> Vec<UiAction> {
+1275:        let Some(agent_id) = self.action_agent_id() else {
+1276:            return Vec::new();
+1277:        };
+1278:        self.split_chats.push(agent_id.clone());
+1279:        vec![UiAction::OpenChatSamePane(agent_id)]
+1280:    }
+1281:
+1282:    fn open_selected_new_window(&mut self) -> Vec<UiAction> {
+1283:        let Some(agent_id) = self.action_agent_id() else {
+1284:            return Vec::new();
+1285:        };
+1286:        self.windows.push(UiWindow::chat(agent_id.clone()));
+1287:        self.active_window = self.windows.len() - 1;
+1288:        vec![UiAction::OpenChatNewWindow(agent_id)]
+1289:    }
+1290:
+1291:    fn fork_selected_agent(&self) -> Vec<UiAction> {
+1292:        self.action_agent_id()
+1293:            .map(UiAction::ForkAgent)
+1294:            .into_iter()
+1295:            .collect()
+1296:    }
+1297:
+1298:    fn open_control_selection(&mut self) {
+1299:        if self.control_selected == 0 {
+1300:            self.select_command_interface();
+1301:            self.focus = PaneFocus::Right;
+1302:            return;
+1303:        }
+1304:        if let Some(agent_id) = self.control_selected_agent_id() {
+1305:            let _ = self.select_agent(&agent_id);
+1306:            self.focus = PaneFocus::Right;
+1307:        }
+1308:    }
+1309:
+1310:    fn select_control_row_surface(&mut self) {
+1311:        if self.control_selected == 0 {
+1312:            self.select_command_interface();
+1313:            self.focus = PaneFocus::Left;
+1314:            return;
+1315:        }
+1316:        if let Some(agent_id) = self.control_selected_agent_id() {
+1317:            let _ = self.select_agent(&agent_id);
+1318:            self.focus = PaneFocus::Left;
+1319:        }
+1320:    }
+1321:
+1322:    fn handle_mouse_click(&mut self, column: u16, row: u16) -> Vec<UiAction> {
+1323:        if column == 0 || row == 0 {
+1324:            return Vec::new();
+1325:        }
+1326:
+1327:        let left_width = self.layout().left_width;
+1328:
+1329:        if self.left_visible && column <= left_width {
+1330:            self.mode = UiMode::Command;
+1331:            self.focus = PaneFocus::Left;
+1332:            let Some(target) = self.left_pane_click_target(row) else {
+1333:                return Vec::new();
+1334:            };
+1335:            match target {
+1336:                LeftPaneClickTarget::Command => {
+1337:                    self.select_command_interface();
+1338:                    self.focus = PaneFocus::Right;
+1339:                }
+1340:                LeftPaneClickTarget::Agent(agent_id) => {
+1341:                    let _ = self.activate_agent_chat(&agent_id);
+1342:                }
+1343:            }
+1344:        } else {
+1345:            self.focus = PaneFocus::Right;
+1346:            self.mode = if self.selected_agent.is_some()
+1347:                && self.windows[self.active_window].surface == UiSurface::AgentChat
+1348:            {
+1349:                UiMode::Insert
+1350:            } else {
+1351:                UiMode::Command
+1352:            };
+1353:        }
+1354:
+1355:        Vec::new()
+1356:    }
+1357:
+1358:    fn handle_mouse_scroll(&mut self, column: u16, row: u16, up: bool) {
+1359:        if column == 0 || row == 0 || row >= self.height {
+1360:            return;
+1361:        }
+1362:
+1363:        let left_width = self.layout().left_width;
+1364:        if self.left_visible && column <= left_width {
+1365:            return;
+1366:        }
+1367:
+1368:        if up {
+1369:            self.scroll_right_pane_up();
+1370:        } else {
+1371:            self.scroll_right_pane_down();
+1372:        }
+1373:    }
+1374:
+1375:    fn hide_control_selection(&mut self) {
+1376:        if self.control_selected == 0 {
+1377:            return;
+1378:        }
+1379:        let Some(agent_index) = self.control_selected_agent_index() else {
+1380:            return;
+1381:        };
+1382:        let hidden_agent = self.agents[agent_index].id.clone();
+1383:        self.agents[agent_index].hidden = true;
+1384:        let hidden_was_selected = self
+1385:            .selected_agent
+1386:            .as_ref()
+1387:            .is_some_and(|selected| selected == &hidden_agent);
+1388:        self.clamp_control_selection();
+1389:        if hidden_was_selected {
+1390:            self.select_control_row_surface();
+1391:        }
+1392:    }
+1393:
+1394:    fn move_control_selection(&mut self, delta: isize) {
+1395:        let max_row = self.visible_agent_indices().len();
+1396:        let current = self.control_selected as isize;
+1397:        let next = (current + delta).clamp(0, max_row as isize);
+1398:        self.control_selected = next as usize;
+1399:    }
+1400:
+1401:    fn clamp_control_selection(&mut self) {
+1402:        let max_row = self.visible_agent_indices().len();
+1403:        if self.control_selected > max_row {
+1404:            self.control_selected = max_row;
+1405:        }

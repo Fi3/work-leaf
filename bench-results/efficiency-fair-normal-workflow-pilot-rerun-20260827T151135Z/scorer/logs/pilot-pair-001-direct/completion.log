@@ -1,0 +1,58 @@
+command: cargo test --test quality_completion quality_completion_behavior -- --exact
+exit_code: 101
+duration_seconds: 0.431
+
+[stdout]
+
+running 1 test
+test quality_completion_behavior ... FAILED
+
+failures:
+
+---- quality_completion_behavior stdout ----
+
+thread 'quality_completion_behavior' (32012) panicked at tests/quality_completion.rs:23:5:
+[H┌work-leaf─────────────┐┌chat──────────────────────────────────────────────────────────────────────────────────────────┐
+│  work-leaf  command  ││chat>                                                                                         │
+│[7m review-f user-1 READY[0m││                                                                                              │
+│[7m>review-user-1 r READY[0m││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+└──────────────────────┘└──────────────────────────────────────────────────────────────────────────────────────────────┘
+mode=insert focus=right window=1/1                                                                                      [2;32H
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    quality_completion_behavior
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+
+[stderr]
+   Compiling work-leaf v0.1.0 (/tmp/work-leaf-fair-pilot-score-ku6rn44o/checkouts/pilot-pair-001-direct)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.36s
+     Running tests/quality_completion.rs (/tmp/work-leaf-fair-pilot-score-ku6rn44o/cargo-target/debug/deps/quality_completion-dedde6b96f0e96d0)
+error: test failed, to rerun pass `--test quality_completion`

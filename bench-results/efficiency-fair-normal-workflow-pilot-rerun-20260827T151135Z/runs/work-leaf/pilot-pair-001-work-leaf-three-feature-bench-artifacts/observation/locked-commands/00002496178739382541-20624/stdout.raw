@@ -1,0 +1,202 @@
+2290:----- END FILE src/http_controller.rs -----
+2291:
+2292:----- BEGIN FILE src/terminal_app.rs -----
+2293:digest: fnv64:37e6fb9d2b3a4bd1; bytes:43323
+2294:
+2295:use std::thread;
+2296:use std::time::{Duration, Instant};
+2297:
+2298:use rustyline::line_buffer::{ChangeListener, DeleteListener, Direction, LineBuffer};
+2299:
+2300:use crate::agent::{AgentBackend, AgentId};
+2301:use crate::cli::{CommandChat, terminal_right_content, ui_action_text};
+2302:use crate::http_controller::HttpControllerClient;
+2303:use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode};
+2304:use crate::workspace::{
+2305:    WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSession, WorkLeafSnapshot,
+2306:};
+2307:
+2308:#[derive(Debug)]
+3290:#[derive(Clone, Debug, Eq, PartialEq)]
+3291:struct PendingEscapeSequence {
+3292:    bytes: Vec<u8>,
+3293:    mode_before: UiMode,
+3294:    escape_dispatched: bool,
+3295:}
+3296:
+3297:const SPINNER: [&str; 4] = ["|", "/", "-", "\\"];
+3298:
+3299:const MAX_ESCAPE_SEQUENCE: usize = 64;
+3300:
+3301:fn is_agent_slash_command(line: &str) -> bool {
+3302:    line.strip_prefix('/')
+3303:        .and_then(|rest| rest.chars().next())
+3304:        .is_some_and(|ch| !ch.is_whitespace())
+3305:}
+3306:
+3307:fn is_complete_control_sequence(sequence: &[u8]) -> bool {
+3308:    sequence.len() > 1
+3309:        && sequence
+3310:            .last()
+3311:            .is_some_and(|byte| (0x40..=0x7e).contains(byte))
+3312:}
+3313:
+3314:fn parse_control_sequence(sequence: &[u8]) -> Option<TerminalAppInput> {
+3315:    match sequence {
+3316:        [b'[', b'A'] => Some(TerminalAppInput::Key(UiKey::Up)),
+3317:        [b'[', b'B'] => Some(TerminalAppInput::Key(UiKey::Down)),
+3318:        [b'[', b'C'] => Some(TerminalAppInput::Key(UiKey::Right)),
+3319:        [b'[', b'D'] => Some(TerminalAppInput::Key(UiKey::Left)),
+3320:        [b'[', b'2', b'0', b'0', b'~'] => Some(TerminalAppInput::PasteStart),
+3321:        [b'[', b'2', b'0', b'1', b'~'] => Some(TerminalAppInput::PasteEnd),
+3322:        [b'[', b'1', b'3', b';', b'2', b'u']
+3323:        | [b'[', b'1', b'3', b';', b'2', b'~']
+3324:        | [b'[', b'2', b'7', b';', b'2', b';', b'1', b'3', b'~'] => {
+3325:            Some(TerminalAppInput::LineBreak)
+3326:        }
+3327:        _ => parse_sgr_mouse_event(sequence).map(TerminalAppInput::Key),
+3328:    }
+3329:}
+3330:
+3331:fn parse_sgr_mouse_event(sequence: &[u8]) -> Option<UiKey> {
+3332:    let final_byte = *sequence.last()?;
+3333:    if !sequence.starts_with(b"[<") || !matches!(final_byte, b'M' | b'm') {
+3334:        return None;
+3335:    }
+3336:
+3337:    let body = std::str::from_utf8(&sequence[2..sequence.len() - 1]).ok()?;
+3338:    let mut parts = body.split(';');
+3339:    let button = parts.next()?.parse::<u16>().ok()?;
+3340:    let column = parts.next()?.parse::<u16>().ok()?;
+3341:    let row = parts.next()?.parse::<u16>().ok()?;
+3342:    if parts.next().is_some() {
+3343:        return None;
+3344:    }
+3345:
+3346:    let button_kind = button & !0b0001_1100_u16;
+3347:    match (button_kind, final_byte) {
+3348:        (64, b'M') => Some(UiKey::MouseScrollUp { column, row }),
+3349:        (65, b'M') => Some(UiKey::MouseScrollDown { column, row }),
+3350:        (_, b'M' | b'm') if button_kind < 64 && button & 0b11 == 0 => {
+3351:            Some(UiKey::MouseClick { column, row })
+3352:        }
+3353:        _ => None,
+3354:    }
+3355:}
+3356:
+3357:#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+3358:enum TerminalAppInput {
+3359:    Key(UiKey),
+3360:    Char(char),
+3361:    Enter,
+3362:    Backspace,
+3363:    LineBreak,
+3364:    PasteStart,
+3365:    PasteEnd,
+3366:    Interrupt,
+3367:    Quit,
+3368:}
+3369:
+3370:impl TerminalAppInput {
+3371:    fn from_byte(byte: u8) -> Option<Self> {
+3372:        match byte {
+3373:            3 => Some(Self::Interrupt),
+3374:            4 => Some(Self::Quit),
+3375:            13 | 10 => Some(Self::Enter),
+3376:            27 => Some(Self::Key(UiKey::Esc)),
+3377:            23 => Some(Self::Key(UiKey::CtrlW)),
+3378:            8 | 127 => Some(Self::Backspace),
+3379:            byte if byte.is_ascii_graphic() || byte == b' ' => Some(Self::Char(byte as char)),
+3380:            _ => None,
+3381:        }
+3382:    }
+3383:}
+3384:
+3385:#[derive(Debug)]
+3386:struct PromptLine {
+3387:    buffer: LineBuffer,
+3388:}
+3389:
+3390:impl PromptLine {
+3391:    const CAPACITY: usize = 64 * 1024;
+3392:
+3393:    fn new() -> Self {
+3394:        Self {
+3395:            buffer: LineBuffer::with_capacity(Self::CAPACITY),
+3396:        }
+3397:    }
+3398:
+3399:    fn as_str(&self) -> &str {
+3400:        self.buffer.as_str()
+3401:    }
+3402:
+3403:    fn cursor(&self) -> usize {
+3404:        self.buffer.pos()
+3405:    }
+3406:
+3407:    fn cursor_char_count(&self) -> usize {
+3408:        self.as_str()[..self.cursor()].chars().count()
+3409:    }
+3410:
+3411:    fn trimmed_string(&self) -> String {
+3412:        self.as_str().trim().to_string()
+3413:    }
+3414:
+3415:    fn push(&mut self, ch: char) {
+3416:        let mut listener = NoopLineListener;
+3417:        let _ = self.buffer.insert(ch, 1, &mut listener);
+3418:    }
+3419:
+3420:    fn move_left(&mut self) {
+3421:        self.buffer.move_backward(1);
+3422:    }
+3423:
+3424:    fn move_right(&mut self) {
+3425:        self.buffer.move_forward(1);
+3426:    }
+3427:
+3428:    fn backspace(&mut self) {
+3429:        let mut listener = NoopLineListener;
+3430:        self.buffer.backspace(1, &mut listener);
+3431:    }
+3432:
+3433:    fn clear(&mut self) {
+3434:        let mut listener = NoopLineListener;
+3435:        let len = self.buffer.as_str().len();
+3436:        self.buffer.replace(0..len, "", &mut listener);
+3437:    }
+3438:
+3439:    fn replace(&mut self, text: &str) {
+3440:        let mut listener = NoopLineListener;
+3441:        let len = self.buffer.as_str().len();
+3442:        self.buffer.replace(0..len, text, &mut listener);
+3443:        self.buffer.move_end();
+3444:    }
+3445:}
+3446:
+3447:#[derive(Debug)]
+3448:struct NoopLineListener;
+3449:
+3450:impl DeleteListener for NoopLineListener {
+3451:    fn delete(&mut self, _idx: usize, _string: &str, _dir: Direction) {}
+3452:}
+3453:
+3454:impl ChangeListener for NoopLineListener {
+3455:    fn insert_char(&mut self, _idx: usize, _c: char) {}
+3456:
+3457:    fn insert_str(&mut self, _idx: usize, _string: &str) {}
+3458:
+3459:    fn replace(&mut self, _idx: usize, _old: &str, _new: &str) {}
+3460:}
+3461:
+3462:#[cfg(test)]
+3463:mod tests {
+3464:    use std::path::PathBuf;
+3465:    use std::sync::{
+3466:        Arc,
+3467:        atomic::{AtomicUsize, Ordering},
+3468:    };
+3469:
+3470:    use super::*;
+3471:    use crate::agent::{
+3472:        AgentError, AgentKind, AgentLaunch, AgentSession, ChatMessage, MessageRole,

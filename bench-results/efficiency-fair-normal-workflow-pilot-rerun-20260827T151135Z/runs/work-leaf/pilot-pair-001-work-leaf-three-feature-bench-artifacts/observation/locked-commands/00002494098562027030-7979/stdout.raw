@@ -1,0 +1,381 @@
+1400:
+1401:    fn clamp_control_selection(&mut self) {
+1402:        let max_row = self.visible_agent_indices().len();
+1403:        if self.control_selected > max_row {
+1404:            self.control_selected = max_row;
+1405:        }
+1406:    }
+1407:
+1408:    fn visible_agent_indices(&self) -> Vec<usize> {
+1409:        self.agents
+1410:            .iter()
+1411:            .enumerate()
+1412:            .filter_map(|(index, agent)| (!agent.hidden).then_some(index))
+1413:            .collect()
+1414:    }
+1415:
+1416:    fn control_selected_agent_index(&self) -> Option<usize> {
+1417:        if self.control_selected == 0 {
+1418:            return None;
+1419:        }
+1420:        self.visible_agent_indices()
+1421:            .get(self.control_selected - 1)
+1422:            .copied()
+1423:    }
+1424:
+1425:    fn control_selected_agent_id(&self) -> Option<AgentId> {
+1426:        self.control_selected_agent_index()
+1427:            .map(|index| self.agents[index].id.clone())
+1428:    }
+1429:
+1430:    fn left_pane_click_target(&mut self, row: u16) -> Option<LeftPaneClickTarget> {
+1431:        let list_row = usize::from(row.saturating_sub(2));
+1432:        if row < 2 {
+1433:            return None;
+1434:        }
+1435:        if list_row == 0 {
+1436:            self.control_selected = 0;
+1437:            return Some(LeftPaneClickTarget::Command);
+1438:        }
+1439:
+1440:        let mut current_row = 1;
+1441:        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
+1442:            let agent = &self.agents[*agent_index];
+1443:            if list_row == current_row {
+1444:                self.control_selected = visible_position + 1;
+1445:                return Some(LeftPaneClickTarget::Agent(agent.id.clone()));
+1446:            }
+1447:            current_row += 1;
+1448:
+1449:            if !agent.modified_files.is_empty() {
+1450:                if list_row == current_row {
+1451:                    self.control_selected = visible_position + 1;
+1452:                    return Some(LeftPaneClickTarget::Agent(agent.id.clone()));
+1453:                }
+1454:                current_row += 1;
+1455:            }
+1456:
+1457:            for linked_agents in [
+1458:                &agent.conflicting_agents,
+1459:                &agent.depends_on,
+1460:                &agent.depended_on_by,
+1461:            ] {
+1462:                if !linked_agents.is_empty() {
+1463:                    if list_row == current_row {
+1464:                        self.control_selected = visible_position + 1;
+1465:                        return linked_agents
+1466:                            .first()
+1467:                            .cloned()
+1468:                            .map(LeftPaneClickTarget::Agent);
+1469:                    }
+1470:                    current_row += 1;
+1471:                }
+1472:            }
+1473:        }
+1474:
+1475:        None
+1476:    }
+1477:
+1478:    fn action_agent_id(&self) -> Option<AgentId> {
+1479:        self.control_selected_agent_id()
+1480:            .or_else(|| self.selected_agent.clone())
+1481:    }
+1482:
+1483:    fn control_cursor_row(&self) -> u16 {
+1484:        (self.control_selected + 2).min(usize::from(u16::MAX)) as u16
+1485:    }
+1486:
+1487:    fn right_cursor_position_with_cursor(
+1488:        &self,
+1489:        right_content: &str,
+1490:        cursor_column: Option<usize>,
+1491:    ) -> (u16, u16) {
+1492:        let layout = self.layout();
+1493:        let inner_width = layout.right_width.saturating_sub(2).max(1);
+1494:        let lines = right_content.lines().collect::<Vec<_>>();
+1495:        let Some(line) = lines.last().copied() else {
+1496:            return (2, layout.left_width.saturating_add(2));
+1497:        };
+1498:        if !line.starts_with("chat> ") {
+1499:            return (2, layout.left_width.saturating_add(2));
+1500:        }
+1501:        let previous_rows = lines[..lines.len() - 1]
+1502:            .iter()
+1503:            .map(|line| visual_rows(line, inner_width))
+1504:            .sum::<u16>();
+1505:        let line_chars = line.chars().count();
+1506:        let line_len = cursor_column
+1507:            .unwrap_or(line_chars)
+1508:            .min(line_chars)
+1509:            .min(usize::from(u16::MAX)) as u16;
+1510:        let row = 2_u16
+1511:            .saturating_add(previous_rows)
+1512:            .saturating_add(line_len / inner_width);
+1513:        let column = layout
+1514:            .left_width
+1515:            .saturating_add(2)
+1516:            .saturating_add(line_len % inner_width);
+1517:        (row, column)
+1518:    }
+1519:    fn right_inner_size(&self) -> (u16, u16) {
+1520:        let layout = self.layout();
+1521:        let inner_width = layout.right_width.saturating_sub(2).max(1);
+1522:        let body_height = self.height.saturating_sub(1);
+1523:        let inner_height = body_height.saturating_sub(2).max(1);
+1524:        (inner_width, inner_height)
+1525:    }
+1526:
+1527:    fn next_window(&mut self) {
+1528:        if !self.windows.is_empty() {
+1529:            self.active_window = (self.active_window + 1) % self.windows.len();
+1530:        }
+1531:    }
+1532:
+1533:    fn previous_window(&mut self) {
+1534:        if !self.windows.is_empty() {
+1535:            self.active_window = if self.active_window == 0 {
+1536:                self.windows.len() - 1
+1537:            } else {
+1538:                self.active_window - 1
+1539:            };
+1540:        }
+1541:    }
+1542:
+1543:    fn render_agent_links(&self, label: &str, agents: &[AgentId], rendered: &mut String) {
+1544:        if agents.is_empty() {
+1545:            return;
+1546:        }
+1547:        rendered.push_str("    ");
+1548:        rendered.push_str(label);
+1549:        rendered.push_str(": ");
+1550:        for (index, agent_id) in agents.iter().enumerate() {
+1551:            if index > 0 {
+1552:                rendered.push_str(", ");
+1553:            }
+1554:            rendered.push_str(agent_id.as_str());
+1555:        }
+1556:        rendered.push('\n');
+1557:    }
+1558:
+1559:    fn render_status_line(&self) -> String {
+1560:        if let Some(notice) = self.active_status_notice() {
+1561:            return notice.to_string();
+1562:        }
+1563:
+1564:        format!(
+1565:            "mode={} focus={} window={}/{}",
+1566:            self.mode.as_str(),
+1567:            self.focus.as_str(),
+1568:            self.active_window + 1,
+1569:            self.windows.len()
+1570:        )
+1571:    }
+1572:}
+1573:
+1574:impl UiMode {
+1575:    fn as_str(&self) -> &'static str {
+1576:        match self {
+1577:            Self::Command => "command",
+1578:            Self::Insert => "insert",
+1579:            Self::Prompt => "prompt",
+1580:        }
+1581:    }
+1582:}
+1583:
+1584:impl PaneFocus {
+1585:    fn as_str(&self) -> &'static str {
+1586:        match self {
+1587:            Self::Left => "left",
+1588:            Self::Right => "right",
+1589:        }
+1590:    }
+1591:}
+1592:
+1593:fn agent_list_labels(agent: &AgentListEntry) -> (&str, &str) {
+1594:    if agent.id.as_str().starts_with("review-") {
+1595:        (agent.id.as_str(), &agent.feature)
+1596:    } else {
+1597:        (&agent.feature, agent.id.as_str())
+1598:    }
+1599:}
+1600:
+1601:fn compact_agent_row(agent: &AgentListEntry, selected: bool, width: usize) -> String {
+1602:    let prefix = if selected { ">" } else { " " };
+1603:    let status = if agent.ready { " READY" } else { "" };
+1604:    let id = agent.id.as_str();
+1605:    let width = width.max(1);
+1606:
+1607:    let row = if id.starts_with("review-") {
+1608:        compact_fixed_first(prefix, id, &agent.feature, status, width)
+1609:    } else {
+1610:        compact_fixed_last(prefix, &agent.feature, id, status, width)
+1611:    };
+1612:    truncate_to_width(&row, width)
+1613:}
+1614:
+1615:fn compact_fixed_first(
+1616:    prefix: &str,
+1617:    fixed: &str,
+1618:    flexible: &str,
+1619:    status: &str,
+1620:    width: usize,
+1621:) -> String {
+1622:    let fixed_width = prefix.chars().count() + fixed.chars().count() + status.chars().count();
+1623:    if fixed_width >= width {
+1624:        return format!("{prefix}{fixed}{status}");
+1625:    }
+1626:
+1627:    let flexible_width = width.saturating_sub(fixed_width + 1);
+1628:    format!(
+1629:        "{prefix}{fixed} {}{status}",
+1630:        truncate_to_width(flexible, flexible_width)
+1631:    )
+1632:}
+1633:
+1634:fn compact_fixed_last(
+1635:    prefix: &str,
+1636:    flexible: &str,
+1637:    fixed: &str,
+1638:    status: &str,
+1639:    width: usize,
+1640:) -> String {
+1641:    let fixed_width = prefix.chars().count() + 1 + fixed.chars().count() + status.chars().count();
+1642:    if fixed_width >= width {
+1643:        return format!("{prefix}{fixed}{status}");
+1644:    }
+1645:
+1646:    let flexible_width = width.saturating_sub(fixed_width);
+1647:    format!(
+1648:        "{prefix}{} {fixed}{status}",
+1649:        truncate_to_width(flexible, flexible_width)
+1650:    )
+1651:}
+1652:
+1653:fn truncate_to_width(text: &str, width: usize) -> String {
+1654:    text.chars().take(width).collect()
+1655:}
+1656:
+1657:fn buffer_to_string(buffer: &Buffer) -> String {
+1658:    const ANSI_REVERSE_VIDEO: &str = "\u{1b}[7m";
+1659:    const ANSI_RESET: &str = "\u{1b}[0m";
+1660:    let mut output = String::new();
+1661:    for y in 0..buffer.area.height {
+1662:        let mut reversed = false;
+1663:        for x in 0..buffer.area.width {
+1664:            let cell = buffer.get(x, y);
+1665:            let cell_reversed = cell.modifier.contains(Modifier::REVERSED);
+1666:            if cell_reversed != reversed {
+1667:                output.push_str(if cell_reversed {
+1668:                    ANSI_REVERSE_VIDEO
+1669:                } else {
+1670:                    ANSI_RESET
+1671:                });
+1672:                reversed = cell_reversed;
+1673:            }
+1674:            output.push_str(&cell.symbol);
+1675:        }
+1676:        if reversed {
+1677:            output.push_str(ANSI_RESET);
+1678:        }
+1679:        if y + 1 < buffer.area.height {
+1680:            output.push_str("\r\n");
+1681:        }
+1682:    }
+1683:    output
+1684:}
+1685:
+1686:fn visual_rows(line: &str, width: u16) -> u16 {
+1687:    visual_row_count(line, width).min(usize::from(u16::MAX)) as u16
+1688:}
+1689:
+1690:fn visual_row_count(line: &str, width: u16) -> usize {
+1691:    let width = usize::from(width.max(1));
+1692:    let len = line.chars().count().min(usize::from(u16::MAX));
+1693:    (len / width).saturating_add(1)
+1694:}
+1695:
+1696:fn cursor_char_count(text: &str, cursor: usize) -> usize {
+1697:    text.char_indices()
+1698:        .take_while(|(index, _)| *index < cursor)
+1699:        .count()
+1700:}
+1701:
+1702:fn visible_content(content: &str, width: u16, height: u16, scroll_rows: usize) -> String {
+1703:    let height = usize::from(height);
+1704:    let Some((history, prompt)) = split_chat_prompt(content) else {
+1705:        return tail_visible_content(content, width, height, scroll_rows);
+1706:    };
+1707:
+1708:    let prompt_rows = visual_row_count(prompt, width);
+1709:    let history_height = height.saturating_sub(prompt_rows).max(1);
+1710:    let visible_history = tail_visible_content(history, width, history_height, scroll_rows);
+1711:    if visible_history.is_empty() {
+1712:        prompt.to_string()
+1713:    } else {
+1714:        format!("{visible_history}\n{prompt}")
+1715:    }
+1716:}
+1717:
+1718:fn split_chat_prompt(content: &str) -> Option<(&str, &str)> {
+1719:    let (history, prompt) = content.rsplit_once('\n')?;
+1720:    prompt.starts_with("chat> ").then_some((history, prompt))
+1721:}
+1722:
+1723:fn tail_visible_content(content: &str, width: u16, height: usize, scroll_rows: usize) -> String {
+1724:    if content.is_empty() || height == 0 {
+1725:        return String::new();
+1726:    }
+1727:
+1728:    let lines = content.lines().collect::<Vec<_>>();
+1729:    let rows_to_skip = scroll_rows.min(
+1730:        lines
+1731:            .iter()
+1732:            .map(|line| visual_row_count(line, width))
+1733:            .sum::<usize>()
+1734:            .saturating_sub(height),
+1735:    );
+1736:    let mut visible = Vec::new();
+1737:    let mut skipped_rows = 0_usize;
+1738:    let mut used_rows = 0_usize;
+1739:    for line in lines.iter().rev() {
+1740:        let rows = visual_row_count(line, width);
+1741:        if skipped_rows.saturating_add(rows) <= rows_to_skip {
+1742:            skipped_rows = skipped_rows.saturating_add(rows);
+1743:            continue;
+1744:        }
+1745:        if visible.is_empty() || used_rows.saturating_add(rows) <= height {
+1746:            visible.push(*line);
+1747:            used_rows = used_rows.saturating_add(rows);
+1748:        } else {
+1749:            break;
+1750:        }
+1751:    }
+1752:    visible.reverse();
+1753:    visible.join("\n")
+1754:}
+1755:
+1756:#[cfg(test)]
+1757:mod tests {
+1758:    use super::*;
+1759:
+1760:    #[test]
+1761:    fn setting_agent_ready_queues_one_bell_for_next_render() {
+1762:        let mut ui = TerminalUi::new(80, 24);
+1763:        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+1764:        ui.add_agent(AgentListEntry::new(agent_id.clone(), "parser"));
+1765:
+1766:        ui.set_agent_ready_state(&agent_id, true)
+1767:            .expect("test agent is registered");
+1768:
+1769:        assert!(ui.render_screen("reply").starts_with('\u{7}'));
+1770:        assert!(!ui.render_screen("reply").contains('\u{7}'));
+1771:    }
+1772:
+1773:    #[test]
+1774:    fn ready_agent_row_is_reversed_across_the_tui_left_pane() {
+1775:        let mut ui = TerminalUi::new(100, 24);
+1776:        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+1777:        ui.add_agent(AgentListEntry::new(agent_id, "parser").with_ready(true));
+1778:
+1779:        let buffer = ui.render_tui_buffer("reply", "", 0);
+1780:        let left_width = ui.layout().left_width;

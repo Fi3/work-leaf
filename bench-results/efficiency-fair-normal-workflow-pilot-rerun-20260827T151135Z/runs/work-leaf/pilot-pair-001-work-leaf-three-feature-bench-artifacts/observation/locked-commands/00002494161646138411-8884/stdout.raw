@@ -1,0 +1,555 @@
+3645:----- BEGIN FILE tests/ui_harness.rs -----
+3646:digest: fnv64:01ef102fdde22996; bytes:15937
+3647:
+3648:use work_leaf::{PaneFocus, UiHarness, UiMode};
+3649:
+3650:#[test]
+3651:fn scripted_harness_renders_full_width_crlf_frame() {
+3652:    let harness = UiHarness::new(80, 24);
+3653:    let rendered = harness.render_frame();
+3654:    let lines = rendered.split("\r\n").collect::<Vec<_>>();
+3655:
+3656:    assert!(rendered.starts_with("\u{1b}[H"));
+3657:    assert!(!rendered.contains("\u{1b}[2J"));
+3658:    assert!(rendered.contains("UI harness"));
+3659:    assert!(rendered.contains("user-1"));
+3660:    assert_eq!(lines.len(), 24);
+3661:    assert!(
+3662:        lines
+3663:            .iter()
+3664:            .all(|line| strip_ansi(line).chars().count() == 80)
+3665:    );
+3666:}
+3667:
+3668:#[test]
+3669:fn scripted_harness_rings_and_highlights_ready_chat() {
+3670:    let mut harness = UiHarness::new(100, 24);
+3671:
+3672:    assert!(!harness.render_frame().starts_with('\u{7}'));
+3673:
+3674:    harness
+3675:        .mark_agent_ready("user-2")
+3676:        .expect("fixture user-2 agent is registered");
+3677:
+3678:    let ready_frame = harness.render_frame();
+3679:    assert!(ready_frame.starts_with('\u{7}'));
+3680:    assert!(ready_frame.contains("\u{1b}[7m test user-2 READY\u{1b}[0m"));
+3681:    assert!(!harness.render_frame().starts_with('\u{7}'));
+3682:}
+3683:
+3684:#[test]
+3685:fn scripted_harness_switches_modes_without_enter() {
+3686:    let mut harness = UiHarness::new(80, 24);
+3687:
+3688:    harness.handle_byte(b'i');
+3689:    assert_eq!(harness.ui().mode(), UiMode::Insert);
+3690:
+3691:    harness.handle_byte(27);
+3692:    assert_eq!(harness.ui().mode(), UiMode::Command);
+3693:
+3694:    harness.handle_byte(b':');
+3695:    assert_eq!(harness.ui().mode(), UiMode::Prompt);
+3696:    assert!(harness.render_frame().ends_with("\u{1b}[24;2H"));
+3697:
+3698:    harness.handle_byte(b'n');
+3699:    assert_eq!(harness.ui().mode(), UiMode::Prompt);
+3700:    assert!(harness.render_frame().ends_with("\u{1b}[24;3H"));
+3701:}
+3702:
+3703:#[test]
+3704:fn scripted_harness_prompt_arrow_keys_move_visible_cursor() {
+3705:    let mut harness = UiHarness::new(80, 24);
+3706:    harness.handle_bytes(b":ab\x1b[D");
+3707:    assert_eq!(harness.ui().mode(), UiMode::Prompt);
+3708:    assert!(harness.render_frame().ends_with("\u{1b}[24;3H"));
+3709:    harness.handle_bytes(b"\x1b[C");
+3710:    assert_eq!(harness.ui().mode(), UiMode::Prompt);
+3711:    assert!(harness.render_frame().ends_with("\u{1b}[24;4H"));
+3712:}
+3713:
+3714:#[test]
+3715:fn scripted_harness_long_prompt_arrows_keep_rendered_cursor_at_edit_position() {
+3716:    let mut harness = UiHarness::new(20, 10);
+3717:
+3718:    harness.handle_bytes(b":abcdefghijklmnopqrstuvwxyz0123\x1b[D\x1b[D\x1b[D\x1b[D\x1b[DX");
+3719:
+3720:    let frame = harness.render_frame();
+3721:    assert!(frame.contains(":ijklmnopqrstuvwxyXz"));
+3722:    assert!(frame.ends_with("\u{1b}[10;20H"));
+3723:
+3724:    harness.handle_bytes(b"\n");
+3725:
+3726:    assert!(
+3727:        harness
+3728:            .transcript()
+3729:            .iter()
+3730:            .any(|line| line == "unknown fixture command: abcdefghijklmnopqrstuvwxyXz0123")
+3731:    );
+3732:}
+3733:#[test]
+3734:fn scripted_harness_prompt_arrow_keys_recall_prompt_history() {
+3735:    let mut harness = UiHarness::new(80, 24);
+3736:    harness.handle_bytes(b":review\n:linearize\n:\x1b[A\x1b[A\x1b[B\n");
+3737:    assert_eq!(harness.ui().mode(), UiMode::Command);
+3738:    assert_eq!(
+3739:        harness
+3740:            .transcript()
+3741:            .iter()
+3742:            .filter(|line| line.as_str() == "work-leaf> linearize")
+3743:            .count(),
+3744:        2
+3745:    );
+3746:}
+3747:
+3748:#[test]
+3749:fn scripted_harness_prompt_history_down_restores_in_progress_prompt() {
+3750:    let mut harness = UiHarness::new(80, 24);
+3751:
+3752:    harness.handle_bytes(b":review\n:draft command\x1b[A\x1b[B\n");
+3753:
+3754:    assert!(
+3755:        harness
+3756:            .transcript()
+3757:            .iter()
+3758:            .any(|line| line == "unknown fixture command: draft command")
+3759:    );
+3760:}
+3761:
+3762:#[test]
+3763:fn scripted_harness_bytewise_prompt_arrow_keys_edit_without_leaving_prompt() {
+3764:    let mut harness = UiHarness::new(80, 24);
+3765:    harness.handle_byte(b':');
+3766:    harness.handle_byte(b'a');
+3767:    harness.handle_byte(b'b');
+3768:    harness.handle_byte(27);
+3769:    assert_eq!(harness.ui().mode(), UiMode::Prompt);
+3770:    harness.handle_byte(b'[');
+3771:    assert_eq!(harness.ui().mode(), UiMode::Prompt);
+3772:    harness.handle_byte(b'D');
+3773:    harness.handle_byte(b'Z');
+3774:    harness.handle_byte(b'\n');
+3775:    assert_eq!(harness.ui().mode(), UiMode::Command);
+3776:    assert!(
+3777:        harness
+3778:            .transcript()
+3779:            .iter()
+3780:            .any(|line| line == "unknown fixture command: aZb")
+3781:    );
+3782:}
+3783:#[test]
+3784:fn scripted_harness_drives_ctrl_w_navigation_and_left_toggle() {
+3785:    let mut harness = UiHarness::new(80, 24);
+3786:
+3787:    harness.handle_bytes(&[23, b'l']);
+3788:    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+3789:    assert!(harness.render_frame().ends_with("\u{1b}[5;24H"));
+3790:
+3791:    harness.handle_bytes(&[23, b'h']);
+3792:    assert_eq!(harness.ui().focus(), PaneFocus::Left);
+3793:    assert!(harness.render_frame().ends_with("\u{1b}[3;2H"));
+3794:
+3795:    harness.handle_byte(b',');
+3796:    assert_eq!(harness.ui().layout().left_width, 0);
+3797:    assert_eq!(harness.ui().layout().right_width, 80);
+3798:    assert!(harness.ui().layout().right_surface.is_some());
+3799:    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+3800:
+3801:    harness.handle_byte(b',');
+3802:    assert_eq!(harness.ui().layout().left_width, 16);
+3803:    assert_eq!(harness.ui().focus(), PaneFocus::Left);
+3804:    harness.handle_bytes(&[23, b'j']);
+3805:    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+3806:
+3807:    harness.handle_bytes(&[23, b'k']);
+3808:    assert_eq!(harness.ui().focus(), PaneFocus::Left);
+3809:}
+3810:
+3811:#[test]
+3812:fn scripted_harness_ctrl_c_never_quits_and_only_right_focus_interrupts_agent() {
+3813:    let mut harness = UiHarness::new(80, 24);
+3814:
+3815:    assert_eq!(harness.ui().focus(), PaneFocus::Left);
+3816:    assert!(harness.handle_byte(3));
+3817:    assert!(!harness.is_quit());
+3818:    assert!(
+3819:        !harness
+3820:            .transcript()
+3821:            .iter()
+3822:            .any(|line| line.contains("sent Ctrl-C"))
+3823:    );
+3824:
+3825:    harness.handle_bytes(&[23, b'l']);
+3826:    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+3827:    assert!(harness.handle_byte(3));
+3828:    assert!(!harness.is_quit());
+3829:    assert!(
+3830:        harness
+3831:            .transcript()
+3832:            .iter()
+3833:            .any(|line| line == "work-leaf: sent Ctrl-C to user-1")
+3834:    );
+3835:}
+3836:
+3837:#[test]
+3838:fn scripted_harness_command_mode_typing_shows_insert_mode_notice() {
+3839:    let mut harness = UiHarness::new(80, 24);
+3840:
+3841:    harness.handle_bytes(b"hello");
+3842:
+3843:    assert_eq!(harness.ui().mode(), UiMode::Command);
+3844:    assert!(
+3845:        harness
+3846:            .render_frame()
+3847:            .contains("command mode: press i for insert mode before typing")
+3848:    );
+3849:}
+3850:
+3851:#[test]
+3852:fn scripted_harness_ctrl_c_shows_quit_notice() {
+3853:    let mut harness = UiHarness::new(80, 24);
+3854:
+3855:    assert!(harness.handle_byte(3));
+3856:    assert!(!harness.is_quit());
+3857:    assert!(
+3858:        harness
+3859:            .render_frame()
+3860:            .contains("to exit, press Esc then :q then Enter")
+3861:    );
+3862:}
+3863:
+3864:#[test]
+3865:fn scripted_harness_structural_command_keys_do_not_show_typing_notice() {
+3866:    let mut harness = UiHarness::new(80, 24);
+3867:
+3868:    harness.handle_bytes(&[23, b'l']);
+3869:
+3870:    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+3871:    assert!(!harness.render_frame().contains("command mode: press i"));
+3872:}
+3873:
+3874:#[test]
+3875:fn scripted_harness_left_pane_navigation_does_not_show_typing_notice() {
+3876:    let mut harness = UiHarness::new(80, 24);
+3877:
+3878:    harness.handle_bytes(b"jjjjj");
+3879:
+3880:    assert_eq!(harness.ui().focus(), PaneFocus::Left);
+3881:    assert_eq!(
+3882:        harness.ui().selected_agent().map(|id| id.as_str()),
+3883:        Some("user-2")
+3884:    );
+3885:    assert!(!harness.render_frame().contains("command mode: press i"));
+3886:}
+3887:
+3888:#[test]
+3889:fn scripted_harness_quits_only_through_colon_q() {
+3890:    let mut harness = UiHarness::new(80, 24);
+3891:
+3892:    assert!(harness.handle_byte(b'q'));
+3893:    assert!(!harness.is_quit());
+3894:
+3895:    assert!(!harness.handle_bytes(b":q\n"));
+3896:    assert!(harness.is_quit());
+3897:}
+3898:
+3899:#[test]
+3900:fn scripted_harness_new_commands_select_new_agent_chat() {
+3901:    let mut harness = UiHarness::new(80, 24);
+3902:
+3903:    harness.handle_bytes(b":new ui automation\n");
+3904:
+3905:    assert_eq!(
+3906:        harness.ui().selected_agent().map(|id| id.as_str()),
+3907:        Some("user-3")
+3908:    );
+3909:    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+3910:    assert_eq!(harness.ui().mode(), UiMode::Insert);
+3911:    assert!(
+3912:        harness
+3913:            .transcript()
+3914:            .iter()
+3915:            .any(|line| line.contains("agent user-3 launched for: ui automation"))
+3916:    );
+3917:    assert!(harness.render_frame().contains("user-3"));
+3918:
+3919:    harness.handle_bytes(b"\x1b:new\n");
+3920:
+3921:    assert_eq!(
+3922:        harness.ui().selected_agent().map(|id| id.as_str()),
+3923:        Some("user-4")
+3924:    );
+3925:    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+3926:    assert_eq!(harness.ui().mode(), UiMode::Insert);
+3927:}
+3928:
+3929:#[test]
+3930:fn scripted_harness_names_new_chat_from_first_inserted_prompt() {
+3931:    let mut harness = UiHarness::new(80, 24);
+3932:
+3933:    harness.handle_bytes(b":new\n");
+3934:    assert!(
+3935:        harness
+3936:            .ui()
+3937:            .render_left_pane()
+3938:            .contains(">harness-agent user-3  working: harness-agent")
+3939:    );
+3940:
+3941:    harness.handle_bytes(b"please fix the OAuth redirect handler\n");
+3942:
+3943:    let named_left_pane = harness.ui().render_left_pane();
+3944:    assert!(named_left_pane.contains(
+3945:        ">please-fix-the-oauth-redirect-handler user-3  working: please-fix-the-oauth-redirect-handler"
+3946:    ));
+3947:    assert!(!named_left_pane.contains("harness-agent user-3"));
+3948:
+3949:    harness.handle_bytes(b"add cookie coverage\n");
+3950:
+3951:    let unchanged_left_pane = harness.ui().render_left_pane();
+3952:    assert!(unchanged_left_pane.contains(
+3953:        ">please-fix-the-oauth-redirect-handler user-3  working: please-fix-the-oauth-redirect-handler"
+3954:    ));
+3955:    assert!(!unchanged_left_pane.contains("add-cookie-coverage user-3"));
+3956:}
+3957:
+3958:#[test]
+3959:fn scripted_harness_insert_mode_records_chat_text_and_literal_colons() {
+3960:    let mut harness = UiHarness::new(80, 24);
+3961:
+3962:    harness.handle_bytes(b"ihello:world\n");
+3963:
+3964:    assert_eq!(harness.ui().mode(), UiMode::Insert);
+3965:    assert!(
+3966:        harness
+3967:            .transcript()
+3968:            .iter()
+3969:            .any(|line| line == "user-1> hello:world")
+3970:    );
+3971:    assert!(
+3972:        harness
+3973:            .transcript()
+3974:            .iter()
+3975:            .any(|line| line == "fixture reply: message recorded")
+3976:    );
+3977:}
+3978:
+3979:#[test]
+3980:fn scripted_harness_slash_command_starts_agent_chat_command_from_chat_view() {
+3981:    let mut harness = UiHarness::new(80, 24);
+3982:
+3983:    assert_eq!(harness.ui().mode(), UiMode::Command);
+3984:    assert_eq!(
+3985:        harness.ui().selected_agent().map(|id| id.as_str()),
+3986:        Some("user-1")
+3987:    );
+3988:
+3989:    harness.handle_bytes(b"/status\n");
+3990:
+3991:    assert_eq!(harness.ui().mode(), UiMode::Insert);
+3992:    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+3993:    assert!(
+3994:        harness
+3995:            .transcript()
+3996:            .iter()
+3997:            .any(|line| line == "user-1> /status")
+3998:    );
+3999:}
+4000:
+4001:#[test]
+4002:fn scripted_harness_mouse_wheel_scrolls_chat_history() {
+4003:    let mut harness = UiHarness::new(80, 10);
+4004:
+4005:    harness.handle_bytes(&[23, b'l']);
+4006:    harness.handle_byte(b'i');
+4007:    for index in 0..12 {
+4008:        harness.handle_bytes(format!("message-{index:02}\n").as_bytes());
+4009:    }
+4010:
+4011:    let bottom_frame = harness.render_frame();
+4012:    assert!(!bottom_frame.contains("UI harness"));
+4013:    assert!(bottom_frame.contains("message-11"));
+4014:
+4015:    for _ in 0..8 {
+4016:        harness.handle_bytes(b"\x1b[<64;20;3M");
+4017:    }
+4018:
+4019:    let scrolled_frame = harness.render_frame();
+4020:    assert!(scrolled_frame.contains("UI harness"));
+4021:    assert!(scrolled_frame.contains("chat> "));
+4022:
+4023:    for _ in 0..8 {
+4024:        harness.handle_bytes(b"\x1b[<65;20;3M");
+4025:    }
+4026:
+4027:    let bottom_again = harness.render_frame();
+4028:    assert!(!bottom_again.contains("UI harness"));
+4029:    assert!(bottom_again.contains("message-11"));
+4030:}
+4031:
+4032:#[test]
+4033:fn scripted_harness_arrow_keys_edit_focused_chat_without_switching_to_command() {
+4034:    let mut harness = UiHarness::new(80, 24);
+4035:
+4036:    harness.handle_bytes(&[23, b'l']);
+4037:    harness.handle_bytes(b"iab\x1b[DZ\n");
+4038:
+4039:    assert_eq!(harness.ui().mode(), UiMode::Insert);
+4040:    assert!(
+4041:        harness
+4042:            .transcript()
+4043:            .iter()
+4044:            .any(|line| line == "user-1> aZb")
+4045:    );
+4046:}
+4047:
+4048:#[test]
+4049:fn scripted_harness_insert_arrow_keys_move_visible_chat_cursor() {
+4050:    let mut harness = UiHarness::new(80, 24);
+4051:    harness.handle_bytes(&[23, b'l']);
+4052:    harness.handle_bytes(b"iab\x1b[D");
+4053:    assert_eq!(harness.ui().mode(), UiMode::Insert);
+4054:    assert!(harness.render_frame().ends_with("\u{1b}[5;25H"));
+4055:    harness.handle_bytes(b"\x1b[C");
+4056:    assert_eq!(harness.ui().mode(), UiMode::Insert);
+4057:    assert!(harness.render_frame().ends_with("\u{1b}[5;26H"));
+4058:}
+4059:#[test]
+4060:fn scripted_harness_arrow_keys_recall_chat_history() {
+4061:    let mut harness = UiHarness::new(80, 24);
+4062:
+4063:    harness.handle_bytes(&[23, b'l']);
+4064:    harness.handle_bytes(b"ifirst\nsecond\n\x1b[A\x1b[A\x1b[B\n");
+4065:
+4066:    assert_eq!(harness.ui().mode(), UiMode::Insert);
+4067:    assert_eq!(
+4068:        harness
+4069:            .transcript()
+4070:            .iter()
+4071:            .filter(|line| line.as_str() == "user-1> second")
+4072:            .count(),
+4073:        2
+4074:    );
+4075:}
+4076:
+4077:#[test]
+4078:fn scripted_harness_chat_history_down_restores_in_progress_message() {
+4079:    let mut harness = UiHarness::new(80, 24);
+4080:
+4081:    harness.handle_bytes(b"ifirst\nsecond draft\x1b[A\x1b[B\n");
+4082:
+4083:    assert!(
+4084:        harness
+4085:            .transcript()
+4086:            .iter()
+4087:            .any(|line| line == "user-1> second draft")
+4088:    );
+4089:}
+4090:
+4091:#[test]
+4092:fn scripted_harness_bytewise_arrow_keys_edit_focused_chat_without_switching_to_command() {
+4093:    let mut harness = UiHarness::new(80, 24);
+4094:
+4095:    harness.handle_bytes(&[23, b'l']);
+4096:    harness.handle_byte(b'i');
+4097:    harness.handle_byte(b'a');
+4098:    harness.handle_byte(b'b');
+4099:    harness.handle_byte(27);
+4100:    harness.handle_byte(b'[');
+4101:    harness.handle_byte(b'D');
+4102:    harness.handle_byte(b'Z');
+4103:    harness.handle_byte(b'\n');
+4104:
+4105:    assert_eq!(harness.ui().mode(), UiMode::Insert);
+4106:    assert!(
+4107:        harness
+4108:            .transcript()
+4109:            .iter()
+4110:            .any(|line| line == "user-1> aZb")
+4111:    );
+4112:}
+4113:
+4114:#[test]
+4115:fn scripted_harness_bytewise_arrow_prefix_keeps_focused_chat_in_insert_mode() {
+4116:    let mut harness = UiHarness::new(80, 24);
+4117:
+4118:    harness.handle_bytes(&[23, b'l']);
+4119:    harness.handle_byte(b'i');
+4120:    harness.handle_byte(b'a');
+4121:    harness.handle_byte(27);
+4122:
+4123:    assert_eq!(harness.ui().focus(), PaneFocus::Right);
+4124:    assert_eq!(harness.ui().mode(), UiMode::Insert);
+4125:    assert!(harness.render_frame().contains("mode=insert focus=right"));
+4126:
+4127:    harness.handle_byte(b'[');
+4128:    assert_eq!(harness.ui().mode(), UiMode::Insert);
+4129:
+4130:    harness.handle_byte(b'D');
+4131:    harness.handle_byte(b'Z');
+4132:    harness.handle_byte(b'\n');
+4133:
+4134:    assert!(harness.transcript().iter().any(|line| line == "user-1> Za"));
+4135:}
+4136:
+4137:#[test]
+4138:fn scripted_harness_arrow_keys_move_left_pane_selection_like_j_k() {
+4139:    let mut harness = UiHarness::new(80, 24);
+4140:
+4141:    assert_eq!(harness.ui().focus(), PaneFocus::Left);
+4142:    assert_eq!(
+4143:        harness.ui().selected_agent().map(|id| id.as_str()),
+4144:        Some("user-1")
+4145:    );
+4146:
+4147:    harness.handle_bytes(b"\x1b[B");
+4148:    assert_eq!(
+4149:        harness.ui().selected_agent().map(|id| id.as_str()),
+4150:        Some("user-2")
+4151:    );
+4152:
+4153:    harness.handle_bytes(b"\x1b[A");
+4154:    assert_eq!(
+4155:        harness.ui().selected_agent().map(|id| id.as_str()),
+4156:        Some("user-1")
+4157:    );
+4158:}
+4159:
+4160:#[test]
+4161:fn scripted_harness_left_right_arrows_move_left_pane_selection_like_j_k() {
+4162:    let mut harness = UiHarness::new(80, 24);
+4163:
+4164:    assert_eq!(harness.ui().focus(), PaneFocus::Left);
+4165:    assert_eq!(
+4166:        harness.ui().selected_agent().map(|id| id.as_str()),
+4167:        Some("user-1")
+4168:    );
+4169:
+4170:    harness.handle_bytes(b"\x1b[C");
+4171:    assert_eq!(
+4172:        harness.ui().selected_agent().map(|id| id.as_str()),
+4173:        Some("user-2")
+4174:    );
+4175:
+4176:    harness.handle_bytes(b"\x1b[D");
+4177:    assert_eq!(
+4178:        harness.ui().selected_agent().map(|id| id.as_str()),
+4179:        Some("user-1")
+4180:    );
+4181:}
+4182:
+4183:fn strip_ansi(input: &str) -> String {
+4184:    let mut output = String::new();
+4185:    let mut chars = input.chars();
+4186:    while let Some(ch) = chars.next() {
+4187:        if ch == '\u{1b}' {
+4188:            for next in chars.by_ref() {
+4189:                if next.is_ascii_alphabetic() {
+4190:                    break;
+4191:                }
+4192:            }
+4193:        } else {
+4194:            output.push(ch);
+4195:        }
+4196:    }
+4197:    output
+4198:}
+4199:----- END FILE tests/ui_harness.rs -----

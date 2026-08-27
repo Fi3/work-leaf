@@ -1,0 +1,95 @@
+1560:        if let Some(notice) = self.active_status_notice() {
+1561:            return notice.to_string();
+1562:        }
+1563:
+1564:        format!(
+1565:            "mode={} focus={} window={}/{}",
+1566:            self.mode.as_str(),
+1567:            self.focus.as_str(),
+1568:            self.active_window + 1,
+1569:            self.windows.len()
+1570:        )
+1571:    }
+1572:}
+1573:
+1574:impl UiMode {
+1575:    fn as_str(&self) -> &'static str {
+1576:        match self {
+1577:            Self::Command => "command",
+1578:            Self::Insert => "insert",
+1579:            Self::Prompt => "prompt",
+1580:        }
+1581:    }
+1582:}
+1583:
+1584:impl PaneFocus {
+1585:    fn as_str(&self) -> &'static str {
+1586:        match self {
+1587:            Self::Left => "left",
+1588:            Self::Right => "right",
+1589:        }
+1590:    }
+1591:}
+1592:
+1593:fn agent_list_labels(agent: &AgentListEntry) -> (&str, &str) {
+1594:    if agent.id.as_str().starts_with("review-") {
+1595:        (agent.id.as_str(), &agent.feature)
+1596:    } else {
+1597:        (&agent.feature, agent.id.as_str())
+1598:    }
+1599:}
+1600:
+1601:fn compact_agent_row(agent: &AgentListEntry, selected: bool, width: usize) -> String {
+1602:    let prefix = if selected { ">" } else { " " };
+1603:    let status = if agent.ready { " READY" } else { "" };
+1604:    let id = agent.id.as_str();
+1605:    let width = width.max(1);
+1606:
+1607:    let row = if id.starts_with("review-") {
+1608:        compact_fixed_first(prefix, id, &agent.feature, status, width)
+1609:    } else {
+1610:        compact_fixed_last(prefix, &agent.feature, id, status, width)
+1611:    };
+1612:    truncate_to_width(&row, width)
+1613:}
+1614:
+1615:fn compact_fixed_first(
+1616:    prefix: &str,
+1617:    fixed: &str,
+1618:    flexible: &str,
+1619:    status: &str,
+1620:    width: usize,
+1621:) -> String {
+1622:    let fixed_width = prefix.chars().count() + fixed.chars().count() + status.chars().count();
+1623:    if fixed_width >= width {
+1624:        return format!("{prefix}{fixed}{status}");
+1625:    }
+1626:
+1627:    let flexible_width = width.saturating_sub(fixed_width + 1);
+1628:    format!(
+2380:fn cursor_char_count(text: &str, cursor: usize) -> usize {
+2381:    text.char_indices()
+2382:        .take_while(|(index, _)| *index < cursor)
+2383:        .count()
+2384:}
+2385:fn fixture_ui(width: u16, height: u16, parser: AgentId, tests: AgentId) -> TerminalUi {
+2386:    let mut ui = TerminalUi::new(width, height);
+2387:    ui.add_agent(
+2388:        AgentListEntry::new(parser.clone(), "parser")
+2389:            .with_ready(true)
+2390:            .with_modified_file("src/parser.rs")
+2391:            .with_conflicting_agent(tests.clone())
+2392:            .with_dependent(tests.clone()),
+2393:    );
+2394:    ui.add_agent(
+2395:        AgentListEntry::new(tests.clone(), "tests")
+2396:            .with_modified_file("tests/parser.rs")
+2397:            .with_dependency(parser.clone()),
+2398:    );
+2399:    ui.select_agent(&parser)
+2400:        .expect("fixture parser agent is registered");
+2401:    ui
+2402:}
+2403:----- END FILE src/ui_harness.rs -----
+2404:
+2405:----- BEGIN FILE src/workspace.rs -----

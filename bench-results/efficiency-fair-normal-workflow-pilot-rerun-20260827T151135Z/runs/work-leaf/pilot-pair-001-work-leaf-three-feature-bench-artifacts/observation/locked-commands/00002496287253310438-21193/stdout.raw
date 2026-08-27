@@ -1,0 +1,8 @@
+558:    pub fn with_ready(mut self, ready: bool) -> Self {
+918:            let (primary, secondary) = agent_list_labels(agent);
+1060:            let item = ListItem::new(Spans::from(vec![Span::raw(compact_agent_row(
+1593:fn agent_list_labels(agent: &AgentListEntry) -> (&str, &str) {
+1601:fn compact_agent_row(agent: &AgentListEntry, selected: bool, width: usize) -> String {
+1777:        ui.add_agent(AgentListEntry::new(agent_id, "parser").with_ready(true));
+2385:fn fixture_ui(width: u16, height: u16, parser: AgentId, tests: AgentId) -> TerminalUi {
+2389:            .with_ready(true)

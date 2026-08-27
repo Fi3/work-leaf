@@ -51,5 +51,9 @@ read-only checkout. The request asked for the exact reply `WORK_LEAF_REAL_AGENT_
 was returned, and the recursive-attempt log remained empty. The matching Codex rollout records
 `gpt-5.5` and `xhigh` for the task.
 
+This smoke validated provider launch and model selection only. It did not ask Codex to start a
+write-capable tool, so it could not expose the nested workspace-write sandbox failure later observed
+in the paid direct workflow. The replacement gate requires a bounded workspace-write smoke.
+
 The captured CLI stream is `preflight/real-agent-smoke.jsonl`. Its hashes, Codex version, rollout
 identity, model profile, and result are recorded in `preflight/real-agent-smoke.json`.

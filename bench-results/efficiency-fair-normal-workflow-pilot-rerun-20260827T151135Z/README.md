@@ -19,3 +19,8 @@ until the user reviews this result.
 
 The exact comparison rules are in `FAIRNESS-CONTRACT.md`. The repaired observer's offline check
 against the first pilot is recorded under `preflight/`.
+
+The completed one-pair gate is not usable for a workflow comparison because both conditions hit
+different infrastructure failures. `RUN-ANALYSIS.md` explains the failures, retained partial results,
+and required next gate in plain language. `PROVISIONAL-RESULT.md` and `result.json` are the scorer's
+unchanged outputs. `EVIDENCE-STORAGE.md` documents the archived oversized derived frame index.

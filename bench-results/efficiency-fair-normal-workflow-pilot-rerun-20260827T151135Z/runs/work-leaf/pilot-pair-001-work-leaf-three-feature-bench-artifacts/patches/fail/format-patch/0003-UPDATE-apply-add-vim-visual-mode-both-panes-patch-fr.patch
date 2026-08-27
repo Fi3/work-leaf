@@ -1,0 +1,192 @@
+From 2f35b04d1120560f9b416f700fe9ca0554c017b7 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Thu, 27 Aug 2026 17:48:43 +0200
+Subject: [PATCH 3/3] UPDATE apply add-vim-visual-mode-both-panes patch from
+ user-1
+
+Agent-ID: user-1
+Feature: add-vim-visual-mode-both-panes
+Reason: FIX visual selection row and arrow routing defects so yanks target the focused left-pane row and right-pane arrow keys extend visual selections.
+Context: The orchestrator applied this provisional patch for user-1 while the agent was working on feature `add-vim-visual-mode-both-panes`. The agent stated the reason as `FIX visual selection row and arrow routing defects so yanks target the focused left-pane row and right-pane arrow keys extend visual selections.`. The patch touched src/terminal_app.rs, src/ui.rs, src/ui_harness.rs, tests/terminal_app.rs, tests/ui_harness.rs and changed the working tree with 94 added line(s) and 8 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.
+---
+ src/terminal_app.rs   |  5 +++--
+ src/ui.rs             | 43 +++++++++++++++++++++++++++++++++++++++----
+ src/ui_harness.rs     |  5 +++--
+ tests/terminal_app.rs | 18 ++++++++++++++++++
+ tests/ui_harness.rs   | 31 +++++++++++++++++++++++++++++++
+ 5 files changed, 94 insertions(+), 8 deletions(-)
+
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 4364beb..cbc6dd6 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -823,8 +823,9 @@ where
+     }
+ 
+     fn should_route_chat_arrow(&self) -> bool {
+-        self.ui.mode() == UiMode::Insert
+-            || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right)
++        !self.ui.is_visual_active()
++            && (self.ui.mode() == UiMode::Insert
++                || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right))
+     }
+ 
+     fn defer_escape_key(&self) -> bool {
+diff --git a/src/ui.rs b/src/ui.rs
+index a2b2829..e6802f2 100644
+--- a/src/ui.rs
++++ b/src/ui.rs
+@@ -269,6 +269,10 @@ impl TerminalUi {
+         self.focus
+     }
+ 
++    pub(crate) fn is_visual_active(&self) -> bool {
++        self.visual_selection.is_some()
++    }
++
+     pub(crate) fn show_ctrl_c_exit_notice(&mut self) {
+         self.show_status_notice(
+             CTRL_C_EXIT_NOTICE,
+@@ -1109,7 +1113,7 @@ impl TerminalUi {
+     }
+ 
+     fn control_cursor_row(&self) -> u16 {
+-        (self.control_selected + 2).min(usize::from(u16::MAX)) as u16
++        (self.left_control_row_index() + 2).min(usize::from(u16::MAX)) as u16
+     }
+ 
+     fn right_cursor_position_with_cursor(
+@@ -1284,12 +1288,43 @@ impl TerminalUi {
+     }
+ 
+     fn left_visual_cursor(&self) -> TextCursor {
+-        let row = self
+-            .control_selected
+-            .min(self.left_pane_rows(1).len().saturating_sub(1));
++        let row = self.left_control_row_index();
+         TextCursor { row, column: 0 }
+     }
+ 
++    fn left_control_row_index(&self) -> usize {
++        if self.control_selected == 0 {
++            return 0;
++        }
++
++        let Some(selected_agent_index) = self.control_selected_agent_index() else {
++            return 0;
++        };
++        let mut row = 1;
++        for agent_index in self.visible_agent_indices() {
++            if agent_index == selected_agent_index {
++                return row;
++            }
++
++            let agent = &self.agents[agent_index];
++            row += 1;
++            if !agent.modified_files.is_empty() {
++                row += 1;
++            }
++            for linked_agents in [
++                &agent.conflicting_agents,
++                &agent.depends_on,
++                &agent.depended_on_by,
++            ] {
++                if !linked_agents.is_empty() {
++                    row += 1;
++                }
++            }
++        }
++
++        self.left_pane_rows(1).len().saturating_sub(1)
++    }
++
+     fn right_visual_cursor(
+         &self,
+         right_content: &str,
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index 0a8b61d..16391b3 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -453,8 +453,9 @@ impl UiHarness {
+     }
+ 
+     fn should_route_chat_arrow(&self) -> bool {
+-        self.ui.mode() == UiMode::Insert
+-            || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right)
++        !self.ui.is_visual_active()
++            && (self.ui.mode() == UiMode::Insert
++                || (self.ui.mode() == UiMode::Command && self.ui.focus() == PaneFocus::Right))
+     }
+ 
+     fn defer_escape_key(&self) -> bool {
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index aec2ac5..3a29d4a 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -306,6 +306,24 @@ fn terminal_app_visual_line_yanks_visible_chat_text() {
+     assert!(app.render_frame().contains("\u{1b}]52;c;"));
+ }
+ 
++#[test]
++fn terminal_app_visual_arrow_keys_extend_right_pane_selection() {
++    let backend = FakeBackend::new(["launch reply"]);
++    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
++    let mut app = TerminalApp::new(chat, 100, 24);
++
++    app.handle_bytes(b":new arrow visual\n");
++    app.wait_for_idle(Duration::from_secs(1));
++    app.handle_bytes(b"\x1bV\x1b[Ay");
++
++    let copied = app
++        .ui()
++        .clipboard_text()
++        .expect("right-pane visual arrow yank should store copied text");
++    assert!(copied.contains("launch reply"));
++    assert!(copied.contains("chat> "));
++}
++
+ #[test]
+ fn terminal_app_ctrl_v_starts_block_visual_mode() {
+     let backend = FakeBackend::new(["launch reply"]);
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index 6efdf04..8c3afd6 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -609,6 +609,37 @@ fn scripted_harness_visual_line_yanks_from_the_left_pane() {
+     assert!(harness.render_frame().contains("copied 2 lines"));
+ }
+ 
++#[test]
++fn scripted_harness_visual_yanks_focused_left_agent_below_metadata() {
++    let mut harness = UiHarness::new(100, 24);
++
++    harness.handle_byte(b'j');
++    harness.handle_byte(b'Y');
++
++    let copied = harness
++        .ui()
++        .clipboard_text()
++        .expect("focused left row yank should store copied text");
++    assert!(copied.contains("tests"));
++    assert!(copied.contains("user-2"));
++    assert!(!copied.contains("src/parser.rs"));
++}
++
++#[test]
++fn scripted_harness_visual_arrow_keys_extend_right_pane_selection() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_bytes(b"V\x1b[Ay");
++
++    let copied = harness
++        .ui()
++        .clipboard_text()
++        .expect("right-pane visual arrow yank should store copied text");
++    assert!(copied.contains("Esc command"));
++    assert!(copied.contains("chat> "));
++}
++
+ #[test]
+ fn scripted_harness_visual_block_yanks_rectangular_text() {
+     let mut harness = UiHarness::new(100, 24);

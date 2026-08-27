@@ -1,0 +1,160 @@
+51:- `orchestrator`, `patch`, `review`, `linearize`, and `locks` define core workflow behavior.
+62:- Command orchestration: `CommandChat`, `CommandChatResult`, `ProcessCommand`, `CliError`.
+76:2. Core workflows live in `src/cli.rs`, `src/orchestrator.rs`, `src/patch.rs`, `src/review.rs`,
+185:- orchestrator, patch, review, and linearizer coordination,
+193:- `CommandChat::handle_line` for processing command lines such as `new`, `chat`, `review`, and
+201:`CommandChat` uses the active `AgentProfile` when launching user agents, reviewers, and linearizers.
+216:- background launch/send/review workers,
+218:- review startup, automatic per-patch-agent review routing, reviewer-session creation, and
+219:  reviewed-commit bookkeeping,
+223:loading state. A user-agent response becomes review-ready only when the orchestrator transcript shows
+227:review readiness. Repository build, test, format, and required-check commands run only through
+238:Review bookkeeping has three scopes. The controller records a launch-time review baseline for each
+239:patch agent, tracks the latest reviewed hash for that patch agent so the same agent head is not
+240:reviewed twice, and asks reviewers to inspect every provisional commit from the active baseline
+241:through the latest patch-agent commit. `CommandChat` also keeps the ordered exact review targets that
+242:completed review during the active instance, and those targets form the linearizer handoff. This lets
+243:one patch-agent session complete more than one reviewed patch without a later hash replacing earlier
+244:reviewed work in the linearizer prompt.
+248:lines and common natural-language requests for help, review, linearization, quitting, and launching
+261:- `start_review` to create or resume reviewer sessions for explicit history-wide review and stream
+262:  reviewer output.
+277:`CommandTranscriptLine` carries one new command transcript line. `AgentStatusUpdated` carries
+284:spawning, session naming, review lookup, loading bookkeeping, or orchestrator event routing.
+367:`src/review.rs::GitHistory` reads latest agent commits from repository history, builds cumulative
+368:review targets for a patch agent since a launch or reviewed baseline, and resolves agent metadata
+369:commits by exact hash. `ReviewCoordinator<B>` launches reviewer agents against those review targets
+370:and loops until the reviewer reports no findings or the configured maximum round count is reached.
+371:`CommandChat` resolves reviewer `@work-leaf` directives, such as file reads, before interpreting
+372:reviewer output as findings. `CommandChat` and `WorkLeafController` keep a stable
+373:`review-<agent-id>` reviewer identity for each patch agent and skip latest agent heads that have
+374:already completed review. `AgentCommit`, `ReviewResult`, and `ReviewError` are the public review
+375:workflow types. `WorkLeafController` scopes automatic review after a patch agent reports done to the
+376:patch agent that produced the provisional commit; explicit review commands use the history-wide
+377:review target lookup.
+383:exact commits recorded as reviewed in the current command-chat or controller instance; unrelated
+384:historical agent metadata commits are outside the linearizer scope unless the user explicitly reviews
+385:or adds them in that session. When one patch-agent id completes multiple reviewed commits in one
+386:active instance, each reviewed hash is listed independently for the linearizer.
+460:`tests/reviews.rs`, `tests/linearize.rs`, and `tests/workspace.rs` provide the current coverage
+1594:    if agent.id.as_str().starts_with("review-") {
+1607:    let row = if id.starts_with("review-") {
+2057:                    .push("commands: new [prompt...], review, linearize, quit".into());
+2059:            "review" => self.transcript.push("fixture review: no findings".into()),
+2420:    CliError, CommandChat, CommandChatResult, command_chat_error_text, command_result_text,
+2423:use crate::review::{AgentCommit, GitHistory, ReviewResult};
+2426:pub struct WorkLeafController<B>
+2438:    reviewers: BTreeSet<AgentId>,
+2439:    review_commits_in_progress: BTreeMap<AgentId, String>,
+2440:    reviewed_agent_commits: BTreeMap<AgentId, String>,
+2441:    agent_review_baselines: BTreeMap<AgentId, String>,
+2444:impl<B> WorkLeafController<B>
+2459:            reviewers: BTreeSet::new(),
+2460:            review_commits_in_progress: BTreeMap::new(),
+2461:            reviewed_agent_commits: BTreeMap::new(),
+2462:            agent_review_baselines: BTreeMap::new(),
+2551:            "review" => {
+2552:                if let Err(error) = self.start_review() {
+2629:        self.remember_agent_review_baseline(&agent_id);
+2681:                let _ = stream_sender.send(WorkerEvent::Stream {
+2688:                    let _ = sender.send(WorkerEvent::Complete {
+2694:                    let _ = sender.send(WorkerEvent::Error {
+2704:    pub fn start_review(&mut self) -> Result<Vec<AgentId>, CliError> {
+2705:        self.start_review_for_agent(None)
+2708:    fn start_review_for_patch_agent(
+2712:        self.start_review_for_agent(Some(agent_id))
+2715:    fn start_review_for_agent(
+2731:            &self.agent_review_baselines
+2736:            .latest_agent_review_commits(&self.reviewed_agent_commits, agent_baselines)?;
+2742:        let mut reviewer_ids = Vec::new();
+2748:                .reviewed_agent_commits
+2752:                    .review_commits_in_progress
+2758:            let reviewer_id = AgentId::new(format!("review-{}", commit.agent_id.as_str()))
+2760:            let reviewer_busy = self
+2762:                .get(&reviewer_id)
+2765:            if reviewer_busy {
+2768:            let session_exists = self.sessions.contains_key(&reviewer_id);
+2769:            let reuse_reviewer = self.reviewers.contains(&reviewer_id);
+2771:                self.set_session_loading(&reviewer_id, Some(WorkLeafLoading::WaitingForReply));
+2774:                    id: reviewer_id.clone(),
+2776:                    title: format!("review {}", commit.feature),
+2777:                    feature: format!("review {}", commit.feature),
+2782:            if reviewer_ids.is_empty() {
+2784:                    agent_id: reviewer_id.clone(),
+2787:            self.review_commits_in_progress
+2789:            self.start_review_worker(commit, reviewer_id.clone(), reuse_reviewer);
+2790:            reviewer_ids.push(reviewer_id);
+2792:        Ok(reviewer_ids)
+2804:            self.push_command_line("no reviewed agent commits found".to_string());
+2908:    fn remember_agent_review_baseline(&mut self, agent_id: &AgentId) {
+2910:            || self.agent_review_baselines.contains_key(agent_id)
+2922:            self.agent_review_baselines.insert(agent_id.clone(), hash);
+2939:                let _ = stream_sender.send(WorkerEvent::Stream {
+2946:                    let _ = sender.send(WorkerEvent::Complete {
+2952:                    let _ = sender.send(WorkerEvent::Error {
+2966:            let _ = sender.send(WorkerEvent::TitleGenerated { agent_id, title });
+2970:    fn start_review_worker(
+2972:        commit: crate::review::AgentCommit,
+2973:        reviewer_id: AgentId,
+2974:        reuse_reviewer: bool,
+2979:            let reviewed_agent_id = commit.agent_id.clone();
+2981:                let _ = stream_sender.send(WorkerEvent::Stream {
+2986:            match chat.review_commit_streaming_with_ids(
+2988:                reviewer_id.clone(),
+2989:                reuse_reviewer,
+2993:                    let _ = sender.send(WorkerEvent::Complete {
+2994:                        agent_id: Some(reviewer_id),
+2995:                        result: CommandChatResult::ReviewComplete(vec![result]),
+2999:                    let _ = sender.send(WorkerEvent::ReviewError {
+3000:                        reviewer_id,
+3001:                        reviewed_agent_id,
+3012:                let _ = sender.send(WorkerEvent::Complete {
+3018:                let _ = sender.send(WorkerEvent::Error {
+3040:            WorkerEvent::Stream { agent_id, text } => {
+3043:            WorkerEvent::TitleGenerated { agent_id, title } => {
+3046:            WorkerEvent::Complete { agent_id, result } => {
+3048:                    let start_review = should_start_review(&agent_id, &result);
+3051:                    if start_review && let Err(error) = self.start_review_for_patch_agent(&agent_id)
+3057:                    if matches!(result, CommandChatResult::Quit) {
+3062:            WorkerEvent::Error { agent_id, message } => {
+3070:            WorkerEvent::ReviewError {
+3071:                reviewer_id,
+3072:                reviewed_agent_id,
+3075:                self.review_commits_in_progress.remove(&reviewed_agent_id);
+3076:                self.set_session_loading(&reviewer_id, None);
+3077:                self.append_agent_line(&reviewer_id, message);
+3082:    fn apply_agent_result(&mut self, agent_id: &AgentId, result: &CommandChatResult) {
+3084:            CommandChatResult::AgentLaunched { reply, .. }
+3085:            | CommandChatResult::AgentMessage { reply, .. } => {
+3090:            CommandChatResult::ReviewComplete(results) => {
+3093:                for review in results {
+3094:                    self.record_review_result(review);
+3095:                    self.append_agent_line(&review.commit.agent_id, format!("review: {text}"));
+3108:            self.pending_events.push(WorkLeafEvent::AgentStatusUpdated {
+3144:    fn record_review_result(&mut self, review: &ReviewResult) {
+3145:        self.review_commits_in_progress.remove(&review.agent_id);
+3147:            .latest_agent_review_commit(&review.agent_id)
+3148:            .unwrap_or_else(|| review.commit.clone());
+3149:        self.reviewed_agent_commits
+3150:            .insert(review.agent_id.clone(), latest_commit.hash.clone());
+3151:        self.agent_review_baselines
+3152:            .insert(review.agent_id.clone(), latest_commit.hash.clone());
+3154:            chat.mark_reviewed_agent_commit(latest_commit);
+3156:        self.reviewers.insert(review.reviewer_id.clone());
+3159:    fn latest_agent_review_commit(&self, agent_id: &AgentId) -> Option<AgentCommit> {
+3165:            .reviewed_agent_commits
+3167:            .or_else(|| self.agent_review_baselines.get(agent_id))
+3170:            .agent_review_commit(agent_id, boundary)
+3187:        self.pending_events.push(WorkLeafEvent::AgentStatusUpdated {
+3236:fn should_start_review(agent_id: &AgentId, result: &CommandChatResult) -> bool {
+3239:            CommandChatResult::AgentLaunched { reply, .. }
+3240:            | CommandChatResult::AgentMessage { reply, .. } => {
+3307:    AgentStatusUpdated {
+3345:        result: CommandChatResult,
+3352:        reviewer_id: AgentId,
+3353:        reviewed_agent_id: AgentId,
+3409:        ("review", "review"),
+3423:        "I can run help, new [prompt...], review, linearize, or quit.".to_string(),
+3431:        "help" | "?" | "new" | "review" | "linearize" | "quit" | "exit" | "q"
+3736:    harness.handle_bytes(b":review\n:linearize\n:\x1b[A\x1b[A\x1b[B\n");
+3752:    harness.handle_bytes(b":review\n:draft command\x1b[A\x1b[B\n");

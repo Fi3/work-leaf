@@ -1,0 +1,219 @@
+3120:        if line.is_empty() {
+3121:            return;
+3122:        }
+3123:        let fallback_kind = self.agent_kind();
+3124:        if !self.sessions.contains_key(agent_id) {
+3125:            let session = WorkLeafSession::unknown(agent_id.clone(), fallback_kind);
+3126:            self.sessions.insert(agent_id.clone(), session.clone());
+3127:            self.pending_events
+3128:                .push(WorkLeafEvent::AgentAdded { session });
+3129:        }
+3130:        let session = self
+3131:            .sessions
+3132:            .get_mut(agent_id)
+3133:            .expect("session was inserted before appending a line");
+3134:        if session.lines.iter().any(|existing| existing == &line) {
+3135:            return;
+3136:        }
+3137:        session.lines.push(line.clone());
+3138:        self.pending_events.push(WorkLeafEvent::AgentLineAppended {
+3139:            agent_id: agent_id.clone(),
+3140:            line,
+3141:        });
+3142:    }
+3143:
+3144:    fn record_review_result(&mut self, review: &ReviewResult) {
+3145:        self.review_commits_in_progress.remove(&review.agent_id);
+3146:        let latest_commit = self
+3147:            .latest_agent_review_commit(&review.agent_id)
+3148:            .unwrap_or_else(|| review.commit.clone());
+3149:        self.reviewed_agent_commits
+3150:            .insert(review.agent_id.clone(), latest_commit.hash.clone());
+3151:        self.agent_review_baselines
+3152:            .insert(review.agent_id.clone(), latest_commit.hash.clone());
+3153:        if let Some(chat) = self.chat.as_mut() {
+3154:            chat.mark_reviewed_agent_commit(latest_commit);
+3155:        }
+3156:        self.reviewers.insert(review.reviewer_id.clone());
+3157:    }
+3158:
+3159:    fn latest_agent_review_commit(&self, agent_id: &AgentId) -> Option<AgentCommit> {
+3160:        let root = self
+3161:            .chat
+3162:            .as_ref()
+3163:            .map(|chat| chat.project_dir().to_path_buf())?;
+3164:        let boundary = self
+3165:            .reviewed_agent_commits
+3166:            .get(agent_id)
+3167:            .or_else(|| self.agent_review_baselines.get(agent_id))
+3168:            .map(String::as_str);
+3169:        GitHistory::new(root)
+3170:            .agent_review_commit(agent_id, boundary)
+3171:            .ok()?
+3172:    }
+3173:
+3174:    fn set_session_loading(&mut self, agent_id: &AgentId, loading: Option<WorkLeafLoading>) {
+3175:        let fallback_kind = self.agent_kind();
+3176:        if !self.sessions.contains_key(agent_id) {
+3177:            let session = WorkLeafSession::unknown(agent_id.clone(), fallback_kind);
+3178:            self.sessions.insert(agent_id.clone(), session.clone());
+3179:            self.pending_events
+3180:                .push(WorkLeafEvent::AgentAdded { session });
+3181:        }
+3182:        let session = self
+3183:            .sessions
+3184:            .get_mut(agent_id)
+3185:            .expect("session was inserted before updating loading");
+3186:        session.loading = loading;
+3187:        self.pending_events.push(WorkLeafEvent::AgentStatusUpdated {
+3188:            agent_id: session.id.clone(),
+3189:            kind: session.kind.clone(),
+3190:            title: session.title.clone(),
+3191:            feature: session.feature.clone(),
+3192:            loading: session.loading,
+3193:        });
+3194:    }
+3195:
+3196:    fn push_command_line(&mut self, line: String) {
+3197:        if line.is_empty() {
+3198:            return;
+3199:        }
+3200:        self.command_transcript.push(line.clone());
+3201:        self.pending_events
+3202:            .push(WorkLeafEvent::CommandTranscriptLine { line });
+3203:    }
+3204:
+3205:    fn request_quit(&mut self) {
+3206:        self.shutdown.shutdown();
+3207:        self.pending_events.push(WorkLeafEvent::QuitRequested);
+3208:    }
+3209:
+3210:    fn agent_display_name(&self) -> String {
+3211:        self.chat
+3212:            .as_ref()
+3213:            .map(|chat| chat.agent_profile().display_name.clone())
+3214:            .unwrap_or_else(|| "agent".to_string())
+3215:    }
+3216:
+3217:    fn agent_kind(&self) -> AgentKind {
+3218:        self.chat
+3219:            .as_ref()
+3220:            .map(|chat| chat.agent_profile().kind.clone())
+3221:            .unwrap_or_else(|| AgentKind::External("agent".to_string()))
+3222:    }
+3223:}
+3224:
+3225:impl<B> Drop for WorkLeafController<B>
+3226:where
+3227:    B: AgentBackend + Clone + Send + 'static,
+3228:{
+3229:    fn drop(&mut self) {
+3230:        if self.shutdown_on_drop {
+3231:            self.shutdown.shutdown();
+3232:        }
+3233:    }
+3234:}
+3235:
+3236:fn should_start_review(agent_id: &AgentId, result: &CommandChatResult) -> bool {
+3237:    agent_id.as_str().starts_with("user-")
+3238:        && match result {
+3239:            CommandChatResult::AgentLaunched { reply, .. }
+3240:            | CommandChatResult::AgentMessage { reply, .. } => {
+3241:                contains_applied_patch(agent_id, reply) && contains_done_directive(reply)
+3242:            }
+3243:            _ => false,
+3244:        }
+3245:}
+3246:
+3247:fn contains_applied_patch(agent_id: &AgentId, text: &str) -> bool {
+3248:    let prefix = format!("applied patch from {agent_id}:");
+3249:    text.lines()
+3250:        .any(|line| line.trim_start().starts_with(&prefix))
+3251:}
+3252:
+3253:fn contains_done_directive(text: &str) -> bool {
+3254:    text.lines()
+3255:        .any(|line| line.trim_start() == "@work-leaf done")
+3256:}
+3257:
+3258:#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+3259:pub struct WorkLeafSnapshot {
+3260:    pub command_transcript: Vec<String>,
+3261:    pub sessions: Vec<WorkLeafSession>,
+3262:}
+3263:
+3264:impl WorkLeafSnapshot {
+3265:    pub fn session(&self, agent_id: &AgentId) -> Option<&WorkLeafSession> {
+3266:        self.sessions.iter().find(|session| &session.id == agent_id)
+3267:    }
+3268:}
+3269:
+3270:#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+3271:pub struct WorkLeafSession {
+3272:    pub id: AgentId,
+3273:    pub kind: AgentKind,
+3274:    pub title: String,
+3275:    pub feature: String,
+3276:    pub lines: Vec<String>,
+3277:    pub loading: Option<WorkLeafLoading>,
+3278:}
+3279:
+3280:impl WorkLeafSession {
+3281:    fn unknown(agent_id: AgentId, kind: AgentKind) -> Self {
+3282:        Self {
+3283:            id: agent_id,
+3284:            kind,
+3285:            title: "agent".to_string(),
+3286:            feature: "agent".to_string(),
+3287:            lines: Vec::new(),
+3288:            loading: None,
+3289:        }
+3290:    }
+3291:}
+3292:
+3293:#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+3294:pub enum WorkLeafLoading {
+3295:    Launching,
+3296:    WaitingForReply,
+3297:}
+3298:
+3299:#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+3300:pub enum WorkLeafEvent {
+3301:    AgentAdded {
+3302:        session: WorkLeafSession,
+3303:    },
+3304:    AgentUpdated {
+3305:        session: WorkLeafSession,
+3306:    },
+3307:    AgentStatusUpdated {
+3308:        agent_id: AgentId,
+3309:        kind: AgentKind,
+3310:        title: String,
+3311:        feature: String,
+3312:        loading: Option<WorkLeafLoading>,
+3313:    },
+3314:    AgentLineAppended {
+3315:        agent_id: AgentId,
+3316:        line: String,
+3317:    },
+3318:    AgentSelected {
+3319:        agent_id: AgentId,
+3320:    },
+3321:    CommandTranscriptLine {
+3322:        line: String,
+3323:    },
+3324:    QuitRequested,
+3325:}
+3326:
+3327:#[derive(Debug)]
+3328:struct Worker {
+3329:    receiver: Receiver<WorkerEvent>,
+3330:    handle: JoinHandle<()>,
+3331:}
+3332:
+3333:#[derive(Clone, Debug, Eq, PartialEq)]
+3334:enum WorkerEvent {
+3335:    Stream {
+3336:        agent_id: AgentId,
+3337:        text: String,
+3338:    },

@@ -1,0 +1,108 @@
+2818:                self.chat_history_draft = None;
+2819:                self.dirty = true;
+2820:            }
+2821:            TerminalAppInput::Enter if self.ui.mode() == UiMode::Prompt => {
+2822:                let line = self.prompt_buffer.trimmed_string();
+2823:                self.prompt_buffer.clear();
+2824:                self.ui.handle_key(UiKey::Esc);
+2825:                if !line.is_empty() {
+2826:                    self.prompt_history.push(line.clone());
+2827:                    self.prompt_history_index = None;
+2828:                    self.prompt_history_draft = None;
+2829:                    self.handle_command_line(&line);
+2830:                } else {
+2831:                    self.prompt_history_index = None;
+2832:                    self.prompt_history_draft = None;
+2833:                }
+2834:                self.dirty = true;
+2835:            }
+2836:            TerminalAppInput::Enter if self.ui.mode() == UiMode::Insert => {
+2837:                self.send_chat_buffer();
+2838:            }
+2839:            TerminalAppInput::Char('/') if self.should_start_agent_slash_command() => {
+2840:                self.start_agent_slash_command();
+2841:                self.dirty = true;
+2842:            }
+2843:            TerminalAppInput::LineBreak if self.ui.mode() == UiMode::Insert => {
+2844:                self.chat_buffer.push('\n');
+2845:                self.chat_history_index = None;
+2846:                self.chat_history_draft = None;
+2847:                self.dirty = true;
+2848:            }
+2849:            TerminalAppInput::PasteStart => {
+2850:                self.paste_mode = true;
+2851:                self.skip_next_paste_lf = false;
+2852:            }
+2853:            TerminalAppInput::PasteEnd => {
+2854:                self.paste_mode = false;
+2855:                self.skip_next_paste_lf = false;
+2856:            }
+2857:            TerminalAppInput::Char(ch) if self.ui.mode() == UiMode::Prompt => {
+2858:                self.prompt_buffer.push(ch);
+2859:                self.prompt_history_index = None;
+2860:                self.prompt_history_draft = None;
+2861:                self.dirty = true;
+2862:            }
+2863:            TerminalAppInput::Char(ch) if self.ui.mode() == UiMode::Insert => {
+2864:                self.chat_buffer.push(ch);
+2865:                self.chat_history_index = None;
+2866:                self.chat_history_draft = None;
+2867:                self.dirty = true;
+2868:            }
+2869:            TerminalAppInput::Key(UiKey::Left) if self.ui.mode() == UiMode::Prompt => {
+2870:                self.prompt_buffer.move_left();
+2871:                self.dirty = true;
+2872:            }
+2873:            TerminalAppInput::Key(UiKey::Right) if self.ui.mode() == UiMode::Prompt => {
+2874:                self.prompt_buffer.move_right();
+2875:                self.dirty = true;
+2876:            }
+2877:            TerminalAppInput::Key(UiKey::Up) if self.ui.mode() == UiMode::Prompt => {
+2878:                self.recall_prompt_history(-1);
+2879:                self.dirty = true;
+2880:            }
+2881:            TerminalAppInput::Key(UiKey::Down) if self.ui.mode() == UiMode::Prompt => {
+2882:                self.recall_prompt_history(1);
+2883:                self.dirty = true;
+2884:            }
+2885:            TerminalAppInput::Key(UiKey::Left) if self.should_route_chat_arrow() => {
+2886:                self.chat_buffer.move_left();
+2887:                self.dirty = true;
+2888:            }
+2889:            TerminalAppInput::Key(UiKey::Right) if self.should_route_chat_arrow() => {
+2890:                self.chat_buffer.move_right();
+2891:                self.dirty = true;
+2892:            }
+2893:            TerminalAppInput::Key(UiKey::Up) if self.should_route_chat_arrow() => {
+2894:                self.recall_chat_history(-1);
+2895:                self.dirty = true;
+2896:            }
+2897:            TerminalAppInput::Key(UiKey::Down) if self.should_route_chat_arrow() => {
+2898:                self.recall_chat_history(1);
+2899:                self.dirty = true;
+2900:            }
+2901:            TerminalAppInput::Key(UiKey::Esc) => {
+2902:                self.prompt_buffer.clear();
+2903:                let actions = self.ui.handle_key(UiKey::Esc);
+2904:                self.record_actions(actions);
+2905:                self.dirty = true;
+2906:            }
+2907:            TerminalAppInput::Key(key) => {
+2908:                let actions = self.ui.handle_key(key);
+2909:                self.record_actions(actions);
+2910:                self.dirty = true;
+2911:            }
+2912:            TerminalAppInput::Char(ch) => {
+2913:                let actions = self.ui.handle_key(UiKey::Char(ch));
+2914:                self.record_actions(actions);
+2915:                self.dirty = true;
+2916:            }
+2917:            TerminalAppInput::Backspace | TerminalAppInput::Enter | TerminalAppInput::LineBreak => {
+2918:            }
+2919:        }
+2920:    }
+2921:
+2922:    fn handle_command_line(&mut self, line: &str) {
+2923:        if is_agent_slash_command(line)
+2924:            && let Some(agent_id) = self.ui.selected_agent().cloned()
+2925:        {

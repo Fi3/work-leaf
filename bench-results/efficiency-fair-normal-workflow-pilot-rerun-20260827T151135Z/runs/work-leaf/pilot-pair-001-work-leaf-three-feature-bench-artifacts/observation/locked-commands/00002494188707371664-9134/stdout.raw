@@ -1,0 +1,137 @@
+35:const DEFAULT_NEW_AGENT_PROMPT: &str = "Start a new work-leaf user-agent session. Ask the user what to work on if the task is not already clear, then report the broad feature before proposing patches.";
+1056:    write!(stdout, "{}", app.render_frame())?;
+1074:            write!(stdout, "{}", app.render_frame())?;
+1121:            .snapshot()
+1147:    fn new(snapshot: WorkLeafSnapshot) -> Self {
+1149:            command_lines: snapshot.command_transcript.len(),
+1150:            session_lines: snapshot
+1160:        snapshot: WorkLeafSnapshot,
+1163:        for line in snapshot.command_transcript.iter().skip(self.command_lines) {
+1166:        self.command_lines = snapshot.command_transcript.len();
+1168:        for session in snapshot.sessions {
+1187:        let snapshot = client.snapshot().map_err(http_cli_error)?;
+1188:        printed.print_new_lines(snapshot, output)?;
+1201:    write!(output, "{}", app.render_frame())?;
+1293:        ui.add_agent(crate::ui::AgentListEntry::new(
+1598:    pub fn snapshot(&self) -> Result<WorkLeafSnapshot, OrchestratorHttpError> {
+1599:        self.get("/snapshot")
+1602:    pub fn drain_events(&self) -> Result<Vec<WorkLeafEvent>, OrchestratorHttpError> {
+1645:    pub fn send_message(
+1718:            "{method} {path} HTTP/1.1\r\nHost: {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+1980:        ("GET", "/snapshot") => with_controller(&controller, |controller| controller.snapshot()),
+1981:        ("POST", "/events/drain") => with_controller(&controller, WorkLeafController::drain_events),
+2012:                    .send_message(&body.agent_id, &body.message)
+2202:        "HTTP/1.1 {} {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+2303:use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode};
+2389:    pub fn render_frame(&self) -> String {
+2390:        self.inner.render_frame()
+2468:    pub fn render_frame(&self) -> String {
+2469:        self.inner.render_frame()
+2486:    fn snapshot(&self) -> crate::WorkLeafSnapshot;
+2487:    fn drain_events(&mut self) -> Vec<WorkLeafEvent>;
+2490:    fn send_message(&mut self, agent_id: &AgentId, message: &str);
+2502:    fn snapshot(&self) -> crate::WorkLeafSnapshot {
+2503:        self.controller.snapshot()
+2506:    fn drain_events(&mut self) -> Vec<WorkLeafEvent> {
+2507:        self.controller.drain_events()
+2518:    fn send_message(&mut self, agent_id: &AgentId, message: &str) {
+2519:        let _ = self.controller.send_message(agent_id, message);
+2544:    fn snapshot(&self) -> crate::WorkLeafSnapshot {
+2545:        self.snapshot()
+2552:    fn drain_events(&mut self) -> Vec<WorkLeafEvent> {
+2553:        HttpControllerClient::drain_events(self).unwrap_or_default()
+2564:    fn send_message(&mut self, agent_id: &AgentId, message: &str) {
+2565:        let _ = HttpControllerClient::send_message(self, agent_id, message);
+2609:    snapshot: WorkLeafSnapshot,
+2620:        let snapshot = controller.snapshot();
+2646:            snapshot,
+2651:        let sessions = app.snapshot.sessions.clone();
+2707:            if self.render_frame().contains(needle) {
+2713:        self.render_frame().contains(needle)
+2777:    pub fn render_frame(&self) -> String {
+2926:            self.controller.send_message(&agent_id, line);
+2947:            self.controller.send_message(&agent_id, &message);
+2962:        let _ = self.ui.set_agent_ready_state(agent_id, loading.is_none());
+2973:        let events = self.controller.drain_events();
+2983:                WorkLeafEvent::AgentStatusUpdated {
+2994:                WorkLeafEvent::AgentLineAppended { agent_id, line } => {
+2997:                WorkLeafEvent::AgentSelected { agent_id } => {
+3001:                    self.snapshot.command_transcript.push(line);
+3013:            .snapshot
+3020:            self.snapshot.sessions.push(session);
+3021:            self.snapshot
+3036:            .snapshot
+3056:        self.snapshot.sessions.push(session.clone());
+3057:        self.snapshot
+3068:            .snapshot
+3086:            self.ui.add_agent(AgentListEntry::new(
+3093:            .set_agent_ready_state(&session.id, session.loading.is_none());
+3221:            let session = self.snapshot.session(agent_id);
+3234:        terminal_right_content(self.chat_buffer.as_str(), &self.snapshot.command_transcript)
+3490:        snapshot: crate::WorkLeafSnapshot,
+3491:        snapshot_calls: Arc<AtomicUsize>,
+3497:            snapshot: crate::WorkLeafSnapshot,
+3498:            snapshot_calls: Arc<AtomicUsize>,
+3502:                snapshot,
+3503:                snapshot_calls,
+3510:        fn snapshot(&self) -> crate::WorkLeafSnapshot {
+3511:            self.snapshot_calls.fetch_add(1, Ordering::Relaxed);
+3512:            self.snapshot.clone()
+3515:        fn drain_events(&mut self) -> Vec<WorkLeafEvent> {
+3524:        fn send_message(&mut self, _agent_id: &AgentId, _message: &str) {}
+3543:        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+3550:            Arc::clone(&snapshot_calls),
+3568:    fn rendering_uses_cached_snapshot_instead_of_refetching_full_transcripts() {
+3569:        let snapshot_calls = Arc::new(AtomicUsize::new(0));
+3584:            Arc::clone(&snapshot_calls),
+3588:        snapshot_calls.store(0, Ordering::Relaxed);
+3590:        assert!(app.render_frame().contains("help"));
+3591:        assert!(app.render_frame().contains("help"));
+3594:            snapshot_calls.load(Ordering::Relaxed),
+3596:            "rendering and scrolling should use the local snapshot cache"
+3601:    fn clearing_agent_loading_marks_chat_ready_in_left_pane() {
+3608:            .add_agent(AgentListEntry::new(agent_id.clone(), "feature"));
+3615:        assert!(!app.render_frame().contains('\u{7}'));
+3620:        assert!(app.render_frame().starts_with('\u{7}'));
+3621:        assert!(!app.render_frame().contains('\u{7}'));
+3636:        assert!(app.render_frame().contains("type in command agent"));
+3901:fn controller_exposes_ui_neutral_events_and_snapshot_without_terminal_ui() {
+3911:    assert!(controller.drain_events().iter().any(|event| {
+3914:    let starting = controller.snapshot();
+3920:    let ready = controller.snapshot();
+3921:    let session = ready.session(&agent_id).expect("session exists");
+3926:    controller.send_message(&agent_id, "continue").unwrap();
+3928:    let replied = controller.snapshot();
+3943:    let events = controller.drain_events();
+3947:            WorkLeafEvent::AgentLineAppended { agent_id: id, line }
+3973:    controller.drain_events();
+3975:    controller.send_message(&agent_id, "continue").unwrap();
+3976:    let waiting_events = controller.drain_events();
+3980:            WorkLeafEvent::AgentStatusUpdated {
+4000:    let ready_events = controller.drain_events();
+4001:    assert!(ready_events.iter().any(|event| {
+4004:            WorkLeafEvent::AgentStatusUpdated {
+4011:    assert!(ready_events.iter().any(|event| {
+4014:            WorkLeafEvent::AgentLineAppended { agent_id: id, line }
+4019:        !ready_events.iter().any(|event| {
+4027:        "ready status changes should not serialize existing transcript text"
+4042:    let snapshot = controller.snapshot();
+4043:    let session = snapshot.session(&agent_id).expect("session exists");
+4124:    let snapshot = controller.snapshot();
+4125:    let reviewer = snapshot
+4130:    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+4173:    let snapshot = controller.snapshot();
+4175:        snapshot
+4180:    let patch_agent = snapshot.session(&agent_id).expect("patch agent exists");
+4255:        .send_message(&agent_id, "make the second update")
+4398:        "linearizer ready",
+4433:        "linearizer ready",
+4442:        .send_message(&agent_id, "make a second reviewed update")
+4497:    let snapshot = controller.snapshot();
+4498:    let session = snapshot.session(&agent_id).expect("session exists");
+4519:    controller.send_message(&second, "slow question").unwrap();
+4522:            .snapshot()
+4529:    controller.send_message(&first, "quick question").unwrap();
+4532:    let snapshot = controller.snapshot();
+4533:    let first_session = snapshot.session(&first).expect("first session");
+4617:        session.push_message(MessageRole::Agent, "ready");

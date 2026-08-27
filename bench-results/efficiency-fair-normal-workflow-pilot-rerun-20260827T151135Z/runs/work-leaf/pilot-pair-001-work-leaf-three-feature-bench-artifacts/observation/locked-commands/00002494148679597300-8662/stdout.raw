@@ -1,0 +1,65 @@
+3038:    fn apply_worker_event(&mut self, event: WorkerEvent) {
+3039:        match event {
+3040:            WorkerEvent::Stream { agent_id, text } => {
+3041:                self.append_agent_line(&agent_id, text);
+3042:            }
+3043:            WorkerEvent::TitleGenerated { agent_id, title } => {
+3044:                self.apply_agent_title(&agent_id, title);
+3045:            }
+3046:            WorkerEvent::Complete { agent_id, result } => {
+3047:                if let Some(agent_id) = agent_id {
+3048:                    let start_review = should_start_review(&agent_id, &result);
+3049:                    self.set_session_loading(&agent_id, None);
+3050:                    self.apply_agent_result(&agent_id, &result);
+3051:                    if start_review && let Err(error) = self.start_review_for_patch_agent(&agent_id)
+3052:                    {
+3053:                        self.push_command_line(command_chat_error_text(&error));
+3054:                    }
+3055:                } else {
+3056:                    self.push_command_line(command_result_text(&result));
+3057:                    if matches!(result, CommandChatResult::Quit) {
+3058:                        self.request_quit();
+3059:                    }
+3060:                }
+3061:            }
+3062:            WorkerEvent::Error { agent_id, message } => {
+3063:                if let Some(agent_id) = agent_id {
+3064:                    self.set_session_loading(&agent_id, None);
+3065:                    self.append_agent_line(&agent_id, message);
+3066:                } else {
+3067:                    self.push_command_line(message);
+3068:                }
+3069:            }
+3070:            WorkerEvent::ReviewError {
+3071:                reviewer_id,
+3072:                reviewed_agent_id,
+3073:                message,
+3074:            } => {
+3075:                self.review_commits_in_progress.remove(&reviewed_agent_id);
+3076:                self.set_session_loading(&reviewer_id, None);
+3077:                self.append_agent_line(&reviewer_id, message);
+3078:            }
+3079:        }
+3080:    }
+3081:
+3082:    fn apply_agent_result(&mut self, agent_id: &AgentId, result: &CommandChatResult) {
+3083:        match result {
+3084:            CommandChatResult::AgentLaunched { reply, .. }
+3085:            | CommandChatResult::AgentMessage { reply, .. } => {
+3086:                if !reply.is_empty() {
+3087:                    self.append_agent_line(agent_id, reply.clone());
+3088:                }
+3089:            }
+3090:            CommandChatResult::ReviewComplete(results) => {
+3091:                let text = command_result_text(result);
+3092:                self.push_command_line(text.clone());
+3093:                for review in results {
+3094:                    self.record_review_result(review);
+3095:                    self.append_agent_line(&review.commit.agent_id, format!("review: {text}"));
+3096:                }
+3097:            }
+3098:            other => {
+3099:                self.push_command_line(command_result_text(other));
+3100:            }
+3101:        }
+3102:    }
