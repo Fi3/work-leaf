@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/../.." && pwd)"
+runtime_root="${WORK_LEAF_POINT7_SMOKE_RUNTIME:-$(mktemp -d /tmp/work-leaf-point7-write-smoke.XXXXXX)}"
+fixture="$runtime_root/repo"
+provider_tmp="$runtime_root/provider-tmp"
+profile="$runtime_root/profile"
+jsonl="$script_dir/preflight/real-write-smoke.jsonl"
+stderr_file="$script_dir/preflight/real-write-smoke.stderr"
+result_file="$script_dir/preflight/real-write-smoke.txt"
+
+if [[ -e "$jsonl" || -e "$stderr_file" || -e "$result_file" ]]; then
+  echo "error: real write smoke evidence already exists" >&2
+  exit 2
+fi
+
+mkdir -p "$fixture" "$provider_tmp" "$script_dir/preflight"
+git -C "$fixture" init --quiet
+source "$repo_root/bench-agent-profile-common"
+bench_prepare_codex_profile "$(command -v codex)" gpt-5.5 xhigh "$profile"
+
+set +e
+printf '%s\n' \
+  'Create smoke.txt containing exactly WORK_LEAF_REAL_AGENT_WRITE_OK followed by one newline. Do not change any other file, do not launch another agent, and then report completion.' |
+  timeout --foreground 600s env TMPDIR="$provider_tmp" \
+    "$bench_profiled_codex_bin" --cd "$fixture" --sandbox workspace-write \
+      --ask-for-approval never --model gpt-5.5 exec --color never --json - \
+      >"$jsonl" 2>"$stderr_file"
+status=$?
+set -e
+
+{
+  printf 'exit_code=%s\n' "$status"
+  printf 'runtime_root=%s\n' "$runtime_root"
+  printf 'model=gpt-5.5\n'
+  printf 'reasoning_effort=xhigh\n'
+  printf 'codex_cli_version=%s\n' "$bench_codex_cli_version"
+  printf 'actual_codex_sha256=%s\n' "$bench_actual_codex_sha256"
+  printf 'profiled_codex_sha256=%s\n' "$bench_profiled_codex_sha256"
+  printf 'provider_tmp=%s\n' "$provider_tmp"
+  printf 'git_status=%s\n' "$(git -C "$fixture" status --porcelain=v1 | tr '\n' '|')"
+  printf 'recursive_attempt_bytes=%s\n' "$(wc -c < "$bench_recursive_codex_log" | tr -d '[:space:]')"
+} >"$result_file"
+
+[[ "$status" == "0" ]]
+[[ "$(cat "$fixture/smoke.txt")" == "WORK_LEAF_REAL_AGENT_WRITE_OK" ]]
+[[ "$(git -C "$fixture" status --porcelain=v1)" == "?? smoke.txt" ]]
+[[ ! -s "$bench_recursive_codex_log" ]]
+rg -q '"type":"turn.completed"' "$jsonl"
+
+printf 'REAL_WRITE_SMOKE_PASSED runtime=%s\n' "$runtime_root"

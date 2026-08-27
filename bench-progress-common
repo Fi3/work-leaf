@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+bench_provider_stream_signature() {
+  local observer_root="$1"
+  local app_server_root="$observer_root/app-server"
+  local paths path relative bytes
+
+  if [[ ! -d "$app_server_root" ]]; then
+    printf 'unavailable\n'
+    return
+  fi
+
+  paths="$(find "$app_server_root" -type f -name server-to-client.raw -print 2>/dev/null | LC_ALL=C sort)"
+  if [[ -z "$paths" ]]; then
+    printf 'unavailable\n'
+    return
+  fi
+
+  while IFS= read -r path; do
+    relative="${path#"$observer_root"/}"
+    bytes="$(wc -c < "$path" | tr -d '[:space:]')"
+    printf '%s:%s\n' "$relative" "$bytes"
+  done <<< "$paths"
+}

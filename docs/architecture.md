@@ -161,7 +161,9 @@ together through the localhost HTTP API, and polls `GET /state` until review and
 Codex runs through the local app-server JSON-RPC interface. Only the linearizer receives the
 `danger-full-access` sandbox selected by `WORK_LEAF_CODEX_LINEARIZE_SANDBOX`. The driver records the
 resolved model, reasoning effort, process versions, duration, commit shape, token use, and final gate
-result under `bench-results`, then removes the temporary checkout.
+result under `bench-results`, then removes the temporary checkout. Each benchmark gives its provider
+process a run-local writable temporary directory. The Work Leaf stall guard treats either a visible
+session-state change or growth in the observed provider response stream as active progress.
 
 `bench-three-features-sequential` invokes `bench-three-features-direct-common` for the comparison
 path. Three normal Codex implementation sessions handle the frozen requests one after another.

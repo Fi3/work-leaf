@@ -830,13 +830,13 @@ run_direct_agent() {
   if command -v timeout >/dev/null 2>&1; then
     (
       cd "$cwd"
-      timeout --foreground "${remaining}s" env WORK_LEAF_OBSERVER_ROLE="$label" WORK_LEAF_OBSERVER_PRIMARY_MARKER="$observer_primary_marker" \
+      timeout --foreground "${remaining}s" env TMPDIR="$child_tmp_dir" WORK_LEAF_OBSERVER_ROLE="$label" WORK_LEAF_OBSERVER_PRIMARY_MARKER="$observer_primary_marker" \
         "$agent_bin" "${args[@]}" < "$prompt_file" > "$jsonl" 2> "$stderr_file"
     )
   else
     (
       cd "$cwd"
-      env WORK_LEAF_OBSERVER_ROLE="$label" WORK_LEAF_OBSERVER_PRIMARY_MARKER="$observer_primary_marker" \
+      env TMPDIR="$child_tmp_dir" WORK_LEAF_OBSERVER_ROLE="$label" WORK_LEAF_OBSERVER_PRIMARY_MARKER="$observer_primary_marker" \
         "$agent_bin" "${args[@]}" < "$prompt_file" > "$jsonl" 2> "$stderr_file"
     )
   fi
@@ -883,13 +883,13 @@ run_direct_agent_resume() {
   if command -v timeout >/dev/null 2>&1; then
     (
       cd "$cwd"
-      timeout --foreground "${remaining}s" env WORK_LEAF_OBSERVER_ROLE="$label" WORK_LEAF_OBSERVER_PRIMARY_MARKER="$observer_primary_marker" \
+      timeout --foreground "${remaining}s" env TMPDIR="$child_tmp_dir" WORK_LEAF_OBSERVER_ROLE="$label" WORK_LEAF_OBSERVER_PRIMARY_MARKER="$observer_primary_marker" \
         "$agent_bin" "${args[@]}" < "$prompt_file" > "$jsonl" 2> "$stderr_file"
     )
   else
     (
       cd "$cwd"
-      env WORK_LEAF_OBSERVER_ROLE="$label" WORK_LEAF_OBSERVER_PRIMARY_MARKER="$observer_primary_marker" \
+      env TMPDIR="$child_tmp_dir" WORK_LEAF_OBSERVER_ROLE="$label" WORK_LEAF_OBSERVER_PRIMARY_MARKER="$observer_primary_marker" \
         "$agent_bin" "${args[@]}" < "$prompt_file" > "$jsonl" 2> "$stderr_file"
     )
   fi

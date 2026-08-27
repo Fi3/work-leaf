@@ -57,6 +57,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$repo_root/bench-candidate-common"
 source "$repo_root/bench-validation-common"
 source "$repo_root/bench-agent-profile-common"
+source "$repo_root/bench-progress-common"
 readonly base_commit="c92a0b7060a36eac6db2d869b85e589a7a9480f9"
 readonly candidate_schema="$bench_candidate_schema"
 readonly minimum_candidate_commits=1
@@ -1110,7 +1111,7 @@ if [[ "$no_read_permission" == "1" || "$no_read_permission" == "true" || "$no_re
 fi
 (
   cd "$checkout_dir"
-  exec env WORK_LEAF_OBSERVER_PRIMARY_MARKER="$observer_primary_marker" WORK_LEAF_CONTEXT_BUNDLE_DIR="$tmp_root/context-bundles" WORK_LEAF_COMMAND_TMPDIR="$child_tmp_dir" WORK_LEAF_CODEX_TRACE=1 WORK_LEAF_CODEX_LINEARIZE_SANDBOX=danger-full-access "$bin_dir/work-leaf-orchestrator" "${daemon_args[@]}" >"$tmp_root/daemon.out" 2>"$tmp_root/daemon.err"
+  TMPDIR="$child_tmp_dir" exec env WORK_LEAF_OBSERVER_PRIMARY_MARKER="$observer_primary_marker" WORK_LEAF_CONTEXT_BUNDLE_DIR="$tmp_root/context-bundles" WORK_LEAF_COMMAND_TMPDIR="$child_tmp_dir" WORK_LEAF_CODEX_TRACE=1 WORK_LEAF_CODEX_LINEARIZE_SANDBOX=danger-full-access "$bin_dir/work-leaf-orchestrator" "${daemon_args[@]}" >"$tmp_root/daemon.out" 2>"$tmp_root/daemon.err"
 ) &
 daemon_pid=$!
 {
@@ -1146,6 +1147,7 @@ linearize_started=0
 accepted_linearize=0
 expected_final_commits=3
 last_sig=""
+last_provider_sig=""
 last_progress_active_seconds="$start_active_seconds"
 feature_stage_deadline=$((start_active_seconds + timeout_secs))
 linearize_stage_deadline=0
@@ -1171,6 +1173,11 @@ while true; do
     last_sig="$sig"
     last_progress_active_seconds="$now_active"
     log "elapsed=${elapsed}s busy=$busy $sig"
+  fi
+  provider_sig="$(bench_provider_stream_signature "$observer_root")"
+  if [[ "$provider_sig" != "$last_provider_sig" ]]; then
+    last_provider_sig="$provider_sig"
+    last_progress_active_seconds="$now_active"
   fi
   reviews="$(jq '[.snapshot.sessions[] | select(.id|startswith("review-"))] | length' "$tmp_root/state.json")"
   ready_users="$(jq '[.snapshot.sessions[] | select((.id|test("^user-[0-9]+$")) and .completion == "NeedsDecision")] | length' "$tmp_root/state.json")"

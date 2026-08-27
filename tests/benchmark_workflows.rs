@@ -342,6 +342,47 @@ fn paired_product_benchmarks_give_each_stage_a_full_timeout() {
 }
 
 #[test]
+fn paired_product_benchmarks_isolate_provider_tmp_and_treat_stream_growth_as_progress() {
+    let work_leaf = read("bench-three-features");
+    let direct = read("bench-three-features-direct-common");
+    let progress = read("bench-progress-common");
+
+    assert!(work_leaf.contains("source \"$repo_root/bench-progress-common\""));
+    assert!(
+        work_leaf.contains("TMPDIR=\"$child_tmp_dir\" exec env WORK_LEAF_OBSERVER_PRIMARY_MARKER=")
+    );
+    assert_eq!(
+        direct
+            .matches("env TMPDIR=\"$child_tmp_dir\" WORK_LEAF_OBSERVER_ROLE=\"$label\"")
+            .count(),
+        4,
+        "initial/resumed direct calls, with and without timeout, must use isolated provider temp state"
+    );
+    assert!(work_leaf.contains("bench_provider_stream_signature \"$observer_root\""));
+
+    let root = test_dir("provider-stream-progress");
+    let capture = root.join("app-server/invocation/server-to-client.raw");
+    fs::create_dir_all(capture.parent().unwrap()).unwrap();
+    fs::write(&capture, b"first").unwrap();
+    let command = format!(
+        "source ./bench-progress-common; first=$(bench_provider_stream_signature {}); printf second >> {}; second=$(bench_provider_stream_signature {}); test \"$first\" != \"$second\"",
+        shell_path(&root),
+        shell_path(&capture),
+        shell_path(&root),
+    );
+    let output = Command::new("bash")
+        .args(["-c", &command])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "provider stream growth was not detected: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(progress.contains("server-to-client.raw"));
+}
+
+#[test]
 fn observer_measurement_cannot_change_the_workflow_result() {
     for path in ["bench-three-features", "bench-three-features-direct-common"] {
         let script = read(path);
