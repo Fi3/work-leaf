@@ -9,11 +9,19 @@ measurements used for every reported calculation. `provenance.json` binds those 
 external recovery archive. The `frozen-original-task-scorer` directory contains the byte-identical
 step-228 scorer, fixtures, result, tests, and compact test logs.
 
+`NEXT-STEPS.md` defines the practical follow-up. Its primary analysis compares randomized condition
+groups. Collection rounds control scheduling and expose failures early; they do not create
+one-to-one statistical pairs.
+
 The benchmark driver prompts and the scoring contract are separate. The committed driver prompts
-match `origin/master` at `fc1a7e731d68a68b838c27f6e29f8709a6a2c0fa`. Their lengths are 189,
-609, and 149 bytes. The frozen scorer uses the original task prompts from
+are bound to commit `fc1a7e731d68a68b838c27f6e29f8709a6a2c0fa`, which was `origin/master`
+when the package was frozen. The live remote ref can move and is not the benchmark candidate base.
+The prompt lengths are 189, 609, and 149 bytes. The frozen scorer uses the original task prompts from
 `e70c933ff0313fafb771ff214d06734845537b86`. Their lengths are 189, 204, and 149 bytes. `/fork` is
 supplemental evidence for original-task quality. It is not a comparison requirement.
+
+`verify.py` retains the original live-`origin/master` identity guard. After that remote ref moves,
+the guard fails before the content audit. Do not update the frozen identity to silence that failure.
 
 ## Audit commands
 

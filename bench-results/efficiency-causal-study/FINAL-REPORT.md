@@ -15,10 +15,11 @@ chat after review so the user can close or reopen that feature. `/fork` belongs 
 of the slash-command task and is not included in the three-feature score.
 
 In the saved results, sequential Codex completes an average of 2.00 of the three requested features,
-while concurrent Work Leaf completes 2.25. The one pair with complete, independently checked token
-accounting shows Work Leaf using 72.0567% fewer total input-and-output tokens and 49.0420% fewer
-tokens after cached input is removed. That pair is not equal in quality: Codex scores 3/3 and Work
-Leaf scores 2/3. Separate controlled tests show that compact repeated-file responses and supplying
+while concurrent Work Leaf completes 2.25. The single direct-versus-Work-Leaf comparison with
+complete, independently checked token accounting shows Work Leaf using 72.0567% fewer total
+input-and-output tokens and 49.0420% fewer tokens after cached input is removed. Those two runs are
+not equal in quality: Codex scores 3/3 and Work Leaf scores 2/3. Separate controlled tests show that
+compact repeated-file responses and supplying
 review context directly can each reduce tokens in the tested situation. The current data do not
 show exactly how much each mechanism contributes to the complete workflow difference, do not prove
 that the workflows are statistically equivalent in quality, and do not establish that the result
@@ -59,9 +60,10 @@ applies to other repositories.
 - **R19** is the name of the final saved full-workflow measurement batch. It is not a model version.
   The number 19 only distinguishes that collection iteration; it is not a sample count. **Attempt
   2** means the second saved execution of one condition in that batch.
-- A **block** is a collection batch whose conditions share the same setup and time window. A
-  **same-block pair** compares sequential Codex and concurrent Work Leaf from the same block and
-  attempt number instead of combining unrelated runs.
+- A **block** is a historical collection batch whose conditions share a setup and time window. A
+  **same-block comparison** contrasts sequential Codex and concurrent Work Leaf from that historical
+  window. It is a secondary check, not the primary statistical unit. Future collection compares all
+  independently randomized observations in each condition and does not create arbitrary pairs.
 - The **title agent** is Work Leaf's hidden helper that generates short chat titles. Its tokens are
   excluded from the R19 product comparison because naming chats is outside the three-feature work.
 - A **controlled test** keeps a small task fixed and changes one Work Leaf behavior. The unchanged
@@ -122,27 +124,28 @@ Codex has six rows and a mean quality score of **2.00/3**. Concurrent Work Leaf 
 mean of **2.25/3**. `/status` succeeds in **4/6** sequential direct Codex rows and **4/4** concurrent
 Work Leaf rows.
 
-Four rows form same-block pairs. For each pair, subtracting the sequential score from the Work Leaf
-score gives **-1, +2, +1, and -1** in frozen order. The paired condition means are also 2.00/3 and
-2.25/3. The two sequential rows without a matched Work Leaf row remain in the overall average and
-show the observed run-to-run variation.
+The aggregate condition means above are the primary quality summary. Four historical collection
+windows also contain one candidate from each path. Within those windows, subtracting the sequential
+score from the Work Leaf score gives **-1, +2, +1, and -1** in frozen order. Those comparisons are a
+secondary check for collection-time effects; they are not a reason to pair arbitrary runs. The two
+additional sequential rows remain in the overall average and show the observed run-to-run variation.
 
 Three older Work Leaf rows, used only to confirm that the scorer recognizes previously working
 behavior, score **3, 2, and 2**. `/status` succeeds in all three. They used a sequential Work Leaf
 schedule, so they are not part of the normal concurrent comparison and do not set an expected
 current quality level.
 
-The exact R19 attempt-2 pair counts model work for the requested workflow. It excludes title-agent
-usage because naming chats is not part of implementing the three features.
+The exact R19 attempt-2 comparison counts model work for the requested workflow. It excludes
+title-agent usage because naming chats is not part of implementing the three features.
 
 | Condition | Raw tokens | Uncached tokens | Original-task quality |
 | --- | ---: | ---: | ---: |
 | Sequential direct Codex | 43,009,498 | 2,105,178 | 3/3 |
 | Concurrent Work Leaf | 12,018,293 | 1,072,757 | 2/3 |
 
-For that pair, concurrent Work Leaf reduces raw tokens by **72.0567%** and uncached tokens by
-**49.0420%**. This is exact accounting for one unequal-quality pair. The broader quality cohort is
-needed to describe average task completion.
+For those two runs, concurrent Work Leaf reduces raw tokens by **72.0567%** and uncached tokens by
+**49.0420%**. This is exact accounting for one unequal-quality comparison. The broader quality
+cohort is needed to describe average task completion.
 
 ## Mechanism evidence
 
@@ -195,18 +198,20 @@ value. No paid run is authorized by this study.
 
 ## Limits
 
-Formal quality equivalence is unavailable. There are only four matched pairs. No equivalence margin
-was declared before collection. Retries and dependent observations are present. The descriptive
-intervals are wide: -0.833 to +1.250 for the aggregate difference and -1.00 to +1.50 for the paired
-difference.
+Formal quality equivalence is unavailable. The aggregate comparison has only six sequential and
+four concurrent Work Leaf observations. No equivalence margin was declared before collection.
+Retries and dependent observations are present. The descriptive interval for the aggregate
+difference is wide: -0.833 to +1.250. The four historical same-window comparisons give a secondary
+interval of -1.00 to +1.50.
 
 Exact whole-gap allocation is also unavailable. Only **6 of the 9** required R19 conditions have
-exact accounting. `wl-111`, `wl-101`, and `wl-011` are missing. Substituting conditions from other
-blocks would mix different collection times and token-capture setups, so that substitution would
-not complete the same controlled design.
+exact accounting. `wl-111`, `wl-101`, and `wl-011` are missing. The historical runs used changing
+collection and token-capture setups, so adding unrelated runs after the fact would not repair that
+dataset. A new frozen collection can estimate all nine randomized condition groups without
+requiring one-to-one pairs.
 
-Cross-project generalization is deferred. The controlled tests use one repository and one pair per
-mechanism.
+Cross-project generalization is deferred. The controlled tests use one repository and one
+comparison per mechanism.
 
 ## Paths investigated
 

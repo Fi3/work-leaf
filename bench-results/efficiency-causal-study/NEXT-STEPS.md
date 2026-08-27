@@ -1,182 +1,148 @@
-# Next measurement protocol
+# Practical follow-up measurement plan
 
-This specification governs a separate data collection. It does not report a new result. The compact
-evidence does not establish exact token-gap allocation or formal quality equivalence.
+This plan governs a separate data collection. The evidence and conclusions in `FINAL-REPORT.md`
+remain unchanged.
 
-This protocol has two distinct goals:
+The follow-up has two goals:
 
-1. **Exact token-gap allocation.** Allocate the measured gap between normal direct Codex and normal
-   Work Leaf to three Work Leaf mechanisms and a residual. A residual is the part not assigned to
-   those mechanisms.
-2. **Formal quality equivalence.** Test whether the two normal paths have practically equivalent
-   quality for every requested feature.
+1. Measure how much of the token difference comes from changed-file diffs, unchanged-file digests,
+   direct review context, and everything not explained by those three mechanisms.
+2. Improve the estimate of token use and implementation quality for normal sequential Codex versus
+   normal concurrent Work Leaf.
 
-Evidence for one goal is not evidence for the other. Token allocation without quality equivalence
-is not an equal-quality efficiency result. Quality equivalence does not explain a token gap.
+Cross-project replication is deferred. This study concerns only the frozen three-feature Rust task.
 
-This protocol-writing step includes no paid run. It includes no model, provider, benchmark,
-candidate, or candidate-binary run. Collection requires separate funding and authorization.
+## The unit of evidence
 
-## Required work
+Each completed candidate is one observation in its assigned condition. The primary analysis compares
+all observations in one condition with all observations in another condition.
 
-### Freeze the comparison before collection
+Do not create one-to-one pairs after collection. With many separately launched runs, any such pairing
+would be arbitrary and would not add information. A collection round is only a practical way to
+spread the conditions across time and detect operational failures early. It is not the statistical
+unit, and a run is not discarded merely because another condition is missing from the same round.
 
-Create a pre-registration record before the first launch. A pre-registration is a plan that is
-locked before outcomes are known. Give it a content hash and make it read-only. A content hash is a
-short fingerprint that changes when the record changes.
+Record launch time and round so time-related or machine-related effects can be checked separately.
+Those checks are secondary to the randomized condition-group comparison.
 
-The record must freeze all of the following:
+## Fixed comparison
 
-- The exact task bytes and their hashes.
-- The repository and exact starting commit.
-- The frozen scorer, its fixtures, its tests, and their hashes.
+Every accepted run uses:
+
+- Candidate base commit `c92a0b7060a36eac6db2d869b85e589a7a9480f9`. Commit `3fdf54f` is a
+  documentation commit and is not the candidate base.
+- The existing three-feature benchmark task and frozen original-task scorer.
 - GPT-5.5 with `xhigh` reasoning.
-- The exact direct Codex command and the exact Work Leaf command.
-- Every executable path, executable hash, argument, argument order, working directory, input byte,
-  environment setting, timeout, and version used by those commands.
-- The Work Leaf build, direct Codex build, observer build, and factor settings.
-- The number of blocks, randomization method, random seed, retry rule, admission rule, and stopping
-  rule.
-- The statistical code and confidence-interval method.
-- The token scope and the rules for artifact and observer acceptance.
+- The same current Codex CLI version across conditions in this collection. Record its version; it
+  does not have to match the historical CLI version.
+- A fresh checkout, conversation, observer identity, and output directory.
 
-Store commands as literal argument arrays. Do not rely on aliases or an interactive shell profile.
-Store standard input separately as exact bytes. A changed command, task, scorer, model, or reasoning
-effort is a protocol deviation. Keep the run, but do not silently treat it as the frozen condition.
+The product comparison is:
 
-The accepted comparison profile is GPT-5.5 with `xhigh` reasoning. Results from any other model or
-reasoning profile are display-only. They cannot enter the accepted comparison. A different profile
-requires a separately funded and predeclared replication.
+- `direct`: normal direct Codex, handling the three requested features sequentially without Work
+  Leaf.
+- `wl-000`: normal Work Leaf, handling its feature agents concurrently.
 
-The path comparison is:
+Do not schedule Work Leaf features sequentially. Do not modify Work Leaf, either workflow's prompt,
+the task, the scorer, the validation budget, or the evaluator to improve outcomes. The benchmark
+must measure the products as they actually behave.
 
-- Normal direct Codex, with the three feature tasks handled sequentially.
-- Normal Work Leaf, with its agents handled concurrently.
+The finalized study under `bench-results/efficiency-causal-study` is immutable evidence. The
+untracked directory
+`bench-results/efficiency-token-allocation-follow-up-20260826T144239Z` is a rejected planning
+attempt, not an approved protocol or source of tooling. It launched no provider workflow. Do not use
+its 16,400-round calculation, generated controller, statistical assumptions, or storage plan.
 
-Both paths use their normal product behavior. A sequentially scheduled Work Leaf condition is
-outside this design.
+## Mechanism conditions
 
-### Use randomized complete blocks
+The Work Leaf condition name has three bits in this order:
 
-A block is one set of closely matched runs. Every run in a block uses the same frozen task, starting
-commit, profile, command versions, observer version, hardware class, and collection window. Each run
-starts from a fresh checkout. Runs do not share a conversation or working tree.
+1. Changed-file reread delivery.
+2. Unchanged-file reread delivery.
+3. Review-context delivery.
 
-Each block contains the direct condition and all eight Work Leaf factor cells. The direct condition
-and `wl-000` form the normal-path pair. Pairing means that their difference is calculated within the
-same block before differences are combined across blocks.
+`0` is normal Work Leaf behavior. `1` replaces that behavior with its less compact control.
 
-Run one condition at a time to avoid machine contention. Work Leaf still uses its normal internal
-concurrency. Before collection, use a reproducible computer shuffle to create a different order of
-the nine conditions for each block. Freeze the shuffle algorithm, seed, and full order list in the
-pre-registration. Do not alter an order after seeing a failure, score, or token count.
-
-### Run the complete mechanism design
-
-A factor is one mechanism that can be set to normal behavior or a control behavior. A cell is one
-particular combination of factor settings. A complete `2^3` factorial contains all eight
-combinations of three two-setting factors.
-
-The cell name uses three bits in this order:
-
-1. Changed reread delivery.
-2. Unchanged reread delivery.
-3. Review provenance delivery.
-
-For each bit, `0` means normal Work Leaf behavior. A changed reread returns a diff. An unchanged
-reread returns a digest. A review receives exact provenance inline. A digest is a short stable
-summary of unchanged content. Provenance is the exact source and commit information needed for a
-review.
-
-For each bit, `1` means the declared control. A changed reread returns the full current content. An
-unchanged reread resends the full content. A reviewer reconstructs provenance from Git.
-
-| Cell | Changed reread | Unchanged reread | Review provenance |
+| Condition | Changed-file reread | Unchanged-file reread | Review context |
 | --- | --- | --- | --- |
-| `wl-000` | diff | digest | inline exact |
-| `wl-001` | diff | digest | Git reconstruction |
-| `wl-010` | diff | full resend | inline exact |
-| `wl-011` | diff | full resend | Git reconstruction |
-| `wl-100` | full current content | digest | inline exact |
-| `wl-101` | full current content | digest | Git reconstruction |
-| `wl-110` | full current content | full resend | inline exact |
-| `wl-111` | full current content | full resend | Git reconstruction |
+| `wl-000` | diff | digest | supplied directly |
+| `wl-001` | diff | digest | reconstructed from Git |
+| `wl-010` | diff | full file | supplied directly |
+| `wl-011` | diff | full file | reconstructed from Git |
+| `wl-100` | full file | digest | supplied directly |
+| `wl-101` | full file | digest | reconstructed from Git |
+| `wl-110` | full file | full file | supplied directly |
+| `wl-111` | full file | full file | reconstructed from Git |
 
-`direct` is the ninth cell in each block. It is normal sequential direct Codex. The Work Leaf factor
-switches do not apply to it.
+`direct` is the ninth condition. Work Leaf factor switches do not apply to it.
 
-Use exact provider counters for every cell. Raw tokens equal input tokens plus output tokens. Cached
-input remains in raw tokens. Uncached tokens equal input tokens minus cached input tokens plus
-output tokens. Count every provider call caused by the condition. This includes implementation,
-fixes, reviews, orchestration, and naming calls. Stop the scope at the frozen terminal report.
-Offline scoring and analysis are outside the token scope.
+## Collection stages
 
-Allocate raw and uncached tokens separately. For each metric and each complete block:
+### 1. Check only what is needed to launch
 
-1. Calculate the whole gap as `direct` minus `wl-000`.
-2. For each mechanism, calculate the saving from changing its control setting to its normal setting
-   in every possible order in which the three mechanisms can be enabled. Average those savings.
-3. Split interaction effects through that average. An interaction exists when the effect of one
-   mechanism depends on another mechanism's setting.
-4. Calculate the residual as `direct` minus `wl-111`.
+Spend no more than five minutes confirming that the existing benchmark commands, frozen binaries,
+observer, scorer, output paths, free space, and model settings are available. Confirm that another
+benchmark is not already running.
 
-This average-over-orders allocation makes the three mechanism amounts sum exactly to `wl-111`
-minus `wl-000`. Adding the residual gives `direct` minus `wl-000`. Report negative amounts as
-negative. Do not force every mechanism to appear beneficial.
+Do not build a new controller, replay historical candidates, run a power simulation, create storage
+infrastructure, or execute candidate fixtures during this check. A concrete mismatch is reported and
+fixed only if it would invalidate a real run.
 
-The compact evidence has exact data for six of the nine required cells: `direct`, `wl-000`,
-`wl-001`, `wl-010`, `wl-100`, and `wl-110`. Exact data are unavailable for `wl-011`, `wl-101`, and
-`wl-111`. The missing combinations prevent all average-over-orders calculations. The missing
-`wl-111` cell also prevents calculation of the residual. The current 6/9 cells therefore cannot
-support exact allocation.
+### 2. Run a small pilot
 
-Do not fill a missing cell with a run from another block. That would mix collection windows and
-observer identities. It would also break the within-block comparison.
+Launch one separate run in each of the nine conditions in a randomized order. At most two
+top-level workflows may run at once. Each workflow must have its own checkout, build directory,
+observer identity, and result directory. Work Leaf keeps its normal internal concurrency.
 
-The complete factorial is required unless the pre-registration gives a statistically valid
-alternative. An alternative must be justified before collection. It must show which effects and
-interactions are identifiable, state every assumption, include its own power simulation, and still
-identify the residual against `direct`. If it cannot uniquely allocate the whole gap, label its
-result as partial. Do not call it exact allocation.
+The pilot verifies that all nine condition switches activate, exact provider counters are captured,
+candidate artifacts can be reconstructed, and the frozen scorer can score every artifact. It is not
+the final sample and must not be presented as sufficient statistical evidence.
 
-### Freeze admission and retry rules
+### 3. Inspect before spending more
 
-Assign every scheduled launch a unique block, condition, and attempt identifier. Save a manifest
-entry before invoking its command.
+After the pilot, inspect every failure and missing field before launching another round. Preserve the
+failed attempt and explain its cause in plain language. Stop and report if failures share a systematic
+cause, if exact counters cannot be recovered, or if running two workflows at once creates resource
+contention.
 
-A task observation is admitted when the frozen task reaches the first provider thread. Before that
-point, allow at most one retry for one of these recorded reasons:
+Do not fix an apparent problem by changing Work Leaf, the task, the prompts, or the scorer. Do not
+rerun a model merely because its implementation is incomplete or scores poorly.
 
-- The executable did not start.
-- The checkout or frozen-hash preflight failed.
-- The observer was not ready.
-- The provider rejected the request before creating a thread.
+### 4. Continue in small randomized rounds
 
-No other reason permits a retry. In particular, do not retry because of a low score, high token use,
-model refusal, test failure, partial implementation, workflow failure, interruption after a thread
-starts, or a zero-feature result.
+When the pilot is clean, collect further separate observations in small rounds. A round schedules
+one new run per condition in a newly randomized order and is kept short enough to inspect before the
+next round. Continue using at most two top-level workflows at once.
 
-Give a retry its own attempt identifier. Record the original identifier in a `retry_of` field. Keep
-the original launch and the retry. Never overwrite either record. Put a permitted retry in a frozen
-retry slot after the nine scheduled positions in its block. Do not reorder the remaining conditions.
+After each round, update the condition counts, exact-token capture rate, feature results, elapsed
+time, and failure analysis. Use the initial observations to estimate actual variation and state how
+many additional runs would materially narrow the uncertainty. Report the proposed run count, elapsed
+time, and provider cost before committing to a large expansion. Do not derive a huge run count from
+the rejected formal plan.
 
-Retain every admitted success, partial result, failure, interrupted run, and zero-feature result.
-Retain every pre-admission launch failure as operational evidence. Decide protocol exclusions only
-from frozen integrity fields. These fields include the task hash, starting commit, model, reasoning
-effort, command hash, factor setting, and observer readiness. Make the decision while scores and
-token totals are hidden. Keep every excluded record with its reason.
+Once the mechanism estimates are reasonably stable, additional evidence for the normal product
+comparison needs only `direct` and `wl-000`. The other seven factor conditions do not need to be run
+again solely to increase confidence in the normal-product comparison.
 
-Do not filter on workflow PASS. Do not filter on scorer results. Do not discard a run because exact
-token counters are missing. Mark its token outcome as missing. A block without all nine exact token
-outcomes cannot enter the exact within-block allocation.
+## Admission and retries
 
-### Give both paths the same validation budget
+Assign every scheduled launch a unique condition, round, and attempt identifier before it starts.
+Preserve every attempt.
 
-An implementation or fix turn is one agent response devoted to implementing or correcting one
-feature. Permit exactly one focused Cargo validation in each such turn. Freeze the command-selection
-rule, timeout, and output limit. Apply the same rule to direct Codex and Work Leaf.
+A retry is allowed only when no task reached a provider thread because the executable did not start,
+the checkout failed its fixed-identity check, the observer was not ready, or the provider rejected
+the request before creating a thread. Give the retry a new identifier and link it to the original.
 
-After implementation and fixes, run the same final gate for both paths, in this order:
+Once a provider receives the task, the observation remains evidence even if it is interrupted,
+implements nothing, fails validation, or scores zero. Do not retry or remove it because of its result,
+token use, or quality. Missing token counters remain recorded as missing; they do not erase the
+quality result.
+
+## Fair workflow treatment
+
+Both normal paths receive the same task information, implementation-turn allowance, focused Cargo
+validation allowance, timeout policy, and final checks. Each implementation or correction turn may
+run one focused Cargo validation. The final gate is the same for both paths:
 
 ```sh
 cargo fmt
@@ -184,133 +150,86 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-targets --all-features
 ```
 
-Do not give either path an extra manual check, correction, hint, or validation retry. This is fair
-because both paths receive the same task feedback and the same chance to find errors. The design
-then measures orchestration behavior instead of a larger test budget.
+Do not give either path an extra hint, manual correction, validation retry, or hidden test. Workflow
+PASS and feature quality remain separate results.
 
-### Freeze quality scoring and capture acceptance
+## Quality and token capture
 
-Score each requested feature separately:
+Score every admitted candidate on the three original features:
 
 - Vim-like visual selection and copying in both panes.
-- Strict selected-agent slash-command execution, including `/status` as a backend command rather
-  than an ordinary agent prompt.
-- The reviewed-patch yes/no completion state, including close and reopen behavior.
+- Selected-agent `/status` execution as a backend command, with its response shown in that chat.
+- Reviewed-patch close and reopen behavior.
 
-Use the frozen scorer on every admitted artifact. Do not replace separate feature results with one
-workflow PASS flag. Keep the total feature score as a secondary summary only.
+`/fork` is not part of this task's score. It may be recorded separately but cannot affect admission,
+the slash-command result, or the comparison.
 
-`/fork` is supplemental evidence for original-task quality. It does not determine the primary slash
-command feature result. It does not determine admission or equivalence.
+Use exact provider counters. Raw tokens are input plus output tokens. Uncached tokens are input minus
+cached input plus output. Count every provider call caused by the workflow through its frozen final
+report. Keep implementation, orchestration, fix, review, and history-cleanup calls in scope. Apply
+the same title-agent rule to every normal-path run.
 
-An artifact is the saved candidate output used for scoring. It includes the frozen base identity,
-the final commits or patch state, repository status, and validation logs. Define acceptance before
-collection. Accept an artifact when its hashes match and it can be reconstructed from the frozen
-base. A certified empty artifact is valid and scores zero for all features. A partial artifact is
-valid and receives the feature results produced by the frozen scorer. A corrupt or unrecorded
-artifact remains in the manifest and has a missing quality measurement.
+Offline scoring and analysis are outside the token count. Blind the scorer to condition names and
+token totals. A valid empty or partial artifact receives the score it earned; it is not discarded.
 
-An observer is the independent capture process that records provider threads and usage. Define its
-acceptance before collection. Exact token acceptance requires a one-to-one mapping from the run to
-every provider thread that it caused. Every thread must have complete input, cached-input, and
-output counters through completion or interruption. The counters must reconcile with the provider
-totals.
-The observer may certify zero usage only when it also certifies that no provider thread started.
-Missing or conflicting counters fail exact token acceptance. They do not remove the run.
+## Analysis
 
-Test the frozen scorer and observer acceptance rules on synthetic fixtures before any paid launch.
-Blind scoring to the condition label and token totals.
+### Normal product comparison
 
-### Predeclare the statistical decision
+Use all admitted `direct` observations as one group and all admitted `wl-000` observations as the
+other group. For each group report:
 
-The primary token outcomes are the complete-scope raw and uncached gaps and their four allocation
-amounts: changed rereads, unchanged rereads, review provenance, and the residual. Analyze raw and
-uncached tokens as separate outcome families.
+- Mean and median raw tokens and uncached tokens.
+- The difference and percentage difference between group means.
+- Pass rate for each of the three features.
+- Mean total feature score out of three.
+- Confidence intervals and the full result distribution.
 
-The primary quality outcomes are the three separate feature pass indicators. For each feature,
-estimate the paired difference in pass probability between `wl-000` and `direct`.
+Do not pair runs after collection. Launch-round comparisons may be shown only as a secondary check
+for time or machine effects. Retain unequal-quality outcomes and show tokens together with quality;
+an incomplete implementation is useful evidence, not a reason to discard a run.
 
-Before collection, give each feature a numeric equivalence margin in percentage points. An
-equivalence margin is the largest quality difference that the task owner considers practically
-unimportant. Justify each margin from product requirements. Do not choose it from observed study
-scores.
+The practical study reports the uncertainty supported by the collected sample. It does not claim
+formal `+/-5` percentage-point quality equivalence unless the resulting confidence intervals truly
+support that claim. Failure to prove equivalence does not prove that the workflows differ.
 
-Run a sample-size and power simulation before collection. Power is the chance that the planned test
-reaches the correct decision under stated assumptions. The simulation must use the frozen analysis
-code and a fixed seed. It must represent paired block effects, correlation among the three feature
-results, repeated use of the same task, interrupted runs, missing measurements, and linked retries.
-It must also represent the planned random order and stopping rule.
+### Token allocation
 
-Choose the number of blocks to provide at least 90% simulated power for the joint quality
-equivalence decision when the paths are truly equal at the assumed rates. Also set a target maximum
-confidence-interval width for each token allocation. Increase the planned block count until the
-simulation meets both gates. Freeze the simulation inputs, code, output, block count, and any
-reserve blocks before collection.
+For raw and uncached tokens separately, calculate the mean for each of the eight Work Leaf condition
+groups and for `direct`. Apply the average-over-orders allocation to those condition means:
 
-A confidence interval is a range that shows uncertainty around an estimate. Report confidence
-intervals for every primary outcome. Use block-level resampling. Resampling repeatedly draws whole
-blocks to measure how estimates vary. Keep each block's nine conditions, three feature results,
-attempt families, and repeated observations together. This preserves their dependence. Do not count
-feature checks or retries as independent runs.
+1. The whole gap is mean `direct` minus mean `wl-000`.
+2. Each mechanism receives its average marginal change across every order in which the three normal
+   mechanisms can be enabled.
+3. Those three amounts include their shared interactions and sum to mean `wl-111` minus mean
+   `wl-000`.
+4. The residual is mean `direct` minus mean `wl-111`.
 
-Use simultaneous intervals with at least 95% joint coverage within each primary family. Apply the
-frozen Bonferroni rule to the three quality intervals and separately to each token family. This rule
-uses a smaller error allowance for each interval so that the full set keeps the stated coverage.
+The three mechanism amounts plus the residual must reproduce the whole gap. Report negative amounts
+as negative. Do not force every mechanism to save tokens.
 
-Claim formal quality equivalence only when every simultaneous quality interval lies wholly inside
-its predeclared negative and positive margin. A failure to meet this rule means equivalence is not
-established. It does not by itself prove that the paths differ.
+Estimate uncertainty by resampling complete observations within each condition group. The primary
+calculation does not require equal sample counts or complete nine-run blocks. Also show a secondary
+check by launch period to reveal drift, without constructing arbitrary pairs.
 
-Use a fixed stopping rule. Run exactly the predeclared blocks, reserve blocks, and permitted
-pre-admission retries. Do not stop early because results look favorable. Do not add blocks after
-viewing results. A safety, budget, or provider outage may stop collection early. Report that case as
-incomplete.
+Report absolute token amounts before percentages. Keep raw and uncached results separate. Do not add
+the earlier treated-turn percentages or reviewer-thread percentages; their scopes differ from a
+whole workflow.
 
-Report absolute token amounts before percentages. Keep raw-token percentages separate from
-uncached-token percentages. Keep whole-workflow results separate from treated-turn and
-reviewer-thread results. Do not add percentages from different scopes. Do not present isolated
-mechanism percentages as shares of the whole gap. Only the frozen complete-block allocation may
-produce whole-gap shares.
+## Records and completion
 
-### Preserve an auditable record
+Keep raw provider streams, candidate artifacts, manifests, commands, environment values, versions,
+timestamps, factor settings, counters, scorer outputs, failures, and hashes in the external archive.
+Keep a compact human-readable report, normalized measurements, analysis code, tests, and archive
+hashes in a new study directory.
 
-Keep full raw evidence outside rewritten master in an immutable archive. Keep the authoritative
-machine-readable block, launch, attempt, retry, environment, artifact, observer, and analysis
-manifests there as well. Include provider event streams, exact counters, command output, task bytes,
-artifacts, and integrity hashes. Do not store credentials.
+The follow-up is complete when it provides:
 
-Keep a compact audit package in the repository. It should contain the frozen protocol, scorer,
-analysis code, tests, normalized measurements, small decisive logs, archive inventory hashes, and
-provenance pointers. Do not commit candidate binaries, raw provider streams, caches, temporary
-checkouts, or large artifacts. Verify every external file used by the compact package with a
-recorded cryptographic hash.
+- A reproducible group-level allocation of the whole raw and uncached token gaps, with uncertainty.
+- A group-level normal sequential versus concurrent Work Leaf comparison for tokens and all three
+  feature outcomes, with uncertainty.
+- A plain-language account of failures, missing data, sample size, runtime, cost, and remaining
+  limits.
 
-### Evidence required for each goal
-
-Exact token-gap allocation is available only when the predeclared design is complete. Every used
-block must have exact counters for `direct` and all eight Work Leaf cells. The frozen allocation
-must produce the three mechanism amounts, the residual, the whole gap, and their confidence
-intervals for raw and uncached tokens. A predeclared valid alternative must meet the same
-identification standard.
-
-Formal quality equivalence is available only when the numerical margins, power simulation, sample
-size, scoring rules, stopping rule, and dependence-aware analysis were frozen first. Every admitted
-normal-path artifact must enter the frozen scorer. All three simultaneous confidence intervals must
-fall inside their margins.
-
-Neither body of evidence is available until this protocol is funded, frozen, and run. The compact
-study does not claim either result.
-
-## Optional replication
-
-Cross-project generalization requires replication on separately frozen projects. Each project needs
-its own task bytes, starting commit, scorer contract, commands, block schedule, power simulation,
-and archive. Predeclare any pooled analysis before those runs. Without that replication, conclusions
-apply only to the frozen project and task.
-
-A model or reasoning profile other than GPT-5.5 with `xhigh` reasoning is also a separate
-replication. Fund it separately and predeclare it before collection. Otherwise, show its rows only
-as display-only context.
-
-An independent observer implementation or a second hardware environment can provide an optional
-robustness check. Freeze it as a separate replication. Do not mix its cells into required blocks.
+Historical candidates remain a sanity check only. Do not mix them into the new randomized groups.
+Other repositories, models, and reasoning settings remain future studies.
