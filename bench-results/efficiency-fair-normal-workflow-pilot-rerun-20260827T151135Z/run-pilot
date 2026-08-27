@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/../.." && pwd)"
+study_dir="${WORK_LEAF_PILOT_STUDY_DIR:-$script_dir}"
+runtime_root="${WORK_LEAF_PILOT_RUNTIME_DIR:-${TMPDIR:-/tmp}/work-leaf-fair-normal-pilot-rerun-20260827}"
+source_repo="${WORK_LEAF_PILOT_SOURCE_REPO:-$repo_root}"
+readonly study_id="efficiency-fair-normal-workflow-pilot-rerun-20260827T151135Z"
+readonly pair_id="pilot-pair-001"
+readonly base_commit="c92a0b7060a36eac6db2d869b85e589a7a9480f9"
+readonly task_list_sha256="45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+readonly model="gpt-5.5"
+readonly reasoning_effort="xhigh"
+readonly timeout_seconds="7200"
+readonly work_leaf_run_id="pilot-pair-001-work-leaf"
+readonly direct_run_id="pilot-pair-001-direct"
+
+work_leaf_results="$study_dir/runs/work-leaf"
+direct_results="$study_dir/runs/direct"
+logs_dir="$study_dir/logs"
+state_path="$study_dir/STATE.md"
+manifest_path="$study_dir/manifest.json"
+result_path="$study_dir/result.json"
+provisional_path="$study_dir/PROVISIONAL-RESULT.md"
+
+if [[ -e "$manifest_path" || -e "$result_path" || -e "$provisional_path" || -d "$study_dir/runs" ]]; then
+  echo "error: this pilot is one-shot and already has run state in $study_dir" >&2
+  exit 2
+fi
+
+mkdir -p "$logs_dir" "$runtime_root"
+
+write_state() {
+  local stage="$1"
+  local detail="$2"
+  cat >"$state_path" <<EOF
+# Pilot State
+
+- Stage: $stage
+- Provider workflows admitted: ${provider_workflows_admitted:-0}/2
+- Detail: $detail
+- Next action: ${next_action:-continue the current pilot stage}
+- Stop rule: The study stops after this provisional pilot. Steps 8 and 9 require user review and are not launched here.
+EOF
+}
+
+provider_workflows_admitted=0
+next_action="build the frozen benchmark runners"
+write_state "preparing" "No provider workflow has started."
+
+build_target="$runtime_root/driver-target"
+observer_target="$runtime_root/observer-target"
+CARGO_TARGET_DIR="$build_target" cargo build --manifest-path "$repo_root/Cargo.toml" --release --bins
+CARGO_TARGET_DIR="$observer_target" cargo build \
+  --manifest-path "$repo_root/bench-observer/Cargo.toml" --release --bin bench-observer
+bin_dir="$build_target/release"
+observer_bin="$observer_target/release/bench-observer"
+
+for binary in work-leaf work-leaf-orchestrator; do
+  if [[ ! -x "$bin_dir/$binary" ]]; then
+    echo "error: required runner binary is missing: $bin_dir/$binary" >&2
+    exit 1
+  fi
+done
+if [[ ! -x "$observer_bin" ]]; then
+  echo "error: required observer binary is missing: $observer_bin" >&2
+  exit 1
+fi
+
+mkdir -p "$work_leaf_results" "$direct_results"
+
+next_action="wait for both real workflows, then score their saved outputs"
+write_state "running" "Launching one normal concurrent Work Leaf workflow and one fair direct sequential Codex workflow with GPT-5.5/xhigh."
+
+env \
+  WORK_LEAF_BENCH_MODEL=gpt-5.5 \
+  WORK_LEAF_BENCH_REASONING_EFFORT=xhigh \
+  WORK_LEAF_BENCH_TMPDIR="$runtime_root/work-leaf" \
+  WORK_LEAF_BENCH_RESULTS_DIR="$work_leaf_results" \
+  WORK_LEAF_BENCH_SKIP_BUILD=1 \
+  WORK_LEAF_BENCH_BIN_DIR="$bin_dir" \
+  WORK_LEAF_BENCH_TIMEOUT_SECS="$timeout_seconds" \
+  WORK_LEAF_BENCH_NO_READ_PERMISSION=0 \
+  WORK_LEAF_BENCH_WEB_UI=0 \
+  WORK_LEAF_BENCH_DISABLE_TMUX_SUPERVISOR=1 \
+  WORK_LEAF_BENCH_OBSERVER_BIN="$observer_bin" \
+  WORK_LEAF_BENCH_STUDY_ID="$study_id" \
+  WORK_LEAF_BENCH_PAIR_ID="$pair_id" \
+  WORK_LEAF_BENCH_RUN_ID="$work_leaf_run_id" \
+  "$repo_root/bench-three-features" >"$logs_dir/work-leaf.log" 2>&1 &
+work_leaf_pid=$!
+provider_workflows_admitted=1
+write_state "running" "The concurrent Work Leaf workflow has reached the provider; the direct workflow is being launched."
+
+env \
+  WORK_LEAF_DIRECT_BENCH_MODEL=gpt-5.5 \
+  WORK_LEAF_DIRECT_BENCH_REASONING_EFFORT=xhigh \
+  WORK_LEAF_DIRECT_BENCH_TMPDIR="$runtime_root/direct" \
+  WORK_LEAF_DIRECT_BENCH_RESULTS_DIR="$direct_results" \
+  WORK_LEAF_DIRECT_BENCH_SKIP_BUILD=1 \
+  WORK_LEAF_DIRECT_BENCH_BIN_DIR="$bin_dir" \
+  WORK_LEAF_DIRECT_BENCH_TIMEOUT_SECS="$timeout_seconds" \
+  WORK_LEAF_BENCH_OBSERVER_BIN="$observer_bin" \
+  WORK_LEAF_BENCH_STUDY_ID="$study_id" \
+  WORK_LEAF_BENCH_PAIR_ID="$pair_id" \
+  WORK_LEAF_DIRECT_BENCH_RUN_ID="$direct_run_id" \
+  "$repo_root/bench-three-features-sequential" >"$logs_dir/direct.log" 2>&1 &
+direct_pid=$!
+
+provider_workflows_admitted=2
+write_state "running" "Both one-shot provider workflows are active. No retry is permitted."
+set +e
+wait "$work_leaf_pid"
+work_leaf_status=$?
+wait "$direct_pid"
+direct_status=$?
+set -e
+
+work_leaf_artifact="$work_leaf_results/${work_leaf_run_id}-three-feature-bench-artifacts"
+direct_artifact="$direct_results/${direct_run_id}-three-feature-sequential-bench-artifacts"
+work_leaf_report="$work_leaf_artifact/report.json"
+direct_report="$direct_artifact/report.json"
+
+if [[ ! -f "$work_leaf_report" || ! -f "$direct_report" ]]; then
+  next_action="inspect the saved workflow logs; do not retry automatically"
+  write_state "incomplete" "At least one workflow did not save report.json. Work Leaf exit $work_leaf_status; direct exit $direct_status."
+  echo "error: a workflow did not save its report; no automatic retry is allowed" >&2
+  exit 1
+fi
+
+python3 - "$manifest_path" "$source_repo" "$work_leaf_artifact" "$work_leaf_report" \
+  "$direct_artifact" "$direct_report" "$work_leaf_status" "$direct_status" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+(
+    manifest_path,
+    source_repo,
+    work_leaf_artifact,
+    work_leaf_report,
+    direct_artifact,
+    direct_report,
+    work_leaf_status,
+    direct_status,
+) = sys.argv[1:]
+
+manifest = {
+    "schema_version": 1,
+    "study": "efficiency-fair-normal-workflow-pilot-rerun-20260827T151135Z",
+    "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+    "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a",
+    "model": "gpt-5.5",
+    "reasoning_effort": "xhigh",
+    "source_repo": str(Path(source_repo).resolve()),
+    "runs": [
+        {
+            "id": "pilot-pair-001-work-leaf",
+            "workflow": "work-leaf-concurrent",
+            "launcher_exit_code": int(work_leaf_status),
+            "artifact": str(Path(work_leaf_artifact).resolve()),
+            "report": str(Path(work_leaf_report).resolve()),
+        },
+        {
+            "id": "pilot-pair-001-direct",
+            "workflow": "direct-sequential",
+            "launcher_exit_code": int(direct_status),
+            "artifact": str(Path(direct_artifact).resolve()),
+            "report": str(Path(direct_report).resolve()),
+        },
+    ],
+}
+temporary = Path(manifest_path + ".tmp")
+temporary.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+os.replace(temporary, manifest_path)
+PY
+
+next_action="wait for user review before steps 8 and 9"
+write_state "scoring" "Both workflow outcomes are saved. Offline quality scoring is running."
+python3 "$study_dir/scorer/score.py" --manifest "$manifest_path" \
+  --output "$result_path" --markdown "$provisional_path"
+write_state "provisional result ready" "Both saved outcomes were scored. Work Leaf exit $work_leaf_status; direct exit $direct_status."
+printf '%s\n' "$provisional_path"

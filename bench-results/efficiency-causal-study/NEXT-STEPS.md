@@ -19,19 +19,21 @@ and exposed measurement defects before a larger batch:
 - the live state file showed zero admitted workflows until finalization;
 - Work Leaf scored 2/3 and direct Codex scored 3/3, so the pair is not an equal-output comparison.
 
-## Before Another Provider Run
+## Provider-Run Infrastructure
 
-1. Pin `gpt-5.5` and `xhigh` in the run-local wrapper for every Codex invocation, including commands
-   launched by benchmarked agents. Do not read or modify `.codex/config.toml`.
-2. Count direct CLI usage once per invocation and sum all implementation, review, correction, and
-   linearization invocations. Keep app-server thread accounting cumulative for Work Leaf.
-3. Make rollout extraction recognize that resumed direct turns start a new usage total rather than
-   requiring the last turn to equal the complete thread sum.
-4. Add regression tests reproducing the saved pilot's launch-plus-resume pattern. Run all repository
-   and observer checks locally.
-5. Update the live state file immediately after each provider admission.
-6. Reanalyze the saved pilot capture offline. Preserve the original reports and write corrected
-   diagnostics separately.
+The next one-pair gate uses these fixed controls:
+
+1. The run-local wrapper pins GPT-5.5 and xhigh without reading or modifying `.codex/config.toml`.
+2. Both benchmark paths prohibit recursive real-agent provider sessions while retaining normal tests
+   and validation. The wrapper blocks and records any attempted recursive Codex launch.
+3. Direct CLI usage is counted once per invocation and summed across launch and resume commands.
+   Work Leaf app-server usage remains cumulative per conversation.
+4. Direct rollout reconciliation adds the final usage from each task epoch and requires the result to
+   match the captured CLI invocation sum.
+5. The pilot state file records each provider admission immediately.
+6. Regression tests reproduce the first pilot's launch-and-resume pattern. The complete saved direct
+   capture reanalyzes to 35,947,089 raw and 1,353,041 uncached tokens with all 15 rollout conversations
+   matched and no accounting errors.
 
 ## Next Paid Gate
 
@@ -44,6 +46,7 @@ Run one new pair only after the fixes above are green:
 - GPT-5.5 with `xhigh` reasoning for every provider thread;
 - at most two top-level workflows at once;
 - no artificial validation-command limit;
+- no recursive provider-verification sessions;
 - no retry after a task reaches a provider thread.
 
 Stop after scoring that pair. A larger batch starts only after confirming that model strata,

@@ -5,7 +5,7 @@ bench_prepare_codex_profile() {
   local model="$2"
   local reasoning_effort="$3"
   local profile_root="$4"
-  local real_dir override version_output
+  local real_dir model_override effort_override version_output
 
   [[ -n "$requested_codex" && -x "$requested_codex" ]] || {
     printf 'error: Codex executable is not runnable: %s\n' "$requested_codex" >&2
@@ -27,9 +27,23 @@ bench_prepare_codex_profile() {
   bench_actual_codex_bin="$real_dir/$(basename "$requested_codex")"
   mkdir -p "$profile_root" || return 1
   bench_profiled_codex_bin="$profile_root/codex"
-  override="model_reasoning_effort=\"$reasoning_effort\""
-  printf '#!/usr/bin/env bash\nexec %q -c %q "$@"\n' \
-    "$bench_actual_codex_bin" "$override" > "$bench_profiled_codex_bin" || return 1
+  bench_recursive_codex_log="$profile_root/recursive-codex-attempts.log"
+  : > "$bench_recursive_codex_log" || return 1
+  chmod 600 "$bench_recursive_codex_log" || return 1
+  model_override="model=\"$model\""
+  effort_override="model_reasoning_effort=\"$reasoning_effort\""
+  {
+    printf '#!/usr/bin/env bash\n'
+    printf 'if [[ "${WORK_LEAF_BENCH_CODEX_ACTIVE:-}" == "1" ]]; then\n'
+    printf '  printf '\''blocked recursive Codex launch pid=%%s\\n'\'' "$$" >> %q\n' \
+      "$bench_recursive_codex_log"
+    printf '  printf '\''benchmark policy blocks recursive Codex provider launches; do not retry; continue with automated validation\\n'\'' >&2\n'
+    printf '  exit 86\n'
+    printf 'fi\n'
+    printf 'export WORK_LEAF_BENCH_CODEX_ACTIVE=1\n'
+    printf 'exec %q -c %q -c %q "$@"\n' \
+      "$bench_actual_codex_bin" "$model_override" "$effort_override"
+  } > "$bench_profiled_codex_bin" || return 1
   chmod 700 "$bench_profiled_codex_bin" || return 1
 
   version_output="$($bench_profiled_codex_bin --version 2>&1)" || {
@@ -39,4 +53,66 @@ bench_prepare_codex_profile() {
   bench_codex_cli_version="$(printf '%s\n' "$version_output" | awk 'NF { line = $0 } END { print line }')"
   bench_actual_codex_sha256="$(sha256sum "$bench_actual_codex_bin" | awk '{print $1}')" || return 1
   bench_profiled_codex_sha256="$(sha256sum "$bench_profiled_codex_bin" | awk '{print $1}')" || return 1
+}
+
+bench_assert_no_recursive_codex() {
+  local log_path="$1"
+  [[ -f "$log_path" ]] || {
+    printf 'error: recursive Codex attempt log is missing: %s\n' "$log_path" >&2
+    return 1
+  }
+  [[ ! -s "$log_path" ]] || {
+    printf 'error: a benchmarked agent attempted a forbidden recursive Codex launch\n' >&2
+    return 1
+  }
+}
+
+bench_install_no_recursive_agent_policy() {
+  local checkout="$1"
+  local policy_root="$2"
+  local instructions="$checkout/AGENTS.md"
+
+  [[ -f "$instructions" && ! -L "$instructions" ]] || {
+    printf 'error: benchmark checkout has no regular AGENTS.md\n' >&2
+    return 1
+  }
+  git -C "$checkout" ls-files --error-unmatch AGENTS.md >/dev/null 2>&1 || {
+    printf 'error: benchmark AGENTS.md is not tracked\n' >&2
+    return 1
+  }
+  mkdir -p "$policy_root" || return 1
+  cp --no-dereference -- "$instructions" "$policy_root/original-AGENTS.md" || return 1
+  cat > "$policy_root/effective-policy.txt" <<'EOF'
+## Benchmark Provider-Isolation Policy
+
+This temporary benchmark checkout has already verified the configured provider outside the measured
+workflow. Do not launch another Codex or agent provider from inside an agent turn. The repository's
+Real Agent Verification requirement is waived for this benchmark run only, and its absence is not a
+review finding. All repository tests and validation checks remain required.
+EOF
+  {
+    cat "$policy_root/original-AGENTS.md"
+    printf '\n\n'
+    cat "$policy_root/effective-policy.txt"
+  } > "$policy_root/effective-AGENTS.md" || return 1
+  git -C "$checkout" update-index --skip-worktree -- AGENTS.md || return 1
+  cp --no-dereference -- "$policy_root/effective-AGENTS.md" "$instructions" || return 1
+}
+
+bench_restore_no_recursive_agent_policy() {
+  local checkout="$1"
+  local policy_root="$2"
+  local instructions="$checkout/AGENTS.md"
+
+  if ! cmp -s "$instructions" "$policy_root/effective-AGENTS.md" \
+    && ! cmp -s "$instructions" "$policy_root/original-AGENTS.md"; then
+    printf 'error: benchmark AGENTS.md changed while the temporary provider policy was active\n' >&2
+    return 1
+  fi
+  cp --no-dereference -- "$policy_root/original-AGENTS.md" "$instructions" || return 1
+  git -C "$checkout" update-index --no-skip-worktree -- AGENTS.md || return 1
+  git -C "$checkout" diff --quiet -- AGENTS.md || {
+    printf 'error: benchmark AGENTS.md did not restore to the fixed base\n' >&2
+    return 1
+  }
 }

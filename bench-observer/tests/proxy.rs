@@ -1776,6 +1776,10 @@ fn rollout_recovers_captured_exec_thread_without_terminal_usage() {
                 "payload": { "id": thread_id, "cwd": cwd, "cli_version": "1.0" },
             }),
             serde_json::json!({
+                "type": "event_msg",
+                "payload": { "type": "task_started" },
+            }),
+            serde_json::json!({
                 "type": "turn_context",
                 "payload": { "cwd": cwd, "model": "gpt-5.5", "effort": "xhigh" },
             }),
@@ -1872,6 +1876,10 @@ fn rollout_recovers_newer_usage_after_output_free_resume() {
                 "payload": { "id": thread_id, "cwd": cwd, "cli_version": "1.0" },
             }),
             serde_json::json!({
+                "type": "event_msg",
+                "payload": { "type": "task_started" },
+            }),
+            serde_json::json!({
                 "type": "turn_context",
                 "payload": { "cwd": cwd, "model": "gpt-5.5", "effort": "xhigh" },
             }),
@@ -1880,12 +1888,40 @@ fn rollout_recovers_newer_usage_after_output_free_resume() {
                 "payload": {
                     "type": "token_count",
                     "info": { "total_token_usage": {
-                        "input_tokens": 250,
-                        "cached_input_tokens": 200,
-                        "output_tokens": 25,
-                        "reasoning_output_tokens": 8,
+                        "input_tokens": 100,
+                        "cached_input_tokens": 80,
+                        "output_tokens": 10,
+                        "reasoning_output_tokens": 5,
                     }},
                 },
+            }),
+            serde_json::json!({
+                "type": "event_msg",
+                "payload": { "type": "task_complete" },
+            }),
+            serde_json::json!({
+                "type": "event_msg",
+                "payload": { "type": "task_started" },
+            }),
+            serde_json::json!({
+                "type": "turn_context",
+                "payload": { "cwd": cwd, "model": "gpt-5.5", "effort": "xhigh" },
+            }),
+            serde_json::json!({
+                "type": "event_msg",
+                "payload": {
+                    "type": "token_count",
+                    "info": { "total_token_usage": {
+                        "input_tokens": 150,
+                        "cached_input_tokens": 120,
+                        "output_tokens": 15,
+                        "reasoning_output_tokens": 3,
+                    }},
+                },
+            }),
+            serde_json::json!({
+                "type": "event_msg",
+                "payload": { "type": "task_complete" },
             }),
         ]),
     )
@@ -1902,7 +1938,7 @@ fn rollout_recovers_newer_usage_after_output_free_resume() {
 }
 
 #[test]
-fn direct_launch_and_resume_keep_only_final_cumulative_thread_usage() {
+fn direct_launch_and_resume_sum_each_invocation_usage() {
     let root = TempDir::new().unwrap();
     let config_path = initialize_for_condition(&root, "direct");
     let config = CaptureConfig::load(&config_path).unwrap();
@@ -1956,19 +1992,26 @@ fn direct_launch_and_resume_keep_only_final_cumulative_thread_usage() {
     assert!(summary.capture_complete, "{:?}", summary.errors);
     assert_eq!(summary.invocation_count, 2);
     assert_eq!(summary.threads.len(), 1);
-    assert_eq!(summary.threads[0].usage.input_tokens, 250);
-    assert_eq!(summary.usage_scopes.visible_role.input_tokens, 250);
-    assert_eq!(summary.usage_scopes.primary_condition.input_tokens, 250);
-    assert_eq!(summary.usage_scopes.total_workflow.input_tokens, 250);
+    assert_eq!(summary.threads[0].usage.input_tokens, 350);
+    assert_eq!(summary.threads[0].usage.cached_input_tokens, 280);
+    assert_eq!(summary.threads[0].usage.output_tokens, 35);
+    assert_eq!(summary.threads[0].usage.reasoning_output_tokens, 10);
+    assert_eq!(summary.usage_scopes.visible_role.input_tokens, 350);
+    assert_eq!(summary.usage_scopes.primary_condition.input_tokens, 350);
+    assert_eq!(summary.usage_scopes.total_workflow.input_tokens, 350);
 
     let sessions = root.path().join("sessions/2026/07/31");
     fs::create_dir_all(&sessions).unwrap();
     let cwd = std::env::current_dir().unwrap();
-    let rollout = |cli_version: &str, input: u64, cached_input: u64, output: u64| {
+    let rollout = |cli_version: &str| {
         json_lines([
             serde_json::json!({
                 "type": "session_meta",
                 "payload": { "id": thread_id, "cwd": cwd, "cli_version": cli_version },
+            }),
+            serde_json::json!({
+                "type": "event_msg",
+                "payload": { "type": "task_started" },
             }),
             serde_json::json!({
                 "type": "turn_context",
@@ -1979,22 +2022,45 @@ fn direct_launch_and_resume_keep_only_final_cumulative_thread_usage() {
                 "payload": {
                     "type": "token_count",
                     "info": { "total_token_usage": {
-                        "input_tokens": input,
-                        "cached_input_tokens": cached_input,
-                        "output_tokens": output,
+                        "input_tokens": 100,
+                        "cached_input_tokens": 80,
+                        "output_tokens": 10,
                         "reasoning_output_tokens": 5,
                     }},
                 },
             }),
+            serde_json::json!({
+                "type": "event_msg",
+                "payload": { "type": "task_complete" },
+            }),
+            serde_json::json!({
+                "type": "event_msg",
+                "payload": { "type": "task_started" },
+            }),
+            serde_json::json!({
+                "type": "turn_context",
+                "payload": { "cwd": cwd, "model": "gpt-5.5", "effort": "xhigh" },
+            }),
+            serde_json::json!({
+                "type": "event_msg",
+                "payload": {
+                    "type": "token_count",
+                    "info": { "total_token_usage": {
+                        "input_tokens": 250,
+                        "cached_input_tokens": 200,
+                        "output_tokens": 25,
+                        "reasoning_output_tokens": 5,
+                    }},
+                },
+            }),
+            serde_json::json!({
+                "type": "event_msg",
+                "payload": { "type": "task_complete" },
+            }),
         ])
     };
-    fs::write(
-        sessions.join("rollout-direct-initial.jsonl"),
-        rollout("1.0", 100, 80, 10),
-    )
-    .unwrap();
-    let rollout_path = sessions.join("rollout-direct-resume.jsonl");
-    fs::write(&rollout_path, rollout("9.9", 250, 200, 25)).unwrap();
+    let rollout_path = sessions.join("rollout-direct.jsonl");
+    fs::write(&rollout_path, rollout("9.9")).unwrap();
     let rejected = extract_rollout_metadata(&config, &root.path().join("sessions")).unwrap();
     assert!(
         rejected
@@ -2004,14 +2070,14 @@ fn direct_launch_and_resume_keep_only_final_cumulative_thread_usage() {
         "{:?}",
         rejected.errors
     );
-    fs::write(rollout_path, rollout("1.0", 250, 200, 25)).unwrap();
+    fs::write(rollout_path, rollout("1.0")).unwrap();
     let audit = extract_rollout_metadata(&config, &root.path().join("sessions")).unwrap();
     assert!(audit.errors.is_empty(), "{:?}", audit.errors);
     let reconciled = analyze(&config).unwrap();
     assert!(reconciled.capture_complete, "{:?}", reconciled.errors);
     assert_eq!(reconciled.model_strata.len(), 1);
     assert_eq!(reconciled.model_strata[0].thread_count, 1);
-    assert_eq!(reconciled.model_strata[0].usage.input_tokens, 250);
+    assert_eq!(reconciled.model_strata[0].usage.input_tokens, 350);
 }
 
 #[test]

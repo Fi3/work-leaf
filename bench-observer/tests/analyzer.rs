@@ -48,6 +48,10 @@ fn jsonl_index_ignores_provider_json_embedded_in_command_output() {
         .filter(|frame| frame.usage.is_some())
         .collect::<Vec<_>>();
     assert_eq!(usage_frames.len(), 1);
+    assert_eq!(
+        usage_frames[0].usage_kind.as_deref(),
+        Some("invocation-total")
+    );
     assert_eq!(usage_frames[0].usage, Some(usage(100, 80, 10, 5)));
 }
 

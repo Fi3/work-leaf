@@ -552,6 +552,12 @@ copy_artifacts() {
       cp --no-dereference -- "$tmp_root/$file" "$artifact_dir/$file"
     fi
   done
+  if [[ -d "$tmp_root/agent-policy" ]]; then
+    cp -a -- "$tmp_root/agent-policy" "$artifact_dir/agent-policy"
+  fi
+  if [[ -f "${bench_recursive_codex_log:-}" ]]; then
+    cp --no-dereference -- "$bench_recursive_codex_log" "$artifact_dir/recursive-codex-attempts.log"
+  fi
   if ! state_snapshot_is_valid "$artifact_dir/final-state.json" && state_snapshot_is_valid "$artifact_dir/state.json"; then
     cp --no-dereference -- \
       "$artifact_dir/state.json" "$artifact_dir/final-state.json" 2>/dev/null || true
@@ -727,6 +733,7 @@ actual_codex=$bench_actual_codex_bin
 actual_codex_sha256=$bench_actual_codex_sha256
 profiled_codex=$bench_profiled_codex_bin
 profiled_codex_sha256=$bench_profiled_codex_sha256
+recursive_codex_attempt_log=$bench_recursive_codex_log
 codex_cli_version=$codex_cli_version
 EOF
 }
@@ -1090,6 +1097,8 @@ log "WORK_LEAF_BENCH_SOURCE_HEAD=$source_head"
 prepare_base_checkout
 log "WORK_LEAF_BENCH_BASE=$base_commit"
 mkdir -p "$child_tmp_dir"
+bench_install_no_recursive_agent_policy "$checkout_dir" "$tmp_root/agent-policy" \
+  || fail_bench "failed to install benchmark provider-isolation policy"
 prepare_bench_codex_profile || fail_bench "failed to prepare explicit Codex model/reasoning profile"
 setup_observer || fail_bench "failed to start required benchmark observer"
 observer_checkpoint base || fail_bench "failed to capture observer base checkpoint"
@@ -1215,6 +1224,10 @@ while true; do
   if [[ "$accepted_linearize" == "1" && "$busy" == "false" ]]; then
     linearize_completed="yes"
     fetch_state_snapshot "$tmp_root/final-state.json" || fail_bench "orchestrator final-state request failed"
+    bench_restore_no_recursive_agent_policy "$checkout_dir" "$tmp_root/agent-policy" \
+      || fail_bench "failed to restore benchmark repository instructions"
+    bench_assert_no_recursive_codex "$bench_recursive_codex_log" \
+      || fail_bench "a benchmarked agent attempted recursive provider verification"
     git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt"
     git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt"
     if [[ -s "$tmp_root/final-status.txt" ]]; then

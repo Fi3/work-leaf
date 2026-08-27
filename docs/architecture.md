@@ -188,11 +188,20 @@ comparison is concurrent Work Leaf against direct sequential Codex with the same
 reasoning level, stage responsibilities, time allowances, final verification, and quality scorer.
 
 Both benchmark drivers use `bench-agent-profile-common` to create a run-local Codex wrapper. The
-wrapper passes the requested reasoning effort directly to every real Codex invocation without
-reading or changing the user's global Codex configuration. The observer's
-`usage_scopes.total_workflow` record is the token authority for comparisons. A report keeps the
-workflow result, token-measurement status, and quality-score result separate so a partial or failed
-implementation remains evidence rather than being silently retried or discarded.
+wrapper pins the requested model and reasoning effort directly on every allowed Codex invocation
+without reading or changing the user's global Codex configuration. Each temporary benchmark
+checkout receives the same provider-isolation instruction, which waives repository-required
+recursive real-agent smoke sessions while retaining normal tests and validation. The wrapper blocks
+and records a Codex process launched from inside an active Codex turn; any such attempt fails the
+workflow instead of becoming unmeasured provider work. The temporary instruction is hidden from
+candidate commits and restored before the final repository gate.
+
+The observer keeps cumulative conversation totals from Work Leaf's app-server transport. For direct
+Codex, it keeps one terminal total per CLI invocation and adds initial and resumed invocations. The
+direct sum is reconciled against the final usage from each task epoch in the matching Codex rollout
+file. The observer's `usage_scopes.total_workflow` record is the token authority for comparisons. A
+report keeps the workflow result, token-measurement status, and quality-score result separate so a
+partial or failed implementation remains evidence rather than being silently retried or discarded.
 
 `bench-candidate-common` owns candidate staging, digest checks, admission metadata, and atomic report
 publication for both drivers. `materialize-bench-candidate` can reconstruct at most one historical

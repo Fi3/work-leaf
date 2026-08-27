@@ -148,13 +148,21 @@ fn paired_product_benchmarks_pin_the_same_profile_without_editing_codex_config()
         assert!(script.contains("WORK_LEAF_BENCH_REASONING_EFFORT"));
         assert!(!script.contains("model_reasoning_effort=\"$agent_reasoning_effort\""));
         assert!(!script.contains("sed -i"));
+        assert!(script.contains("bench_install_no_recursive_agent_policy"));
+        assert!(script.contains("bench_restore_no_recursive_agent_policy"));
+        assert!(script.contains("bench_assert_no_recursive_codex"));
     }
+    assert!(profile.contains("model=\\\"$model\\\""));
     assert!(profile.contains("model_reasoning_effort=\\\"$reasoning_effort\\\""));
+    assert!(profile.contains("WORK_LEAF_BENCH_CODEX_ACTIVE"));
     assert!(!profile.contains("config.toml"));
+    assert!(!direct.contains(
+        "The temporary benchmark provider-isolation policy waives recursive real-agent verification"
+    ));
 }
 
 #[test]
-fn profiled_codex_wrapper_injects_xhigh_and_preserves_the_real_cli_arguments() {
+fn profiled_codex_wrapper_injects_model_and_xhigh_and_preserves_real_cli_arguments() {
     let root = test_dir("profiled-codex");
     let fake = root.join("codex-real");
     let argument_log = root.join("args.txt");
@@ -186,7 +194,136 @@ fn profiled_codex_wrapper_injects_xhigh_and_preserves_the_real_cli_arguments() {
     );
     assert_eq!(
         fs::read_to_string(argument_log).unwrap(),
-        "-c\nmodel_reasoning_effort=\"xhigh\"\n--model\ngpt-5.5\nexec\n--json\n-\n"
+        "-c\nmodel=\"gpt-5.5\"\n-c\nmodel_reasoning_effort=\"xhigh\"\n--model\ngpt-5.5\nexec\n--json\n-\n"
+    );
+}
+
+#[test]
+fn profiled_codex_wrapper_blocks_and_records_recursive_provider_launches() {
+    let root = test_dir("profiled-codex-recursion");
+    let fake = root.join("codex-real");
+    let argument_log = root.join("args.txt");
+    let status_log = root.join("status.txt");
+    fs::write(
+        &fake,
+        "#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" >> \"$BENCH_PROFILE_TEST_LOG\"\n",
+    )
+    .unwrap();
+    let mut permissions = fs::metadata(&fake).unwrap().permissions();
+    use std::os::unix::fs::PermissionsExt;
+    permissions.set_mode(0o700);
+    fs::set_permissions(&fake, permissions).unwrap();
+
+    let command = format!(
+        "source ./bench-agent-profile-common; bench_prepare_codex_profile {} gpt-5.5 xhigh {}; : > {}; set +e; WORK_LEAF_BENCH_CODEX_ACTIVE=1 BENCH_PROFILE_TEST_LOG={} \"$bench_profiled_codex_bin\" exec --json -; printf '%s\\n' $? > {}",
+        shell_path(&fake),
+        shell_path(&root.join("profile")),
+        shell_path(&argument_log),
+        shell_path(&argument_log),
+        shell_path(&status_log),
+    );
+    let output = Command::new("bash")
+        .args(["-c", &command])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert_eq!(fs::read_to_string(argument_log).unwrap(), "");
+    assert_eq!(fs::read_to_string(status_log).unwrap(), "86\n");
+    assert!(
+        fs::read_to_string(root.join("profile/recursive-codex-attempts.log"))
+            .unwrap()
+            .contains("blocked recursive Codex launch")
+    );
+}
+
+#[test]
+fn temporary_benchmark_policy_waives_only_recursive_real_agent_verification() {
+    let root = test_dir("benchmark-agent-policy");
+    let repo = root.join("repo");
+    let policy = root.join("policy");
+    fs::create_dir_all(&repo).unwrap();
+    fs::write(
+        repo.join("AGENTS.md"),
+        "# Original instructions\nRun all checks.\n",
+    )
+    .unwrap();
+    run_git(&repo, &["init"]);
+    run_git(&repo, &["config", "user.email", "bench@example.com"]);
+    run_git(&repo, &["config", "user.name", "Bench Test"]);
+    run_git(&repo, &["add", "AGENTS.md"]);
+    run_git(
+        &repo,
+        &["commit", "-m", "ADD fixture instructions for testing"],
+    );
+
+    let command = format!(
+        "source ./bench-agent-profile-common; bench_install_no_recursive_agent_policy {} {}; git -C {} status --porcelain; bench_restore_no_recursive_agent_policy {} {}",
+        shell_path(&repo),
+        shell_path(&policy),
+        shell_path(&repo),
+        shell_path(&repo),
+        shell_path(&policy),
+    );
+    let output = Command::new("bash")
+        .args(["-c", &command])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "policy helper failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(String::from_utf8(output.stdout).unwrap(), "");
+    assert_eq!(
+        fs::read_to_string(repo.join("AGENTS.md")).unwrap(),
+        "# Original instructions\nRun all checks.\n"
+    );
+    let policy_text = fs::read_to_string(policy.join("effective-policy.txt")).unwrap();
+    assert!(policy_text.contains("Do not launch another Codex or agent provider"));
+    assert!(policy_text.contains("All repository tests and validation checks remain required"));
+}
+
+#[test]
+fn benchmark_policy_restore_accepts_a_checkout_already_reset_to_the_fixed_base() {
+    let root = test_dir("benchmark-agent-policy-reset");
+    let repo = root.join("repo");
+    let policy = root.join("policy");
+    fs::create_dir_all(&repo).unwrap();
+    fs::write(
+        repo.join("AGENTS.md"),
+        "# Original instructions\nRun all checks.\n",
+    )
+    .unwrap();
+    run_git(&repo, &["init"]);
+    run_git(&repo, &["config", "user.email", "bench@example.com"]);
+    run_git(&repo, &["config", "user.name", "Bench Test"]);
+    run_git(&repo, &["add", "AGENTS.md"]);
+    run_git(
+        &repo,
+        &["commit", "-m", "ADD fixture instructions for testing"],
+    );
+
+    let command = format!(
+        "source ./bench-agent-profile-common; bench_install_no_recursive_agent_policy {} {}; cp {}/original-AGENTS.md {}/AGENTS.md; bench_restore_no_recursive_agent_policy {} {}",
+        shell_path(&repo),
+        shell_path(&policy),
+        shell_path(&policy),
+        shell_path(&repo),
+        shell_path(&repo),
+        shell_path(&policy),
+    );
+    let output = Command::new("bash")
+        .args(["-c", &command])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "policy helper failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        fs::read_to_string(repo.join("AGENTS.md")).unwrap(),
+        "# Original instructions\nRun all checks.\n"
     );
 }
 
@@ -326,6 +463,46 @@ fn fair_normal_workflow_pilot_is_one_shot_paired_and_stops_after_scoring() {
     assert!(scorer.contains("One pilot pair is descriptive"));
 }
 
+#[test]
+fn fair_normal_workflow_pilot_rerun_keeps_the_repaired_one_pair_contract() {
+    let study = "bench-results/efficiency-fair-normal-workflow-pilot-rerun-20260827T151135Z";
+    let launcher = read(&format!("{study}/run-pilot"));
+    let scorer = read(&format!("{study}/scorer/score.py"));
+
+    assert_eq!(
+        launcher
+            .matches("\"$repo_root/bench-three-features\"")
+            .count(),
+        1
+    );
+    assert_eq!(
+        launcher
+            .matches("\"$repo_root/bench-three-features-sequential\"")
+            .count(),
+        1
+    );
+    assert!(launcher.contains("WORK_LEAF_BENCH_MODEL=gpt-5.5"));
+    assert!(launcher.contains("WORK_LEAF_BENCH_REASONING_EFFORT=xhigh"));
+    assert!(launcher.contains("WORK_LEAF_DIRECT_BENCH_MODEL=gpt-5.5"));
+    assert!(launcher.contains("WORK_LEAF_DIRECT_BENCH_REASONING_EFFORT=xhigh"));
+    assert!(launcher.contains("WORK_LEAF_BENCH_NO_READ_PERMISSION=0"));
+    assert!(launcher.contains("provider_workflows_admitted=1"));
+    assert!(launcher.contains("provider_workflows_admitted=2"));
+    assert!(launcher.contains("work_leaf_pid=$!"));
+    assert!(launcher.contains("direct_pid=$!"));
+    assert!(launcher.contains("wait \"$work_leaf_pid\""));
+    assert!(launcher.contains("wait \"$direct_pid\""));
+    assert!(!launcher.contains("WORK_LEAF_BENCH_RETRY"));
+    assert!(!launcher.contains("wl-000"));
+    assert!(!launcher.contains("wl-111"));
+    assert!(launcher.contains("scorer/score.py"));
+    assert!(launcher.contains("Steps 8 and 9 require user review"));
+
+    assert!(!scorer.contains("/fork"));
+    assert!(scorer.contains("quality_match_in_this_pair"));
+    assert!(scorer.contains("One pilot pair is descriptive"));
+}
+
 fn read(path: &str) -> String {
     fs::read_to_string(path).unwrap_or_else(|error| panic!("cannot read {path}: {error}"))
 }
@@ -354,6 +531,20 @@ fn direct_feature(script: &str, index: usize) -> &str {
 
 fn shell_path(path: &std::path::Path) -> String {
     format!("'{}'", path.display().to_string().replace('\'', "'\\''"))
+}
+
+fn run_git(cwd: &std::path::Path, args: &[&str]) {
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(cwd)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "git {} failed: {}",
+        args.join(" "),
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 fn test_dir(name: &str) -> std::path::PathBuf {

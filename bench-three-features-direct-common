@@ -395,6 +395,12 @@ copy_artifacts() {
       cp --no-dereference -- "$tmp_root/$file" "$artifact_dir/$file"
     fi
   done
+  if [[ -d "$tmp_root/agent-policy" ]]; then
+    cp -a -- "$tmp_root/agent-policy" "$artifact_dir/agent-policy"
+  fi
+  if [[ -f "${bench_recursive_codex_log:-}" ]]; then
+    cp --no-dereference -- "$bench_recursive_codex_log" "$artifact_dir/recursive-codex-attempts.log"
+  fi
   if [[ -d "$tmp_root/runs" ]]; then
     mkdir -p "$artifact_dir/runs"
     cp -a --no-dereference -- "$tmp_root/runs/." "$artifact_dir/runs/"
@@ -729,6 +735,7 @@ actual_codex=$bench_actual_codex_bin
 actual_codex_sha256=$bench_actual_codex_sha256
 profiled_codex=$bench_profiled_codex_bin
 profiled_codex_sha256=$bench_profiled_codex_sha256
+recursive_codex_attempt_log=$bench_recursive_codex_log
 codex_cli_version=$bench_codex_cli_version
 EOF
 }
@@ -978,8 +985,6 @@ $request
 Inspect the repository and the diff from $from_ref..HEAD. Report only bugs, regressions, or missing
 tests for the changed behavior. Documentation and plain-text updates are deferred to the final
 linearizer. Do not treat missing documentation or plain-text updates as review findings.
-For agent-facing changes, missing required real-agent verification is a finding unless the author
-response includes the exact real-agent scenario and visible result, or the exact pre-agent blocker.
 $previous_evidence
 If the patch is acceptable, reply with a standalone first review marker:
 
@@ -1234,12 +1239,18 @@ agent_bin="$(command -v "$agent_backend" 2>/dev/null || true)"
 } > "$tmp_root/agent-version.txt"
 env | redact_sensitive_env > "$tmp_root/driver-env.txt"
 detect_agent_profile
+bench_install_no_recursive_agent_policy "$checkout_dir" "$tmp_root/agent-policy" \
+  || fail_bench "failed to install benchmark provider-isolation policy"
 prepare_bench_codex_profile || fail_bench "failed to prepare explicit Codex model/reasoning profile"
 setup_observer || fail_bench "failed to start required benchmark observer"
 observer_checkpoint base || fail_bench "failed to capture observer base checkpoint"
 
 run_sequential_bench
 
+bench_restore_no_recursive_agent_policy "$checkout_dir" "$tmp_root/agent-policy" \
+  || fail_bench "failed to restore benchmark repository instructions"
+bench_assert_no_recursive_codex "$bench_recursive_codex_log" \
+  || fail_bench "a benchmarked agent attempted recursive provider verification"
 run_final_checks
 completed_active_seconds="$(monotonic_seconds)"
 observer_timeline final-checks-complete "status=pass" || fail_bench "failed to record final checks"

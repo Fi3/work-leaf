@@ -956,6 +956,19 @@ impl CapturedUsage {
         )
     }
 
+    fn checked_difference(self, previous: Self) -> Option<Self> {
+        Some(Self {
+            input_tokens: self.input_tokens.checked_sub(previous.input_tokens)?,
+            cached_input_tokens: self
+                .cached_input_tokens
+                .checked_sub(previous.cached_input_tokens)?,
+            output_tokens: self.output_tokens.checked_sub(previous.output_tokens)?,
+            reasoning_output_tokens: self
+                .reasoning_output_tokens
+                .checked_sub(previous.reasoning_output_tokens)?,
+        })
+    }
+
     pub fn uncached_input_tokens(self) -> u64 {
         self.input_tokens.saturating_sub(self.cached_input_tokens)
     }
@@ -1285,7 +1298,7 @@ fn extract_agent_id(prompt: &str) -> Option<String> {
 fn extract_usage(value: &Value) -> Option<(String, CapturedUsage)> {
     if value.get("type").and_then(Value::as_str) == Some("turn.completed") {
         return usage_from_object(value.get("usage")?)
-            .map(|usage| ("thread-total".to_string(), usage));
+            .map(|usage| ("invocation-total".to_string(), usage));
     }
     if value.get("method").and_then(Value::as_str) == Some("thread/tokenUsage/updated") {
         let token_usage = value.get("params")?.get("tokenUsage").or_else(|| {
@@ -1401,6 +1414,13 @@ pub struct UsageObservation {
     pub primary: bool,
     pub visible: bool,
     pub usage: CapturedUsage,
+    accounting: UsageAccounting,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum UsageAccounting {
+    CumulativeThread,
+    PerInvocation,
 }
 
 impl UsageObservation {
@@ -1417,6 +1437,24 @@ impl UsageObservation {
             primary,
             visible,
             usage,
+            accounting: UsageAccounting::CumulativeThread,
+        }
+    }
+
+    fn per_invocation(
+        thread_id: impl Into<String>,
+        invocation_id: impl Into<String>,
+        primary: bool,
+        visible: bool,
+        usage: CapturedUsage,
+    ) -> Self {
+        Self {
+            thread_id: thread_id.into(),
+            invocation_id: invocation_id.into(),
+            primary,
+            visible,
+            usage,
+            accounting: UsageAccounting::PerInvocation,
         }
     }
 }
@@ -1467,26 +1505,13 @@ pub struct UsageScopes {
 }
 
 pub fn summarize_usage(observations: &[UsageObservation]) -> UsageScopes {
-    let mut threads = BTreeMap::<String, UsageObservation>::new();
-    for observation in observations {
-        let entry = threads
-            .entry(observation.thread_id.clone())
-            .or_insert_with(|| observation.clone());
-        entry.primary |= observation.primary;
-        entry.visible |= observation.visible;
-        if observation.usage.score() > entry.usage.score() {
-            entry.usage = observation.usage;
-            entry.invocation_id = observation.invocation_id.clone();
-        }
-    }
+    let threads = final_thread_observations(observations);
     UsageScopes {
-        visible_role: UsageAggregate::from_threads(
-            threads.values().filter(|thread| thread.visible),
-        ),
+        visible_role: UsageAggregate::from_threads(threads.iter().filter(|thread| thread.visible)),
         primary_condition: UsageAggregate::from_threads(
-            threads.values().filter(|thread| thread.primary),
+            threads.iter().filter(|thread| thread.primary),
         ),
-        total_workflow: UsageAggregate::from_threads(threads.values()),
+        total_workflow: UsageAggregate::from_threads(threads.iter()),
     }
 }
 
@@ -3774,6 +3799,7 @@ pub fn analyze(config: &CaptureConfig) -> ObserverResult<AnalysisSummary> {
         mechanisms.observe(EvidenceInput::AccountingReconciliation);
     }
 
+    validate_usage_accounting(&observations, &mut errors);
     let usage_scopes = summarize_usage(&observations);
     let final_threads = final_thread_observations(&observations);
     let roles_by_invocation = inventory
@@ -4833,9 +4859,9 @@ fn analyze_exec(
         let Some((usage_kind, usage)) = extract_usage(value) else {
             continue;
         };
-        if usage_kind != "thread-total" {
+        if usage_kind != "invocation-total" {
             errors.push(format!(
-                "usage event in invocation {} is not a cumulative thread total",
+                "usage event in invocation {} is not a terminal invocation total",
                 start.invocation_id
             ));
             continue;
@@ -4848,7 +4874,7 @@ fn analyze_exec(
             continue;
         };
         let visible = start.primary && start.role.as_deref().is_some_and(is_visible_direct_role);
-        observations.push(UsageObservation::new(
+        observations.push(UsageObservation::per_invocation(
             &thread_id,
             &start.invocation_id,
             start.primary,
@@ -5728,20 +5754,70 @@ fn resume_thread_from_argv(argv: &[EncodedArgument]) -> Option<String> {
         .map(|thread_id| (*thread_id).to_string())
 }
 
-fn final_thread_observations(observations: &[UsageObservation]) -> Vec<UsageObservation> {
-    let mut threads = BTreeMap::<String, UsageObservation>::new();
+#[derive(Default)]
+struct ThreadUsageAccumulator {
+    observation: Option<UsageObservation>,
+    cumulative: Option<CapturedUsage>,
+    invocations: BTreeMap<String, CapturedUsage>,
+}
+
+fn validate_usage_accounting(observations: &[UsageObservation], errors: &mut Vec<String>) {
+    let mut accounting = BTreeMap::<&str, UsageAccounting>::new();
     for observation in observations {
-        let entry = threads
-            .entry(observation.thread_id.clone())
-            .or_insert_with(|| observation.clone());
-        entry.primary |= observation.primary;
-        entry.visible |= observation.visible;
-        if observation.usage.score() > entry.usage.score() {
-            entry.usage = observation.usage;
-            entry.invocation_id = observation.invocation_id.clone();
+        if let Some(previous) = accounting.insert(&observation.thread_id, observation.accounting)
+            && previous != observation.accounting
+        {
+            errors.push(format!(
+                "thread {} mixes cumulative and per-invocation usage records",
+                observation.thread_id
+            ));
         }
     }
-    threads.into_values().collect()
+}
+
+fn final_thread_observations(observations: &[UsageObservation]) -> Vec<UsageObservation> {
+    let mut threads = BTreeMap::<String, ThreadUsageAccumulator>::new();
+    for observation in observations {
+        let entry = threads.entry(observation.thread_id.clone()).or_default();
+        let representative = entry.observation.get_or_insert_with(|| observation.clone());
+        representative.primary |= observation.primary;
+        representative.visible |= observation.visible;
+        if observation.invocation_id > representative.invocation_id {
+            representative.invocation_id = observation.invocation_id.clone();
+        }
+        match observation.accounting {
+            UsageAccounting::CumulativeThread => {
+                if entry
+                    .cumulative
+                    .is_none_or(|usage| observation.usage.score() > usage.score())
+                {
+                    entry.cumulative = Some(observation.usage);
+                }
+            }
+            UsageAccounting::PerInvocation => {
+                let invocation = entry
+                    .invocations
+                    .entry(observation.invocation_id.clone())
+                    .or_insert(observation.usage);
+                if observation.usage.score() > invocation.score() {
+                    *invocation = observation.usage;
+                }
+            }
+        }
+    }
+    threads
+        .into_values()
+        .filter_map(|entry| {
+            let mut observation = entry.observation?;
+            observation.usage = entry.cumulative.unwrap_or_else(|| {
+                entry
+                    .invocations
+                    .into_values()
+                    .fold(CapturedUsage::default(), CapturedUsage::combine)
+            });
+            Some(observation)
+        })
+        .collect()
 }
 
 fn read_or_empty(path: &Path) -> ObserverResult<Vec<u8>> {
@@ -6261,6 +6337,7 @@ struct RolloutExpectation {
     expected_cwd: Option<PathBuf>,
     allow_rollout_supersession: bool,
     latest_capture_unix_ns: u128,
+    invocation_count: usize,
 }
 
 fn captured_exec_threads(
@@ -6278,7 +6355,7 @@ fn captured_exec_threads(
         let frames = index_jsonl(&read_or_empty(&directory.join("stdout.raw"))?, "stdout");
         let has_terminal_usage = frames
             .iter()
-            .any(|frame| frame.usage_kind.as_deref() == Some("thread-total"));
+            .any(|frame| frame.usage_kind.as_deref() == Some("invocation-total"));
         let visible = process.start.primary
             && process
                 .start
@@ -6376,13 +6453,30 @@ fn supplement_usage_from_rollouts(
             .map(|thread| thread.invocation_id.clone())
             .or_else(|| observed.map(|thread| thread.invocation_id.clone()))
             .expect("captured or observed rollout thread has an invocation");
-        observations.push(UsageObservation::new(
-            &row.thread_id,
-            invocation_id,
-            row.primary,
-            row.visible,
-            row.usage,
-        ));
+        let per_invocation = capture.is_some()
+            || observed.is_some_and(|thread| thread.accounting == UsageAccounting::PerInvocation);
+        if per_invocation {
+            if observed.is_none_or(|thread| thread.usage != row.usage) {
+                let usage = observed
+                    .and_then(|thread| row.usage.checked_difference(thread.usage))
+                    .unwrap_or(row.usage);
+                observations.push(UsageObservation::per_invocation(
+                    &row.thread_id,
+                    invocation_id,
+                    row.primary,
+                    row.visible,
+                    usage,
+                ));
+            }
+        } else {
+            observations.push(UsageObservation::new(
+                &row.thread_id,
+                invocation_id,
+                row.primary,
+                row.visible,
+                row.usage,
+            ));
+        }
         if let Some(capture) = capture {
             metadata
                 .entry(row.thread_id.clone())
@@ -6415,6 +6509,30 @@ struct ParsedRollout {
     effort: String,
     cli_version: String,
     usage: Option<CapturedUsage>,
+    task_usages: Vec<CapturedUsage>,
+    profiles: BTreeSet<(String, String)>,
+}
+
+impl ParsedRollout {
+    fn normalize_direct_invocation_usage(&mut self) {
+        if self.task_usages.is_empty() {
+            return;
+        }
+        self.usage = Some(
+            self.task_usages
+                .iter()
+                .copied()
+                .fold(CapturedUsage::default(), CapturedUsage::combine),
+        );
+    }
+
+    fn invocation_count(&self) -> usize {
+        if self.task_usages.is_empty() {
+            usize::from(self.usage.is_some())
+        } else {
+            self.task_usages.len()
+        }
+    }
 }
 
 pub fn extract_rollout_metadata(
@@ -6459,12 +6577,14 @@ pub fn extract_rollout_metadata(
                     expected_cwd,
                     allow_rollout_supersession: false,
                     latest_capture_unix_ns,
+                    invocation_count: 0,
                 },
             )
         })
         .collect::<BTreeMap<_, _>>();
     for capture in captured_exec_threads(config, &inventory)? {
         if let Some(expectation) = expected.get_mut(&capture.thread_id) {
+            expectation.invocation_count = expectation.invocation_count.saturating_add(1);
             expectation.thread.primary |= capture.primary;
             expectation.thread.visible |= capture.visible;
             if !capture.has_terminal_usage
@@ -6495,6 +6615,7 @@ pub fn extract_rollout_metadata(
                 expected_cwd: Some(capture.cwd),
                 allow_rollout_supersession: !capture.has_terminal_usage,
                 latest_capture_unix_ns: capture.started_unix_ns,
+                invocation_count: 1,
             },
         );
     }
@@ -6534,7 +6655,10 @@ pub fn extract_rollout_metadata(
             }
             continue;
         }
-        let parsed = parse_rollout(&path)?;
+        let mut parsed = parse_rollout(&path)?;
+        if config.condition == "direct" {
+            parsed.normalize_direct_invocation_usage();
+        }
         let thread_id = parsed.thread_id.clone();
         matches.entry(thread_id).or_default().push((path, parsed));
     }
@@ -6564,6 +6688,15 @@ pub fn extract_rollout_metadata(
                     .unwrap_or_else(|| "missing".to_string())
             ));
         }
+        if config.condition == "direct"
+            && rollout.invocation_count() != expectation.invocation_count
+        {
+            errors.push(format!(
+                "thread {thread_id} rollout has {} task usage epoch(s) for {} captured direct invocation(s)",
+                rollout.invocation_count(),
+                expectation.invocation_count
+            ));
+        }
         let Some(usage) = rollout.usage else {
             errors.push(format!(
                 "thread {thread_id} rollout has no final token usage"
@@ -6588,6 +6721,14 @@ pub fn extract_rollout_metadata(
                 "primary thread {thread_id} effort {} does not match configured {}",
                 rollout.effort, config.effort
             ));
+        }
+        for (model, effort) in rollout.profiles.iter().filter(|_| thread.primary) {
+            if model != &config.model || effort != &config.effort {
+                errors.push(format!(
+                    "thread {thread_id} task profile {model}/{effort} does not match configured {}/{}",
+                    config.model, config.effort
+                ));
+            }
         }
         if !cli_versions_match(&config.real_codex_version, &rollout.cli_version) {
             errors.push(format!(
@@ -6736,6 +6877,8 @@ fn collect_rollout_files(current: &Path, paths: &mut Vec<PathBuf>) -> ObserverRe
 fn parse_rollout(path: &Path) -> ObserverResult<ParsedRollout> {
     let file = File::open(path)?;
     let mut parsed = ParsedRollout::default();
+    let mut task_open = false;
+    let mut task_usage = None;
     for line in BufReader::new(file).lines() {
         let line = line?;
         let Ok(value) = serde_json::from_str::<Value>(&line) else {
@@ -6773,6 +6916,24 @@ fn parse_rollout(path: &Path) -> ObserverResult<ParsedRollout> {
                 if let Some(effort) = payload.get("effort").and_then(Value::as_str) {
                     parsed.effort = effort.to_string();
                 }
+                if !parsed.model.is_empty() && !parsed.effort.is_empty() {
+                    parsed
+                        .profiles
+                        .insert((parsed.model.clone(), parsed.effort.clone()));
+                }
+            }
+            Some("event_msg")
+                if value
+                    .get("payload")
+                    .and_then(|payload| payload.get("type"))
+                    .and_then(Value::as_str)
+                    == Some("task_started") =>
+            {
+                if task_open && let Some(usage) = task_usage.take() {
+                    parsed.task_usages.push(usage);
+                }
+                task_open = true;
+                task_usage = None;
             }
             Some("event_msg")
                 if value
@@ -6781,14 +6942,33 @@ fn parse_rollout(path: &Path) -> ObserverResult<ParsedRollout> {
                     .and_then(Value::as_str)
                     == Some("token_count") =>
             {
-                parsed.usage = value
+                let usage = value
                     .get("payload")
                     .and_then(|payload| payload.get("info"))
                     .and_then(|info| info.get("total_token_usage"))
                     .and_then(usage_from_object);
+                parsed.usage = usage;
+                if task_open {
+                    task_usage = usage;
+                }
+            }
+            Some("event_msg")
+                if value
+                    .get("payload")
+                    .and_then(|payload| payload.get("type"))
+                    .and_then(Value::as_str)
+                    == Some("task_complete") =>
+            {
+                if task_open && let Some(usage) = task_usage.take() {
+                    parsed.task_usages.push(usage);
+                }
+                task_open = false;
             }
             _ => {}
         }
+    }
+    if task_open && let Some(usage) = task_usage {
+        parsed.task_usages.push(usage);
     }
     Ok(parsed)
 }
