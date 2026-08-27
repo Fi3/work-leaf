@@ -170,30 +170,29 @@ when review finds a problem. The direct path does not start Work Leaf or use its
 Its linearizer rewrites the reviewed provisional history into three final commits.
 
 Both paths require `bench-observer` for non-dry runs. The driver builds the default observer binary
-or uses the executable named by `WORK_LEAF_BENCH_OBSERVER_BIN`. The observer supplies the same Cargo
-proxy to both paths. Every implementation or review-fix cycle must execute exactly one focused Cargo
-validation. Focus requires a named package, one named Cargo target, or a named test filter; a focused
-format command must also use `--check`. Broad flags, test-runner display flags, and empty target or
-filter values do not supply focus. The target-kind flags `--lib` and `--doc` and the package-set
-flags `--workspace` and `--all` do not supply focus by themselves. `cargo nextest` must use `run`; a
-nonempty `--filter-expr` can provide named-test focus. Discovery skips Cargo global options before
-the subcommand and recognizes Cargo's built-in `b`, `c`, `d`, and `t` validation aliases. It does
-not assume aliases for Clippy or fmt because Cargo does not define them. Validation discovery also
-recognizes direct shell command segments,
-leading environment assignments, and `env` or `command` wrappers. Redirection targets, including
-file-descriptor duplication, and shell comments are ignored before commands and filters are counted.
-Dynamic `eval` commands and command substitution are ineligible because the audit cannot prove a
-single validation process. `env` split-string execution and heredocs are ineligible for the same
-reason. Discovery follows at most four nested shell payloads. A broad first validation is blocked
-before real Cargo starts. A second validation inside one process allowance is also blocked, and
-analysis rejects extra Work Leaf cycle validations.
-The direct driver checks each Codex JSONL turn with `bench-audit-agent-validation`; observer analysis
-checks Work Leaf validation cycles across their provider turns. Both linearizers leave Cargo
-validation to the driver. Each driver calls `bench-validation-common::bench_run_final_gate` once,
-which runs `cargo fmt`, `cargo clippy --all-targets --all-features -- -D warnings`, and
-`cargo test --all-targets --all-features` in that order, stopping and returning failure after the
-first command that fails. The normal comparison is therefore
-concurrent Work Leaf against direct sequential Codex with the same validation rules.
+or uses the executable named by `WORK_LEAF_BENCH_OBSERVER_BIN`. The observer proxies Codex and the
+locked-command shell so it can record provider traffic, commands, and token use. It records Cargo's
+identity and observed validation activity but does not proxy, limit, block, or grade Cargo commands.
+Measurement failures are reported separately and cannot change whether the implementation workflow
+succeeded.
+
+Agents retain their normal validation behavior. Work Leaf feature agents and reviewers use the
+orchestrator's normal prompts and command policy; its linearizer runs the repository-required checks
+and fixes failures. Direct feature sessions may run focused checks as needed, their reviewers may
+request fixes, and their final linearizer owns broad cross-feature checks and fixes. Neither driver
+sets a command count or rejects a workflow for running more validation. Each driver then calls
+`bench-validation-common::bench_run_final_gate` once as a non-mutating verification step. The gate
+runs `cargo fmt -- --check`, `cargo clippy --all-targets --all-features -- -D warnings`, and
+`cargo test --all-targets --all-features` in that order, stopping after the first failure. The normal
+comparison is concurrent Work Leaf against direct sequential Codex with the same tasks, model,
+reasoning level, stage responsibilities, time allowances, final verification, and quality scorer.
+
+Both benchmark drivers use `bench-agent-profile-common` to create a run-local Codex wrapper. The
+wrapper passes the requested reasoning effort directly to every real Codex invocation without
+reading or changing the user's global Codex configuration. The observer's
+`usage_scopes.total_workflow` record is the token authority for comparisons. A report keeps the
+workflow result, token-measurement status, and quality-score result separate so a partial or failed
+implementation remains evidence rather than being silently retried or discarded.
 
 `bench-candidate-common` owns candidate staging, digest checks, admission metadata, and atomic report
 publication for both drivers. `materialize-bench-candidate` can reconstruct at most one historical

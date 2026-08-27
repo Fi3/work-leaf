@@ -4,12 +4,12 @@ use std::fs;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
-// Frozen from the three `post_command 'new ...'` tasks in origin/master:bench-three-features.
+// Frozen from the three `post_command 'new ...'` tasks in e70c933:bench-three-features.
 const ORIGIN_MASTER_FEATURE_HASH: &str =
-    "c27bb64412deeee646d8d25753b599bf1650050e7b761c9dc119611abac58d1a";
+    "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a";
 const ORIGIN_MASTER_FEATURES: [&str; 3] = [
     "add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select",
-    "implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt.",
+    "when an user prompt start with / and is followed by something without whitespace that is a command for the agent; the orchestrator must send it to the selected backend agent and show that backend response",
     "when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it",
 ];
 
@@ -72,32 +72,41 @@ fn product_benchmarks_preserve_the_origin_master_task_bytes() {
         Some(ORIGIN_MASTER_FEATURE_HASH)
     );
 
-    assert!(!direct.contains("A /fork implementation must"));
-    assert!(!direct.contains("excluded ordinary prompt path"));
-    assert!(!direct.contains("Provider-backed /status output"));
+    for script in [&work_leaf, &direct] {
+        assert!(!script.contains("/fork"));
+        assert!(!script.contains("strict selected-agent"));
+        assert!(!script.contains("ordinary prompt path"));
+    }
 }
 
 #[test]
-fn paired_product_benchmarks_apply_the_same_validation_policy_and_final_gate() {
+fn paired_product_benchmarks_preserve_normal_validation_and_use_a_check_only_final_gate() {
     let work_leaf = read("bench-three-features");
     let direct = read("bench-three-features-direct-common");
     let validation = read("bench-validation-common");
+    let observer_main = read("bench-observer/src/main.rs");
+    let observer_lib = read("bench-observer/src/lib.rs");
 
     for script in [&work_leaf, &direct] {
-        assert!(script.contains("Run exactly one focused Cargo validation command"));
-        assert!(script.contains("Starting no Cargo validation, or starting more than one"));
-        assert!(script.contains("The benchmark driver owns the one final"));
-        assert!(script.contains("disable_iteration_validation_budget"));
+        assert!(!script.contains("Run exactly one focused Cargo validation command"));
+        assert!(!script.contains("Starting no Cargo validation, or starting more than one"));
+        assert!(!script.contains("validation-budget-violation.txt"));
+        assert!(!script.contains("disable_iteration_validation_budget"));
+        assert!(!script.contains("bench-audit-agent-validation"));
         assert!(script.contains("WORK_LEAF_BENCH_OBSERVER_BIN"));
         assert!(script.contains("source \"$repo_root/bench-candidate-common\""));
         assert!(script.contains("source \"$repo_root/bench-validation-common\""));
         assert_eq!(script.matches("bench_run_final_gate").count(), 1);
-        assert!(script.contains("final repository changed during the final gate"));
-        assert!(!script.contains("cargo fmt -- --check"));
-        assert!(!script.contains("Run the repository required checks"));
+        assert!(!script.contains("Do not run Cargo validation"));
+        assert!(!script.contains("benchmark driver owns the one final"));
     }
 
-    assert_eq!(validation.matches("cargo fmt || exit $?\n").count(), 1);
+    assert_eq!(
+        validation
+            .matches("cargo fmt -- --check || exit $?\n")
+            .count(),
+        1
+    );
     assert_eq!(
         validation
             .matches("cargo clippy --all-targets --all-features -- -D warnings || exit $?\n")
@@ -113,173 +122,109 @@ fn paired_product_benchmarks_apply_the_same_validation_policy_and_final_gate() {
 
     assert!(work_leaf.contains("setup_observer || fail_bench"));
     assert!(direct.contains("setup_observer || fail_bench"));
-    assert!(direct.matches("$(focused_validation_policy)").count() >= 2);
+    assert!(direct.contains("Run focused checks while implementing"));
+    assert!(direct.contains("Run the checks required by AGENTS.md and iterate until they pass"));
+    assert!(work_leaf.contains(
+        "Run the checks required by the repository instructions and iterate until they pass"
+    ));
+
+    assert!(!observer_main.contains("run_cargo_proxy"));
+    assert!(!observer_main.contains("validation-budget"));
+    assert!(!observer_lib.contains("for name in [\"codex\", \"sh\", \"cargo\"]"));
+    assert!(!observer_lib.contains("set_validation_budget(&config, true)"));
+    assert!(!observer_lib.contains("load_online_validation_budget_violations(config"));
 }
 
 #[test]
-fn direct_validation_audit_matches_the_shared_focused_policy_table() {
-    let root = test_dir("validation-audit");
-    for (index, (accepted, command)) in focused_validation_policy_cases().into_iter().enumerate() {
-        let log = root.join(format!("case-{index}.jsonl"));
-        write_command_log(&log, &[command]);
-        let output = Command::new("python3")
-            .args(["bench-audit-agent-validation", log.to_str().unwrap()])
-            .output()
-            .unwrap();
-        assert_eq!(
-            output.status.success(),
-            accepted,
-            "direct auditor disagreed for `{command}`\nstdout:\n{}\nstderr:\n{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
+fn paired_product_benchmarks_pin_the_same_profile_without_editing_codex_config() {
+    let work_leaf = read("bench-three-features");
+    let direct = read("bench-three-features-direct-common");
+    let profile = read("bench-agent-profile-common");
+
+    for script in [&work_leaf, &direct] {
+        assert!(script.contains("source \"$repo_root/bench-agent-profile-common\""));
+        assert!(script.contains("bench_prepare_codex_profile"));
+        assert!(script.contains("bench_profiled_codex_bin"));
+        assert!(script.contains("WORK_LEAF_BENCH_REASONING_EFFORT"));
+        assert!(!script.contains("model_reasoning_effort=\"$agent_reasoning_effort\""));
+        assert!(!script.contains("sed -i"));
     }
+    assert!(profile.contains("model_reasoning_effort=\\\"$reasoning_effort\\\""));
+    assert!(!profile.contains("config.toml"));
 }
 
 #[test]
-fn direct_validation_audit_bounds_nested_shell_payloads() {
-    let root = test_dir("validation-audit-nested-shell");
-    for (depth, accepted) in [(4, true), (5, false)] {
-        let command = nested_shell_command(depth);
-        let log = root.join(format!("depth-{depth}.jsonl"));
-        write_command_log(&log, &[&command]);
-        let output = Command::new("python3")
-            .args(["bench-audit-agent-validation", log.to_str().unwrap()])
-            .output()
-            .unwrap();
-        assert_eq!(
-            output.status.success(),
-            accepted,
-            "unexpected depth-{depth} result for `{command}`\nstdout:\n{}\nstderr:\n{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
-}
-
-#[test]
-fn direct_validation_audit_rejects_broad_multiline_shell_commands() {
-    let root = test_dir("validation-audit-multiline-shell");
-    for (index, command) in [
-        "cargo test;\n",
-        "cargo test;\necho done",
-        "cargo test &&\necho done",
-        "cargo test |\ncat",
-        "cargo test focused_case <<'EOF'\ncargo test\nEOF",
-    ]
-    .into_iter()
-    .enumerate()
-    {
-        let log = root.join(format!("case-{index}.jsonl"));
-        write_command_log(&log, &[command]);
-        let output = Command::new("python3")
-            .args(["bench-audit-agent-validation", log.to_str().unwrap()])
-            .output()
-            .unwrap();
-        assert!(
-            !output.status.success(),
-            "direct auditor accepted broad multiline command `{command}`"
-        );
-    }
-}
-
-#[test]
-fn validation_audit_rejects_missing_and_repeated_cargo_checks() {
-    let root = test_dir("validation-audit-count");
-
-    let no_validation = root.join("none.jsonl");
-    fs::write(&no_validation, "{\"type\":\"item.completed\"}\n").unwrap();
-    let none = Command::new("python3")
-        .args([
-            "bench-audit-agent-validation",
-            no_validation.to_str().unwrap(),
-        ])
-        .output()
-        .unwrap();
-    assert!(!none.status.success());
-    assert!(String::from_utf8_lossy(&none.stderr).contains("exactly one"));
-
-    let repeated = root.join("repeated.jsonl");
-    write_command_log(
-        &repeated,
-        &[
-            "cargo test --test terminal_ui visual_mode",
-            "cargo test --test terminal_ui visual_mode",
-        ],
-    );
-    let repeated = Command::new("python3")
-        .args(["bench-audit-agent-validation", repeated.to_str().unwrap()])
-        .output()
-        .unwrap();
-    assert!(!repeated.status.success());
-    assert!(String::from_utf8_lossy(&repeated.stderr).contains("exactly one"));
-
-    let repeated_without_ids = root.join("repeated-without-ids.jsonl");
-    let event = serde_json::json!({
-        "type": "command_execution",
-        "command": "cargo test --test terminal_ui visual_mode",
-    })
-    .to_string()
-        + "\n";
-    fs::write(&repeated_without_ids, format!("{event}{event}")).unwrap();
-    let repeated_without_ids = Command::new("python3")
-        .args([
-            "bench-audit-agent-validation",
-            repeated_without_ids.to_str().unwrap(),
-        ])
-        .output()
-        .unwrap();
-    assert!(!repeated_without_ids.status.success());
-    assert!(String::from_utf8_lossy(&repeated_without_ids.stderr).contains("exactly one"));
-
-    let lifecycle_pair = root.join("started-completed-pair.jsonl");
-    let item = serde_json::json!({
-        "type": "command_execution",
-        "id": "item-7",
-        "command": "cargo test --test terminal_ui visual_mode",
-    });
+fn profiled_codex_wrapper_injects_xhigh_and_preserves_the_real_cli_arguments() {
+    let root = test_dir("profiled-codex");
+    let fake = root.join("codex-real");
+    let argument_log = root.join("args.txt");
     fs::write(
-        &lifecycle_pair,
-        ["item.started", "item.completed"]
-            .into_iter()
-            .map(|event_type| {
-                serde_json::json!({"type": event_type, "item": item}).to_string() + "\n"
-            })
-            .collect::<String>(),
+        &fake,
+        "#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" >> \"$BENCH_PROFILE_TEST_LOG\"\n",
     )
     .unwrap();
-    let lifecycle_pair = Command::new("python3")
-        .args([
-            "bench-audit-agent-validation",
-            lifecycle_pair.to_str().unwrap(),
-        ])
+    let mut permissions = fs::metadata(&fake).unwrap().permissions();
+    use std::os::unix::fs::PermissionsExt;
+    permissions.set_mode(0o700);
+    fs::set_permissions(&fake, permissions).unwrap();
+
+    let command = format!(
+        "source ./bench-agent-profile-common; bench_prepare_codex_profile {} gpt-5.5 xhigh {}; : > {}; BENCH_PROFILE_TEST_LOG={} \"$bench_profiled_codex_bin\" --model gpt-5.5 exec --json -",
+        shell_path(&fake),
+        shell_path(&root.join("profile")),
+        shell_path(&argument_log),
+        shell_path(&argument_log),
+    );
+    let output = Command::new("bash")
+        .args(["-c", &command])
         .output()
         .unwrap();
     assert!(
-        lifecycle_pair.status.success(),
-        "one command's started/completed lifecycle was counted twice:\n{}",
-        String::from_utf8_lossy(&lifecycle_pair.stderr)
+        output.status.success(),
+        "profile helper failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        fs::read_to_string(argument_log).unwrap(),
+        "-c\nmodel_reasoning_effort=\"xhigh\"\n--model\ngpt-5.5\nexec\n--json\n-\n"
     );
 }
 
-fn focused_validation_policy_cases() -> Vec<(bool, &'static str)> {
-    include_str!("../bench-observer/tests/focused-validation-policy.tsv")
-        .lines()
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .map(|line| {
-            let (expected, command) = line.split_once('\t').unwrap();
-            (expected == "accept", command)
-        })
-        .collect()
+#[test]
+fn paired_product_benchmarks_give_each_stage_a_full_timeout() {
+    let work_leaf = read("bench-three-features");
+    let direct = read("bench-three-features-direct-common");
+
+    assert!(work_leaf.contains("feature_stage_deadline"));
+    assert!(work_leaf.contains("linearize_stage_deadline"));
+    assert!(!work_leaf.contains("elapsed <= timeout_secs"));
+    assert!(direct.contains("begin_stage_deadline"));
+    assert!(direct.contains("begin_stage_deadline \"feature-$feature_index\""));
+    assert!(direct.contains("begin_stage_deadline \"linearize\""));
+    assert!(!direct.contains("start_active_seconds + timeout_secs"));
 }
 
-fn nested_shell_command(depth: usize) -> String {
-    let mut command = "cargo test nested_case".to_string();
-    for _ in 0..depth {
-        let payload = command.replace('\\', "\\\\").replace(' ', "\\ ");
-        command = format!("sh -c {payload}");
+#[test]
+fn observer_measurement_cannot_change_the_workflow_result() {
+    for path in ["bench-three-features", "bench-three-features-direct-common"] {
+        let script = read(path);
+        assert!(script.contains("measurement_status="));
+        assert!(script.contains("workflow_result"));
+        assert!(script.contains("usage_scopes.total_workflow"));
+        assert!(!script.contains("finalize_observation || fail_bench"));
+        assert!(!script.contains("observer analysis rejected this capture"));
     }
-    command
+}
+
+#[test]
+fn paired_product_benchmarks_preserve_uncommitted_and_untracked_candidate_changes() {
+    for path in ["bench-three-features", "bench-three-features-direct-common"] {
+        let script = read(path);
+        assert!(script.contains("snapshot.index"));
+        assert!(script.contains("git -C \"$checkout_dir\" add -N -- ."));
+        assert!(script.contains("git -C \"$checkout_dir\" diff --binary"));
+        assert!(script.contains("git -C \"$checkout_dir\" diff --cached --binary"));
+    }
 }
 
 #[test]
@@ -331,16 +276,54 @@ fn retained_scripts_have_valid_syntax_and_no_investigation_controls() {
 }
 
 #[test]
-fn dashboard_fixes_the_accepted_baseline_profile() {
+fn dashboard_owns_historical_baselines_while_launchers_report_raw_measurements() {
     let dashboard = read("bench-dashboard");
     let work_leaf = read("bench-three-features");
     assert!(dashboard.contains("ACCEPTED_BASELINE_MODEL = \"gpt-5.5\""));
     assert!(dashboard.contains("ACCEPTED_BASELINE_REASONING = \"xhigh\""));
     assert!(dashboard.contains("accepted_baseline_profile"));
     assert!(dashboard.contains("different model or reasoning profile cannot train the baseline"));
-    assert!(work_leaf.contains("accepted_baseline_model = \"gpt-5.5\""));
-    assert!(work_leaf.contains("accepted_baseline_reasoning = \"xhigh\""));
-    assert!(work_leaf.contains("different model or reasoning profile cannot be fitted"));
+    assert!(!work_leaf.contains("accepted_baseline_model"));
+    assert!(!work_leaf.contains("token_model_status"));
+    assert!(work_leaf.contains("total_workflow_raw_tokens"));
+}
+
+#[test]
+fn fair_normal_workflow_pilot_is_one_shot_paired_and_stops_after_scoring() {
+    let study = "bench-results/efficiency-fair-normal-workflow-pilot-20260827T115642Z";
+    let launcher = read(&format!("{study}/run-pilot"));
+    let scorer = read(&format!("{study}/scorer/score.py"));
+
+    assert_eq!(
+        launcher
+            .matches("\"$repo_root/bench-three-features\"")
+            .count(),
+        1
+    );
+    assert_eq!(
+        launcher
+            .matches("\"$repo_root/bench-three-features-sequential\"")
+            .count(),
+        1
+    );
+    assert!(launcher.contains("WORK_LEAF_BENCH_MODEL=gpt-5.5"));
+    assert!(launcher.contains("WORK_LEAF_BENCH_REASONING_EFFORT=xhigh"));
+    assert!(launcher.contains("WORK_LEAF_DIRECT_BENCH_MODEL=gpt-5.5"));
+    assert!(launcher.contains("WORK_LEAF_DIRECT_BENCH_REASONING_EFFORT=xhigh"));
+    assert!(launcher.contains("WORK_LEAF_BENCH_NO_READ_PERMISSION=0"));
+    assert!(launcher.contains("work_leaf_pid=$!"));
+    assert!(launcher.contains("direct_pid=$!"));
+    assert!(launcher.contains("wait \"$work_leaf_pid\""));
+    assert!(launcher.contains("wait \"$direct_pid\""));
+    assert!(!launcher.contains("WORK_LEAF_BENCH_RETRY"));
+    assert!(!launcher.contains("wl-000"));
+    assert!(!launcher.contains("wl-111"));
+    assert!(launcher.contains("scorer/score.py"));
+    assert!(launcher.contains("The study stops after this provisional pilot"));
+
+    assert!(!scorer.contains("/fork"));
+    assert!(scorer.contains("quality_match_in_this_pair"));
+    assert!(scorer.contains("One pilot pair is descriptive"));
 }
 
 fn read(path: &str) -> String {
@@ -369,21 +352,8 @@ fn direct_feature(script: &str, index: usize) -> &str {
         .0
 }
 
-fn write_command_log(path: &std::path::Path, commands: &[&str]) {
-    let text = commands
-        .iter()
-        .enumerate()
-        .map(|(index, command)| {
-            serde_json::json!({
-                "type": "command_execution",
-                "id": format!("command-{index}"),
-                "command": command,
-            })
-            .to_string()
-                + "\n"
-        })
-        .collect::<String>();
-    fs::write(path, text).unwrap();
+fn shell_path(path: &std::path::Path) -> String {
+    format!("'{}'", path.display().to_string().replace('\'', "'\\''"))
 }
 
 fn test_dir(name: &str) -> std::path::PathBuf {

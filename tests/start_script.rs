@@ -833,8 +833,8 @@ fn three_feature_smoke_script_describes_head_binary_old_base_workflow() {
     assert!(script.contains("WORK_LEAF_START_BIN_DIR=\"$bin_dir\""));
     assert!(script.contains("\"$repo_root/start\""));
     assert!(script.contains(":new add vim like visual mode"));
-    assert!(script.contains(":new implement strict selected-agent slash command execution"));
-    assert!(script.contains("normal agent send/resume/model prompt path is insufficient"));
+    assert!(script.contains(":new when an user prompt start with /"));
+    assert!(!script.contains("/fork"));
     assert!(script.contains(":new when review process is done"));
 }
 
@@ -952,7 +952,8 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains("sha256sum * > SHA256SUMS"));
     assert!(script.contains("save_repo_snapshot()"));
     assert!(script.contains("$artifact_dir/patches/$safe_label"));
-    assert!(script.contains("implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt."));
+    assert!(script.contains("when an user prompt start with / and is followed by something without whitespace that is a command for the agent; the orchestrator must send it to the selected backend agent and show that backend response"));
+    assert!(!script.contains("/fork"));
     assert!(
         script.contains("format-patch --no-signature -o \"$patch_dir\" \"$base_commit\"..HEAD")
     );
@@ -1002,15 +1003,14 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains("post_agent 'linearize' 'Accept the proposed linearization plan."));
     assert!(script.contains("accepted_linearize=1\n    sleep 5\n    continue"));
     assert!(script.contains("token_usage"));
-    assert!(script.contains("$session.token_usage.input_tokens"));
-    assert!(script.contains("compute_token_model_fit()"));
-    assert!(script.contains("baseline-manifest.json"));
-    assert!(script.contains("token_model_status"));
-    assert!(script.contains("token_model_delta_tokens"));
-    assert!(script.contains("token_model_rerun"));
-    assert!(script.contains("## Token Model Fit"));
-    assert!(script.contains("rerun recommendation: $token_model_rerun"));
-    assert!(script.contains("outside fitted central 98%"));
+    assert!(!script.contains("$session.token_usage.input_tokens"));
+    assert!(!script.contains("compute_token_model_fit()"));
+    assert!(!script.contains("baseline-manifest.json"));
+    assert!(!script.contains("token_model_status"));
+    assert!(script.contains("measurement_status"));
+    assert!(script.contains("usage_scopes.total_workflow"));
+    assert!(script.contains("total_workflow_raw_tokens"));
+    assert!(script.contains("total_workflow_uncached_tokens"));
     assert!(!script.contains("post_agent \"$session_id\" \"/status\""));
     assert!(script.contains("code_quality"));
     assert!(script.contains("agent_backend: codex"));
@@ -1018,7 +1018,7 @@ fn three_feature_bench_script_drives_default_http_benchmark_and_reports_results(
     assert!(script.contains("codex_cli_path: $codex_cli_path"));
     assert!(script.contains("codex_cli_version: $codex_cli_version"));
     assert!(script.contains("detect_codex_cli_version()"));
-    assert!(script.contains("codex --version"));
+    assert!(script.contains("\"$codex_cli_path\" --version"));
     assert!(script.contains("agent_model"));
     assert!(script.contains("agent_model_source"));
     assert!(script.contains("agent_reasoning_effort"));

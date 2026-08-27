@@ -21,7 +21,7 @@ base commit, task text, observer, validation rules, and final repository gate.
 ## Process capture
 
 `bench-observer init` creates a run-owned artifact directory and writes immutable identities for
-the real Codex, shell, and Cargo executables. It places `codex`, `sh`, and `cargo` proxy links under
+the real Codex, shell, and Cargo executables. It places `codex` and `sh` proxy links under
 `observation/proxy-bin`. The driver puts that directory first in `PATH` and exports the generated
 `WORK_LEAF_OBSERVER_CONFIG`.
 
@@ -32,57 +32,33 @@ ineligible.
 
 The shell proxy records only the locked-command shape emitted by
 `src/orchestrator.rs::run_shell_command`. Other shell processes run through the configured real
-shell. The Cargo proxy always executes the immutable real Cargo path recorded by `init`.
+shell. Cargo runs directly; its recorded identity and observed command events are descriptive
+evidence rather than an enforcement mechanism.
 
 `stop-app-server` stops only the real child of the primary observed Work Leaf app server. It waits
 for the proxy to write completion metadata before the driver shuts down the product daemon.
 
-## Fair validation
+## Validation recording
 
-Each implementation or review-fix cycle must run exactly one focused Cargo validation command.
-A command is focused only when it names a package with `-p` or `--package`, names one Cargo target
-with `--bin`, `--test`, `--bench`, or `--example`, or supplies a named test filter. Target-kind
-switches such as `--lib` and `--doc`, and package-set switches such as `--workspace` and `--all`, do
-not provide focus by themselves.
-The test filter may appear before or after `--`; runner flags such as `--nocapture` and empty target
-or filter values do not provide scope. Validation discovery recognizes direct shell command
-segments, leading environment assignments, and `env` or `command` wrappers. Redirection targets,
-including file-descriptor duplication, and shell comments are ignored before commands and filters
-are counted. Dynamic `eval` commands and command substitution are ineligible because the audit
-cannot prove that they start exactly one validation process. `env` split-string execution and
-heredocs are ineligible for the same reason.
-Validation discovery follows at most four nested `sh -c` payloads.
-`cargo nextest` must use its `run` action; `--filter-expr` can provide named-test focus. A focused
-`cargo fmt` must also use
-`--check`. Broad switches such as `--all-targets` and `--all-features` do not provide focus by
-themselves. For example, `cargo test --all-targets --all-features done` is focused by the `done`
-filter, while plain `cargo fmt`, `cargo clippy`, `cargo check`, `cargo build`, `cargo test`, and
-`cargo test -- --nocapture` are not. Discovery skips Cargo's global options before the subcommand
-and recognizes the built-in `b`, `c`, `d`, and `t` aliases for build, check, doc, and test. Cargo
-does not define built-in short aliases for Clippy or fmt, so none are assumed.
+The observer records Cargo command activity that appears in captured agent and shell events. It does
+not place a Cargo executable in the proxy directory, impose a per-turn command budget, reject broad
+commands, or change a workflow result because of its validation pattern. This preserves each
+workflow's normal behavior: Work Leaf agents follow the orchestrator's regular implementation,
+review, and linearization prompts, while direct Codex sessions validate as needed and leave broad
+cross-feature checks to their final linearizer.
 
-The Cargo proxy rejects a broad first command before the real Cargo process starts. It also blocks a
-second validation inside one captured process allowance. For direct Codex,
-`bench-audit-agent-validation` reads each implementation or fix JSONL log and requires exactly one
-focused command. For Work Leaf, the observer groups the initial request and each reviewer-requested
-fix into validation cycles. Analysis requires exactly one focused command across each cycle, even
-when its reads, edits, and commands span several provider turns.
-
-Both drivers disable the implementation budget before linearization. Linearizers rewrite the
-reviewed commits without running Cargo. After linearization, both drivers call
-`bench-validation-common::bench_run_final_gate` exactly once. That gate runs:
+After linearization, both drivers independently verify the saved implementation with
+`bench-validation-common::bench_run_final_gate`. That non-mutating gate runs:
 
 ```sh
-cargo fmt
+cargo fmt -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-targets --all-features
 ```
 
 The gate stops at the first failed command and returns that failure even when its caller tests the
-function's status in a shell condition.
-
-This keeps the comparison plain: concurrent Work Leaf and direct sequential Codex receive the same
-per-cycle validation allowance and the same final gate.
+function's status in a shell condition. It records whether the result meets the repository checks;
+it does not repair the implementation or replace the agents' own validation.
 
 ## Accounting and analysis
 
@@ -112,8 +88,9 @@ treated as a provider event.
 
 `capture-audit.txt` records completeness. Missing process endings, malformed framing, token usage
 without a thread ID, rollout mismatch, an unobserved same-directory thread, model or reasoning
-mismatch, a validation violation, or a credential marker rejects the capture. Raw prompts and
-streams use user-only permissions. Credential scanning runs before artifacts are admitted.
+mismatch, or a credential marker rejects the capture. A capture failure marks token measurement as
+unusable but does not rewrite the workflow's implementation result. Raw prompts and streams use
+user-only permissions. Credential scanning runs before artifacts are admitted.
 
 The dashboard fits only the accepted GPT-5.5/xhigh profile. Reports from another model or reasoning
 profile remain visible in a separate raw-comparison section and cannot train or be compared with the

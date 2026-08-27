@@ -1212,13 +1212,13 @@ fn concurrent_timeline_accepts_additional_condition_metadata() {
 }
 
 #[test]
-fn work_leaf_validation_cycle_rejects_more_than_one_focused_process() {
+fn validation_activity_records_multiple_processes_without_judging_the_workflow() {
     let mut analyzer = MechanismAnalyzer::default();
     analyzer.observe_thread_role("thread-patch", "user-1");
     analyzer.observe_prompt(
         "thread-patch",
         "turn-launch",
-        "Agent-ID: user-1\n\nValidation policy for this implementation/fix turn:\n",
+        "Agent-ID: user-1\n\nImplement the requested feature and validate it as needed.\n",
     );
     for (turn_id, command) in [
         ("turn-check-1", "cargo test --test focused first_case"),
@@ -1239,24 +1239,18 @@ fn work_leaf_validation_cycle_rejects_more_than_one_focused_process() {
 
     let summary = analyzer.finish();
     assert_eq!(summary.validation.validation_commands, 2);
-    assert_eq!(summary.validation.violations.len(), 1);
-    assert!(summary.validation.violations[0].contains("exactly one"));
-    assert!(
-        summary
-            .errors
-            .iter()
-            .any(|error| error.contains("validation budget"))
-    );
+    assert!(summary.validation.violations.is_empty());
+    assert!(summary.errors.is_empty(), "{:?}", summary.errors);
 }
 
 #[test]
-fn work_leaf_validation_cycles_require_exactly_one_process_each() {
+fn validation_activity_spans_implementation_and_review_fix_turns() {
     let mut analyzer = MechanismAnalyzer::default();
     analyzer.observe_thread_role("thread-patch", "user-1");
     analyzer.observe_prompt(
         "thread-patch",
         "turn-launch",
-        "Agent-ID: user-1\n\nValidation policy for this implementation/fix turn:\n",
+        "Agent-ID: user-1\n\nImplement the requested feature and validate it as needed.\n",
     );
     analyzer.observe_prompt(
         "thread-patch",
@@ -1295,24 +1289,23 @@ fn work_leaf_validation_cycles_require_exactly_one_process_each() {
 }
 
 #[test]
-fn work_leaf_validation_cycle_rejects_a_missing_process() {
+fn validation_activity_allows_a_turn_without_a_cargo_process() {
     let mut analyzer = MechanismAnalyzer::default();
     analyzer.observe_thread_role("thread-patch", "user-1");
     analyzer.observe_prompt(
         "thread-patch",
         "turn-launch",
-        "Agent-ID: user-1\n\nValidation policy for this implementation/fix turn:\n",
+        "Agent-ID: user-1\n\nImplement the requested feature and validate it as needed.\n",
     );
 
     let summary = analyzer.finish();
     assert_eq!(summary.validation.validation_commands, 0);
-    assert_eq!(summary.validation.violations.len(), 1);
-    assert!(summary.validation.violations[0].contains("found 0"));
-    assert!(summary.validation.violations[0].contains("exactly one"));
+    assert!(summary.validation.violations.is_empty());
+    assert!(summary.errors.is_empty(), "{:?}", summary.errors);
 }
 
 #[test]
-fn linearizer_validation_is_rejected_because_the_driver_owns_the_final_gate() {
+fn validation_activity_allows_linearizer_checks() {
     let mut analyzer = MechanismAnalyzer::default();
     analyzer.observe_thread_role("thread-linearize", "linearize");
     analyzer.observe_command(CommandObservation {
@@ -1325,10 +1318,8 @@ fn linearizer_validation_is_rejected_because_the_driver_owns_the_final_gate() {
 
     let summary = analyzer.finish();
     assert_eq!(summary.validation.validation_commands, 1);
-    assert_eq!(summary.validation.violations.len(), 1);
-    assert!(
-        summary.validation.violations[0].contains("final gate belongs to the benchmark driver")
-    );
+    assert!(summary.validation.violations.is_empty());
+    assert!(summary.errors.is_empty(), "{:?}", summary.errors);
 }
 
 #[test]
@@ -1356,144 +1347,6 @@ fn review_only_turns_are_measured_without_patch_iteration_caps() {
         summary.validation.violations
     );
     assert!(summary.errors.is_empty(), "{:?}", summary.errors);
-}
-
-#[test]
-fn filtered_all_targets_test_is_focused_validation() {
-    let mut analyzer = MechanismAnalyzer::default();
-    analyzer.observe_thread_role("thread-patch", "user-1");
-    analyzer.observe_prompt(
-        "thread-patch",
-        "turn-launch",
-        "Agent-ID: user-1\n\nValidation policy for this implementation/fix turn:\n",
-    );
-    analyzer.observe_prompt("thread-patch", "turn-patch", "continue implementation");
-    analyzer.observe_command(CommandObservation {
-        thread_id: "thread-patch".into(),
-        turn_id: "turn-patch".into(),
-        command: "cargo test --all-targets --all-features done".into(),
-        output: Vec::new(),
-        duration_ns: Some(1),
-    });
-
-    let summary = analyzer.finish();
-    assert!(
-        summary.validation.violations.is_empty(),
-        "{:?}",
-        summary.validation.violations
-    );
-    assert!(summary.errors.is_empty(), "{:?}", summary.errors);
-}
-
-#[test]
-fn work_leaf_auditor_matches_the_shared_focused_policy_table() {
-    for (accepted, command) in focused_validation_policy_cases() {
-        let mut analyzer = MechanismAnalyzer::default();
-        analyzer.observe_thread_role("thread-patch", "user-1");
-        analyzer.observe_prompt(
-            "thread-patch",
-            "turn-launch",
-            "Agent-ID: user-1\n\nValidation policy for this implementation/fix turn:\n",
-        );
-        analyzer.observe_prompt("thread-patch", "turn-check", "continue implementation");
-        analyzer.observe_command(CommandObservation {
-            thread_id: "thread-patch".into(),
-            turn_id: "turn-check".into(),
-            command: command.into(),
-            output: Vec::new(),
-            duration_ns: Some(1),
-        });
-
-        let summary = analyzer.finish();
-        assert_eq!(
-            summary.validation.violations.is_empty(),
-            accepted,
-            "Work Leaf auditor disagreed for `{command}`: {:?}",
-            summary.validation.violations
-        );
-    }
-}
-
-#[test]
-fn work_leaf_auditor_bounds_nested_shell_payloads() {
-    for (depth, accepted) in [(4, true), (5, false)] {
-        let command = nested_shell_command(depth);
-        let mut analyzer = MechanismAnalyzer::default();
-        analyzer.observe_thread_role("thread-patch", "user-1");
-        analyzer.observe_prompt(
-            "thread-patch",
-            "turn-launch",
-            "Agent-ID: user-1\n\nValidation policy for this implementation/fix turn:\n",
-        );
-        analyzer.observe_prompt("thread-patch", "turn-check", "continue implementation");
-        analyzer.observe_command(CommandObservation {
-            thread_id: "thread-patch".into(),
-            turn_id: "turn-check".into(),
-            command: command.clone(),
-            output: Vec::new(),
-            duration_ns: Some(1),
-        });
-
-        let summary = analyzer.finish();
-        assert_eq!(
-            summary.validation.violations.is_empty(),
-            accepted,
-            "unexpected depth-{depth} result for `{command}`: {:?}",
-            summary.validation.violations
-        );
-    }
-}
-
-#[test]
-fn work_leaf_auditor_rejects_broad_multiline_shell_commands() {
-    for command in [
-        "cargo test;\n",
-        "cargo test;\necho done",
-        "cargo test &&\necho done",
-        "cargo test |\ncat",
-        "cargo test focused_case <<'EOF'\ncargo test\nEOF",
-    ] {
-        let mut analyzer = MechanismAnalyzer::default();
-        analyzer.observe_thread_role("thread-patch", "user-1");
-        analyzer.observe_prompt(
-            "thread-patch",
-            "turn-launch",
-            "Agent-ID: user-1\n\nValidation policy for this implementation/fix turn:\n",
-        );
-        analyzer.observe_command(CommandObservation {
-            thread_id: "thread-patch".into(),
-            turn_id: "turn-check".into(),
-            command: command.into(),
-            output: Vec::new(),
-            duration_ns: Some(1),
-        });
-
-        let summary = analyzer.finish();
-        assert!(
-            !summary.validation.violations.is_empty(),
-            "Work Leaf auditor accepted broad multiline command `{command}`"
-        );
-    }
-}
-
-fn focused_validation_policy_cases() -> Vec<(bool, &'static str)> {
-    include_str!("focused-validation-policy.tsv")
-        .lines()
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .map(|line| {
-            let (expected, command) = line.split_once('\t').unwrap();
-            (expected == "accept", command)
-        })
-        .collect()
-}
-
-fn nested_shell_command(depth: usize) -> String {
-    let mut command = "cargo test nested_case".to_string();
-    for _ in 0..depth {
-        let payload = command.replace('\\', "\\\\").replace(' ', "\\ ");
-        command = format!("sh -c {payload}");
-    }
-    command
 }
 
 #[test]

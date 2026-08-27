@@ -7,10 +7,9 @@ use std::time::Duration;
 use work_leaf_bench_observer::{
     CONFIG_ENV, CaptureKind, InitSpec, ObserverError, ObserverResult, analyze,
     archive_context_bundles, capture_git_checkpoint, classify_codex_invocation,
-    config_from_environment, enforce_cargo_validation_budget, exit_like_child,
-    extract_rollout_metadata, initialize, is_locked_shell_invocation, pass_through,
-    pass_through_cargo, pass_through_codex, record_controller_usage, record_timeline,
-    run_captured_process, set_validation_budget, stop_active_primary_app_server,
+    config_from_environment, exit_like_child, extract_rollout_metadata, initialize,
+    is_locked_shell_invocation, pass_through, pass_through_codex, record_controller_usage,
+    record_timeline, run_captured_process, stop_active_primary_app_server,
 };
 
 fn main() {
@@ -31,21 +30,8 @@ fn run() -> ObserverResult<()> {
     match executable_name {
         "codex" => run_codex_proxy(&args),
         "sh" => run_shell_proxy(&args),
-        "cargo" => run_cargo_proxy(&args),
         _ => run_command(&args),
     }
-}
-
-fn run_cargo_proxy(args: &[OsString]) -> ObserverResult<()> {
-    let config = config_from_environment()?;
-    let real_cargo = config.real_cargo.as_deref().ok_or_else(|| {
-        ObserverError::from(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "observer configuration has no real Cargo executable",
-        ))
-    })?;
-    enforce_cargo_validation_budget(&config, args)?;
-    Err(pass_through_cargo(real_cargo, args))
 }
 
 fn run_codex_proxy(args: &[OsString]) -> ObserverResult<()> {
@@ -145,20 +131,6 @@ fn run_command(args: &[OsString]) -> ObserverResult<()> {
             let count = stop_active_primary_app_server(&config, Duration::from_secs(5))?;
             println!("{count}");
         }
-        "validation-budget" => {
-            let config = load_option_config(&options)?;
-            let enabled = match required(&options, "--state")?.as_str() {
-                "enabled" => true,
-                "disabled" => false,
-                state => {
-                    return Err(ObserverError::from(std::io::Error::new(
-                        std::io::ErrorKind::InvalidInput,
-                        format!("invalid validation budget state {state}"),
-                    )));
-                }
-            };
-            set_validation_budget(&config, enabled)?;
-        }
         "extract-rollouts" => {
             let config = load_option_config(&options)?;
             let audit =
@@ -235,5 +207,5 @@ fn load_option_config(
 }
 
 fn usage() -> &'static str {
-    "usage: bench-observer <init|analyze|archive-bundles|timeline|git-checkpoint|controller-state|stop-app-server|validation-budget|extract-rollouts> [--name value ...]"
+    "usage: bench-observer <init|analyze|archive-bundles|timeline|git-checkpoint|controller-state|stop-app-server|extract-rollouts> [--name value ...]"
 }

@@ -22,8 +22,6 @@ pub const PARENT_INVOCATION_ENV: &str = "WORK_LEAF_OBSERVER_PARENT_INVOCATION";
 pub const PRIMARY_MARKER_ENV: &str = "WORK_LEAF_OBSERVER_PRIMARY_MARKER";
 pub const ROLE_ENV: &str = "WORK_LEAF_OBSERVER_ROLE";
 const CONFIG_FILE: &str = "observer-config.json";
-const VALIDATION_BUDGET_ENABLED_FILE: &str = "validation-budget.enabled";
-const VALIDATION_BUDGET_VIOLATION_FILE: &str = "validation-budget-violation.txt";
 const LOCKED_COMMAND_PREFIX: &str = "trap 'trap - TERM INT; kill -TERM 0 2>/dev/null' TERM INT; (";
 
 #[derive(Debug)]
@@ -193,7 +191,6 @@ pub fn initialize(spec: InitSpec) -> ObserverResult<CaptureConfig> {
         created_unix_ns: unix_time_ns(),
     };
     write_json_atomic(&config.path(), &config)?;
-    set_validation_budget(&config, true)?;
     install_proxy_links(&config)?;
     write_manifest(&config)?;
     harden_artifact_permissions(&config.root)?;
@@ -231,7 +228,7 @@ fn executable_entrypoint(path: &Path, label: &str) -> ObserverResult<PathBuf> {
 fn install_proxy_links(config: &CaptureConfig) -> ObserverResult<()> {
     let proxy_dir = config.root.join("proxy-bin");
     fs::create_dir_all(&proxy_dir)?;
-    for name in ["codex", "sh", "cargo"] {
+    for name in ["codex", "sh"] {
         let path = proxy_dir.join(name);
         if path.symlink_metadata().is_ok() {
             fs::remove_file(&path)?;
@@ -359,15 +356,6 @@ pub struct CodexPassthroughRecord {
     pub real_executable_sha256: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-struct ValidationBudgetEvent {
-    parent_invocation_id: String,
-    decision: String,
-    argv: Vec<EncodedArgument>,
-    monotonic_ns: u128,
-    unix_ns: u128,
-}
-
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct StreamChunk {
     pub offset: u64,
@@ -403,149 +391,6 @@ pub fn is_locked_shell_invocation(args: &[OsString]) -> bool {
     args.len() == 2
         && args[0] == OsStr::new("-c")
         && args[1].to_string_lossy().starts_with(LOCKED_COMMAND_PREFIX)
-}
-
-pub fn set_validation_budget(config: &CaptureConfig, enabled: bool) -> ObserverResult<()> {
-    let marker = config.root.join(VALIDATION_BUDGET_ENABLED_FILE);
-    if enabled {
-        write_json_atomic(
-            &marker,
-            &json!({
-                "enabled_monotonic_ns": monotonic_time_ns().to_string(),
-                "enabled_unix_ns": unix_time_ns().to_string(),
-            }),
-        )?;
-    } else if let Err(error) = fs::remove_file(&marker)
-        && error.kind() != io::ErrorKind::NotFound
-    {
-        return Err(error.into());
-    }
-    Ok(())
-}
-
-pub fn enforce_cargo_validation_budget(
-    config: &CaptureConfig,
-    args: &[OsString],
-) -> ObserverResult<()> {
-    if !config.root.join(VALIDATION_BUDGET_ENABLED_FILE).is_file()
-        || !is_cargo_validation_invocation(args)
-    {
-        return Ok(());
-    }
-    let Some(parent_invocation_id) = std::env::var(PARENT_INVOCATION_ENV).ok() else {
-        return Ok(());
-    };
-    let parent_path = config
-        .root
-        .join("invocations")
-        .join(safe_component(&parent_invocation_id))
-        .join("start.json");
-    let parent: InvocationStart = match fs::read(&parent_path) {
-        Ok(bytes) => serde_json::from_slice(&bytes)?,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
-        Err(error) => return Err(error.into()),
-    };
-    let budget_applies = match parent.capture_kind {
-        CaptureKind::LockedCommand => config.condition == "work-leaf",
-        CaptureKind::ExecJson => {
-            config.condition == "direct" && parent.role.as_deref().is_some_and(is_iteration_role)
-        }
-        CaptureKind::AppServer => false,
-    };
-    if !budget_applies {
-        return Ok(());
-    }
-
-    let budget_root = config.root.join("validation-budget");
-    let claims = budget_root.join("claims");
-    fs::create_dir_all(&claims)?;
-    harden_directory_permissions(&budget_root)?;
-    harden_directory_permissions(&claims)?;
-    let event = ValidationBudgetEvent {
-        parent_invocation_id: parent_invocation_id.clone(),
-        decision: "allowed".to_string(),
-        argv: args
-            .iter()
-            .map(|argument| encode_argument(argument))
-            .collect(),
-        monotonic_ns: monotonic_time_ns(),
-        unix_ns: unix_time_ns(),
-    };
-    let command = format!(
-        "cargo {}",
-        args.iter()
-            .map(|argument| argument.to_string_lossy())
-            .collect::<Vec<_>>()
-            .join(" ")
-    );
-    let mut segment = vec!["cargo".to_string()];
-    segment.extend(
-        args.iter()
-            .map(|argument| argument.to_string_lossy().to_string()),
-    );
-    if let Some(violation) = focused_validation_violation(&segment) {
-        let message = format!("validation budget violation: {violation}; attempted `{command}`");
-        return reject_validation_budget_event(config, &budget_root, event, &message);
-    }
-
-    let claim_path = claims.join(format!("{}.json", safe_component(&parent_invocation_id)));
-    let mut options = OpenOptions::new();
-    options.create_new(true).write(true);
-    #[cfg(unix)]
-    options.mode(0o600);
-    match options.open(&claim_path) {
-        Ok(mut claim) => {
-            serde_json::to_writer_pretty(&mut claim, &event)?;
-            claim.write_all(b"\n")?;
-            claim.flush()?;
-            append_json_line(&budget_root.join("events.jsonl"), &event)?;
-            // Claim and event writers set their own modes. Avoid rescanning the growing claim tree
-            // for every validation process.
-            Ok(())
-        }
-        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
-            let message = format!(
-                "validation budget violation: parent invocation {parent_invocation_id} attempted `{command}` after its validation allowance was consumed; at most one Cargo validation process may start in an implementation/fix turn"
-            );
-            reject_validation_budget_event(config, &budget_root, event, &message)
-        }
-        Err(error) => Err(error.into()),
-    }
-}
-
-fn reject_validation_budget_event(
-    config: &CaptureConfig,
-    budget_root: &Path,
-    mut event: ValidationBudgetEvent,
-    message: &str,
-) -> ObserverResult<()> {
-    event.decision = "blocked".to_string();
-    append_json_line(&budget_root.join("events.jsonl"), &event)?;
-    let violation_path = config.root.join(VALIDATION_BUDGET_VIOLATION_FILE);
-    let mut violation_options = OpenOptions::new();
-    violation_options.create(true).append(true);
-    #[cfg(unix)]
-    {
-        violation_options.mode(0o600);
-        violation_options.custom_flags(libc::O_NOFOLLOW);
-    }
-    let mut violation = violation_options.open(&violation_path)?;
-    #[cfg(unix)]
-    violation.set_permissions(fs::Permissions::from_mode(0o600))?;
-    violation.write_all(message.as_bytes())?;
-    violation.write_all(b"\n")?;
-    violation.flush()?;
-    Err(ObserverError::new(message))
-}
-
-fn is_cargo_validation_invocation(args: &[OsString]) -> bool {
-    let mut segment = Vec::with_capacity(args.len() + 1);
-    segment.push("cargo".to_string());
-    segment.extend(
-        args.iter()
-            .map(|argument| argument.to_string_lossy().to_string()),
-    );
-    cargo_subcommand_and_arguments(&segment).0.is_some()
 }
 
 pub fn run_captured_process(
@@ -1766,11 +1611,6 @@ struct TerminalTurnEvidence {
 }
 
 #[derive(Clone, Debug)]
-struct ValidationCycleEvidence {
-    label: String,
-}
-
-#[derive(Clone, Debug)]
 struct TimedLockedCommand {
     observation: LockedCommandObservation,
     start_monotonic_ns: Option<u128>,
@@ -1795,9 +1635,6 @@ pub struct MechanismAnalyzer {
     commands: Vec<CommandObservation>,
     command_signatures: BTreeMap<String, u64>,
     thread_roles: BTreeMap<String, String>,
-    validation_cycles: BTreeMap<(String, u64), ValidationCycleEvidence>,
-    active_validation_cycles: BTreeMap<String, u64>,
-    validation_cycle_by_turn: BTreeMap<(String, String), u64>,
     terminal_turns: BTreeMap<(String, String), TerminalTurnEvidence>,
     edit_submissions: BTreeMap<String, u64>,
     edit_acknowledgements: u64,
@@ -1950,7 +1787,6 @@ impl MechanismAnalyzer {
         prompt: &str,
         received_monotonic_ns: Option<u128>,
     ) {
-        self.observe_validation_cycle_prompt(thread_id, turn_id, prompt);
         self.observe_protocol_component(prompt);
         self.protocol_bytes = self.protocol_bytes.saturating_add(prompt.len() as u64);
         self.bump(16);
@@ -2063,40 +1899,6 @@ impl MechanismAnalyzer {
         if prompt.contains("work-leaf linearizer") && prompt.contains("Final patch targets") {
             self.bump(7);
             self.observe_linearize_targets(prompt);
-        }
-    }
-
-    fn observe_validation_cycle_prompt(&mut self, thread_id: &str, turn_id: &str, prompt: &str) {
-        let initial_cycle = prompt.contains("Validation policy for this implementation/fix turn:")
-            && extract_agent_id(prompt).is_some_and(|agent_id| agent_id.starts_with("user-"));
-        let fix_cycle = self.active_validation_cycles.contains_key(thread_id)
-            && (prompt.starts_with("The reviewer found issues in your patch for commit ")
-                || prompt.starts_with(
-                    "The user answered that the feature is not done and asked for follow-up fixes:",
-                ));
-        if initial_cycle || fix_cycle {
-            let index = self
-                .active_validation_cycles
-                .get(thread_id)
-                .copied()
-                .unwrap_or(0)
-                .saturating_add(1);
-            self.active_validation_cycles
-                .insert(thread_id.to_string(), index);
-            self.validation_cycles.insert(
-                (thread_id.to_string(), index),
-                ValidationCycleEvidence {
-                    label: if initial_cycle {
-                        "implementation".to_string()
-                    } else {
-                        format!("fix-{}", index.saturating_sub(1))
-                    },
-                },
-            );
-        }
-        if let Some(index) = self.active_validation_cycles.get(thread_id).copied() {
-            self.validation_cycle_by_turn
-                .insert((thread_id.to_string(), turn_id.to_string()), index);
         }
     }
 
@@ -2580,7 +2382,7 @@ impl MechanismAnalyzer {
     }
 
     pub fn finish(mut self) -> MechanismSummary {
-        let validation = self.audit_validation_budget();
+        let validation = self.summarize_validation_activity();
         self.resolve_locked_commands();
         let bundles = self.resolve_bundles();
         let terminal_directives = self.summarize_terminal_directives();
@@ -2697,16 +2499,8 @@ impl MechanismAnalyzer {
         (validated, unresolved)
     }
 
-    fn audit_validation_budget(&mut self) -> ValidationBudgetSummary {
+    fn summarize_validation_activity(&self) -> ValidationBudgetSummary {
         let mut summary = ValidationBudgetSummary::default();
-        let mut validations_by_turn = BTreeMap::<(String, String), u64>::new();
-        let mut validations_by_cycle = BTreeMap::<(String, u64), u64>::new();
-        let mut violations = Vec::new();
-        let cycle_threads = self
-            .validation_cycles
-            .keys()
-            .map(|(thread_id, _)| thread_id.clone())
-            .collect::<BTreeSet<_>>();
         let commands = self
             .commands
             .iter()
@@ -2724,89 +2518,12 @@ impl MechanismAnalyzer {
                     result.key.command.clone(),
                 )
             }))
-            .collect::<Vec<_>>();
+            .collect::<BTreeSet<_>>();
 
-        for (thread_id, turn_id, command) in commands {
-            let Some(role) = self.thread_roles.get(&thread_id) else {
-                continue;
-            };
-            let validations = cargo_validation_segments(&command);
-            summary.validation_commands = summary
-                .validation_commands
-                .saturating_add(validations.len() as u64);
-            if is_linearizer_role(role) {
-                for validation in validations {
-                    violations.push(format!(
-                        "role {role} turn {turn_id} started `{}`; the final gate belongs to the benchmark driver",
-                        validation.join(" ")
-                    ));
-                }
-                continue;
-            }
-            if cycle_threads.contains(&thread_id) {
-                for validation in validations {
-                    let turn_key = (thread_id.clone(), turn_id.clone());
-                    if let Some(index) = self.validation_cycle_by_turn.get(&turn_key).copied() {
-                        *validations_by_cycle
-                            .entry((thread_id.clone(), index))
-                            .or_default() += 1;
-                    } else {
-                        violations.push(format!(
-                            "role {role} turn {turn_id} started a Cargo validation outside an implementation/fix validation cycle"
-                        ));
-                    }
-                    if let Some(violation) = focused_validation_violation(&validation) {
-                        violations.push(format!("role {role} turn {turn_id}: {violation}"));
-                    }
-                }
-                continue;
-            }
-            if !is_iteration_role(role) {
-                continue;
-            }
-            let count = validations.len() as u64;
-            if count > 0 {
-                *validations_by_turn
-                    .entry((thread_id.clone(), turn_id.clone()))
-                    .or_default() += count;
-            }
-            for validation in validations {
-                if let Some(violation) = focused_validation_violation(&validation) {
-                    violations.push(format!("role {role} turn {turn_id}: {violation}"));
-                }
-            }
+        for (_, _, command) in commands {
+            let validations = cargo_validation_segments(&command).len() as u64;
+            summary.validation_commands = summary.validation_commands.saturating_add(validations);
         }
-
-        for ((thread_id, turn_id), count) in validations_by_turn {
-            if count > 1 {
-                violations.push(format!(
-                    "thread {thread_id} turn {turn_id} started {count} Cargo validations; at most one is allowed"
-                ));
-            }
-        }
-        for ((thread_id, index), cycle) in &self.validation_cycles {
-            let count = validations_by_cycle
-                .get(&(thread_id.clone(), *index))
-                .copied()
-                .unwrap_or(0);
-            if count != 1 {
-                violations.push(format!(
-                    "thread {thread_id} {} validation cycle found {count} Cargo validation processes; exactly one is required",
-                    cycle.label
-                ));
-            }
-        }
-        let mut seen = BTreeSet::new();
-        summary.violations = violations
-            .into_iter()
-            .filter(|violation| seen.insert(violation.clone()))
-            .collect();
-        self.errors.extend(
-            summary
-                .violations
-                .iter()
-                .map(|violation| format!("validation budget violation: {violation}")),
-        );
         summary
     }
 
@@ -3961,7 +3678,6 @@ pub fn analyze(config: &CaptureConfig) -> ObserverResult<AnalysisSummary> {
         .collect::<BTreeSet<_>>();
 
     verify_manifest_executables(config, &mut errors)?;
-    load_online_validation_budget_violations(config, &mut errors)?;
     for record in &passthrough {
         if !record.informational {
             errors.push(format!(
@@ -4120,12 +3836,6 @@ pub fn analyze(config: &CaptureConfig) -> ObserverResult<AnalysisSummary> {
     let model_strata = summarize_model_strata(config, &mut errors)?;
     errors.extend(scan_for_secret_markers(config)?);
     let mechanism_summary = mechanisms.finish();
-    errors.extend(
-        mechanism_summary
-            .errors
-            .iter()
-            .map(|error| format!("mechanism: {error}")),
-    );
     let capture_complete = errors.is_empty();
     write_json_lines(
         &config.root.join("counterfactuals.jsonl"),
@@ -5377,14 +5087,6 @@ fn is_visible_direct_role(role: &str) -> bool {
     !role.is_empty() && role != "title-agent" && role != "command-agent"
 }
 
-fn is_linearizer_role(role: &str) -> bool {
-    role.contains("linearize")
-}
-
-fn is_iteration_role(role: &str) -> bool {
-    role.starts_with("user-") || role.contains("-implement") || role.contains("-fix-")
-}
-
 fn cargo_validation_segments(command: &str) -> Vec<Vec<String>> {
     cargo_validation_segments_at_depth(command, 0)
 }
@@ -5936,116 +5638,6 @@ fn cargo_subcommand_and_arguments(segment: &[String]) -> (Option<&'static str>, 
     (subcommand, arguments)
 }
 
-fn focused_validation_violation(segment: &[String]) -> Option<String> {
-    let (subcommand, arguments) = cargo_subcommand_and_arguments(segment);
-    let subcommand = subcommand?;
-    let arguments = validation_arguments(&arguments);
-    let mut focused = cargo_arguments_have_explicit_scope(&arguments);
-    if subcommand == "test" {
-        focused |= cargo_test_has_named_filter(&arguments);
-    } else if subcommand == "nextest" {
-        if arguments.first() != Some(&"run") {
-            return Some("cargo nextest must use the run action to validate tests".into());
-        }
-        focused |= arguments.iter().enumerate().any(|(index, argument)| {
-            argument
-                .strip_prefix("--filter-expr=")
-                .is_some_and(|value| !value.is_empty())
-                || (*argument == "--filter-expr"
-                    && arguments
-                        .get(index + 1)
-                        .is_some_and(|value| !value.is_empty() && !value.starts_with('-')))
-        });
-    }
-    if !focused {
-        return Some(format!(
-            "repository-wide cargo {subcommand} is not a focused validation"
-        ));
-    }
-    if subcommand == "fmt" && !arguments.contains(&"--check") {
-        return Some("write-producing cargo fmt is not a validation".into());
-    }
-    None
-}
-
-fn cargo_arguments_have_explicit_scope(arguments: &[&str]) -> bool {
-    let mut index = 0;
-    while index < arguments.len() && arguments[index] != "--" {
-        let argument = arguments[index];
-        if ["--package=", "--test=", "--bin=", "--bench=", "--example="]
-            .iter()
-            .any(|prefix| {
-                argument
-                    .strip_prefix(prefix)
-                    .is_some_and(|value| !value.is_empty())
-            })
-            || argument
-                .strip_prefix("-p")
-                .is_some_and(|value| !value.trim_start_matches('=').is_empty())
-        {
-            return true;
-        }
-        if matches!(
-            argument,
-            "-p" | "--package" | "--test" | "--bin" | "--bench" | "--example"
-        ) {
-            return arguments
-                .get(index + 1)
-                .is_some_and(|value| !value.is_empty() && !value.starts_with('-'));
-        }
-        if cargo_option_takes_value(argument) {
-            index = index.saturating_add(2);
-            continue;
-        }
-        index += 1;
-    }
-    false
-}
-
-fn cargo_test_has_named_filter(arguments: &[&str]) -> bool {
-    let mut before_separator = true;
-    let mut index = 0;
-    while index < arguments.len() {
-        let argument = arguments[index];
-        if argument == "--" {
-            before_separator = false;
-            index += 1;
-            continue;
-        }
-        if argument.starts_with('-') {
-            let takes_value = if before_separator {
-                cargo_option_takes_value(argument)
-            } else {
-                matches!(
-                    argument,
-                    "--skip"
-                        | "--test-threads"
-                        | "--format"
-                        | "--color"
-                        | "--logfile"
-                        | "--shuffle-seed"
-                        | "-Z"
-                )
-            };
-            index = index.saturating_add(if takes_value && !argument.contains('=') {
-                2
-            } else {
-                1
-            });
-            continue;
-        }
-        if !argument.is_empty() {
-            return true;
-        }
-        index += 1;
-    }
-    false
-}
-
-fn validation_arguments<'a>(arguments: &[&'a str]) -> Vec<&'a str> {
-    shell_effective_arguments(arguments, &BTreeSet::new())
-}
-
 fn shell_comment_arguments<'a>(
     arguments: &[&'a str],
     opaque_indexes: &BTreeSet<usize>,
@@ -6123,30 +5715,6 @@ fn shell_effective_arguments<'a>(
     filtered
 }
 
-fn cargo_option_takes_value(argument: &str) -> bool {
-    matches!(
-        argument,
-        "-p" | "--package"
-            | "--bin"
-            | "--test"
-            | "--bench"
-            | "--example"
-            | "--exclude"
-            | "-F"
-            | "--features"
-            | "--target"
-            | "--manifest-path"
-            | "--target-dir"
-            | "-j"
-            | "--jobs"
-            | "--color"
-            | "--config"
-            | "-Z"
-            | "--profile"
-            | "--message-format"
-    )
-}
-
 fn resume_thread_from_argv(argv: &[EncodedArgument]) -> Option<String> {
     let displays = argv
         .iter()
@@ -6174,26 +5742,6 @@ fn final_thread_observations(observations: &[UsageObservation]) -> Vec<UsageObse
         }
     }
     threads.into_values().collect()
-}
-
-fn load_online_validation_budget_violations(
-    config: &CaptureConfig,
-    errors: &mut Vec<String>,
-) -> ObserverResult<()> {
-    let path = config.root.join(VALIDATION_BUDGET_VIOLATION_FILE);
-    let text = match fs::read_to_string(path) {
-        Ok(text) => text,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
-        Err(error) => return Err(error.into()),
-    };
-    errors.extend(text.lines().filter_map(|line| {
-        let detail = line
-            .trim()
-            .strip_prefix("validation budget violation: ")
-            .unwrap_or(line.trim());
-        (!detail.is_empty()).then(|| format!("online validation budget violation: {detail}"))
-    }));
-    Ok(())
 }
 
 fn read_or_empty(path: &Path) -> ObserverResult<Vec<u8>> {
@@ -6612,14 +6160,6 @@ fn harden_artifact_permissions(root: &Path) -> ObserverResult<()> {
     harden(root)?;
     #[cfg(not(unix))]
     let _ = root;
-    Ok(())
-}
-
-fn harden_directory_permissions(path: &Path) -> ObserverResult<()> {
-    #[cfg(unix)]
-    fs::set_permissions(path, fs::Permissions::from_mode(0o700))?;
-    #[cfg(not(unix))]
-    let _ = path;
     Ok(())
 }
 
@@ -7494,35 +7034,6 @@ pub fn pass_through(real_executable: &Path, args: &[OsString]) -> ObserverError 
     #[cfg(not(unix))]
     {
         match Command::new(real_executable).args(args).status() {
-            Ok(status) => std::process::exit(status.code().unwrap_or(1)),
-            Err(error) => ObserverError::new(format!(
-                "failed to execute {}: {error}",
-                real_executable.display()
-            )),
-        }
-    }
-}
-
-pub fn pass_through_cargo(real_executable: &Path, args: &[OsString]) -> ObserverError {
-    #[cfg(unix)]
-    {
-        use std::os::unix::process::CommandExt;
-        let error = Command::new(real_executable)
-            .args(args)
-            .env_remove(PARENT_INVOCATION_ENV)
-            .exec();
-        ObserverError::new(format!(
-            "failed to execute {}: {error}",
-            real_executable.display()
-        ))
-    }
-    #[cfg(not(unix))]
-    {
-        match Command::new(real_executable)
-            .args(args)
-            .env_remove(PARENT_INVOCATION_ENV)
-            .status()
-        {
             Ok(status) => std::process::exit(status.code().unwrap_or(1)),
             Err(error) => ObserverError::new(format!(
                 "failed to execute {}: {error}",

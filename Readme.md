@@ -86,10 +86,11 @@ base commit, or pass daemon options after `--`.
 the real configured Codex backend. It launches the three Work Leaf requests together.
 `./bench-three-features-sequential` runs the same frozen requests one after another through normal
 direct Codex sessions, without Work Leaf. Both drivers use the fixed base commit, require the passive
-benchmark observer, give every implementation or fix cycle exactly one focused Cargo validation,
-and run the same final `cargo fmt`, Clippy, and test gate once after linearization. Busy agent silence
-and idle orchestrator silence have separate limits through `WORK_LEAF_BENCH_BUSY_STALL_SECS` and
-`WORK_LEAF_BENCH_IDLE_STALL_SECS`.
+benchmark observer, allow agents to validate and fix their work normally, and run the same final
+check-only format, Clippy, and test gate after linearization. The observer records provider traffic,
+commands, and total-workflow token use without limiting Cargo commands or deciding whether a workflow
+passes. Busy agent silence and idle orchestrator silence have separate limits through
+`WORK_LEAF_BENCH_BUSY_STALL_SECS` and `WORK_LEAF_BENCH_IDLE_STALL_SECS`.
 
 Reports and admitted candidate runtimes are written under `bench-results`. The driver always removes
 its temporary checkout. `./materialize-bench-candidate` can reconstruct one verified historical

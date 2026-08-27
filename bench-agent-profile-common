@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+bench_prepare_codex_profile() {
+  local requested_codex="$1"
+  local model="$2"
+  local reasoning_effort="$3"
+  local profile_root="$4"
+  local real_dir override version_output
+
+  [[ -n "$requested_codex" && -x "$requested_codex" ]] || {
+    printf 'error: Codex executable is not runnable: %s\n' "$requested_codex" >&2
+    return 1
+  }
+  [[ -n "$model" && "$model" != "default" && "$model" != "unknown" ]] || {
+    printf 'error: benchmark model must resolve to an explicit value\n' >&2
+    return 1
+  }
+  case "$reasoning_effort" in
+    low|medium|high|xhigh|max) ;;
+    *)
+      printf 'error: benchmark reasoning effort must resolve to low, medium, high, xhigh, or max\n' >&2
+      return 1
+      ;;
+  esac
+
+  real_dir="$(cd "$(dirname "$requested_codex")" && pwd -P)" || return 1
+  bench_actual_codex_bin="$real_dir/$(basename "$requested_codex")"
+  mkdir -p "$profile_root" || return 1
+  bench_profiled_codex_bin="$profile_root/codex"
+  override="model_reasoning_effort=\"$reasoning_effort\""
+  printf '#!/usr/bin/env bash\nexec %q -c %q "$@"\n' \
+    "$bench_actual_codex_bin" "$override" > "$bench_profiled_codex_bin" || return 1
+  chmod 700 "$bench_profiled_codex_bin" || return 1
+
+  version_output="$($bench_profiled_codex_bin --version 2>&1)" || {
+    printf 'error: profiled Codex wrapper could not run --version: %s\n' "$version_output" >&2
+    return 1
+  }
+  bench_codex_cli_version="$(printf '%s\n' "$version_output" | awk 'NF { line = $0 } END { print line }')"
+  bench_actual_codex_sha256="$(sha256sum "$bench_actual_codex_bin" | awk '{print $1}')" || return 1
+  bench_profiled_codex_sha256="$(sha256sum "$bench_profiled_codex_bin" | awk '{print $1}')" || return 1
+}

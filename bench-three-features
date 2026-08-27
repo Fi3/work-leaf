@@ -16,10 +16,11 @@ Environment:
   WORK_LEAF_BENCH_SKIP_BUILD    set to 1 to skip the pre-benchmark runner build
   WORK_LEAF_BENCH_BIN_DIR       directory containing Work Leaf runner binaries
   WORK_LEAF_BENCH_LISTEN        daemon listen address, default 127.0.0.1:0
-  WORK_LEAF_BENCH_TIMEOUT_SECS  total timeout, default 7200
+  WORK_LEAF_BENCH_TIMEOUT_SECS  timeout for the feature stage and linearize stage, default 7200 each
   WORK_LEAF_BENCH_BUSY_STALL_SECS no-progress timeout while agents are busy, default 1800
   WORK_LEAF_BENCH_IDLE_STALL_SECS no-progress timeout while agents are idle, default 300
   WORK_LEAF_BENCH_MODEL         optional Codex model passed to the daemon
+  WORK_LEAF_BENCH_REASONING_EFFORT optional Codex reasoning level
   WORK_LEAF_BENCH_NO_READ_PERMISSION set to 1 to pass --no-read-permission
   WORK_LEAF_BENCH_OPERATOR_NOTES optional human notes saved in the report
   WORK_LEAF_BENCH_WEB_UI       set to 0 to skip the local web UI helper
@@ -55,6 +56,7 @@ done
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$repo_root/bench-candidate-common"
 source "$repo_root/bench-validation-common"
+source "$repo_root/bench-agent-profile-common"
 readonly base_commit="c92a0b7060a36eac6db2d869b85e589a7a9480f9"
 readonly candidate_schema="$bench_candidate_schema"
 readonly minimum_candidate_commits=1
@@ -71,12 +73,17 @@ listen_addr="${WORK_LEAF_BENCH_LISTEN:-127.0.0.1:0}"
 bin_dir="${WORK_LEAF_BENCH_BIN_DIR:-$repo_root/target/release}"
 candidate_cargo_bin="$(command -v cargo 2>/dev/null || true)"
 requested_bench_model="${WORK_LEAF_BENCH_MODEL:-default}"
+requested_reasoning_effort="${WORK_LEAF_BENCH_REASONING_EFFORT:-default}"
 bench_model="unresolved"
 bench_model_source="unresolved"
 agent_reasoning_effort="unresolved"
 agent_reasoning_effort_source="unresolved"
 codex_cli_path="unknown"
 codex_cli_version="unknown"
+bench_actual_codex_bin=""
+bench_profiled_codex_bin=""
+bench_actual_codex_sha256=""
+bench_profiled_codex_sha256=""
 no_read_permission="${WORK_LEAF_BENCH_NO_READ_PERMISSION:-0}"
 run_id="${WORK_LEAF_BENCH_RUN_ID:-$(date +%Y%m%dT%H%M%S%z)}"
 observer_study_id="${WORK_LEAF_BENCH_STUDY_ID:-efficiency-causal-study}"
@@ -156,6 +163,7 @@ launch_tmux_supervisor_if_needed() {
     WORK_LEAF_BENCH_SKIP_BUILD WORK_LEAF_BENCH_BIN_DIR WORK_LEAF_BENCH_LISTEN \
     WORK_LEAF_BENCH_TIMEOUT_SECS WORK_LEAF_BENCH_STALL_SECS \
     WORK_LEAF_BENCH_BUSY_STALL_SECS WORK_LEAF_BENCH_IDLE_STALL_SECS WORK_LEAF_BENCH_MODEL \
+    WORK_LEAF_BENCH_REASONING_EFFORT \
     WORK_LEAF_BENCH_NO_READ_PERMISSION WORK_LEAF_BENCH_WEB_UI WORK_LEAF_BENCH_WEB_LISTEN \
     WORK_LEAF_BENCH_OBSERVER_BIN \
     WORK_LEAF_BENCH_STUDY_ID WORK_LEAF_BENCH_PAIR_ID; do
@@ -207,19 +215,15 @@ code_quality="not run"
 result="fail"
 failure_reason=""
 token_usage="unavailable"
-token_model_status="unavailable"
-token_model_label="unavailable"
-token_model_total=0
-token_model_baseline_count=0
-token_model_mean=0
-token_model_stddev=0
-token_model_delta_tokens=0
-token_model_z="0.00"
-token_model_percentile="0.00"
-token_model_central95_low=0
-token_model_central95_high=0
-token_model_rerun="unknown"
-token_model_comment="baseline model unavailable"
+measurement_status="not-started"
+measurement_reason="observer was not initialized"
+total_workflow_input_tokens=0
+total_workflow_cached_input_tokens=0
+total_workflow_uncached_input_tokens=0
+total_workflow_output_tokens=0
+total_workflow_reasoning_output_tokens=0
+total_workflow_raw_tokens=0
+total_workflow_uncached_tokens=0
 operator_notes="${WORK_LEAF_BENCH_OPERATOR_NOTES:-}"
 reported=0
 report_attempted=0
@@ -234,7 +238,7 @@ log() {
 
 setup_observer() {
   [[ -x "$observer_bin" ]] || fail_bench "required benchmark observer is not executable: $observer_bin"
-  [[ "$codex_cli_path" != "unavailable" ]] || fail_bench "observer requires a real Codex executable"
+  [[ -x "$bench_profiled_codex_bin" ]] || fail_bench "observer requires the profiled Codex wrapper"
   local real_sh real_cargo experiment_commit
   real_sh="$(command -v sh 2>/dev/null || true)"
   [[ -n "$real_sh" ]] || fail_bench "observer could not resolve sh from PATH"
@@ -249,7 +253,7 @@ setup_observer() {
     --pair-id "$observer_pair_id" \
     --condition work-leaf \
     --run-id "$run_id" \
-    --real-codex "$codex_cli_path" \
+    --real-codex "$bench_profiled_codex_bin" \
     --real-sh "$real_sh" \
     --real-cargo "$real_cargo" \
     --base-commit "$base_commit" \
@@ -267,23 +271,24 @@ setup_observer() {
   observer_timeline condition-start "schedule=$feature_schedule"
 }
 
-disable_iteration_validation_budget() {
-  [[ "$observer_enabled" == "1" ]] || return 0
-  "$observer_bin" validation-budget --config "$observer_config" --state disabled
-}
-
 observer_timeline() {
   [[ "$observer_enabled" == "1" ]] || return 0
   local event="$1"
   local detail="${2:-}"
-  "$observer_bin" timeline --config "$observer_config" --event "$event" --detail "$detail"
+  if ! "$observer_bin" timeline --config "$observer_config" --event "$event" --detail "$detail"; then
+    log "observer timeline capture failed for $event"
+  fi
+  return 0
 }
 
 observer_checkpoint() {
   [[ "$observer_enabled" == "1" ]] || return 0
   local label="$1"
-  "$observer_bin" git-checkpoint \
-    --config "$observer_config" --repo "$checkout_dir" --label "$label"
+  if ! "$observer_bin" git-checkpoint \
+    --config "$observer_config" --repo "$checkout_dir" --label "$label"; then
+    log "observer Git checkpoint failed for $label"
+  fi
+  return 0
 }
 
 archive_observation_bundles() {
@@ -309,7 +314,11 @@ stop_observed_app_server() {
 }
 
 finalize_observation() {
-  [[ "$observer_enabled" == "1" ]] || return 0
+  if [[ "$observer_enabled" != "1" ]]; then
+    measurement_status="not-started"
+    measurement_reason="observer was not initialized"
+    return 0
+  fi
   local sessions_root="${CODEX_HOME:-$HOME/.codex}/sessions"
   "$observer_bin" analyze --config "$observer_config" \
     >"$artifact_dir/observation/analysis-pre-rollout.json" \
@@ -317,11 +326,46 @@ finalize_observation() {
   "$observer_bin" extract-rollouts --config "$observer_config" --sessions-root "$sessions_root" \
     >"$artifact_dir/observation/rollout-extraction.json" \
     2>"$artifact_dir/observation/rollout-extraction.err" || true
-  if ! "$observer_bin" analyze --config "$observer_config" \
-    >"$artifact_dir/observation/analysis.json" 2>"$artifact_dir/observation/analysis.err"; then
-    return 1
-  fi
+  "$observer_bin" analyze --config "$observer_config" \
+    >"$artifact_dir/observation/analysis.json" 2>"$artifact_dir/observation/analysis.err" || true
   observer_finalized=1
+  load_observer_measurement
+}
+
+load_observer_measurement() {
+  local analysis="$artifact_dir/observation/analysis.json"
+  if ! jq -e '.usage_scopes.total_workflow' "$analysis" >/dev/null 2>&1; then
+    measurement_status="unavailable"
+    measurement_reason="observer did not produce a readable total-workflow usage record"
+    return 0
+  fi
+  if [[ "$(jq -r '.capture_complete' "$analysis")" == "true" ]]; then
+    measurement_status="complete"
+    measurement_reason="all observer capture checks passed"
+  else
+    measurement_status="incomplete"
+    measurement_reason="$(jq -r 'if (.errors | length) == 0 then "capture marked incomplete without a recorded reason" else (.errors | join("; ")) end' "$analysis")"
+  fi
+  total_workflow_input_tokens="$(jq -r '.usage_scopes.total_workflow.input_tokens' "$analysis")"
+  total_workflow_cached_input_tokens="$(jq -r '.usage_scopes.total_workflow.cached_input_tokens' "$analysis")"
+  total_workflow_uncached_input_tokens="$(jq -r '.usage_scopes.total_workflow.uncached_input_tokens' "$analysis")"
+  total_workflow_output_tokens="$(jq -r '.usage_scopes.total_workflow.output_tokens' "$analysis")"
+  total_workflow_reasoning_output_tokens="$(jq -r '.usage_scopes.total_workflow.reasoning_output_tokens' "$analysis")"
+  total_workflow_raw_tokens="$(jq -r '.usage_scopes.total_workflow.raw_input_plus_output' "$analysis")"
+  total_workflow_uncached_tokens="$(jq -r '.usage_scopes.total_workflow.uncached_input_plus_output' "$analysis")"
+  token_usage="total-workflow: input=$total_workflow_input_tokens cached_input=$total_workflow_cached_input_tokens output=$total_workflow_output_tokens reasoning_output=$total_workflow_reasoning_output_tokens"
+}
+
+finish_observation() {
+  local status="$1"
+  [[ "$observer_finalized" != "1" ]] || return 0
+  archive_observation_bundles || log "observer context-bundle archive failed"
+  capture_observation_controller_state || log "observer controller-state capture failed"
+  observer_timeline condition-end "status=$status result=$result" \
+    || log "observer final timeline event failed"
+  stop_observed_app_server || log "observer app-server finalization failed"
+  stop_bench_runtime
+  finalize_observation
 }
 
 stop_bench_runtime() {
@@ -416,17 +460,7 @@ cleanup() {
     git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt" 2>/dev/null || true
     should_report=1
   fi
-  if [[ "$observer_finalized" != "1" ]]; then
-    archive_observation_bundles || log "observer context-bundle archive failed"
-    capture_observation_controller_state || log "observer controller-usage capture failed"
-    observer_timeline condition-end "status=$status result=$result" \
-      || log "observer final timeline event failed"
-  fi
-  stop_observed_app_server || log "observer app-server finalization failed"
-  stop_bench_runtime
-  if [[ "$observer_finalized" != "1" ]]; then
-    finalize_observation || log "observer analysis rejected this capture; see observation/capture-audit.txt"
-  fi
+  finish_observation "$status"
   if [[ "$should_report" == "1" ]]; then
     write_report "$failure_reason" || true
   fi
@@ -513,7 +547,7 @@ copy_artifacts() {
   [[ "$bench_artifact_transaction_active" == "1" \
     && "$(stat -Lc '%d:%i' "$artifact_dir" 2>/dev/null)" \
       == "$bench_artifact_transaction_stage_identity" ]] || return 1
-  for file in state.json final-state.json daemon.out daemon.err daemon-env.txt daemon-ps.txt web-ui.out web-ui.err web-ui-url.txt final-status.txt final-log.txt checks.log candidate-build.log; do
+  for file in state.json final-state.json daemon.out daemon.err daemon-env.txt daemon-ps.txt web-ui.out web-ui.err web-ui-url.txt final-status.txt final-log.txt checks.log candidate-build.log agent-profile.txt; do
     if [[ -f "$tmp_root/$file" && ! -L "$tmp_root/$file" ]]; then
       cp --no-dereference -- "$tmp_root/$file" "$artifact_dir/$file"
     fi
@@ -556,7 +590,7 @@ copy_artifacts() {
 
 save_repo_snapshot() {
   local label="$1"
-  local safe_label commit_count snapshot_dir patch_dir
+  local safe_label commit_count snapshot_dir patch_dir git_dir snapshot_index
   [[ -d "$checkout_dir/.git" ]] || return
   safe_label="$(printf '%s' "$label" | tr -c 'A-Za-z0-9._-' '-')"
   snapshot_dir="$artifact_dir/patches/$safe_label"
@@ -567,8 +601,17 @@ save_repo_snapshot() {
   git -C "$checkout_dir" log --oneline --decorate "$base_commit"..HEAD > "$snapshot_dir/git-log.txt" 2>/dev/null || true
   git -C "$checkout_dir" diff --stat "$base_commit"..HEAD > "$snapshot_dir/diff-stat.txt" 2>/dev/null || true
   git -C "$checkout_dir" diff --stat > "$snapshot_dir/worktree-diff-stat.txt" 2>/dev/null || true
-  git -C "$checkout_dir" diff > "$snapshot_dir/worktree.diff" 2>/dev/null || true
-  git -C "$checkout_dir" diff --cached > "$snapshot_dir/index.diff" 2>/dev/null || true
+  git -C "$checkout_dir" diff --cached --binary > "$snapshot_dir/index.diff" 2>/dev/null || true
+  git_dir="$(git -C "$checkout_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  snapshot_index="$snapshot_dir/snapshot.index"
+  if [[ -n "$git_dir" ]] && cp -- "$git_dir/index" "$snapshot_index" 2>/dev/null \
+    && GIT_INDEX_FILE="$snapshot_index" git -C "$checkout_dir" add -N -- . 2>/dev/null; then
+    GIT_INDEX_FILE="$snapshot_index" git -C "$checkout_dir" diff --binary \
+      > "$snapshot_dir/worktree.diff" 2>/dev/null || true
+  else
+    git -C "$checkout_dir" diff --binary > "$snapshot_dir/worktree.diff" 2>/dev/null || true
+  fi
+  rm -f -- "$snapshot_index"
   commit_count="$(git -C "$checkout_dir" rev-list --count HEAD ^"$base_commit" 2>/dev/null || printf '0')"
   if [[ "$commit_count" != "0" ]]; then
     git -C "$checkout_dir" format-patch --no-signature -o "$patch_dir" "$base_commit"..HEAD > "$snapshot_dir/format-patch-files.txt" 2>/dev/null || true
@@ -600,6 +643,12 @@ detect_codex_model() {
   if [[ -z "$bench_model" || "$bench_model" == "default" || "$bench_model" == "unknown" || "$bench_model" == "unresolved" ]]; then
     printf 'error: unable to resolve Codex model from WORK_LEAF_BENCH_MODEL or %s\n' "$config_path" >&2
     return 1
+  fi
+
+  if [[ -n "${WORK_LEAF_BENCH_REASONING_EFFORT:-}" ]]; then
+    agent_reasoning_effort="$WORK_LEAF_BENCH_REASONING_EFFORT"
+    agent_reasoning_effort_source="WORK_LEAF_BENCH_REASONING_EFFORT"
+    return
   fi
 
   if [[ -f "$config_path" ]]; then
@@ -657,11 +706,29 @@ detect_codex_cli_version() {
     return
   fi
 
-  if version_output="$(codex --version 2>&1 | awk 'NF { line = $0 } END { if (line) print line; else print "unavailable" }')"; then
+  if version_output="$("$codex_cli_path" --version 2>&1 | awk 'NF { line = $0 } END { if (line) print line; else print "unavailable" }')"; then
     codex_cli_version="$version_output"
   else
     codex_cli_version="${version_output:-unavailable}"
   fi
+}
+
+prepare_bench_codex_profile() {
+  bench_prepare_codex_profile \
+    "$codex_cli_path" \
+    "$bench_model" \
+    "$agent_reasoning_effort" \
+    "$tmp_root/codex-profile" || return 1
+  codex_cli_version="$bench_codex_cli_version"
+  cat > "$tmp_root/agent-profile.txt" <<EOF
+agent_model=$bench_model
+agent_reasoning_effort=$agent_reasoning_effort
+actual_codex=$bench_actual_codex_bin
+actual_codex_sha256=$bench_actual_codex_sha256
+profiled_codex=$bench_profiled_codex_bin
+profiled_codex_sha256=$bench_profiled_codex_sha256
+codex_cli_version=$codex_cli_version
+EOF
 }
 
 session_summary() {
@@ -669,282 +736,6 @@ session_summary() {
   if [[ -f "$state_file" ]]; then
     jq -r '.snapshot.sessions[]? | [.id, (.loading // "-"), (.completion // "-"), (.lines | length), .title] | @tsv' "$state_file" 2>/dev/null || true
   fi
-}
-
-compute_token_model_fit() {
-  local output key value_
-  output="$(
-    python3 - "$results_dir" "$result" "$token_usage" "$bench_model" "$agent_reasoning_effort" <<'PY'
-import json
-import math
-import re
-import sys
-from pathlib import Path
-
-results_dir = Path(sys.argv[1])
-current_result = sys.argv[2]
-current_token_usage = sys.argv[3]
-current_model = sys.argv[4].strip().lower()
-current_reasoning = sys.argv[5].strip().lower()
-accepted_baseline_model = "gpt-5.5"
-accepted_baseline_reasoning = "xhigh"
-accepted_baseline_workflow = ("work-leaf", "concurrent", "codex", "app-server")
-manifest_path = results_dir / "baseline-manifest.json"
-token_re = re.compile(r"(cached_input|reasoning_output|input|output)=(\d+)")
-meta_re = re.compile(r"^- ([A-Za-z0-9_]+):\s*(.*)$")
-
-
-def emit(key: str, value: object) -> None:
-    print(f"{key}\t{value}")
-
-
-def parse_tokens(text: str | None) -> dict[str, int]:
-    totals = {"input": 0, "output": 0}
-    if not text:
-        return totals
-    for key, value in token_re.findall(text):
-        if key in totals:
-            totals[key] += int(value)
-    return totals
-
-
-def parse_metadata(path: Path) -> dict[str, str]:
-    try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return {}
-    fields: dict[str, str] = {}
-    for line in text.splitlines():
-        match = meta_re.match(line)
-        if match:
-            fields[match.group(1)] = match.group(2).strip()
-    return fields
-
-
-def normalized_metadata_value(fields: dict[str, str], *keys: str) -> str:
-    for key in keys:
-        value = fields.get(key, "").strip()
-        if value:
-            return value.lower()
-    return ""
-
-
-def is_normal_work_leaf_product_report(fields: dict[str, str]) -> bool:
-    workflow = (
-        normalized_metadata_value(fields, "bench_mode"),
-        normalized_metadata_value(fields, "feature_schedule"),
-        normalized_metadata_value(fields, "agent_backend", "backend"),
-        normalized_metadata_value(fields, "agent_transport", "transport"),
-    )
-    return workflow == accepted_baseline_workflow
-
-
-def sample_stddev(values: list[int], mean: float) -> float:
-    if len(values) < 2:
-        return 0.0
-    return math.sqrt(sum((value - mean) ** 2 for value in values) / (len(values) - 1))
-
-
-def gamma_lower_regularized(shape: float, x: float) -> float:
-    if shape <= 0 or x < 0:
-        return 0.0
-    if x == 0:
-        return 0.0
-    log_gamma = math.lgamma(shape)
-    if x < shape + 1.0:
-        term_shape = shape
-        total = 1.0 / shape
-        delta = total
-        for _ in range(10_000):
-            term_shape += 1.0
-            delta *= x / term_shape
-            total += delta
-            if abs(delta) < abs(total) * 1e-14:
-                return total * math.exp(-x + shape * math.log(x) - log_gamma)
-        return total * math.exp(-x + shape * math.log(x) - log_gamma)
-
-    b = x + 1.0 - shape
-    c = 1.0 / 1e-300
-    d = 1.0 / b
-    h = d
-    for i in range(1, 10_000):
-        an = -i * (i - shape)
-        b += 2.0
-        d = an * d + b
-        if abs(d) < 1e-300:
-            d = 1e-300
-        c = b + an / c
-        if abs(c) < 1e-300:
-            c = 1e-300
-        d = 1.0 / d
-        delta = d * c
-        h *= delta
-        if abs(delta - 1.0) < 1e-14:
-            upper = math.exp(-x + shape * math.log(x) - log_gamma) * h
-            return max(0.0, min(1.0, 1.0 - upper))
-    upper = math.exp(-x + shape * math.log(x) - log_gamma) * h
-    return max(0.0, min(1.0, 1.0 - upper))
-
-
-def gamma_quantile(probability: float, shape: float, scale: float) -> int:
-    low = 0.0
-    high = max(1.0, shape * scale)
-    while gamma_lower_regularized(shape, high / scale) < probability:
-        high *= 2.0
-    for _ in range(120):
-        midpoint = (low + high) / 2.0
-        if gamma_lower_regularized(shape, midpoint / scale) < probability:
-            low = midpoint
-        else:
-            high = midpoint
-    return int((low + high) / 2.0 + 0.5)
-
-
-def unavailable(reason: str) -> None:
-    emit("token_model_status", "unavailable")
-    emit("token_model_label", "unavailable")
-    emit("token_model_total", 0)
-    emit("token_model_baseline_count", 0)
-    emit("token_model_mean", 0)
-    emit("token_model_stddev", 0)
-    emit("token_model_delta_tokens", 0)
-    emit("token_model_z", "0.00")
-    emit("token_model_percentile", "0.00")
-    emit("token_model_central95_low", 0)
-    emit("token_model_central95_high", 0)
-    emit("token_model_rerun", "unknown")
-    emit("token_model_comment", reason)
-
-
-if (current_model, current_reasoning) != (
-    accepted_baseline_model,
-    accepted_baseline_reasoning,
-):
-    unavailable("different model or reasoning profile cannot be fitted against the accepted baseline")
-    raise SystemExit(0)
-
-if not manifest_path.exists():
-    unavailable("baseline-manifest.json not found")
-    raise SystemExit(0)
-
-try:
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-except (OSError, json.JSONDecodeError) as error:
-    unavailable(f"baseline manifest unreadable: {error}")
-    raise SystemExit(0)
-
-baseline_totals: list[int] = []
-for item in manifest.get("reports") or []:
-    report_name = item.get("report") if isinstance(item, dict) else item
-    if not report_name:
-        continue
-    fields = parse_metadata(results_dir / str(report_name))
-    if fields.get("result", "").lower() != "pass":
-        continue
-    if not is_normal_work_leaf_product_report(fields):
-        continue
-    if (
-        fields.get("agent_model", "").strip().lower(),
-        fields.get("agent_reasoning_effort", "").strip().lower(),
-    ) != (accepted_baseline_model, accepted_baseline_reasoning):
-        continue
-    tokens = parse_tokens(fields.get("token_usage"))
-    total = tokens["input"] + tokens["output"]
-    if tokens["input"] > 0 and tokens["output"] > 0:
-        baseline_totals.append(total)
-
-if len(baseline_totals) < 2:
-    unavailable("not enough passing baseline reports with token usage")
-    raise SystemExit(0)
-
-mean = sum(baseline_totals) / len(baseline_totals)
-stddev = sample_stddev(baseline_totals, mean)
-if stddev <= 0:
-    unavailable("baseline token variance is zero")
-    raise SystemExit(0)
-
-variance = stddev * stddev
-shape = mean * mean / variance
-scale = variance / mean
-low95 = gamma_quantile(0.025, shape, scale)
-high95 = gamma_quantile(0.975, shape, scale)
-low98 = gamma_quantile(0.01, shape, scale)
-high98 = gamma_quantile(0.99, shape, scale)
-
-current_tokens = parse_tokens(current_token_usage)
-current_total = current_tokens["input"] + current_tokens["output"]
-if current_result.lower() != "pass":
-    emit("token_model_status", "reliability")
-    emit("token_model_label", "failed")
-    emit("token_model_total", current_total)
-    emit("token_model_baseline_count", len(baseline_totals))
-    emit("token_model_mean", int(mean + 0.5))
-    emit("token_model_stddev", int(stddev + 0.5))
-    emit("token_model_delta_tokens", int(current_total - mean))
-    emit("token_model_z", f"{((current_total - mean) / stddev):.2f}")
-    emit("token_model_percentile", "0.00")
-    emit("token_model_central95_low", low95)
-    emit("token_model_central95_high", high95)
-    emit("token_model_rerun", "investigate")
-    emit("token_model_comment", "not a successful token-model sample; investigate reliability failure")
-    raise SystemExit(0)
-
-percentile = gamma_lower_regularized(shape, current_total / scale) * 100
-delta = int(current_total - mean)
-z_score = (current_total - mean) / stddev
-if low95 <= current_total <= high95:
-    status = "fit"
-    label = "fits"
-    rerun = "not needed"
-    comment = "inside fitted central 95%"
-elif low98 <= current_total <= high98:
-    status = "watch"
-    label = "watch"
-    rerun = "useful"
-    comment = "outside central 95% but inside central 98%"
-else:
-    status = "anomaly"
-    label = "anomaly"
-    rerun = "recommended"
-    comment = "outside fitted central 98%"
-
-emit("token_model_status", status)
-emit("token_model_label", label)
-emit("token_model_total", current_total)
-emit("token_model_baseline_count", len(baseline_totals))
-emit("token_model_mean", int(mean + 0.5))
-emit("token_model_stddev", int(stddev + 0.5))
-emit("token_model_delta_tokens", delta)
-emit("token_model_z", f"{z_score:.2f}")
-emit("token_model_percentile", f"{percentile:.2f}")
-emit("token_model_central95_low", low95)
-emit("token_model_central95_high", high95)
-emit("token_model_rerun", rerun)
-emit("token_model_comment", comment)
-PY
-  )" || {
-    token_model_status="unavailable"
-    token_model_label="unavailable"
-    token_model_comment="token model comparison failed"
-    return
-  }
-  while IFS=$'\t' read -r key value_; do
-    case "$key" in
-      token_model_status) token_model_status="$value_" ;;
-      token_model_label) token_model_label="$value_" ;;
-      token_model_total) token_model_total="$value_" ;;
-      token_model_baseline_count) token_model_baseline_count="$value_" ;;
-      token_model_mean) token_model_mean="$value_" ;;
-      token_model_stddev) token_model_stddev="$value_" ;;
-      token_model_delta_tokens) token_model_delta_tokens="$value_" ;;
-      token_model_z) token_model_z="$value_" ;;
-      token_model_percentile) token_model_percentile="$value_" ;;
-      token_model_central95_low) token_model_central95_low="$value_" ;;
-      token_model_central95_high) token_model_central95_high="$value_" ;;
-      token_model_rerun) token_model_rerun="$value_" ;;
-      token_model_comment) token_model_comment="$value_" ;;
-    esac
-  done <<< "$output"
 }
 
 write_report() {
@@ -1011,11 +802,11 @@ write_report() {
   else
     read_permission_mode="orchestrator-mediated file reads"
   fi
-  compute_token_model_fit
   cat > "$artifact_dir/$human_report_name" <<EOF
 # $report_title
 
 - result: $result
+- workflow_result: $result
 - bench_mode: $bench_mode
 - feature_schedule: $feature_schedule
 - started_at: $(date -d "@$start_epoch" -Iseconds)
@@ -1029,11 +820,13 @@ write_report() {
 - agent_transport: app-server
 - codex_cli_path: $codex_cli_path
 - codex_cli_version: $codex_cli_version
+- profiled_codex_sha256: ${bench_profiled_codex_sha256:-unavailable}
 - agent_model: $bench_model
 - agent_model_source: $bench_model_source
 - agent_reasoning_effort: $agent_reasoning_effort
 - agent_reasoning_effort_source: $agent_reasoning_effort_source
 - requested_agent_model: $requested_bench_model
+- requested_agent_reasoning_effort: $requested_reasoning_effort
 - no_read_permission: $no_read_permission
 - read_permission_mode: $read_permission_mode
 - web_ui_url: $web_ui_url
@@ -1048,19 +841,10 @@ write_report() {
 - changed_lines_deleted: $changed_lines_deleted
 - changed_lines_total: $changed_lines_total
 - token_usage: $token_usage
-- token_model_status: $token_model_status
-- token_model_label: $token_model_label
-- token_model_total: $token_model_total
-- token_model_baseline_count: $token_model_baseline_count
-- token_model_mean: $token_model_mean
-- token_model_stddev: $token_model_stddev
-- token_model_delta_tokens: $token_model_delta_tokens
-- token_model_z: $token_model_z
-- token_model_percentile: $token_model_percentile
-- token_model_central95_low: $token_model_central95_low
-- token_model_central95_high: $token_model_central95_high
-- token_model_rerun: $token_model_rerun
-- token_model_comment: $token_model_comment
+- measurement_status: $measurement_status
+- measurement_reason: $measurement_reason
+- total_workflow_raw_tokens: $total_workflow_raw_tokens
+- total_workflow_uncached_tokens: $total_workflow_uncached_tokens
 - code_quality: $code_quality
 - comment: $comment
 - operator_notes: $effective_notes
@@ -1072,20 +856,18 @@ write_report() {
 - runner_binaries: $artifact_final_dir/runner-bin
 - patch_artifacts: $patch_artifacts
 
-## Token Model Fit
+## Measurement
 
-Status: $token_model_label
+Status: $measurement_status
 
-- total input+output: $token_model_total
-- fitted baseline runs: $token_model_baseline_count
-- fitted mean: $token_model_mean
-- fitted stddev: $token_model_stddev
-- delta from mean: $token_model_delta_tokens
-- z-score: $token_model_z
-- fitted percentile: $token_model_percentile%
-- central 95% interval: $token_model_central95_low to $token_model_central95_high
-- rerun recommendation: $token_model_rerun
-- interpretation: $token_model_comment
+- reason: $measurement_reason
+- total-workflow input: $total_workflow_input_tokens
+- total-workflow cached input: $total_workflow_cached_input_tokens
+- total-workflow uncached input: $total_workflow_uncached_input_tokens
+- total-workflow output: $total_workflow_output_tokens
+- total-workflow reasoning output: $total_workflow_reasoning_output_tokens
+- total-workflow raw input plus output: $total_workflow_raw_tokens
+- total-workflow uncached input plus output: $total_workflow_uncached_tokens
 
 ## Sessions
 
@@ -1108,6 +890,7 @@ EOF
   jq -cn \
     --arg run_id "$run_id" \
     --arg result "$result" \
+    --arg workflow_result "$result" \
     --arg bench_mode "$bench_mode" \
     --arg feature_schedule "$feature_schedule" \
     --arg benched_binary_commit "$benched_commit" \
@@ -1118,11 +901,14 @@ EOF
     --arg agent_transport "app-server" \
     --arg codex_cli_path "$codex_cli_path" \
     --arg codex_cli_version "$codex_cli_version" \
+    --arg actual_codex_sha256 "${bench_actual_codex_sha256:-unavailable}" \
+    --arg profiled_codex_sha256 "${bench_profiled_codex_sha256:-unavailable}" \
     --arg agent_model "$bench_model" \
     --arg agent_model_source "$bench_model_source" \
     --arg agent_reasoning_effort "$agent_reasoning_effort" \
     --arg agent_reasoning_effort_source "$agent_reasoning_effort_source" \
     --arg requested_agent_model "$requested_bench_model" \
+    --arg requested_agent_reasoning_effort "$requested_reasoning_effort" \
     --arg no_read_permission "$no_read_permission" \
     --arg read_permission_mode "$read_permission_mode" \
     --arg web_ui_url "$web_ui_url" \
@@ -1132,12 +918,8 @@ EOF
     --arg linearize_completed "$linearize_completed" \
     --arg code_quality "$code_quality" \
     --arg token_usage "$token_usage" \
-    --arg token_model_status "$token_model_status" \
-    --arg token_model_label "$token_model_label" \
-    --arg token_model_z "$token_model_z" \
-    --arg token_model_percentile "$token_model_percentile" \
-    --arg token_model_rerun "$token_model_rerun" \
-    --arg token_model_comment "$token_model_comment" \
+    --arg measurement_status "$measurement_status" \
+    --arg measurement_reason "$measurement_reason" \
     --arg comment "$comment" \
     --arg operator_notes "$effective_notes" \
     --arg binaries_produced "${binaries_produced:-none}" \
@@ -1150,14 +932,14 @@ EOF
     --argjson changed_lines_added "$changed_lines_added" \
     --argjson changed_lines_deleted "$changed_lines_deleted" \
     --argjson changed_lines_total "$changed_lines_total" \
-    --argjson token_model_total "$token_model_total" \
-    --argjson token_model_baseline_count "$token_model_baseline_count" \
-    --argjson token_model_mean "$token_model_mean" \
-    --argjson token_model_stddev "$token_model_stddev" \
-    --argjson token_model_delta_tokens "$token_model_delta_tokens" \
-    --argjson token_model_central95_low "$token_model_central95_low" \
-    --argjson token_model_central95_high "$token_model_central95_high" \
-    '{run_id:$run_id,result:$result,bench_mode:$bench_mode,feature_schedule:$feature_schedule,benched_binary_commit:$benched_binary_commit,benched_binary_dirty:$benched_binary_dirty,worktree_source_commit:$worktree_source_commit,worktree_source_dirty:$worktree_source_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,codex_cli_path:$codex_cli_path,codex_cli_version:$codex_cli_version,agent_model:$agent_model,agent_model_source:$agent_model_source,agent_reasoning_effort:$agent_reasoning_effort,agent_reasoning_effort_source:$agent_reasoning_effort_source,requested_agent_model:$requested_agent_model,no_read_permission:$no_read_permission,read_permission_mode:$read_permission_mode,web_ui_url:$web_ui_url,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,token_model_status:$token_model_status,token_model_label:$token_model_label,token_model_total:$token_model_total,token_model_baseline_count:$token_model_baseline_count,token_model_mean:$token_model_mean,token_model_stddev:$token_model_stddev,token_model_delta_tokens:$token_model_delta_tokens,token_model_z:$token_model_z,token_model_percentile:$token_model_percentile,token_model_central95_low:$token_model_central95_low,token_model_central95_high:$token_model_central95_high,token_model_rerun:$token_model_rerun,token_model_comment:$token_model_comment,comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,observation:$observation,report:$report,candidate:$candidate}' \
+    --argjson total_workflow_input_tokens "$total_workflow_input_tokens" \
+    --argjson total_workflow_cached_input_tokens "$total_workflow_cached_input_tokens" \
+    --argjson total_workflow_uncached_input_tokens "$total_workflow_uncached_input_tokens" \
+    --argjson total_workflow_output_tokens "$total_workflow_output_tokens" \
+    --argjson total_workflow_reasoning_output_tokens "$total_workflow_reasoning_output_tokens" \
+    --argjson total_workflow_raw_tokens "$total_workflow_raw_tokens" \
+    --argjson total_workflow_uncached_tokens "$total_workflow_uncached_tokens" \
+    '{run_id:$run_id,result:$result,workflow_result:$workflow_result,bench_mode:$bench_mode,feature_schedule:$feature_schedule,benched_binary_commit:$benched_binary_commit,benched_binary_dirty:$benched_binary_dirty,worktree_source_commit:$worktree_source_commit,worktree_source_dirty:$worktree_source_dirty,agent_backend:$agent_backend,agent_transport:$agent_transport,codex_cli_path:$codex_cli_path,codex_cli_version:$codex_cli_version,actual_codex_sha256:$actual_codex_sha256,profiled_codex_sha256:$profiled_codex_sha256,agent_model:$agent_model,agent_model_source:$agent_model_source,agent_reasoning_effort:$agent_reasoning_effort,agent_reasoning_effort_source:$agent_reasoning_effort_source,requested_agent_model:$requested_agent_model,requested_agent_reasoning_effort:$requested_agent_reasoning_effort,no_read_permission:$no_read_permission,read_permission_mode:$read_permission_mode,web_ui_url:$web_ui_url,base_commit:$base_commit,duration_seconds:$duration_seconds,review_completed:$review_completed,linearize_completed:$linearize_completed,commits_after_base:$commits_after_base,changed_files:$changed_files,changed_lines_added:$changed_lines_added,changed_lines_deleted:$changed_lines_deleted,changed_lines_total:$changed_lines_total,code_quality:$code_quality,token_usage:$token_usage,measurement_status:$measurement_status,measurement_reason:$measurement_reason,total_workflow_usage:{input_tokens:$total_workflow_input_tokens,cached_input_tokens:$total_workflow_cached_input_tokens,uncached_input_tokens:$total_workflow_uncached_input_tokens,output_tokens:$total_workflow_output_tokens,reasoning_output_tokens:$total_workflow_reasoning_output_tokens,raw_input_plus_output:$total_workflow_raw_tokens,uncached_input_plus_output:$total_workflow_uncached_tokens},comment:$comment,operator_notes:$operator_notes,binaries_produced:$binaries_produced,patch_artifacts:$patch_artifacts,observation:$observation,report:$report,candidate:$candidate}' \
     > "$machine_report_staging" || return 1
   bench_publish_regular_file \
     "$artifact_dir" \
@@ -1170,32 +952,13 @@ EOF
   log "bench report: $report_path"
 }
 
-collect_token_usage() {
-  local state_file
-  if [[ -n "${url:-}" ]]; then
-    fetch_state_snapshot "$tmp_root/final-state.json" 2>/dev/null || true
-  fi
-  state_file="$(best_state_snapshot 2>/dev/null || true)"
-  if [[ -z "$state_file" ]]; then
-    return
-  fi
-  token_usage="$(
-    jq -r '
-      [.snapshot.sessions[]? as $session
-        | select($session.token_usage != null)
-        | "\($session.id): input=\($session.token_usage.input_tokens) cached_input=\($session.token_usage.cached_input_tokens) output=\($session.token_usage.output_tokens) reasoning_output=\($session.token_usage.reasoning_output_tokens)"]
-      | if length == 0 then "unavailable" else join("; ") end
-    ' "$state_file" 2>/dev/null || printf 'unavailable'
-  )"
-}
-
 fail_bench() {
   failure_reason="$1"
   result="fail"
   save_final_state_snapshot || true
   git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt" 2>/dev/null || true
   git -C "$checkout_dir" log --oneline --max-count=30 > "$tmp_root/final-log.txt" 2>/dev/null || true
-  collect_token_usage
+  finish_observation 1
   write_report "$failure_reason"
   exit 1
 }
@@ -1219,7 +982,7 @@ feature_prompt() {
       printf '%s\n' 'add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select'
       ;;
     2)
-      printf '%s\n' 'implement strict selected-agent slash command execution. When a selected agent chat message starts with / followed by a non-whitespace command token, Work Leaf must treat it as a backend command for that selected agent, execute it immediately, and append the backend command output in the chat. This is not the existing raw pass-through behavior: passing /status to the normal agent send/resume/model prompt path is insufficient and must be covered by a failing test. Add coverage for /status and /fork, including a test that proves the normal backend send path does not receive /status as an ordinary prompt.'
+      printf '%s\n' 'when an user prompt start with / and is followed by something without whitespace that is a command for the agent; the orchestrator must send it to the selected backend agent and show that backend response'
       ;;
     3)
       printf '%s\n' 'when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it'
@@ -1230,24 +993,9 @@ feature_prompt() {
   esac
 }
 
-benchmark_validation_policy() {
-  cat <<'EOF'
-Validation policy for this implementation/fix turn:
-- Run exactly one focused Cargo validation command that covers the behavior or tests changed in this turn.
-- Starting no Cargo validation, or starting more than one, invalidates the benchmark.
-- Rerunning the same command still counts as a second validation and invalidates the benchmark.
-- If code changes after validation, do not validate again; report that the final edit was not rerun.
-- Do not combine formatting, Clippy, and the full test suite into one command.
-- Do not run the three-command full repository check suite during this feature iteration.
-- The benchmark driver owns the one final full repository check suite.
-EOF
-}
-
 post_feature_command() {
   local feature_number="$1"
-  post_command "new $(feature_prompt "$feature_number")
-
-$(benchmark_validation_policy)"
+  post_command "new $(feature_prompt "$feature_number")"
 }
 
 start_benchmark_features() {
@@ -1342,6 +1090,7 @@ log "WORK_LEAF_BENCH_SOURCE_HEAD=$source_head"
 prepare_base_checkout
 log "WORK_LEAF_BENCH_BASE=$base_commit"
 mkdir -p "$child_tmp_dir"
+prepare_bench_codex_profile || fail_bench "failed to prepare explicit Codex model/reasoning profile"
 setup_observer || fail_bench "failed to start required benchmark observer"
 observer_checkpoint base || fail_bench "failed to capture observer base checkpoint"
 
@@ -1389,18 +1138,23 @@ accepted_linearize=0
 expected_final_commits=3
 last_sig=""
 last_progress_active_seconds="$start_active_seconds"
+feature_stage_deadline=$((start_active_seconds + timeout_secs))
+linearize_stage_deadline=0
 
 while true; do
   now_active="$(monotonic_seconds)"
   elapsed=$((now_active - start_active_seconds))
-  (( elapsed <= timeout_secs )) || fail_bench "timed out after ${elapsed}s"
+  if [[ "$linearize_started" == "0" ]]; then
+    (( now_active <= feature_stage_deadline )) \
+      || fail_bench "feature/review stage timed out after ${timeout_secs}s"
+  else
+    (( now_active <= linearize_stage_deadline )) \
+      || fail_bench "linearize stage timed out after ${timeout_secs}s"
+  fi
 
   fetch_state_snapshot "$tmp_root/state.json" || fail_bench "orchestrator state request failed"
   if [[ -f "$tmp_root/abort-reason" ]]; then
     fail_bench "$(cat "$tmp_root/abort-reason")"
-  fi
-  if [[ -n "$observer_root" && -f "$observer_root/validation-budget-violation.txt" ]]; then
-    fail_bench "$(cat "$observer_root/validation-budget-violation.txt")"
   fi
   busy="$(jq -r '.busy' "$tmp_root/state.json")"
   sig="$(jq -r '[.snapshot.sessions[] | "\(.id):\(.loading // "-"):\(.completion // "-"):lines=\(.lines|length):title=\(.title)"] | join(" | ")' "$tmp_root/state.json")"
@@ -1438,12 +1192,12 @@ while true; do
     fi
     expected_final_commits=3
     log "all patch agents done and ${patch_agents_with_commits} patch-agent commit(s) reviewed; launching force-linearize"
-    disable_iteration_validation_budget || fail_bench "failed to disable the iteration validation budget"
     observer_timeline feature-cycle-complete "feature=3" || fail_bench "failed to record completed feature cycle"
     observer_checkpoint pre-linearize || fail_bench "failed to capture pre-linearize checkpoint"
     observer_timeline linearize-start "reviewed-features=3" || fail_bench "failed to record linearize start"
     post_command 'force-linearize' || fail_bench "failed to post force-linearize command"
     linearize_started=1
+    linearize_stage_deadline=$((now_active + timeout_secs))
     sleep 5
     continue
   fi
@@ -1452,7 +1206,7 @@ while true; do
   if [[ "$linearize_started" == "1" && "$accepted_linearize" == "0" && "$linearize_ready" != "0" && "$busy" == "false" ]]; then
     log "linearizer ready; accepting plan"
     observer_timeline linearize-accept "reviewed-features=3" || fail_bench "failed to record linearize acceptance"
-    post_agent 'linearize' 'Accept the proposed linearization plan. Rewrite the reviewed provisional agent commits into final commits now, preserving all three reviewed features. Do not run Cargo validation or the full repository check suite. The benchmark driver owns the one final gate. Leave the repository clean and report the final commit messages.' || fail_bench "failed to accept linearize plan"
+    post_agent 'linearize' 'Accept the proposed linearization plan. Rewrite the reviewed provisional agent commits into final commits now, preserving all three reviewed features. Run the checks required by the repository instructions and iterate until they pass. Leave the repository clean and report the final commit messages and verification results.' || fail_bench "failed to accept linearize plan"
     accepted_linearize=1
     sleep 5
     continue
@@ -1479,22 +1233,16 @@ while true; do
     }
     git -C "$checkout_dir" status --short > "$tmp_root/final-status.txt"
     if [[ -s "$tmp_root/final-status.txt" ]]; then
-      code_quality="failed; cargo fmt changed the final repository"
+      code_quality="failed; final gate changed the final repository"
       fail_bench "final repository changed during the final gate"
     fi
-    code_quality="passed cargo fmt; cargo clippy --all-targets --all-features -- -D warnings; cargo test --all-targets --all-features"
+    code_quality="passed cargo fmt -- --check; cargo clippy --all-targets --all-features -- -D warnings; cargo test --all-targets --all-features"
     completed_active_seconds="$(monotonic_seconds)"
     observer_timeline final-checks-complete "status=pass" || fail_bench "failed to record final checks"
     observer_checkpoint final || fail_bench "failed to capture final checkpoint"
     stage_candidate_binary || fail_bench "final candidate release build failed"
     result="pass"
-    collect_token_usage
-    archive_observation_bundles || fail_bench "failed to archive observer context bundles"
-    capture_observation_controller_state || fail_bench "failed to capture observer controller usage"
-    observer_timeline condition-end "status=0 result=$result" || fail_bench "failed to record observer completion"
-    stop_observed_app_server || fail_bench "failed to finalize observed app-server"
-    stop_bench_runtime
-    finalize_observation || fail_bench "observer analysis rejected this capture; see observation/capture-audit.txt"
+    finish_observation 0
     write_report "review and linearize completed; final repository checks passed"
     exit 0
   fi
