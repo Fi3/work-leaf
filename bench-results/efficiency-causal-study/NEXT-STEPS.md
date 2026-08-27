@@ -18,12 +18,12 @@ Each completed candidate is one observation in its assigned condition. The prima
 all observations in one condition with all observations in another condition.
 
 Do not create one-to-one pairs after collection. With many separately launched runs, any such pairing
-would be arbitrary and would not add information. A collection round is only a practical way to
+would be arbitrary and would not add information. A collection batch is only a practical way to
 spread the conditions across time and detect operational failures early. It is not the statistical
-unit, and a run is not discarded merely because another condition is missing from the same round.
+unit, and a run is not discarded merely because another condition is missing from the same batch.
 
-Record launch time and round so time-related or machine-related effects can be checked separately.
-Those checks are secondary to the randomized condition-group comparison.
+Record launch time and collection batch so time-related or machine-related effects can be checked
+separately. Those checks are secondary to the randomized condition-group comparison.
 
 ## Fixed comparison
 
@@ -37,21 +37,22 @@ Every accepted run uses:
   does not have to match the historical CLI version.
 - A fresh checkout, conversation, observer identity, and output directory.
 
-The product comparison is:
+The product comparison uses the existing benchmark launchers unchanged:
 
-- `direct`: normal direct Codex, handling the three requested features sequentially without Work
-  Leaf.
-- `wl-000`: normal Work Leaf, handling its feature agents concurrently.
+- `direct`: `bench-three-features-sequential`, which runs normal direct Codex and handles the three
+  requested features sequentially without Work Leaf.
+- `wl-000`: `bench-three-features`, which runs normal Work Leaf and handles its feature agents
+  concurrently.
 
 Do not schedule Work Leaf features sequentially. Do not modify Work Leaf, either workflow's prompt,
 the task, the scorer, the validation budget, or the evaluator to improve outcomes. The benchmark
 must measure the products as they actually behave.
 
-The finalized study under `bench-results/efficiency-causal-study` is immutable evidence. The
-untracked directory
-`bench-results/efficiency-token-allocation-follow-up-20260826T144239Z` is a rejected planning
-attempt, not an approved protocol or source of tooling. It launched no provider workflow. Do not use
-its 16,400-round calculation, generated controller, statistical assumptions, or storage plan.
+The finalized study under `bench-results/efficiency-causal-study` is immutable evidence. The rejected
+planning attempt formerly stored at
+`bench-results/efficiency-token-allocation-follow-up-20260826T144239Z` launched no provider workflow
+and is absent from the worktree. Do not recreate or use its 16,400-run calculation, generated
+controller, statistical assumptions, or storage plan.
 
 ## Mechanism conditions
 
@@ -78,47 +79,41 @@ The Work Leaf condition name has three bits in this order:
 
 ## Collection stages
 
-### 1. Check only what is needed to launch
+### 1. Run the first retained production batch
 
-Spend no more than five minutes confirming that the existing benchmark commands, frozen binaries,
-observer, scorer, output paths, free space, and model settings are available. Confirm that another
-benchmark is not already running.
+Launch one run in each of the nine conditions in a randomized order. These are real study
+observations and remain in the final condition groups; they are not disposable preflight or pilot
+runs. At most two top-level workflows may run at once. Each workflow must have its own checkout,
+build directory, observer identity, and result directory. Work Leaf keeps its normal internal
+concurrency.
 
-Do not build a new controller, replay historical candidates, run a power simulation, create storage
-infrastructure, or execute candidate fixtures during this check. A concrete mismatch is reported and
-fixed only if it would invalidate a real run.
+Use the existing launchers, frozen factor controls, frozen binaries, and frozen observer directly.
+Do not run a separate launcher audit or preflight, build a controller, replay historical candidates,
+run a power simulation, create storage infrastructure, or execute candidate fixtures before this
+batch.
 
-### 2. Run a small pilot
+### 2. Inspect before spending more
 
-Launch one separate run in each of the nine conditions in a randomized order. At most two
-top-level workflows may run at once. Each workflow must have its own checkout, build directory,
-observer identity, and result directory. Work Leaf keeps its normal internal concurrency.
-
-The pilot verifies that all nine condition switches activate, exact provider counters are captured,
-candidate artifacts can be reconstructed, and the frozen scorer can score every artifact. It is not
-the final sample and must not be presented as sufficient statistical evidence.
-
-### 3. Inspect before spending more
-
-After the pilot, inspect every failure and missing field before launching another round. Preserve the
-failed attempt and explain its cause in plain language. Stop and report if failures share a systematic
-cause, if exact counters cannot be recovered, or if running two workflows at once creates resource
-contention.
+After the first batch, inspect every factor setting, token counter, candidate artifact, scorer result,
+failure, and missing field. Preserve failed attempts and explain their causes in plain language. Stop
+and report if failures share a systematic cause, if exact counters cannot be recovered, or if running
+two workflows at once creates resource contention.
 
 Do not fix an apparent problem by changing Work Leaf, the task, the prompts, or the scorer. Do not
 rerun a model merely because its implementation is incomplete or scores poorly.
 
-### 4. Continue in small randomized rounds
+### 3. Set the larger sample from observed data
 
-When the pilot is clean, collect further separate observations in small rounds. A round schedules
-one new run per condition in a newly randomized order and is kept short enough to inspect before the
-next round. Continue using at most two top-level workflows at once.
+The first batch does not set or prove the final sample size. Combine its observations with the saved
+historical variation only to propose practical options for additional independent runs per condition.
+For each option, state the expected uncertainty, elapsed time, and provider use. Obtain the study
+owner's approval for one explicit option before launching a larger collection. Do not infer approval
+from an example number mentioned in conversation, and do not derive a huge run count from the
+rejected formal plan.
 
-After each round, update the condition counts, exact-token capture rate, feature results, elapsed
-time, and failure analysis. Use the initial observations to estimate actual variation and state how
-many additional runs would materially narrow the uncertainty. Report the proposed run count, elapsed
-time, and provider cost before committing to a large expansion. Do not derive a huge run count from
-the rejected formal plan.
+Run an approved expansion in small randomized operational batches, with at most two top-level
+workflows at once. Inspect each batch before starting the next. The batches are not statistical
+blocks and do not create pairs.
 
 Once the mechanism estimates are reasonably stable, additional evidence for the normal product
 comparison needs only `direct` and `wl-000`. The other seven factor conditions do not need to be run
@@ -126,8 +121,8 @@ again solely to increase confidence in the normal-product comparison.
 
 ## Admission and retries
 
-Assign every scheduled launch a unique condition, round, and attempt identifier before it starts.
-Preserve every attempt.
+Assign every scheduled launch a unique condition, collection-batch, and attempt identifier before it
+starts. Preserve every attempt.
 
 A retry is allowed only when no task reached a provider thread because the executable did not start,
 the checkout failed its fixed-identity check, the observer was not ready, or the provider rejected
