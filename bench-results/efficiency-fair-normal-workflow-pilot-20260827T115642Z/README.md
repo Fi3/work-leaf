@@ -21,3 +21,8 @@ the task is kept unchanged for both workflows rather than replaced with a strict
 The earlier efficiency-study percentages are excluded because those runs imposed an artificial
 one-Cargo-command rule and used a later slash-command task containing `/fork`. Their raw artifacts
 remain available only as an audit trail.
+
+The completed pilot result is in `PROVISIONAL-RESULT.md`. It retains both outcomes but supports no
+token-saving claim: quality differed, descendant verification calls escaped the fixed model, and
+direct resume usage exposed an observer accumulation error. No larger batch or mechanism run has
+started.

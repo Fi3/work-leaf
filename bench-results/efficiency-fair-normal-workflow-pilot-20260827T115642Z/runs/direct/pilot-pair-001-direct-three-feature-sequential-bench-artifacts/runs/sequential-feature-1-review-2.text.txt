@@ -1,0 +1,6 @@
+I’ll re-check the current `c92a0b7..HEAD` diff against the two fixed areas and scan the remaining visual-mode paths for regressions or missing focused coverage.
+The previous two findings have corresponding code changes and focused tests now. I’m reading the updated row-mapping helper and the visual selection calculations to check for any new off-by-one or pane-state regressions.
+The helper now maps the selected control row to the rendered left-pane row before creating or yanking a visual selection, which addresses the earlier detail-row copy bug. I’m checking the Escape deferral interaction to make sure a literal `Esc` still exits visual mode and arrow sequences still get parsed.
+The raw terminal mode uses `min 0 time 1`, so a literal `Esc` deferred during visual mode is still flushed as Escape on the next empty read. I’m doing a final diff hygiene scan and a focused search for untested visual-mode branches.
+The current patch still touches only the terminal UI/app/harness and tests. I’m scanning the remaining changed `ui.rs` chunks outside the two fixes so I don’t miss behavior introduced around rendering, clipboard emission, or command-mode key handling.
+NO_FINDINGS

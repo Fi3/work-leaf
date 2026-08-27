@@ -1,0 +1,29 @@
+You are continuing the same direct feature task.
+
+Request 3:
+when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it
+
+The reviewer reported the findings below. Fix only the reviewed feature behavior and tests needed to
+resolve those findings. Leave changes uncommitted; the benchmark driver will commit them.
+Documentation and plain-text updates are deferred to the final linearizer.
+Do not modify docs/**, README*, CHANGELOG*, *.md, *.txt, or other prose-only files in this turn.
+
+Reviewer findings:
+I’ll inspect the diff from the specified base and focus only on behavior touched by this request: review completion prompting, highlighting, yes/no handling, and reopening on further typing.
+The patch is a single commit on top of the requested base. I’m reading the changed code and the surrounding ownership paths now so the review stays tied to the actual UI/workspace flow.
+The implementation puts the prompt in the workspace controller and the hide/reopen behavior in the terminal adapter/UI. I’m checking the event paths and remote terminal path next, because a controller event without remote-side handling can create split behavior between test adapter and actual binary.
+The changed code is in the shared terminal state machine, so it affects both in-process tests and the remote CLI path. I’m drilling into the exact submit/selection functions and existing tests to see whether the new flow has gaps.
+I found the feature state is tracked locally in `TerminalAppCore`, while the controller only appends/selects the prompt. I’m checking whether hidden agents remain hidden across later events and whether yes/no semantics match the requested “yes closes it, typing again reopens it” behavior.
+The main behavior to scrutinize is state lifetime: the prompt is appended to the patch-agent transcript after each completed review, while yes/no tracking is held only in the terminal state machine. I’m comparing that with controller snapshots/events and tests around multi-round reviews and repeated patch-agent cycles.
+A concrete issue is emerging around repeated review completions for the same patch agent: the controller suppresses duplicate transcript lines, and the prompt text is a fixed string. I’m verifying whether that prevents the second done prompt from being tracked/handled after the first one is answered.
+The duplicate-prompt path is grounded: `append_agent_line` drops any line already present in the session, and the terminal only arms yes/no handling when it receives the exact prompt line event. I’m also checking whether the patch records a real-agent verification result anywhere, because this is terminal chat/review behavior.
+The added tests cover the first review prompt and immediate yes/reopen path. They do not cover a same-agent second review completion after the first prompt was answered, which is the path affected by the duplicate-line suppression.
+FINDINGS
+
+- `src/workspace.rs:701` reuses the exact `FEATURE_DONE_PROMPT`, but `append_agent_line` drops duplicate lines at `src/workspace.rs:744`. After the first prompt is answered, `TerminalAppCore` removes that agent from `feature_done_prompts` at `src/terminal_app.rs:853`; a second review completion for the same patch agent emits no prompt event, so `yes` is sent to the agent instead of closing the chat. Missing coverage for repeated review-complete cycles on the same patch agent.
+
+- Missing required real-agent verification for this agent-facing terminal chat/review behavior. No author response here includes an exact real-agent scenario with visible result or a pre-agent blocker.
+
+Run focused checks while implementing this feature, and fix and rerun them as needed. Leave broad
+cross-feature formatting, Clippy, and full-suite integration checks to the final linearizer unless a
+broader check is necessary to finish this feature correctly.

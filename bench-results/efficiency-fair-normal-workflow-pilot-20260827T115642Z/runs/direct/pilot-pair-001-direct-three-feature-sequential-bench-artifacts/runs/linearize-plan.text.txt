@@ -1,0 +1,34 @@
+I’ll inspect the provisional history from the specified base and the resulting diff, then map the reviewed commits back to the three requested feature slices. I’ll keep this to read-only git and file inspection.
+The branch is clean and has seven provisional commits: each feature has an implementation commit, feature 1 and 2 have one review-fix commit, and feature 3 has two review-fix commits. Next I’m reading each commit’s touched paths and messages to identify the request boundaries.
+The request boundaries are cleanly ordered: `c92a0b7..394e8aa` is feature 1 plus its fix, `394e8aa..03c3dc7` is feature 2 plus its fix, and `03c3dc7..298e0aa` is feature 3 plus two fixes. I’m now inspecting those three slice diffs to identify the behavior each final commit should describe.
+Feature 1 is concentrated in the terminal UI rendering/input path, feature 2 adds workspace/controller behavior plus terminal routing, and feature 3 extends both workspace metadata and terminal orchestration. I’m reading the concrete symbols now so the final plan can cite the actual call paths instead of only commit labels.
+Feature 2’s call path is `TerminalApp::handle_command_line` and `WorkLeafController::execute_command_line`, both using slash-command detection and the UI/controller selected-agent state to forward `/status`-style commands to `send_message`. I’m checking the final feature slice next.
+Feature 3 adds an agent-facing review-completion loop: `WorkLeafController::poll_workers` appends `FEATURE_DONE_PROMPT`, selects the patch agent, and `TerminalApp` treats `yes/y` as closing the chat while preserving a reopen path for follow-up typing. I’m checking the existing docs now because the implementation agents deferred plain-text updates.
+The docs currently describe the old review handoff as “mark the review chat done” after `NO_FINDINGS`, and the terminal section only documents `/` from selected agent command mode, not prompt-mode slash routing or visual yanks. Those are likely the deferred documentation items to fold into the relevant final commits.
+One search pattern had a quoting error, so I’m rerunning that lookup with simpler terms. No files were changed.
+`git diff --check` is clean for the accumulated diff. I’m doing one more read of the adapter structure so the plan is accurate about whether behavior applies only to local tests or also the remote CLI path.
+The same `TerminalAppCore` backs both `TerminalApp<B>` and `RemoteTerminalApp`, so the terminal behavior in features 2 and 3 applies to the normal CLI/daemon path as well as in-process tests. I’m checking the review-fix commits only to make sure no fix belongs in a different feature slice.
+The review-fix commits stay within their original requests: feature 1 fixes visual selection focus/escape handling, feature 2 fixes stale selected-agent slash routing, and feature 3 fixes repeated completion prompts and cached duplicate prompt rendering. I’m checking the documentation anchor list so the doc plan names the right sections.
+I inspected the provisional history and resulting diff. Worktree is clean. I did not modify files, rewrite history, create commits, or run the check suite.
+
+The seven provisional commits map cleanly into three feature slices:
+
+1. `c92a0b7..394e8aa`: terminal visual selection/yank support.
+2. `394e8aa..03c3dc7`: prompt-mode slash commands routed to the selected agent.
+3. `03c3dc7..298e0aa`: post-review feature-done prompt and chat close/reopen behavior.
+
+Deferred docs should be folded into the relevant feature commits:
+- [docs/architecture.md](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/docs/architecture.md:273) needs terminal UI notes for visual yanks, prompt slash routing, and feature-done terminal handling.
+- [docs/orchestrator-file-workflow.md](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/docs/orchestrator-file-workflow.md:87) needs the old “mark review chat done” wording updated to the current patch-agent `work-leaf: Is this feature done? yes/no` flow.
+
+**Proposed Three-Commit Plan**
+1. `ADD terminal visual yanks so users can copy pane text`
+   Fold `0941cc5` + `394e8aa`. Includes [src/ui.rs::VisualKind](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/ui.rs:178), visual-mode key handling/yanking, OSC52 clipboard output, `TerminalAppCore` visual-context preparation, and UI/terminal tests. Add `docs/architecture.md` terminal UI documentation for `v`, `V`, Ctrl-V, `y/Y`, highlighting, and OSC52 copy behavior.
+
+2. `ADD prompt slash routing so selected agents receive commands`
+   Fold `c31fc83` + `03c3dc7`. Includes [WorkLeafController::execute_command_line](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/workspace.rs:129), controller selected-agent tracking, [TerminalAppCore::handle_command_line](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/terminal_app.rs:641), stale-command-row protection, and workspace/terminal/harness tests. Add `docs/architecture.md` notes that `/command` prompt input routes to the selected agent only when a non-space slash command and selected agent exist.
+
+3. `ADD review completion prompts so users can close finished patch chats`
+   Fold `21fc946` + `5c8ae41` + `298e0aa`. Includes [FEATURE_DONE_PROMPT](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/workspace.rs:18), review-complete prompt appending/selection, duplicate prompt allowance for repeated reviews, [TerminalAppCore::handle_feature_done_reply](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/terminal_app.rs:849), hidden-chat reopen behavior, [TerminalUi::hide_agent](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/ui.rs:390), and review/workspace/terminal tests. Update both docs files so the review lifecycle describes the patch-agent completion prompt and `yes/y` terminal close behavior.
+
+After acceptance, I’ll rebuild the history rooted at `c92a0b7060a36eac6db2d869b85e589a7a9480f9` with exactly those three commits, then run the required validation suite and real-agent verification. Waiting for acceptance.

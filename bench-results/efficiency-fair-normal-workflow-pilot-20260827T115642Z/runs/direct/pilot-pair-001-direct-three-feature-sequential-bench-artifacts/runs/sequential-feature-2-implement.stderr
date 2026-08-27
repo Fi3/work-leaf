@@ -1,0 +1,6 @@
+2026-08-27T13:21:48.596440Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/terminal_app.rs:
+fn parse_control_sequence(sequence: &[u8]) -> Option<TerminalAppInput> {
+    match sequence {
+        [b'[', b'A', ..] => Some(TerminalAppInput::Key(UiKey::Up)),
+        [b'[', b'B', ..] => Some(TerminalAppInput::Key(UiKey::Down)),
+        [b'[', b'C', ..] => Some(TerminalAppInput::Key(UiKey::Right)),

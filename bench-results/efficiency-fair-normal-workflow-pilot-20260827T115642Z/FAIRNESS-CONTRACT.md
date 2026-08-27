@@ -104,3 +104,13 @@ it would change the original benchmark request.
 The pilot runs exactly one workflow per condition, scores both saved implementations, writes a
 provisional report, and stops. No larger replication batch and no mechanism-ablation condition may
 start without the user's review of that report.
+
+## Observed Compliance
+
+The completed pilot met the task, source-base, scheduling, timeout, validation, and no-retry rules.
+It did not meet the all-provider-thread model rule: descendant real-agent verification calls
+inherited GPT-5.6 Sol. Direct resume accounting also failed the frozen measurement rule because the
+observer treated per-invocation totals as cumulative thread totals. These deviations make the pilot
+useful for infrastructure and quality findings but ineligible for a token-efficiency conclusion.
+
+The exact outcomes and required corrections are in `PROVISIONAL-RESULT.md`.

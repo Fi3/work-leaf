@@ -1,0 +1,69 @@
+I’ll inspect the architecture notes and the review/patch UI flow first, then add a focused failing test around the new completion prompt before changing the implementation.
+The architecture says UI state is owned in `src/workspace.rs` and terminal readiness highlighting is rendered in `src/ui.rs`; review completion is started by the controller after patch-agent `done`. I’m narrowing the change to controller/session state and terminal input rendering rather than the core patcher.
+The review loop already sends reviewer findings back to the patch agent and records reviewed commits in `CommandChat::record_review_result`. I’m checking how worker completion becomes UI state so the post-review yes/no question can be represented without inventing a terminal-only path.
+The existing ready highlight is tied to `session.loading.is_none()`, which means every idle chat is marked ready today. The requested behavior needs a narrower post-review attention state, and “closes it” appears to map to the existing hidden-agent support in the left pane.
+I found that hiding a chat is already a UI operation (`x` in the left pane) and not persisted through the controller. For this feature I’ll keep the user-visible completion prompt in the session transcript, add an explicit reviewed-attention event to drive highlight/selection, and let `yes` hide that chat while any non-yes reply goes back to the agent.
+Next I’m going to add tests in `tests/workspace.rs` for the controller prompt/event and `tests/terminal_app.rs` for the yes/no terminal behavior. They should fail against the current implementation before the code changes.
+One important API constraint: `WorkLeafSession` and `WorkLeafEvent` are public DTOs. I’m avoiding changes to existing struct fields and adding only a non-breaking event variant for the reviewed “needs user answer” state.
+I’m adding the focused tests now: one at the controller level for the post-review prompt and final selection, and one terminal test for `yes` closing the patch chat and the next typed message reopening/sending to that same agent.
+The controller test is in place. I’m adding the terminal-level test beside the existing review streaming coverage so it exercises the real `TerminalApp` event path.
+I’m running the two new tests now to confirm they fail for the missing behavior before I touch the implementation.
+The implementation will add the prompt from the controller when a `ReviewComplete` result is applied, then keep the close/reopen mechanics inside the terminal adapter. I’m also adding a small UI helper to hide and unhide agent rows by id, using the existing hidden-row model.
+The controller now appends the completion question and reselects the reviewed patch agent. I’m wiring the terminal row close/reopen behavior next.
+The UI helper hides by agent id and makes programmatic selection unhide the row again. I’m adding the terminal-side state that treats the post-review question as a local confirmation instead of sending `yes` to the backend.
+The terminal adapter now tracks outstanding feature-done questions, hides on `yes`, and remembers the closed chat as the destination for the next typed message. I’m adding the small reply parser and then I’ll run the focused tests.
+I’m simplifying the yes parser before test runs so it stays Clippy-clean when the broader checks run later.
+I’m removing a newer `Option` convenience method so the code remains conservative about the Rust toolchain version used by the repo.
+I’m rerunning the focused controller and terminal tests now.
+The terminal test failure was the assertion matching `review-user-1`, not the patch chat row itself. I’m tightening that assertion to distinguish the patch-agent row from the reviewer row and rerunning.
+I’m rerunning the adjusted terminal test to verify the close/reopen behavior itself.
+Because this is a terminal UI behavior change, I’m adding one UI-harness test around the underlying close/reopen row behavior as required by the repo instructions. The review-specific behavior remains covered by the `TerminalApp` test.
+I added a small harness hook to activate a chat by id, which uses the same UI path as controller selection. Now I’m adding the harness test that a hidden row reappears when that chat is activated again.
+I’m running the new UI-harness test and the focused review tests together now.
+The focused new tests are green. I’m formatting the Rust changes, then I’ll run the affected test targets rather than the full suite.
+Formatting completed cleanly. I’m checking the diff shape before running the affected test files so I can catch any accidental churn.
+The diff is scoped to controller, terminal UI/app, harness, and tests. I noticed a test closure that rustfmt left verbose, so I’m cleaning that up before the affected target runs.
+I’m running `cargo fmt` once more after the small test cleanup, then the affected test targets.
+I’m running the full affected test files now: controller workspace behavior first, then terminal app/UI harness/UI renderer coverage.
+The full workspace controller test file is green. Next I’m running the terminal app tests, which cover the end-to-end terminal event path with fake backends.
+The terminal app target is green. I’m running the UI harness and terminal UI renderer tests because the row hide/unhide path changed.
+The affected test targets are green. I’m running a focused Clippy invocation over those test targets with warnings denied, which should catch issues in the new code without doing the full all-target/all-feature pass reserved for the linearizer.
+Focused Clippy is clean. Since this touches terminal chat/review behavior, I’m running the repo-prescribed bounded real Codex smoke check and will record the result if local Codex setup blocks it.
+The real Codex smoke check succeeded with `WORK_LEAF_REAL_AGENT_OK`. I’m doing a final status/diff check to make sure only the intended files changed and nothing prose-only was touched.
+The working tree only has the intended Rust source and test changes, and `git diff --check` is clean. I’m grabbing line references for the final summary.
+I’m tightening the terminal test slightly so it proves the row reopens as soon as typing starts, before Enter submits the follow-up.
+I’m rerunning the terminal test after that stricter assertion.
+The stricter terminal test passes. I’m formatting and rerunning the affected targets once more to keep the final state clean.
+I’m rerunning the same affected test files after the final format pass.
+Workspace tests are still green. Continuing with the terminal app target.
+The terminal app target is still green. I’m rerunning the UI harness and terminal UI renderer targets next.
+The affected test targets all pass. I’m rerunning the focused Clippy command after the final test adjustment.
+Focused Clippy is clean. I’m doing the final worktree hygiene check now.
+The hygiene checks are clean and only intended files are modified. I’m doing one small import cleanup in `terminal_app.rs` so the new `BTreeSet` import sits with the existing `std` imports.
+I’m formatting after that import cleanup and rerunning the focused Clippy command; no behavior changed.
+Format is clean; running focused Clippy one last time.
+Focused Clippy is still clean. I’m checking the final status and whitespace once more before I wrap up.
+Implemented and left changes uncommitted.
+
+What changed:
+- [src/workspace.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/workspace.rs:18) appends `work-leaf: Is this feature done? yes/no` to the reviewed patch agent and reselects that agent after review completes.
+- [src/terminal_app.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/terminal_app.rs:314) tracks that prompt, consumes `yes`/`y` locally, hides the patch chat without sending `yes` to the backend, and reopens the chat as soon as the user starts typing again.
+- [src/ui.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/ui.rs:371) makes programmatic chat activation unhide hidden rows and adds an internal hide-by-agent helper.
+
+Focused coverage added in:
+- [tests/workspace.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/tests/workspace.rs:329)
+- [tests/terminal_app.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/tests/terminal_app.rs:1064)
+- [tests/ui_harness.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/tests/ui_harness.rs:38)
+
+Checks run:
+- `cargo fmt`
+- `cargo test --test workspace`
+- `cargo test --test terminal_app`
+- `cargo test --test ui_harness`
+- `cargo test --test terminal_ui`
+- `cargo clippy --test workspace --test terminal_app --test ui_harness --test terminal_ui -- -D warnings`
+- `git diff --check`
+
+Real-agent verification: ran the repo-prescribed Codex smoke command with read-only sandbox; it started a real Codex thread and returned `WORK_LEAF_REAL_AGENT_OK`.
+
+No docs or prose-only files were modified.

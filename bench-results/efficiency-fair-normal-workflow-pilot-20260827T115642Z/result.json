@@ -1,0 +1,153 @@
+{
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "comparison": {
+    "completed_features": {
+      "direct_sequential": 3,
+      "work_leaf_concurrent": 2
+    },
+    "interpretation_limit": "One pilot pair is descriptive and cannot establish an average effect or statistical confidence.",
+    "quality_match_in_this_pair": false,
+    "raw_tokens": {
+      "direct_sequential": 23048981,
+      "work_leaf_concurrent": 7996153,
+      "work_leaf_reduction_percent": 65.308
+    },
+    "reasons": [
+      "direct token measurement is not usable",
+      "Work Leaf token measurement is not usable",
+      "the two saved implementations completed different numbers of requested features"
+    ],
+    "token_measurements_usable": false,
+    "uncached_tokens": {
+      "direct_sequential": 862741,
+      "work_leaf_concurrent": 741753,
+      "work_leaf_reduction_percent": 14.024
+    },
+    "usable": false
+  },
+  "complete": true,
+  "fixtures": {
+    "completion": "4d6a19f4c6f515b9a97f184a056d08dc2882041d40d26dd82011180a949c5c87",
+    "status": "5f5295c9dec6be20abb28827b68e84342110fb748aa0cc887d8b58ffa3c6e6b5",
+    "visual": "5ce0782e37b8672e04d8016ca3fbec9caa12f6f9cfaf431cac847c1f6e6a26ca"
+  },
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "runs": [
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.405,
+          "exit_code": 101,
+          "log": "scorer/logs/pilot-pair-001-work-leaf/completion.log",
+          "log_sha256": "296d0d1511ba7bedef87546b67f3238c8a4efb4d34230a252ed712e4da0c749c",
+          "status": "fail"
+        },
+        "status": {
+          "duration_seconds": 0.218,
+          "exit_code": 0,
+          "log": "scorer/logs/pilot-pair-001-work-leaf/status.log",
+          "log_sha256": "0d057328d577b5561ae5630884f0cf2934ee497f424632db69794696a004e261",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 5.994,
+          "exit_code": 0,
+          "log": "scorer/logs/pilot-pair-001-work-leaf/visual.log",
+          "log_sha256": "f4720fa5b3862ea43802a990609b1b09f8a82936a64a554d54458d0dc47b661b",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 2,
+      "final_commit": "84550b1fee4d93f0d7c84cf627f158df8fe529dc",
+      "id": "pilot-pair-001-work-leaf",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-fair-normal-workflow-pilot-20260827T115642Z/runs/work-leaf/pilot-pair-001-work-leaf-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "3c283057112f355129c6c6448d2e0d70aebfe70e806e8863ffd61b4b03853f7f",
+        "reasons": [
+          "observer model stratum is gpt-5.6-sol/xhigh"
+        ],
+        "usable": false,
+        "usage": {
+          "cached_input_tokens": 7254400,
+          "input_tokens": 7937586,
+          "output_tokens": 58567,
+          "raw_input_plus_output": 7996153,
+          "reasoning_output_tokens": 30116,
+          "uncached_input_plus_output": 741753,
+          "uncached_input_tokens": 683186
+        }
+      },
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-fair-normal-workflow-pilot-20260827T115642Z/runs/work-leaf/pilot-pair-001-work-leaf-three-feature-bench-artifacts/report.json",
+      "report_sha256": "a94a6009671f867789634c9b7bcfeb72ca30044a0c4a045fa359bf58d188ed6f",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.449,
+          "exit_code": 0,
+          "log": "scorer/logs/pilot-pair-001-direct/completion.log",
+          "log_sha256": "d32fd4a17a24617f12d028ad5d1055bb02c9e88123bcc3e46736eafb1779caf2",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.228,
+          "exit_code": 0,
+          "log": "scorer/logs/pilot-pair-001-direct/status.log",
+          "log_sha256": "168d827edf0f3a0a486bdc23da42841e6ad5d40d014420c56299ec1936666be5",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.467,
+          "exit_code": 0,
+          "log": "scorer/logs/pilot-pair-001-direct/visual.log",
+          "log_sha256": "712f4907925796d3d9cfde4a4dde1470399b6b23dc2e01896eba4e02cc873231",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "final_commit": "0c1472ae599840932e5f25a4f32354eec0a9c83f",
+      "id": "pilot-pair-001-direct",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-fair-normal-workflow-pilot-20260827T115642Z/runs/direct/pilot-pair-001-direct-three-feature-sequential-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "c4fc2e75558f6b82d724c54bf82c3465d6e7e6f1944578eca6ed9010927f24e9",
+        "reasons": [
+          "measurement status is incomplete",
+          "observer analysis marks the capture incomplete",
+          "observer model stratum is gpt-5.6-sol/xhigh"
+        ],
+        "usable": false,
+        "usage": {
+          "cached_input_tokens": 22186240,
+          "input_tokens": 22916620,
+          "output_tokens": 132361,
+          "raw_input_plus_output": 23048981,
+          "reasoning_output_tokens": 66595,
+          "uncached_input_plus_output": 862741,
+          "uncached_input_tokens": 730380
+        }
+      },
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-fair-normal-workflow-pilot-20260827T115642Z/runs/direct/pilot-pair-001-direct-three-feature-sequential-bench-artifacts/report.json",
+      "report_sha256": "6a402b639b8a64143f6c4eb3de2ff63a57d342565eaef308e8d5239b8e715329",
+      "workflow": "direct-sequential",
+      "workflow_result": "fail"
+    }
+  ],
+  "schema_version": 1,
+  "study": "efficiency-fair-normal-workflow-pilot-20260827T115642Z",
+  "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+}

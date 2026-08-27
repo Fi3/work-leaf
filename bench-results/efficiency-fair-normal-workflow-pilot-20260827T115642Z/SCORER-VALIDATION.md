@@ -30,3 +30,11 @@ The scorer's saved-output materialization is also covered locally. A test recons
 from its Git bundle plus an untracked-file diff and verifies both files. Token scoring reads
 `observation/analysis.json -> usage_scopes.total_workflow`, verifies the model and effort strata,
 and requires the copied totals in `report.json` to match.
+
+## Pilot Application
+
+Applied to the two saved pilot candidates, the scorer reports Work Leaf at 2/3 and direct Codex at
+3/3. Work Leaf consistently fails the completion question: the same saved candidate failed that
+fixture in five additional offline runs. Direct Codex's one driver-gate failure appears unrelated to
+the three feature fixtures: the exact failed repository test passed ten out of ten additional runs
+against the unchanged saved candidate. The original pass/fail records remain preserved.

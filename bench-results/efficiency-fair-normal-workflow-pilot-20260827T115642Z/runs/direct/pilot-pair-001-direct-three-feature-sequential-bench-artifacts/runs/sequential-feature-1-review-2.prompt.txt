@@ -1,0 +1,53 @@
+You are a normal direct review agent. Do not modify files.
+
+Review only the changes for request 1 since commit c92a0b7060a36eac6db2d869b85e589a7a9480f9:
+add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select
+
+Inspect the repository and the diff from c92a0b7060a36eac6db2d869b85e589a7a9480f9..HEAD. Report only bugs, regressions, or missing
+tests for the changed behavior. Documentation and plain-text updates are deferred to the final
+linearizer. Do not treat missing documentation or plain-text updates as review findings.
+For agent-facing changes, missing required real-agent verification is a finding unless the author
+response includes the exact real-agent scenario and visible result, or the exact pre-agent blocker.
+
+Additional author response and verification evidence from the previous fix turn:
+I’ll add focused regression tests for the two reviewer findings first, run them to confirm they fail, then patch only the visual-mode behavior.
+I’m adding two regression tests: bytewise arrow movement while visual mode is active in `TerminalApp`, and linewise yank after selecting the second agent when the first agent has detail rows.
+Now I’ll add the left-pane regression in the harness where the fixture already has interleaved file/conflict rows.
+I’ll run just the new failing regressions now to confirm both reviewer cases reproduce.
+Both regressions reproduce. I’ll fix Escape deferral first so bytewise arrow sequences remain intact while visual mode is active.
+I’m applying the same Escape deferral fix to the UI harness parser so bytewise tests mirror the live app.
+Now I’m fixing the left-pane row mapping so visual mode uses the actual rendered row, including file/link detail rows above the focused agent.
+I’ll rerun the two regression tests that failed to confirm the fixes hit the reported behavior.
+The regression tests now pass. I’ll format and then run the affected focused suites again.
+I’m re-running the affected test files and focused clippy after formatting.
+The reviewer regressions are fixed and the affected suites are green. I’m running final format/diff checks and the bounded real-Codex smoke again for the final report.
+The real Codex smoke passed. I’ll grab the final diff stat and file locations for the handoff.
+Fixed the reviewer findings.
+
+Changes:
+- `Esc` is now deferred while visual mode is active in both [src/terminal_app.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/terminal_app.rs:816) and [src/ui_harness.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/ui_harness.rs:444), so bytewise arrow sequences like `Esc [ D` move the visual cursor instead of cancelling selection.
+- Left-pane visual copy now maps `control_selected` to the actual rendered display row via [focused_left_display_row](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/ui.rs:1486), so detail rows above later agents no longer shift `V`/`Y` onto the wrong text.
+- Added regression coverage in [tests/terminal_app.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/tests/terminal_app.rs:470) and [tests/ui_harness.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/tests/ui_harness.rs:540).
+
+Checks run:
+- `cargo test --test ui_harness`
+- `cargo test --test terminal_app`
+- `cargo test --test terminal_ui`
+- `cargo clippy --test ui_harness --test terminal_ui --test terminal_app -- -D warnings`
+- `cargo fmt --check`
+- `git diff --check`
+
+Real-agent verification:
+- Ran the bounded Codex smoke check.
+- Result: `WORK_LEAF_REAL_AGENT_OK`, thread `01a0435b-d90d-7e33-befb-d41c4cc9b5bc`.
+
+Full cross-feature clippy/test suite left to the final linearizer as requested. Changes are uncommitted.
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

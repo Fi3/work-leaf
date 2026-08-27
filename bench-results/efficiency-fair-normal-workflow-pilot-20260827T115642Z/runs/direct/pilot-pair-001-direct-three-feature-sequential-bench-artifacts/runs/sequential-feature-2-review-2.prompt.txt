@@ -1,0 +1,54 @@
+You are a normal direct review agent. Do not modify files.
+
+Review only the changes for request 2 since commit 394e8aa9968bdc4a07526c4307d8e420eefe6413:
+when an user prompt start with / and is followed by something without whitespace that is a command for the agent; the orchestrator must send it to the selected backend agent and show that backend response
+
+Inspect the repository and the diff from 394e8aa9968bdc4a07526c4307d8e420eefe6413..HEAD. Report only bugs, regressions, or missing
+tests for the changed behavior. Documentation and plain-text updates are deferred to the final
+linearizer. Do not treat missing documentation or plain-text updates as review findings.
+For agent-facing changes, missing required real-agent verification is a finding unless the author
+response includes the exact real-agent scenario and visible result, or the exact pre-agent blocker.
+
+Additional author response and verification evidence from the previous fix turn:
+I’ll fix the stale-selection path by making the terminal command-prompt branch own the “no selected agent” case instead of delegating slash prompts into the controller’s remembered selection. I’ll add a focused regression for selecting the Work Leaf command row, then rerun the affected targets and real Codex smoke.
+The repro is specific to the terminal selecting the Work Leaf command row after an agent exists. I’m adding that failing test first so the fix is pinned to the reviewed behavior.
+The stale-selection regression test is in. I’m running it now and expect it to fail against the reviewed code.
+The regression fails by trying to send `/status` to the stale agent and exhausting the fake reply queue. I’m fixing `TerminalAppCore` so slash-shaped prompt lines never fall through to controller command parsing when the terminal UI has no selected agent.
+I’m using the existing `command_chat_error_text` formatting for the no-agent case, so the terminal shows the same unknown-command message without invoking the controller’s stale selected agent.
+I’m patching the terminal fallback to emit a normal Work Leaf unknown-command transcript for `/status` when no agent is selected, rather than letting the controller interpret it with stale state.
+The no-selected slash fallback is patched. I’m formatting and rerunning the stale-selection regression.
+The stale-selection regression now passes. I’m adding a matching harness assertion for the no-selected command-row case so the terminal state fixture covers it too.
+The harness starts with `user-1` selected while focus is left; moving up once selects the command interface. I’ll pin the `/status` command-row case there too.
+The harness command-row case is added. I’m formatting and running the new stale-selection tests.
+The new stale-selection tests pass. I’m rerunning the full touched targets to make sure the extra guard did not disturb the existing slash behavior.
+The affected test targets are green. I’m rerunning the real configured Codex launch/resume smoke now and will include the exact visible result in the final report.
+The real Codex launch returned `WORK_LEAF_REAL_AGENT_OK` on thread `01a0436f-734b-7e41-bb93-06928fdaba7b`. I’m resuming that same thread with raw `/status`.
+The raw `/status` real Codex resume returned a backend response and reported no file modifications. I’m doing one final status and whitespace check.
+The final diff for this follow-up is limited to `src/terminal_app.rs` and the two UI test files; no docs/prose files are changed.
+Fixed the reviewed stale-selection bug.
+
+Changes:
+- [src/terminal_app.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/terminal_app.rs:631): slash-shaped prompt lines now only send to an agent when the terminal UI has a selected agent. If the Work Leaf command row is selected, `/status` is rendered as an unknown Work Leaf command instead of falling through to the controller’s remembered agent.
+- Added regressions in [tests/terminal_app.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/tests/terminal_app.rs:118) and [tests/ui_harness.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/tests/ui_harness.rs:407).
+
+Checks run:
+- Verified the new stale-selection terminal test failed before the fix.
+- `cargo test --test terminal_app`
+- `cargo test --test ui_harness`
+- `cargo test --test workspace controller_prompt_slash`
+- `git diff --check`
+
+Real-agent verification:
+- Real Codex launch smoke: returned `WORK_LEAF_REAL_AGENT_OK` on thread `01a0436f-734b-7e41-bb93-06928fdaba7b`.
+- Real Codex raw slash resume: sent `/status` to that thread and got `Ready. Previous smoke check completed successfully; no files were modified.`
+
+Changes are uncommitted.
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

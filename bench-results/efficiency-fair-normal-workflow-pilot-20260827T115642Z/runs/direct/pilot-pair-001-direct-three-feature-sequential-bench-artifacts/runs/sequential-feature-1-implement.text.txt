@@ -1,0 +1,70 @@
+I’ll inspect the UI architecture and existing key handling first, then add focused harness coverage around visual selection before changing the implementation.
+I’ve confirmed the architecture keeps terminal behavior in `src/ui.rs` and test-facing state in `src/ui_harness.rs`; this feature should stay inside that frontend layer and its terminal tests.
+Next I’m reading the full UI state machine and terminal tests so the new visual mode reuses existing scrolling, pane focus, and copy behavior instead of adding a separate path.
+I need the remaining rendering helpers before editing, especially how text is wrapped and where cursor rows map to pane content.
+I’m going to inspect the lower helper functions and app input parser now; Ctrl-V needs raw byte handling in both the harness and real terminal app, while rendering should remain in `TerminalUi`.
+There is no existing clipboard or selection code. I’ll add the smallest terminal-native model: visual state lives in `TerminalUi`, `y`/`Y` produce a copy action with selected text, and the app emits that through the terminal clipboard path.
+I’ve found the live terminal loop in `src/cli.rs`: it writes exactly whatever `TerminalApp::render_frame()` returns. That means OSC-52 copy can be returned as part of the next frame without introducing another UI dependency.
+I’m going to add failing harness/UI tests first: one for right-pane charwise yank, one for left-pane linewise/block selection, and one render assertion that selected pane text is highlighted. Then I’ll implement the state machine and copy path.
+I added the first focused harness expectations. Next I’ll add a direct renderer test so the selection is visibly highlighted, not only copied.
+I’ll run the focused tests now to confirm they fail against the current implementation before applying the feature code.
+The focused tests fail for the expected missing behavior. I’m going to implement visual selection as terminal UI state, with OSC-52 output on the next render and raw Ctrl-V mapped to block selection.
+The implementation will keep `UiMode` unchanged to avoid a breaking public enum change; the status line will still report `visual`, `visual-line`, or `visual-block` while `mode()` remains command-mode for existing integrations.
+I’ve added the private visual-selection model and clipboard queue. Next I’m wiring it into initialization and render/input paths.
+I’ll expose a small crate-local hook so the real app and harness can keep visual selection aligned with the current right-pane chat buffer before keys are handled.
+Now I’m making focus/surface changes clear any active visual selection, so selection cannot point at stale pane content after navigation.
+The visual key handler needs to run before normal pane navigation so `j/k/h/l` extend selection instead of moving the agent list or editing chat history.
+I also need plain Escape to cancel visual state and the normal renderer to consume pending clipboard output exactly once.
+I’m wiring render now: the panes will draw selected text in reverse video, and a successful yank will prepend a standard OSC-52 clipboard sequence to the next frame.
+The pane widgets currently render raw strings. I’m replacing just those widget builders with styled span builders, which keeps the same layout while allowing selection highlighting.
+That widget patch touched a dense block; I’m checking it immediately for any leftover code from the old builder before continuing.
+There was a stray fragment from the old left-widget loop; I’m removing that now before adding the helper methods.
+I’m adding the selection helpers in one block: cursor movement, row/column range calculation, copy text extraction, and styled-span generation.
+I’m adding the OSC-52 encoding and keeping the existing bell behavior intact.
+Next I’m making the terminal cursor follow the visual cursor while selection is active.
+I’m updating the command-mode typing notice so visual commands are treated as controls, not accidental text input.
+The bottom status line will report the visual submode while selection is active, which keeps existing `UiMode` API behavior unchanged.
+I’m adding the pure helpers for character slicing, line/block range extraction, and the small base64 encoder used by OSC-52.
+I’m updating the harness and real terminal app so Ctrl-V reaches the UI state machine, and so arrow keys don’t get stolen by chat editing while visual selection is active.
+I’m adding the test-facing clipboard accessor to `UiHarness` and preparing pane content before each UI key dispatch.
+I’m applying the same visual-context routing in the real terminal app, so tests and the live PTY loop share the behavior.
+I’m mapping raw byte 22 to the existing internal character path for Ctrl-V block visual selection.
+The core wiring is in place. I’ll run the focused tests now; any failures should be around exact selected ranges or render styling.
+I’m adding one terminal-app test to cover the production input path, not just the standalone harness.
+I’ll run the visual-focused targets again including the new terminal app coverage.
+The focused visual tests now pass. I’m running rustfmt so the touched Rust files are left in the repository’s normal style, then I’ll run the affected test files more broadly.
+Formatting is clean. I’m checking the diff shape now before running the affected test files.
+The diff is scoped to terminal UI, terminal app input, harness, and tests. I’m going to review the full `src/ui.rs` changes for edge cases before broad focused test runs.
+The code review pass looks coherent. I’m running the affected test files now, not the full suite, per your instruction to leave broad integration checks to the linearizer.
+The affected UI, harness, and terminal-app tests are green. I’m doing a focused clippy/check pass on the touched targets plus the local UI unit tests, without running the full suite.
+The focused checks are green. Because this touched terminal chat input routing, I’m attempting the repository’s bounded real-Codex smoke check and will record the exact outcome.
+The real Codex smoke check returned `WORK_LEAF_REAL_AGENT_OK`. I’m doing one final diff/status pass to catch accidental prose changes or unrelated files.
+I noticed scrolling could leave a selection pointing at old visible rows, so I’m making scroll operations cancel visual selection just like clicks and surface changes.
+I’ll format after that small cancellation tweak and re-run the focused checks.
+Formatting is done. I’m re-running the focused affected tests and clippy check once more after the scroll-cancel adjustment.
+Affected tests and focused clippy are still green. I’ll run a final format check and status summary.
+The final status shows only Rust source and tests changed; no docs or prose files were touched.
+I’m doing one whitespace diff check; then I’ll hand back the uncommitted patch summary.
+Implemented vim-like visual selection for terminal panes.
+
+What changed:
+- Added visual selection state in [src/ui.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/ui.rs:838): `v` character mode, `V` line mode, Ctrl-V block mode.
+- Selection works in the focused pane, uses `h/j/k/l` and arrow keys, highlights selected text, `Esc` cancels.
+- `y` copies the selected range; `Y` copies linewise/current line. Copy is emitted via OSC-52 terminal clipboard sequence.
+- Wired raw Ctrl-V and visual-aware routing through [src/terminal_app.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/terminal_app.rs:607) and [src/ui_harness.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/ui_harness.rs:520).
+- Added focused coverage in [tests/ui_harness.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/tests/ui_harness.rs:514), [tests/terminal_ui.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/tests/terminal_ui.rs:297), and [tests/terminal_app.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/tests/terminal_app.rs:454).
+
+Checks run:
+- `cargo fmt --check`
+- `git diff --check`
+- `cargo test --test ui_harness`
+- `cargo test --test terminal_ui`
+- `cargo test --test terminal_app`
+- `cargo test --lib ui::tests`
+- `cargo clippy --test ui_harness --test terminal_ui --test terminal_app -- -D warnings`
+
+Real-agent verification:
+- Ran the repo-prescribed Codex smoke command with read-only sandbox.
+- Result: `WORK_LEAF_REAL_AGENT_OK` on thread `01a04352-e15f-7fc2-8586-9c2559bf9bc1`.
+
+I did not run the full cross-feature clippy/test suite, per your instruction to leave broad checks to the final linearizer. Changes are uncommitted.

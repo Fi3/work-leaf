@@ -1,0 +1,62 @@
+I’ll inspect the architecture and the existing prompt/command routing before touching code, then add a focused failing test around slash-prefixed backend commands.
+The documented boundary is `CommandChat` for command orchestration and `WorkLeafController` for UI routing. I’m tracing where slash-prefixed input is currently classified so the change stays in that path.
+There are already tests around slash commands in `tests/terminal_app.rs` and a Codex unit test for raw `/status` stdin. I need to verify whether the controller or remote HTTP path still treats these as Work Leaf commands instead of backend agent input.
+The local terminal path already has a narrow slash-command shortcut, but it depends on terminal input state. The orchestration layer itself still has no selected-agent-aware treatment for a prompt like `/status`, so I’m checking the HTTP/controller surfaces next.
+I found the command worker path: `WorkLeafController::execute_command_line` parses unknown text and then calls `CommandChat::handle_line`, which rejects unknown commands. There’s no selected-agent context there, so `/status` in the command prompt cannot currently become a backend send.
+The missing behavior appears to be the colon prompt path (`:/status`), where terminal selection exists locally but the line is still sent as a Work Leaf command. I’ll add a test that drives that path and expects the selected session to receive the raw slash command.
+I’m going to add the failing test in `tests/terminal_app.rs`, because it exercises the actual selected-agent UI state plus the controller send path without needing a real terminal process. Then I’ll make the smallest routing change.
+I’m adding the regression test first and running only that test name to confirm the current behavior fails before changing routing.
+The test will drive `Esc` then `:/status` from an already selected chat, which is the path a user reaches when they explicitly use the bottom prompt. That should currently produce an unknown command instead of a backend send.
+I’m editing only the focused terminal app test file to capture the missing prompt behavior.
+I’ve added the failing regression case. Next I’m running just that test to confirm it exposes the current gap.
+The regression fails as expected: `:/status` is still treated as a Work Leaf command. I’m routing prompt lines that match the agent slash-command shape through the currently selected chat session before falling back to command execution.
+The fix will live in `TerminalAppCore::handle_command_line`: when a prompt line is `/` plus a non-whitespace command token and a chat is selected, it uses the same `send_message` controller method as normal chat input. I’m mirroring that behavior in the UI harness so the automated terminal state tests cover it.
+The first patch missed the exact helper location in the file, so I’m reopening the small region and applying the same scoped change against the current code.
+I’m applying the terminal routing change now.
+I’m updating the harness fixture to follow the same rule for prompt-entered slash commands, then adding a harness test so this UI behavior is covered through the expected terminal test surface.
+The harness now records `:/status` as a selected agent message instead of a Work Leaf command. I’m adding the matching harness assertion.
+The focused code change is in place. I’m rerunning the new terminal app test plus the new harness test now.
+The new cases pass. I’m running the existing slash-command focused tests as a group next, including the fake spawned Codex coverage that checks raw `/status` reaches stdin unchanged.
+The focused slash tests are green. I’m going to run targeted rustfmt on the Rust files I touched, then rerun the focused tests if formatting changes anything.
+The diff is small and formatted close to rustfmt already; I’m running rustfmt just on the touched Rust files.
+Targeted rustfmt completed without output. I’m checking the resulting diff and rerunning the focused tests once more.
+I’m adding one narrow negative case for the explicit grammar: `/status` routes to the selected agent, while `/ status` remains a Work Leaf prompt command.
+The negative grammar tests are in. I’m formatting the touched files again and rerunning the slash-focused test groups.
+The prompt slash behavior and the whitespace guard are passing in the focused UI tests. I’m checking whether selection changes are already surfaced as UI actions, because keeping this in the controller may be cleaner if the app already reports selected-agent changes back.
+The focused slash subsets are green after formatting. I’m running the full `terminal_app` and `ui_harness` test targets now, since those are the surfaces touched.
+Both touched test targets are green. I’m checking the final worktree state, then I’ll attempt the required real Codex smoke check for agent-facing behavior and report exactly what happens.
+Only Rust source/test files are modified; no docs or prose files were touched. I’m running the bounded real Codex smoke check from the repo instructions now.
+The basic real Codex launch smoke succeeded and produced thread `01a04365-10db-7b50-b93b-904b795e9909`. I’m sending a raw `/status` resume to that real thread to verify the backend accepts the slash command as raw resumed input.
+The real Codex resume accepted raw `/status` and returned an idle/status-style response without modifying files. I’m doing a final diff review for file paths and line numbers before wrapping up.
+The final diff is limited to the terminal routing and tests. I’m running a whitespace check before the final report.
+I’m going one layer deeper: `WorkLeafController` can track the agent it selected when it launches sessions, so direct controller prompt execution can also route `/status` to that agent. I’m adding a focused controller regression before the controller change.
+I found the workspace test backend already records sends, so the controller test can directly assert the raw slash prompt reaches `user-1`.
+I’m adding controller-level positive and negative tests for the same slash-command grammar.
+The controller regression is added. I’m running the positive controller test before implementing the controller route, expecting it to fail.
+The controller test fails on the missing `user: /status` line. I’m adding controller-owned selected-agent tracking for controller-launched selections and routing prompt slash commands through `send_message` before command parsing.
+Controller selection tracking is in place; I’m adding the same small slash-command predicate to the controller module.
+I’m formatting the controller and test files, then rerunning the focused controller tests that just failed.
+The controller regression now passes. I’m running the full touched test targets again with `workspace` included.
+The full touched test targets are green. I’m doing the final whitespace/status check now.
+Implemented slash-command routing for selected agents.
+
+What changed:
+- [src/workspace.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/workspace.rs:125): `WorkLeafController::execute_command_line` now routes prompt lines like `/status` to the currently selected agent via `send_message`, before Work Leaf command parsing.
+- [src/terminal_app.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/terminal_app.rs:629): terminal prompt input uses the UI-selected agent for slash commands, so remote/local terminal behavior follows the visible selection.
+- [src/ui_harness.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/ui_harness.rs:151): harness mirrors the same behavior.
+- Added focused positive and negative tests for `/status` versus `/ status` in `workspace`, `terminal_app`, and `ui_harness`.
+
+Checks run:
+- Verified the new controller regression failed before the controller fix.
+- `cargo test --test workspace`
+- `cargo test --test terminal_app`
+- `cargo test --test ui_harness`
+- `cargo test slash_command_resume_invocation_uses_raw_command_stdin`
+- `git diff --check`
+- Targeted `rustfmt` on touched Rust files.
+
+Real-agent verification:
+- Ran the prescribed real Codex smoke check; it returned `WORK_LEAF_REAL_AGENT_OK`.
+- Resumed that real Codex thread with raw `/status`; Codex replied: `Idle. Previous request completed; no files were modified.`
+
+No docs/prose files were modified. Changes are left uncommitted.

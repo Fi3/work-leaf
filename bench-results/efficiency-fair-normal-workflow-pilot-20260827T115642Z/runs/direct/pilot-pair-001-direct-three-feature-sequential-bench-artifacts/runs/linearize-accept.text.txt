@@ -1,0 +1,54 @@
+Accepted. I’ll preserve the current provisional tip with a backup ref, rebuild the branch from the requested base by cherry-picking each reviewed request group without committing, add the deferred docs inside the matching group, then run the required checks and real-agent verification.
+The worktree is clean and the provisional tip is `298e0aa`. I’m creating a backup branch at that exact tip before moving the current branch back to `c92a0b7`.
+The current checkout is detached, so the rewrite will leave a detached three-commit history unless the surrounding harness attaches it later. I’m still saving `298e0aa` under a named backup ref first.
+Backup ref `linearizer-provisional-298e0aa` is in place. I’m rewinding the working history to the requested base and applying the first reviewed feature group without committing yet, so its documentation can be folded into the same final commit.
+Base reset succeeded. I’m cherry-picking feature 1 and its review fix into the index/worktree now.
+Feature 1 code and tests are staged in the working tree. I’m adding the terminal visual-yank documentation to `docs/architecture.md` before committing this slice.
+I’m updating only the terminal UI section for feature 1, describing the visual selection state as current behavior without change-log wording.
+The feature 1 docs are in place. I’m checking the staged/unstaged split, then I’ll stage the doc edit and create the first final commit.
+Only the doc edit is unstaged; the feature 1 code/tests are staged from the cherry-picks. I’m staging the doc file and committing the first final slice.
+Creating final commit 1 with the reviewed visual-yank behavior and matching terminal UI documentation.
+Final commit 1 is `662e114`. I’m applying the second reviewed feature group next, then I’ll fold in the prompt slash-routing docs before committing it.
+Feature 2 code/tests are applied. I’m updating `docs/architecture.md` to document the controller and terminal routing rule for slash-prefixed prompt input.
+I’m adding two current-state notes: one at the controller API level, and one at the terminal adapter level where prompt input is translated before reaching the controller.
+The feature 2 docs are added. I’m staging that doc edit and creating the second final commit.
+Feature 2 code/tests are staged and only the doc edit is unstaged. I’m staging the docs and committing the completed slice.
+Creating final commit 2 with selected-agent prompt slash routing and matching docs.
+Final commit 2 is `307da34`. I’m applying the third reviewed feature group, including both review-fix commits, then I’ll update the architecture and workflow docs in that same slice.
+Feature 3 code/tests are applied. I’m updating docs so the review lifecycle describes the patch-agent completion prompt rather than the old review-chat completion wording.
+I’m documenting the split of responsibilities for feature 3: the controller records clean-review completion and emits the prompt, while the terminal adapter handles the user-facing `yes/y` close and hidden-chat reopen behavior.
+The architecture doc is updated for feature 3. I’m updating the workflow doc sections that still describe the old post-`NO_FINDINGS` handoff.
+The workflow doc now reflects the feature-done prompt and terminal close/reopen path. I’m checking for stale wording, then I’ll stage docs and commit the third slice.
+No stale “mark review chat done” wording remains. Feature 3 code/tests are staged and the doc edits are the only unstaged changes, so I’m staging those docs and committing.
+Creating final commit 3 with the clean-review completion prompt, terminal close/reopen handling, repeated-prompt fixes, and workflow docs.
+The three final commits are created on top of `c92a0b7`. I’m verifying the rewritten history shape and that the code diff still matches the reviewed provisional tip, with only the planned docs added.
+History now has exactly the requested three commits. The only diff from the reviewed provisional tip is documentation, so I’m starting validation with formatting.
+The reviewed `src` and `tests` diff is byte-for-byte identical to the provisional tip, and `rev-list` reports exactly 3 commits after the base. I’m running `cargo fmt` now.
+`cargo fmt` completed without output. I’m checking whether it changed anything before moving to clippy.
+Formatting left the tree clean. I’m running the required clippy invocation with all targets and features.
+Clippy passed cleanly. I’m running the full required test suite now.
+The full required cargo suite passed. Because these changes affect terminal chat routing and review handoff, I’m running the repository-prescribed real Codex smoke check with a read-only prompt.
+The real Codex launch smoke returned `WORK_LEAF_REAL_AGENT_OK` and produced thread `01a0438c-a042-78d2-ac27-4b7c48053132`. I’m also doing a bounded raw resume follow-up because the rewritten features route terminal/controller input into agent sends.
+That resume attempt used the wrong option placement for this installed Codex CLI; it failed before contacting an agent. I’m checking the local help and rerunning with the supported resume syntax.
+This Codex version expects `--json` before the `resume` subcommand and does not accept `--color` there. I’m rerunning the resume smoke with the supported local syntax.
+The corrected real Codex resume smoke also returned the expected marker. I’m removing the temporary backup ref I created for safety, then I’ll do the final clean-history and clean-worktree checks.
+The temporary backup branch is gone. I’m checking that HEAD is exactly three commits past the base and that the worktree is clean.
+Linearization complete. HEAD is exactly 3 commits after `c92a0b7060a36eac6db2d869b85e589a7a9480f9`, and `git status --short` is clean.
+
+Final commits:
+
+1. `662e114 ADD terminal visual yanks so users can copy pane text`
+2. `307da34 ADD prompt slash routing so selected agents receive commands`
+3. `0c1472a ADD review completion prompts so users can close finished patch chats`
+
+Deferred docs were folded into the matching feature commits:
+- `docs/architecture.md`
+- `docs/orchestrator-file-workflow.md`
+
+Verification passed:
+
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+- Real Codex launch smoke returned `WORK_LEAF_REAL_AGENT_OK`
+- Real Codex resume smoke on thread `01a0438c-a042-78d2-ac27-4b7c48053132` returned `WORK_LEAF_REAL_AGENT_RESUME_OK`

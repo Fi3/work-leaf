@@ -1,10 +1,8 @@
 # Pilot State
 
-- Stage: frozen infrastructure ready for the real pilot.
-- Provider workflows launched: 0.
-- Completed Work Leaf runs: 0.
-- Completed direct runs: 0.
-- Local checks: root and observer format, Clippy, and test suites pass; scorer and shell tests pass.
-- Scorer sanity: current implementation 3/3; fixed base 1/3 because literal `/status` already works there.
-- Next action: run exactly one concurrent Work Leaf workflow and one direct sequential workflow together, then score both.
-- Stop condition: write the provisional result and wait for user review before any larger study.
+- Stage: provisional result ready
+- Provider workflows admitted: 2/2
+- Detail: Both saved outcomes were scored. Work Leaf exit 0; direct exit 1.
+- Supported token comparison: none; quality differs and both measurements violate the frozen profile
+- Next action: wait for user review of `PROVISIONAL-RESULT.md` before repairing the two measurement defects
+- Stop rule: The study stops after this provisional pilot. Steps 8 and 9 require user review and are not launched here.

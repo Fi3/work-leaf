@@ -1,0 +1,477 @@
+From 307da3452f9961ae85b66183246a8f3228005991 Mon Sep 17 00:00:00 2001
+From: Work Leaf Bench <bench@example.com>
+Date: Thu, 27 Aug 2026 16:06:01 +0200
+Subject: [PATCH 2/3] ADD prompt slash routing so selected agents receive
+ commands
+
+WorkLeafController remembers the selected session and routes slash-prefixed non-space command input through send_message when an agent is selected. The terminal adapter mirrors that selected-agent path while keeping slash-space input and command-row input on the Work Leaf command surface.
+---
+ docs/architecture.md  |  9 ++++-
+ src/terminal_app.rs   | 29 +++++++++++++++-
+ src/ui_harness.rs     | 18 ++++++++--
+ src/workspace.rs      | 33 +++++++++++++-----
+ tests/terminal_app.rs | 78 +++++++++++++++++++++++++++++++++++++++++
+ tests/ui_harness.rs   | 81 +++++++++++++++++++++++++++++++++++++++++++
+ tests/workspace.rs    | 58 +++++++++++++++++++++++++++++++
+ 7 files changed, 293 insertions(+), 13 deletions(-)
+
+diff --git a/docs/architecture.md b/docs/architecture.md
+index 48bb292..324ada6 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -215,6 +215,11 @@ lines and common natural-language requests for help, review, linearization, quit
+ one or more user agents. Multi-agent launch requests dispatch `new [prompt...]` once per requested
+ agent through the same controller paths used by command-mode input.
+ 
++The controller tracks the most recently selected agent session. `execute_command_line` treats a
++trimmed line that starts with `/` followed by a non-whitespace character as a selected-agent command
++when a selected session exists, and routes that text through `send_message` instead of the
++`command-agent` transcript. Slash followed by whitespace remains ordinary Work Leaf command input.
++
+ Frontend code should use these methods:
+ 
+ - `WorkLeafController::new` to wrap a `CommandChat<B>`.
+@@ -287,7 +292,9 @@ Bracketed-paste newlines and Shift+Enter are chat prompt line breaks. A plain En
+ buffered chat text.
+ When an agent chat is selected in command mode, `/` focuses the chat, seeds the chat buffer with
+ `/`, and enters insert mode so `/status`-style input submits through the same selected-agent chat
+-path.
++path. Prompt-mode command lines such as `/status` also submit to the selected agent. If the command
++row is selected, the same prompt text stays on the Work Leaf command surface and renders the unknown
++command diagnostic there.
+ 
+ Command mode supports terminal-local visual selection in both panes. `v` starts character selection,
+ `V` starts line selection, and Ctrl-V starts block selection from the focused pane row or chat cursor.
+diff --git a/src/terminal_app.rs b/src/terminal_app.rs
+index 5bdeb14..14a6a8f 100644
+--- a/src/terminal_app.rs
++++ b/src/terminal_app.rs
+@@ -4,7 +4,9 @@ use std::time::{Duration, Instant};
+ use rustyline::line_buffer::{ChangeListener, DeleteListener, Direction, LineBuffer};
+ 
+ use crate::agent::{AgentBackend, AgentId};
+-use crate::cli::{CommandChat, terminal_right_content, ui_action_text};
++use crate::cli::{
++    CliError, CommandChat, command_chat_error_text, terminal_right_content, ui_action_text,
++};
+ use crate::http_controller::HttpControllerClient;
+ use crate::ui::{AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode};
+ use crate::workspace::{
+@@ -627,6 +629,19 @@ where
+     }
+ 
+     fn handle_command_line(&mut self, line: &str) {
++        if is_agent_slash_command(line) {
++            if let Some(agent_id) = self.ui.selected_agent().cloned() {
++                self.controller.send_message(&agent_id, line);
++            } else {
++                self.controller
++                    .push_transcript_line(format!("work-leaf> {line}"));
++                self.controller
++                    .push_transcript_line(unknown_command_chat_command_text(line));
++            }
++            self.apply_controller_events();
++            return;
++        }
++
+         self.controller.execute_command_line(line);
+         self.apply_controller_events();
+     }
+@@ -1033,6 +1048,18 @@ fn parse_control_sequence(sequence: &[u8]) -> Option<TerminalAppInput> {
+     }
+ }
+ 
++fn is_agent_slash_command(line: &str) -> bool {
++    let mut chars = line.chars();
++    chars.next() == Some('/') && chars.next().is_some_and(|ch| !ch.is_whitespace())
++}
++
++fn unknown_command_chat_command_text(line: &str) -> String {
++    let command = line.split_whitespace().next().unwrap_or(line);
++    command_chat_error_text(&CliError::Usage(format!(
++        "unknown command chat command `{command}`"
++    )))
++}
++
+ fn parse_sgr_mouse_event(sequence: &[u8]) -> Option<UiKey> {
+     let final_byte = *sequence.last()?;
+     if !sequence.starts_with(b"[<") || !matches!(final_byte, b'M' | b'm') {
+diff --git a/src/ui_harness.rs b/src/ui_harness.rs
+index 4764fdd..f5c1508 100644
+--- a/src/ui_harness.rs
++++ b/src/ui_harness.rs
+@@ -157,8 +157,17 @@ impl UiHarness {
+                 self.ui.handle_key(UiKey::Esc);
+                 if !line.is_empty() {
+                     self.prompt_history.push(line.clone());
+-                    self.transcript.push(format!("work-leaf> {line}"));
+-                    self.execute_prompt(&line);
++                    if is_agent_slash_command(&line)
++                        && let Some(agent_id) = self.ui.selected_agent().cloned()
++                    {
++                        self.name_chat_from_first_prompt(&agent_id, &line);
++                        self.transcript.push(format!("{agent_id}> {line}"));
++                        self.transcript
++                            .push("fixture reply: message recorded".to_string());
++                    } else {
++                        self.transcript.push(format!("work-leaf> {line}"));
++                        self.execute_prompt(&line);
++                    }
+                 }
+             }
+             HarnessInput::Enter if self.ui.mode() == UiMode::Insert => {
+@@ -544,6 +553,11 @@ fn parse_key_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
+     }
+ }
+ 
++fn is_agent_slash_command(line: &str) -> bool {
++    let mut chars = line.chars();
++    chars.next() == Some('/') && chars.next().is_some_and(|ch| !ch.is_whitespace())
++}
++
+ fn parse_sgr_mouse_sequence(bytes: &[u8]) -> Option<(UiKey, usize)> {
+     if !bytes.starts_with(b"\x1b[<") {
+         return None;
+diff --git a/src/workspace.rs b/src/workspace.rs
+index 8fc3e6f..011b04a 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -26,6 +26,7 @@ where
+     workers: Vec<Worker>,
+     command_transcript: Vec<String>,
+     sessions: BTreeMap<AgentId, WorkLeafSession>,
++    selected_agent: Option<AgentId>,
+     title_agent: ChatTitleAgent,
+     pending_events: Vec<WorkLeafEvent>,
+     reviewers: BTreeSet<AgentId>,
+@@ -47,6 +48,7 @@ where
+             workers: Vec::new(),
+             command_transcript: vec![render_command_chat_help()],
+             sessions: BTreeMap::new(),
++            selected_agent: None,
+             title_agent: ChatTitleAgent::new(),
+             pending_events: Vec::new(),
+             reviewers: BTreeSet::new(),
+@@ -127,6 +129,14 @@ where
+         if trimmed.is_empty() {
+             return;
+         }
++        if is_agent_slash_command(trimmed)
++            && let Some(agent_id) = self.selected_agent.clone()
++        {
++            if let Err(error) = self.send_message(&agent_id, trimmed) {
++                self.append_agent_line(&agent_id, command_chat_error_text(&error));
++            }
++            return;
++        }
+         self.push_command_line(format!("work-leaf> {trimmed}"));
+         let parts = split_command_line(trimmed);
+         let Some(command) = parts.first().map(String::as_str) else {
+@@ -231,9 +241,7 @@ where
+             lines: Vec::new(),
+             loading: Some(WorkLeafLoading::Launching),
+         });
+-        self.pending_events.push(WorkLeafEvent::AgentSelected {
+-            agent_id: agent_id.clone(),
+-        });
++        self.select_agent(agent_id.clone());
+         if let Some(first_prompt) = title_prompt {
+             self.start_title_worker(agent_id.clone(), first_prompt);
+         }
+@@ -373,9 +381,7 @@ where
+                 });
+             }
+             if reviewer_ids.is_empty() {
+-                self.pending_events.push(WorkLeafEvent::AgentSelected {
+-                    agent_id: reviewer_id.clone(),
+-                });
++                self.select_agent(reviewer_id.clone());
+             }
+             self.review_commits_in_progress
+                 .insert(commit.agent_id.clone(), commit.hash.clone());
+@@ -409,9 +415,7 @@ where
+             lines: Vec::new(),
+             loading: Some(WorkLeafLoading::Launching),
+         });
+-        self.pending_events.push(WorkLeafEvent::AgentSelected {
+-            agent_id: agent_id.clone(),
+-        });
++        self.select_agent(agent_id.clone());
+         self.start_launch_worker(launch);
+         Ok(Some(agent_id))
+     }
+@@ -522,6 +526,12 @@ where
+             .push(WorkLeafEvent::AgentAdded { session });
+     }
+ 
++    fn select_agent(&mut self, agent_id: AgentId) {
++        self.selected_agent = Some(agent_id.clone());
++        self.pending_events
++            .push(WorkLeafEvent::AgentSelected { agent_id });
++    }
++
+     fn start_launch_worker(&mut self, launch: AgentLaunch) {
+         let agent_id = launch.id.clone();
+         self.set_session_loading(&agent_id, Some(WorkLeafLoading::Launching));
+@@ -848,6 +858,11 @@ fn contains_done_directive(text: &str) -> bool {
+         .any(|line| line.trim_start() == "@work-leaf done")
+ }
+ 
++fn is_agent_slash_command(line: &str) -> bool {
++    let mut chars = line.chars();
++    chars.next() == Some('/') && chars.next().is_some_and(|ch| !ch.is_whitespace())
++}
++
+ #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+ pub struct WorkLeafSnapshot {
+     pub command_transcript: Vec<String>,
+diff --git a/tests/terminal_app.rs b/tests/terminal_app.rs
+index 9243f84..1211d60 100644
+--- a/tests/terminal_app.rs
++++ b/tests/terminal_app.rs
+@@ -66,6 +66,84 @@ fn terminal_app_slash_command_from_chat_view_sends_agent_command() {
+     assert_eq!(sends[0].1, "/status");
+ }
+ 
++#[test]
++fn terminal_app_prompt_slash_command_sends_selected_agent_command() {
++    let backend = FakeBackend::new(["launch reply", "status reply"]);
++    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
++    let mut app = TerminalApp::new(chat, 100, 24);
++
++    app.handle_bytes(b":new status command\n");
++    app.wait_for_idle(Duration::from_secs(1));
++    app.handle_bytes(b"\x1b:/status\n");
++    app.wait_for_idle(Duration::from_secs(1));
++
++    assert!(app.render_frame().contains("user: /status"));
++    assert!(app.render_frame().contains("status reply"));
++    assert!(!app.render_frame().contains("unknown command chat command"));
++
++    let backend = app.into_chat().into_backend();
++    let sends = backend.sends();
++    assert_eq!(sends.len(), 1);
++    assert_eq!(sends[0].0.as_str(), "user-1");
++    assert_eq!(sends[0].1, "/status");
++}
++
++#[test]
++fn terminal_app_prompt_slash_space_stays_work_leaf_command() {
++    let backend = FakeBackend::new(["launch reply"]);
++    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
++    let mut app = TerminalApp::new(chat, 100, 24);
++
++    app.handle_bytes(b":new status command\n");
++    app.wait_for_idle(Duration::from_secs(1));
++    app.handle_bytes(b"\x1b:/ status\n");
++    app.wait_for_idle(Duration::from_secs(1));
++
++    assert!(
++        app.transcript()
++            .iter()
++            .any(|line| line == "work-leaf> / status")
++    );
++    assert!(
++        app.transcript()
++            .iter()
++            .any(|line| line.contains("unknown command chat command `/`"))
++    );
++
++    let backend = app.into_chat().into_backend();
++    assert!(backend.sends().is_empty());
++}
++
++#[test]
++fn terminal_app_prompt_slash_with_command_row_selected_does_not_use_stale_agent() {
++    let backend = FakeBackend::new(["launch reply"]);
++    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
++    let mut app = TerminalApp::new(chat, 100, 24);
++
++    app.handle_bytes(b":new status command\n");
++    app.wait_for_idle(Duration::from_secs(1));
++    app.handle_bytes(&[27, 23, b'h', b'k']);
++
++    assert!(app.ui().selected_agent().is_none());
++
++    app.handle_bytes(b":/status\n");
++    app.wait_for_idle(Duration::from_secs(1));
++
++    assert!(
++        app.transcript()
++            .iter()
++            .any(|line| line == "work-leaf> /status")
++    );
++    assert!(
++        app.transcript()
++            .iter()
++            .any(|line| line.contains("unknown command chat command `/status`"))
++    );
++
++    let backend = app.into_chat().into_backend();
++    assert!(backend.sends().is_empty());
++}
++
+ #[test]
+ fn terminal_app_sends_spawned_codex_slash_command_as_raw_command() {
+     let root = temp_dir("terminal-app-codex-slash-command");
+diff --git a/tests/ui_harness.rs b/tests/ui_harness.rs
+index 1f83c24..3f804b4 100644
+--- a/tests/ui_harness.rs
++++ b/tests/ui_harness.rs
+@@ -351,6 +351,87 @@ fn scripted_harness_slash_command_starts_agent_chat_command_from_chat_view() {
+     );
+ }
+ 
++#[test]
++fn scripted_harness_prompt_slash_command_sends_selected_agent_command() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_bytes(b":/status\n");
++
++    assert!(
++        harness
++            .transcript()
++            .iter()
++            .any(|line| line == "user-1> /status")
++    );
++    assert!(
++        harness
++            .transcript()
++            .iter()
++            .any(|line| line == "fixture reply: message recorded")
++    );
++    assert!(
++        !harness
++            .transcript()
++            .iter()
++            .any(|line| line == "work-leaf> /status")
++    );
++}
++
++#[test]
++fn scripted_harness_prompt_slash_space_stays_work_leaf_command() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_bytes(b":/ status\n");
++
++    assert!(
++        harness
++            .transcript()
++            .iter()
++            .any(|line| line == "work-leaf> / status")
++    );
++    assert!(
++        harness
++            .transcript()
++            .iter()
++            .any(|line| line == "unknown fixture command: / status")
++    );
++    assert!(
++        !harness
++            .transcript()
++            .iter()
++            .any(|line| line == "user-1> / status")
++    );
++}
++
++#[test]
++fn scripted_harness_prompt_slash_with_command_row_selected_stays_work_leaf_command() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_byte(b'k');
++    assert!(harness.ui().selected_agent().is_none());
++
++    harness.handle_bytes(b":/status\n");
++
++    assert!(
++        harness
++            .transcript()
++            .iter()
++            .any(|line| line == "work-leaf> /status")
++    );
++    assert!(
++        harness
++            .transcript()
++            .iter()
++            .any(|line| line == "unknown fixture command: /status")
++    );
++    assert!(
++        !harness
++            .transcript()
++            .iter()
++            .any(|line| line == "user-1> /status")
++    );
++}
++
+ #[test]
+ fn scripted_harness_mouse_wheel_scrolls_chat_history() {
+     let mut harness = UiHarness::new(80, 10);
+diff --git a/tests/workspace.rs b/tests/workspace.rs
+index 5724d95..b32fba9 100644
+--- a/tests/workspace.rs
++++ b/tests/workspace.rs
+@@ -45,6 +45,64 @@ fn controller_exposes_ui_neutral_events_and_snapshot_without_terminal_ui() {
+     assert!(session.lines.iter().any(|line| line == "follow reply"));
+ }
+ 
++#[test]
++fn controller_prompt_slash_command_sends_selected_agent_command() {
++    let backend = FakeBackend::new(["launch reply", "status reply"]);
++    let recorder = backend.clone();
++    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
++    let mut controller = WorkLeafController::new(chat);
++
++    let agent_id = controller.create_agent("status command").unwrap();
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    controller.execute_command_line("/status");
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    let snapshot = controller.snapshot();
++    let session = snapshot.session(&agent_id).expect("session exists");
++    assert!(session.lines.iter().any(|line| line == "user: /status"));
++    assert!(session.lines.iter().any(|line| line == "status reply"));
++    assert!(
++        !controller
++            .transcript()
++            .iter()
++            .any(|line| line.contains("unknown command chat command"))
++    );
++
++    let sends = recorder.sends();
++    assert_eq!(sends.len(), 1);
++    assert_eq!(sends[0].0, agent_id);
++    assert_eq!(sends[0].1, "/status");
++}
++
++#[test]
++fn controller_prompt_slash_space_stays_work_leaf_command() {
++    let backend = FakeBackend::new(["launch reply"]);
++    let recorder = backend.clone();
++    let chat = CommandChat::new(PathBuf::from("/repo"), backend);
++    let mut controller = WorkLeafController::new(chat);
++
++    controller.create_agent("status command").unwrap();
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    controller.execute_command_line("/ status");
++    assert!(controller.wait_for_idle(Duration::from_secs(1)));
++
++    assert!(
++        controller
++            .transcript()
++            .iter()
++            .any(|line| line == "work-leaf> / status")
++    );
++    assert!(
++        controller
++            .transcript()
++            .iter()
++            .any(|line| line.contains("unknown command chat command `/`"))
++    );
++    assert!(recorder.sends().is_empty());
++}
++
+ #[test]
+ fn controller_line_events_do_not_resend_full_session_transcripts() {
+     let backend = FakeBackend::new(["launch reply"]);

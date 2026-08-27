@@ -1,0 +1,20 @@
+You are a normal direct review agent. Do not modify files.
+
+Review only the changes for request 3 since commit 03c3dc765e26ca427d4fba9ba979d84708c0b781:
+when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it
+
+Inspect the repository and the diff from 03c3dc765e26ca427d4fba9ba979d84708c0b781..HEAD. Report only bugs, regressions, or missing
+tests for the changed behavior. Documentation and plain-text updates are deferred to the final
+linearizer. Do not treat missing documentation or plain-text updates as review findings.
+For agent-facing changes, missing required real-agent verification is a finding unless the author
+response includes the exact real-agent scenario and visible result, or the exact pre-agent blocker.
+
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

@@ -1,0 +1,47 @@
+You are a normal direct review agent. Do not modify files.
+
+Review only the changes for request 3 since commit 03c3dc765e26ca427d4fba9ba979d84708c0b781:
+when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it
+
+Inspect the repository and the diff from 03c3dc765e26ca427d4fba9ba979d84708c0b781..HEAD. Report only bugs, regressions, or missing
+tests for the changed behavior. Documentation and plain-text updates are deferred to the final
+linearizer. Do not treat missing documentation or plain-text updates as review findings.
+For agent-facing changes, missing required real-agent verification is a finding unless the author
+response includes the exact real-agent scenario and visible result, or the exact pre-agent blocker.
+
+Additional author response and verification evidence from the previous fix turn:
+I’ll address the remaining render-cache gap directly: the terminal cache should allow duplicate feature-done prompt lines just like the controller does. I’ll first strengthen the repeated-review terminal test so it fails when the second question is not visibly appended.
+I’m updating the repeated-review test to render a taller frame and count the visible completion questions before the second `yes`. That captures the UI-cache issue instead of only the state-machine close behavior.
+I’m running the strengthened test now; it should fail until the terminal cache allows this one duplicate line.
+The strengthened test fails exactly on the visible prompt count: the second prompt event re-arms state but is not appended to the render cache. I’m allowing duplicate cache insertion only for `FEATURE_DONE_PROMPT`, matching the controller policy.
+The cache policy fix is in place. I’m rerunning the repeated-review terminal test.
+The targeted regression is green. I’m formatting and running the affected terminal app test file plus focused Clippy.
+Formatting completed. I’m running the full terminal app test target now.
+The terminal app test target is green. I’m running focused Clippy for that target.
+Focused Clippy is clean. Because this is still terminal chat/review behavior, I’m running the bounded real Codex smoke check again.
+The real Codex smoke check succeeded. I’m doing final status and whitespace checks.
+Only `src/terminal_app.rs` and its test changed for this reviewer fix, with no whitespace issues. I’m grabbing the exact line references for the final note.
+Fixed the remaining render-cache issue.
+
+What changed:
+- [src/terminal_app.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/terminal_app.rs:806) now allows duplicate `FEATURE_DONE_PROMPT` lines into the terminal render cache, matching the controller behavior.
+- [tests/terminal_app.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/tests/terminal_app.rs:1156) now asserts that the second repeated-review prompt is visibly rendered before the second `yes`.
+
+Checks run:
+- `cargo fmt`
+- `cargo test --test terminal_app`
+- `cargo clippy --test terminal_app -- -D warnings`
+- `git diff --check`
+
+Real-agent verification: ran the bounded Codex smoke command again; Codex started thread `01a04382-1f18-7ad1-bb49-90adb5a3c7de` and returned `WORK_LEAF_REAL_AGENT_OK`.
+
+No docs or prose-only files were modified.
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

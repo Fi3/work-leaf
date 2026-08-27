@@ -1,0 +1,6 @@
+I’ll re-review the current tree, including the uncommitted fix the author described, against the original base commit. I’ll keep this limited to the slash-prompt behavior and the stated verification evidence.
+The working tree is clean and `HEAD` includes the follow-up fix. I’m reading the updated diff and the regression tests now.
+The stale-selection case is now handled in the terminal adapter before the controller sees a slash-shaped line. I’m checking the HTTP transcript path and the exact helper behavior to make sure the no-agent fallback is still visible in remote mode.
+The no-agent fallback pushes transcript lines through the same controller event path used elsewhere, including over HTTP. I’m doing a final whitespace/check scan and looking for any remaining changed behavior outside the requested path.
+The second commit is present in `HEAD`, the tree is clean, and `git diff --check` is clean. I don’t see remaining code or test issues in the request-specific diff.
+NO_FINDINGS

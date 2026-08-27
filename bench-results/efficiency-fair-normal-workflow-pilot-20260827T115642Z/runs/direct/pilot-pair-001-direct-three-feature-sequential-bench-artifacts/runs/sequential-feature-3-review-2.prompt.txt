@@ -1,0 +1,56 @@
+You are a normal direct review agent. Do not modify files.
+
+Review only the changes for request 3 since commit 03c3dc765e26ca427d4fba9ba979d84708c0b781:
+when review process is done the patch agent chat must be highlighted and ask is this feature done with yes/no; yes closes it, typing again reopens it
+
+Inspect the repository and the diff from 03c3dc765e26ca427d4fba9ba979d84708c0b781..HEAD. Report only bugs, regressions, or missing
+tests for the changed behavior. Documentation and plain-text updates are deferred to the final
+linearizer. Do not treat missing documentation or plain-text updates as review findings.
+For agent-facing changes, missing required real-agent verification is a finding unless the author
+response includes the exact real-agent scenario and visible result, or the exact pre-agent blocker.
+
+Additional author response and verification evidence from the previous fix turn:
+I’ll fix the duplicate prompt path the reviewer identified: the prompt needs to emit every time review completes for a patch agent, even when the transcript already contains the same question. I’ll add a focused repeated-review test first, then make the prompt append bypass the duplicate-line suppression only for this case.
+The repeated same-agent flow already has a controller fixture for multiple reviewed commits. I’m going to cover the bug at the terminal layer because the failure is specifically that the second `yes` would be sent to the agent instead of closing after local prompt state was cleared.
+I’m adding the regression test for two review completions from the same patch agent: first `yes` closes, typing reopens and submits another patch, then the second `yes` must close again and must not be sent to the backend.
+I’m running that new repeated-review test before the fix to confirm it reproduces the reviewer’s failure.
+The regression test fails as expected: the second `yes` leaves the patch row open because no second prompt event is emitted. I’m fixing that by letting only the feature-done prompt bypass the controller’s duplicate-line suppression.
+The duplicate bypass is in place for the completion prompt only. I’m rerunning the repeated-review regression test now.
+The terminal regression is green. I’m adding one controller-level assertion to the existing same-agent repeated-review fixture so the duplicate prompt emission is covered at the source as well.
+I’m running the controller repeated-review test now to verify the source-level prompt count.
+The source-level repeated-review assertion passes. I’m formatting, then rerunning the affected controller and terminal app test files plus focused Clippy.
+Formatting is clean; running the affected workspace test file.
+Workspace tests are green. I’m running the terminal app target where the repeated yes/no behavior is exercised.
+The terminal app target is green with the new repeated-review regression. I’m rerunning the UI harness and renderer targets because the close/reopen helper remains part of this feature.
+UI harness and renderer tests are green. I’m running focused Clippy now.
+Focused Clippy is clean. I’m running the required bounded real Codex smoke check again and will report the exact visible result.
+The real Codex smoke check succeeded with the requested exact response. I’m doing final diff/status checks now.
+The final status shows only the reviewer-fix files changed in this continuation: `src/workspace.rs`, `tests/terminal_app.rs`, and `tests/workspace.rs`. I’m grabbing line references for the close-out.
+Fixed the reviewer findings.
+
+Changes:
+- [src/workspace.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/src/workspace.rs:701) now emits the feature-done prompt through a duplicate-allowed append path, so repeated review completions for the same patch agent re-arm terminal yes/no handling.
+- [tests/terminal_app.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/tests/terminal_app.rs:1118) covers the repeated same-agent cycle: first `yes` closes, typing reopens, second review completes, and second `yes` closes without being sent to the agent.
+- [tests/workspace.rs](/tmp/work-leaf-fair-normal-pilot-runtime-ad016ca/direct/work-leaf-3feature-sequential-bench.Uzex9B/repo/tests/workspace.rs:656) asserts the controller records two prompt lines across two reviewed commits from the same agent.
+
+Checks run:
+- `cargo fmt`
+- `cargo test --test workspace`
+- `cargo test --test terminal_app`
+- `cargo test --test ui_harness`
+- `cargo test --test terminal_ui`
+- `cargo clippy --test workspace --test terminal_app --test ui_harness --test terminal_ui -- -D warnings`
+- `git diff --check`
+
+Real-agent verification: ran `printf 'Reply exactly with WORK_LEAF_REAL_AGENT_OK and do not modify files.\n' | codex --cd "$PWD" --sandbox read-only --ask-for-approval never exec --color never --json -`; Codex started thread `01a0437e-c482-7dd3-ba2d-a2eb48ed8857` and returned `WORK_LEAF_REAL_AGENT_OK`.
+
+No docs or prose-only files were modified.
+If the patch is acceptable, reply with a standalone first review marker:
+
+NO_FINDINGS
+
+If it is not acceptable, reply with:
+
+FINDINGS
+
+followed by concise bullets. Do not include unrelated pre-existing issues.

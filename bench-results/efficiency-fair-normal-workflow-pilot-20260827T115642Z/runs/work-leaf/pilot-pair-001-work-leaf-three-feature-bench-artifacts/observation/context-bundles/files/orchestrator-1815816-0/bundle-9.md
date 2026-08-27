@@ -1,0 +1,2073 @@
+# Work Leaf Context Bundle
+
+This file contains orchestrator-mediated read output. Use it as read-only context; submit project changes through `@work-leaf edit`.
+
+----- BEGIN FILE src/http_controller.rs -----
+digest: fnv64:dd2ce01ac0fab571; bytes:22497
+
+use std::fmt;
+use std::io::{self, BufRead, BufReader, Read, Write};
+use std::net::{TcpListener, TcpStream};
+use std::process;
+use std::sync::{
+    Arc, Mutex,
+    atomic::{AtomicBool, Ordering},
+};
+use std::thread;
+use std::time::{Duration, Instant};
+
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
+
+use crate::CommandChat;
+use crate::agent::{AgentBackend, AgentId, ReadPermission};
+use crate::cli::{ProcessCommand, codex_backend, parse_process_args, render_process_help};
+use crate::workspace::{WorkLeafController, WorkLeafEvent, WorkLeafLoading, WorkLeafSnapshot};
+
+#[derive(Clone, Debug)]
+pub struct HttpControllerClient {
+    base_url: String,
+    address: String,
+}
+
+impl HttpControllerClient {
+    pub fn connect(base_url: impl Into<String>) -> Result<Self, OrchestratorHttpError> {
+        let base_url = base_url.into();
+        let address = parse_http_address(&base_url)?;
+        let client = Self {
+            base_url: format!("http://{address}"),
+            address,
+        };
+        client.health()?;
+        Ok(client)
+    }
+
+    pub fn base_url(&self) -> &str {
+        &self.base_url
+    }
+
+    pub fn health(&self) -> Result<(), OrchestratorHttpError> {
+        let _: OkResponse = self.get("/health")?;
+        Ok(())
+    }
+
+    pub fn snapshot(&self) -> Result<WorkLeafSnapshot, OrchestratorHttpError> {
+        self.get("/snapshot")
+    }
+
+    pub fn drain_events(&self) -> Result<Vec<WorkLeafEvent>, OrchestratorHttpError> {
+        self.post("/events/drain", &EmptyRequest)
+    }
+
+    pub fn is_busy(&self) -> Result<bool, OrchestratorHttpError> {
+        let response: BusyResponse = self.get("/busy")?;
+        Ok(response.busy)
+    }
+
+    pub fn wait_for_idle(&mut self, timeout: Duration) -> Result<bool, OrchestratorHttpError> {
+        let start = Instant::now();
+        while start.elapsed() < timeout {
+            if !self.is_busy()? {
+                return Ok(true);
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        Ok(!self.is_busy()?)
+    }
+
+    pub fn execute_command_line(&mut self, line: &str) -> Result<(), OrchestratorHttpError> {
+        let _: OkResponse = self.post(
+            "/command",
+            &LineRequest {
+                line: line.to_string(),
+            },
+        )?;
+        Ok(())
+    }
+
+    pub fn send_command_agent_message(
+        &mut self,
+        message: &str,
+    ) -> Result<(), OrchestratorHttpError> {
+        let _: OkResponse = self.post(
+            "/command-agent",
+            &MessageRequest {
+                message: message.to_string(),
+            },
+        )?;
+        Ok(())
+    }
+
+    pub fn send_message(
+        &mut self,
+        agent_id: &AgentId,
+        message: &str,
+    ) -> Result<(), OrchestratorHttpError> {
+        let _: OkResponse = self.post(
+            "/agent/message",
+            &AgentMessageRequest {
+                agent_id: agent_id.clone(),
+                message: message.to_string(),
+            },
+        )?;
+        Ok(())
+    }
+
+    pub fn interrupt_agent(&mut self, agent_id: &AgentId) -> Result<(), OrchestratorHttpError> {
+        let _: OkResponse = self.post(
+            "/agent/interrupt",
+            &AgentRequest {
+                agent_id: agent_id.clone(),
+            },
+        )?;
+        Ok(())
+    }
+
+    pub fn push_transcript_line(&mut self, line: String) -> Result<(), OrchestratorHttpError> {
+        let _: OkResponse = self.post("/transcript", &LineRequest { line })?;
+        Ok(())
+    }
+
+    pub fn loading_text(&self, loading: WorkLeafLoading) -> Result<String, OrchestratorHttpError> {
+        let response: LoadingTextResponse =
+            self.post("/loading-text", &LoadingTextRequest { loading })?;
+        Ok(response.text)
+    }
+
+    pub fn shutdown(&mut self) -> Result<(), OrchestratorHttpError> {
+        let _: OkResponse = self.post("/shutdown", &EmptyRequest)?;
+        Ok(())
+    }
+
+    fn get<T>(&self, path: &str) -> Result<T, OrchestratorHttpError>
+    where
+        T: DeserializeOwned,
+    {
+        self.request::<EmptyRequest, T>("GET", path, None)
+    }
+
+    fn post<T, R>(&self, path: &str, body: &T) -> Result<R, OrchestratorHttpError>
+    where
+        T: Serialize,
+        R: DeserializeOwned,
+    {
+        self.request("POST", path, Some(body))
+    }
+
+    fn request<T, R>(
+        &self,
+        method: &str,
+        path: &str,
+        body: Option<&T>,
+    ) -> Result<R, OrchestratorHttpError>
+    where
+        T: Serialize,
+        R: DeserializeOwned,
+    {
+        let body = match body {
+            Some(body) => serde_json::to_vec(body)?,
+            None => Vec::new(),
+        };
+        let mut stream = TcpStream::connect(&self.address)?;
+        write!(
+            stream,
+            "{method} {path} HTTP/1.1\r\nHost: {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            self.address,
+            body.len()
+        )?;
+        stream.write_all(&body)?;
+        stream.flush()?;
+
+        let mut response = Vec::new();
+        stream.read_to_end(&mut response)?;
+        let (status, body) = parse_http_response(&response)?;
+        if !(200..300).contains(&status) {
+            let error = serde_json::from_slice::<ErrorResponse>(body)
+                .map(|response| response.error)
+                .unwrap_or_else(|_| String::from_utf8_lossy(body).to_string());
+            return Err(OrchestratorHttpError::Api(error));
+        }
+        Ok(serde_json::from_slice(body)?)
+    }
+}
+
+#[derive(Debug)]
+pub enum OrchestratorHttpError {
+    Io(io::Error),
+    Json(serde_json::Error),
+    Protocol(String),
+    Api(String),
+}
+
+impl fmt::Display for OrchestratorHttpError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Io(error) => write!(formatter, "{error}"),
+            Self::Json(error) => write!(formatter, "{error}"),
+            Self::Protocol(message) => write!(formatter, "{message}"),
+            Self::Api(message) => write!(formatter, "{message}"),
+        }
+    }
+}
+
+impl std::error::Error for OrchestratorHttpError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Io(error) => Some(error),
+            Self::Json(error) => Some(error),
+            Self::Protocol(_) | Self::Api(_) => None,
+        }
+    }
+}
+
+impl From<io::Error> for OrchestratorHttpError {
+    fn from(error: io::Error) -> Self {
+        Self::Io(error)
+    }
+}
+
+impl From<serde_json::Error> for OrchestratorHttpError {
+    fn from(error: serde_json::Error) -> Self {
+        Self::Json(error)
+    }
+}
+
+#[derive(Debug)]
+pub struct HttpControllerServer {
+    listener: TcpListener,
+}
+
+impl HttpControllerServer {
+    pub fn bind(address: &str) -> Result<Self, OrchestratorHttpError> {
+        let listener = TcpListener::bind(address)?;
+        listener.set_nonblocking(true)?;
+        Ok(Self { listener })
+    }
+
+    pub fn local_url(&self) -> Result<String, OrchestratorHttpError> {
+        Ok(format!("http://{}", self.listener.local_addr()?))
+    }
+
+    pub fn serve<B>(self, controller: WorkLeafController<B>) -> Result<(), OrchestratorHttpError>
+    where
+        B: AgentBackend + Clone + Send + 'static,
+    {
+        self.serve_with_parent(controller, None)
+    }
+
+    pub fn serve_with_parent<B>(
+        self,
+        controller: WorkLeafController<B>,
+        parent_pid: Option<u32>,
+    ) -> Result<(), OrchestratorHttpError>
+    where
+        B: AgentBackend + Clone + Send + 'static,
+    {
+        let controller = Arc::new(Mutex::new(controller));
+        let shutdown = Arc::new(AtomicBool::new(false));
+        while !shutdown.load(Ordering::SeqCst) {
+            if parent_pid.is_some_and(|pid| !process_is_alive(pid)) {
+                break;
+            }
+            match self.listener.accept() {
+                Ok((stream, _)) => {
+                    let controller = Arc::clone(&controller);
+                    let shutdown = Arc::clone(&shutdown);
+                    thread::spawn(move || {
+                        let _ = handle_connection(stream, controller, shutdown);
+                    });
+                }
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(error) => return Err(OrchestratorHttpError::Io(error)),
+            }
+        }
+        if let Ok(mut controller) = controller.lock() {
+            controller.shutdown();
+        }
+        Ok(())
+    }
+}
+
+pub fn run_orchestrator_from_env() -> ! {
+    let command = match parse_orchestrator_args(std::env::args()) {
+        Ok(command) => command,
+        Err(error) => {
+            eprintln!("{error}");
+            process::exit(2);
+        }
+    };
+
+    match command {
+        OrchestratorProcessCommand::Help => {
+            print!("{}", render_orchestrator_help());
+            process::exit(0);
+        }
+        OrchestratorProcessCommand::Launch(config) => {
+            if let Err(error) = run_orchestrator(config) {
+                eprintln!("{error}");
+                process::exit(1);
+            }
+            process::exit(0);
+        }
+    }
+}
+
+fn run_orchestrator(config: OrchestratorProcessConfig) -> Result<(), String> {
+    let project_dir = std::env::current_dir().map_err(|error| error.to_string())?;
+    let backend = codex_backend(project_dir.clone(), config.model, config.read_permission)
+        .map_err(|error| error.to_string())?;
+    let chat = CommandChat::new(project_dir, backend);
+    let controller = WorkLeafController::new(chat);
+    let server = HttpControllerServer::bind(&config.listen).map_err(|error| error.to_string())?;
+    println!(
+        "WORK_LEAF_ORCHESTRATOR_URL={}",
+        server.local_url().map_err(|error| error.to_string())?
+    );
+    io::stdout().flush().map_err(|error| error.to_string())?;
+    let parent_pid = std::env::var("WORK_LEAF_PARENT_PID")
+        .ok()
+        .and_then(|value| value.parse::<u32>().ok());
+    server
+        .serve_with_parent(controller, parent_pid)
+        .map_err(|error| error.to_string())
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct OrchestratorProcessConfig {
+    listen: String,
+    model: Option<String>,
+    read_permission: ReadPermission,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum OrchestratorProcessCommand {
+    Help,
+    Launch(OrchestratorProcessConfig),
+}
+
+fn parse_orchestrator_args<I, S>(args: I) -> Result<OrchestratorProcessCommand, crate::CliError>
+where
+    I: IntoIterator<Item = S>,
+    S: Into<String>,
+{
+    let mut args = args.into_iter().map(Into::into).collect::<Vec<_>>();
+    if args.first().is_some_and(|arg| {
+        arg.ends_with("work-leaf-orchestrator") || arg.ends_with("work-leaf-orchestrator.exe")
+    }) {
+        args.remove(0);
+    }
+
+    let mut listen = "127.0.0.1:7878".to_string();
+    let mut process_args = vec!["work-leaf".to_string()];
+    let mut index = 0;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--listen" => {
+                if index + 1 >= args.len() {
+                    return Err(crate::CliError::Usage(
+                        "--listen requires a value".to_string(),
+                    ));
+                }
+                listen = args[index + 1].clone();
+                index += 2;
+            }
+            other => {
+                process_args.push(other.to_string());
+                index += 1;
+            }
+        }
+    }
+
+    match parse_process_args(process_args)? {
+        ProcessCommand::Help => Ok(OrchestratorProcessCommand::Help),
+        ProcessCommand::Launch {
+            model,
+            read_permission,
+        } => Ok(OrchestratorProcessCommand::Launch(
+            OrchestratorProcessConfig {
+                listen,
+                model,
+                read_permission,
+            },
+        )),
+    }
+}
+
+fn render_orchestrator_help() -> String {
+    let mut help = render_process_help();
+    help.push_str("Daemon options:\n");
+    help.push_str("  --listen <addr>         bind the localhost HTTP API address\n");
+    help
+}
+
+fn handle_connection<B>(
+    mut stream: TcpStream,
+    controller: Arc<Mutex<WorkLeafController<B>>>,
+    shutdown: Arc<AtomicBool>,
+) -> Result<(), OrchestratorHttpError>
+where
+    B: AgentBackend + Clone + Send + 'static,
+{
+    let Some(request) = read_http_request(&mut stream)? else {
+        return Ok(());
+    };
+    let reply = route_request(request, controller, shutdown);
+    write_http_reply(&mut stream, reply)?;
+    Ok(())
+}
+
+fn route_request<B>(
+    request: HttpRequest,
+    controller: Arc<Mutex<WorkLeafController<B>>>,
+    shutdown: Arc<AtomicBool>,
+) -> HttpReply
+where
+    B: AgentBackend + Clone + Send + 'static,
+{
+    let path = request
+        .path
+        .split('?')
+        .next()
+        .unwrap_or(request.path.as_str());
+    match (request.method.as_str(), path) {
+        ("GET", "/health") => json_reply(200, &OkResponse { ok: true }),
+        ("GET", "/snapshot") => with_controller(&controller, |controller| controller.snapshot()),
+        ("POST", "/events/drain") => with_controller(&controller, WorkLeafController::drain_events),
+        ("GET", "/busy") => with_controller(&controller, |controller| BusyResponse {
+            busy: controller.is_busy(),
+        }),
+        ("POST", "/command") => {
+            let body = match decode_body::<LineRequest>(&request) {
+                Ok(body) => body,
+                Err(reply) => return reply,
+            };
+            with_controller(&controller, |controller| {
+                controller.execute_command_line(&body.line);
+                OkResponse { ok: true }
+            })
+        }
+        ("POST", "/command-agent") => {
+            let body = match decode_body::<MessageRequest>(&request) {
+                Ok(body) => body,
+                Err(reply) => return reply,
+            };
+            with_controller(&controller, |controller| {
+                controller.send_command_agent_message(&body.message);
+                OkResponse { ok: true }
+            })
+        }
+        ("POST", "/agent/message") => {
+            let body = match decode_body::<AgentMessageRequest>(&request) {
+                Ok(body) => body,
+                Err(reply) => return reply,
+            };
+            with_controller_result(&controller, |controller| {
+                controller
+                    .send_message(&body.agent_id, &body.message)
+                    .map(|()| OkResponse { ok: true })
+            })
+        }
+        ("POST", "/agent/interrupt") => {
+            let body = match decode_body::<AgentRequest>(&request) {
+                Ok(body) => body,
+                Err(reply) => return reply,
+            };
+            with_controller(&controller, |controller| {
+                controller.interrupt_agent(&body.agent_id);
+                OkResponse { ok: true }
+            })
+        }
+        ("POST", "/transcript") => {
+            let body = match decode_body::<LineRequest>(&request) {
+                Ok(body) => body,
+                Err(reply) => return reply,
+            };
+            with_controller(&controller, |controller| {
+                controller.push_transcript_line(body.line);
+                OkResponse { ok: true }
+            })
+        }
+        ("POST", "/loading-text") => {
+            let body = match decode_body::<LoadingTextRequest>(&request) {
+                Ok(body) => body,
+                Err(reply) => return reply,
+            };
+            with_controller(&controller, |controller| LoadingTextResponse {
+                text: controller.loading_text(body.loading),
+            })
+        }
+        ("POST", "/shutdown") => {
+            with_controller(&controller, WorkLeafController::shutdown);
+            shutdown.store(true, Ordering::SeqCst);
+            json_reply(200, &OkResponse { ok: true })
+        }
+        _ => error_reply(404, "not found"),
+    }
+}
+
+fn with_controller<B, T, F>(
+    controller: &Arc<Mutex<WorkLeafController<B>>>,
+    operation: F,
+) -> HttpReply
+where
+    B: AgentBackend + Clone + Send + 'static,
+    T: Serialize,
+    F: FnOnce(&mut WorkLeafController<B>) -> T,
+{
+    match controller.lock() {
+        Ok(mut controller) => json_reply(200, &operation(&mut controller)),
+        Err(_) => error_reply(500, "controller mutex poisoned"),
+    }
+}
+
+fn with_controller_result<B, T, F>(
+    controller: &Arc<Mutex<WorkLeafController<B>>>,
+    operation: F,
+) -> HttpReply
+where
+    B: AgentBackend + Clone + Send + 'static,
+    T: Serialize,
+    F: FnOnce(&mut WorkLeafController<B>) -> Result<T, crate::CliError>,
+{
+    match controller.lock() {
+        Ok(mut controller) => match operation(&mut controller) {
+            Ok(value) => json_reply(200, &value),
+            Err(error) => error_reply(400, &error.to_string()),
+        },
+        Err(_) => error_reply(500, "controller mutex poisoned"),
+    }
+}
+
+#[derive(Debug)]
+struct HttpRequest {
+    method: String,
+    path: String,
+    body: Vec<u8>,
+}
+
+#[derive(Debug)]
+struct HttpReply {
+    status: u16,
+    body: Vec<u8>,
+}
+
+#[derive(Deserialize, Serialize)]
+struct EmptyRequest;
+
+#[derive(Deserialize, Serialize)]
+struct OkResponse {
+    ok: bool,
+}
+
+#[derive(Deserialize, Serialize)]
+struct ErrorResponse {
+    error: String,
+}
+
+#[derive(Deserialize, Serialize)]
+struct BusyResponse {
+    busy: bool,
+}
+
+#[derive(Deserialize, Serialize)]
+struct LineRequest {
+    line: String,
+}
+
+#[derive(Deserialize, Serialize)]
+struct MessageRequest {
+    message: String,
+}
+
+#[derive(Deserialize, Serialize)]
+struct AgentRequest {
+    agent_id: AgentId,
+}
+
+#[derive(Deserialize, Serialize)]
+struct AgentMessageRequest {
+    agent_id: AgentId,
+    message: String,
+}
+
+#[derive(Deserialize, Serialize)]
+struct LoadingTextRequest {
+    loading: WorkLeafLoading,
+}
+
+#[derive(Deserialize, Serialize)]
+struct LoadingTextResponse {
+    text: String,
+}
+
+fn read_http_request(stream: &mut TcpStream) -> Result<Option<HttpRequest>, OrchestratorHttpError> {
+    let mut reader = BufReader::new(stream.try_clone()?);
+    let mut request_line = String::new();
+    if reader.read_line(&mut request_line)? == 0 {
+        return Ok(None);
+    }
+    let mut parts = request_line.split_whitespace();
+    let method = parts
+        .next()
+        .ok_or_else(|| OrchestratorHttpError::Protocol("missing HTTP method".to_string()))?
+        .to_string();
+    let path = parts
+        .next()
+        .ok_or_else(|| OrchestratorHttpError::Protocol("missing HTTP path".to_string()))?
+        .to_string();
+
+    let mut content_length = 0_usize;
+    loop {
+        let mut header = String::new();
+        if reader.read_line(&mut header)? == 0 {
+            break;
+        }
+        let header = header.trim_end_matches(['\r', '\n']);
+        if header.is_empty() {
+            break;
+        }
+        if let Some((name, value)) = header.split_once(':')
+            && name.eq_ignore_ascii_case("content-length")
+        {
+            content_length = value.trim().parse::<usize>().map_err(|_| {
+                OrchestratorHttpError::Protocol("invalid Content-Length".to_string())
+            })?;
+        }
+    }
+
+    let mut body = vec![0_u8; content_length];
+    if content_length > 0 {
+        reader.read_exact(&mut body)?;
+    }
+    Ok(Some(HttpRequest { method, path, body }))
+}
+
+fn decode_body<T>(request: &HttpRequest) -> Result<T, HttpReply>
+where
+    T: DeserializeOwned,
+{
+    serde_json::from_slice(&request.body).map_err(|error| error_reply(400, &error.to_string()))
+}
+
+fn write_http_reply(stream: &mut TcpStream, reply: HttpReply) -> Result<(), OrchestratorHttpError> {
+    let status_text = status_text(reply.status);
+    write!(
+        stream,
+        "HTTP/1.1 {} {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        reply.status,
+        status_text,
+        reply.body.len()
+    )?;
+    stream.write_all(&reply.body)?;
+    stream.flush()?;
+    Ok(())
+}
+
+fn json_reply<T>(status: u16, body: &T) -> HttpReply
+where
+    T: Serialize,
+{
+    match serde_json::to_vec(body) {
+        Ok(body) => HttpReply { status, body },
+        Err(error) => error_reply(500, &error.to_string()),
+    }
+}
+
+fn error_reply(status: u16, error: &str) -> HttpReply {
+    json_reply(
+        status,
+        &ErrorResponse {
+            error: error.to_string(),
+        },
+    )
+}
+
+fn status_text(status: u16) -> &'static str {
+    match status {
+        200 => "OK",
+        400 => "Bad Request",
+        404 => "Not Found",
+        500 => "Internal Server Error",
+        _ => "OK",
+    }
+}
+
+fn parse_http_response(response: &[u8]) -> Result<(u16, &[u8]), OrchestratorHttpError> {
+    let header_end = response
+        .windows(4)
+        .position(|window| window == b"\r\n\r\n")
+        .ok_or_else(|| OrchestratorHttpError::Protocol("missing HTTP response headers".into()))?;
+    let headers = std::str::from_utf8(&response[..header_end])
+        .map_err(|_| OrchestratorHttpError::Protocol("HTTP headers are not UTF-8".into()))?;
+    let status_line = headers
+        .lines()
+        .next()
+        .ok_or_else(|| OrchestratorHttpError::Protocol("missing HTTP status line".into()))?;
+    let status = status_line
+        .split_whitespace()
+        .nth(1)
+        .ok_or_else(|| OrchestratorHttpError::Protocol("missing HTTP status code".into()))?
+        .parse::<u16>()
+        .map_err(|_| OrchestratorHttpError::Protocol("invalid HTTP status code".into()))?;
+    Ok((status, &response[header_end + 4..]))
+}
+
+fn parse_http_address(base_url: &str) -> Result<String, OrchestratorHttpError> {
+    let trimmed = base_url.trim().trim_end_matches('/');
+    let address = trimmed.strip_prefix("http://").ok_or_else(|| {
+        OrchestratorHttpError::Protocol(
+            "orchestrator URL must start with http:// and point at localhost".to_string(),
+        )
+    })?;
+    if address.is_empty() || address.contains('/') {
+        return Err(OrchestratorHttpError::Protocol(
+            "orchestrator URL must not include a path".to_string(),
+        ));
+    }
+    if !address.starts_with("127.0.0.1:") && !address.starts_with("localhost:") {
+        return Err(OrchestratorHttpError::Protocol(
+            "orchestrator URL must use localhost".to_string(),
+        ));
+    }
+    Ok(address.to_string())
+}
+
+#[cfg(target_os = "linux")]
+fn process_is_alive(pid: u32) -> bool {
+    std::path::Path::new(&format!("/proc/{pid}")).exists()
+}
+
+#[cfg(not(target_os = "linux"))]
+fn process_is_alive(_pid: u32) -> bool {
+    true
+}
+----- END FILE src/http_controller.rs -----
+
+----- BEGIN FILE src/ui.rs -----
+digest: fnv64:9ee9f02c5bc43f7d; bytes:43323
+
+use std::{
+    cell::Cell,
+    path::PathBuf,
+    time::{Duration, Instant},
+};
+
+use crate::agent::AgentId;
+use tui::{
+    Terminal,
+    backend::TestBackend,
+    buffer::Buffer,
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Modifier, Style},
+    text::{Span, Spans},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+};
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum UiMode {
+    Command,
+    Insert,
+    Prompt,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PaneFocus {
+    Left,
+    Right,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum UiSurface {
+    WorkLeafCommand,
+    AgentChat,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum UiKey {
+    Char(char),
+    Esc,
+    CtrlW,
+    Up,
+    Down,
+    Left,
+    Right,
+    MouseClick { column: u16, row: u16 },
+    MouseScrollUp { column: u16, row: u16 },
+    MouseScrollDown { column: u16, row: u16 },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum UiAction {
+    OpenChatSamePane(AgentId),
+    OpenChatNewWindow(AgentId),
+    ForkAgent(AgentId),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TerminalLayout {
+    pub left_width: u16,
+    pub right_width: u16,
+    pub height: u16,
+    pub right_surface: Option<UiSurface>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AgentListEntry {
+    pub id: AgentId,
+    pub feature: String,
+    pub ready: bool,
+    pub hidden: bool,
+    pub modified_files: Vec<PathBuf>,
+    pub conflicting_agents: Vec<AgentId>,
+    pub depends_on: Vec<AgentId>,
+    pub depended_on_by: Vec<AgentId>,
+}
+
+impl AgentListEntry {
+    pub fn new(id: AgentId, feature: impl Into<String>) -> Self {
+        Self {
+            id,
+            feature: feature.into(),
+            ready: false,
+            hidden: false,
+            modified_files: Vec::new(),
+            conflicting_agents: Vec::new(),
+            depends_on: Vec::new(),
+            depended_on_by: Vec::new(),
+        }
+    }
+
+    pub fn with_ready(mut self, ready: bool) -> Self {
+        self.ready = ready;
+        self
+    }
+
+    pub fn with_hidden(mut self, hidden: bool) -> Self {
+        self.hidden = hidden;
+        self
+    }
+
+    pub fn with_modified_file(mut self, path: impl Into<PathBuf>) -> Self {
+        self.modified_files.push(path.into());
+        self
+    }
+
+    pub fn with_conflicting_agent(mut self, agent_id: AgentId) -> Self {
+        self.conflicting_agents.push(agent_id);
+        self
+    }
+
+    pub fn with_dependency(mut self, agent_id: AgentId) -> Self {
+        self.depends_on.push(agent_id);
+        self
+    }
+
+    pub fn with_dependent(mut self, agent_id: AgentId) -> Self {
+        self.depended_on_by.push(agent_id);
+        self
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PendingKey {
+    CtrlW,
+    G,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct StatusNotice {
+    message: String,
+    expires_at: Instant,
+}
+
+const STATUS_NOTICE_SECONDS: u64 = 5;
+const COMMAND_MODE_TYPING_NOTICE_THRESHOLD: usize = 5;
+const COMMAND_MODE_TYPING_NOTICE: &str = "command mode: press i for insert mode before typing";
+const CTRL_C_EXIT_NOTICE: &str = "to exit, press Esc then :q then Enter";
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum LeftPaneClickTarget {
+    Command,
+    Agent(AgentId),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct UiWindow {
+    surface: UiSurface,
+    agent_id: Option<AgentId>,
+}
+
+impl UiWindow {
+    fn command() -> Self {
+        Self {
+            surface: UiSurface::WorkLeafCommand,
+            agent_id: None,
+        }
+    }
+
+    fn chat(agent_id: AgentId) -> Self {
+        Self {
+            surface: UiSurface::AgentChat,
+            agent_id: Some(agent_id),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct PromptView {
+    line: String,
+    cursor_column: u16,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TerminalUi {
+    width: u16,
+    height: u16,
+    mode: UiMode,
+    focus: PaneFocus,
+    left_visible: bool,
+    agents: Vec<AgentListEntry>,
+    selected_agent: Option<AgentId>,
+    control_selected: usize,
+    split_chats: Vec<AgentId>,
+    windows: Vec<UiWindow>,
+    active_window: usize,
+    right_scroll_rows: usize,
+    pending: Option<PendingKey>,
+    pending_bell: Cell<bool>,
+    status_notice: Option<StatusNotice>,
+    command_mode_typing_count: usize,
+    command_mode_typing_controls_only: bool,
+}
+
+impl TerminalUi {
+    pub fn new(width: u16, height: u16) -> Self {
+        Self {
+            width,
+            height,
+            mode: UiMode::Command,
+            focus: PaneFocus::Left,
+            left_visible: true,
+            agents: Vec::new(),
+            selected_agent: None,
+            control_selected: 0,
+            split_chats: Vec::new(),
+            windows: vec![UiWindow::command()],
+            active_window: 0,
+            right_scroll_rows: 0,
+            pending: None,
+            pending_bell: Cell::new(false),
+            status_notice: None,
+            command_mode_typing_count: 0,
+            command_mode_typing_controls_only: true,
+        }
+    }
+
+    pub fn layout(&self) -> TerminalLayout {
+        let left_width = if self.left_visible { self.width / 5 } else { 0 };
+        let right_width = self.width.saturating_sub(left_width);
+        TerminalLayout {
+            left_width,
+            right_width,
+            height: self.height,
+            right_surface: Some(self.windows[self.active_window].surface),
+        }
+    }
+
+    pub fn mode(&self) -> UiMode {
+        self.mode
+    }
+
+    pub fn focus(&self) -> PaneFocus {
+        self.focus
+    }
+
+    pub(crate) fn show_ctrl_c_exit_notice(&mut self) {
+        self.show_status_notice(
+            CTRL_C_EXIT_NOTICE,
+            Duration::from_secs(STATUS_NOTICE_SECONDS),
+        );
+    }
+
+    pub(crate) fn has_status_notice(&self) -> bool {
+        self.status_notice.is_some()
+    }
+
+    pub(crate) fn clear_expired_status_notice(&mut self) {
+        if self.status_notice_expired() {
+            self.status_notice = None;
+        }
+    }
+
+    pub fn window_count(&self) -> usize {
+        self.windows.len()
+    }
+
+    pub fn active_window(&self) -> usize {
+        self.active_window
+    }
+
+    pub fn selected_agent(&self) -> Option<&AgentId> {
+        self.selected_agent.as_ref()
+    }
+
+    pub fn control_selected_row(&self) -> usize {
+        self.control_selected
+    }
+
+    pub fn add_agent(&mut self, agent: AgentListEntry) {
+        self.agents.push(agent);
+    }
+
+    pub(crate) fn set_agent_feature(
+        &mut self,
+        agent_id: &AgentId,
+        feature: impl Into<String>,
+    ) -> Result<(), String> {
+        let Some(agent) = self.agents.iter_mut().find(|agent| &agent.id == agent_id) else {
+            return Err(format!("unknown agent `{agent_id}`"));
+        };
+        agent.feature = feature.into();
+        Ok(())
+    }
+
+    pub(crate) fn set_agent_ready_state(
+        &mut self,
+        agent_id: &AgentId,
+        ready: bool,
+    ) -> Result<(), String> {
+        let Some(agent) = self.agents.iter_mut().find(|agent| &agent.id == agent_id) else {
+            return Err(format!("unknown agent `{agent_id}`"));
+        };
+        if ready && !agent.ready {
+            self.pending_bell.set(true);
+        }
+        agent.ready = ready;
+        Ok(())
+    }
+
+    pub fn select_agent(&mut self, agent_id: &AgentId) -> Result<(), String> {
+        if self.agents.iter().any(|agent| &agent.id == agent_id) {
+            self.selected_agent = Some(agent_id.clone());
+            self.windows[self.active_window] = UiWindow::chat(agent_id.clone());
+            self.control_selected = self
+                .visible_agent_indices()
+                .iter()
+                .position(|index| self.agents[*index].id == *agent_id)
+                .map(|position| position + 1)
+                .unwrap_or(self.control_selected);
+            self.reset_right_scroll();
+            Ok(())
+        } else {
+            Err(format!("unknown agent `{agent_id}`"))
+        }
+    }
+
+    pub fn activate_agent_chat(&mut self, agent_id: &AgentId) -> Result<(), String> {
+        self.select_agent(agent_id)?;
+        self.focus = PaneFocus::Right;
+        self.mode = UiMode::Insert;
+        Ok(())
+    }
+
+    pub fn select_command_interface(&mut self) {
+        self.selected_agent = None;
+        self.windows[self.active_window] = UiWindow::command();
+        self.control_selected = 0;
+        self.reset_right_scroll();
+    }
+
+    pub fn handle_key(&mut self, key: UiKey) -> Vec<UiAction> {
+        let command_mode_text_key = self.command_mode_text_key_control_status(key);
+        let actions = self.handle_key_inner(key);
+        self.update_command_mode_typing_notice(command_mode_text_key);
+        actions
+    }
+
+    fn handle_key_inner(&mut self, key: UiKey) -> Vec<UiAction> {
+        match key {
+            UiKey::MouseClick { column, row } => {
+                self.pending = None;
+                return self.handle_mouse_click(column, row);
+            }
+            UiKey::MouseScrollUp { column, row } => {
+                self.pending = None;
+                self.handle_mouse_scroll(column, row, true);
+                return Vec::new();
+            }
+            UiKey::MouseScrollDown { column, row } => {
+                self.pending = None;
+                self.handle_mouse_scroll(column, row, false);
+                return Vec::new();
+            }
+            _ => {}
+        }
+
+        if let Some(pending) = self.pending.take() {
+            return self.handle_pending_key(pending, key);
+        }
+
+        match key {
+            UiKey::Esc => {
+                self.mode = UiMode::Command;
+                Vec::new()
+            }
+            UiKey::CtrlW if self.mode == UiMode::Command => {
+                self.pending = Some(PendingKey::CtrlW);
+                Vec::new()
+            }
+            UiKey::Char('g') if self.mode == UiMode::Command => {
+                self.pending = Some(PendingKey::G);
+                Vec::new()
+            }
+            UiKey::Char('i') if self.mode == UiMode::Command => {
+                self.mode = UiMode::Insert;
+                Vec::new()
+            }
+            UiKey::Char(':') if self.mode == UiMode::Command => {
+                self.mode = UiMode::Prompt;
+                Vec::new()
+            }
+            UiKey::Char(',') if self.mode == UiMode::Command => {
+                self.left_visible = !self.left_visible;
+                self.focus = if self.left_visible {
+                    PaneFocus::Left
+                } else {
+                    PaneFocus::Right
+                };
+                Vec::new()
+            }
+            UiKey::Char('j') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(1);
+                self.select_control_row_surface();
+                Vec::new()
+            }
+            UiKey::Down if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(1);
+                self.select_control_row_surface();
+                Vec::new()
+            }
+            UiKey::Right if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(1);
+                self.select_control_row_surface();
+                Vec::new()
+            }
+            UiKey::Char('k') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(-1);
+                self.select_control_row_surface();
+                Vec::new()
+            }
+            UiKey::Up if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(-1);
+                self.select_control_row_surface();
+                Vec::new()
+            }
+            UiKey::Left if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.move_control_selection(-1);
+                self.select_control_row_surface();
+                Vec::new()
+            }
+            UiKey::Char('l') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.open_control_selection();
+                Vec::new()
+            }
+            UiKey::Char('x') if self.mode == UiMode::Command && self.focus == PaneFocus::Left => {
+                self.hide_control_selection();
+                Vec::new()
+            }
+            UiKey::Char('s') if self.mode == UiMode::Command => self.open_selected_same_pane(),
+            UiKey::Char('t') if self.mode == UiMode::Command => self.open_selected_new_window(),
+            UiKey::Char('f') if self.mode == UiMode::Command => self.fork_selected_agent(),
+            _ => Vec::new(),
+        }
+    }
+
+    pub fn render_left_pane(&self) -> String {
+        let mut rendered = String::new();
+        if self.control_selected == 0 {
+            rendered.push_str("> work-leaf  command\n");
+        } else {
+            rendered.push_str("  work-leaf  command\n");
+        }
+        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
+            let agent = &self.agents[*agent_index];
+            let mut row = String::new();
+            row.push(if self.control_selected == visible_position + 1 {
+                '>'
+            } else {
+                ' '
+            });
+            let (primary, secondary) = agent_list_labels(agent);
+            row.push_str(primary);
+            row.push(' ');
+            row.push_str(secondary);
+            row.push_str("  working: ");
+            row.push_str(&agent.feature);
+            if agent.ready {
+                row.push_str("  READY");
+                rendered.push_str("\u{1b}[7m");
+                rendered.push_str(&row);
+                rendered.push_str("\u{1b}[0m");
+            } else {
+                rendered.push_str(&row);
+            }
+            rendered.push('\n');
+            if !agent.modified_files.is_empty() {
+                rendered.push_str("    ");
+                rendered.push_str("files: ");
+                rendered.push_str(
+                    &agent
+                        .modified_files
+                        .iter()
+                        .map(|path| path.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                );
+                rendered.push('\n');
+            }
+            self.render_agent_links("conflicts", &agent.conflicting_agents, &mut rendered);
+            self.render_agent_links("depends-on", &agent.depends_on, &mut rendered);
+            self.render_agent_links("depended-on-by", &agent.depended_on_by, &mut rendered);
+        }
+        rendered
+    }
+
+    pub fn render_screen(&self, right_content: &str) -> String {
+        self.render_screen_with_prompt(right_content, "")
+    }
+
+    pub fn render_screen_with_prompt(&self, right_content: &str, prompt: &str) -> String {
+        let visible_right_content = self.visible_right_content(right_content);
+        let prompt_cursor = prompt.len();
+        let buffer = self.render_tui_buffer(&visible_right_content, prompt, prompt_cursor);
+        let mut rendered = String::new();
+        rendered.push_str(self.bell_prefix());
+        rendered.push_str("\u{1b}[H");
+        rendered.push_str(&buffer_to_string(&buffer));
+        rendered.push_str(&self.cursor_sequence(&visible_right_content, prompt));
+        rendered
+    }
+
+    pub fn render_screen_with_cursors(
+        &self,
+        right_content: &str,
+        prompt: &str,
+        prompt_cursor: usize,
+        right_cursor_column: Option<usize>,
+    ) -> String {
+        let visible_right_content = self.visible_right_content(right_content);
+        let buffer = self.render_tui_buffer(&visible_right_content, prompt, prompt_cursor);
+        let mut rendered = String::new();
+        rendered.push_str(self.bell_prefix());
+        rendered.push_str("\u{1b}[H");
+        rendered.push_str(&buffer_to_string(&buffer));
+        rendered.push_str(&self.cursor_sequence_with_cursors(
+            &visible_right_content,
+            prompt,
+            prompt_cursor,
+            right_cursor_column,
+        ));
+        rendered
+    }
+
+    pub fn scroll_right_pane_up(&mut self) {
+        self.right_scroll_rows = self.right_scroll_rows.saturating_add(3);
+    }
+
+    pub fn scroll_right_pane_down(&mut self) {
+        self.right_scroll_rows = self.right_scroll_rows.saturating_sub(3);
+    }
+
+    pub fn reset_right_scroll(&mut self) {
+        self.right_scroll_rows = 0;
+    }
+
+    fn visible_right_content(&self, right_content: &str) -> String {
+        let (inner_width, inner_height) = self.right_inner_size();
+        visible_content(
+            right_content,
+            inner_width,
+            inner_height,
+            self.right_scroll_rows,
+        )
+    }
+
+    fn render_tui_buffer(&self, right_content: &str, prompt: &str, prompt_cursor: usize) -> Buffer {
+        let backend = TestBackend::new(self.width, self.height);
+        let mut terminal = Terminal::new(backend).expect("test backend is valid");
+        terminal
+            .draw(|frame| {
+                let area = frame.size();
+                let body_height = area.height.saturating_sub(1);
+                let body = Rect::new(area.x, area.y, area.width, body_height);
+                let bottom = Rect::new(area.x, body_height, area.width, 1);
+                let layout = self.layout();
+                let panes = if layout.left_width > 0 {
+                    Layout::default()
+                        .direction(Direction::Horizontal)
+                        .constraints([
+                            Constraint::Length(layout.left_width),
+                            Constraint::Length(layout.right_width),
+                        ])
+                        .split(body)
+                } else {
+                    vec![body]
+                };
+
+                if layout.left_width > 0 {
+                    frame.render_widget(self.left_widget(), panes[0]);
+                    frame.render_widget(self.right_widget(right_content), panes[1]);
+                } else {
+                    frame.render_widget(self.right_widget(right_content), panes[0]);
+                }
+                frame.render_widget(
+                    Paragraph::new(self.bottom_line(prompt, prompt_cursor)),
+                    bottom,
+                );
+            })
+            .expect("test backend draw succeeds");
+        terminal.backend().buffer().clone()
+    }
+
+    fn left_widget(&self) -> List<'static> {
+        let inner_width = usize::from(self.layout().left_width.saturating_sub(2).max(1));
+        let mut items = vec![ListItem::new(if self.control_selected == 0 {
+            Spans::from(vec![Span::raw("> work-leaf  command")])
+        } else {
+            Spans::from(vec![Span::raw("  work-leaf  command")])
+        })];
+        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
+            let agent = &self.agents[*agent_index];
+            let selected = self.control_selected == visible_position + 1;
+            let item = ListItem::new(Spans::from(vec![Span::raw(compact_agent_row(
+                agent,
+                selected,
+                inner_width,
+            ))]));
+            let item = if agent.ready {
+                item.style(Style::default().add_modifier(Modifier::REVERSED))
+            } else {
+                item
+            };
+            items.push(item);
+            if !agent.modified_files.is_empty() {
+                items.push(ListItem::new(Spans::from(vec![Span::raw(format!(
+                    "    files: {}",
+                    agent
+                        .modified_files
+                        .iter()
+                        .map(|path| path.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ))])));
+            }
+            for (label, agents) in [
+                ("conflicts", &agent.conflicting_agents),
+                ("depends-on", &agent.depends_on),
+                ("depended-on-by", &agent.depended_on_by),
+            ] {
+                if !agents.is_empty() {
+                    items.push(ListItem::new(Spans::from(vec![Span::raw(format!(
+                        "    {label}: {}",
+                        agents
+                            .iter()
+                            .map(AgentId::as_str)
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ))])));
+                }
+            }
+        }
+        List::new(items).block(Block::default().title("work-leaf").borders(Borders::ALL))
+    }
+
+    fn right_widget(&self, right_content: &str) -> Paragraph<'static> {
+        let title = match self.windows[self.active_window].surface {
+            UiSurface::WorkLeafCommand => "command",
+            UiSurface::AgentChat => "chat",
+        };
+        Paragraph::new(right_content.to_string())
+            .block(Block::default().title(title).borders(Borders::ALL))
+            .wrap(Wrap { trim: false })
+    }
+
+    fn bottom_line(&self, prompt: &str, prompt_cursor: usize) -> String {
+        if self.mode == UiMode::Prompt {
+            self.prompt_view(prompt, prompt_cursor).line
+        } else {
+            self.render_status_line()
+        }
+    }
+
+    fn cursor_sequence(&self, right_content: &str, prompt: &str) -> String {
+        self.cursor_sequence_with_cursors(right_content, prompt, prompt.len(), None)
+    }
+
+    fn cursor_sequence_with_cursors(
+        &self,
+        right_content: &str,
+        prompt: &str,
+        prompt_cursor: usize,
+        right_cursor_column: Option<usize>,
+    ) -> String {
+        let (row, column) = if self.mode == UiMode::Prompt {
+            (
+                self.height,
+                self.prompt_view(prompt, prompt_cursor).cursor_column,
+            )
+        } else {
+            match self.focus {
+                PaneFocus::Left => (self.control_cursor_row(), 2),
+                PaneFocus::Right => {
+                    self.right_cursor_position_with_cursor(right_content, right_cursor_column)
+                }
+            }
+        };
+        let row = row.clamp(1, self.height.max(1));
+        let column = column.clamp(1, self.width.max(1));
+        format!("\u{1b}[{row};{column}H")
+    }
+
+    fn prompt_view(&self, prompt: &str, prompt_cursor: usize) -> PromptView {
+        let width = usize::from(self.width.max(1));
+        let input_width = width.saturating_sub(1);
+        let max_cursor_offset = width.saturating_sub(2);
+        let cursor_chars = cursor_char_count(prompt, prompt_cursor);
+        let start = cursor_chars.saturating_sub(max_cursor_offset);
+        let visible_prompt = prompt
+            .chars()
+            .skip(start)
+            .take(input_width)
+            .collect::<String>();
+        let cursor_offset = cursor_chars.saturating_sub(start).min(max_cursor_offset);
+        let cursor_column = if self.width <= 1 {
+            1
+        } else {
+            cursor_offset.saturating_add(2).min(width) as u16
+        };
+        PromptView {
+            line: format!(":{visible_prompt}"),
+            cursor_column,
+        }
+    }
+
+    fn bell_prefix(&self) -> &'static str {
+        if self.pending_bell.replace(false) {
+            "\u{7}"
+        } else {
+            ""
+        }
+    }
+
+    fn handle_pending_key(&mut self, pending: PendingKey, key: UiKey) -> Vec<UiAction> {
+        match (pending, key) {
+            (PendingKey::CtrlW, UiKey::Char('h')) if self.mode == UiMode::Command => {
+                if self.left_visible {
+                    self.focus = PaneFocus::Left;
+                }
+                Vec::new()
+            }
+            (PendingKey::CtrlW, UiKey::Char('k')) if self.mode == UiMode::Command => {
+                if self.left_visible {
+                    self.focus = PaneFocus::Left;
+                }
+                Vec::new()
+            }
+            (PendingKey::CtrlW, UiKey::Char('l')) if self.mode == UiMode::Command => {
+                self.focus = PaneFocus::Right;
+                self.mode = UiMode::Command;
+                Vec::new()
+            }
+            (PendingKey::CtrlW, UiKey::Char('j')) if self.mode == UiMode::Command => {
+                self.focus = PaneFocus::Right;
+                self.mode = UiMode::Command;
+                Vec::new()
+            }
+            (PendingKey::G, UiKey::Char('t')) if self.mode == UiMode::Command => {
+                self.next_window();
+                Vec::new()
+            }
+            (PendingKey::G, UiKey::Char('T')) if self.mode == UiMode::Command => {
+                self.previous_window();
+                Vec::new()
+            }
+            _ => Vec::new(),
+        }
+    }
+
+    fn command_mode_text_key_control_status(&self, key: UiKey) -> Option<bool> {
+        if self.mode != UiMode::Command || self.pending.is_some() {
+            return None;
+        }
+        let UiKey::Char(ch) = key else {
+            return None;
+        };
+        (ch.is_ascii_alphanumeric() || ch == ' ').then(|| self.is_command_control_char(ch))
+    }
+
+    fn is_command_control_char(&self, ch: char) -> bool {
+        matches!(ch, 'i' | ':' | ',' | 's' | 't' | 'f' | 'g')
+            || (self.focus == PaneFocus::Left && matches!(ch, 'j' | 'k' | 'l' | 'x'))
+    }
+
+    fn update_command_mode_typing_notice(&mut self, command_mode_text_key_control: Option<bool>) {
+        if let Some(command_mode_text_key_control) = command_mode_text_key_control
+            && self.mode == UiMode::Command
+            && self.pending.is_none()
+        {
+            self.command_mode_typing_count = self.command_mode_typing_count.saturating_add(1);
+            self.command_mode_typing_controls_only &= command_mode_text_key_control;
+            if self.command_mode_typing_count >= COMMAND_MODE_TYPING_NOTICE_THRESHOLD {
+                if !self.command_mode_typing_controls_only {
+                    self.show_status_notice(
+                        COMMAND_MODE_TYPING_NOTICE,
+                        Duration::from_secs(STATUS_NOTICE_SECONDS),
+                    );
+                }
+                self.command_mode_typing_count = 0;
+                self.command_mode_typing_controls_only = true;
+            }
+        } else {
+            self.command_mode_typing_count = 0;
+            self.command_mode_typing_controls_only = true;
+        }
+    }
+
+    fn show_status_notice(&mut self, message: impl Into<String>, duration: Duration) {
+        self.status_notice = Some(StatusNotice {
+            message: message.into(),
+            expires_at: Instant::now() + duration,
+        });
+    }
+
+    fn active_status_notice(&self) -> Option<&str> {
+        self.status_notice
+            .as_ref()
+            .filter(|notice| Instant::now() < notice.expires_at)
+            .map(|notice| notice.message.as_str())
+    }
+
+    fn status_notice_expired(&self) -> bool {
+        self.status_notice
+            .as_ref()
+            .is_some_and(|notice| Instant::now() >= notice.expires_at)
+    }
+
+    fn open_selected_same_pane(&mut self) -> Vec<UiAction> {
+        let Some(agent_id) = self.action_agent_id() else {
+            return Vec::new();
+        };
+        self.split_chats.push(agent_id.clone());
+        vec![UiAction::OpenChatSamePane(agent_id)]
+    }
+
+    fn open_selected_new_window(&mut self) -> Vec<UiAction> {
+        let Some(agent_id) = self.action_agent_id() else {
+            return Vec::new();
+        };
+        self.windows.push(UiWindow::chat(agent_id.clone()));
+        self.active_window = self.windows.len() - 1;
+        vec![UiAction::OpenChatNewWindow(agent_id)]
+    }
+
+    fn fork_selected_agent(&self) -> Vec<UiAction> {
+        self.action_agent_id()
+            .map(UiAction::ForkAgent)
+            .into_iter()
+            .collect()
+    }
+
+    fn open_control_selection(&mut self) {
+        if self.control_selected == 0 {
+            self.select_command_interface();
+            self.focus = PaneFocus::Right;
+            return;
+        }
+        if let Some(agent_id) = self.control_selected_agent_id() {
+            let _ = self.select_agent(&agent_id);
+            self.focus = PaneFocus::Right;
+        }
+    }
+
+    fn select_control_row_surface(&mut self) {
+        if self.control_selected == 0 {
+            self.select_command_interface();
+            self.focus = PaneFocus::Left;
+            return;
+        }
+        if let Some(agent_id) = self.control_selected_agent_id() {
+            let _ = self.select_agent(&agent_id);
+            self.focus = PaneFocus::Left;
+        }
+    }
+
+    fn handle_mouse_click(&mut self, column: u16, row: u16) -> Vec<UiAction> {
+        if column == 0 || row == 0 {
+            return Vec::new();
+        }
+
+        let left_width = self.layout().left_width;
+
+        if self.left_visible && column <= left_width {
+            self.mode = UiMode::Command;
+            self.focus = PaneFocus::Left;
+            let Some(target) = self.left_pane_click_target(row) else {
+                return Vec::new();
+            };
+            match target {
+                LeftPaneClickTarget::Command => {
+                    self.select_command_interface();
+                    self.focus = PaneFocus::Right;
+                }
+                LeftPaneClickTarget::Agent(agent_id) => {
+                    let _ = self.activate_agent_chat(&agent_id);
+                }
+            }
+        } else {
+            self.focus = PaneFocus::Right;
+            self.mode = if self.selected_agent.is_some()
+                && self.windows[self.active_window].surface == UiSurface::AgentChat
+            {
+                UiMode::Insert
+            } else {
+                UiMode::Command
+            };
+        }
+
+        Vec::new()
+    }
+
+    fn handle_mouse_scroll(&mut self, column: u16, row: u16, up: bool) {
+        if column == 0 || row == 0 || row >= self.height {
+            return;
+        }
+
+        let left_width = self.layout().left_width;
+        if self.left_visible && column <= left_width {
+            return;
+        }
+
+        if up {
+            self.scroll_right_pane_up();
+        } else {
+            self.scroll_right_pane_down();
+        }
+    }
+
+    fn hide_control_selection(&mut self) {
+        if self.control_selected == 0 {
+            return;
+        }
+        let Some(agent_index) = self.control_selected_agent_index() else {
+            return;
+        };
+        let hidden_agent = self.agents[agent_index].id.clone();
+        self.agents[agent_index].hidden = true;
+        let hidden_was_selected = self
+            .selected_agent
+            .as_ref()
+            .is_some_and(|selected| selected == &hidden_agent);
+        self.clamp_control_selection();
+        if hidden_was_selected {
+            self.select_control_row_surface();
+        }
+    }
+
+    fn move_control_selection(&mut self, delta: isize) {
+        let max_row = self.visible_agent_indices().len();
+        let current = self.control_selected as isize;
+        let next = (current + delta).clamp(0, max_row as isize);
+        self.control_selected = next as usize;
+    }
+
+    fn clamp_control_selection(&mut self) {
+        let max_row = self.visible_agent_indices().len();
+        if self.control_selected > max_row {
+            self.control_selected = max_row;
+        }
+    }
+
+    fn visible_agent_indices(&self) -> Vec<usize> {
+        self.agents
+            .iter()
+            .enumerate()
+            .filter_map(|(index, agent)| (!agent.hidden).then_some(index))
+            .collect()
+    }
+
+    fn control_selected_agent_index(&self) -> Option<usize> {
+        if self.control_selected == 0 {
+            return None;
+        }
+        self.visible_agent_indices()
+            .get(self.control_selected - 1)
+            .copied()
+    }
+
+    fn control_selected_agent_id(&self) -> Option<AgentId> {
+        self.control_selected_agent_index()
+            .map(|index| self.agents[index].id.clone())
+    }
+
+    fn left_pane_click_target(&mut self, row: u16) -> Option<LeftPaneClickTarget> {
+        let list_row = usize::from(row.saturating_sub(2));
+        if row < 2 {
+            return None;
+        }
+        if list_row == 0 {
+            self.control_selected = 0;
+            return Some(LeftPaneClickTarget::Command);
+        }
+
+        let mut current_row = 1;
+        for (visible_position, agent_index) in self.visible_agent_indices().iter().enumerate() {
+            let agent = &self.agents[*agent_index];
+            if list_row == current_row {
+                self.control_selected = visible_position + 1;
+                return Some(LeftPaneClickTarget::Agent(agent.id.clone()));
+            }
+            current_row += 1;
+
+            if !agent.modified_files.is_empty() {
+                if list_row == current_row {
+                    self.control_selected = visible_position + 1;
+                    return Some(LeftPaneClickTarget::Agent(agent.id.clone()));
+                }
+                current_row += 1;
+            }
+
+            for linked_agents in [
+                &agent.conflicting_agents,
+                &agent.depends_on,
+                &agent.depended_on_by,
+            ] {
+                if !linked_agents.is_empty() {
+                    if list_row == current_row {
+                        self.control_selected = visible_position + 1;
+                        return linked_agents
+                            .first()
+                            .cloned()
+                            .map(LeftPaneClickTarget::Agent);
+                    }
+                    current_row += 1;
+                }
+            }
+        }
+
+        None
+    }
+
+    fn action_agent_id(&self) -> Option<AgentId> {
+        self.control_selected_agent_id()
+            .or_else(|| self.selected_agent.clone())
+    }
+
+    fn control_cursor_row(&self) -> u16 {
+        (self.control_selected + 2).min(usize::from(u16::MAX)) as u16
+    }
+
+    fn right_cursor_position_with_cursor(
+        &self,
+        right_content: &str,
+        cursor_column: Option<usize>,
+    ) -> (u16, u16) {
+        let layout = self.layout();
+        let inner_width = layout.right_width.saturating_sub(2).max(1);
+        let lines = right_content.lines().collect::<Vec<_>>();
+        let Some(line) = lines.last().copied() else {
+            return (2, layout.left_width.saturating_add(2));
+        };
+        if !line.starts_with("chat> ") {
+            return (2, layout.left_width.saturating_add(2));
+        }
+        let previous_rows = lines[..lines.len() - 1]
+            .iter()
+            .map(|line| visual_rows(line, inner_width))
+            .sum::<u16>();
+        let line_chars = line.chars().count();
+        let line_len = cursor_column
+            .unwrap_or(line_chars)
+            .min(line_chars)
+            .min(usize::from(u16::MAX)) as u16;
+        let row = 2_u16
+            .saturating_add(previous_rows)
+            .saturating_add(line_len / inner_width);
+        let column = layout
+            .left_width
+            .saturating_add(2)
+            .saturating_add(line_len % inner_width);
+        (row, column)
+    }
+    fn right_inner_size(&self) -> (u16, u16) {
+        let layout = self.layout();
+        let inner_width = layout.right_width.saturating_sub(2).max(1);
+        let body_height = self.height.saturating_sub(1);
+        let inner_height = body_height.saturating_sub(2).max(1);
+        (inner_width, inner_height)
+    }
+
+    fn next_window(&mut self) {
+        if !self.windows.is_empty() {
+            self.active_window = (self.active_window + 1) % self.windows.len();
+        }
+    }
+
+    fn previous_window(&mut self) {
+        if !self.windows.is_empty() {
+            self.active_window = if self.active_window == 0 {
+                self.windows.len() - 1
+            } else {
+                self.active_window - 1
+            };
+        }
+    }
+
+    fn render_agent_links(&self, label: &str, agents: &[AgentId], rendered: &mut String) {
+        if agents.is_empty() {
+            return;
+        }
+        rendered.push_str("    ");
+        rendered.push_str(label);
+        rendered.push_str(": ");
+        for (index, agent_id) in agents.iter().enumerate() {
+            if index > 0 {
+                rendered.push_str(", ");
+            }
+            rendered.push_str(agent_id.as_str());
+        }
+        rendered.push('\n');
+    }
+
+    fn render_status_line(&self) -> String {
+        if let Some(notice) = self.active_status_notice() {
+            return notice.to_string();
+        }
+
+        format!(
+            "mode={} focus={} window={}/{}",
+            self.mode.as_str(),
+            self.focus.as_str(),
+            self.active_window + 1,
+            self.windows.len()
+        )
+    }
+}
+
+impl UiMode {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Command => "command",
+            Self::Insert => "insert",
+            Self::Prompt => "prompt",
+        }
+    }
+}
+
+impl PaneFocus {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Left => "left",
+            Self::Right => "right",
+        }
+    }
+}
+
+fn agent_list_labels(agent: &AgentListEntry) -> (&str, &str) {
+    if agent.id.as_str().starts_with("review-") {
+        (agent.id.as_str(), &agent.feature)
+    } else {
+        (&agent.feature, agent.id.as_str())
+    }
+}
+
+fn compact_agent_row(agent: &AgentListEntry, selected: bool, width: usize) -> String {
+    let prefix = if selected { ">" } else { " " };
+    let status = if agent.ready { " READY" } else { "" };
+    let id = agent.id.as_str();
+    let width = width.max(1);
+
+    let row = if id.starts_with("review-") {
+        compact_fixed_first(prefix, id, &agent.feature, status, width)
+    } else {
+        compact_fixed_last(prefix, &agent.feature, id, status, width)
+    };
+    truncate_to_width(&row, width)
+}
+
+fn compact_fixed_first(
+    prefix: &str,
+    fixed: &str,
+    flexible: &str,
+    status: &str,
+    width: usize,
+) -> String {
+    let fixed_width = prefix.chars().count() + fixed.chars().count() + status.chars().count();
+    if fixed_width >= width {
+        return format!("{prefix}{fixed}{status}");
+    }
+
+    let flexible_width = width.saturating_sub(fixed_width + 1);
+    format!(
+        "{prefix}{fixed} {}{status}",
+        truncate_to_width(flexible, flexible_width)
+    )
+}
+
+fn compact_fixed_last(
+    prefix: &str,
+    flexible: &str,
+    fixed: &str,
+    status: &str,
+    width: usize,
+) -> String {
+    let fixed_width = prefix.chars().count() + 1 + fixed.chars().count() + status.chars().count();
+    if fixed_width >= width {
+        return format!("{prefix}{fixed}{status}");
+    }
+
+    let flexible_width = width.saturating_sub(fixed_width);
+    format!(
+        "{prefix}{} {fixed}{status}",
+        truncate_to_width(flexible, flexible_width)
+    )
+}
+
+fn truncate_to_width(text: &str, width: usize) -> String {
+    text.chars().take(width).collect()
+}
+
+fn buffer_to_string(buffer: &Buffer) -> String {
+    const ANSI_REVERSE_VIDEO: &str = "\u{1b}[7m";
+    const ANSI_RESET: &str = "\u{1b}[0m";
+    let mut output = String::new();
+    for y in 0..buffer.area.height {
+        let mut reversed = false;
+        for x in 0..buffer.area.width {
+            let cell = buffer.get(x, y);
+            let cell_reversed = cell.modifier.contains(Modifier::REVERSED);
+            if cell_reversed != reversed {
+                output.push_str(if cell_reversed {
+                    ANSI_REVERSE_VIDEO
+                } else {
+                    ANSI_RESET
+                });
+                reversed = cell_reversed;
+            }
+            output.push_str(&cell.symbol);
+        }
+        if reversed {
+            output.push_str(ANSI_RESET);
+        }
+        if y + 1 < buffer.area.height {
+            output.push_str("\r\n");
+        }
+    }
+    output
+}
+
+fn visual_rows(line: &str, width: u16) -> u16 {
+    visual_row_count(line, width).min(usize::from(u16::MAX)) as u16
+}
+
+fn visual_row_count(line: &str, width: u16) -> usize {
+    let width = usize::from(width.max(1));
+    let len = line.chars().count().min(usize::from(u16::MAX));
+    (len / width).saturating_add(1)
+}
+
+fn cursor_char_count(text: &str, cursor: usize) -> usize {
+    text.char_indices()
+        .take_while(|(index, _)| *index < cursor)
+        .count()
+}
+
+fn visible_content(content: &str, width: u16, height: u16, scroll_rows: usize) -> String {
+    let height = usize::from(height);
+    let Some((history, prompt)) = split_chat_prompt(content) else {
+        return tail_visible_content(content, width, height, scroll_rows);
+    };
+
+    let prompt_rows = visual_row_count(prompt, width);
+    let history_height = height.saturating_sub(prompt_rows).max(1);
+    let visible_history = tail_visible_content(history, width, history_height, scroll_rows);
+    if visible_history.is_empty() {
+        prompt.to_string()
+    } else {
+        format!("{visible_history}\n{prompt}")
+    }
+}
+
+fn split_chat_prompt(content: &str) -> Option<(&str, &str)> {
+    let (history, prompt) = content.rsplit_once('\n')?;
+    prompt.starts_with("chat> ").then_some((history, prompt))
+}
+
+fn tail_visible_content(content: &str, width: u16, height: usize, scroll_rows: usize) -> String {
+    if content.is_empty() || height == 0 {
+        return String::new();
+    }
+
+    let lines = content.lines().collect::<Vec<_>>();
+    let rows_to_skip = scroll_rows.min(
+        lines
+            .iter()
+            .map(|line| visual_row_count(line, width))
+            .sum::<usize>()
+            .saturating_sub(height),
+    );
+    let mut visible = Vec::new();
+    let mut skipped_rows = 0_usize;
+    let mut used_rows = 0_usize;
+    for line in lines.iter().rev() {
+        let rows = visual_row_count(line, width);
+        if skipped_rows.saturating_add(rows) <= rows_to_skip {
+            skipped_rows = skipped_rows.saturating_add(rows);
+            continue;
+        }
+        if visible.is_empty() || used_rows.saturating_add(rows) <= height {
+            visible.push(*line);
+            used_rows = used_rows.saturating_add(rows);
+        } else {
+            break;
+        }
+    }
+    visible.reverse();
+    visible.join("\n")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn setting_agent_ready_queues_one_bell_for_next_render() {
+        let mut ui = TerminalUi::new(80, 24);
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        ui.add_agent(AgentListEntry::new(agent_id.clone(), "parser"));
+
+        ui.set_agent_ready_state(&agent_id, true)
+            .expect("test agent is registered");
+
+        assert!(ui.render_screen("reply").starts_with('\u{7}'));
+        assert!(!ui.render_screen("reply").contains('\u{7}'));
+    }
+
+    #[test]
+    fn ready_agent_row_is_reversed_across_the_tui_left_pane() {
+        let mut ui = TerminalUi::new(100, 24);
+        let agent_id = AgentId::new("user-1").expect("test agent id is valid");
+        ui.add_agent(AgentListEntry::new(agent_id, "parser").with_ready(true));
+
+        let buffer = ui.render_tui_buffer("reply", "", 0);
+        let left_width = ui.layout().left_width;
+
+        for column in 1..left_width.saturating_sub(1) {
+            assert!(
+                buffer.get(column, 2).modifier.contains(Modifier::REVERSED),
+                "column {column} on the ready agent row should be reversed"
+            );
+        }
+    }
+}
+----- END FILE src/ui.rs -----

@@ -1,0 +1,56 @@
+
+running 30 tests
+test scripted_harness_arrow_keys_recall_chat_history ... ok
+test scripted_harness_arrow_keys_move_left_pane_selection_like_j_k ... ok
+test scripted_harness_arrow_keys_edit_focused_chat_without_switching_to_command ... ok
+test scripted_harness_bytewise_arrow_keys_edit_focused_chat_without_switching_to_command ... ok
+test scripted_harness_chat_history_down_restores_in_progress_message ... ok
+test scripted_harness_bytewise_prompt_arrow_keys_edit_without_leaving_prompt ... ok
+test scripted_harness_ctrl_c_never_quits_and_only_right_focus_interrupts_agent ... ok
+test scripted_harness_insert_mode_records_chat_text_and_literal_colons ... ok
+test scripted_harness_left_right_arrows_move_left_pane_selection_like_j_k ... ok
+test scripted_harness_names_new_chat_from_first_inserted_prompt ... ok
+test scripted_harness_quits_only_through_colon_q ... ok
+test scripted_harness_prompt_history_down_restores_in_progress_prompt ... ok
+test scripted_harness_prompt_arrow_keys_recall_prompt_history ... ok
+test scripted_harness_prompt_slash_command_routes_to_selected_agent ... ok
+test scripted_harness_slash_command_starts_agent_chat_command_from_chat_view ... ok
+test scripted_harness_long_prompt_arrows_keep_rendered_cursor_at_edit_position ... ok
+test scripted_harness_left_pane_navigation_does_not_show_typing_notice ... ok
+test scripted_harness_command_mode_typing_shows_insert_mode_notice ... ok
+test scripted_harness_bytewise_arrow_prefix_keeps_focused_chat_in_insert_mode ... ok
+test scripted_harness_ctrl_c_shows_quit_notice ... ok
+test scripted_harness_new_commands_select_new_agent_chat ... ok
+test scripted_harness_renders_full_width_crlf_frame ... ok
+test scripted_harness_structural_command_keys_do_not_show_typing_notice ... ok
+test scripted_harness_feature_done_prompt_closes_and_reopens_chat ... ok
+test scripted_harness_mouse_wheel_scrolls_chat_history ... ok
+test scripted_harness_insert_arrow_keys_move_visible_chat_cursor ... ok
+test scripted_harness_drives_ctrl_w_navigation_and_left_toggle ... ok
+test scripted_harness_switches_modes_without_enter ... ok
+test scripted_harness_prompt_arrow_keys_move_visible_cursor ... ok
+test scripted_harness_rings_and_highlights_ready_chat ... ok
+
+test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 16 tests
+test controller_line_events_do_not_resend_full_session_transcripts ... ok
+test controller_uses_backend_agent_to_name_chat_from_first_prompt ... ok
+test controller_exposes_ui_neutral_events_and_snapshot_without_terminal_ui ... ok
+test controller_keeps_agent_loading_scoped_to_the_active_session ... ok
+test controller_status_events_do_not_resend_existing_large_transcripts ... ok
+test controller_does_not_run_project_required_checks_after_agent_reply ... ok
+test controller_does_not_start_review_until_patch_agent_reports_done ... ok
+test controller_uses_agent_profile_for_non_codex_launches_and_reviews ... ok
+test controller_starts_review_after_patch_agent_done_and_loops_until_clean ... ok
+test controller_review_prompt_covers_all_agent_commits_since_launch ... ok
+test controller_auto_review_ignores_historical_agents_outside_current_patch_agent ... ok
+test controller_yes_closes_reviewed_feature_and_later_chat_reopens_it ... ok
+test controller_linearize_uses_only_commits_reviewed_in_this_session ... ok
+test controller_reuses_one_reviewer_for_repeated_patch_agent_iterations ... ok
+test controller_reviews_only_unreviewed_patch_agent_commits ... ok
+test controller_linearize_keeps_multiple_reviewed_commits_from_same_agent ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+

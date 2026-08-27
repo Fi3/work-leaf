@@ -1,0 +1,4 @@
+I’ll re-check the current HEAD against the same base, specifically the terminal cache change and the strengthened repeated-review assertion.
+The second fix commit is on top. I’m reading the full diff and the specific render-cache hunk before deciding whether any behavior gaps remain.
+The direct repeated prompt path is covered now. I’m checking one more cache-consistency path: remote/in-process adapters initialize from a full snapshot and then apply queued append events, so the prompt-specific duplicate exception can affect startup from an already-populated controller.
+NO_FINDINGS
