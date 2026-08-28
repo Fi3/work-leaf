@@ -1,0 +1,810 @@
+{
+  "schema_version": 2,
+  "run_id": "point7-exact-wl-000",
+  "condition": "work-leaf",
+  "capture_complete": false,
+  "invocation_count": 8,
+  "complete_invocation_count": 8,
+  "passthrough_invocation_count": 0,
+  "threads": [
+    {
+      "thread_id": "01a04842-cbf0-7c43-a668-00461615bf57",
+      "invocation_id": "00002568025344723695-3776231",
+      "primary": true,
+      "visible": true,
+      "agent_id": "user-1",
+      "role": null,
+      "usage": {
+        "input_tokens": 954518,
+        "cached_input_tokens": 812416,
+        "output_tokens": 54937,
+        "reasoning_output_tokens": 26013
+      }
+    },
+    {
+      "thread_id": "01a04842-da7c-7132-94ca-e8cb4adc390c",
+      "invocation_id": "00002568025344723695-3776231",
+      "primary": true,
+      "visible": true,
+      "agent_id": "user-2",
+      "role": null,
+      "usage": {
+        "input_tokens": 837296,
+        "cached_input_tokens": 706944,
+        "output_tokens": 11985,
+        "reasoning_output_tokens": 5476
+      }
+    },
+    {
+      "thread_id": "01a04842-ee3a-7e01-b7b5-b704762b1d97",
+      "invocation_id": "00002568025344723695-3776231",
+      "primary": true,
+      "visible": true,
+      "agent_id": "user-3",
+      "role": null,
+      "usage": {
+        "input_tokens": 5724837,
+        "cached_input_tokens": 5394688,
+        "output_tokens": 69295,
+        "reasoning_output_tokens": 50263
+      }
+    },
+    {
+      "thread_id": "01a04846-ce00-7281-9638-aa51772485d1",
+      "invocation_id": "00002568025344723695-3776231",
+      "primary": true,
+      "visible": false,
+      "agent_id": "title-agent",
+      "role": null,
+      "usage": {
+        "input_tokens": 56918,
+        "cached_input_tokens": 55424,
+        "output_tokens": 410,
+        "reasoning_output_tokens": 374
+      }
+    },
+    {
+      "thread_id": "01a04846-ce0e-7c32-a689-ec7dbeb87673",
+      "invocation_id": "00002568025344723695-3776231",
+      "primary": true,
+      "visible": true,
+      "agent_id": "review-user-2",
+      "role": null,
+      "usage": {
+        "input_tokens": 24199,
+        "cached_input_tokens": 9600,
+        "output_tokens": 4318,
+        "reasoning_output_tokens": 4172
+      }
+    },
+    {
+      "thread_id": "01a0484b-e69a-7e23-8640-a7ce7c4b4f33",
+      "invocation_id": "00002568025344723695-3776231",
+      "primary": true,
+      "visible": true,
+      "agent_id": "review-user-3",
+      "role": null,
+      "usage": {
+        "input_tokens": 1502269,
+        "cached_input_tokens": 1359232,
+        "output_tokens": 27295,
+        "reasoning_output_tokens": 22388
+      }
+    },
+    {
+      "thread_id": "01a04852-674e-7c73-991b-50da763a4d20",
+      "invocation_id": "00002568025344723695-3776231",
+      "primary": true,
+      "visible": true,
+      "agent_id": "review-user-1",
+      "role": null,
+      "usage": {
+        "input_tokens": 48500,
+        "cached_input_tokens": 17792,
+        "output_tokens": 13193,
+        "reasoning_output_tokens": 12959
+      }
+    }
+  ],
+  "session_only_threads": [],
+  "model_strata": [
+    {
+      "model": "gpt-5.5",
+      "effort": "xhigh",
+      "thread_count": 7,
+      "primary_threads": 7,
+      "visible_threads": 6,
+      "descendant_threads": 0,
+      "usage": {
+        "input_tokens": 9148537,
+        "cached_input_tokens": 8356096,
+        "output_tokens": 181433,
+        "reasoning_output_tokens": 121645
+      }
+    }
+  ],
+  "usage_scopes": {
+    "visible_role": {
+      "thread_count": 6,
+      "input_tokens": 9091619,
+      "cached_input_tokens": 8300672,
+      "uncached_input_tokens": 790947,
+      "output_tokens": 181023,
+      "reasoning_output_tokens": 121271,
+      "raw_input_plus_output": 9272642,
+      "uncached_input_plus_output": 971970
+    },
+    "primary_condition": {
+      "thread_count": 7,
+      "input_tokens": 9148537,
+      "cached_input_tokens": 8356096,
+      "uncached_input_tokens": 792441,
+      "output_tokens": 181433,
+      "reasoning_output_tokens": 121645,
+      "raw_input_plus_output": 9329970,
+      "uncached_input_plus_output": 973874
+    },
+    "total_workflow": {
+      "thread_count": 7,
+      "input_tokens": 9148537,
+      "cached_input_tokens": 8356096,
+      "uncached_input_tokens": 792441,
+      "output_tokens": 181433,
+      "reasoning_output_tokens": 121645,
+      "raw_input_plus_output": 9329970,
+      "uncached_input_plus_output": 973874
+    }
+  },
+  "controller_usage_reconciliation": [
+    {
+      "agent_id": "review-user-1",
+      "provider_thread_ids": [
+        "01a04852-674e-7c73-991b-50da763a4d20"
+      ],
+      "controller_streamed_usage": null,
+      "replayed_streamed_usage": null,
+      "provider_largest_cumulative_usage": {
+        "input_tokens": 48500,
+        "cached_input_tokens": 17792,
+        "output_tokens": 13193,
+        "reasoning_output_tokens": 12959
+      },
+      "controller_matches_replay": false
+    },
+    {
+      "agent_id": "review-user-2",
+      "provider_thread_ids": [
+        "01a04846-ce0e-7c32-a689-ec7dbeb87673"
+      ],
+      "controller_streamed_usage": null,
+      "replayed_streamed_usage": null,
+      "provider_largest_cumulative_usage": {
+        "input_tokens": 24199,
+        "cached_input_tokens": 9600,
+        "output_tokens": 4318,
+        "reasoning_output_tokens": 4172
+      },
+      "controller_matches_replay": false
+    },
+    {
+      "agent_id": "review-user-3",
+      "provider_thread_ids": [
+        "01a0484b-e69a-7e23-8640-a7ce7c4b4f33"
+      ],
+      "controller_streamed_usage": {
+        "input_tokens": 1399118,
+        "cached_input_tokens": 1318528,
+        "output_tokens": 26485,
+        "reasoning_output_tokens": 21641
+      },
+      "replayed_streamed_usage": {
+        "input_tokens": 1399118,
+        "cached_input_tokens": 1318528,
+        "output_tokens": 26485,
+        "reasoning_output_tokens": 21641
+      },
+      "provider_largest_cumulative_usage": {
+        "input_tokens": 1502269,
+        "cached_input_tokens": 1359232,
+        "output_tokens": 27295,
+        "reasoning_output_tokens": 22388
+      },
+      "controller_matches_replay": true
+    },
+    {
+      "agent_id": "user-1",
+      "provider_thread_ids": [
+        "01a04842-cbf0-7c43-a668-00461615bf57"
+      ],
+      "controller_streamed_usage": {
+        "input_tokens": 461682,
+        "cached_input_tokens": 358144,
+        "output_tokens": 7288,
+        "reasoning_output_tokens": 4388
+      },
+      "replayed_streamed_usage": {
+        "input_tokens": 461682,
+        "cached_input_tokens": 358144,
+        "output_tokens": 7288,
+        "reasoning_output_tokens": 4388
+      },
+      "provider_largest_cumulative_usage": {
+        "input_tokens": 954518,
+        "cached_input_tokens": 812416,
+        "output_tokens": 54937,
+        "reasoning_output_tokens": 26013
+      },
+      "controller_matches_replay": true
+    },
+    {
+      "agent_id": "user-2",
+      "provider_thread_ids": [
+        "01a04842-da7c-7132-94ca-e8cb4adc390c"
+      ],
+      "controller_streamed_usage": {
+        "input_tokens": 567337,
+        "cached_input_tokens": 484864,
+        "output_tokens": 7049,
+        "reasoning_output_tokens": 2375
+      },
+      "replayed_streamed_usage": {
+        "input_tokens": 567337,
+        "cached_input_tokens": 484864,
+        "output_tokens": 7049,
+        "reasoning_output_tokens": 2375
+      },
+      "provider_largest_cumulative_usage": {
+        "input_tokens": 837296,
+        "cached_input_tokens": 706944,
+        "output_tokens": 11985,
+        "reasoning_output_tokens": 5476
+      },
+      "controller_matches_replay": true
+    },
+    {
+      "agent_id": "user-3",
+      "provider_thread_ids": [
+        "01a04842-ee3a-7e01-b7b5-b704762b1d97"
+      ],
+      "controller_streamed_usage": {
+        "input_tokens": 2256020,
+        "cached_input_tokens": 2041088,
+        "output_tokens": 11880,
+        "reasoning_output_tokens": 4229
+      },
+      "replayed_streamed_usage": {
+        "input_tokens": 2256020,
+        "cached_input_tokens": 2041088,
+        "output_tokens": 11880,
+        "reasoning_output_tokens": 4229
+      },
+      "provider_largest_cumulative_usage": {
+        "input_tokens": 5724837,
+        "cached_input_tokens": 5394688,
+        "output_tokens": 69295,
+        "reasoning_output_tokens": 50263
+      },
+      "controller_matches_replay": true
+    }
+  ],
+  "mechanisms": {
+    "hypotheses": [
+      {
+        "id": "H1",
+        "observed": true,
+        "evidence_count": 2
+      },
+      {
+        "id": "H2",
+        "observed": true,
+        "evidence_count": 1
+      },
+      {
+        "id": "H3",
+        "observed": true,
+        "evidence_count": 12
+      },
+      {
+        "id": "H4",
+        "observed": true,
+        "evidence_count": 7
+      },
+      {
+        "id": "H5",
+        "observed": true,
+        "evidence_count": 23
+      },
+      {
+        "id": "H6",
+        "observed": true,
+        "evidence_count": 3
+      },
+      {
+        "id": "H7",
+        "observed": false,
+        "evidence_count": 0
+      },
+      {
+        "id": "H8",
+        "observed": true,
+        "evidence_count": 44
+      },
+      {
+        "id": "H9",
+        "observed": true,
+        "evidence_count": 1
+      },
+      {
+        "id": "H10",
+        "observed": true,
+        "evidence_count": 149
+      },
+      {
+        "id": "H11",
+        "observed": true,
+        "evidence_count": 1
+      },
+      {
+        "id": "H12",
+        "observed": true,
+        "evidence_count": 6
+      },
+      {
+        "id": "H13",
+        "observed": true,
+        "evidence_count": 1
+      },
+      {
+        "id": "H14",
+        "observed": true,
+        "evidence_count": 1
+      },
+      {
+        "id": "H15",
+        "observed": true,
+        "evidence_count": 1
+      },
+      {
+        "id": "H16",
+        "observed": true,
+        "evidence_count": 54
+      }
+    ],
+    "protocol_bytes": 482219,
+    "command_classes": {
+      "locked-command": 7,
+      "other": 142
+    },
+    "command_count": 149,
+    "command_output_bytes": 1097648,
+    "command_duration_ns": 19434560451,
+    "repeated_commands": 0,
+    "counterfactuals": [
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 953,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 908,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 963,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 562,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 742,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 762,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 557,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 631,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 808,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 690,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H2",
+        "status": "verified",
+        "observed_prompt_bytes": 10738,
+        "actual_component_bytes": 6909,
+        "counterfactual_component_bytes": 47254,
+        "avoided_bytes": 40345,
+        "note": "applied captured diff for src/terminal_app.rs and verified previous/current digests"
+      },
+      {
+        "hypothesis": "H2",
+        "status": "verified",
+        "observed_prompt_bytes": 10738,
+        "actual_component_bytes": 1179,
+        "counterfactual_component_bytes": 44010,
+        "avoided_bytes": 42831,
+        "note": "applied captured diff for src/workspace.rs and verified previous/current digests"
+      },
+      {
+        "hypothesis": "H2",
+        "status": "verified",
+        "observed_prompt_bytes": 10738,
+        "actual_component_bytes": 2373,
+        "counterfactual_component_bytes": 34253,
+        "avoided_bytes": 31880,
+        "note": "applied captured diff for tests/workspace.rs and verified previous/current digests"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 570,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 756,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H1",
+        "status": "source-text-omitted",
+        "observed_prompt_bytes": 756,
+        "actual_component_bytes": 60,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "matching prior refresh omitted exact source text for src/terminal_app.rs; digest=fnv64:acd8108e07fd0167; bytes:48896; declared_bytes=48896"
+      },
+      {
+        "hypothesis": "H1",
+        "status": "source-text-omitted",
+        "observed_prompt_bytes": 266,
+        "actual_component_bytes": 60,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "matching prior refresh omitted exact source text for src/terminal_app.rs; digest=fnv64:acd8108e07fd0167; bytes:48896; declared_bytes=48896"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 2921,
+        "actual_component_bytes": 2610,
+        "counterfactual_component_bytes": 2610,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002569043088856815-3807487; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 2769,
+        "actual_component_bytes": 2471,
+        "counterfactual_component_bytes": 2471,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002568274922451231-3783348; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 7896,
+        "actual_component_bytes": 7560,
+        "counterfactual_component_bytes": 7560,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002569817964027959-3827044; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 7579,
+        "actual_component_bytes": 7243,
+        "counterfactual_component_bytes": 7243,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002568615365772001-3792675; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 7896,
+        "actual_component_bytes": 7560,
+        "counterfactual_component_bytes": 7560,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002569216648331371-3811752; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 7896,
+        "actual_component_bytes": 7560,
+        "counterfactual_component_bytes": 7560,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002569036573776181-3806128; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 4283,
+        "actual_component_bytes": 3945,
+        "counterfactual_component_bytes": 3945,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002568547423210376-3790484; status=101; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H8",
+        "status": "requires-ablation",
+        "observed_prompt_bytes": null,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "interrupted terminal directives are measured, but prevented generation is not observable"
+      }
+    ],
+    "bundles": [
+      {
+        "thread_id": "01a04842-cbf0-7c43-a668-00461615bf57",
+        "turn_id": "01a04842-fa14-7430-a789-a18979d405ce",
+        "source_path": "/tmp/work-leaf-point7-exact-accounting-20260828T113610Z/wl-000/work-leaf-3feature-bench.WVrGhO/context-bundles/orchestrator-3776151-0/bundle-0.md",
+        "archived_path": "files/orchestrator-3776151-0/bundle-0.md",
+        "payload_bytes": 187931,
+        "manifest_bytes": 953,
+        "observed_follow_up_bytes": 131495,
+        "consumption": "partial",
+        "deferred_bytes": 186978,
+        "observed_path_net_bytes": 55483,
+        "sha256": "a26052f8591dee03fd6a860c5190390c82e7fc4d291a89c738deadf1952a7a5f"
+      },
+      {
+        "thread_id": "01a04842-da7c-7132-94ca-e8cb4adc390c",
+        "turn_id": "01a04843-07bd-75a2-a334-2a19855c9d51",
+        "source_path": "/tmp/work-leaf-point7-exact-accounting-20260828T113610Z/wl-000/work-leaf-3feature-bench.WVrGhO/context-bundles/orchestrator-3776151-0/bundle-1.md",
+        "archived_path": "files/orchestrator-3776151-0/bundle-1.md",
+        "payload_bytes": 179120,
+        "manifest_bytes": 908,
+        "observed_follow_up_bytes": 98344,
+        "consumption": "partial",
+        "deferred_bytes": 178212,
+        "observed_path_net_bytes": 79868,
+        "sha256": "b302f7a358c96adfe13f696fee2c824d38b4c9ac4e0ea216867dd1c4e58ca283"
+      },
+      {
+        "thread_id": "01a04842-ee3a-7e01-b7b5-b704762b1d97",
+        "turn_id": "01a04853-61a2-7962-bb9d-8388ec3aadb4",
+        "source_path": "/tmp/work-leaf-point7-exact-accounting-20260828T113610Z/wl-000/work-leaf-3feature-bench.WVrGhO/context-bundles/orchestrator-3776151-0/bundle-10.md",
+        "archived_path": "files/orchestrator-3776151-0/bundle-10.md",
+        "payload_bytes": 91624,
+        "manifest_bytes": 570,
+        "observed_follow_up_bytes": 14672,
+        "consumption": "partial",
+        "deferred_bytes": 91054,
+        "observed_path_net_bytes": 76382,
+        "sha256": "5f7f75bded8feeb2613343541a056836d1fca740dbf819d9f4918cd6aec2bd7c"
+      },
+      {
+        "thread_id": "01a04842-ee3a-7e01-b7b5-b704762b1d97",
+        "turn_id": "01a04859-35d4-7723-9a09-c608b60c90b3",
+        "source_path": "/tmp/work-leaf-point7-exact-accounting-20260828T113610Z/wl-000/work-leaf-3feature-bench.WVrGhO/context-bundles/orchestrator-3776151-0/bundle-11.md",
+        "archived_path": "files/orchestrator-3776151-0/bundle-11.md",
+        "payload_bytes": 44480,
+        "manifest_bytes": 756,
+        "observed_follow_up_bytes": 1689,
+        "consumption": "partial",
+        "deferred_bytes": 43724,
+        "observed_path_net_bytes": 42035,
+        "sha256": "6360836c333bf10aa86b05dbf358f8e2b7ff0711a90a1e2073796d05fd1c8683"
+      },
+      {
+        "thread_id": "01a04842-ee3a-7e01-b7b5-b704762b1d97",
+        "turn_id": "01a04843-1589-7080-a3c9-7fb900ba0369",
+        "source_path": "/tmp/work-leaf-point7-exact-accounting-20260828T113610Z/wl-000/work-leaf-3feature-bench.WVrGhO/context-bundles/orchestrator-3776151-0/bundle-2.md",
+        "archived_path": "files/orchestrator-3776151-0/bundle-2.md",
+        "payload_bytes": 182536,
+        "manifest_bytes": 963,
+        "observed_follow_up_bytes": 202261,
+        "consumption": "partial",
+        "deferred_bytes": 181573,
+        "observed_path_net_bytes": -20688,
+        "sha256": "0a716619aa24d583e867823b5aa79832e58bb9b83d4d354fb72080898a4fa695"
+      },
+      {
+        "thread_id": "01a04842-cbf0-7c43-a668-00461615bf57",
+        "turn_id": "01a04843-bf78-7c13-b1bb-034e49db325b",
+        "source_path": "/tmp/work-leaf-point7-exact-accounting-20260828T113610Z/wl-000/work-leaf-3feature-bench.WVrGhO/context-bundles/orchestrator-3776151-0/bundle-3.md",
+        "archived_path": "files/orchestrator-3776151-0/bundle-3.md",
+        "payload_bytes": 45006,
+        "manifest_bytes": 562,
+        "observed_follow_up_bytes": 44366,
+        "consumption": "partial",
+        "deferred_bytes": 44444,
+        "observed_path_net_bytes": 78,
+        "sha256": "f4d2b7dc66cba19529a1441ed85455982df28daef08f27a7a3a8dd8a1a3b749e"
+      },
+      {
+        "thread_id": "01a04842-da7c-7132-94ca-e8cb4adc390c",
+        "turn_id": "01a04843-c2db-7723-b31a-e2bb5553cfe3",
+        "source_path": "/tmp/work-leaf-point7-exact-accounting-20260828T113610Z/wl-000/work-leaf-3feature-bench.WVrGhO/context-bundles/orchestrator-3776151-0/bundle-4.md",
+        "archived_path": "files/orchestrator-3776151-0/bundle-4.md",
+        "payload_bytes": 187128,
+        "manifest_bytes": 742,
+        "observed_follow_up_bytes": 81671,
+        "consumption": "partial",
+        "deferred_bytes": 186386,
+        "observed_path_net_bytes": 104715,
+        "sha256": "9359fe3aa4c58d31c2e16d85f070476d66d94a8a08d20bbe367498d9c85a4ea9"
+      },
+      {
+        "thread_id": "01a04842-ee3a-7e01-b7b5-b704762b1d97",
+        "turn_id": "01a04843-cfc2-7781-aad4-d1bc15076cd5",
+        "source_path": "/tmp/work-leaf-point7-exact-accounting-20260828T113610Z/wl-000/work-leaf-3feature-bench.WVrGhO/context-bundles/orchestrator-3776151-0/bundle-5.md",
+        "archived_path": "files/orchestrator-3776151-0/bundle-5.md",
+        "payload_bytes": 142807,
+        "manifest_bytes": 762,
+        "observed_follow_up_bytes": 207489,
+        "consumption": "partial",
+        "deferred_bytes": 142045,
+        "observed_path_net_bytes": -65444,
+        "sha256": "4bef72fc7560accda0eaa40cfb5a7d6dc9e4424e788a7900be1886f3589b7e5e"
+      },
+      {
+        "thread_id": "01a04842-ee3a-7e01-b7b5-b704762b1d97",
+        "turn_id": "01a04845-ad53-7040-b2fd-69645883692a",
+        "source_path": "/tmp/work-leaf-point7-exact-accounting-20260828T113610Z/wl-000/work-leaf-3feature-bench.WVrGhO/context-bundles/orchestrator-3776151-0/bundle-6.md",
+        "archived_path": "files/orchestrator-3776151-0/bundle-6.md",
+        "payload_bytes": 64234,
+        "manifest_bytes": 557,
+        "observed_follow_up_bytes": 44273,
+        "consumption": "partial",
+        "deferred_bytes": 63677,
+        "observed_path_net_bytes": 19404,
+        "sha256": "09e282d3683c055b8c6fb58a435847ec656fa1ee02ffe4d218b9e9806b30e463"
+      },
+      {
+        "thread_id": "01a04842-ee3a-7e01-b7b5-b704762b1d97",
+        "turn_id": "01a0484a-fafb-7d71-a716-000aca2e36e9",
+        "source_path": "/tmp/work-leaf-point7-exact-accounting-20260828T113610Z/wl-000/work-leaf-3feature-bench.WVrGhO/context-bundles/orchestrator-3776151-0/bundle-7.md",
+        "archived_path": "files/orchestrator-3776151-0/bundle-7.md",
+        "payload_bytes": 132670,
+        "manifest_bytes": 631,
+        "observed_follow_up_bytes": 70282,
+        "consumption": "partial",
+        "deferred_bytes": 132039,
+        "observed_path_net_bytes": 61757,
+        "sha256": "fe3cf47fc350ea344d4384f37f6fe0d02f52424c9ae509b38ffce557a04fb823"
+      },
+      {
+        "thread_id": "01a0484b-e69a-7e23-8640-a7ce7c4b4f33",
+        "turn_id": "01a0484c-1aec-76a2-a11b-e2090e6872fa",
+        "source_path": "/tmp/work-leaf-point7-exact-accounting-20260828T113610Z/wl-000/work-leaf-3feature-bench.WVrGhO/context-bundles/orchestrator-3776151-0/bundle-8.md",
+        "archived_path": "files/orchestrator-3776151-0/bundle-8.md",
+        "payload_bytes": 203649,
+        "manifest_bytes": 808,
+        "observed_follow_up_bytes": 146447,
+        "consumption": "partial",
+        "deferred_bytes": 202841,
+        "observed_path_net_bytes": 56394,
+        "sha256": "a2beb5cdd8aa1725e5710a1c3897fa3972ffe22f0df95f1272a076ad7d2c0c9c"
+      },
+      {
+        "thread_id": "01a04842-ee3a-7e01-b7b5-b704762b1d97",
+        "turn_id": "01a04850-5f8c-7f81-9c78-01c9827519f9",
+        "source_path": "/tmp/work-leaf-point7-exact-accounting-20260828T113610Z/wl-000/work-leaf-3feature-bench.WVrGhO/context-bundles/orchestrator-3776151-0/bundle-9.md",
+        "archived_path": "files/orchestrator-3776151-0/bundle-9.md",
+        "payload_bytes": 165260,
+        "manifest_bytes": 690,
+        "observed_follow_up_bytes": 42935,
+        "consumption": "partial",
+        "deferred_bytes": 164570,
+        "observed_path_net_bytes": 121635,
+        "sha256": "a9564ece1c359fe2d953f74684671414e58a17e93ba8fbedd39ce9c6739a5105"
+      }
+    ],
+    "terminal_directives": {
+      "observed": 6,
+      "interrupted": 6,
+      "naturally_completed": 0,
+      "failed": 0,
+      "unresolved": 0
+    },
+    "structured_edits": {
+      "submissions": 11,
+      "duplicate_submissions": 0,
+      "acknowledgements": 7,
+      "rejections": 5
+    },
+    "reviews": {
+      "prompts": 3,
+      "unique_targets": 4,
+      "duplicate_targets": 6,
+      "validated_targets": 0,
+      "unresolved_targets": 4
+    },
+    "validation": {
+      "validation_commands": 7,
+      "violations": []
+    },
+    "protocol_components": {
+      "command-result": 41240,
+      "edit-acknowledgement": 6958,
+      "file-read": 19906,
+      "other-orchestration": 128660,
+      "review-provenance": 246506
+    },
+    "sequential_timeline_valid": true,
+    "errors": [
+      "review target 65079a9ecec1090e7c3de63b0ede023b919fb2bb resolves to 0 captured Git commits",
+      "review target 6edaf62d64d4d1484d0c1de8bbd36d7af90b6ecf resolves to 0 captured Git commits",
+      "review target b756ba1b6f81fcf2336d8bfbb768c635f438abb9 resolves to 0 captured Git commits",
+      "review target f676c87ea9054242811709ffc95a9c2cd8856de8 resolves to 0 captured Git commits"
+    ]
+  },
+  "errors": [
+    "visible provider agent review-user-1 has no controller usage row",
+    "visible provider agent review-user-2 has no controller usage row"
+  ]
+}

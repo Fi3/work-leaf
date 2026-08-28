@@ -1,0 +1,82 @@
+{
+  "all_three_disabled": {
+    "reasons": [
+      "both Work Leaf conditions are required"
+    ],
+    "usable": false
+  },
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "comparison": {
+    "reasons": [
+      "both pilot workflows are required"
+    ],
+    "usable": false
+  },
+  "complete": true,
+  "fixtures": {
+    "completion": "4d6a19f4c6f515b9a97f184a056d08dc2882041d40d26dd82011180a949c5c87",
+    "status": "5f5295c9dec6be20abb28827b68e84342110fb748aa0cc887d8b58ffa3c6e6b5",
+    "visual": "5ce0782e37b8672e04d8016ca3fbec9caa12f6f9cfaf431cac847c1f6e6a26ca"
+  },
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "runs": [
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.519,
+          "exit_code": 0,
+          "log": "scorer/logs/point7-exact-direct/completion.log",
+          "log_sha256": "4b51f6be8e2ba01d7b8fd6ef0ebfa689cd66e4ce8073e9fbb4bd3f4ed3b81632",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.273,
+          "exit_code": 0,
+          "log": "scorer/logs/point7-exact-direct/status.log",
+          "log_sha256": "c2835ad1e7963899b97a6928f0f0fed3809d4ca7d6869067e6533cb9beb7cacd",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 7.714,
+          "exit_code": 0,
+          "log": "scorer/logs/point7-exact-direct/visual.log",
+          "log_sha256": "8e61ef81b507feae5b60270f1f0c76056200b5935a7925ea44b8c4df22d5407b",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "direct",
+      "final_commit": "cffa56fe162982433ea1eae73c7f50bf05a6e2ca",
+      "id": "point7-exact-direct",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-point7-exact-accounting-20260828T113610Z/runs/direct/point7-exact-direct-three-feature-sequential-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "f556090b0050bc919a36e0b6f121bdf77ef1a5479d0feb24e5d13a2595a1e917",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 39052544,
+          "input_tokens": 40789986,
+          "output_tokens": 245138,
+          "raw_input_plus_output": 41035124,
+          "reasoning_output_tokens": 122885,
+          "uncached_input_plus_output": 1982580,
+          "uncached_input_tokens": 1737442
+        }
+      },
+      "report": "bench-results/efficiency-point7-exact-accounting-20260828T113610Z/runs/direct/point7-exact-direct-three-feature-sequential-bench-artifacts/report.json",
+      "report_sha256": "99075f4699c8ed01f36c794d607a685381e05daf0f6c35b158ac06e47eba8f61",
+      "workflow": "direct-sequential",
+      "workflow_result": "pass"
+    }
+  ],
+  "schema_version": 1,
+  "study": "efficiency-point7-exact-accounting-20260828T113610Z",
+  "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+}

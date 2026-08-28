@@ -1,7 +1,8 @@
 # Point-7 State
 
-- Stage: infrastructure ready for the one-pair gate
-- Provider workflows admitted: 0/2
-- Current action: freeze the tested benchmark tooling, then launch the one authorized pair
-- Automatic retries allowed: no
-- Steps 8 and 9: stopped pending user review of this gate
+- Stage: complete but token comparison superseded
+- Provider workflows admitted: 2/2
+- Detail: Both workflows passed and both candidates scored 3/3. The direct token capture is usable;
+  the Work Leaf total omits interrupted directive responses and is not usable.
+- Current authority: `../efficiency-point7-exact-accounting-20260828T113610Z/FINAL-RESULT.md`
+- Stop rule: Do not use this directory's percentages in a normal-workflow comparison.

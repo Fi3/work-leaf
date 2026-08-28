@@ -1,0 +1,157 @@
+{
+  "all_three_disabled": {
+    "reasons": [
+      "both Work Leaf conditions are required"
+    ],
+    "usable": false
+  },
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "comparison": {
+    "completed_features": {
+      "direct_sequential": 3,
+      "work_leaf_concurrent": 2
+    },
+    "interpretation_limit": "One pilot pair is descriptive and cannot establish an average effect or statistical confidence.",
+    "quality_match_in_this_pair": false,
+    "raw_tokens": {
+      "direct_sequential": 41035124,
+      "work_leaf_concurrent": 9329970,
+      "work_leaf_reduction_percent": 77.263
+    },
+    "reasons": [
+      "Work Leaf token measurement is not usable",
+      "the two saved implementations completed different numbers of requested features"
+    ],
+    "token_measurements_usable": false,
+    "uncached_tokens": {
+      "direct_sequential": 1982580,
+      "work_leaf_concurrent": 973874,
+      "work_leaf_reduction_percent": 50.878
+    },
+    "usable": false
+  },
+  "complete": true,
+  "fixtures": {
+    "completion": "4d6a19f4c6f515b9a97f184a056d08dc2882041d40d26dd82011180a949c5c87",
+    "status": "5f5295c9dec6be20abb28827b68e84342110fb748aa0cc887d8b58ffa3c6e6b5",
+    "visual": "5ce0782e37b8672e04d8016ca3fbec9caa12f6f9cfaf431cac847c1f6e6a26ca"
+  },
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "runs": [
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.523,
+          "exit_code": 0,
+          "log": "scorer/logs/point7-exact-direct/completion.log",
+          "log_sha256": "afbddd406a0eb3493e52d59dc46d97c35d242b6bbe4cd9fda5e60867fef30a8e",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.282,
+          "exit_code": 0,
+          "log": "scorer/logs/point7-exact-direct/status.log",
+          "log_sha256": "1b000693ba8073fb86d6113daa9d5ac150c19c47610fde054aa4f3e3548782b4",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 7.296,
+          "exit_code": 0,
+          "log": "scorer/logs/point7-exact-direct/visual.log",
+          "log_sha256": "597ae339d5d01d81eafb7623fa47d98f5542fa1c493b3d67f54e27d04f6cd63c",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "direct",
+      "final_commit": "cffa56fe162982433ea1eae73c7f50bf05a6e2ca",
+      "id": "point7-exact-direct",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-point7-exact-accounting-20260828T113610Z/runs/direct/point7-exact-direct-three-feature-sequential-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "f556090b0050bc919a36e0b6f121bdf77ef1a5479d0feb24e5d13a2595a1e917",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 39052544,
+          "input_tokens": 40789986,
+          "output_tokens": 245138,
+          "raw_input_plus_output": 41035124,
+          "reasoning_output_tokens": 122885,
+          "uncached_input_plus_output": 1982580,
+          "uncached_input_tokens": 1737442
+        }
+      },
+      "report": "bench-results/efficiency-point7-exact-accounting-20260828T113610Z/runs/direct/point7-exact-direct-three-feature-sequential-bench-artifacts/report.json",
+      "report_sha256": "99075f4699c8ed01f36c794d607a685381e05daf0f6c35b158ac06e47eba8f61",
+      "workflow": "direct-sequential",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.482,
+          "exit_code": 101,
+          "log": "scorer/logs/point7-exact-wl-000/completion.log",
+          "log_sha256": "d50a75eab09e818cf9f764f9aed2b4a386336df603f9b8c262d88b60f6e001d2",
+          "status": "fail"
+        },
+        "status": {
+          "duration_seconds": 0.283,
+          "exit_code": 0,
+          "log": "scorer/logs/point7-exact-wl-000/status.log",
+          "log_sha256": "2545bc9da44f5c783cc51463e71b6b1386d46ed922b6a9ddcb2a5c1e35c54dd6",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 3.271,
+          "exit_code": 0,
+          "log": "scorer/logs/point7-exact-wl-000/visual.log",
+          "log_sha256": "5e814921ed804a6f10dd7823b7e3e9941c13660de1de3e899b597ea24ad28d2b",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 2,
+      "condition": "wl-000",
+      "final_commit": "e50637181ed098c32246458b09838976db824351",
+      "id": "point7-exact-wl-000",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-point7-exact-accounting-20260828T113610Z/runs/wl-000/point7-exact-wl-000-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "4f590bd0c34005901b95daeb37067158e867f02d81e3b490b39cdce0495529c9",
+        "reasons": [
+          "measurement status is incomplete",
+          "observer analysis marks the capture incomplete"
+        ],
+        "usable": false,
+        "usage": {
+          "cached_input_tokens": 8356096,
+          "input_tokens": 9148537,
+          "output_tokens": 181433,
+          "raw_input_plus_output": 9329970,
+          "reasoning_output_tokens": 121645,
+          "uncached_input_plus_output": 973874,
+          "uncached_input_tokens": 792441
+        }
+      },
+      "report": "bench-results/efficiency-point7-exact-accounting-20260828T113610Z/runs/wl-000/point7-exact-wl-000-three-feature-bench-artifacts/report.json",
+      "report_sha256": "1533715a43aa05db2e1a963e30e1c59aaa4223b0d025c7ea2335d1f31974ba28",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "fail"
+    }
+  ],
+  "schema_version": 1,
+  "study": "efficiency-point7-exact-accounting-20260828T113610Z",
+  "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+}

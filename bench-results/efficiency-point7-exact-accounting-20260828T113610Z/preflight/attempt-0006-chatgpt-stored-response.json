@@ -1,0 +1,19 @@
+{
+  "attempt": 6,
+  "purpose": "Check whether the ChatGPT Codex endpoint can retain a response so interrupted usage can be retrieved later",
+  "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "request_settings": {
+    "store": true,
+    "stream": true,
+    "background": true
+  },
+  "provider_reached": false,
+  "http_status": 400,
+  "response": {
+    "detail": "Store must be set to false"
+  },
+  "credentials_recorded": false,
+  "conclusion": "The benchmark's ChatGPT Codex transport cannot retain responses for later usage retrieval."
+}

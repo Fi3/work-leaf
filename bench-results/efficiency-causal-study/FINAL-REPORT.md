@@ -13,12 +13,12 @@ later slash-command request containing `/fork`, although the original task requi
 slash-command forwarding and was scored with `/status`. Those runs answer questions about the
 artificial protocol, not normal Work Leaf versus normal direct Codex.
 
-The normal-workflow pilot is stored in
-`../efficiency-fair-normal-workflow-pilot-20260827T115642Z/PROVISIONAL-RESULT.md`. It used the exact
-original task and normal product workflows, but it also produced no supported token percentage:
-Work Leaf completed 2/3 requested behaviors while direct Codex completed 3/3, descendant verification
-calls escaped the fixed GPT-5.5 profile, and direct resume accounting used the wrong accumulation
-rule.
+Later normal-workflow runs corrected the task, model profile, validation policy, and direct resume
+accounting. The final exact-accounting gate is stored in
+`../efficiency-point7-exact-accounting-20260828T113610Z/FINAL-RESULT.md`. It found a remaining
+transport limit: normal Work Leaf interrupts model responses at orchestrator directives, but the
+ChatGPT Codex transport exposes usage only for completed responses. Earlier Work Leaf totals
+therefore omitted interrupted-response tokens.
 
 ## Supported Findings
 
@@ -30,6 +30,10 @@ rule.
   mechanisms in their small controlled traces.
 - Percentages from those small traces have different scopes and cannot be added or allocated to a
   whole-workflow difference.
+- Direct sequential Codex can be measured exactly by adding every completed launch and resume
+  invocation.
+- Normal Work Leaf cannot be measured exactly on the current ChatGPT Codex transport because usage
+  for interrupted directive responses is unavailable.
 - No current evidence supports a precise normal-workflow token reduction or formal quality
   equivalence.
 
@@ -49,7 +53,13 @@ must not be mixed into a new normal-workflow result.
 
 The original headline reductions of 72.0567% raw tokens and 49.0420% uncached tokens are excluded
 from the normal-workflow question. They describe one unequal-quality comparison collected under the
-artificial protocol. The newer pilot's diagnostic arithmetic is also not a result until its profile
-and resume-accounting defects are fixed and comparable-quality observations exist.
+artificial protocol. The later 49.039% raw and 26.256% uncached Point 7 reductions and subsequent
+attribution percentages are also withdrawn because their Work Leaf totals omit interrupted-response
+usage.
+
+The corrected direct run completed all three features with exact totals of 41,035,124 raw and
+1,982,580 uncached tokens. Its Work Leaf counterpart cannot be compared: exact-accounting
+instrumentation delayed normal directive handling, failed during review, and still did not recover
+complete usage. The current evidence neither proves nor disproves a real Work Leaf saving.
 
 The required work before another paid batch is listed in `NEXT-STEPS.md`.

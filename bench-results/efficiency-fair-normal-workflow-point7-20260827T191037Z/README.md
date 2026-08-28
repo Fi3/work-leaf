@@ -1,4 +1,11 @@
-# Fair Normal-Workflow Point-7 Gate
+# Superseded Fair Normal-Workflow Point-7 Gate
+
+## Important Result Status
+
+The candidates and quality scores in this directory remain valid, but its Work Leaf token total is
+incomplete. Normal Work Leaf interrupted directive responses whose usage was not reported by the
+Codex transport. The recorded 49.039% raw and 26.256% uncached reductions are withdrawn. See
+`../efficiency-point7-exact-accounting-20260828T113610Z/FINAL-RESULT.md` for the corrected result.
 
 ## Goal
 
@@ -26,6 +33,6 @@ user reviews this point-7 result.
 - Work Leaf schedule: three requests submitted concurrently
 - direct schedule: the same requests handled sequentially without Work Leaf
 
-`PREFLIGHT.md` records the infrastructure checks and real write smoke. `STATE.md` is the durable
-current status. The final scorer output and plain-language analysis are written only after both
-admitted workflows end.
+`PREFLIGHT.md` records the infrastructure checks and real write smoke. `FINAL-RESULT.md` explains
+which evidence remains usable. `PROVISIONAL-RESULT.md` and `result.json` preserve the original
+generated output, and `runs/` contains both complete workflow records.

@@ -1,0 +1,19 @@
+{
+  "attempt": 7,
+  "purpose": "Check whether the ChatGPT Codex endpoint can run a cancellable background response without storage",
+  "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "request_settings": {
+    "store": false,
+    "stream": true,
+    "background": true
+  },
+  "provider_reached": false,
+  "http_status": 400,
+  "response": {
+    "detail": "Unsupported parameter: background"
+  },
+  "credentials_recorded": false,
+  "conclusion": "The benchmark's ChatGPT Codex transport cannot create a cancellable background response."
+}

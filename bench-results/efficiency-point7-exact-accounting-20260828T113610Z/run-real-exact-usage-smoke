@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/../.." && pwd)"
+runtime_root="${WORK_LEAF_POINT7_SMOKE_RUNTIME:-$(mktemp -d /tmp/work-leaf-point7-exact-smoke.XXXXXX)}"
+profile="$runtime_root/profile"
+transcript="$script_dir/preflight/attempt-0003-interrupt-after-usage.jsonl"
+stderr_file="$script_dir/preflight/attempt-0003-interrupt-after-usage.stderr"
+summary="$script_dir/preflight/attempt-0003-interrupt-after-usage.json"
+
+mkdir -p "$script_dir/preflight"
+source "$repo_root/bench-agent-profile-common"
+bench_prepare_codex_profile "$(command -v codex)" gpt-5.5 xhigh "$profile"
+
+python3 "$script_dir/real_exact_usage_smoke.py" \
+  --codex "$bench_profiled_codex_bin" \
+  --cwd "$repo_root" \
+  --transcript "$transcript" \
+  --stderr "$stderr_file" \
+  --summary "$summary" \
+  --codex-version "$bench_codex_cli_version" \
+  --actual-codex-sha256 "$bench_actual_codex_sha256" \
+  --profiled-codex-sha256 "$bench_profiled_codex_sha256" \
+  --completion-mode interrupt-after-usage
+
+bench_assert_no_recursive_codex "$bench_recursive_codex_log"
+python3 - "$summary" <<'PY'
+import json
+import sys
+
+result = json.load(open(sys.argv[1], encoding="utf-8"))
+assert result["result"] == "passed"
+assert result["model"] == "gpt-5.5"
+assert result["reasoning_effort"] == "xhigh"
+assert result["completion_mode"] == "interrupt-after-usage"
+assert result["interrupt_sent"] is True
+assert result["interrupt_acknowledged"] is True
+assert result["exact_response_count"] >= 1
+assert result["exact_usage"]["inputTokens"] > 0
+print("REAL_EXACT_USAGE_SMOKE_PASSED")
+PY

@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source_repo="${WORK_LEAF_POINT7_SOURCE_REPO:-/tmp/work-leaf-point7-exact-source-db5fe21}"
+runtime_root="${WORK_LEAF_POINT7_RUNTIME_DIR:-/tmp/work-leaf-point7-exact-accounting-20260828T113610Z}"
+expected_commit="17e020ba5f2b9bd9736721bcbc479d9c6160a1d8"
+infrastructure_commit="db5fe21"
+task_list_sha256="45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+
+[[ "$(git -C "$source_repo" rev-parse HEAD)" == "$expected_commit" ]] || {
+  echo "error: isolated source is not the frozen instrumented commit" >&2
+  exit 1
+}
+[[ -z "$(git -C "$source_repo" status --short)" ]] || {
+  echo "error: isolated source is dirty" >&2
+  exit 1
+}
+[[ ! -e "$script_dir/PREPARED.json" ]] || {
+  echo "error: study is already prepared" >&2
+  exit 2
+}
+
+mkdir -p "$runtime_root" "$script_dir/infrastructure/bin"
+CARGO_TARGET_DIR="$runtime_root/driver-target" \
+  cargo build --manifest-path "$source_repo/Cargo.toml" --release --bins
+CARGO_TARGET_DIR="$runtime_root/observer-target" \
+  cargo build --manifest-path "$source_repo/bench-observer/Cargo.toml" \
+    --release --bin bench-observer
+
+install -m 0755 "$runtime_root/driver-target/release/work-leaf" \
+  "$script_dir/infrastructure/bin/work-leaf"
+install -m 0755 "$runtime_root/driver-target/release/work-leaf-orchestrator" \
+  "$script_dir/infrastructure/bin/work-leaf-orchestrator"
+install -m 0755 "$runtime_root/observer-target/release/bench-observer" \
+  "$script_dir/infrastructure/bin/bench-observer"
+
+git -C "$source_repo" format-patch --stdout "$infrastructure_commit..$expected_commit" \
+  >"$script_dir/infrastructure/instrumentation.patch"
+git -C "$source_repo" show --format=fuller --stat "$expected_commit" \
+  >"$script_dir/infrastructure/instrumentation-commit.txt"
+sha256sum "$script_dir"/infrastructure/bin/* \
+  >"$script_dir/infrastructure/SHA256SUMS"
+PYTHONPYCACHEPREFIX="$runtime_root/scorer-pycache" \
+  python3 -m unittest "$script_dir/scorer/test_score.py"
+
+python3 - "$script_dir/PREPARED.json" "$source_repo" "$runtime_root" \
+  "$expected_commit" "$infrastructure_commit" "$task_list_sha256" <<'PY'
+import hashlib
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+output, source, runtime, instrumentation, infrastructure, task_hash = sys.argv[1:]
+study = Path(output).parent
+paths = [
+    *sorted((study / "infrastructure" / "bin").iterdir()),
+    study / "infrastructure" / "instrumentation.patch",
+    study / "prepare-study",
+    study / "run-condition",
+    study / "build-manifest.py",
+    study / "scorer" / "score.py",
+    study / "scorer" / "test_score.py",
+    *sorted((study / "scorer" / "fixtures").iterdir()),
+    study / "SCHEDULE.tsv",
+]
+hashes = {
+    str(path.relative_to(study)): hashlib.sha256(path.read_bytes()).hexdigest()
+    for path in paths
+}
+payload = {
+    "schema_version": 1,
+    "source_repo": str(Path(source).resolve()),
+    "runtime_root": str(Path(runtime).resolve()),
+    "infrastructure_commit": infrastructure,
+    "instrumentation_commit": instrumentation,
+    "benchmark_base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+    "task_list_sha256": task_hash,
+    "model": "gpt-5.5",
+    "reasoning_effort": "xhigh",
+    "codex_version": subprocess.run(
+        ["codex", "--version"], text=True, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT, check=True
+    ).stdout.strip(),
+    "hashes": hashes,
+}
+temporary = Path(output + ".tmp")
+temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+os.replace(temporary, output)
+PY
+
+printf 'prepared %s\n' "$script_dir"

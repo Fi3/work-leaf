@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$#" != 2 ]]; then
+  echo "usage: $0 CONDITION BATCH_ID" >&2
+  exit 2
+fi
+
+condition="$1"
+batch_id="$2"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source_repo="${WORK_LEAF_POINT7_SOURCE_REPO:-/tmp/work-leaf-point7-exact-source-db5fe21}"
+runtime_root="${WORK_LEAF_POINT7_RUNTIME_DIR:-/tmp/work-leaf-point7-exact-accounting-20260828T113610Z}"
+bin_dir="$script_dir/infrastructure/bin"
+observer_bin="$bin_dir/bench-observer"
+study_id="efficiency-point7-exact-accounting-20260828T113610Z"
+expected_commit="17e020ba5f2b9bd9736721bcbc479d9c6160a1d8"
+timeout_seconds=7200
+
+[[ -f "$script_dir/PREPARED.json" && -x "$bin_dir/work-leaf" \
+  && -x "$bin_dir/work-leaf-orchestrator" && -x "$observer_bin" ]] || {
+  echo "error: run prepare-study before launching a condition" >&2
+  exit 2
+}
+[[ "$(git -C "$source_repo" rev-parse HEAD)" == "$expected_commit" \
+  && -z "$(git -C "$source_repo" status --short)" ]] || {
+  echo "error: frozen isolated source changed after preparation" >&2
+  exit 1
+}
+
+case "$condition" in
+  direct)
+    workflow="direct-sequential"
+    changed="n/a"
+    unchanged="n/a"
+    review="n/a"
+    ;;
+  wl-000)
+    workflow="work-leaf-concurrent"
+    changed="normal"
+    unchanged="normal"
+    review="inline-exact"
+    ;;
+  wl-111)
+    workflow="work-leaf-concurrent"
+    changed="full"
+    unchanged="full"
+    review="git-reconstruct"
+    ;;
+  *)
+    echo "error: condition must be direct, wl-000, or wl-111" >&2
+    exit 2
+    ;;
+esac
+
+results_dir="$script_dir/runs/$condition"
+log_path="$script_dir/logs/$condition.log"
+status_path="$script_dir/logs/$condition.exit"
+run_id="point7-exact-$condition"
+[[ ! -e "$results_dir" && ! -e "$log_path" && ! -e "$status_path" ]] || {
+  echo "error: condition already has preserved run state: $condition" >&2
+  exit 2
+}
+mkdir -p "$results_dir" "$script_dir/logs" "$runtime_root/$condition"
+
+python3 - "$results_dir/admission.json" "$condition" "$workflow" "$batch_id" \
+  "$changed" "$unchanged" "$review" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+output, condition, workflow, batch, changed, unchanged, review = sys.argv[1:]
+payload = {
+    "schema_version": 1,
+    "condition": condition,
+    "workflow": workflow,
+    "batch": batch,
+    "model": "gpt-5.5",
+    "reasoning_effort": "xhigh",
+    "changed_reread": changed,
+    "unchanged_reread": unchanged,
+    "review_context": review,
+    "retry": False,
+}
+temporary = Path(output + ".tmp")
+temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+os.replace(temporary, output)
+PY
+
+set +e
+if [[ "$workflow" == "direct-sequential" ]]; then
+  env -u WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY \
+    -u WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY \
+    -u WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE \
+    WORK_LEAF_DIRECT_BENCH_MODEL=gpt-5.5 \
+    WORK_LEAF_DIRECT_BENCH_REASONING_EFFORT=xhigh \
+    WORK_LEAF_DIRECT_BENCH_TMPDIR="$runtime_root/$condition" \
+    WORK_LEAF_DIRECT_BENCH_RESULTS_DIR="$results_dir" \
+    WORK_LEAF_DIRECT_BENCH_SKIP_BUILD=1 \
+    WORK_LEAF_DIRECT_BENCH_BIN_DIR="$bin_dir" \
+    WORK_LEAF_DIRECT_BENCH_TIMEOUT_SECS="$timeout_seconds" \
+    WORK_LEAF_BENCH_OBSERVER_BIN="$observer_bin" \
+    WORK_LEAF_BENCH_STUDY_ID="$study_id" \
+    WORK_LEAF_BENCH_PAIR_ID="$batch_id" \
+    WORK_LEAF_DIRECT_BENCH_RUN_ID="$run_id" \
+    "$source_repo/bench-three-features-sequential" >"$log_path" 2>&1
+  status=$?
+else
+  env \
+    WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY="$changed" \
+    WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY="$unchanged" \
+    WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE="$review" \
+    WORK_LEAF_BENCH_MODEL=gpt-5.5 \
+    WORK_LEAF_BENCH_REASONING_EFFORT=xhigh \
+    WORK_LEAF_BENCH_TMPDIR="$runtime_root/$condition" \
+    WORK_LEAF_BENCH_RESULTS_DIR="$results_dir" \
+    WORK_LEAF_BENCH_SKIP_BUILD=1 \
+    WORK_LEAF_BENCH_BIN_DIR="$bin_dir" \
+    WORK_LEAF_BENCH_TIMEOUT_SECS="$timeout_seconds" \
+    WORK_LEAF_BENCH_NO_READ_PERMISSION=0 \
+    WORK_LEAF_BENCH_WEB_UI=0 \
+    WORK_LEAF_BENCH_DISABLE_TMUX_SUPERVISOR=1 \
+    WORK_LEAF_BENCH_OBSERVER_BIN="$observer_bin" \
+    WORK_LEAF_BENCH_STUDY_ID="$study_id" \
+    WORK_LEAF_BENCH_PAIR_ID="$batch_id" \
+    WORK_LEAF_BENCH_RUN_ID="$run_id" \
+    "$source_repo/bench-three-features" >"$log_path" 2>&1
+  status=$?
+fi
+set -e
+
+printf '%s\n' "$status" >"$status_path"
+exit "$status"
