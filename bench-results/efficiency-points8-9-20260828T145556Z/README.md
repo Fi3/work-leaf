@@ -76,7 +76,9 @@ transport. Each Work Leaf result therefore reports:
 
 - observed usage from completed responses;
 - the number of interrupted responses; and
-- a conservative raw-token upper bound that adds 400,000 tokens per interrupted response.
+- a conservative raw-token upper bound. Missing usage is charged at least 400,000 tokens per
+  interrupted response. If that does not also cover the effective context window, maximum output,
+  and captured new-turn prompt bytes, the larger aggregate amount is used.
 
 The study must not report an exact Work Leaf raw percentage or any uncached-token reduction. A
 single factorial contrast is a causal screen, not a population estimate. Repeated endpoint groups
@@ -88,4 +90,3 @@ No admitted provider attempt is retried because of quality, token use, model beh
 or workflow failure. A pre-provider infrastructure failure may receive one separately named retry.
 Collection stops for analysis if the same infrastructure problem makes two consecutive attempts
 unusable or if the frozen model, task, base, controls, or accounting scope cannot be preserved.
-

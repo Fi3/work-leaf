@@ -69,7 +69,9 @@ responses. Its conservative upper bound is 32,319,646 raw tokens. It used digest
 verified unchanged-file reread.
 
 Control `wl-010-001` recorded 19,080,233 raw tokens from completed responses and 59 interrupted
-responses. Its conservative upper bound is 42,680,233 raw tokens. It delivered the full current
+responses. Its conservative upper bound is 42,728,938 raw tokens. The usual 400,000-token allowance
+per interruption was 48,705 tokens short of the stricter context-window, maximum-output, and
+captured-prompt formula, so the larger amount is used. It delivered the full current
 file for three verified unchanged-file rereads, so the declared control activated. The observed
 values differ by 6,360,587 raw tokens, but their conservative ranges overlap. This one contrast
 does not separate a repeatable digest effect from normal model-path variation.

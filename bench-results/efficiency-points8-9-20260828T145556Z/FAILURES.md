@@ -68,3 +68,11 @@ The intended frozen three-feature scorer then ran all six fixtures for `wl-000-0
 `wl-010-001` and wrote `quality/batch2.json`. It exited only while formatting Markdown because a
 result without a direct row has no `token_measurements_usable` field. Both saved candidates passed
 visual mode, `/status`, and completion close/reopen. They were not rerun.
+
+## Interrupted-Response Headroom
+
+The initial batch-2 inspection applied the Point-7 rounded allowance of 400,000 raw tokens per
+interrupted response. For `wl-010-001`, that aggregate allowance was 48,705 tokens smaller than the
+stricter sum of effective context windows, maximum outputs, and captured new-turn prompt bytes. The
+analysis therefore uses the larger formula whenever 400,000 per response is insufficient. This
+changes only the offline ceiling and requires no candidate or provider rerun.

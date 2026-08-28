@@ -49,7 +49,7 @@ workflow rather than the three delivery mechanisms.
 Credible alternatives:
 
 - the endpoint difference is still normal variation;
-- the 400,000-token bound is too broad to distinguish the groups;
+- the conservative interrupted-response bound is too broad to distinguish the groups;
 - app-server and direct-CLI transport differences cause the result;
 - Work Leaf produces less robust behavior outside the frozen scorer; or
 - several untested mechanisms jointly cause the remaining difference.
@@ -67,4 +67,3 @@ that cycle pattern and the token bounds in the predicted direction.
 - Percentages are calculated only after absolute token bounds and feature quality are shown.
 - Exact uncached attribution is unavailable while interrupted responses lack usage.
 - A result that fits both a mechanism effect and normal variation is inconclusive.
-
