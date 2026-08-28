@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "study": "efficiency-point7-bounded-accounting-20260828T142614Z",
+  "status": "complete",
+  "provider_workflows_launched": 0,
+  "question": "Does a raw-token saving remain under conservative accounting, including when all three candidate mechanisms are disabled?",
+  "frozen_setup": {
+    "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+    "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a",
+    "model": "gpt-5.5",
+    "reasoning_effort": "xhigh",
+    "quality_checks": [
+      "visual",
+      "status",
+      "completion"
+    ],
+    "required_completed_features": 3
+  },
+  "bound": {
+    "effective_context_window_observed_in_saved_runs": 258400,
+    "documented_maximum_output_tokens": 128000,
+    "model_documentation": "https://developers.openai.com/api/docs/models/gpt-5.5",
+    "codex_context_limit_source": "https://github.com/openai/codex/blob/rust-v0.149.1/codex-rs/core/src/session/context_window.rs#L53-L76",
+    "sum": 386400,
+    "rounded_maximum_tokens_per_interrupted_response": 400000,
+    "interpretation": "Each interrupted turn is charged the full rounded maximum even though only its final response lacks terminal usage. Aggregate headroom also covers the captured new-turn prompt JSON bytes."
+  },
+  "direct_sequential": {
+    "run_id": "point7-exact-direct",
+    "workflow_result": "pass",
+    "completed_features": 3,
+    "raw_tokens_exact": 41035124,
+    "uncached_tokens_exact": 1982580,
+    "measurement": "exact"
+  },
+  "normal_work_leaf": {
+    "run_id": "wl-normal-003",
+    "workflow_result": "pass",
+    "completed_features": 3,
+    "turn_audit": {
+      "started_turns": 63,
+      "completed_turns": 12,
+      "interrupted_turns": 51,
+      "interrupted_prompt_json_bytes": 481131,
+      "rpc_errors": 0
+    },
+    "rollout_profile": {
+      "provider_threads": 8,
+      "models": [
+        "gpt-5.5"
+      ],
+      "reasoning_efforts": [
+        "xhigh"
+      ],
+      "recursive_provider_threads": 0
+    },
+    "context_window_evidence": {
+      "usage_events": 210,
+      "effective_context_window": 258400
+    },
+    "missing_usage_cap_audit": {
+      "declared_missing_raw_token_cap": 20400000,
+      "context_output_and_prompt_upper_bound": 20187531,
+      "remaining_headroom": 212469
+    },
+    "controls": {
+      "WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY": "normal",
+      "WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE": "inline-exact",
+      "WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY": "normal"
+    },
+    "raw_bound": {
+      "observed_raw_tokens": 12777778,
+      "interrupted_turns": 51,
+      "maximum_tokens_per_interrupted_turn": 400000,
+      "raw_token_upper_bound": 33177778,
+      "minimum_raw_tokens_saved": 7857346,
+      "minimum_raw_reduction_percent": 19.147855
+    }
+  },
+  "all_three_disabled_work_leaf": {
+    "run_id": "wl-all-off-002",
+    "workflow_result": "pass",
+    "completed_features": 3,
+    "turn_audit": {
+      "started_turns": 80,
+      "completed_turns": 8,
+      "interrupted_turns": 72,
+      "interrupted_prompt_json_bytes": 785051,
+      "rpc_errors": 0
+    },
+    "rollout_profile": {
+      "provider_threads": 8,
+      "models": [
+        "gpt-5.5"
+      ],
+      "reasoning_efforts": [
+        "xhigh"
+      ],
+      "recursive_provider_threads": 0
+    },
+    "context_window_evidence": {
+      "usage_events": 180,
+      "effective_context_window": 258400
+    },
+    "missing_usage_cap_audit": {
+      "declared_missing_raw_token_cap": 28800000,
+      "context_output_and_prompt_upper_bound": 28605851,
+      "remaining_headroom": 194149
+    },
+    "controls": {
+      "WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY": "full",
+      "WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE": "git-reconstruct",
+      "WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY": "full"
+    },
+    "non_provider_capture_gap": {
+      "incomplete_processes": 1,
+      "incomplete_process_capture_kind": "locked-command",
+      "provider_usage_affected": false
+    },
+    "raw_bound": {
+      "observed_raw_tokens": 10292989,
+      "interrupted_turns": 72,
+      "maximum_tokens_per_interrupted_turn": 400000,
+      "raw_token_upper_bound": 39092989,
+      "minimum_raw_tokens_saved": 1942135,
+      "minimum_raw_reduction_percent": 4.73286
+    }
+  },
+  "conclusion": {
+    "normal_work_leaf_raw_saving_proven_for_selected_run": true,
+    "all_three_disabled_raw_saving_proven_for_selected_run": true,
+    "saving_fully_explained_by_three_candidate_mechanisms": false,
+    "exact_raw_reduction_known": false,
+    "uncached_reduction_known": false,
+    "population_average_known": false
+  },
+  "source_sha256": {
+    "bench-results/efficiency-point7-exact-accounting-20260828T113610Z/direct-result.json": "0e31fa8b26e6199115e965abd9338c8c19775f0f25ca050eabd3b2c281e26cd2",
+    "bench-results/efficiency-point7-exact-accounting-20260828T113610Z/runs/direct/point7-exact-direct-three-feature-sequential-bench-artifacts/report.json": "99075f4699c8ed01f36c794d607a685381e05daf0f6c35b158ac06e47eba8f61",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/quality/wl-normal-003/result.json": "97b147bcd19f1635ce9c9913b602b379dd18b03795901f5d42d21448c4370f5a",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/runs/wl-normal-003/residual-wl-normal-003-three-feature-bench-artifacts/report.json": "efdaac9c70f606d36ba05b8d81575073f57bb60fbdd1f80a04e4a8411ffa4b18",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/runs/wl-normal-003/residual-wl-normal-003-three-feature-bench-artifacts/observation/app-server/00002551049505474822-3299243/client-to-server.raw": "beb311c9ee7cde2c51b320431709e8959bb50ab79edec623d07c38f2975c6408",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/runs/wl-normal-003/residual-wl-normal-003-three-feature-bench-artifacts/observation/app-server/00002551049505474822-3299243/server-to-client.raw": "5663e71c1f5fe9ca6ae4f1a61c7d3437d54a9511ba9631bfc70146fbf82eb503",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/runs/wl-normal-003/residual-wl-normal-003-three-feature-bench-artifacts/observation/rollout-metadata.jsonl": "0686bc6cf7577148ec51aabe6192679f44700f34c9e4410f08d47ae9845e49b3",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/runs/wl-normal-003/residual-wl-normal-003-three-feature-bench-artifacts/daemon-env.txt": "d3b29fb111cab60e4ecfae9777757ce62ca38999c429abc3cd980f4873698c29",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/quality/wl-all-off-002/result.json": "1eb96bd4ee01608c20fc5cc26cd1968484b486d07bfb9c2603804f2ba402e30f",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/runs/wl-all-off-002/residual-wl-all-off-002-three-feature-bench-artifacts/report.json": "6d54fefe6383e45f397f080ae9451add8acf2aac63d8e498aef1f248995c020c",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/runs/wl-all-off-002/residual-wl-all-off-002-three-feature-bench-artifacts/observation/app-server/00002553926897852129-3388596/client-to-server.raw": "8a11f68f26d07a3beed2f52ba6e937063666b6f0d795b5fe905d89cb65559c29",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/runs/wl-all-off-002/residual-wl-all-off-002-three-feature-bench-artifacts/observation/app-server/00002553926897852129-3388596/server-to-client.raw": "75cf78471aeaf33c4d6fabccaf0d03c9fafe6e2e7d360761639e61d1ee5eecea",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/runs/wl-all-off-002/residual-wl-all-off-002-three-feature-bench-artifacts/observation/rollout-metadata.jsonl": "e3db65e2d4995ebd0f94fec02bd336b4d5dbcd45ee7315fc6982d0540fbf3543",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/runs/wl-all-off-002/residual-wl-all-off-002-three-feature-bench-artifacts/observation/process-invocations.jsonl": "478777fd3865933501364e8daa0eef3d4fa3d8057ca269d13b50014b4d08c8a1",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/runs/wl-all-off-002/residual-wl-all-off-002-three-feature-bench-artifacts/daemon-env.txt": "f17470120cdd70720cf541a22ea1d023eb07d2460d5a1cf34a573a7383f17e6f"
+  }
+}

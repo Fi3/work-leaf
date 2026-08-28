@@ -9,20 +9,19 @@ Leaf runs as independent groups rather than discarding one run when another fail
 
 ## Current Evidence
 
-The corrected Point 7 study is in
-`../efficiency-point7-exact-accounting-20260828T113610Z/FINAL-RESULT.md`.
+Point 7 is complete in
+`../efficiency-point7-bounded-accounting-20260828T142614Z/FINAL-RESULT.md`.
 
-- Direct sequential Codex completed all three requested features. Its exact total is 41,035,124 raw
-  and 1,982,580 uncached tokens.
-- The Work Leaf accounting attempt changed normal directive handling and failed during review. Its
-  partial candidate scored 2/3, but its token total is incomplete and unusable.
-- No valid direct-versus-Work-Leaf percentage was produced.
-- The planned Work Leaf run with all three suspected saving mechanisms disabled was not launched
-  after the shared measurement defect was confirmed.
+- Direct sequential Codex completed 3/3 features with 41,035,124 exact raw tokens.
+- Normal Work Leaf completed 3/3 and is at least 19.15% lower after a conservative allowance for
+  every interrupted response.
+- Work Leaf with all three tested delivery mechanisms disabled completed 3/3 and is at least 4.73%
+  lower under the same bound.
+- The three tested mechanisms do not fully explain the saving.
 
-All earlier normal-workflow and attribution percentages are withdrawn. Their Work Leaf observers
-counted completed-response usage but omitted responses interrupted at orchestrator directives. The
-historical artificial-validation runs remain useful only as qualitative mechanism traces.
+Earlier exact percentages remain withdrawn because their Work Leaf totals omitted interrupted
+responses. The completed bound proves a raw saving for the selected observations; it does not turn
+those old percentages into valid measurements.
 
 ## What Is Verified
 
@@ -39,7 +38,7 @@ The fair benchmark setup can hold these controls constant:
 Direct token accounting is also verified: every completed initial and resumed Codex invocation is
 added once and reconciled with saved provider records.
 
-## Remaining Blocker
+## Remaining Measurement Limit
 
 Normal Work Leaf immediately interrupts a provider response after a complete orchestrator directive.
 On the current ChatGPT Codex transport, exact usage exists only on `response.completed`; interruption
@@ -51,21 +50,19 @@ usage was unavailable, and the same endpoint rejected stored and background resp
 evidence and Codex source call chain are in
 `../efficiency-point7-exact-accounting-20260828T113610Z/FAILURE-ANALYSIS.md`.
 
-## Required Decision
+## Points 8 And 9
 
-No more paid runs should start until one measurement contract is chosen:
+Point 8 identifies the remaining cause of the raw saving. Start from the previously observed
+candidates, especially the number of model/tool cycles, and use controlled conditions that preserve
+normal validation and task behavior. Each condition needs the same conservative interrupted-response
+bound unless exact cancelled-response telemetry becomes available.
 
-1. **Exact provider measurement:** use a transport that reports usage for cancelled responses. Both
-   workflows must use the same declared account and transport. This is a new study because it is not
-   the current normal ChatGPT Codex path.
-2. **Estimated local measurement:** preserve the current normal workflows and estimate interrupted
-   response usage from captured request and response content. The report must label raw and uncached
-   values as estimates, document uncertainty, and never mix them with exact provider totals.
+Point 9 repeats direct, normal Work Leaf, all-three-disabled Work Leaf, and any successful causal
+condition as independent groups. It estimates normal variance, average feature completion, and the
+average raw-token difference. Runs remain evidence even when another condition in the same launch
+batch fails.
 
-After the measurement method is frozen and verified, run a small gate containing one direct run, one
-normal Work Leaf run, and one Work Leaf run with all three candidate mechanisms disabled. The
-all-three-disabled run is mandatory because it checks whether the suspected mechanisms explain the
-overall difference. Only a green gate should proceed to repeated normal-workflow runs and the full
-eight-setting attribution study.
+Exact raw and uncached percentages require a transport that reports usage for cancelled responses.
+Until then, reports must use bounds for raw tokens and must not claim an uncached reduction.
 
 Cross-project replication and other model profiles remain future work.

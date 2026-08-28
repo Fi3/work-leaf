@@ -1,4 +1,9 @@
-# Corrected Point 7 Result
+# Exact-Accounting Attempt
+
+This directory records the failed attempt to obtain exact Work Leaf provider usage without changing
+normal directive handling. It is not the current Point 7 conclusion. The completed conservative
+result is in
+[`../efficiency-point7-bounded-accounting-20260828T142614Z/FINAL-RESULT.md`](../efficiency-point7-bounded-accounting-20260828T142614Z/FINAL-RESULT.md).
 
 ## Abstract
 

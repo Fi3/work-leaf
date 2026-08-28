@@ -20,6 +20,12 @@ transport limit: normal Work Leaf interrupts model responses at orchestrator dir
 ChatGPT Codex transport exposes usage only for completed responses. Earlier Work Leaf totals
 therefore omitted interrupted-response tokens.
 
+Point 7 is completed by a conservative bound in
+`../efficiency-point7-bounded-accounting-20260828T142614Z/FINAL-RESULT.md`. It charges every omitted
+response 400,000 raw tokens. Normal Work Leaf remains at least 19.15% below exact direct Codex, and
+Work Leaf with all three tested mechanisms disabled remains at least 4.73% below. All selected
+candidates passed 3/3.
+
 ## Supported Findings
 
 - The original three requests can be scored independently in saved candidate histories.
@@ -34,8 +40,9 @@ therefore omitted interrupted-response tokens.
   invocation.
 - Normal Work Leaf cannot be measured exactly on the current ChatGPT Codex transport because usage
   for interrupted directive responses is unavailable.
-- No current evidence supports a precise normal-workflow token reduction or formal quality
-  equivalence.
+- A conservative upper bound proves a raw-token saving in the selected fair 3/3 observations.
+- No current evidence supports a precise average reduction, an uncached reduction, or formal
+  population-level quality equivalence.
 
 ## Historical Names
 
@@ -58,8 +65,13 @@ attribution percentages are also withdrawn because their Work Leaf totals omit i
 usage.
 
 The corrected direct run completed all three features with exact totals of 41,035,124 raw and
-1,982,580 uncached tokens. Its Work Leaf counterpart cannot be compared: exact-accounting
-instrumentation delayed normal directive handling, failed during review, and still did not recover
-complete usage. The current evidence neither proves nor disproves a real Work Leaf saving.
+1,982,580 uncached tokens. A later analysis selected independent normal and all-three-disabled Work
+Leaf candidates that also completed all three features. After applying the conservative missing-
+response bound, normal Work Leaf is at least 19.15% lower in raw tokens and all-three-disabled Work
+Leaf is at least 4.73% lower. This proves a raw saving for those observations and shows that the three
+tested context-delivery mechanisms do not fully explain it.
+
+The exact percentage, uncached percentage, population average, and remaining causal allocation are
+still unknown.
 
 The required work before another paid batch is listed in `NEXT-STEPS.md`.
