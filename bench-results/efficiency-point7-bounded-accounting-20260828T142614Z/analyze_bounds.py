@@ -550,7 +550,7 @@ def analyze() -> dict[str, Any]:
         "conclusion": {
             "normal_work_leaf_raw_saving_proven_for_selected_run": True,
             "all_three_disabled_raw_saving_proven_for_selected_run": True,
-            "saving_fully_explained_by_three_candidate_mechanisms": False,
+            "three_candidate_mechanisms_explain_population_saving": "unknown",
             "exact_raw_reduction_known": False,
             "uncached_reduction_known": False,
             "population_average_known": False,

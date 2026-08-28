@@ -5,8 +5,10 @@
 Point 7 is complete. For the selected fair 3/3 observations, normal concurrent Work Leaf used fewer
 raw tokens than direct sequential Codex even after charging the maximum conservative allowance for
 every interrupted response. The saving also remains when all three suspected context-delivery
-mechanisms are disabled. This proves that the observed raw saving is real for these observations and
-that those three mechanisms do not fully explain it.
+mechanisms are disabled in the selected observation. This proves that the observed raw saving is
+real for these observations. It does not establish whether the three mechanisms explain the average
+saving because one observation per condition cannot separate a repeatable effect from normal
+run-to-run variation.
 
 The exact reduction, uncached-token reduction, average reduction across repeated runs, and allocation
 among the remaining causes are not established here.
@@ -72,7 +74,6 @@ fails. All three happen to pass 3/3, so implementation quality does not explain 
 
 - A raw-token saving exists in these fair selected observations.
 - The saving survives an intentionally excessive charge for all missing interrupted responses.
-- The three tested delivery mechanisms cannot be the complete explanation.
 - No new paid model call was needed to reach this result.
 
 ## What Remains Unknown
@@ -80,6 +81,7 @@ fails. All three happen to pass 3/3, so implementation quality does not explain 
 - The exact raw-token saving is unknown because interrupted responses have no terminal usage.
 - The uncached saving is unknown because the missing responses have no cached-input split.
 - One observation per condition does not estimate the population average or normal variance.
+- Whether the three tested delivery mechanisms explain the average saving remains unknown.
 - This result does not allocate the remaining saving among fewer model/tool cycles, orchestration,
   command-output delivery, structured edits, linearization, or other workflow differences.
 

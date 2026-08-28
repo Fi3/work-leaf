@@ -68,8 +68,9 @@ The corrected direct run completed all three features with exact totals of 41,03
 1,982,580 uncached tokens. A later analysis selected independent normal and all-three-disabled Work
 Leaf candidates that also completed all three features. After applying the conservative missing-
 response bound, normal Work Leaf is at least 19.15% lower in raw tokens and all-three-disabled Work
-Leaf is at least 4.73% lower. This proves a raw saving for those observations and shows that the three
-tested context-delivery mechanisms do not fully explain it.
+Leaf is at least 4.73% lower. This proves a raw saving for those observations. It does not determine
+whether the three tested context-delivery mechanisms explain the average saving because the
+all-three-disabled result is a single observation and may reflect normal run-to-run variation.
 
 The exact percentage, uncached percentage, population average, and remaining causal allocation are
 still unknown.

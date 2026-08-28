@@ -17,7 +17,9 @@ Point 7 is complete in
   every interrupted response.
 - Work Leaf with all three tested delivery mechanisms disabled completed 3/3 and is at least 4.73%
   lower under the same bound.
-- The three tested mechanisms do not fully explain the saving.
+- One observation per condition cannot show whether that 4.73% difference is a repeatable residual
+  or ordinary run-to-run variation. Whether the three mechanisms explain the average saving remains
+  unknown.
 
 Earlier exact percentages remain withdrawn because their Work Leaf totals omitted interrupted
 responses. The completed bound proves a raw saving for the selected observations; it does not turn
@@ -52,10 +54,10 @@ evidence and Codex source call chain are in
 
 ## Points 8 And 9
 
-Point 8 identifies the remaining cause of the raw saving. Start from the previously observed
-candidates, especially the number of model/tool cycles, and use controlled conditions that preserve
-normal validation and task behavior. Each condition needs the same conservative interrupted-response
-bound unless exact cancelled-response telemetry becomes available.
+Point 8 tests candidate causes of the raw saving. Start from the previously observed candidates,
+especially the number of model/tool cycles, and use controlled conditions that preserve normal
+validation and task behavior. Each condition needs the same conservative interrupted-response bound
+unless exact cancelled-response telemetry becomes available.
 
 Point 9 repeats direct, normal Work Leaf, all-three-disabled Work Leaf, and any successful causal
 condition as independent groups. It estimates normal variance, average feature completion, and the
