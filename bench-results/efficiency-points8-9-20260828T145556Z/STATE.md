@@ -2,9 +2,11 @@
 
 ## Status
 
-Batches 1 and 2 are closed and inspected. `wl-100-001`, `wl-000-003`, and `wl-010-001`
-completed. `wl-111-003` was stopped after a systematic review-routing loop. `FAILURES.md` records
-the evidence and why the remaining Git-reconstruction conditions will not be launched.
+Batches 1 and 2 and the first balanced execution batch are closed and inspected. `wl-100-001`,
+`wl-000-003`, `wl-010-001`, `direct-003`, and `wl-110-001` completed. `wl-111-003` was stopped
+after a systematic review-routing loop. `FAILURES.md` records the evidence and why the remaining
+Git-reconstruction conditions will not be launched. The final balanced execution batch is
+`direct-002` with `wl-000-002`.
 
 ## Frozen Inputs
 
@@ -23,9 +25,9 @@ the evidence and why the remaining Git-reconstruction conditions will not be lau
 | ---: | --- | --- |
 | 1 | `wl-111-003`, `wl-100-001` | closed: `wl-100-001` passed; `wl-111-003` unusable interruption |
 | 2 | `wl-000-003`, `wl-010-001` | closed: both passed workflow and 3/3 features |
-| 3 | `wl-001-001`, `direct-003` | `wl-001-001` withheld; `direct-003` pending |
+| 3 | `wl-001-001`, `direct-003` | `wl-001-001` withheld; `direct-003` passed workflow and 2/3 features |
 | 4 | `direct-002`, `wl-011-001` | `direct-002` pending; `wl-011-001` withheld |
-| 5 | `wl-111-002`, `wl-110-001` | `wl-111-002` withheld; `wl-110-001` pending |
+| 5 | `wl-111-002`, `wl-110-001` | `wl-111-002` withheld; `wl-110-001` passed workflow and 2/3 features |
 | 6 | `wl-000-002`, `wl-101-001` | `wl-000-002` pending; `wl-101-001` withheld |
 
 Every attempt remains independent. A failure in one row does not remove or invalidate another row.
@@ -35,7 +37,7 @@ Every attempt remains independent. A failure in one row does not remove or inval
 The systematic Git-reconstruction failure removes one member from each original batch after batch
 2. The remaining safe attempts run in two predeclared concurrent execution batches:
 
-1. `direct-003` with `wl-110-001`;
+1. `direct-003` with `wl-110-001` (complete);
 2. `direct-002` with `wl-000-002`.
 
 This keeps the two-workflow parallelism while avoiding a schedule in which both direct runs happen
@@ -75,3 +77,22 @@ captured-prompt formula, so the larger amount is used. It delivered the full cur
 file for three verified unchanged-file rereads, so the declared control activated. The observed
 values differ by 6,360,587 raw tokens, but their conservative ranges overlap. This one contrast
 does not separate a repeatable digest effect from normal model-path variation.
+
+## First Balanced Execution Batch
+
+`direct-003` and `wl-110-001` completed the normal workflow, review, linearization, final
+formatting, Clippy, full tests, candidate replay build, and startup smoke. Both used GPT-5.5/xhigh,
+the frozen candidate base and task, and no recursive provider calls. The frozen scorer gives both
+implementations the same 2/3 requested features: visual selection and `/status` pass; completion
+close/reopen fails.
+
+`direct-003` has a complete observer capture of 28,877,983 raw tokens and 1,906,975 uncached
+tokens. `wl-110-001` recorded 11,052,832 raw tokens and 871,712 uncached tokens from completed
+responses. Its 57 interrupted responses make the Work Leaf values incomplete; the conservative
+raw-token range is 11,052,832 to 34,694,958.
+
+The `wl-110` control delivered full content for both repeated-read types. It activated on eight
+unchanged-file rereads and eight changed-file rereads. The unchanged-file events delivered 294,593
+bytes where digest delivery would have used 452 bytes. A reconstructed changed-file diff was not
+available for these eight full-file events, so their byte-level counterfactual is unknown. The
+whole-workflow token ranges, rather than these byte counts alone, determine the causal screen.

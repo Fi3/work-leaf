@@ -1,0 +1,59 @@
+command: cargo test --test quality_completion quality_completion_behavior -- --exact
+exit_code: 101
+duration_seconds: 0.390
+
+[stdout]
+
+running 1 test
+test quality_completion_behavior ... FAILED
+
+failures:
+
+---- quality_completion_behavior stdout ----
+
+thread 'quality_completion_behavior' (190712) panicked at tests/quality_completion.rs:41:5:
+closing must have a visible effect
+[H┌work-leaf─────────────┐┌chat──────────────────────────────────────────────────────────────────────────────────────────┐
+│  work-leaf  command  ││implementation complete                                                                       │
+│>review-fixture user-1││@work-leaf patch update fixture                                                               │
+│[7m review-user-1 r READY[0m││--- a/README.md                                                                               │
+│                      ││+++ b/README.md                                                                               │
+│                      ││@@ -1 +1 @@                                                                                   │
+│                      ││-before                                                                                       │
+│                      ││+after                                                                                        │
+│                      ││@work-leaf end                                                                                │
+│                      ││@work-leaf done                                                                               │
+│                      ││                                                                                              │
+│                      ││orchestrator:                                                                                 │
+│                      ││applied patch from user-1: update fixture; commit=c328aeb8043e5c660793f2ab4bf977a220068d6b;   │
+│                      ││files=README.md                                                                               │
+│                      ││agent user-1 reported done                                                                    │
+│                      ││review: user-1 reviewed by review-user-1: rounds=1 resolved=yes                               │
+│                      ││work-leaf: Is this feature done? yes/no                                                       │
+│                      ││user: yes                                                                                     │
+│                      ││work-leaf: feature marked done                                                                │
+│                      ││chat>                                                                                         │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+└──────────────────────┘└──────────────────────────────────────────────────────────────────────────────────────────────┘
+mode=insert focus=right window=1/1                                                                                      [20;32H
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    quality_completion_behavior
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+
+[stderr]
+   Compiling work-leaf v0.1.0 (/tmp/points89-score-batch3/checkouts/direct-003)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.33s
+     Running tests/quality_completion.rs (/tmp/points89-score-batch3/cargo-target/debug/deps/quality_completion-dedde6b96f0e96d0)
+error: test failed, to rerun pass `--test quality_completion`

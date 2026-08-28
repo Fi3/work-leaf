@@ -76,3 +76,12 @@ interrupted response. For `wl-010-001`, that aggregate allowance was 48,705 toke
 stricter sum of effective context windows, maximum outputs, and captured new-turn prompt bytes. The
 analysis therefore uses the larger formula whenever 400,000 per response is insufficient. This
 changes only the offline ceiling and requires no candidate or provider rerun.
+
+## First Balanced Batch Scorer Formatting
+
+The intended frozen three-feature scorer ran all six fixtures for `direct-003` and `wl-110-001`
+and wrote `quality/batch3.json`. It exited only while formatting Markdown because the compact
+manifest contains no normal `wl-000` row and the comparison object therefore has no
+`token_measurements_usable` field. The saved JSON and all six hash-checked fixture logs are
+complete. Both candidates passed visual selection and `/status` and failed completion
+close/reopen. Neither candidate was rerun.
