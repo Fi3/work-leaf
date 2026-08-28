@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$#" != 1 || ! "$1" =~ ^[1-6]$ ]]; then
+  echo "usage: $0 BATCH_NUMBER" >&2
+  exit 2
+fi
+
+batch="$1"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+schedule="$script_dir/SCHEDULE.tsv"
+status_dir="$script_dir/batch-status"
+mapfile -t rows < <(awk -F '\t' -v batch="$batch" 'NR > 1 && $1 == batch {print $2 "\t" $3}' "$schedule")
+[[ "${#rows[@]}" == 2 ]] || {
+  echo "error: batch $batch must contain exactly two attempts" >&2
+  exit 2
+}
+mkdir -p "$status_dir"
+[[ ! -e "$status_dir/batch-$batch.complete" ]] || {
+  echo "error: batch $batch is already complete" >&2
+  exit 2
+}
+
+pids=()
+attempts=()
+for row in "${rows[@]}"; do
+  IFS=$'\t' read -r attempt condition <<<"$row"
+  "$script_dir/run-condition" "$attempt" "$condition" "$batch" &
+  pids+=("$!")
+  attempts+=("$attempt")
+done
+
+overall=0
+for index in "${!pids[@]}"; do
+  if wait "${pids[$index]}"; then
+    status=0
+  else
+    status=$?
+    overall=1
+  fi
+  printf '%s\t%s\n' "${attempts[$index]}" "$status" \
+    >>"$status_dir/batch-$batch.complete"
+done
+
+exit "$overall"

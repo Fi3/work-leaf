@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$#" != 3 ]]; then
+  echo "usage: $0 ATTEMPT_ID CONDITION BATCH_ID" >&2
+  exit 2
+fi
+
+attempt_id="$1"
+condition="$2"
+batch_id="$3"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source_repo="${WORK_LEAF_POINTS89_SOURCE_REPO:-/home/user/.codex/work-leaf-points89-source-20260828T145556Z}"
+runtime_root="${WORK_LEAF_POINTS89_RUNTIME_DIR:-/home/user/.codex/work-leaf-points89-runtime-20260828T145556Z}"
+bin_dir="$script_dir/infrastructure/bin"
+observer_bin="$bin_dir/bench-observer"
+study_id="efficiency-points8-9-20260828T145556Z"
+expected_commit="4707ceb4903a09646857d1e316cb45acb15a3d07"
+timeout_seconds=7200
+
+[[ "$attempt_id" =~ ^(direct|wl-[01][01][01])-[0-9][0-9][0-9]$ ]] || {
+  echo "error: invalid attempt ID: $attempt_id" >&2
+  exit 2
+}
+[[ -x "$bin_dir/work-leaf" && -x "$bin_dir/work-leaf-orchestrator" \
+  && -x "$observer_bin" ]] || {
+  echo "error: frozen study binaries are missing" >&2
+  exit 2
+}
+[[ "$(git -C "$source_repo" rev-parse HEAD)" == "$expected_commit" \
+  && -z "$(git -C "$source_repo" status --short)" ]] || {
+  echo "error: isolated study source does not match the frozen commit" >&2
+  exit 1
+}
+
+case "$condition" in
+  direct)
+    workflow="direct-sequential"
+    changed="n/a"
+    unchanged="n/a"
+    review="n/a"
+    [[ "$attempt_id" == direct-* ]] || {
+      echo "error: direct condition requires a direct attempt ID" >&2
+      exit 2
+    }
+    ;;
+  wl-[01][01][01])
+    workflow="work-leaf-concurrent"
+    bits="${condition#wl-}"
+    changed="normal"
+    unchanged="normal"
+    review="inline-exact"
+    [[ "${bits:0:1}" == "1" ]] && changed="full"
+    [[ "${bits:1:1}" == "1" ]] && unchanged="full"
+    [[ "${bits:2:1}" == "1" ]] && review="git-reconstruct"
+    [[ "$attempt_id" == "$condition"-* ]] || {
+      echo "error: Work Leaf attempt ID does not match condition" >&2
+      exit 2
+    }
+    ;;
+  *)
+    echo "error: condition must be direct or wl-000 through wl-111" >&2
+    exit 2
+    ;;
+esac
+
+results_dir="$script_dir/runs/$attempt_id"
+log_path="$script_dir/logs/$attempt_id.log"
+status_path="$script_dir/logs/$attempt_id.exit"
+run_id="points89-$attempt_id"
+[[ ! -e "$results_dir" && ! -e "$log_path" && ! -e "$status_path" ]] || {
+  echo "error: attempt already has preserved state: $attempt_id" >&2
+  exit 2
+}
+mkdir -p "$results_dir" "$script_dir/logs" "$runtime_root/$attempt_id"
+
+python3 - "$results_dir/admission.json" "$attempt_id" "$condition" "$workflow" \
+  "$batch_id" "$changed" "$unchanged" "$review" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+output, attempt, condition, workflow, batch, changed, unchanged, review = sys.argv[1:]
+payload = {
+    "schema_version": 1,
+    "attempt_id": attempt,
+    "condition": condition,
+    "workflow": workflow,
+    "launch_batch": int(batch),
+    "analytical_pair": False,
+    "model": "gpt-5.5",
+    "reasoning_effort": "xhigh",
+    "changed_reread": changed,
+    "unchanged_reread": unchanged,
+    "review_context": review,
+    "retry": False,
+}
+temporary = Path(output + ".tmp")
+temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+os.replace(temporary, output)
+PY
+
+set +e
+if [[ "$workflow" == "direct-sequential" ]]; then
+  env -u WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY \
+    -u WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY \
+    -u WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE \
+    WORK_LEAF_DIRECT_BENCH_MODEL=gpt-5.5 \
+    WORK_LEAF_DIRECT_BENCH_REASONING_EFFORT=xhigh \
+    WORK_LEAF_DIRECT_BENCH_TMPDIR="$runtime_root/$attempt_id" \
+    WORK_LEAF_DIRECT_BENCH_RESULTS_DIR="$results_dir" \
+    WORK_LEAF_DIRECT_BENCH_SKIP_BUILD=1 \
+    WORK_LEAF_DIRECT_BENCH_BIN_DIR="$bin_dir" \
+    WORK_LEAF_DIRECT_BENCH_TIMEOUT_SECS="$timeout_seconds" \
+    WORK_LEAF_BENCH_OBSERVER_BIN="$observer_bin" \
+    WORK_LEAF_BENCH_STUDY_ID="$study_id" \
+    WORK_LEAF_BENCH_PAIR_ID="unpaired-$attempt_id" \
+    WORK_LEAF_DIRECT_BENCH_RUN_ID="$run_id" \
+    "$source_repo/bench-three-features-sequential" >"$log_path" 2>&1
+  status=$?
+else
+  env \
+    WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY="$changed" \
+    WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY="$unchanged" \
+    WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE="$review" \
+    WORK_LEAF_BENCH_MODEL=gpt-5.5 \
+    WORK_LEAF_BENCH_REASONING_EFFORT=xhigh \
+    WORK_LEAF_BENCH_TMPDIR="$runtime_root/$attempt_id" \
+    WORK_LEAF_BENCH_RESULTS_DIR="$results_dir" \
+    WORK_LEAF_BENCH_SKIP_BUILD=1 \
+    WORK_LEAF_BENCH_BIN_DIR="$bin_dir" \
+    WORK_LEAF_BENCH_TIMEOUT_SECS="$timeout_seconds" \
+    WORK_LEAF_BENCH_NO_READ_PERMISSION=0 \
+    WORK_LEAF_BENCH_WEB_UI=0 \
+    WORK_LEAF_BENCH_DISABLE_TMUX_SUPERVISOR=1 \
+    WORK_LEAF_BENCH_OBSERVER_BIN="$observer_bin" \
+    WORK_LEAF_BENCH_STUDY_ID="$study_id" \
+    WORK_LEAF_BENCH_PAIR_ID="unpaired-$attempt_id" \
+    WORK_LEAF_BENCH_RUN_ID="$run_id" \
+    "$source_repo/bench-three-features" >"$log_path" 2>&1
+  status=$?
+fi
+set -e
+
+printf '%s\n' "$status" >"$status_path"
+exit "$status"
+

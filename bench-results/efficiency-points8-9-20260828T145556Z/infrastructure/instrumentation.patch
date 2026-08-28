@@ -1,0 +1,396 @@
+From 17e020ba5f2b9bd9736721bcbc479d9c6160a1d8 Mon Sep 17 00:00:00 2001
+From: Work Leaf Attribution Study <bench-study@example.invalid>
+Date: Thu, 27 Aug 2026 23:05:35 +0200
+Subject: [PATCH] ADD controlled context delivery switches so token savings can
+ be attributed
+
+Keep normal Work Leaf behavior as the default while allowing isolated benchmark runs to replace changed-file diffs, unchanged-file digests, and inline review context one mechanism at a time. Tests execute environment-controlled cases in child processes so the controls cannot leak into unrelated parallel tests.
+---
+ src/cli.rs                     |  59 +++++++++++++-----
+ src/orchestrator.rs            | 111 ++++++++++++++++++++++++++++++---
+ tests/cli.rs                   |  46 ++++++++++++++
+ tests/orchestrator_protocol.rs |  76 ++++++++++++++++++++++
+ 4 files changed, 271 insertions(+), 21 deletions(-)
+
+diff --git a/src/cli.rs b/src/cli.rs
+index bf5eb3e..b2744e5 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -35,6 +35,30 @@ use crate::{HttpControllerClient, OrchestratorHttpError, WorkLeafSnapshot};
+ const DEFAULT_NEW_AGENT_PROMPT: &str = "Start a new work-leaf user-agent session. Ask the user what to work on if the task is not already clear, then report the broad feature before proposing patches.";
+ const COMMAND_AGENT_ID: &str = "command-agent";
+ const TITLE_AGENT_ID: &str = "title-agent";
++const WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE_ENV: &str = "WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE";
++
++#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
++enum ExperimentReviewProvenancePolicy {
++    #[default]
++    InlineExact,
++    GitReconstruct,
++}
++
++fn experiment_review_provenance_policy_from_env() -> ExperimentReviewProvenancePolicy {
++    match std::env::var(WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE_ENV) {
++        Err(std::env::VarError::NotPresent) => ExperimentReviewProvenancePolicy::InlineExact,
++        Err(std::env::VarError::NotUnicode(_)) => {
++            panic!("{WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE_ENV} must be valid UTF-8")
++        }
++        Ok(value) => match value.trim() {
++            "" | "inline-exact" | "normal" => ExperimentReviewProvenancePolicy::InlineExact,
++            "git-reconstruct" => ExperimentReviewProvenancePolicy::GitReconstruct,
++            value => panic!(
++                "{WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE_ENV} must be `inline-exact` or `git-reconstruct`, got `{value}`"
++            ),
++        },
++    }
++}
+ pub(crate) const COMMAND_AGENT_TRANSCRIPT_LIMIT: usize = 40;
+ 
+ fn launch_agent_streaming_interruptible<B>(
+@@ -1189,21 +1213,28 @@ where
+         reuse_reviewer: bool,
+         stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+     ) -> Result<ReviewResult, CliError> {
+-        let source_context = {
+-            let session = self.agent_session(&commit.agent_id);
+-            render_review_source_context(&commit, session.as_ref())
+-        };
+-
+         let review_feature = format!("review {}", commit.feature);
+-        let review_prompt = format!(
+-            "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\n\nSource context from Work Leaf commits, logs, and chat history:\n{}\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.\n\nFor agent-facing changes, missing required real-agent verification is a finding unless the source context includes the exact real-agent scenario and visible result, or the exact pre-agent blocker. If you report missing verification, state the precise evidence that would resolve it. When the patch agent responds with verification evidence or a blocker rather than code, evaluate that evidence instead of requiring another patch.",
+-            commit.agent_id,
+-            commit.hash,
+-            commit.feature,
+-            commit.reason,
+-            commit.context,
+-            source_context
+-        );
++        let review_prompt = match experiment_review_provenance_policy_from_env() {
++            ExperimentReviewProvenancePolicy::InlineExact => {
++                let source_context = {
++                    let session = self.agent_session(&commit.agent_id);
++                    render_review_source_context(&commit, session.as_ref())
++                };
++                format!(
++                    "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\n\nSource context from Work Leaf commits, logs, and chat history:\n{}\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.\n\nFor agent-facing changes, missing required real-agent verification is a finding unless the source context includes the exact real-agent scenario and visible result, or the exact pre-agent blocker. If you report missing verification, state the precise evidence that would resolve it. When the patch agent responds with verification evidence or a blocker rather than code, evaluate that evidence instead of requiring another patch.",
++                    commit.agent_id,
++                    commit.hash,
++                    commit.feature,
++                    commit.reason,
++                    commit.context,
++                    source_context
++                )
++            }
++            ExperimentReviewProvenancePolicy::GitReconstruct => format!(
++                "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope and source context are intentionally not inlined for this experiment. Reconstruct the exact review scope from Git before reviewing. Start with the latest commit above and include its immediately preceding contiguous commits while their commit messages contain `Agent-ID: {}`; stop at the first commit with a different or missing Agent-ID. Inspect the full commit messages for that scope and the cumulative diff from the parent of its oldest commit through the latest commit. Run Git inspection through `@work-leaf locks run . -- git ...`. Treat the reconstructed commit messages and diff as the review scope and source context referenced below.\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.\n\nFor agent-facing changes, missing required real-agent verification is a finding unless the source context includes the exact real-agent scenario and visible result, or the exact pre-agent blocker. If you report missing verification, state the precise evidence that would resolve it. When the patch agent responds with verification evidence or a blocker rather than code, evaluate that evidence instead of requiring another patch.",
++                commit.agent_id, commit.hash, commit.feature, commit.reason, commit.agent_id
++            ),
++        };
+         let mut review_text = if reuse_reviewer {
+             {
+                 let backend = self
+diff --git a/src/orchestrator.rs b/src/orchestrator.rs
+index 1445cfd..9c1bee5 100644
+--- a/src/orchestrator.rs
++++ b/src/orchestrator.rs
+@@ -16,6 +16,11 @@ use crate::patch::{
+ };
+ 
+ const WORK_LEAF_CONTEXT_BUNDLE_DIR_ENV: &str = "WORK_LEAF_CONTEXT_BUNDLE_DIR";
++const WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY_ENV: &str =
++    "WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY";
++const WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY_ENV: &str =
++    "WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY";
++const WORK_LEAF_EXPERIMENT_READ_DELIVERY_ENV: &str = "WORK_LEAF_EXPERIMENT_READ_DELIVERY";
+ const LOCKED_COMMAND_PROGRESS_INTERVAL: Duration = Duration::from_secs(30);
+ 
+ #[derive(Debug)]
+@@ -2078,27 +2083,55 @@ fn render_file_read_response_with_repeats(
+     unchanged_snapshots: &[crate::locks::FileSnapshot],
+     failures: &[FileReadFailure],
+ ) -> String {
++    let experiment = experiment_read_delivery_config_from_env();
+     let mut text = exact_text;
+     if !changed_snapshots.is_empty() {
+         text.push_str("\nRepeated file reads with changes\n");
+-        text.push_str(
+-            "These files changed since this agent's last mediated snapshot, so Work Leaf is sending diffs instead of full file text. Continue from the previous snapshot and request narrower related context if the diff is insufficient.\n",
+-        );
++        if experiment.changed_full {
++            text.push_str(
++                "These files changed since this agent's last mediated snapshot. This controlled condition sends full current file text instead of a diff.\n",
++            );
++        } else {
++            text.push_str(
++                "These files changed since this agent's last mediated snapshot, so Work Leaf is sending diffs instead of full file text. Continue from the previous snapshot and request narrower related context if the diff is insufficient.\n",
++            );
++        }
+         for snapshot in changed_snapshots {
+-            render_changed_repeat_read_snapshot(&mut text, file_reads, agent_id, snapshot);
++            if experiment.changed_full {
++                render_changed_repeat_full_current_snapshot(
++                    &mut text, file_reads, agent_id, snapshot,
++                );
++            } else {
++                render_changed_repeat_read_snapshot(&mut text, file_reads, agent_id, snapshot);
++            }
+         }
+     }
+     if !unchanged_snapshots.is_empty() {
+         text.push_str("\nRepeated file reads unchanged\n");
+-        text.push_str(
+-            "Work Leaf already sent this agent the exact text for these files, and the current digests still match. Full text is not resent; use the existing snapshot.\n",
+-        );
++        if experiment.unchanged_full {
++            text.push_str(
++                "Work Leaf already sent this agent the exact text for these files, and the current digests still match. This controlled condition resends the full current text even though the digest still matches.\n",
++            );
++        } else {
++            text.push_str(
++                "Work Leaf already sent this agent the exact text for these files, and the current digests still match. Full text is not resent; use the existing snapshot.\n",
++            );
++        }
+         for snapshot in unchanged_snapshots {
+             text.push_str("- ");
+             text.push_str(&snapshot.path.display().to_string());
+             text.push_str(" (");
+             text.push_str(&content_digest(&snapshot.text));
+             text.push_str(")\n");
++            if experiment.unchanged_full {
++                text.push_str("full current text follows for ");
++                text.push_str(&snapshot.path.display().to_string());
++                text.push_str(":\n");
++                text.push_str(&snapshot.text);
++                if !snapshot.text.ends_with('\n') {
++                    text.push('\n');
++                }
++            }
+         }
+     }
+     if !failures.is_empty() {
+@@ -2108,6 +2141,45 @@ fn render_file_read_response_with_repeats(
+     text
+ }
+ 
++#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
++struct ExperimentReadDeliveryConfig {
++    changed_full: bool,
++    unchanged_full: bool,
++}
++
++fn experiment_read_delivery_config_from_env() -> ExperimentReadDeliveryConfig {
++    let shared = experiment_env_value(WORK_LEAF_EXPERIMENT_READ_DELIVERY_ENV);
++    ExperimentReadDeliveryConfig {
++        changed_full: experiment_full_delivery(
++            WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY_ENV,
++            shared.as_deref(),
++        ),
++        unchanged_full: experiment_full_delivery(
++            WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY_ENV,
++            shared.as_deref(),
++        ),
++    }
++}
++
++fn experiment_full_delivery(name: &str, fallback: Option<&str>) -> bool {
++    match experiment_env_value(name).as_deref().or(fallback) {
++        None | Some("normal") => false,
++        Some("full") => true,
++        Some(value) => panic!("{name} must be `normal` or `full`, got `{value}`"),
++    }
++}
++
++fn experiment_env_value(name: &str) -> Option<String> {
++    match std::env::var(name) {
++        Err(std::env::VarError::NotPresent) => None,
++        Err(std::env::VarError::NotUnicode(_)) => panic!("{name} must be valid UTF-8"),
++        Ok(value) => {
++            let value = value.trim().to_string();
++            (!value.is_empty()).then_some(value)
++        }
++    }
++}
++
+ fn render_file_read_response_inline(
+     snapshots: &[crate::locks::FileSnapshot],
+     failures: &[FileReadFailure],
+@@ -2166,6 +2238,31 @@ fn render_changed_repeat_read_snapshot(
+     }
+ }
+ 
++fn render_changed_repeat_full_current_snapshot(
++    text: &mut String,
++    file_reads: &FileReadTracker,
++    agent_id: &AgentId,
++    snapshot: &crate::locks::FileSnapshot,
++) {
++    text.push_str("\n--- ");
++    text.push_str(&snapshot.path.display().to_string());
++    text.push_str(" ---\n");
++    text.push_str("current digest: ");
++    text.push_str(&content_digest(&snapshot.text));
++    text.push('\n');
++    if let Some(previous) = file_reads.snapshot_for(agent_id, &snapshot.path) {
++        text.push_str("previous digest: ");
++        text.push_str(&previous.digest);
++        text.push('\n');
++    }
++    text.push_str("status: changed since this agent's last snapshot\n");
++    text.push_str("full current text follows:\n");
++    text.push_str(&snapshot.text);
++    if !snapshot.text.ends_with('\n') {
++        text.push('\n');
++    }
++}
++
+ const MAX_INLINE_FILE_READ_BYTES: usize = 24 * 1024;
+ const MAX_INLINE_SINGLE_FILE_READ_BYTES: usize = 16 * 1024;
+ 
+diff --git a/tests/cli.rs b/tests/cli.rs
+index 73bfb13..947f3e6 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -724,6 +724,52 @@ fn command_chat_processes_reviewer_orchestrator_directives_before_findings() {
+     }));
+ }
+ 
++#[test]
++fn command_chat_experiment_can_require_review_context_reconstruction() {
++    const CHILD: &str = "WORK_LEAF_TEST_REVIEW_RECONSTRUCT_CHILD";
++    if std::env::var_os(CHILD).is_none() {
++        let status = Command::new(std::env::current_exe().unwrap())
++            .args([
++                "--exact",
++                "command_chat_experiment_can_require_review_context_reconstruction",
++                "--nocapture",
++            ])
++            .env(CHILD, "1")
++            .env("WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE", "git-reconstruct")
++            .status()
++            .unwrap();
++        assert!(status.success());
++        return;
++    }
++    let root = temp_git_repo("command-chat-review-git-reconstruct");
++    fs::write(root.join("README.md"), "review target\n").unwrap();
++    git(&root, ["add", "README.md"]);
++    git(
++        &root,
++        [
++            "commit",
++            "-m",
++            "UPDATE apply docs patch from user-1",
++            "-m",
++            "Agent-ID: user-1\nFeature: docs\nReason: review docs\nContext: private inline context",
++        ],
++    );
++    let backend = FakeBackend::new(["NO_FINDINGS"]);
++    let mut chat = CommandChat::new(root, backend);
++
++    let result = chat.handle_line("review").unwrap();
++    assert!(matches!(result, CommandChatResult::ReviewComplete(_)));
++
++    let backend = chat.into_backend();
++    let prompt = &backend.launches[0].prompt;
++    assert!(prompt.contains(
++        "Review scope and source context are intentionally not inlined for this experiment"
++    ));
++    assert!(prompt.contains("Reconstruct the exact review scope from Git before reviewing"));
++    assert!(!prompt.contains("private inline context"));
++    assert!(!prompt.contains("Recorded chat history"));
++}
++
+ #[test]
+ fn command_chat_does_not_interrupt_agents_with_stale_file_updates() {
+     let root = temp_git_repo("command-chat-no-stale-file-interrupt");
+diff --git a/tests/orchestrator_protocol.rs b/tests/orchestrator_protocol.rs
+index 5daf902..388a1c8 100644
+--- a/tests/orchestrator_protocol.rs
++++ b/tests/orchestrator_protocol.rs
+@@ -172,6 +172,82 @@ fn orchestrator_protocol_sends_diff_for_changed_repeat_file_reads() {
+     );
+ }
+ 
++#[test]
++fn orchestrator_protocol_experiment_can_resend_full_changed_files() {
++    const CHILD: &str = "WORK_LEAF_TEST_CHANGED_REPEAT_CHILD";
++    if std::env::var_os(CHILD).is_none() {
++        let status = Command::new(std::env::current_exe().unwrap())
++            .args([
++                "--exact",
++                "orchestrator_protocol_experiment_can_resend_full_changed_files",
++                "--nocapture",
++            ])
++            .env(CHILD, "1")
++            .env("WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY", "full")
++            .status()
++            .unwrap();
++        assert!(status.success());
++        return;
++    }
++    let root = temp_git_repo("protocol-repeat-read-changed-full");
++    fs::write(root.join("README.md"), "before\n").unwrap();
++    let backend = RecordingBackend::default();
++    let mut orchestrator = AgentOrchestrator::new(root.clone(), backend);
++    let agent_id = AgentId::new("user-1").unwrap();
++
++    orchestrator
++        .handle_agent_message(&agent_id, "docs", "@work-leaf read README.md")
++        .unwrap();
++    fs::write(root.join("README.md"), "after\n").unwrap();
++    orchestrator
++        .handle_agent_message(&agent_id, "docs", "@work-leaf read README.md")
++        .unwrap();
++    let backend = orchestrator.into_backend();
++
++    let repeat_prompt = &backend.sends[1].1;
++    assert!(repeat_prompt.contains("full current text follows:\nafter\n"));
++    assert!(!repeat_prompt.contains("diff --git"));
++}
++
++#[test]
++fn orchestrator_protocol_experiment_can_resend_full_unchanged_files() {
++    const CHILD: &str = "WORK_LEAF_TEST_UNCHANGED_REPEAT_CHILD";
++    if std::env::var_os(CHILD).is_none() {
++        let status = Command::new(std::env::current_exe().unwrap())
++            .args([
++                "--exact",
++                "orchestrator_protocol_experiment_can_resend_full_unchanged_files",
++                "--nocapture",
++            ])
++            .env(CHILD, "1")
++            .env("WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY", "full")
++            .status()
++            .unwrap();
++        assert!(status.success());
++        return;
++    }
++    let root = temp_git_repo("protocol-repeat-read-unchanged-full");
++    fs::write(root.join("README.md"), "same\n").unwrap();
++    let backend = RecordingBackend::default();
++    let mut orchestrator = AgentOrchestrator::new(root, backend);
++    let agent_id = AgentId::new("user-1").unwrap();
++
++    orchestrator
++        .handle_agent_message(&agent_id, "docs", "@work-leaf read README.md")
++        .unwrap();
++    orchestrator
++        .handle_agent_message(&agent_id, "docs", "@work-leaf read README.md")
++        .unwrap();
++    let backend = orchestrator.into_backend();
++
++    let repeat_prompt = &backend.sends[1].1;
++    assert!(repeat_prompt.contains(
++        "This controlled condition resends the full current text even though the digest still matches."
++    ));
++    assert!(!repeat_prompt.contains("Full text is not resent"));
++    assert!(repeat_prompt.contains("full current text follows for README.md:\nsame\n"));
++}
++
+ #[test]
+ fn orchestrator_protocol_force_repeat_read_still_sends_diff() {
+     let root = temp_git_repo("protocol-repeat-read-force");
+-- 
+2.55.0
+
