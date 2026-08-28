@@ -1,0 +1,85 @@
+{
+  "all_three_disabled": {
+    "reasons": [
+      "both Work Leaf conditions are required"
+    ],
+    "usable": false
+  },
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "comparison": {
+    "reasons": [
+      "both pilot workflows are required"
+    ],
+    "usable": false
+  },
+  "complete": true,
+  "fixtures": {
+    "completion": "4d6a19f4c6f515b9a97f184a056d08dc2882041d40d26dd82011180a949c5c87",
+    "status": "5f5295c9dec6be20abb28827b68e84342110fb748aa0cc887d8b58ffa3c6e6b5",
+    "visual": "5ce0782e37b8672e04d8016ca3fbec9caa12f6f9cfaf431cac847c1f6e6a26ca"
+  },
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "runs": [
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.432,
+          "exit_code": 101,
+          "log": "quality/logs/wl-100-001/completion.log",
+          "log_sha256": "0ae98d827ece749911fc6156d79861a3611a75e43897a02d170ea1c76e97f797",
+          "status": "fail"
+        },
+        "status": {
+          "duration_seconds": 0.244,
+          "exit_code": 0,
+          "log": "quality/logs/wl-100-001/status.log",
+          "log_sha256": "efe041170a7060b0ae775c1be76fc0c55fddffc4846aa3befc7b2c3c6fd39343",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 6.189,
+          "exit_code": 0,
+          "log": "quality/logs/wl-100-001/visual.log",
+          "log_sha256": "181d3e250260bec02b6cda5af6f20427d037662b70eeecffdfe078f5d0b63839",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 2,
+      "condition": "wl-100",
+      "final_commit": "633cc587aa08440bf39fb58b54a132a73899387e",
+      "id": "wl-100-001",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-100-001/points89-wl-100-001-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "9d82f9ebfd8949771b1eea048ad58ae7dc88bf10345f2c25dc7ed7f4e1321507",
+        "reasons": [
+          "measurement status is incomplete",
+          "observer analysis marks the capture incomplete"
+        ],
+        "usable": false,
+        "usage": {
+          "cached_input_tokens": 12896128,
+          "input_tokens": 13831160,
+          "output_tokens": 123327,
+          "raw_input_plus_output": 13954487,
+          "reasoning_output_tokens": 78383,
+          "uncached_input_plus_output": 1058359,
+          "uncached_input_tokens": 935032
+        }
+      },
+      "report": "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-100-001/points89-wl-100-001-three-feature-bench-artifacts/report.json",
+      "report_sha256": "b84236c2a45f9b08c68c40b067d259ddcb1b77d6022547fbff53852300f76968",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "pass"
+    }
+  ],
+  "schema_version": 1,
+  "study": "efficiency-points8-9-20260828T145556Z",
+  "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+}
