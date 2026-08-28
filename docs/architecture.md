@@ -201,8 +201,14 @@ candidate commits and restored before the final repository gate.
 The observer keeps cumulative conversation totals from Work Leaf's app-server transport. For direct
 Codex, it keeps one terminal total per CLI invocation and adds initial and resumed invocations. The
 direct sum is reconciled against the final usage from each task epoch in the matching Codex rollout
-file. The observer's `usage_scopes.total_workflow` record is the token authority for comparisons. A
-report keeps the workflow result, token-measurement status, and quality-score result separate so a
+file. Work Leaf benchmark launches enable Codex's exact raw-response telemetry. After recognizing a
+complete directive, benchmark telemetry waits at most 30 seconds for the already-finished response's
+exact usage event before sending the normal interrupt; it does not start another model turn or wait
+for the app-server's later turn-completion event. The observer deduplicates exact events by provider
+response ID, sums every response in each thread, requires an exact event for every turn, and rejects
+missing or null usage. Cumulative app-server notifications remain the fallback for non-benchmark
+captures. The observer's `usage_scopes.total_workflow` record is the token authority for comparisons.
+A report keeps the workflow result, token-measurement status, and quality-score result separate so a
 partial or failed implementation remains evidence rather than being silently retried or discarded.
 
 `bench-candidate-common` owns candidate staging, digest checks, admission metadata, and atomic report

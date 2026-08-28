@@ -544,6 +544,15 @@ fn fair_normal_workflow_pilot_rerun_keeps_the_repaired_one_pair_contract() {
     assert!(scorer.contains("One pilot pair is descriptive"));
 }
 
+#[test]
+fn work_leaf_benchmark_enables_exact_provider_response_usage() {
+    let work_leaf = read("bench-three-features");
+    let direct = read("bench-three-features-direct-common");
+
+    assert!(work_leaf.contains("WORK_LEAF_CODEX_EXACT_USAGE=1"));
+    assert!(!direct.contains("WORK_LEAF_CODEX_EXACT_USAGE"));
+}
+
 fn read(path: &str) -> String {
     fs::read_to_string(path).unwrap_or_else(|error| panic!("cannot read {path}: {error}"))
 }
