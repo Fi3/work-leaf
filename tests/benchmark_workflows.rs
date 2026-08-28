@@ -545,11 +545,11 @@ fn fair_normal_workflow_pilot_rerun_keeps_the_repaired_one_pair_contract() {
 }
 
 #[test]
-fn work_leaf_benchmark_enables_exact_provider_response_usage() {
+fn work_leaf_benchmark_preserves_immediate_directive_interruption() {
     let work_leaf = read("bench-three-features");
     let direct = read("bench-three-features-direct-common");
 
-    assert!(work_leaf.contains("WORK_LEAF_CODEX_EXACT_USAGE=1"));
+    assert!(!work_leaf.contains("WORK_LEAF_CODEX_EXACT_USAGE"));
     assert!(!direct.contains("WORK_LEAF_CODEX_EXACT_USAGE"));
 }
 

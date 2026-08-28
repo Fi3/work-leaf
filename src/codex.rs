@@ -6,7 +6,7 @@ use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use serde_json::{Value, json};
 
@@ -25,11 +25,8 @@ const REMOVED_CODEX_CHILD_ENV: &[&str] = &[
     "WORK_LEAF_COMMAND_TMPDIR",
     "WORK_LEAF_CONTEXT_BUNDLE_DIR",
     "WORK_LEAF_CODEX_LINEARIZE_SANDBOX",
-    "WORK_LEAF_CODEX_EXACT_USAGE",
 ];
-const WORK_LEAF_CODEX_EXACT_USAGE_ENV: &str = "WORK_LEAF_CODEX_EXACT_USAGE";
 const CODEX_APP_SERVER_SPAWN_RETRY_DELAYS_MS: &[u64] = &[0, 25, 50, 100];
-const EXACT_USAGE_FLUSH_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SandboxMode {
@@ -125,7 +122,6 @@ struct CodexBackendState {
 #[derive(Debug)]
 struct CodexAppServer {
     config: CodexCommandConfig,
-    exact_usage: bool,
     process: Mutex<Option<CodexAppServerProcess>>,
     router: Arc<(Mutex<CodexAppServerRouterState>, Condvar)>,
     loaded_threads: Mutex<BTreeSet<String>>,
@@ -184,7 +180,6 @@ struct CodexTurnRequest<'a> {
 impl CodexAppServer {
     fn new(config: CodexCommandConfig) -> Self {
         Self {
-            exact_usage: env::var_os(WORK_LEAF_CODEX_EXACT_USAGE_ENV).is_some(),
             config,
             process: Mutex::new(None),
             router: Arc::new((
@@ -246,8 +241,6 @@ impl CodexAppServer {
             reply: String::new(),
             usage: None,
         };
-        let exact_usage_requested = self.exact_usage;
-        let mut exact_usage_ready = false;
         let mut streamed_messages = Vec::new();
         loop {
             let notification = self.next_turn_notification(&turn_id)?;
@@ -259,11 +252,7 @@ impl CodexAppServer {
                         .as_deref_mut()
                         .is_some_and(|detector| detector(&event))
                     {
-                        self.request_interrupt_after_exact_usage(
-                            turn.agent_id,
-                            &turn_id,
-                            exact_usage_ready,
-                        )?;
+                        self.request_interrupt(turn.agent_id)?;
                         self.unregister_turn(&turn_id);
                         output.reply = streamed_messages.join("\n\n");
                         return Ok(output);
@@ -278,11 +267,7 @@ impl CodexAppServer {
                                 .as_deref_mut()
                                 .is_some_and(|detector| detector(&event))
                             {
-                                self.request_interrupt_after_exact_usage(
-                                    turn.agent_id,
-                                    &turn_id,
-                                    exact_usage_ready,
-                                )?;
+                                self.request_interrupt(turn.agent_id)?;
                                 self.unregister_turn(&turn_id);
                                 output.reply = streamed_messages.join("\n\n");
                                 return Ok(output);
@@ -291,9 +276,6 @@ impl CodexAppServer {
                         if notification.method == "item/completed"
                             && let Some(message) = agent_message_text(item)
                         {
-                            if exact_usage_requested {
-                                exact_usage_ready = false;
-                            }
                             output.reply = message.to_string();
                             streamed_messages.push(message.to_string());
                             let event = AgentStreamEvent::AgentMessage(message.to_string());
@@ -302,11 +284,7 @@ impl CodexAppServer {
                                 .as_deref_mut()
                                 .is_some_and(|detector| detector(&event))
                             {
-                                self.request_interrupt_after_exact_usage(
-                                    turn.agent_id,
-                                    &turn_id,
-                                    exact_usage_ready,
-                                )?;
+                                self.request_interrupt(turn.agent_id)?;
                                 self.unregister_turn(&turn_id);
                                 output.reply = streamed_messages.join("\n\n");
                                 return Ok(output);
@@ -323,24 +301,12 @@ impl CodexAppServer {
                             .as_deref_mut()
                             .is_some_and(|detector| detector(&event))
                         {
-                            self.request_interrupt_after_exact_usage(
-                                turn.agent_id,
-                                &turn_id,
-                                exact_usage_ready,
-                            )?;
+                            self.request_interrupt(turn.agent_id)?;
                             self.unregister_turn(&turn_id);
                             output.reply = streamed_messages.join("\n\n");
                             return Ok(output);
                         }
                     }
-                }
-                "rawResponse/completed" if exact_usage_requested => {
-                    if notification.params.get("usage").is_none_or(Value::is_null) {
-                        return Err(self.protocol_error(format!(
-                            "Codex turn {turn_id} emitted exact response telemetry without usage"
-                        )));
-                    }
-                    exact_usage_ready = true;
                 }
                 "turn/completed" => {
                     self.unregister_turn(&turn_id);
@@ -391,12 +357,7 @@ impl CodexAppServer {
             "fork" => {
                 let forked = self.request_raw(
                     "thread/fork",
-                    Some(thread_resume_params(
-                        thread_id,
-                        &self.config,
-                        sandbox,
-                        self.exact_usage,
-                    )),
+                    Some(thread_resume_params(thread_id, &self.config, sandbox)),
                     shutdown,
                 )?;
                 reply_thread_id = json_pointer_str(&forked, &["thread", "id"])
@@ -506,43 +467,6 @@ impl CodexAppServer {
         Ok(())
     }
 
-    fn request_interrupt_after_exact_usage(
-        &self,
-        agent_id: &AgentId,
-        turn_id: &str,
-        exact_usage_ready: bool,
-    ) -> Result<(), AgentError> {
-        if self.exact_usage && !exact_usage_ready {
-            loop {
-                let Some(notification) =
-                    self.next_turn_notification_timeout(turn_id, EXACT_USAGE_FLUSH_TIMEOUT)?
-                else {
-                    return Err(self.protocol_error(format!(
-                        "Codex turn {turn_id} did not emit exact response usage within {} seconds",
-                        EXACT_USAGE_FLUSH_TIMEOUT.as_secs()
-                    )));
-                };
-                match notification.method.as_str() {
-                    "rawResponse/completed" => {
-                        if notification.params.get("usage").is_none_or(Value::is_null) {
-                            return Err(self.protocol_error(format!(
-                                "Codex turn {turn_id} emitted exact response telemetry without usage"
-                            )));
-                        }
-                        break;
-                    }
-                    "turn/completed" => {
-                        return Err(self.protocol_error(format!(
-                            "Codex turn {turn_id} completed without exact response usage"
-                        )));
-                    }
-                    _ => {}
-                }
-            }
-        }
-        self.request_interrupt(agent_id)
-    }
-
     fn start_thread(
         &self,
         sandbox: &SandboxMode,
@@ -550,7 +474,7 @@ impl CodexAppServer {
     ) -> Result<String, AgentError> {
         let response = self.request_raw(
             "thread/start",
-            Some(thread_start_params(&self.config, sandbox, self.exact_usage)),
+            Some(thread_start_params(&self.config, sandbox)),
             shutdown,
         )?;
         let thread_id = json_pointer_str(&response, &["thread", "id"])
@@ -581,12 +505,7 @@ impl CodexAppServer {
         }
         self.request_raw(
             "thread/resume",
-            Some(thread_resume_params(
-                thread_id,
-                &self.config,
-                sandbox,
-                self.exact_usage,
-            )),
+            Some(thread_resume_params(thread_id, &self.config, sandbox)),
             shutdown,
         )?;
         self.loaded_threads
@@ -1021,39 +940,6 @@ impl CodexAppServer {
         }
     }
 
-    fn next_turn_notification_timeout(
-        &self,
-        turn_id: &str,
-        timeout: Duration,
-    ) -> Result<Option<CodexAppServerNotification>, AgentError> {
-        let (lock, condvar) = &*self.router;
-        let deadline = Instant::now() + timeout;
-        let mut state = lock.lock().expect("codex app-server router mutex poisoned");
-        loop {
-            if let Some(notification) = state
-                .turn_notifications
-                .get_mut(turn_id)
-                .and_then(VecDeque::pop_front)
-            {
-                return Ok(Some(notification));
-            }
-            if let Some(error) = &state.closed_error {
-                return Err(self.protocol_error(error.clone()));
-            }
-            let remaining = deadline.saturating_duration_since(Instant::now());
-            if remaining.is_zero() {
-                return Ok(None);
-            }
-            let (next_state, wait) = condvar
-                .wait_timeout(state, remaining)
-                .expect("codex app-server router mutex poisoned");
-            state = next_state;
-            if wait.timed_out() {
-                return Ok(None);
-            }
-        }
-    }
-
     fn protocol_error(&self, message: String) -> AgentError {
         AgentError::ProcessFailed {
             program: self.config.binary.clone(),
@@ -1211,11 +1097,7 @@ fn write_json_line(stdin: &Arc<Mutex<ChildStdin>>, text: &str) -> std::io::Resul
     stdin.flush()
 }
 
-fn thread_start_params(
-    config: &CodexCommandConfig,
-    sandbox: &SandboxMode,
-    exact_usage: bool,
-) -> Value {
+fn thread_start_params(config: &CodexCommandConfig, sandbox: &SandboxMode) -> Value {
     let mut params = json!({
         "approvalPolicy": "never",
         "cwd": config.project_dir.display().to_string(),
@@ -1224,9 +1106,6 @@ fn thread_start_params(
     if let Some(model) = &config.model {
         params["model"] = json!(model);
     }
-    if exact_usage {
-        params["experimentalRawEvents"] = json!(true);
-    }
     params
 }
 
@@ -1234,9 +1113,8 @@ fn thread_resume_params(
     thread_id: &str,
     config: &CodexCommandConfig,
     sandbox: &SandboxMode,
-    exact_usage: bool,
 ) -> Value {
-    let mut params = thread_start_params(config, sandbox, exact_usage);
+    let mut params = thread_start_params(config, sandbox);
     params["threadId"] = json!(thread_id);
     params
 }

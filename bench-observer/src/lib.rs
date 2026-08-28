@@ -1314,13 +1314,6 @@ fn extract_usage(value: &Value) -> Option<(String, CapturedUsage)> {
             .and_then(usage_from_object)
             .map(|usage| ("turn-last".to_string(), usage));
     }
-    if value.get("method").and_then(Value::as_str) == Some("rawResponse/completed") {
-        return value
-            .get("params")?
-            .get("usage")
-            .and_then(usage_from_object)
-            .map(|usage| ("response-total".to_string(), usage));
-    }
     None
 }
 
@@ -1428,7 +1421,6 @@ pub struct UsageObservation {
 enum UsageAccounting {
     CumulativeThread,
     PerInvocation,
-    ExactResponses,
 }
 
 impl UsageObservation {
@@ -1463,23 +1455,6 @@ impl UsageObservation {
             visible,
             usage,
             accounting: UsageAccounting::PerInvocation,
-        }
-    }
-
-    fn exact_responses(
-        thread_id: impl Into<String>,
-        invocation_id: impl Into<String>,
-        primary: bool,
-        visible: bool,
-        usage: CapturedUsage,
-    ) -> Self {
-        Self {
-            thread_id: thread_id.into(),
-            invocation_id: invocation_id.into(),
-            primary,
-            visible,
-            usage,
-            accounting: UsageAccounting::ExactResponses,
         }
     }
 }
@@ -3884,7 +3859,7 @@ pub fn analyze(config: &CaptureConfig) -> ObserverResult<AnalysisSummary> {
                 .map(|error| format!("rollout: {error}")),
         );
     }
-    let model_strata = summarize_model_strata(config, &threads, &mut errors)?;
+    let model_strata = summarize_model_strata(config, &mut errors)?;
     errors.extend(scan_for_secret_markers(config)?);
     let mechanism_summary = mechanisms.finish();
     let capture_complete = errors.is_empty();
@@ -4204,7 +4179,6 @@ fn verify_chunk_inventory(
 
 fn summarize_model_strata(
     config: &CaptureConfig,
-    threads: &[ThreadSummary],
     errors: &mut Vec<String>,
 ) -> ObserverResult<Vec<ModelStratumSummary>> {
     let path = config.root.join("rollout-metadata.jsonl");
@@ -4213,10 +4187,6 @@ fn summarize_model_strata(
     }
     let mut strata = BTreeMap::<(String, String), ModelStratumSummary>::new();
     let mut thread_ids = BTreeSet::new();
-    let measured_usage = threads
-        .iter()
-        .map(|thread| (thread.thread_id.as_str(), thread.usage))
-        .collect::<BTreeMap<_, _>>();
     for (line_number, line) in BufReader::new(File::open(path)?).lines().enumerate() {
         let line = line?;
         if line.trim().is_empty() {
@@ -4252,12 +4222,7 @@ fn summarize_model_strata(
         stratum.primary_threads += usize::from(row.primary);
         stratum.visible_threads += usize::from(row.visible);
         stratum.descendant_threads += usize::from(row.descendant);
-        stratum.usage = stratum.usage.combine(
-            measured_usage
-                .get(row.thread_id.as_str())
-                .copied()
-                .unwrap_or(row.usage),
-        );
+        stratum.usage = stratum.usage.combine(row.usage);
     }
     Ok(strata.into_values().collect())
 }
@@ -4681,26 +4646,7 @@ fn analyze_app_server(
     let server_values = parse_top_level_json_lines(&server_bytes, errors, start, "server")?;
     let mut agents = BTreeMap::<String, String>::new();
     let mut pending_turn_threads = BTreeMap::<String, String>::new();
-    let mut exact_thread_start_requests = BTreeSet::new();
-    let mut exact_usage_threads = BTreeSet::new();
     for value in &client_values {
-        if matches!(
-            value.get("method").and_then(Value::as_str),
-            Some("thread/start" | "thread/resume")
-        ) && value
-            .get("params")
-            .and_then(|params| params.get("experimentalRawEvents"))
-            .and_then(Value::as_bool)
-            == Some(true)
-        {
-            if value.get("method").and_then(Value::as_str) == Some("thread/resume")
-                && let Some(thread_id) = extract_thread_id(value)
-            {
-                exact_usage_threads.insert(thread_id);
-            } else if let Some(request_id) = json_rpc_id(value) {
-                exact_thread_start_requests.insert(request_id);
-            }
-        }
         if value.get("method").and_then(Value::as_str) == Some("turn/start")
             && let (Some(request_id), Some(thread_id)) =
                 (json_rpc_id(value), extract_thread_id(value))
@@ -4723,13 +4669,6 @@ fn analyze_app_server(
     let mut request_turns = BTreeMap::<String, String>::new();
     let mut turn_threads = BTreeMap::<String, String>::new();
     for value in &server_values {
-        if json_rpc_id(value)
-            .as_ref()
-            .is_some_and(|request_id| exact_thread_start_requests.contains(request_id))
-            && let Some(thread_id) = extract_thread_id(value)
-        {
-            exact_usage_threads.insert(thread_id);
-        }
         if let (Some(request_id), Some(turn_id)) = (json_rpc_id(value), extract_turn_id(value))
             && let Some(thread_id) = pending_turn_threads.get(&request_id)
         {
@@ -4739,67 +4678,6 @@ fn analyze_app_server(
         if let (Some(turn_id), Some(thread_id)) = (extract_turn_id(value), extract_thread_id(value))
         {
             turn_threads.insert(turn_id, thread_id);
-        }
-    }
-
-    let mut exact_response_usage = BTreeMap::<(String, String), CapturedUsage>::new();
-    let mut exact_response_turns = BTreeSet::<(String, String)>::new();
-    for value in &server_values {
-        if value.get("method").and_then(Value::as_str) != Some("rawResponse/completed") {
-            continue;
-        }
-        let params = value.get("params").unwrap_or(&Value::Null);
-        let Some(thread_id) = extract_thread_id(value) else {
-            errors.push(format!(
-                "exact response usage in invocation {} has no thread id",
-                start.invocation_id
-            ));
-            continue;
-        };
-        if !exact_usage_threads.contains(&thread_id) {
-            continue;
-        }
-        let Some(turn_id) = extract_turn_id(value) else {
-            errors.push(format!(
-                "exact response usage in invocation {} has no turn id",
-                start.invocation_id
-            ));
-            continue;
-        };
-        let Some(response_id) = params.get("responseId").and_then(Value::as_str) else {
-            errors.push(format!(
-                "exact response usage for thread {thread_id} turn {turn_id} has no response id"
-            ));
-            continue;
-        };
-        let Some(usage) = params.get("usage").and_then(usage_from_object) else {
-            errors.push(format!(
-                "exact response usage for thread {thread_id} turn {turn_id} response {response_id} is missing"
-            ));
-            continue;
-        };
-        exact_response_turns.insert((thread_id.clone(), turn_id));
-        let key = (thread_id, response_id.to_string());
-        if let Some(previous) = exact_response_usage.insert(key.clone(), usage)
-            && previous != usage
-        {
-            errors.push(format!(
-                "exact response {} for thread {} has conflicting usage values",
-                key.1, key.0
-            ));
-        }
-    }
-
-    for (request_id, turn_id) in &request_turns {
-        let Some(thread_id) = pending_turn_threads.get(request_id) else {
-            continue;
-        };
-        if exact_usage_threads.contains(thread_id)
-            && !exact_response_turns.contains(&(thread_id.clone(), turn_id.clone()))
-        {
-            errors.push(format!(
-                "thread {thread_id} turn {turn_id} requested exact usage but emitted no exact response usage"
-            ));
         }
     }
 
@@ -4882,9 +4760,6 @@ fn analyze_app_server(
         let Some((usage_kind, usage)) = extract_usage(value) else {
             continue;
         };
-        if usage_kind == "response-total" {
-            continue;
-        }
         if usage_kind != "thread-total" {
             errors.push(format!(
                 "usage event in invocation {} is not a cumulative thread total",
@@ -4899,9 +4774,6 @@ fn analyze_app_server(
             ));
             continue;
         };
-        if exact_usage_threads.contains(&thread_id) {
-            continue;
-        }
         if !generation_threads.contains(&thread_id) {
             continue;
         }
@@ -4916,38 +4788,6 @@ fn analyze_app_server(
         ));
         thread_accounting.metadata.insert(
             thread_id,
-            CapturedThreadMetadata {
-                agent_id,
-                role: start.role.clone(),
-            },
-        );
-    }
-    for thread_id in exact_usage_threads
-        .iter()
-        .filter(|thread_id| generation_threads.contains(*thread_id))
-    {
-        let matching_usage = exact_response_usage
-            .iter()
-            .filter(|((candidate_thread, _), _)| candidate_thread == thread_id)
-            .map(|(_, usage)| *usage)
-            .collect::<Vec<_>>();
-        if matching_usage.is_empty() {
-            continue;
-        }
-        let usage = matching_usage
-            .into_iter()
-            .fold(CapturedUsage::default(), CapturedUsage::combine);
-        let agent_id = agents.get(thread_id).cloned();
-        let visible = start.primary && agent_id.as_deref().is_some_and(is_visible_work_leaf_agent);
-        observations.push(UsageObservation::exact_responses(
-            thread_id,
-            &start.invocation_id,
-            start.primary,
-            visible,
-            usage,
-        ));
-        thread_accounting.metadata.insert(
-            thread_id.clone(),
             CapturedThreadMetadata {
                 agent_id,
                 role: start.role.clone(),
@@ -5919,7 +5759,6 @@ struct ThreadUsageAccumulator {
     observation: Option<UsageObservation>,
     cumulative: Option<CapturedUsage>,
     invocations: BTreeMap<String, CapturedUsage>,
-    exact_invocations: BTreeMap<String, CapturedUsage>,
 }
 
 fn validate_usage_accounting(observations: &[UsageObservation], errors: &mut Vec<String>) {
@@ -5964,34 +5803,18 @@ fn final_thread_observations(observations: &[UsageObservation]) -> Vec<UsageObse
                     *invocation = observation.usage;
                 }
             }
-            UsageAccounting::ExactResponses => {
-                let invocation = entry
-                    .exact_invocations
-                    .entry(observation.invocation_id.clone())
-                    .or_insert(observation.usage);
-                if observation.usage != *invocation {
-                    *invocation = observation.usage;
-                }
-            }
         }
     }
     threads
         .into_values()
         .filter_map(|entry| {
             let mut observation = entry.observation?;
-            observation.usage = if !entry.exact_invocations.is_empty() {
+            observation.usage = entry.cumulative.unwrap_or_else(|| {
                 entry
-                    .exact_invocations
+                    .invocations
                     .into_values()
                     .fold(CapturedUsage::default(), CapturedUsage::combine)
-            } else {
-                entry.cumulative.unwrap_or_else(|| {
-                    entry
-                        .invocations
-                        .into_values()
-                        .fold(CapturedUsage::default(), CapturedUsage::combine)
-                })
-            };
+            });
             Some(observation)
         })
         .collect()
@@ -6617,17 +6440,6 @@ fn supplement_usage_from_rollouts(
                 "rollout metadata thread {} has no captured provider process",
                 row.thread_id
             ));
-            continue;
-        }
-        if let Some(observed) = observed
-            && observed.accounting == UsageAccounting::ExactResponses
-        {
-            if !usage_contains(observed.usage, row.usage) {
-                errors.push(format!(
-                    "thread {} exact response usage regresses rollout usage",
-                    row.thread_id
-                ));
-            }
             continue;
         }
         if observed.is_some_and(|thread| !usage_contains(row.usage, thread.usage)) {
