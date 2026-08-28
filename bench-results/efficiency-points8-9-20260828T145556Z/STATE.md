@@ -2,9 +2,9 @@
 
 ## Status
 
-Batch 1 is closed and inspected. `wl-100-001` completed. `wl-111-003` was stopped after a
-systematic review-routing loop. `FAILURES.md` records the evidence and why the remaining
-Git-reconstruction conditions will not be launched.
+Batches 1 and 2 are closed and inspected. `wl-100-001`, `wl-000-003`, and `wl-010-001`
+completed. `wl-111-003` was stopped after a systematic review-routing loop. `FAILURES.md` records
+the evidence and why the remaining Git-reconstruction conditions will not be launched.
 
 ## Frozen Inputs
 
@@ -22,11 +22,11 @@ Git-reconstruction conditions will not be launched.
 | Batch | Attempts | State |
 | ---: | --- | --- |
 | 1 | `wl-111-003`, `wl-100-001` | closed: `wl-100-001` passed; `wl-111-003` unusable interruption |
-| 2 | `wl-000-003`, `wl-010-001` | pending |
-| 3 | `wl-001-001`, `direct-003` | pending |
-| 4 | `direct-002`, `wl-011-001` | pending |
-| 5 | `wl-111-002`, `wl-110-001` | pending |
-| 6 | `wl-000-002`, `wl-101-001` | pending |
+| 2 | `wl-000-003`, `wl-010-001` | closed: both passed workflow and 3/3 features |
+| 3 | `wl-001-001`, `direct-003` | `wl-001-001` withheld; `direct-003` pending |
+| 4 | `direct-002`, `wl-011-001` | `direct-002` pending; `wl-011-001` withheld |
+| 5 | `wl-111-002`, `wl-110-001` | `wl-111-002` withheld; `wl-110-001` pending |
+| 6 | `wl-000-002`, `wl-101-001` | `wl-000-002` pending; `wl-101-001` withheld |
 
 Every attempt remains independent. A failure in one row does not remove or invalidate another row.
 
@@ -44,3 +44,19 @@ completion close/reopen fails.
 `done`/`NO_FINDINGS` routing cycle until manually stopped. Signal cleanup removed its temporary
 candidate and unpublished capture, so its quality and token values are missing. It remains an
 admitted reliability failure and does not invalidate `wl-100-001`.
+
+## Batch 2 Inspection
+
+Both attempts completed review, linearization, final formatting, Clippy, full tests, candidate
+replay build, and startup smoke. Each used GPT-5.5/xhigh in eight primary provider threads, with no
+descendant provider threads. The frozen scorer gives both implementations 3/3 requested features.
+
+Normal `wl-000-003` recorded 12,719,646 raw tokens from completed responses and 49 interrupted
+responses. Its conservative upper bound is 32,319,646 raw tokens. It used digest delivery for one
+verified unchanged-file reread.
+
+Control `wl-010-001` recorded 19,080,233 raw tokens from completed responses and 59 interrupted
+responses. Its conservative upper bound is 42,680,233 raw tokens. It delivered the full current
+file for three verified unchanged-file rereads, so the declared control activated. The observed
+values differ by 6,360,587 raw tokens, but their conservative ranges overlap. This one contrast
+does not separate a repeatable digest effect from normal model-path variation.

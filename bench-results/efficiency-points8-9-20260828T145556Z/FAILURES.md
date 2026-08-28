@@ -57,3 +57,14 @@ The frozen scorer ran all three feature fixtures for `wl-100-001` and wrote
 comparison object has no `token_measurements_usable` field. This is the previously observed
 single-condition formatting defect. The fixture results and logs were complete before the error:
 visual and `/status` pass, while completion close/reopen fails. The candidate was not rerun.
+
+## Batch 2 Offline Scoring
+
+An initial offline invocation selected the broader historical scorer. It rejected the compact
+manifest before candidate materialization because that scorer requires historical cohort metadata.
+No provider or candidate fixture ran in that invocation.
+
+The intended frozen three-feature scorer then ran all six fixtures for `wl-000-003` and
+`wl-010-001` and wrote `quality/batch2.json`. It exited only while formatting Markdown because a
+result without a direct row has no `token_measurements_usable` field. Both saved candidates passed
+visual mode, `/status`, and completion close/reopen. They were not rerun.
