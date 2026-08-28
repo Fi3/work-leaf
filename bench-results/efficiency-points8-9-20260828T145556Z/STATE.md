@@ -30,6 +30,19 @@ the evidence and why the remaining Git-reconstruction conditions will not be lau
 
 Every attempt remains independent. A failure in one row does not remove or invalidate another row.
 
+## Remaining Execution Order
+
+The systematic Git-reconstruction failure removes one member from each original batch after batch
+2. The remaining safe attempts run in two predeclared concurrent execution batches:
+
+1. `direct-003` with `wl-110-001`;
+2. `direct-002` with `wl-000-002`.
+
+This keeps the two-workflow parallelism while avoiding a schedule in which both direct runs happen
+together and both Work Leaf runs happen later. The execution neighbors remain independent
+observations, not analytical pairs. `SCHEDULE.tsv` remains unchanged so the original random order
+and every withheld row stay visible.
+
 ## Batch 1 Inspection
 
 `wl-100-001` completed review, linearization, final formatting, Clippy, full tests, candidate replay
