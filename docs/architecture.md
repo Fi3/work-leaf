@@ -204,6 +204,9 @@ direct sum is reconciled against the final usage from each task epoch in the mat
 file. The observer's `usage_scopes.total_workflow` record is the token authority for comparisons. A
 report keeps the workflow result, token-measurement status, and quality-score result separate so a
 partial or failed implementation remains evidence rather than being silently retried or discarded.
+Both benchmark drivers require complete provider usage. An interrupted app-server turn has no
+terminal provider total, so the observer records the number of interrupted turns and marks that
+token measurement incomplete while leaving the implementation workflow result unchanged.
 
 `bench-candidate-common` owns candidate staging, digest checks, admission metadata, and atomic report
 publication for both drivers. `materialize-bench-candidate` can reconstruct at most one historical

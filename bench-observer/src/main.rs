@@ -90,6 +90,10 @@ fn run_command(args: &[OsString]) -> ObserverResult<()> {
                 experiment_commit: required(&options, "--experiment-commit")?,
                 model: required(&options, "--model")?,
                 effort: required(&options, "--effort")?,
+                require_complete_provider_usage: optional_bool(
+                    &options,
+                    "--require-complete-provider-usage",
+                )?,
                 observer_executable,
             })?;
             println!("{}", config.path().display());
@@ -188,6 +192,17 @@ fn required(options: &BTreeMap<String, String>, name: &str) -> ObserverResult<St
 
 fn required_path(options: &BTreeMap<String, String>, name: &str) -> ObserverResult<PathBuf> {
     required(options, name).map(PathBuf::from)
+}
+
+fn optional_bool(options: &BTreeMap<String, String>, name: &str) -> ObserverResult<bool> {
+    match options.get(name).map(String::as_str) {
+        None | Some("false") => Ok(false),
+        Some("true") => Ok(true),
+        Some(value) => Err(ObserverError::from(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("{name} must be true or false, got {value}"),
+        ))),
+    }
 }
 
 fn load_option_config(

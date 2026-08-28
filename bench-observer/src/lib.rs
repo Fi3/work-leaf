@@ -73,6 +73,7 @@ pub struct InitSpec {
     pub experiment_commit: String,
     pub model: String,
     pub effort: String,
+    pub require_complete_provider_usage: bool,
     pub observer_executable: PathBuf,
 }
 
@@ -97,6 +98,8 @@ pub struct CaptureConfig {
     pub experiment_commit: String,
     pub model: String,
     pub effort: String,
+    #[serde(default)]
+    pub require_complete_provider_usage: bool,
     pub observer_executable: PathBuf,
     pub observer_sha256: String,
     pub primary_invocation_marker: String,
@@ -184,6 +187,7 @@ pub fn initialize(spec: InitSpec) -> ObserverResult<CaptureConfig> {
         experiment_commit: spec.experiment_commit,
         model: spec.model,
         effort: spec.effort,
+        require_complete_provider_usage: spec.require_complete_provider_usage,
         observer_sha256: sha256_file(&observer_executable)?,
         observer_executable,
         primary_invocation_marker: random_marker()?,
@@ -252,6 +256,7 @@ fn write_manifest(config: &CaptureConfig) -> ObserverResult<()> {
         "experiment_commit": config.experiment_commit,
         "model": config.model,
         "reasoning_effort": config.effort,
+        "require_complete_provider_usage": config.require_complete_provider_usage,
         "real_codex": {
             "path": config.real_codex,
             "sha256": config.real_codex_sha256,
@@ -3652,6 +3657,8 @@ pub struct AnalysisSummary {
     pub invocation_count: usize,
     pub complete_invocation_count: usize,
     pub passthrough_invocation_count: usize,
+    #[serde(default)]
+    pub interrupted_provider_turns: u64,
     pub threads: Vec<ThreadSummary>,
     #[serde(default)]
     pub session_only_threads: Vec<String>,
@@ -3690,6 +3697,7 @@ pub fn analyze(config: &CaptureConfig) -> ObserverResult<AnalysisSummary> {
     let mut thread_metadata = BTreeMap::<String, CapturedThreadMetadata>::new();
     let mut session_only_threads = BTreeSet::new();
     let mut replayed_controller_usage = BTreeMap::<String, CapturedUsage>::new();
+    let mut interrupted_provider_turns = 0_u64;
     let mut mechanisms = MechanismAnalyzer::default();
     let mut errors = Vec::new();
     let h4_workspaces = inventory
@@ -3735,6 +3743,7 @@ pub fn analyze(config: &CaptureConfig) -> ObserverResult<AnalysisSummary> {
                 let mut thread_accounting = AppServerThreadAccounting {
                     metadata: &mut thread_metadata,
                     session_only: &mut session_only_threads,
+                    interrupted_provider_turns: &mut interrupted_provider_turns,
                 };
                 analyze_app_server(
                     &process.start,
@@ -3859,6 +3868,11 @@ pub fn analyze(config: &CaptureConfig) -> ObserverResult<AnalysisSummary> {
                 .map(|error| format!("rollout: {error}")),
         );
     }
+    if config.require_complete_provider_usage && interrupted_provider_turns > 0 {
+        errors.push(format!(
+            "interrupted provider turn has no complete usage: count={interrupted_provider_turns}"
+        ));
+    }
     let model_strata = summarize_model_strata(config, &mut errors)?;
     errors.extend(scan_for_secret_markers(config)?);
     let mechanism_summary = mechanisms.finish();
@@ -3875,6 +3889,7 @@ pub fn analyze(config: &CaptureConfig) -> ObserverResult<AnalysisSummary> {
         invocation_count: inventory.len(),
         complete_invocation_count,
         passthrough_invocation_count: passthrough.len(),
+        interrupted_provider_turns,
         threads,
         session_only_threads: session_only_threads.into_iter().collect(),
         model_strata,
@@ -4612,6 +4627,7 @@ fn read_codex_passthrough(config: &CaptureConfig) -> ObserverResult<Vec<CodexPas
 struct AppServerThreadAccounting<'a> {
     metadata: &'a mut BTreeMap<String, CapturedThreadMetadata>,
     session_only: &'a mut BTreeSet<String>,
+    interrupted_provider_turns: &'a mut u64,
 }
 
 fn analyze_app_server(
@@ -4709,6 +4725,7 @@ fn analyze_app_server(
         }
     }
     let mut delivery_replays = BTreeMap::<String, TurnDeliveryReplay>::new();
+    let mut interrupted_turns = BTreeSet::<(String, String)>::new();
     for value in &server_values {
         let thread_id = extract_thread_id(value).or_else(|| {
             extract_turn_id(value).and_then(|turn_id| turn_threads.get(&turn_id).cloned())
@@ -4755,7 +4772,11 @@ fn analyze_app_server(
         if value.get("method").and_then(Value::as_str) == Some("turn/completed")
             && let (Some(thread_id), Some(turn_id)) = (thread_id.clone(), turn_id.clone())
         {
-            mechanisms.observe_turn_outcome(&thread_id, &turn_id, extract_turn_outcome(value));
+            let outcome = extract_turn_outcome(value);
+            if outcome == TurnOutcome::Interrupted {
+                interrupted_turns.insert((thread_id.clone(), turn_id.clone()));
+            }
+            mechanisms.observe_turn_outcome(&thread_id, &turn_id, outcome);
         }
         let Some((usage_kind, usage)) = extract_usage(value) else {
             continue;
@@ -4811,6 +4832,9 @@ fn analyze_app_server(
                 .or_insert(replay.usage);
         }
     }
+    *thread_accounting.interrupted_provider_turns = thread_accounting
+        .interrupted_provider_turns
+        .saturating_add(u64::try_from(interrupted_turns.len()).unwrap_or(u64::MAX));
     Ok(())
 }
 

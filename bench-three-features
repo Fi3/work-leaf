@@ -260,7 +260,8 @@ setup_observer() {
     --base-commit "$base_commit" \
     --experiment-commit "$experiment_commit" \
     --model "$bench_model" \
-    --effort "$agent_reasoning_effort" >/dev/null \
+    --effort "$agent_reasoning_effort" \
+    --require-complete-provider-usage true >/dev/null \
     || fail_bench "failed to initialize benchmark observer"
   observer_config="$observer_root/observer-config.json"
   observer_proxy_dir="$observer_root/proxy-bin"

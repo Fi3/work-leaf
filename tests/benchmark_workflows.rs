@@ -553,6 +553,15 @@ fn work_leaf_benchmark_preserves_immediate_directive_interruption() {
     assert!(!direct.contains("WORK_LEAF_CODEX_EXACT_USAGE"));
 }
 
+#[test]
+fn benchmark_observers_require_complete_provider_usage() {
+    let work_leaf = read("bench-three-features");
+    let direct = read("bench-three-features-direct-common");
+
+    assert!(work_leaf.contains("--require-complete-provider-usage true"));
+    assert!(direct.contains("--require-complete-provider-usage true"));
+}
+
 fn read(path: &str) -> String {
     fs::read_to_string(path).unwrap_or_else(|error| panic!("cannot read {path}: {error}"))
 }

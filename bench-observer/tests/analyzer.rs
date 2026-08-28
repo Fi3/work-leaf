@@ -1371,6 +1371,7 @@ fn bundle_archive_timeline_and_git_checkpoint_are_self_contained() {
         experiment_commit: "experiment".into(),
         model: "gpt-5.5".into(),
         effort: "xhigh".into(),
+        require_complete_provider_usage: false,
         observer_executable: observer.into(),
     })
     .unwrap();

@@ -46,38 +46,50 @@ fn initialize_for_condition_with_real_tools(
     real_sh: &std::path::Path,
     real_cargo: &std::path::Path,
 ) -> std::path::PathBuf {
+    initialize_for_condition_with_real_tools_and_usage(root, condition, real_sh, real_cargo, false)
+}
+
+fn initialize_for_condition_with_real_tools_and_usage(
+    root: &TempDir,
+    condition: &str,
+    real_sh: &std::path::Path,
+    real_cargo: &std::path::Path,
+    require_complete_provider_usage: bool,
+) -> std::path::PathBuf {
     let observer = env!("CARGO_BIN_EXE_bench-observer");
     let fixture = env!("CARGO_BIN_EXE_bench-observer-fixture");
-    let output = Command::new(observer)
-        .args([
-            "init",
-            "--root",
-            root.path().to_str().unwrap(),
-            "--study-id",
-            "efficiency-causal-study",
-            "--pair-id",
-            "pair-proxy-test",
-            "--condition",
-            condition,
-            "--run-id",
-            "proxy-test",
-            "--real-codex",
-            fixture,
-            "--real-sh",
-            real_sh.to_str().unwrap(),
-            "--real-cargo",
-            real_cargo.to_str().unwrap(),
-            "--base-commit",
-            "base",
-            "--experiment-commit",
-            "experiment",
-            "--model",
-            "gpt-5.5",
-            "--effort",
-            "xhigh",
-        ])
-        .output()
-        .expect("observer init runs");
+    let mut command = Command::new(observer);
+    command.args([
+        "init",
+        "--root",
+        root.path().to_str().unwrap(),
+        "--study-id",
+        "efficiency-causal-study",
+        "--pair-id",
+        "pair-proxy-test",
+        "--condition",
+        condition,
+        "--run-id",
+        "proxy-test",
+        "--real-codex",
+        fixture,
+        "--real-sh",
+        real_sh.to_str().unwrap(),
+        "--real-cargo",
+        real_cargo.to_str().unwrap(),
+        "--base-commit",
+        "base",
+        "--experiment-commit",
+        "experiment",
+        "--model",
+        "gpt-5.5",
+        "--effort",
+        "xhigh",
+    ]);
+    if require_complete_provider_usage {
+        command.args(["--require-complete-provider-usage", "true"]);
+    }
+    let output = command.output().expect("observer init runs");
     assert!(
         output.status.success(),
         "init failed: {}",
@@ -173,6 +185,96 @@ fn app_server_proxy_forwards_and_captures_exact_bytes() {
             .all(|frame| frame.received_monotonic_ns.is_some())
     );
     assert!(frames.iter().all(|frame| frame.received_unix_ns.is_some()));
+}
+
+#[test]
+fn strict_usage_rejects_interrupted_turn_without_terminal_provider_usage() {
+    let root = TempDir::new().unwrap();
+    let config_path = initialize_for_condition_with_real_tools_and_usage(
+        &root,
+        "work-leaf",
+        std::path::Path::new("/bin/sh"),
+        std::path::Path::new("/bin/true"),
+        true,
+    );
+    let config = CaptureConfig::load(&config_path).unwrap();
+    assert!(config.require_complete_provider_usage);
+    let primary_marker = config.primary_invocation_marker;
+    let manifest: serde_json::Value =
+        serde_json::from_slice(&fs::read(root.path().join("manifest.json")).unwrap()).unwrap();
+    assert_eq!(
+        manifest["require_complete_provider_usage"],
+        serde_json::Value::Bool(true)
+    );
+
+    let client = json_lines([
+        serde_json::json!({
+            "id": 1,
+            "method": "thread/start",
+            "params": {},
+        }),
+        serde_json::json!({
+            "id": 2,
+            "method": "turn/start",
+            "params": {
+                "threadId": "thread-user",
+                "input": [{"type": "text", "text": "[agent_id: user-1] test"}],
+            },
+        }),
+        serde_json::json!({
+            "id": 3,
+            "method": "turn/interrupt",
+            "params": {"threadId": "thread-user", "turnId": "turn-user"},
+        }),
+    ]);
+    let server = json_lines([
+        serde_json::json!({
+            "id": 1,
+            "result": {"thread": {"id": "thread-user"}},
+        }),
+        serde_json::json!({
+            "id": 2,
+            "result": {"turn": {"id": "turn-user"}},
+        }),
+        serde_json::json!({
+            "method": "turn/completed",
+            "params": {
+                "threadId": "thread-user",
+                "turnId": "turn-user",
+                "turn": {"id": "turn-user", "status": "interrupted"},
+            },
+        }),
+    ]);
+
+    let proxy = root.path().join("proxy-bin/codex");
+    let mut child = Command::new(proxy)
+        .args(["app-server", "--listen", "stdio://"])
+        .env("WORK_LEAF_OBSERVER_CONFIG", &config_path)
+        .env("WORK_LEAF_OBSERVER_PRIMARY_MARKER", primary_marker)
+        .env("WORK_LEAF_OBSERVER_FIXTURE_STDOUT", server)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(client.as_bytes())
+        .unwrap();
+    assert!(child.wait().unwrap().success());
+
+    let summary = analyze(&CaptureConfig::load(&config_path).unwrap()).unwrap();
+    assert!(!summary.capture_complete);
+    assert_eq!(summary.interrupted_provider_turns, 1);
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|error| { error == "interrupted provider turn has no complete usage: count=1" }),
+        "{:?}",
+        summary.errors
+    );
 }
 
 #[test]
