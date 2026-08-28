@@ -1,0 +1,157 @@
+{
+  "all_three_disabled": {
+    "reasons": [
+      "both Work Leaf conditions are required"
+    ],
+    "usable": false
+  },
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "comparison": {
+    "completed_features": {
+      "direct_sequential": 3,
+      "work_leaf_concurrent": 2
+    },
+    "interpretation_limit": "One pilot pair is descriptive and cannot establish an average effect or statistical confidence.",
+    "quality_match_in_this_pair": false,
+    "raw_tokens": {
+      "direct_sequential": 35677252,
+      "work_leaf_concurrent": 16471729,
+      "work_leaf_reduction_percent": 53.831
+    },
+    "reasons": [
+      "Work Leaf token measurement is not usable",
+      "the two saved implementations completed different numbers of requested features"
+    ],
+    "token_measurements_usable": false,
+    "uncached_tokens": {
+      "direct_sequential": 1328068,
+      "work_leaf_concurrent": 1246769,
+      "work_leaf_reduction_percent": 6.122
+    },
+    "usable": false
+  },
+  "complete": true,
+  "fixtures": {
+    "completion": "4d6a19f4c6f515b9a97f184a056d08dc2882041d40d26dd82011180a949c5c87",
+    "status": "5f5295c9dec6be20abb28827b68e84342110fb748aa0cc887d8b58ffa3c6e6b5",
+    "visual": "5ce0782e37b8672e04d8016ca3fbec9caa12f6f9cfaf431cac847c1f6e6a26ca"
+  },
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "runs": [
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.557,
+          "exit_code": 0,
+          "log": "quality/logs/direct-002/completion.log",
+          "log_sha256": "3e5a8554ad15e36c9a9b50d94355ddc4710cab86d2abc258e31a907835e45d87",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.273,
+          "exit_code": 0,
+          "log": "quality/logs/direct-002/status.log",
+          "log_sha256": "22c587197fb844025ce3dc8ccf107c6ec07d707e2d57f1d5fd3b170ca2c5992c",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 7.622,
+          "exit_code": 0,
+          "log": "quality/logs/direct-002/visual.log",
+          "log_sha256": "065c0cc2ddfd2c43617147420dae99c16a3c436cabc6da580a77bafc98ae7b14",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "direct",
+      "final_commit": "38000a870239bbc709c755fa00c47274ce348eef",
+      "id": "direct-002",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-002/points89-direct-002-three-feature-sequential-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "281db04eb8fa2c55dc4bfd6ec192a6181e5c2111361b51baa1b24c5a4e93c837",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 34349184,
+          "input_tokens": 35475757,
+          "output_tokens": 201495,
+          "raw_input_plus_output": 35677252,
+          "reasoning_output_tokens": 98283,
+          "uncached_input_plus_output": 1328068,
+          "uncached_input_tokens": 1126573
+        }
+      },
+      "report": "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-002/points89-direct-002-three-feature-sequential-bench-artifacts/report.json",
+      "report_sha256": "ae5d803eeaf49252ad65c6d3be0f5916b3ca148354e89187f446a811a6f0a66a",
+      "workflow": "direct-sequential",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.536,
+          "exit_code": 0,
+          "log": "quality/logs/wl-000-002/completion.log",
+          "log_sha256": "075699438ea3cf34d06917dac9b72b90f1b01406c81b6b0618749a6299e17c83",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.283,
+          "exit_code": 0,
+          "log": "quality/logs/wl-000-002/status.log",
+          "log_sha256": "56d31deea57662536e061af9bc76d660e0c4a49eefdec9c075e712a2a4e3d389",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 3.295,
+          "exit_code": 101,
+          "log": "quality/logs/wl-000-002/visual.log",
+          "log_sha256": "8d1b11d5e2c5f363cd61b60ed2b54f115da9da2bbf0f85792a2ed089c88feb2e",
+          "status": "fail"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "fail"
+      },
+      "completed_features": 2,
+      "condition": "wl-000",
+      "final_commit": "0361b511ae3294ed6e3f3c5bb86016bfe26ecc82",
+      "id": "wl-000-002",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-002/points89-wl-000-002-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "421a542c229c8b007407f541317f2afedeab2c3088fe919a7a6bfc53a8ddf16c",
+        "reasons": [
+          "measurement status is incomplete",
+          "observer analysis marks the capture incomplete"
+        ],
+        "usable": false,
+        "usage": {
+          "cached_input_tokens": 15224960,
+          "input_tokens": 16331144,
+          "output_tokens": 140585,
+          "raw_input_plus_output": 16471729,
+          "reasoning_output_tokens": 88969,
+          "uncached_input_plus_output": 1246769,
+          "uncached_input_tokens": 1106184
+        }
+      },
+      "report": "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-002/points89-wl-000-002-three-feature-bench-artifacts/report.json",
+      "report_sha256": "bf8a5bc3ed7b6796f9e4e340dea2ef8cf59a32cf70330197727716b6f8c39253",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "pass"
+    }
+  ],
+  "schema_version": 1,
+  "study": "efficiency-points8-9-20260828T145556Z",
+  "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+}

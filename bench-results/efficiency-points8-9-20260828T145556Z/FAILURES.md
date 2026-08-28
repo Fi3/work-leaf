@@ -85,3 +85,11 @@ manifest contains no normal `wl-000` row and the comparison object therefore has
 `token_measurements_usable` field. The saved JSON and all six hash-checked fixture logs are
 complete. Both candidates passed visual selection and `/status` and failed completion
 close/reopen. Neither candidate was rerun.
+
+## Final Batch Feature Result
+
+The frozen scorer ran all six fixtures for `direct-002` and `wl-000-002`. `direct-002` passed all
+three requested features. `wl-000-002` passed `/status` and completion close/reopen but failed the
+visual-copy fixture because the rendered frame contained no nonempty copy evidence. The Work Leaf
+candidate passed its own final repository checks; the independent fixture exposed the missing
+requested behavior. Both outcomes remain in the endpoint groups, and neither candidate was rerun.

@@ -2,11 +2,10 @@
 
 ## Status
 
-Batches 1 and 2 and the first balanced execution batch are closed and inspected. `wl-100-001`,
-`wl-000-003`, `wl-010-001`, `direct-003`, and `wl-110-001` completed. `wl-111-003` was stopped
-after a systematic review-routing loop. `FAILURES.md` records the evidence and why the remaining
-Git-reconstruction conditions will not be launched. The final balanced execution batch is
-`direct-002` with `wl-000-002`.
+Collection, scoring, and bounded analysis are complete. Seven current attempts completed, one
+attempt is a retained reliability failure, and four Git-reconstruction attempts were withheld
+under the stop rule. `evidence.json` is the machine-readable result and `FINAL-RESULT.md` is the
+plain-English report.
 
 ## Frozen Inputs
 
@@ -26,19 +25,19 @@ Git-reconstruction conditions will not be launched. The final balanced execution
 | 1 | `wl-111-003`, `wl-100-001` | closed: `wl-100-001` passed; `wl-111-003` unusable interruption |
 | 2 | `wl-000-003`, `wl-010-001` | closed: both passed workflow and 3/3 features |
 | 3 | `wl-001-001`, `direct-003` | `wl-001-001` withheld; `direct-003` passed workflow and 2/3 features |
-| 4 | `direct-002`, `wl-011-001` | `direct-002` pending; `wl-011-001` withheld |
+| 4 | `direct-002`, `wl-011-001` | `direct-002` passed workflow and 3/3 features; `wl-011-001` withheld |
 | 5 | `wl-111-002`, `wl-110-001` | `wl-111-002` withheld; `wl-110-001` passed workflow and 2/3 features |
-| 6 | `wl-000-002`, `wl-101-001` | `wl-000-002` pending; `wl-101-001` withheld |
+| 6 | `wl-000-002`, `wl-101-001` | `wl-000-002` passed workflow and 2/3 features; `wl-101-001` withheld |
 
 Every attempt remains independent. A failure in one row does not remove or invalidate another row.
 
-## Remaining Execution Order
+## Execution Order
 
 The systematic Git-reconstruction failure removes one member from each original batch after batch
 2. The remaining safe attempts run in two predeclared concurrent execution batches:
 
 1. `direct-003` with `wl-110-001` (complete);
-2. `direct-002` with `wl-000-002`.
+2. `direct-002` with `wl-000-002` (complete).
 
 This keeps the two-workflow parallelism while avoiding a schedule in which both direct runs happen
 together and both Work Leaf runs happen later. The execution neighbors remain independent
@@ -96,3 +95,31 @@ unchanged-file rereads and eight changed-file rereads. The unchanged-file events
 bytes where digest delivery would have used 452 bytes. A reconstructed changed-file diff was not
 available for these eight full-file events, so their byte-level counterfactual is unknown. The
 whole-workflow token ranges, rather than these byte counts alone, determine the causal screen.
+
+## Final Balanced Execution Batch
+
+`direct-002` and `wl-000-002` completed the normal workflow, review, linearization, final
+formatting, Clippy, full tests, candidate replay build, and startup smoke. Both used GPT-5.5/xhigh,
+the frozen base and task, and no recursive provider calls.
+
+`direct-002` has a complete observer capture of 35,677,252 raw tokens and 1,328,068 uncached
+tokens. The frozen scorer gives it 3/3 requested features. `wl-000-002` recorded 16,471,729 raw
+tokens and 1,246,769 uncached tokens from completed responses. Its 84 interrupted responses make
+those values incomplete; the conservative raw-token range is 16,471,729 to 50,071,729. The scorer
+gives it 2/3 features: `/status` and completion close/reopen pass, while visual copying fails.
+
+Both quality outcomes remain in the endpoint groups. They are not discarded or replaced.
+
+## Final Analysis
+
+The three direct observations average 35,196,786 exact raw tokens and 2.67 completed features. The
+three normal Work Leaf observations average 13,989,718 observed raw tokens, a conservative upper
+bound of 38,523,051, and 2.67 completed features. Completed-response data are 60.25% lower for Work
+Leaf, but the conservative difference ranges from 21,207,069 fewer to 3,326,265 more raw tokens.
+The repeated saving is therefore not proven under conservative accounting.
+
+The changed-file and unchanged-file controls activated, but both whole-workflow effect ranges cross
+zero. The review-context effect is not estimable because its control repeatedly broke review
+routing. Normal Work Leaf averaged 57.79% fewer commands, 93.05% fewer repeated commands, and
+50.63% fewer validation commands than direct Codex. Fewer workflow cycles are the strongest
+remaining explanation, but this study did not isolate their token fraction.

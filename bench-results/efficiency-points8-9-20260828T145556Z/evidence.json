@@ -1,0 +1,815 @@
+{
+  "associated_workflow_cycle_difference": {
+    "causal_limit": "These cycle counts are an observed workflow difference, not an isolated ablation. They can explain why raw usage differs but cannot assign an exact token fraction.",
+    "metrics": {
+      "command_count": {
+        "direct_mean": 657.0,
+        "normal_work_leaf_mean": 277.3333333333333,
+        "work_leaf_fewer_percent": 57.787925
+      },
+      "repeated_commands": {
+        "direct_mean": 148.66666666666666,
+        "normal_work_leaf_mean": 10.333333333333334,
+        "work_leaf_fewer_percent": 93.049327
+      },
+      "validation_commands": {
+        "direct_mean": 53.333333333333336,
+        "normal_work_leaf_mean": 26.333333333333332,
+        "work_leaf_fewer_percent": 50.625
+      }
+    }
+  },
+  "collection": {
+    "completed_attempts": [
+      "direct-002",
+      "direct-003",
+      "wl-000-002",
+      "wl-000-003",
+      "wl-010-001",
+      "wl-100-001",
+      "wl-110-001"
+    ],
+    "failed_attempts": {
+      "wl-111-003": "systematic review-routing loop"
+    },
+    "failed_attempts_remain_reliability_evidence": true,
+    "withheld_attempts": {
+      "wl-001-001": "Git-reconstruction control has a systematic review-routing failure",
+      "wl-011-001": "Git-reconstruction control has a systematic review-routing failure",
+      "wl-101-001": "Git-reconstruction control has a systematic review-routing failure",
+      "wl-111-002": "Git-reconstruction control has a systematic review-routing failure"
+    }
+  },
+  "conclusions": {
+    "all_disabled_residual_replicated": false,
+    "most_supported_remaining_explanation": "fewer repeated model/tool and validation cycles, if the endpoint bound remains positive",
+    "overall_saving_repeated_under_conservative_accounting": false,
+    "review_context_effect_known": false,
+    "three_delivery_mechanisms_exact_fraction_known": false
+  },
+  "endpoint_groups": {
+    "all_three_disabled_work_leaf": {
+      "feature_pass_counts": {
+        "completion": 1,
+        "status": 1,
+        "visual": 1
+      },
+      "mean_completed_features": 3.0,
+      "mean_workflow_metrics": {
+        "command_count": 288.0,
+        "protocol_bytes": 1274725.0,
+        "provider_invocations": 52.0,
+        "provider_threads": 8.0,
+        "repeated_commands": 38.0,
+        "validation_commands": 22.0
+      },
+      "observations": 1,
+      "raw_token_mean_interval": {
+        "lower": 10292989.0,
+        "upper": 39092989.0
+      },
+      "raw_token_observation_intervals": {
+        "wl-all-off-002": {
+          "lower": 10292989,
+          "upper": 39092989
+        }
+      },
+      "reliability_failure": {
+        "wl-111-003": "systematic review-routing loop"
+      },
+      "replication_complete": false,
+      "run_ids": [
+        "wl-all-off-002"
+      ]
+    },
+    "direct_sequential": {
+      "feature_pass_counts": {
+        "completion": 2,
+        "status": 3,
+        "visual": 3
+      },
+      "mean_completed_features": 2.6666666666666665,
+      "mean_workflow_metrics": {
+        "command_count": 657.0,
+        "protocol_bytes": 100.0,
+        "provider_invocations": 29.333333333333332,
+        "provider_threads": 7.0,
+        "repeated_commands": 148.66666666666666,
+        "validation_commands": 53.333333333333336
+      },
+      "observations": 3,
+      "raw_token_mean_interval": {
+        "lower": 35196786.333333336,
+        "upper": 35196786.333333336
+      },
+      "raw_token_observation_intervals": {
+        "direct-002": {
+          "lower": 35677252,
+          "upper": 35677252
+        },
+        "direct-003": {
+          "lower": 28877983,
+          "upper": 28877983
+        },
+        "point7-exact-direct": {
+          "lower": 41035124,
+          "upper": 41035124
+        }
+      },
+      "run_ids": [
+        "point7-exact-direct",
+        "direct-003",
+        "direct-002"
+      ]
+    },
+    "normal_concurrent_work_leaf": {
+      "feature_pass_counts": {
+        "completion": 3,
+        "status": 3,
+        "visual": 2
+      },
+      "mean_completed_features": 2.6666666666666665,
+      "mean_workflow_metrics": {
+        "command_count": 277.3333333333333,
+        "protocol_bytes": 679550.6666666666,
+        "provider_invocations": 30.0,
+        "provider_threads": 8.0,
+        "repeated_commands": 10.333333333333334,
+        "validation_commands": 26.333333333333332
+      },
+      "observations": 3,
+      "raw_token_mean_interval": {
+        "lower": 13989717.666666666,
+        "upper": 38523051.0
+      },
+      "raw_token_observation_intervals": {
+        "wl-000-002": {
+          "lower": 16471729,
+          "upper": 50071729
+        },
+        "wl-000-003": {
+          "lower": 12719646,
+          "upper": 32319646
+        },
+        "wl-normal-003": {
+          "lower": 12777778,
+          "upper": 33177778
+        }
+      },
+      "run_ids": [
+        "wl-normal-003",
+        "wl-000-003",
+        "wl-000-002"
+      ]
+    }
+  },
+  "factorial_screen": {
+    "cells": {
+      "wl-000": {
+        "completed_features": 3,
+        "delivery_events": {
+          "changed_reread": {
+            "actual_component_bytes": 22241,
+            "events": 9,
+            "events_with_measured_counterfactual": 9,
+            "measured_avoided_bytes": 350297,
+            "statuses": {
+              "verified": 9
+            }
+          },
+          "unchanged_reread": {
+            "actual_component_bytes": 62,
+            "events": 1,
+            "events_with_measured_counterfactual": 1,
+            "measured_avoided_bytes": 45348,
+            "statuses": {
+              "verified": 1
+            }
+          }
+        },
+        "raw_tokens": {
+          "lower": 12719646,
+          "upper": 32319646
+        },
+        "run_id": "wl-000-003"
+      },
+      "wl-010": {
+        "completed_features": 3,
+        "delivery_events": {
+          "changed_reread": {
+            "actual_component_bytes": 138618,
+            "events": 6,
+            "events_with_measured_counterfactual": 5,
+            "measured_avoided_bytes": 22036,
+            "statuses": {
+              "invalid-diff-reconstruction": 1,
+              "verified": 5
+            }
+          },
+          "unchanged_reread": {
+            "actual_component_bytes": 106283,
+            "events": 3,
+            "events_with_measured_counterfactual": 3,
+            "measured_avoided_bytes": -106112,
+            "statuses": {
+              "full-current-delivery": 3
+            }
+          }
+        },
+        "raw_tokens": {
+          "lower": 19080233,
+          "upper": 42728938
+        },
+        "run_id": "wl-010-001"
+      },
+      "wl-100": {
+        "completed_features": 2,
+        "delivery_events": {
+          "changed_reread": {
+            "actual_component_bytes": 624770,
+            "events": 15,
+            "events_with_measured_counterfactual": 0,
+            "measured_avoided_bytes": 0,
+            "statuses": {
+              "full-current-delivery": 15
+            }
+          },
+          "unchanged_reread": {
+            "actual_component_bytes": 60,
+            "events": 1,
+            "events_with_measured_counterfactual": 1,
+            "measured_avoided_bytes": 20678,
+            "statuses": {
+              "verified": 1
+            }
+          }
+        },
+        "raw_tokens": {
+          "lower": 13954487,
+          "upper": 36754487
+        },
+        "run_id": "wl-100-001"
+      },
+      "wl-110": {
+        "completed_features": 2,
+        "delivery_events": {
+          "changed_reread": {
+            "actual_component_bytes": 309664,
+            "events": 8,
+            "events_with_measured_counterfactual": 0,
+            "measured_avoided_bytes": 0,
+            "statuses": {
+              "full-current-delivery": 8
+            }
+          },
+          "unchanged_reread": {
+            "actual_component_bytes": 294593,
+            "events": 8,
+            "events_with_measured_counterfactual": 8,
+            "measured_avoided_bytes": -294141,
+            "statuses": {
+              "full-current-delivery": 8
+            }
+          }
+        },
+        "raw_tokens": {
+          "lower": 11052832,
+          "upper": 34694958
+        },
+        "run_id": "wl-110-001"
+      }
+    },
+    "changed_reread_full_minus_diff": {
+      "direction": "inconclusive because the conservative interval crosses zero",
+      "interpretation": "One balanced four-cell screen; not a population estimate.",
+      "raw_token_interval": {
+        "lower": -25020632.5,
+        "upper": 19824783.0
+      }
+    },
+    "quality_equal_across_cells": false,
+    "review_context": {
+      "reason": "Git reconstruction caused a repeated review-routing loop, so the remaining review-control rows were withheld under the stop rule.",
+      "result": "not estimable"
+    },
+    "unchanged_reread_full_minus_digest": {
+      "direction": "inconclusive because the conservative interval crosses zero",
+      "interpretation": "One balanced four-cell screen; not a population estimate.",
+      "raw_token_interval": {
+        "lower": -19470534.0,
+        "upper": 25374881.5
+      }
+    }
+  },
+  "frozen_setup": {
+    "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+    "conditions_are_independent_groups": true,
+    "maximum_tokens_per_interrupted_response": 400000,
+    "model": "gpt-5.5",
+    "reasoning_effort": "xhigh",
+    "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+  },
+  "observations": {
+    "direct-002": {
+      "cap_audit": null,
+      "completed_features": 3,
+      "condition": "direct",
+      "controls": {},
+      "delivery_events": {
+        "changed_reread": {
+          "events": 0
+        },
+        "unchanged_reread": {
+          "events": 0
+        }
+      },
+      "features": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "interrupted_responses": 0,
+      "observed_uncached_tokens": 1328068,
+      "raw_tokens": {
+        "lower": 35677252,
+        "upper": 35677252
+      },
+      "run_id": "direct-002",
+      "source_sha256": {
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-002/admission.json": "96f57a7c02efde32cfc90433d656e57082ea30816073dbeb08a1cf72c08da933",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-002/points89-direct-002-three-feature-sequential-bench-artifacts/observation/analysis.json": "281db04eb8fa2c55dc4bfd6ec192a6181e5c2111361b51baa1b24c5a4e93c837",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-002/points89-direct-002-three-feature-sequential-bench-artifacts/observation/mechanism-summary.json": "281db04eb8fa2c55dc4bfd6ec192a6181e5c2111361b51baa1b24c5a4e93c837",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-002/points89-direct-002-three-feature-sequential-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-002/points89-direct-002-three-feature-sequential-bench-artifacts/report.json": "ae5d803eeaf49252ad65c6d3be0f5916b3ca148354e89187f446a811a6f0a66a"
+      },
+      "turn_audit": null,
+      "workflow": "direct-sequential",
+      "workflow_metrics": {
+        "command_count": 612,
+        "protocol_bytes": 100,
+        "provider_invocations": 28,
+        "provider_threads": 7,
+        "repeated_commands": 122,
+        "validation_commands": 55
+      },
+      "workflow_result": "pass"
+    },
+    "direct-003": {
+      "cap_audit": null,
+      "completed_features": 2,
+      "condition": "direct",
+      "controls": {},
+      "delivery_events": {
+        "changed_reread": {
+          "events": 0
+        },
+        "unchanged_reread": {
+          "events": 0
+        }
+      },
+      "features": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "interrupted_responses": 0,
+      "observed_uncached_tokens": 1906975,
+      "raw_tokens": {
+        "lower": 28877983,
+        "upper": 28877983
+      },
+      "run_id": "direct-003",
+      "source_sha256": {
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-003/admission.json": "923ed6f3fb37bbcb1a0f7129db73a6efdd7d971dbda6b21a9bbd5b6f1d50f280",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-003/points89-direct-003-three-feature-sequential-bench-artifacts/observation/analysis.json": "f3c3d304835ab8c5143367db474e84a5cb139b381edbcc5de6e58687f94d1af6",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-003/points89-direct-003-three-feature-sequential-bench-artifacts/observation/mechanism-summary.json": "f3c3d304835ab8c5143367db474e84a5cb139b381edbcc5de6e58687f94d1af6",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-003/points89-direct-003-three-feature-sequential-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-003/points89-direct-003-three-feature-sequential-bench-artifacts/report.json": "01ebb52993811f16649c36fbb4efb418e8e66aaad898a55c27e7ed70be117b31"
+      },
+      "turn_audit": null,
+      "workflow": "direct-sequential",
+      "workflow_metrics": {
+        "command_count": 584,
+        "protocol_bytes": 100,
+        "provider_invocations": 28,
+        "provider_threads": 7,
+        "repeated_commands": 130,
+        "validation_commands": 45
+      },
+      "workflow_result": "pass"
+    },
+    "wl-000-002": {
+      "cap_audit": {
+        "applied_missing_raw_token_cap": 33600000,
+        "context_output_and_prompt_upper_bound": 33163678,
+        "declared_missing_raw_token_cap": 33600000,
+        "extra_cap_required": 0,
+        "rounded_cap_headroom": 436322
+      },
+      "completed_features": 2,
+      "condition": "wl-000",
+      "controls": {
+        "WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY": "normal",
+        "WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE": "inline-exact",
+        "WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY": "normal"
+      },
+      "delivery_events": {
+        "changed_reread": {
+          "actual_component_bytes": 51854,
+          "events": 17,
+          "events_with_measured_counterfactual": 16,
+          "measured_avoided_bytes": 567356,
+          "statuses": {
+            "invalid-diff-reconstruction": 1,
+            "verified": 16
+          }
+        },
+        "unchanged_reread": {
+          "actual_component_bytes": 876,
+          "events": 15,
+          "events_with_measured_counterfactual": 11,
+          "measured_avoided_bytes": 345999,
+          "statuses": {
+            "requires-snapshot-resolution": 4,
+            "verified": 11
+          }
+        }
+      },
+      "features": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "fail"
+      },
+      "interrupted_responses": 84,
+      "observed_uncached_tokens": 1246769,
+      "raw_tokens": {
+        "lower": 16471729,
+        "upper": 50071729
+      },
+      "run_id": "wl-000-002",
+      "source_sha256": {
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-002/admission.json": "d094641f7f13b583e82c94e17224db19c8987b143369ca456d7471485e708311",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-002/points89-wl-000-002-three-feature-bench-artifacts/observation/analysis.json": "421a542c229c8b007407f541317f2afedeab2c3088fe919a7a6bfc53a8ddf16c",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-002/points89-wl-000-002-three-feature-bench-artifacts/observation/mechanism-summary.json": "421a542c229c8b007407f541317f2afedeab2c3088fe919a7a6bfc53a8ddf16c",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-002/points89-wl-000-002-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-002/points89-wl-000-002-three-feature-bench-artifacts/report.json": "bf8a5bc3ed7b6796f9e4e340dea2ef8cf59a32cf70330197727716b6f8c39253"
+      },
+      "turn_audit": {
+        "completed_turns": 14,
+        "interrupted_prompt_json_bytes": 706078,
+        "interrupted_turns": 84,
+        "started_turns": 98
+      },
+      "workflow": "work-leaf-concurrent",
+      "workflow_metrics": {
+        "command_count": 340,
+        "protocol_bytes": 860336,
+        "provider_invocations": 36,
+        "provider_threads": 8,
+        "repeated_commands": 16,
+        "validation_commands": 28
+      },
+      "workflow_result": "pass"
+    },
+    "wl-000-003": {
+      "cap_audit": {
+        "applied_missing_raw_token_cap": 19600000,
+        "context_output_and_prompt_upper_bound": 19463574,
+        "declared_missing_raw_token_cap": 19600000,
+        "extra_cap_required": 0,
+        "rounded_cap_headroom": 136426
+      },
+      "completed_features": 3,
+      "condition": "wl-000",
+      "controls": {
+        "WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY": "normal",
+        "WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE": "inline-exact",
+        "WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY": "normal"
+      },
+      "delivery_events": {
+        "changed_reread": {
+          "actual_component_bytes": 22241,
+          "events": 9,
+          "events_with_measured_counterfactual": 9,
+          "measured_avoided_bytes": 350297,
+          "statuses": {
+            "verified": 9
+          }
+        },
+        "unchanged_reread": {
+          "actual_component_bytes": 62,
+          "events": 1,
+          "events_with_measured_counterfactual": 1,
+          "measured_avoided_bytes": 45348,
+          "statuses": {
+            "verified": 1
+          }
+        }
+      },
+      "features": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "interrupted_responses": 49,
+      "observed_uncached_tokens": 905246,
+      "raw_tokens": {
+        "lower": 12719646,
+        "upper": 32319646
+      },
+      "run_id": "wl-000-003",
+      "source_sha256": {
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-003/admission.json": "7a225bc426317b6a6afc95db5882cffee214a1ec2ed7428c34906bc02c542314",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-003/points89-wl-000-003-three-feature-bench-artifacts/observation/analysis.json": "1dc8285342c913cd39bbb3b4293d1a3e86446536dcbb2dc6107c386c1525870f",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-003/points89-wl-000-003-three-feature-bench-artifacts/observation/mechanism-summary.json": "1dc8285342c913cd39bbb3b4293d1a3e86446536dcbb2dc6107c386c1525870f",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-003/points89-wl-000-003-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-003/points89-wl-000-003-three-feature-bench-artifacts/report.json": "321d01f5125398a7feac14d5452544892f8e3a061f942f3581afa6007d249481"
+      },
+      "turn_audit": {
+        "completed_turns": 11,
+        "interrupted_prompt_json_bytes": 529974,
+        "interrupted_turns": 49,
+        "started_turns": 60
+      },
+      "workflow": "work-leaf-concurrent",
+      "workflow_metrics": {
+        "command_count": 279,
+        "protocol_bytes": 637914,
+        "provider_invocations": 26,
+        "provider_threads": 8,
+        "repeated_commands": 11,
+        "validation_commands": 26
+      },
+      "workflow_result": "pass"
+    },
+    "wl-010-001": {
+      "cap_audit": {
+        "applied_missing_raw_token_cap": 23648705,
+        "context_output_and_prompt_upper_bound": 23648705,
+        "declared_missing_raw_token_cap": 23600000,
+        "extra_cap_required": 48705,
+        "rounded_cap_headroom": -48705
+      },
+      "completed_features": 3,
+      "condition": "wl-010",
+      "controls": {
+        "WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY": "normal",
+        "WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE": "inline-exact",
+        "WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY": "full"
+      },
+      "delivery_events": {
+        "changed_reread": {
+          "actual_component_bytes": 138618,
+          "events": 6,
+          "events_with_measured_counterfactual": 5,
+          "measured_avoided_bytes": 22036,
+          "statuses": {
+            "invalid-diff-reconstruction": 1,
+            "verified": 5
+          }
+        },
+        "unchanged_reread": {
+          "actual_component_bytes": 106283,
+          "events": 3,
+          "events_with_measured_counterfactual": 3,
+          "measured_avoided_bytes": -106112,
+          "statuses": {
+            "full-current-delivery": 3
+          }
+        }
+      },
+      "features": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "interrupted_responses": 59,
+      "observed_uncached_tokens": 1172649,
+      "raw_tokens": {
+        "lower": 19080233,
+        "upper": 42728938
+      },
+      "run_id": "wl-010-001",
+      "source_sha256": {
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-010-001/admission.json": "76a77c64ce897e546985b4b192842f7e18ef93fe067caaff520d1d163438695d",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-010-001/points89-wl-010-001-three-feature-bench-artifacts/observation/analysis.json": "037e0d76d6fd8b084e94c16591f16fb4eec256c93e4bf73dc23129d7f5fac600",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-010-001/points89-wl-010-001-three-feature-bench-artifacts/observation/mechanism-summary.json": "037e0d76d6fd8b084e94c16591f16fb4eec256c93e4bf73dc23129d7f5fac600",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-010-001/points89-wl-010-001-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-010-001/points89-wl-010-001-three-feature-bench-artifacts/report.json": "cf9907087960f4fd5e1e95be2b58adb9c3abcd56d3015e175e6bc87d5adc0df0"
+      },
+      "turn_audit": {
+        "completed_turns": 13,
+        "interrupted_prompt_json_bytes": 851105,
+        "interrupted_turns": 59,
+        "started_turns": 72
+      },
+      "workflow": "work-leaf-concurrent",
+      "workflow_metrics": {
+        "command_count": 298,
+        "protocol_bytes": 990467,
+        "provider_invocations": 27,
+        "provider_threads": 8,
+        "repeated_commands": 17,
+        "validation_commands": 15
+      },
+      "workflow_result": "pass"
+    },
+    "wl-100-001": {
+      "cap_audit": {
+        "applied_missing_raw_token_cap": 22800000,
+        "context_output_and_prompt_upper_bound": 22465958,
+        "declared_missing_raw_token_cap": 22800000,
+        "extra_cap_required": 0,
+        "rounded_cap_headroom": 334042
+      },
+      "completed_features": 2,
+      "condition": "wl-100",
+      "controls": {
+        "WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY": "full",
+        "WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE": "inline-exact",
+        "WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY": "normal"
+      },
+      "delivery_events": {
+        "changed_reread": {
+          "actual_component_bytes": 624770,
+          "events": 15,
+          "events_with_measured_counterfactual": 0,
+          "measured_avoided_bytes": 0,
+          "statuses": {
+            "full-current-delivery": 15
+          }
+        },
+        "unchanged_reread": {
+          "actual_component_bytes": 60,
+          "events": 1,
+          "events_with_measured_counterfactual": 1,
+          "measured_avoided_bytes": 20678,
+          "statuses": {
+            "verified": 1
+          }
+        }
+      },
+      "features": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "interrupted_responses": 57,
+      "observed_uncached_tokens": 1058359,
+      "raw_tokens": {
+        "lower": 13954487,
+        "upper": 36754487
+      },
+      "run_id": "wl-100-001",
+      "source_sha256": {
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-100-001/admission.json": "8c40b74d7835e96cceb4f7d4d3c26ad2be7d9980ea077801d8f06ee4c492cfd6",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-100-001/points89-wl-100-001-three-feature-bench-artifacts/observation/analysis.json": "9d82f9ebfd8949771b1eea048ad58ae7dc88bf10345f2c25dc7ed7f4e1321507",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-100-001/points89-wl-100-001-three-feature-bench-artifacts/observation/mechanism-summary.json": "9d82f9ebfd8949771b1eea048ad58ae7dc88bf10345f2c25dc7ed7f4e1321507",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-100-001/points89-wl-100-001-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-100-001/points89-wl-100-001-three-feature-bench-artifacts/report.json": "b84236c2a45f9b08c68c40b067d259ddcb1b77d6022547fbff53852300f76968"
+      },
+      "turn_audit": {
+        "completed_turns": 14,
+        "interrupted_prompt_json_bytes": 441158,
+        "interrupted_turns": 57,
+        "started_turns": 71
+      },
+      "workflow": "work-leaf-concurrent",
+      "workflow_metrics": {
+        "command_count": 234,
+        "protocol_bytes": 1131026,
+        "provider_invocations": 25,
+        "provider_threads": 8,
+        "repeated_commands": 8,
+        "validation_commands": 13
+      },
+      "workflow_result": "pass"
+    },
+    "wl-110-001": {
+      "cap_audit": {
+        "applied_missing_raw_token_cap": 23642126,
+        "context_output_and_prompt_upper_bound": 23642126,
+        "declared_missing_raw_token_cap": 22800000,
+        "extra_cap_required": 842126,
+        "rounded_cap_headroom": -842126
+      },
+      "completed_features": 2,
+      "condition": "wl-110",
+      "controls": {
+        "WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY": "full",
+        "WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE": "inline-exact",
+        "WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY": "full"
+      },
+      "delivery_events": {
+        "changed_reread": {
+          "actual_component_bytes": 309664,
+          "events": 8,
+          "events_with_measured_counterfactual": 0,
+          "measured_avoided_bytes": 0,
+          "statuses": {
+            "full-current-delivery": 8
+          }
+        },
+        "unchanged_reread": {
+          "actual_component_bytes": 294593,
+          "events": 8,
+          "events_with_measured_counterfactual": 8,
+          "measured_avoided_bytes": -294141,
+          "statuses": {
+            "full-current-delivery": 8
+          }
+        }
+      },
+      "features": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "interrupted_responses": 57,
+      "observed_uncached_tokens": 871712,
+      "raw_tokens": {
+        "lower": 11052832,
+        "upper": 34694958
+      },
+      "run_id": "wl-110-001",
+      "source_sha256": {
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-110-001/admission.json": "31e38f6d94dae864f3cf634ecb72bb2257057f216329a415eef1c419b0f8a9d5",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-110-001/points89-wl-110-001-three-feature-bench-artifacts/observation/analysis.json": "d8afa604ad0253cd360a42c05cb25a9b5bd19e50b9b54abe35e789694a864676",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-110-001/points89-wl-110-001-three-feature-bench-artifacts/observation/mechanism-summary.json": "d8afa604ad0253cd360a42c05cb25a9b5bd19e50b9b54abe35e789694a864676",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-110-001/points89-wl-110-001-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-110-001/points89-wl-110-001-three-feature-bench-artifacts/report.json": "bb3163ea176f19fcabe94dff2cb7e1923c2418f0d9a0bcd6d9c167afeef41873"
+      },
+      "turn_audit": {
+        "completed_turns": 10,
+        "interrupted_prompt_json_bytes": 1617326,
+        "interrupted_turns": 57,
+        "started_turns": 67
+      },
+      "workflow": "work-leaf-concurrent",
+      "workflow_metrics": {
+        "command_count": 244,
+        "protocol_bytes": 1786872,
+        "provider_invocations": 28,
+        "provider_threads": 8,
+        "repeated_commands": 15,
+        "validation_commands": 24
+      },
+      "workflow_result": "pass"
+    }
+  },
+  "overall_raw_saving": {
+    "direct_mean_minus_work_leaf_mean_interval": {
+      "lower": -3326264.666666664,
+      "upper": 21207068.66666667
+    },
+    "direction": "inconclusive because the conservative interval crosses zero",
+    "every_normal_work_leaf_upper_bound_below_every_direct_total": false,
+    "exact_percentage_known": false,
+    "minimum_mean_reduction_percent": 0.0,
+    "uncached_reduction_known": false
+  },
+  "schema_version": 1,
+  "source_sha256": {
+    "bench-results/efficiency-point7-bounded-accounting-20260828T142614Z/evidence.json": "f9d68c3925ff0cc68ce3ef253e4703659a88cbfcdd07acd4f9c12dd7f70a05f8",
+    "bench-results/efficiency-point7-exact-accounting-20260828T113610Z/runs/direct/point7-exact-direct-three-feature-sequential-bench-artifacts/observation/mechanism-summary.json": "f556090b0050bc919a36e0b6f121bdf77ef1a5479d0feb24e5d13a2595a1e917",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-002/admission.json": "96f57a7c02efde32cfc90433d656e57082ea30816073dbeb08a1cf72c08da933",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-002/points89-direct-002-three-feature-sequential-bench-artifacts/observation/analysis.json": "281db04eb8fa2c55dc4bfd6ec192a6181e5c2111361b51baa1b24c5a4e93c837",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-002/points89-direct-002-three-feature-sequential-bench-artifacts/observation/mechanism-summary.json": "281db04eb8fa2c55dc4bfd6ec192a6181e5c2111361b51baa1b24c5a4e93c837",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-002/points89-direct-002-three-feature-sequential-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-002/points89-direct-002-three-feature-sequential-bench-artifacts/report.json": "ae5d803eeaf49252ad65c6d3be0f5916b3ca148354e89187f446a811a6f0a66a",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-003/admission.json": "923ed6f3fb37bbcb1a0f7129db73a6efdd7d971dbda6b21a9bbd5b6f1d50f280",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-003/points89-direct-003-three-feature-sequential-bench-artifacts/observation/analysis.json": "f3c3d304835ab8c5143367db474e84a5cb139b381edbcc5de6e58687f94d1af6",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-003/points89-direct-003-three-feature-sequential-bench-artifacts/observation/mechanism-summary.json": "f3c3d304835ab8c5143367db474e84a5cb139b381edbcc5de6e58687f94d1af6",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-003/points89-direct-003-three-feature-sequential-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-003/points89-direct-003-three-feature-sequential-bench-artifacts/report.json": "01ebb52993811f16649c36fbb4efb418e8e66aaad898a55c27e7ed70be117b31",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-002/admission.json": "d094641f7f13b583e82c94e17224db19c8987b143369ca456d7471485e708311",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-002/points89-wl-000-002-three-feature-bench-artifacts/observation/analysis.json": "421a542c229c8b007407f541317f2afedeab2c3088fe919a7a6bfc53a8ddf16c",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-002/points89-wl-000-002-three-feature-bench-artifacts/observation/mechanism-summary.json": "421a542c229c8b007407f541317f2afedeab2c3088fe919a7a6bfc53a8ddf16c",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-002/points89-wl-000-002-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-002/points89-wl-000-002-three-feature-bench-artifacts/report.json": "bf8a5bc3ed7b6796f9e4e340dea2ef8cf59a32cf70330197727716b6f8c39253",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-003/admission.json": "7a225bc426317b6a6afc95db5882cffee214a1ec2ed7428c34906bc02c542314",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-003/points89-wl-000-003-three-feature-bench-artifacts/observation/analysis.json": "1dc8285342c913cd39bbb3b4293d1a3e86446536dcbb2dc6107c386c1525870f",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-003/points89-wl-000-003-three-feature-bench-artifacts/observation/mechanism-summary.json": "1dc8285342c913cd39bbb3b4293d1a3e86446536dcbb2dc6107c386c1525870f",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-003/points89-wl-000-003-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-000-003/points89-wl-000-003-three-feature-bench-artifacts/report.json": "321d01f5125398a7feac14d5452544892f8e3a061f942f3581afa6007d249481",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-010-001/admission.json": "76a77c64ce897e546985b4b192842f7e18ef93fe067caaff520d1d163438695d",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-010-001/points89-wl-010-001-three-feature-bench-artifacts/observation/analysis.json": "037e0d76d6fd8b084e94c16591f16fb4eec256c93e4bf73dc23129d7f5fac600",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-010-001/points89-wl-010-001-three-feature-bench-artifacts/observation/mechanism-summary.json": "037e0d76d6fd8b084e94c16591f16fb4eec256c93e4bf73dc23129d7f5fac600",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-010-001/points89-wl-010-001-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-010-001/points89-wl-010-001-three-feature-bench-artifacts/report.json": "cf9907087960f4fd5e1e95be2b58adb9c3abcd56d3015e175e6bc87d5adc0df0",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-100-001/admission.json": "8c40b74d7835e96cceb4f7d4d3c26ad2be7d9980ea077801d8f06ee4c492cfd6",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-100-001/points89-wl-100-001-three-feature-bench-artifacts/observation/analysis.json": "9d82f9ebfd8949771b1eea048ad58ae7dc88bf10345f2c25dc7ed7f4e1321507",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-100-001/points89-wl-100-001-three-feature-bench-artifacts/observation/mechanism-summary.json": "9d82f9ebfd8949771b1eea048ad58ae7dc88bf10345f2c25dc7ed7f4e1321507",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-100-001/points89-wl-100-001-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-100-001/points89-wl-100-001-three-feature-bench-artifacts/report.json": "b84236c2a45f9b08c68c40b067d259ddcb1b77d6022547fbff53852300f76968",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-110-001/admission.json": "31e38f6d94dae864f3cf634ecb72bb2257057f216329a415eef1c419b0f8a9d5",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-110-001/points89-wl-110-001-three-feature-bench-artifacts/observation/analysis.json": "d8afa604ad0253cd360a42c05cb25a9b5bd19e50b9b54abe35e789694a864676",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-110-001/points89-wl-110-001-three-feature-bench-artifacts/observation/mechanism-summary.json": "d8afa604ad0253cd360a42c05cb25a9b5bd19e50b9b54abe35e789694a864676",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-110-001/points89-wl-110-001-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bench-results/efficiency-points8-9-20260828T145556Z/runs/wl-110-001/points89-wl-110-001-three-feature-bench-artifacts/report.json": "bb3163ea176f19fcabe94dff2cb7e1923c2418f0d9a0bcd6d9c167afeef41873",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/runs/wl-all-off-002/residual-wl-all-off-002-three-feature-bench-artifacts/observation/mechanism-summary.json": "99fa82a721a85b2bd8673906fe899a190b72a68decee148e70613ad5a41cc528",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/runs/wl-normal-003/residual-wl-normal-003-three-feature-bench-artifacts/observation/mechanism-summary.json": "4677065735a0664c32f1837d55eb68804ed865b4ce6c4eb26acf22435b302312"
+  },
+  "status": "complete",
+  "study": "efficiency-points8-9-20260828T145556Z"
+}

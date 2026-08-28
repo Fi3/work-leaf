@@ -1,70 +1,93 @@
-# Next Steps For A Valid Efficiency Study
+# Next Steps For Exact Efficiency Attribution
 
 ## Goal
 
-Measure normal concurrent Work Leaf against fair normal direct sequential Codex on the same three
-requests, then identify which Work Leaf mechanisms account for any real token difference. Preserve
-every success, partial implementation, failure, and missing measurement. Analyze direct and Work
-Leaf runs as independent groups rather than discarding one run when another fails.
+Turn the strong observed Work Leaf token signal into an exact average result, then isolate how much
+of any real saving comes from fewer workflow cycles. Preserve normal direct Codex and normal Work
+Leaf as the endpoint workflows; causal controls must be reported separately.
 
 ## Current Evidence
 
-Point 7 is complete in
-`../efficiency-point7-bounded-accounting-20260828T142614Z/FINAL-RESULT.md`.
+The completed normal-workflow study is
+`../efficiency-points8-9-20260828T145556Z/FINAL-RESULT.md`.
 
-- Direct sequential Codex completed 3/3 features with 41,035,124 exact raw tokens.
-- Normal Work Leaf completed 3/3 and is at least 19.15% lower after a conservative allowance for
-  every interrupted response.
-- Work Leaf with all three tested delivery mechanisms disabled completed 3/3 and is at least 4.73%
-  lower under the same bound.
-- One observation per condition cannot show whether that 4.73% difference is a repeatable residual
-  or ordinary run-to-run variation. Whether the three mechanisms explain the average saving remains
-  unknown.
+- Three direct and three normal Work Leaf observations each average 2.67 completed features.
+- Direct averages 35,196,786 exact raw tokens.
+- Work Leaf averages 13,989,718 observed raw tokens, 60.25% below direct, but interrupted responses
+  make that value incomplete.
+- The conservative Work Leaf upper bound averages 38,523,051 raw tokens. The defensible difference
+  ranges from 21,207,069 fewer tokens to 3,326,265 more.
+- Changed-file and unchanged-file delivery controls activated, but both whole-workflow effect ranges
+  cross zero.
+- Git review reconstruction repeatedly broke review routing, so it is not a valid review-context
+  token control.
+- Work Leaf averages 57.79% fewer commands, 93.05% fewer repeated commands, and 50.63% fewer
+  validation commands. This is the strongest remaining explanation, but it is not an isolated
+  causal fraction.
 
-Earlier exact percentages remain withdrawn because their Work Leaf totals omitted interrupted
-responses. The completed bound proves a raw saving for the selected observations; it does not turn
-those old percentages into valid measurements.
+The selected Point 7 observations still prove a bounded saving for those runs. They do not prove
+the repeated average.
 
-## What Is Verified
+## 1. Obtain Complete Work Leaf Usage
 
-The fair benchmark setup can hold these controls constant:
+The current ChatGPT Codex transport reports usage only when a response completes. Normal Work Leaf
+interrupts a response after receiving a complete orchestrator directive, so exact usage for that
+response is absent. The conservative allowance is wider than the observed group difference.
 
-1. the original task with `/status` and without `/fork`;
-2. base commit `c92a0b7060a36eac6db2d869b85e589a7a9480f9`;
-3. GPT-5.5 with xhigh reasoning for every provider thread;
-4. normal validation behavior and the same final repository checks;
-5. no recursive provider-verification sessions;
-6. concurrent Work Leaf versus sequential direct Codex; and
-7. the same frozen three-feature scorer, with every quality outcome retained.
+The next exact study requires one of these without changing normal Work Leaf behavior:
 
-Direct token accounting is also verified: every completed initial and resumed Codex invocation is
-added once and reconciled with saved provider records.
+1. provider-side usage records that include cancelled responses;
+2. cumulative thread usage available after cancellation; or
+3. transport telemetry that reports final usage on the cancellation path.
 
-## Remaining Measurement Limit
+Do not make Work Leaf wait for unnecessary model text merely to obtain usage. That would change the
+workflow being measured.
 
-Normal Work Leaf immediately interrupts a provider response after a complete orchestrator directive.
-On the current ChatGPT Codex transport, exact usage exists only on `response.completed`; interruption
-produces no exact or cumulative usage for that response. Waiting for completion changes Work Leaf's
-normal behavior and is not a fair accounting fix.
+When complete telemetry exists, rescore the saved runs if the provider records can be linked to
+their recorded thread and turn identities. Otherwise collect a small fresh batch with the same
+frozen task, base, model, reasoning level, scorer, and independent-group rules.
 
-Real GPT-5.5/xhigh probes reproduced this with Codex CLI 0.149.1 and 0.150.1. Server-side account
-usage was unavailable, and the same endpoint rejected stored and background responses. The complete
-evidence and Codex source call chain are in
-`../efficiency-point7-exact-accounting-20260828T113610Z/FAILURE-ANALYSIS.md`.
+## 2. Isolate Workflow Cycles
 
-## Points 8 And 9
+After accounting is exact, test the most supported cause: fewer command, repetition, and validation
+cycles. Predeclare a control that changes only cycle policy in an isolated benchmark build. Keep the
+normal direct and normal Work Leaf endpoint workflows unchanged.
 
-Point 8 tests candidate causes of the raw saving. Start from the previously observed candidates,
-especially the number of model/tool cycles, and use controlled conditions that preserve normal
-validation and task behavior. Each condition needs the same conservative interrupted-response bound
-unless exact cancelled-response telemetry becomes available.
+The control must record:
 
-Point 9 repeats direct, normal Work Leaf, all-three-disabled Work Leaf, and any successful causal
-condition as independent groups. It estimates normal variance, average feature completion, and the
-average raw-token difference. Runs remain evidence even when another condition in the same launch
-batch fails.
+- provider turns and threads;
+- total commands;
+- repeated commands;
+- validation commands;
+- prompt and command-output bytes;
+- exact raw and uncached tokens; and
+- all three feature outcomes.
 
-Exact raw and uncached percentages require a transport that reports usage for cancelled responses.
-Until then, reports must use bounds for raw tokens and must not claim an uncached reduction.
+The causal claim is supported only if the control changes cycle counts in the intended direction,
+quality remains comparable, and exact token use moves with the cycle change across repeated
+independent observations.
 
-Cross-project replication and other model profiles remain future work.
+## 3. Add Formal Precision Only If Needed
+
+More runs improve confidence in the overall direct-versus-Work-Leaf average; they do not fix missing
+usage. Run them only after complete accounting exists.
+
+Use independent groups rather than fixed statistical pairs. Predeclare a practical precision target
+and begin with a small batch so infrastructure or quality problems are visible before committing to
+long collection. Keep every success, partial implementation, workflow failure, and missing result.
+
+## Optional Review Follow-Up
+
+The Git-reconstruction control is not behaviorally equivalent to normal inline review. A future
+review-context study needs a new control that changes only the amount or form of review context
+without changing routing or completion behavior. It must pass a real-agent pilot before paid
+replication. This is optional and separate from proving the overall saving.
+
+## Do Not Reuse
+
+- Do not use the historical artificial-validation percentages as normal-product results.
+- Do not report completed-response Work Leaf usage as an exact total.
+- Do not add percentages from different scopes to allocate the whole-workflow gap.
+- Do not discard one workflow because another workflow in the same launch batch fails.
+- Do not rerun a saved candidate because an offline report formatter fails after fixture results
+  were written.

@@ -43,25 +43,28 @@ sequential Codex without Work Leaf.
 
 ## Collection
 
-`SCHEDULE.tsv` contains twelve new independent attempts. It includes one complete eight-setting
-Work Leaf factorial, two direct attempts, and an additional normal and all-disabled Work Leaf
-attempt. Combined with Point 7, the direct, `wl-000`, and `wl-111` endpoint groups each contain
-three observations.
+`SCHEDULE.tsv` contains twelve predeclared independent attempts. Seven completed. One
+Git-reconstruction attempt is a retained reliability failure, and the four remaining
+Git-reconstruction attempts were withheld after that failure became systematic. The completed
+conditions include two direct attempts, two normal Work Leaf attempts, and a four-condition screen
+of changed-file and unchanged-file delivery. Point 7 supplies one additional observation for each
+endpoint group.
 
-At most two top-level workflows run concurrently. Each attempt has a separate checkout, temporary
-root, observer identity, result directory, and run ID. The launch order is frozen before outcomes
-are observed. Every batch is inspected before the next batch starts.
+At most two top-level workflows ran concurrently. Each attempt used a separate checkout, temporary
+root, observer identity, result directory, and run ID. Batch neighbors remain independent
+observations rather than analytical pairs.
 
 ## Fairness
 
 Every condition uses:
 
 - candidate base `c92a0b7060a36eac6db2d869b85e589a7a9480f9`;
-- the original task with `/status` and without `/fork`;
+- the original generic selected-agent slash-command task, without a `/fork` requirement;
 - GPT-5.5 with `xhigh` reasoning for every provider thread;
 - normal validation behavior and identical final repository checks;
 - no recursive provider-verification sessions; and
-- the frozen visual, `/status`, and completion scorer.
+- the frozen visual, `/status`, and completion scorer, where `/status` is the concrete test of the
+  generic slash-command requirement.
 
 Direct Codex uses the repository's normal sequential benchmark without Work Leaf. Work Leaf uses
 the normal concurrent benchmark. The only changes in `wl-001` through `wl-111` are the declared
@@ -83,6 +86,23 @@ transport. Each Work Leaf result therefore reports:
 The study must not report an exact Work Leaf raw percentage or any uncached-token reduction. A
 single factorial contrast is a causal screen, not a population estimate. Repeated endpoint groups
 are used to judge whether apparent residual differences exceed ordinary run variation.
+
+## Result
+
+The direct and normal Work Leaf endpoint groups each contain three observations and average 2.67
+completed features. Direct averages 35.20 million exact raw tokens. Normal Work Leaf averages 13.99
+million observed raw tokens, but its conservative upper bound averages 38.52 million. The implied
+difference ranges from Work Leaf using 21.21 million fewer tokens to 3.33 million more, so the
+repeated saving is not proven under conservative accounting.
+
+The changed-file and unchanged-file whole-workflow controls are inconclusive because both effect
+ranges cross zero. Review context is not estimable because its Git-reconstruction control
+repeatedly broke review routing. Normal Work Leaf nevertheless averages substantially fewer total,
+repeated, and validation commands than direct Codex. That cycle difference is the strongest
+remaining explanation for the observed token signal, but it is not an isolated causal estimate.
+
+`FINAL-RESULT.md` explains the result in plain language. `evidence.json` contains the verified
+machine-readable evidence.
 
 ## Stop Rule
 

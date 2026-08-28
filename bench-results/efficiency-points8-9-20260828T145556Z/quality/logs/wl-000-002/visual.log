@@ -1,0 +1,29 @@
+command: cargo test --test quality_visual quality_visual_behavior -- --exact
+exit_code: 101
+duration_seconds: 3.295
+
+[stdout]
+
+running 1 test
+test quality_visual_behavior ... FAILED
+
+failures:
+
+---- quality_visual_behavior stdout ----
+
+thread 'quality_visual_behavior' (348869) panicked at tests/quality_visual.rs:10:5:
+assertion failed: has_nonempty_copy_evidence(&line.render_frame())
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    quality_visual_behavior
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+[stderr]
+   Compiling work-leaf v0.1.0 (/tmp/points89-score-batch4/checkouts/wl-000-002)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.27s
+     Running tests/quality_visual.rs (/tmp/points89-score-batch4/cargo-target/debug/deps/quality_visual-7d8c033b6ad2aae9)
+error: test failed, to rerun pass `--test quality_visual`
