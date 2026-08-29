@@ -47,19 +47,6 @@ When complete telemetry exists, rescore the saved runs if the provider records c
 their recorded thread and turn identities. Otherwise collect a small fresh batch with the same
 frozen task, base, model, reasoning level, scorer, and independent-group rules.
 
-### Available API Route
-
-`../efficiency-exact-cancelled-usage-20260828T221936Z/README.md` defines a separate API-key route
-that has passed automated checks and a real Work Leaf interruption. It stores each GPT-5.5/xhigh
-response, closes the provider stream when Codex disconnects, requests cancellation, and retrieves
-exact usage. The final pilot has one started response, one exact final record, and no missing usage.
-
-This route cannot recover the old ChatGPT Codex runs. New direct and Work Leaf observations must
-both use it, and their result must be labeled as an OpenAI API comparison. The existing benchmark
-observer can still capture commands and workflow activity, but the exact provider records from the
-new study are the token authority because the app-server report still lacks terminal usage for the
-interrupted turn.
-
 ## 2. Isolate Workflow Cycles
 
 After accounting is exact, test the most supported cause: fewer command, repetition, and validation
