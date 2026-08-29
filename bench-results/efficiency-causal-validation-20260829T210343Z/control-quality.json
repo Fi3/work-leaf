@@ -1,0 +1,189 @@
+{
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "complete": true,
+  "fixtures": {
+    "completion": {
+      "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_completion.rs",
+      "sha256": "4d6a19f4c6f515b9a97f184a056d08dc2882041d40d26dd82011180a949c5c87"
+    },
+    "status": {
+      "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_status.rs",
+      "sha256": "5f5295c9dec6be20abb28827b68e84342110fb748aa0cc887d8b58ffa3c6e6b5"
+    },
+    "visual": {
+      "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_visual.rs",
+      "sha256": "5ce0782e37b8672e04d8016ca3fbec9caa12f6f9cfaf431cac847c1f6e6a26ca"
+    }
+  },
+  "frozen_scorer": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/score.py",
+  "frozen_scorer_sha256": "c0a4e951e96d7da53a6d414a7677176183cae6e30d0bbfab92069d5082865162",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "runs": [
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.461,
+          "exit_code": 0,
+          "log": "scorer/logs/direct-read-001/completion.log",
+          "log_sha256": "4c9f9aa3fb9deaed1fe2b7e5842970bcf8cdf2cf479dd0f8cd4461c9c0046f5d",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.237,
+          "exit_code": 0,
+          "log": "scorer/logs/direct-read-001/status.log",
+          "log_sha256": "61e9dbb616f438a31cf78fbec1f3c4a1612ccfe24bbccddf3b6c0cba9ab511ed",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 5.534,
+          "exit_code": 0,
+          "log": "scorer/logs/direct-read-001/visual.log",
+          "log_sha256": "c03176acfc9f90395503ce5954dedfe6051db6c9d1435536eaf7f7af2bd93a2e",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "work-leaf-direct-read",
+      "final_commit": "acbf44e17a0da04135e4d22edf7d81ad7122e8c6",
+      "id": "direct-read-001",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-causal-validation-20260829T210343Z/runs/direct-read-001/direct-read-001-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "7cddfdfb4e847af84f5e3083f482c40925bb0b33b6f61eb115668dc22e2fc9ed",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 17235712,
+          "input_tokens": 18798951,
+          "output_tokens": 190874,
+          "raw_input_plus_output": 18989825,
+          "reasoning_output_tokens": 111076,
+          "uncached_input_plus_output": 1754113,
+          "uncached_input_tokens": 1563239
+        }
+      },
+      "report": "bench-results/efficiency-causal-validation-20260829T210343Z/runs/direct-read-001/direct-read-001-three-feature-bench-artifacts/report.json",
+      "report_sha256": "b4d2d58655312ecb646b2f183d737d7609f4f22b72c4e32be968fdf1be7af761",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.453,
+          "exit_code": 0,
+          "log": "scorer/logs/direct-read-002/completion.log",
+          "log_sha256": "a83b70aac6bb77bb968f34fed3c39898abc565099f74c66caffeee9be09d35ea",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.235,
+          "exit_code": 0,
+          "log": "scorer/logs/direct-read-002/status.log",
+          "log_sha256": "2221a4d48f558d3766e9b555bd7e74c271fa9d5daa3b87d2f14b119bb769a012",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.41,
+          "exit_code": 0,
+          "log": "scorer/logs/direct-read-002/visual.log",
+          "log_sha256": "0321612bfeb3d0e1042a733e76ed00b9151711030747fab44de8ef08cc746965",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "work-leaf-direct-read",
+      "final_commit": "c4124b0070a3c8dfe977fd876be47ff11a62b859",
+      "id": "direct-read-002",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-causal-validation-20260829T210343Z/runs/direct-read-002/direct-read-002-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "64e7fa2092891e0d9accf017cf218545194ed18398b28c38dfb540d4269e05ea",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 20139392,
+          "input_tokens": 21575759,
+          "output_tokens": 179793,
+          "raw_input_plus_output": 21755552,
+          "reasoning_output_tokens": 107716,
+          "uncached_input_plus_output": 1616160,
+          "uncached_input_tokens": 1436367
+        }
+      },
+      "report": "bench-results/efficiency-causal-validation-20260829T210343Z/runs/direct-read-002/direct-read-002-three-feature-bench-artifacts/report.json",
+      "report_sha256": "ae8865d2f052a7aa19a0db69c02cf1ce18190e5ecdab74f3a42056a4f04d40ff",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.467,
+          "exit_code": 0,
+          "log": "scorer/logs/direct-read-003/completion.log",
+          "log_sha256": "2bd0eded1e6dace6a18e1237a1e85f2c04a555b6c3f10d512458494699adb0f2",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.237,
+          "exit_code": 0,
+          "log": "scorer/logs/direct-read-003/status.log",
+          "log_sha256": "4e2a15ffb5c1158c7f748bae2ffbe0bb70fe89ce4b08b55fb7975e1103af20d3",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.409,
+          "exit_code": 0,
+          "log": "scorer/logs/direct-read-003/visual.log",
+          "log_sha256": "4988f14537eb156313afba55e4711e71412baa67280c403c0b903ddf9f87cb2c",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "work-leaf-direct-read",
+      "final_commit": "6fd6de4fb1d0ae982825a30e6397c01cdd7b1a75",
+      "id": "direct-read-003",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-causal-validation-20260829T210343Z/runs/direct-read-003/direct-read-003-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "dfe41bdda004ba18ca1d2d8c3ca275fc86c4c5b4280e65039534606ff9712540",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 15464320,
+          "input_tokens": 16791219,
+          "output_tokens": 124930,
+          "raw_input_plus_output": 16916149,
+          "reasoning_output_tokens": 67909,
+          "uncached_input_plus_output": 1451829,
+          "uncached_input_tokens": 1326899
+        }
+      },
+      "report": "bench-results/efficiency-causal-validation-20260829T210343Z/runs/direct-read-003/direct-read-003-three-feature-bench-artifacts/report.json",
+      "report_sha256": "7c4df18390707e7b94cee6ddf8e394e2b703b225a60682b1c889898d20bec129",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "pass"
+    }
+  ],
+  "schema_version": 1,
+  "study": "efficiency-causal-validation-20260829T210343Z",
+  "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+}
