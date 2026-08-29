@@ -1,0 +1,31 @@
+command: cargo test --test quality_completion quality_completion_behavior -- --exact
+exit_code: 101
+duration_seconds: 0.446
+
+[stdout]
+
+running 1 test
+test quality_completion_behavior ... FAILED
+
+failures:
+
+---- quality_completion_behavior stdout ----
+
+thread 'quality_completion_behavior' (2003304) panicked at tests/quality_completion.rs:52:5:
+assertion `left == right` failed
+  left: Some("review-user-1")
+ right: Some("user-1")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    quality_completion_behavior
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+
+[stderr]
+   Compiling work-leaf v0.1.0 (/home/user/.codex/work-leaf-exact-normal-score-20260829T181318Z/all-six/checkouts/exact-normal-005)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.38s
+     Running tests/quality_completion.rs (/home/user/.codex/work-leaf-exact-normal-score-20260829T181318Z/all-six/cargo-target/debug/deps/quality_completion-dedde6b96f0e96d0)
+error: test failed, to rerun pass `--test quality_completion`
