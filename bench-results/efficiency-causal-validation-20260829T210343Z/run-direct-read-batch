@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$script_dir/run-direct-read-control" --check
+
+attempts=(direct-read-001 direct-read-002 direct-read-003)
+pids=()
+for attempt in "${attempts[@]}"; do
+  "$script_dir/run-direct-read-control" "$attempt" &
+  pids+=("$!")
+done
+
+status=0
+for pid in "${pids[@]}"; do
+  if ! wait "$pid"; then
+    status=1
+  fi
+done
+exit "$status"

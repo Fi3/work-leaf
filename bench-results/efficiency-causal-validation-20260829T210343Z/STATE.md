@@ -2,8 +2,8 @@
 
 ## Current Step
 
-The endpoint audit and offline decomposition are complete. The current step is auditing a Work Leaf
-direct-read control before any provider launch.
+The endpoint audit, offline decomposition, and direct-read control audit are complete. The current
+step is the three-run direct-read causal batch.
 
 ## Completed
 
@@ -29,12 +29,17 @@ direct-read control before any provider launch.
   when their interaction is split equally. This arithmetic is not yet a causal feature allocation.
 - Implementation and review-fix work contains 76.48% of the raw gap. Review and linearization are
   too small to explain the result alone.
+- The existing `--no-read-permission` mode has been traced from `bench-three-features` through
+  `src/cli.rs` into `src/agent.rs::PromptPolicy`. Despite its historical name, the switch enables
+  direct agent reads while preserving structured writes, concurrent routing, validation, review,
+  linearization, task, model, scorer, and accounting.
+- Earlier one-run full-reread controls are non-monotonic and cannot establish a causal percentage.
+  Three independent direct-read runs are required before interpreting the read route.
 
 ## Next
 
-1. Verify that existing direct-read mode changes only read delivery for patch agents and keeps the
-   task, concurrency, writes, validation, review, linearization, scorer, and accounting fixed.
-2. Define activation checks before launch: direct read tool use must appear, mediated read events
-   must fall, provider accounting must be exact, and quality must remain scoreable.
-3. Run three isolated direct-read Work Leaf workflows concurrently, then compare their cycle count,
-   context per change, tokens, and quality with the six normal detailed Work Leaf runs.
+1. Run three isolated direct-read Work Leaf workflows concurrently.
+2. Check direct-read activation, exact provider accounting, model settings, and feature quality for
+   every outcome before comparing tokens.
+3. Compare their cycle count, context per change, tokens, and quality with the six normal detailed
+   Work Leaf runs, then decide whether another causal control is justified.
