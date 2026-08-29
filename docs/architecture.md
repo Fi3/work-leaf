@@ -210,11 +210,16 @@ Both benchmark drivers require complete provider usage.
 Work Leaf benchmark. After the app server emits a complete Work Leaf directive, the observer holds
 the matching `turn/interrupt` for at most the configured interval. It forwards the original
 interrupt as soon as the matching post-directive `thread/tokenUsage/updated` event arrives, so the
-provider still receives the normal interrupt and the model output is unchanged. The observer saves
-the incoming and forwarded byte streams separately and records every decision in
-`provider-usage-grace.jsonl`. Output that resumes, a completed turn without matching usage, or an
-expired interval releases the interrupt immediately. An interrupted turn without a matching
-post-directive usage event remains incomplete; the workflow result is retained independently.
+provider still receives the original interrupt bytes. Holding that request changes timing and can
+permit additional post-directive generation; the proxy forwards and counts that output rather than
+claiming the model output is unchanged. The observer saves the incoming and forwarded byte streams
+separately and records every decision in `provider-usage-grace.jsonl`. Output that resumes, a
+completed turn without matching usage, or an expired interval releases the interrupt immediately.
+App-server `tokenUsage.total` values are cumulative for a provider thread, so a later cumulative
+event on the same thread also accounts for an earlier interrupted response that had no immediate
+post-directive usage event. An interrupted turn remains incomplete only when neither an immediate
+event nor a later cumulative thread total is captured; the workflow result is retained
+independently.
 
 `bench-candidate-common` owns candidate staging, digest checks, admission metadata, and atomic report
 publication for both drivers. `materialize-bench-candidate` can reconstruct at most one historical

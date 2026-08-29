@@ -4119,6 +4119,7 @@ struct TurnDeliveryReplay {
     usage: CapturedUsage,
     usage_events: u64,
     interrupted_after_directive: bool,
+    directive_complete_sequence: Option<usize>,
 }
 
 pub fn analyze(config: &CaptureConfig) -> ObserverResult<AnalysisSummary> {
@@ -5166,7 +5167,8 @@ fn analyze_app_server(
     let mut delivery_replays = BTreeMap::<String, TurnDeliveryReplay>::new();
     let mut interrupted_turns = BTreeSet::<(String, String)>::new();
     let mut turns_with_terminal_usage = BTreeSet::<(String, String)>::new();
-    for value in &server_values {
+    let mut last_cumulative_usage_sequence = BTreeMap::<String, usize>::new();
+    for (sequence, value) in server_values.iter().enumerate() {
         let thread_id = extract_thread_id(value).or_else(|| {
             extract_turn_id(value).and_then(|turn_id| turn_threads.get(&turn_id).cloned())
         });
@@ -5188,8 +5190,10 @@ fn analyze_app_server(
                         replay.assistant_text.push_str("\n\n");
                     }
                     replay.assistant_text.push_str(message);
-                    replay.interrupted_after_directive =
-                        assistant_text_completes_work_leaf_directive(&replay.assistant_text);
+                    if assistant_text_completes_work_leaf_directive(&replay.assistant_text) {
+                        replay.interrupted_after_directive = true;
+                        replay.directive_complete_sequence.get_or_insert(sequence);
+                    }
                 }
             }
         }
@@ -5235,6 +5239,7 @@ fn analyze_app_server(
             ));
             continue;
         };
+        last_cumulative_usage_sequence.insert(thread_id.clone(), sequence);
         if let Some(turn_id) = turn_id
             && delivery_replays
                 .get(&turn_id)
@@ -5282,6 +5287,17 @@ fn analyze_app_server(
     interrupted_turns.extend(requested_interrupts);
     let interrupted_without_usage = interrupted_turns
         .difference(&turns_with_terminal_usage)
+        .filter(|(thread_id, turn_id)| {
+            let Some(directive_sequence) = delivery_replays
+                .get(turn_id)
+                .and_then(|replay| replay.directive_complete_sequence)
+            else {
+                return true;
+            };
+            last_cumulative_usage_sequence
+                .get(thread_id)
+                .is_none_or(|sequence| *sequence <= directive_sequence)
+        })
         .count();
     *thread_accounting.interrupted_provider_turns = thread_accounting
         .interrupted_provider_turns
