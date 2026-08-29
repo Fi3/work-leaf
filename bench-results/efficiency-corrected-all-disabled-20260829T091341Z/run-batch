@@ -2,17 +2,40 @@
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-attempts=(
-  corrected-all-disabled-001
-  corrected-all-disabled-002
-  corrected-all-disabled-003
+schedule="$script_dir/SCHEDULE.tsv"
+status_dir="$script_dir/batch-status"
+
+if [[ "$#" != 1 || ! "$1" =~ ^[1-4]$ ]]; then
+  echo "usage: $0 BATCH_ID" >&2
+  exit 2
+fi
+
+batch="$1"
+mapfile -t rows < <(
+  awk -F '\t' -v batch="$batch" 'NR > 1 && $1 == batch {print $2 "\t" $3}' "$schedule"
 )
+[[ "${#rows[@]}" == 3 ]] || {
+  echo "error: batch $batch must contain exactly three attempts" >&2
+  exit 2
+}
+
+mkdir -p "$status_dir"
+complete_path="$status_dir/batch-$batch.complete"
+running_path="$status_dir/batch-$batch.running.$$"
+[[ ! -e "$complete_path" ]] || {
+  echo "error: batch $batch is already complete" >&2
+  exit 2
+}
+
 pids=()
+attempts=()
 statuses=()
 
-for attempt in "${attempts[@]}"; do
-  "$script_dir/run-condition" "$attempt" 1 &
+for row in "${rows[@]}"; do
+  IFS=$'\t' read -r attempt condition <<<"$row"
+  "$script_dir/run-condition" "$attempt" "$condition" "$batch" &
   pids+=("$!")
+  attempts+=("$attempt")
 done
 
 overall=0
@@ -26,5 +49,6 @@ for index in "${!pids[@]}"; do
   fi
 done
 
-printf '%s\n' "${statuses[@]}"
+printf '%s\n' "${statuses[@]}" | tee "$running_path"
+mv "$running_path" "$complete_path"
 exit "$overall"

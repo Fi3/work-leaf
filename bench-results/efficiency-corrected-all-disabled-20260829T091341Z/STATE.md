@@ -1,6 +1,7 @@
 # Study State
 
-Steps (1), (2), and (3) are complete. Steps (4) and (5) have not started.
+Steps (1), (2), and (3) are complete. Step (4) is approved and its three-batch schedule is frozen;
+no Step (4) provider workflow has started. Step (5) begins only after collection and audit finish.
 
 The benchmark-only review control is frozen at
 `d217f3803ac0f417671e27cc8fb18064ff0f4ea9`. Its automated checks and bounded real-agent review

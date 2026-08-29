@@ -24,9 +24,9 @@ Every provider thread uses GPT-5.5 with `xhigh` reasoning. The concurrent Work L
 its normal validation behavior and final formatting, Clippy, and test gate. Recursive provider
 verification is blocked by the existing benchmark profile.
 
-The three attempts run concurrently with separate temporary roots, result directories, observer
-identities, and run IDs. They are independent observations, not pairs. A failure in one attempt does
-not remove or invalidate another attempt.
+Each collection batch runs three workflows concurrently with separate temporary roots, result
+directories, observer identities, and run IDs. They are independent observations, not pairs. A
+failure in one attempt does not remove or invalidate another attempt.
 
 ## Accounting
 
@@ -46,6 +46,11 @@ identify a combined effect for the three disabled mechanisms.
 and source hashes. `quality.json` contains the frozen scorer output. `analyze.py` reproduces the
 accounting and activation audit without launching a provider.
 
+`STEP4-COLLECTION-PLAN.md` defines the approved follow-up: three additional observations from each
+of direct Codex, normal Work Leaf, and the corrected control, followed by independent-group
+analysis. It records the competing explanations and the limits of what six observations per group
+can establish.
+
 The complete attempts remain under `runs/` for local replay and reanalysis. Git stores their compact
 reports and audits rather than the large raw app-server streams and duplicate binaries.
 
@@ -53,5 +58,5 @@ reports and audits rather than the large raw app-server streams and duplicate bi
 
 `./test-study` validates the frozen source, binaries, schedule, and launcher contract without a
 provider call. `python3 score-study.py` reruns the frozen feature scorer, and `python3 analyze.py`
-rebuilds the evidence. `./run-batch` is historical provenance for the completed three-attempt
-collection and rejects any attempt whose preserved result already exists.
+rebuilds the initial evidence. `./run-batch BATCH_ID` launches the three schedule rows for one batch
+and rejects any attempt whose preserved result already exists.

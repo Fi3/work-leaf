@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ "$#" != 2 ]]; then
-  echo "usage: $0 ATTEMPT_ID BATCH_ID" >&2
+if [[ "$#" != 3 ]]; then
+  echo "usage: $0 ATTEMPT_ID CONDITION BATCH_ID" >&2
   exit 2
 fi
 
 attempt_id="$1"
-batch_id="$2"
+condition="$2"
+batch_id="$3"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source_repo="${WORK_LEAF_CORRECTED_CONTROL_SOURCE_REPO:-/home/user/.codex/work-leaf-corrected-control-source-20260829T091341Z}"
 runtime_root="${WORK_LEAF_CORRECTED_CONTROL_RUNTIME_DIR:-/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z}"
@@ -17,12 +18,11 @@ study_id="efficiency-corrected-all-disabled-20260829T091341Z"
 expected_commit="d217f3803ac0f417671e27cc8fb18064ff0f4ea9"
 timeout_seconds=7200
 
-[[ "$attempt_id" =~ ^corrected-all-disabled-00[1-3]$ ]] || {
-  echo "error: invalid attempt ID: $attempt_id" >&2
-  exit 2
-}
-[[ "$batch_id" == "1" ]] || {
-  echo "error: corrected all-disabled attempts belong to batch 1" >&2
+schedule_matches="$(awk -F '\t' -v batch="$batch_id" -v attempt="$attempt_id" -v condition="$condition" \
+  'NR > 1 && $1 == batch && $2 == attempt && $3 == condition {count++} END {print count + 0}' \
+  "$script_dir/SCHEDULE.tsv")"
+[[ "$schedule_matches" == "1" ]] || {
+  echo "error: attempt is not uniquely declared in the schedule: $batch_id $attempt_id $condition" >&2
   exit 2
 }
 [[ -x "$bin_dir/work-leaf" && -x "$bin_dir/work-leaf-orchestrator" \
@@ -36,35 +36,61 @@ timeout_seconds=7200
   exit 1
 }
 
+case "$condition" in
+  direct)
+    workflow="direct-sequential"
+    changed="n/a"
+    unchanged="n/a"
+    review="n/a"
+    ;;
+  normal)
+    workflow="work-leaf-concurrent"
+    changed="diff"
+    unchanged="digest"
+    review="inline-exact"
+    ;;
+  corrected-all-disabled)
+    workflow="work-leaf-concurrent"
+    changed="full"
+    unchanged="full"
+    review="git-reconstruct-marker-first"
+    ;;
+  *)
+    echo "error: unsupported condition: $condition" >&2
+    exit 2
+    ;;
+esac
+
 results_dir="$script_dir/runs/$attempt_id"
 log_path="$script_dir/logs/$attempt_id.log"
 status_path="$script_dir/logs/$attempt_id.exit"
-run_id="corrected-control-$attempt_id"
+run_id="corrected-study-$attempt_id"
 [[ ! -e "$results_dir" && ! -e "$log_path" && ! -e "$status_path" ]] || {
   echo "error: attempt already has preserved state: $attempt_id" >&2
   exit 2
 }
 mkdir -p "$results_dir" "$script_dir/logs" "$runtime_root/$attempt_id"
 
-python3 - "$results_dir/admission.json" "$attempt_id" "$batch_id" <<'PY'
+python3 - "$results_dir/admission.json" "$attempt_id" "$condition" "$workflow" \
+  "$batch_id" "$changed" "$unchanged" "$review" <<'PY'
 import json
 import os
 import sys
 from pathlib import Path
 
-output, attempt, batch = sys.argv[1:]
+output, attempt, condition, workflow, batch, changed, unchanged, review = sys.argv[1:]
 payload = {
     "schema_version": 1,
     "attempt_id": attempt,
-    "condition": "corrected-all-disabled",
-    "workflow": "work-leaf-concurrent",
+    "condition": condition,
+    "workflow": workflow,
     "launch_batch": int(batch),
     "analytical_pair": False,
     "model": "gpt-5.5",
     "reasoning_effort": "xhigh",
-    "changed_reread": "full",
-    "unchanged_reread": "full",
-    "review_context": "git-reconstruct-marker-first",
+    "changed_reread": changed,
+    "unchanged_reread": unchanged,
+    "review_context": review,
     "retry": False,
 }
 temporary = Path(output + ".tmp")
@@ -73,26 +99,47 @@ os.replace(temporary, output)
 PY
 
 set +e
-env \
-  WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY=full \
-  WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY=full \
-  WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE=git-reconstruct \
-  WORK_LEAF_BENCH_MODEL=gpt-5.5 \
-  WORK_LEAF_BENCH_REASONING_EFFORT=xhigh \
-  WORK_LEAF_BENCH_TMPDIR="$runtime_root/$attempt_id" \
-  WORK_LEAF_BENCH_RESULTS_DIR="$results_dir" \
-  WORK_LEAF_BENCH_SKIP_BUILD=1 \
-  WORK_LEAF_BENCH_BIN_DIR="$bin_dir" \
-  WORK_LEAF_BENCH_TIMEOUT_SECS="$timeout_seconds" \
-  WORK_LEAF_BENCH_NO_READ_PERMISSION=0 \
-  WORK_LEAF_BENCH_WEB_UI=0 \
-  WORK_LEAF_BENCH_DISABLE_TMUX_SUPERVISOR=1 \
-  WORK_LEAF_BENCH_OBSERVER_BIN="$observer_bin" \
-  WORK_LEAF_BENCH_STUDY_ID="$study_id" \
-  WORK_LEAF_BENCH_PAIR_ID="unpaired-$attempt_id" \
-  WORK_LEAF_BENCH_RUN_ID="$run_id" \
-  "$source_repo/bench-three-features" >"$log_path" 2>&1
-status=$?
+if [[ "$workflow" == "direct-sequential" ]]; then
+  env -u WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY \
+    -u WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY \
+    -u WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE \
+    WORK_LEAF_DIRECT_BENCH_MODEL=gpt-5.5 \
+    WORK_LEAF_DIRECT_BENCH_REASONING_EFFORT=xhigh \
+    WORK_LEAF_DIRECT_BENCH_TMPDIR="$runtime_root/$attempt_id" \
+    WORK_LEAF_DIRECT_BENCH_RESULTS_DIR="$results_dir" \
+    WORK_LEAF_DIRECT_BENCH_SKIP_BUILD=1 \
+    WORK_LEAF_DIRECT_BENCH_BIN_DIR="$bin_dir" \
+    WORK_LEAF_DIRECT_BENCH_TIMEOUT_SECS="$timeout_seconds" \
+    WORK_LEAF_BENCH_OBSERVER_BIN="$observer_bin" \
+    WORK_LEAF_BENCH_STUDY_ID="$study_id" \
+    WORK_LEAF_BENCH_PAIR_ID="unpaired-$attempt_id" \
+    WORK_LEAF_DIRECT_BENCH_RUN_ID="$run_id" \
+    "$source_repo/bench-three-features-sequential" >"$log_path" 2>&1
+  status=$?
+else
+  review_value="$review"
+  [[ "$review_value" != "git-reconstruct-marker-first" ]] || review_value="git-reconstruct"
+  env \
+    WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY="$changed" \
+    WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY="$unchanged" \
+    WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE="$review_value" \
+    WORK_LEAF_BENCH_MODEL=gpt-5.5 \
+    WORK_LEAF_BENCH_REASONING_EFFORT=xhigh \
+    WORK_LEAF_BENCH_TMPDIR="$runtime_root/$attempt_id" \
+    WORK_LEAF_BENCH_RESULTS_DIR="$results_dir" \
+    WORK_LEAF_BENCH_SKIP_BUILD=1 \
+    WORK_LEAF_BENCH_BIN_DIR="$bin_dir" \
+    WORK_LEAF_BENCH_TIMEOUT_SECS="$timeout_seconds" \
+    WORK_LEAF_BENCH_NO_READ_PERMISSION=0 \
+    WORK_LEAF_BENCH_WEB_UI=0 \
+    WORK_LEAF_BENCH_DISABLE_TMUX_SUPERVISOR=1 \
+    WORK_LEAF_BENCH_OBSERVER_BIN="$observer_bin" \
+    WORK_LEAF_BENCH_STUDY_ID="$study_id" \
+    WORK_LEAF_BENCH_PAIR_ID="unpaired-$attempt_id" \
+    WORK_LEAF_BENCH_RUN_ID="$run_id" \
+    "$source_repo/bench-three-features" >"$log_path" 2>&1
+  status=$?
+fi
 set -e
 
 printf '%s\n' "$status" >"$status_path"
