@@ -490,6 +490,187 @@ fn app_server_usage_grace_waits_for_exact_usage_before_forwarding_interrupt() {
 }
 
 #[test]
+fn app_server_usage_grace_can_wait_through_resumed_output_for_exact_usage() {
+    let root = TempDir::new().unwrap();
+    let config_path = initialize_for_condition_with_real_tools_and_usage(
+        &root,
+        "work-leaf",
+        std::path::Path::new("/bin/sh"),
+        std::path::Path::new("/bin/true"),
+        true,
+    );
+    let marker = CaptureConfig::load(&config_path)
+        .unwrap()
+        .primary_invocation_marker;
+    let proxy = root.path().join("proxy-bin/codex");
+    let mut child = Command::new(proxy)
+        .args(["app-server", "--listen", "stdio://"])
+        .env("WORK_LEAF_OBSERVER_CONFIG", &config_path)
+        .env("WORK_LEAF_OBSERVER_PRIMARY_MARKER", marker)
+        .env("WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS", "1000")
+        .env(
+            "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME",
+            "wait-for-usage",
+        )
+        .env("WORK_LEAF_OBSERVER_FIXTURE_USAGE_DELAY_MS", "75")
+        .env("WORK_LEAF_OBSERVER_FIXTURE_OUTPUT_RESUMES", "1")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut stdin = child.stdin.take().unwrap();
+    let mut stdout = BufReader::new(child.stdout.take().unwrap());
+    writeln!(
+        stdin,
+        "{}",
+        serde_json::json!({
+            "id": 1,
+            "method": "turn/start",
+            "params": {
+                "threadId": "thread-grace",
+                "input": [{"type": "text", "text": "Agent-ID: user-1"}],
+            },
+        })
+    )
+    .unwrap();
+    stdin.flush().unwrap();
+
+    loop {
+        let mut line = String::new();
+        assert_ne!(stdout.read_line(&mut line).unwrap(), 0);
+        if line.contains("\"method\":\"item/completed\"") {
+            break;
+        }
+    }
+    writeln!(
+        stdin,
+        "{}",
+        serde_json::json!({
+            "id": 2,
+            "method": "turn/interrupt",
+            "params": {"threadId": "thread-grace", "turnId": "turn-grace"},
+        })
+    )
+    .unwrap();
+    stdin.flush().unwrap();
+    drop(stdin);
+
+    let mut suffix = String::new();
+    stdout.read_to_string(&mut suffix).unwrap();
+    assert!(child.wait().unwrap().success());
+    let usage_position = suffix.find("thread/tokenUsage/updated").unwrap();
+    let completion_position = suffix.find("turn/completed").unwrap();
+    assert!(usage_position < completion_position, "{suffix}");
+
+    let summary = analyze(&CaptureConfig::load(&config_path).unwrap()).unwrap();
+    assert!(summary.capture_complete, "{:?}", summary.errors);
+    assert_eq!(
+        summary.usage_scopes.total_workflow.raw_input_plus_output,
+        110
+    );
+    let app_server = fs::read_dir(root.path().join("app-server"))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    assert_eq!(
+        fs::read(app_server.join("client-to-server.raw")).unwrap(),
+        fs::read(app_server.join("client-to-server.forwarded.raw")).unwrap()
+    );
+    let decision: serde_json::Value = serde_json::from_str(
+        fs::read_to_string(app_server.join("provider-usage-grace.jsonl"))
+            .unwrap()
+            .trim(),
+    )
+    .unwrap();
+    assert_eq!(decision["outcome"], "forwarded-after-resumed-output-usage");
+}
+
+#[test]
+fn app_server_usage_grace_still_forwards_resumed_output_by_default() {
+    let root = TempDir::new().unwrap();
+    let config_path = initialize_for_condition_with_real_tools_and_usage(
+        &root,
+        "work-leaf",
+        std::path::Path::new("/bin/sh"),
+        std::path::Path::new("/bin/true"),
+        true,
+    );
+    let marker = CaptureConfig::load(&config_path)
+        .unwrap()
+        .primary_invocation_marker;
+    let proxy = root.path().join("proxy-bin/codex");
+    let mut child = Command::new(proxy)
+        .args(["app-server", "--listen", "stdio://"])
+        .env("WORK_LEAF_OBSERVER_CONFIG", &config_path)
+        .env("WORK_LEAF_OBSERVER_PRIMARY_MARKER", marker)
+        .env("WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS", "1000")
+        .env("WORK_LEAF_OBSERVER_FIXTURE_USAGE_DELAY_MS", "500")
+        .env("WORK_LEAF_OBSERVER_FIXTURE_OUTPUT_RESUMES", "1")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut stdin = child.stdin.take().unwrap();
+    let mut stdout = BufReader::new(child.stdout.take().unwrap());
+    writeln!(
+        stdin,
+        "{}",
+        serde_json::json!({
+            "id": 1,
+            "method": "turn/start",
+            "params": {
+                "threadId": "thread-grace",
+                "input": [{"type": "text", "text": "Agent-ID: user-1"}],
+            },
+        })
+    )
+    .unwrap();
+    stdin.flush().unwrap();
+    loop {
+        let mut line = String::new();
+        assert_ne!(stdout.read_line(&mut line).unwrap(), 0);
+        if line.contains("\"method\":\"item/completed\"") {
+            break;
+        }
+    }
+
+    let started = Instant::now();
+    writeln!(
+        stdin,
+        "{}",
+        serde_json::json!({
+            "id": 2,
+            "method": "turn/interrupt",
+            "params": {"threadId": "thread-grace", "turnId": "turn-grace"},
+        })
+    )
+    .unwrap();
+    stdin.flush().unwrap();
+    drop(stdin);
+    let mut suffix = String::new();
+    stdout.read_to_string(&mut suffix).unwrap();
+    assert!(child.wait().unwrap().success());
+    assert!(started.elapsed() < Duration::from_millis(450));
+
+    let app_server = fs::read_dir(root.path().join("app-server"))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let decision: serde_json::Value = serde_json::from_str(
+        fs::read_to_string(app_server.join("provider-usage-grace.jsonl"))
+            .unwrap()
+            .trim(),
+    )
+    .unwrap();
+    assert_eq!(decision["outcome"], "forwarded-after-output-resumed");
+    assert_eq!(decision["output_resume_policy"], "forward");
+}
+
+#[test]
 fn app_server_usage_grace_timeout_preserves_missing_usage_failure() {
     let root = TempDir::new().unwrap();
     let config_path = initialize_for_condition_with_real_tools_and_usage(

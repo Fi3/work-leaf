@@ -221,6 +221,14 @@ post-directive usage event. An interrupted turn remains incomplete only when nei
 event nor a later cumulative thread total is captured; the workflow result is retained
 independently.
 
+The optional `WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME=wait-for-usage` policy extends
+that bounded wait when provider output resumes after the directive. The observer waits for the
+matching exact usage event before forwarding the original interrupt, up to the configured grace
+interval. The decision log distinguishes this path from a response that had already completed.
+Without this option, resumed output releases the interrupt immediately. The grace interval cannot
+exceed 120 seconds. This policy is benchmark instrumentation for a continued-response control; it
+does not alter Work Leaf's directive detector or normal runtime behavior.
+
 `bench-candidate-common` owns candidate staging, digest checks, admission metadata, and atomic report
 publication for both drivers. `materialize-bench-candidate` can reconstruct at most one historical
 candidate from a passing report, a report-pinned Git bundle, and matching patch evidence. It verifies

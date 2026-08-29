@@ -22,9 +22,11 @@ pub const PARENT_INVOCATION_ENV: &str = "WORK_LEAF_OBSERVER_PARENT_INVOCATION";
 pub const PRIMARY_MARKER_ENV: &str = "WORK_LEAF_OBSERVER_PRIMARY_MARKER";
 pub const ROLE_ENV: &str = "WORK_LEAF_OBSERVER_ROLE";
 pub const PROVIDER_USAGE_GRACE_ENV: &str = "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS";
+pub const PROVIDER_USAGE_GRACE_OUTPUT_RESUME_ENV: &str =
+    "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME";
 const CONFIG_FILE: &str = "observer-config.json";
 const LOCKED_COMMAND_PREFIX: &str = "trap 'trap - TERM INT; kill -TERM 0 2>/dev/null' TERM INT; (";
-const MAX_PROVIDER_USAGE_GRACE_MS: u64 = 10_000;
+const MAX_PROVIDER_USAGE_GRACE_MS: u64 = 120_000;
 
 #[derive(Debug)]
 pub struct ObserverError {
@@ -322,6 +324,8 @@ pub struct InvocationStart {
     pub role: Option<String>,
     #[serde(default)]
     pub provider_usage_grace_ms: u64,
+    #[serde(default)]
+    pub provider_usage_grace_output_resume: String,
     pub start_monotonic_ns: u128,
     pub start_unix_ns: u128,
     pub real_executable: PathBuf,
@@ -435,6 +439,11 @@ pub fn run_captured_process(
     } else {
         0
     };
+    let provider_usage_grace_output_resume = if provider_usage_grace_ms > 0 {
+        provider_usage_grace_output_resume_from_environment()?
+    } else {
+        ProviderUsageGraceOutputResume::Forward
+    };
     let start = InvocationStart {
         invocation_id: invocation_id.clone(),
         executable: executable_name.to_string(),
@@ -450,6 +459,7 @@ pub fn run_captured_process(
         parent_invocation_id,
         role,
         provider_usage_grace_ms,
+        provider_usage_grace_output_resume: provider_usage_grace_output_resume.as_str().to_string(),
         start_monotonic_ns: monotonic_time_ns(),
         start_unix_ns: unix_time_ns(),
         real_executable: real_executable.to_path_buf(),
@@ -528,9 +538,10 @@ pub fn run_captured_process(
     let stderr_chunks = create_private_file(&capture_dir.join("stderr-chunks.jsonl"))?;
     let stdin_done = done.clone();
     let usage_grace = (provider_usage_grace_ms > 0).then(|| {
-        Arc::new(ProviderUsageGrace::new(Duration::from_millis(
-            provider_usage_grace_ms,
-        )))
+        Arc::new(ProviderUsageGrace::new(
+            Duration::from_millis(provider_usage_grace_ms),
+            provider_usage_grace_output_resume,
+        ))
     });
     let stdin_thread = if let Some(usage_grace) = usage_grace.clone() {
         let forwarded_capture =
@@ -619,6 +630,37 @@ fn provider_usage_grace_ms_from_environment() -> ObserverResult<u64> {
     Ok(milliseconds)
 }
 
+fn provider_usage_grace_output_resume_from_environment()
+-> ObserverResult<ProviderUsageGraceOutputResume> {
+    let Some(value) = std::env::var_os(PROVIDER_USAGE_GRACE_OUTPUT_RESUME_ENV) else {
+        return Ok(ProviderUsageGraceOutputResume::Forward);
+    };
+    match value.to_string_lossy().as_ref() {
+        "forward" => Ok(ProviderUsageGraceOutputResume::Forward),
+        "wait-for-usage" => Ok(ProviderUsageGraceOutputResume::WaitForUsage),
+        value => Err(ObserverError::new(format!(
+            "{PROVIDER_USAGE_GRACE_OUTPUT_RESUME_ENV} must be forward or wait-for-usage, got {value}"
+        ))),
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum ProviderUsageGraceOutputResume {
+    #[default]
+    Forward,
+    WaitForUsage,
+}
+
+impl ProviderUsageGraceOutputResume {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Forward => "forward",
+            Self::WaitForUsage => "wait-for-usage",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 struct ProviderTurnKey {
     thread_id: String,
@@ -640,6 +682,7 @@ struct ProviderUsageGraceState {
 
 struct ProviderUsageGrace {
     timeout: Duration,
+    output_resume: ProviderUsageGraceOutputResume,
     state: Mutex<ProviderUsageGraceState>,
     changed: Condvar,
 }
@@ -649,6 +692,7 @@ struct ProviderUsageGrace {
 enum ProviderUsageGraceOutcome {
     NotEligible,
     ForwardedAfterExactUsage,
+    ForwardedAfterResumedOutputUsage,
     ForwardedAfterOutputResumed,
     ForwardedAfterTurnCompleted,
     ForwardedAfterTimeout,
@@ -659,14 +703,16 @@ struct ProviderUsageGraceRecord<'a> {
     thread_id: &'a str,
     turn_id: &'a str,
     configured_grace_ms: u128,
+    output_resume_policy: ProviderUsageGraceOutputResume,
     waited_ms: u128,
     outcome: ProviderUsageGraceOutcome,
 }
 
 impl ProviderUsageGrace {
-    fn new(timeout: Duration) -> Self {
+    fn new(timeout: Duration, output_resume: ProviderUsageGraceOutputResume) -> Self {
         Self {
             timeout,
+            output_resume,
             state: Mutex::new(ProviderUsageGraceState::default()),
             changed: Condvar::new(),
         }
@@ -722,11 +768,18 @@ impl ProviderUsageGrace {
                 .expect("eligible turn state disappeared");
             if turn.exact_usage_seen {
                 return (
-                    ProviderUsageGraceOutcome::ForwardedAfterExactUsage,
+                    if turn.output_resumed
+                        && self.output_resume == ProviderUsageGraceOutputResume::WaitForUsage
+                    {
+                        ProviderUsageGraceOutcome::ForwardedAfterResumedOutputUsage
+                    } else {
+                        ProviderUsageGraceOutcome::ForwardedAfterExactUsage
+                    },
                     started.elapsed(),
                 );
             }
-            if turn.output_resumed {
+            if turn.output_resumed && self.output_resume == ProviderUsageGraceOutputResume::Forward
+            {
                 return (
                     ProviderUsageGraceOutcome::ForwardedAfterOutputResumed,
                     started.elapsed(),
@@ -1050,6 +1103,7 @@ where
                 thread_id: &key.thread_id,
                 turn_id: &key.turn_id,
                 configured_grace_ms: usage_grace.timeout.as_millis(),
+                output_resume_policy: usage_grace.output_resume,
                 waited_ms: waited.as_millis(),
                 outcome,
             },

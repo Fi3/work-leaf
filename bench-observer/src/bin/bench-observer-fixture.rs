@@ -117,6 +117,22 @@ fn run_delayed_usage_app_server(delay_ms: u64) -> io::Result<()> {
                         },
                     }),
                 )?;
+                if env::var_os("WORK_LEAF_OBSERVER_FIXTURE_OUTPUT_RESUMES").is_some() {
+                    write_fixture_message(
+                        &mut stdout,
+                        &serde_json::json!({
+                            "method": "item/started",
+                            "params": {
+                                "threadId": thread_id,
+                                "turnId": "turn-grace",
+                                "item": {
+                                    "type": "reasoning",
+                                    "id": "reasoning-after-directive",
+                                },
+                            },
+                        }),
+                    )?;
+                }
                 match receiver.recv_timeout(Duration::from_millis(delay_ms)) {
                     Ok(line) => pending = Some(line),
                     Err(mpsc::RecvTimeoutError::Timeout) => {
