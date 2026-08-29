@@ -1,0 +1,19 @@
+{
+  "condition": "git-reconstruct-marker-first",
+  "fixture_commit": "5ec570c68bbb2d66584e5aa6d846c2b213a96a20",
+  "git_reconstruction_activated": true,
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "recursive_provider_attempts": 0,
+  "review_decision": "NO_FINDINGS",
+  "review_rounds": 1,
+  "reviewer_commands": [
+    "git log --format=fuller -n 20 5ec570c68bbb2d66584e5aa6d846c2b213a96a20",
+    "git diff --find-renames --find-copies 6e75487eef8c6c401bd1e20c43c0cb8af80c56cd 5ec570c68bbb2d66584e5aa6d846c2b213a96a20",
+    "cargo test"
+  ],
+  "reviewer_final_response": "NO_FINDINGS\n@work-leaf done",
+  "routed_to_patch_agent_as_findings": false,
+  "source_commit": "d217f3803ac0f417671e27cc8fb18064ff0f4ea9",
+  "status": "pass"
+}

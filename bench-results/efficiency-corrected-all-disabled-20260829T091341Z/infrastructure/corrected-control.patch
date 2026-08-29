@@ -1,0 +1,71 @@
+From d217f3803ac0f417671e27cc8fb18064ff0f4ea9 Mon Sep 17 00:00:00 2001
+From: fi3 <you@example.com>
+Date: Sat, 29 Aug 2026 11:16:28 +0200
+Subject: [PATCH] FIX keep reconstructed reviews on the normal completion route
+
+Require the review decision marker before the standard completion directive so the context-control reviewer cannot turn a clean decision into patch findings. The regression test exercises Git reconstruction, command feedback, and clean completion without changing production Work Leaf.
+---
+ src/cli.rs   |  2 +-
+ tests/cli.rs | 23 +++++++++++++++++++++--
+ 2 files changed, 22 insertions(+), 3 deletions(-)
+
+diff --git a/src/cli.rs b/src/cli.rs
+index b2744e5..6c64ea3 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -1231,7 +1231,7 @@ where
+                 )
+             }
+             ExperimentReviewProvenancePolicy::GitReconstruct => format!(
+-                "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope and source context are intentionally not inlined for this experiment. Reconstruct the exact review scope from Git before reviewing. Start with the latest commit above and include its immediately preceding contiguous commits while their commit messages contain `Agent-ID: {}`; stop at the first commit with a different or missing Agent-ID. Inspect the full commit messages for that scope and the cumulative diff from the parent of its oldest commit through the latest commit. Run Git inspection through `@work-leaf locks run . -- git ...`. Treat the reconstructed commit messages and diff as the review scope and source context referenced below.\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.\n\nFor agent-facing changes, missing required real-agent verification is a finding unless the source context includes the exact real-agent scenario and visible result, or the exact pre-agent blocker. If you report missing verification, state the precise evidence that would resolve it. When the patch agent responds with verification evidence or a blocker rather than code, evaluate that evidence instead of requiring another patch.",
++                "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope and source context are intentionally not inlined for this experiment. Reconstruct the exact review scope from Git before reviewing. Start with the latest commit above and include its immediately preceding contiguous commits while their commit messages contain `Agent-ID: {}`; stop at the first commit with a different or missing Agent-ID. Inspect the full commit messages for that scope and the cumulative diff from the parent of its oldest commit through the latest commit. Run Git inspection through `@work-leaf locks run . -- git ...`. Treat the reconstructed commit messages and diff as the review scope and source context referenced below.\n\nReview every commit listed in the review scope. To preserve the normal review completion route, make `NO_FINDINGS` or `FINDINGS` the first nonempty line of your final review response. If you also emit the standard completion directive, place `@work-leaf done` after that decision marker, never before it. Follow `FINDINGS` with the issues; no additional text is required after `NO_FINDINGS`.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.\n\nFor agent-facing changes, missing required real-agent verification is a finding unless the source context includes the exact real-agent scenario and visible result, or the exact pre-agent blocker. If you report missing verification, state the precise evidence that would resolve it. When the patch agent responds with verification evidence or a blocker rather than code, evaluate that evidence instead of requiring another patch.",
+                 commit.agent_id, commit.hash, commit.feature, commit.reason, commit.agent_id
+             ),
+         };
+diff --git a/tests/cli.rs b/tests/cli.rs
+index 947f3e6..363ce6b 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -754,11 +754,18 @@ fn command_chat_experiment_can_require_review_context_reconstruction() {
+             "Agent-ID: user-1\nFeature: docs\nReason: review docs\nContext: private inline context",
+         ],
+     );
+-    let backend = FakeBackend::new(["NO_FINDINGS"]);
++    let backend = FakeBackend::new([
++        "@work-leaf locks run . -- git show --no-patch --oneline HEAD",
++        "NO_FINDINGS\n@work-leaf done",
++    ]);
+     let mut chat = CommandChat::new(root, backend);
+ 
+     let result = chat.handle_line("review").unwrap();
+-    assert!(matches!(result, CommandChatResult::ReviewComplete(_)));
++    let CommandChatResult::ReviewComplete(results) = result else {
++        panic!("expected review results");
++    };
++    assert_eq!(results.len(), 1);
++    assert!(results[0].findings_resolved);
+ 
+     let backend = chat.into_backend();
+     let prompt = &backend.launches[0].prompt;
+@@ -766,6 +773,18 @@ fn command_chat_experiment_can_require_review_context_reconstruction() {
+         "Review scope and source context are intentionally not inlined for this experiment"
+     ));
+     assert!(prompt.contains("Reconstruct the exact review scope from Git before reviewing"));
++    assert!(prompt.contains(
++        "make `NO_FINDINGS` or `FINDINGS` the first nonempty line of your final review response"
++    ));
++    assert!(prompt.contains("place `@work-leaf done` after that decision marker"));
++    assert!(backend.sends.iter().any(|(target, prompt)| {
++        target.as_str() == "review-user-1"
++            && prompt.contains("work-leaf command result")
++            && prompt.contains("git show --no-patch --oneline HEAD")
++    }));
++    assert!(!backend.sends.iter().any(|(target, prompt)| {
++        target.as_str() == "user-1" && prompt.contains("The reviewer found issues")
++    }));
+     assert!(!prompt.contains("private inline context"));
+     assert!(!prompt.contains("Recorded chat history"));
+ }
+-- 
+2.55.0
+

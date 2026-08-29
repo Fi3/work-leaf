@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$#" != 2 ]]; then
+  echo "usage: $0 ATTEMPT_ID BATCH_ID" >&2
+  exit 2
+fi
+
+attempt_id="$1"
+batch_id="$2"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source_repo="${WORK_LEAF_CORRECTED_CONTROL_SOURCE_REPO:-/home/user/.codex/work-leaf-corrected-control-source-20260829T091341Z}"
+runtime_root="${WORK_LEAF_CORRECTED_CONTROL_RUNTIME_DIR:-/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z}"
+bin_dir="$script_dir/infrastructure/bin"
+observer_bin="$bin_dir/bench-observer"
+study_id="efficiency-corrected-all-disabled-20260829T091341Z"
+expected_commit="d217f3803ac0f417671e27cc8fb18064ff0f4ea9"
+timeout_seconds=7200
+
+[[ "$attempt_id" =~ ^corrected-all-disabled-00[1-3]$ ]] || {
+  echo "error: invalid attempt ID: $attempt_id" >&2
+  exit 2
+}
+[[ "$batch_id" == "1" ]] || {
+  echo "error: corrected all-disabled attempts belong to batch 1" >&2
+  exit 2
+}
+[[ -x "$bin_dir/work-leaf" && -x "$bin_dir/work-leaf-orchestrator" \
+  && -x "$observer_bin" ]] || {
+  echo "error: frozen study binaries are missing" >&2
+  exit 2
+}
+[[ "$(git -C "$source_repo" rev-parse HEAD)" == "$expected_commit" \
+  && -z "$(git -C "$source_repo" status --short)" ]] || {
+  echo "error: isolated study source does not match the frozen commit" >&2
+  exit 1
+}
+
+results_dir="$script_dir/runs/$attempt_id"
+log_path="$script_dir/logs/$attempt_id.log"
+status_path="$script_dir/logs/$attempt_id.exit"
+run_id="corrected-control-$attempt_id"
+[[ ! -e "$results_dir" && ! -e "$log_path" && ! -e "$status_path" ]] || {
+  echo "error: attempt already has preserved state: $attempt_id" >&2
+  exit 2
+}
+mkdir -p "$results_dir" "$script_dir/logs" "$runtime_root/$attempt_id"
+
+python3 - "$results_dir/admission.json" "$attempt_id" "$batch_id" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+output, attempt, batch = sys.argv[1:]
+payload = {
+    "schema_version": 1,
+    "attempt_id": attempt,
+    "condition": "corrected-all-disabled",
+    "workflow": "work-leaf-concurrent",
+    "launch_batch": int(batch),
+    "analytical_pair": False,
+    "model": "gpt-5.5",
+    "reasoning_effort": "xhigh",
+    "changed_reread": "full",
+    "unchanged_reread": "full",
+    "review_context": "git-reconstruct-marker-first",
+    "retry": False,
+}
+temporary = Path(output + ".tmp")
+temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+os.replace(temporary, output)
+PY
+
+set +e
+env \
+  WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY=full \
+  WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY=full \
+  WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE=git-reconstruct \
+  WORK_LEAF_BENCH_MODEL=gpt-5.5 \
+  WORK_LEAF_BENCH_REASONING_EFFORT=xhigh \
+  WORK_LEAF_BENCH_TMPDIR="$runtime_root/$attempt_id" \
+  WORK_LEAF_BENCH_RESULTS_DIR="$results_dir" \
+  WORK_LEAF_BENCH_SKIP_BUILD=1 \
+  WORK_LEAF_BENCH_BIN_DIR="$bin_dir" \
+  WORK_LEAF_BENCH_TIMEOUT_SECS="$timeout_seconds" \
+  WORK_LEAF_BENCH_NO_READ_PERMISSION=0 \
+  WORK_LEAF_BENCH_WEB_UI=0 \
+  WORK_LEAF_BENCH_DISABLE_TMUX_SUPERVISOR=1 \
+  WORK_LEAF_BENCH_OBSERVER_BIN="$observer_bin" \
+  WORK_LEAF_BENCH_STUDY_ID="$study_id" \
+  WORK_LEAF_BENCH_PAIR_ID="unpaired-$attempt_id" \
+  WORK_LEAF_BENCH_RUN_ID="$run_id" \
+  "$source_repo/bench-three-features" >"$log_path" 2>&1
+status=$?
+set -e
+
+printf '%s\n' "$status" >"$status_path"
+exit "$status"

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+attempts=(
+  corrected-all-disabled-001
+  corrected-all-disabled-002
+  corrected-all-disabled-003
+)
+pids=()
+statuses=()
+
+for attempt in "${attempts[@]}"; do
+  "$script_dir/run-condition" "$attempt" 1 &
+  pids+=("$!")
+done
+
+overall=0
+for index in "${!pids[@]}"; do
+  if wait "${pids[$index]}"; then
+    statuses+=("${attempts[$index]}=0")
+  else
+    status=$?
+    statuses+=("${attempts[$index]}=$status")
+    overall=1
+  fi
+done
+
+printf '%s\n' "${statuses[@]}"
+exit "$overall"

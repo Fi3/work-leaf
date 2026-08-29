@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+import hashlib
+import json
+import os
+import stat
+import subprocess
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent
+SOURCE = Path(
+    os.environ.get(
+        "WORK_LEAF_CORRECTED_CONTROL_SOURCE_REPO",
+        "/home/user/.codex/work-leaf-corrected-control-source-20260829T091341Z",
+    )
+)
+EXPECTED_COMMIT = "d217f3803ac0f417671e27cc8fb18064ff0f4ea9"
+
+
+def digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def main() -> None:
+    schedule = ROOT.joinpath("SCHEDULE.tsv").read_text().splitlines()
+    assert schedule[0] == "batch_id\tattempt_id\tcondition"
+    assert schedule[1:] == [
+        f"1\tcorrected-all-disabled-00{number}\tcorrected-all-disabled"
+        for number in range(1, 4)
+    ]
+
+    head = subprocess.check_output(
+        ["git", "-C", str(SOURCE), "rev-parse", "HEAD"], text=True
+    ).strip()
+    status = subprocess.check_output(
+        ["git", "-C", str(SOURCE), "status", "--short"], text=True
+    )
+    assert head == EXPECTED_COMMIT
+    assert status == ""
+
+    launcher = ROOT.joinpath("run-condition").read_text()
+    assert "WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY=full" in launcher
+    assert "WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY=full" in launcher
+    assert "WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE=git-reconstruct" in launcher
+    assert "WORK_LEAF_BENCH_MODEL=gpt-5.5" in launcher
+    assert "WORK_LEAF_BENCH_REASONING_EFFORT=xhigh" in launcher
+    assert "WORK_LEAF_BENCH_DISABLE_TMUX_SUPERVISOR=1" in launcher
+
+    batch = ROOT.joinpath("run-batch").read_text()
+    assert batch.count('"$script_dir/run-condition" "$attempt" 1 &') == 1
+    assert "corrected-all-disabled-003" in batch
+
+    manifest = json.loads(ROOT.joinpath("infrastructure/manifest.json").read_text())
+    assert manifest["source_commit"] == EXPECTED_COMMIT
+    for name, expected in manifest["binaries"].items():
+        path = ROOT / "infrastructure" / "bin" / name
+        assert path.is_file()
+        assert path.stat().st_mode & stat.S_IXUSR
+        assert digest(path) == expected
+
+    subprocess.run(["bash", "-n", ROOT / "run-condition"], check=True)
+    subprocess.run(["bash", "-n", ROOT / "run-batch"], check=True)
+    print("study contract: pass")
+
+
+if __name__ == "__main__":
+    main()
