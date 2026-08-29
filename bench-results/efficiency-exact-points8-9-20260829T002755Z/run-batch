@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$#" != 1 || ! "$1" =~ ^[1-5]$ ]]; then
+  echo "usage: $0 BATCH_NUMBER" >&2
+  exit 2
+fi
+
+batch="$1"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+schedule="$script_dir/SCHEDULE.tsv"
+status_dir="$script_dir/batch-status"
+mapfile -t rows < <(awk -F '\t' -v batch="$batch" \
+  'NR > 1 && $1 == batch {print $2 "\t" $3}' "$schedule")
+[[ "${#rows[@]}" -ge 1 && "${#rows[@]}" -le 2 ]] || {
+  echo "error: batch $batch must contain one or two attempts" >&2
+  exit 2
+}
+mkdir -p "$status_dir"
+[[ ! -e "$status_dir/batch-$batch.started" \
+  && ! -e "$status_dir/batch-$batch.complete" ]] || {
+  echo "error: batch $batch already has preserved state" >&2
+  exit 2
+}
+printf 'started_unix=%s\n' "$(date +%s)" >"$status_dir/batch-$batch.started"
+
+pids=()
+attempts=()
+for row in "${rows[@]}"; do
+  IFS=$'\t' read -r attempt condition <<<"$row"
+  "$script_dir/run-condition" "$attempt" "$condition" "$batch" &
+  pids+=("$!")
+  attempts+=("$attempt")
+done
+
+overall=0
+temporary="$status_dir/.batch-$batch.complete.$$"
+for index in "${!pids[@]}"; do
+  if wait "${pids[$index]}"; then
+    status=0
+  else
+    status=$?
+    overall=1
+  fi
+  printf '%s\t%s\n' "${attempts[$index]}" "$status" >>"$temporary"
+done
+mv "$temporary" "$status_dir/batch-$batch.complete"
+exit "$overall"
