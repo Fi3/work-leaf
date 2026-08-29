@@ -1,5 +1,8 @@
 # Corrected Three-Mechanism Control: Provisional Report
 
+This file is the Steps 1-3 checkpoint. The completed independent-group result is in
+`FINAL-REPORT.md`; its machine evidence is `final-evidence.json`.
+
 ## Abstract
 
 This study asks whether three Work Leaf context-delivery mechanisms explain the previously observed

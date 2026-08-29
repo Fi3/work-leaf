@@ -41,19 +41,21 @@ response usage is missing.
 
 ## Results
 
-The three declared workflows completed. The frozen scorer gives them 2/3, 2/3, and 3/3 requested
-features. Their mean conservative raw-token range is 8.15M to 41.61M, which overlaps both the prior
-normal Work Leaf range and the prior direct Codex mean. The current evidence therefore does not
-identify a combined effect for the three disabled mechanisms.
+The final independent groups contain 6 direct Codex runs, 5 normal Work Leaf runs, and 6
+all-disabled Work Leaf controls. Direct Codex averages 36.12M raw tokens. Normal Work Leaf averages
+between 13.05M known tokens and a 35.05M conservative upper bound, leaving a collected-sample saving
+of 1.07M to 23.07M tokens, or 2.96% to 63.87%. A 3/3-feature subset gives the same direction.
 
-`PROVISIONAL-REPORT.md` is the plain-language result. `evidence.json` contains the verified values
-and source hashes. `quality.json` contains the frozen scorer output. `analyze.py` reproduces the
-accounting and activation audit without launching a provider.
+The all-disabled control averages 8.85M to 43.38M raw tokens. Its difference from normal Work Leaf
+crosses zero, and its feature score is lower. The three candidate context mechanisms therefore do
+not receive a causal token fraction from this study. Fewer total, repeated, and validation command
+cycles are the strongest remaining explanation, but that explanation is associated rather than
+isolated.
 
-`STEP4-COLLECTION-PLAN.md` defines the approved follow-up: three additional observations from each
-of direct Codex, normal Work Leaf, and the corrected control, followed by independent-group
-analysis. It records the competing explanations and the limits of what six observations per group
-can establish.
+`FINAL-REPORT.md` explains the final result in plain language. `final-evidence.json` contains every
+included observation, source hash, feature score, token interval, and descriptive bootstrap result.
+`step5-analyze.py` reproduces it without launching a provider. `PROVISIONAL-REPORT.md` and
+`evidence.json` remain the Steps 1-3 checkpoint.
 
 The complete attempts remain under `runs/` for local replay and reanalysis. Git stores their compact
 reports and audits rather than the large raw app-server streams and duplicate binaries.
@@ -61,6 +63,7 @@ reports and audits rather than the large raw app-server streams and duplicate bi
 ## Commands
 
 `./test-study` validates the frozen source, binaries, schedule, and launcher contract without a
-provider call. `python3 score-study.py` reruns the frozen feature scorer, and `python3 analyze.py`
-rebuilds the initial evidence. `./run-batch BATCH_ID` launches the three schedule rows for one batch
-and rejects any attempt whose preserved result already exists.
+provider call. `python3 -m unittest test_step5_analyze.py` validates the final analysis, and
+`python3 step5-analyze.py` rebuilds the final evidence. `python3 analyze.py` rebuilds the initial
+three-control checkpoint. `./run-batch BATCH_ID` rejects all completed schedule rows and must not be
+used to replay preserved attempts.

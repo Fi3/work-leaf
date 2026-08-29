@@ -1,0 +1,722 @@
+{
+  "associated_workflow_cycle_difference": {
+    "causal_limit": "These cycle counts are an observed workflow difference, not an isolated ablation. They can explain why raw usage differs but cannot assign an exact token fraction.",
+    "metrics": {
+      "command_count": {
+        "direct_mean": 657.0,
+        "normal_work_leaf_mean": 277.3333333333333,
+        "work_leaf_fewer_percent": 57.787925
+      },
+      "repeated_commands": {
+        "direct_mean": 148.66666666666666,
+        "normal_work_leaf_mean": 10.333333333333334,
+        "work_leaf_fewer_percent": 93.049327
+      },
+      "validation_commands": {
+        "direct_mean": 53.333333333333336,
+        "normal_work_leaf_mean": 26.333333333333332,
+        "work_leaf_fewer_percent": 50.625
+      }
+    }
+  },
+  "comparisons": {
+    "all_disabled_minus_normal_work_leaf": {
+      "combined_mechanism_effect_proven": false,
+      "mean_completed_feature_difference": -0.6000000000000001,
+      "quality_descriptive_bootstrap_95_percent": {
+        "lower": -1.1666666666666667,
+        "upper": 0.0
+      },
+      "raw_descriptive_bootstrap_95_percent": {
+        "conservative_lower": -34267128.513333336,
+        "conservative_upper": 35652009.57833333,
+        "observed_lower_bound_ci_lower": -6265451.533333333,
+        "observed_lower_bound_ci_upper": -2224194.884999999
+      },
+      "raw_mean_difference_interval": {
+        "lower": -26201192.333333336,
+        "upper": 30332141.0
+      },
+      "raw_observed_mean_difference": -4201192.333333334,
+      "uncached_mean_difference_interval": {
+        "lower": -22253749.133333333,
+        "upper": 34279584.2
+      }
+    },
+    "direct_minus_normal_work_leaf": {
+      "mean_completed_feature_difference": 0.2333333333333334,
+      "quality_descriptive_bootstrap_95_percent": {
+        "lower": -0.2999999999999998,
+        "upper": 0.7999999999999998
+      },
+      "raw_average_saving_proven_under_cap": true,
+      "raw_descriptive_bootstrap_95_percent": {
+        "conservative_lower": -7618038.137499999,
+        "conservative_upper": 27376546.702500004,
+        "observed_lower_bound_ci_lower": 18762538.46666667,
+        "observed_lower_bound_ci_upper": 27376546.702500004
+      },
+      "raw_mean_difference_interval": {
+        "lower": 1067753.6666666642,
+        "upper": 23067753.666666664
+      },
+      "raw_mean_reduction_percent_interval": {
+        "lower": 2.956424806120983,
+        "upper": 63.870611069427454
+      },
+      "raw_observed_mean_difference": 23067753.666666664,
+      "uncached_mean_difference_interval": {
+        "lower": -21418744.46666667,
+        "upper": 581255.5333333332
+      }
+    }
+  },
+  "conclusions": {
+    "collected_sample_average_raw_saving_survives_conservative_cap": true,
+    "exact_mechanism_fraction_known": false,
+    "most_supported_remaining_explanation": "normal concurrent Work Leaf used fewer total, repeated, and validation command cycles; this is associated evidence, not an isolated causal allocation",
+    "population_average_raw_saving_statistically_established": false,
+    "same_result_holds_in_full_feature_subset": true,
+    "statistical_limit": "The groups are small and interrupted Work Leaf turns require conservative bounds. Bootstrap ranges are descriptive and do not establish cross-project generalization.",
+    "three_tested_mechanisms_explain_the_saving": "not established",
+    "uncached_saving_proven": false
+  },
+  "control_activation": {
+    "all_three_controls_configured_in_every_observation": true,
+    "changed_reread_events": 12,
+    "changed_reread_exercised_runs": 4,
+    "git_review_exercised_runs": 6,
+    "observations": 6,
+    "unchanged_reread_events": 26,
+    "unchanged_reread_exercised_runs": 6
+  },
+  "excluded_infrastructure_attempts": [
+    {
+      "evidence_retained": true,
+      "reason": "invalid environment values stopped normal Work Leaf before implementation, review, or linearization",
+      "run_id": "step4-normal-001"
+    }
+  ],
+  "frozen_setup": {
+    "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+    "conditions_are_independent_groups": true,
+    "direct_codex_is_sequential": true,
+    "maximum_tokens_per_interrupted_response": 400000,
+    "model": "gpt-5.5",
+    "normal_work_leaf_is_concurrent": true,
+    "production_work_leaf_modified": false,
+    "reasoning_effort": "xhigh",
+    "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+  },
+  "groups": {
+    "all_disabled_work_leaf": {
+      "bounded_token_observations": 6,
+      "feature_pass_counts": {
+        "completion": 2,
+        "status": 6,
+        "visual": 4
+      },
+      "full_feature_observations": 1,
+      "mean_completed_features": 2.0,
+      "observations": 6,
+      "quality_mean_bootstrap_95_percent": {
+        "lower": 1.5,
+        "upper": 2.5
+      },
+      "raw_observed_mean_bootstrap_95_percent": {
+        "lower": 8024709.666666667,
+        "upper": 9597556.333333334
+      },
+      "raw_observed_median": 8781938.0,
+      "raw_observed_range": {
+        "maximum": 10118767.0,
+        "minimum": 7051423.0
+      },
+      "raw_token_mean_interval": {
+        "lower": 8847435.666666666,
+        "upper": 43380769.0
+      },
+      "run_ids": [
+        "corrected-all-disabled-001",
+        "corrected-all-disabled-002",
+        "corrected-all-disabled-003",
+        "step4-control-001",
+        "step4-control-002",
+        "step4-control-003"
+      ],
+      "total_completed_features": 12,
+      "uncached_token_mean_interval": {
+        "lower": 773707.6666666666,
+        "upper": 35307041.0
+      },
+      "workflow_passes": 5
+    },
+    "direct": {
+      "bounded_token_observations": 0,
+      "feature_pass_counts": {
+        "completion": 5,
+        "status": 6,
+        "visual": 6
+      },
+      "full_feature_observations": 5,
+      "mean_completed_features": 2.8333333333333335,
+      "observations": 6,
+      "quality_mean_bootstrap_95_percent": {
+        "lower": 2.5,
+        "upper": 3.0
+      },
+      "raw_observed_mean_bootstrap_95_percent": {
+        "lower": 32279849.0,
+        "upper": 39952914.333333336
+      },
+      "raw_observed_median": 35565929.0,
+      "raw_observed_range": {
+        "maximum": 43257690.0,
+        "minimum": 28877983.0
+      },
+      "raw_token_mean_interval": {
+        "lower": 36116381.666666664,
+        "upper": 36116381.666666664
+      },
+      "run_ids": [
+        "point7-exact-direct",
+        "direct-003",
+        "direct-002",
+        "step4-direct-001",
+        "step4-direct-002",
+        "step4-direct-003"
+      ],
+      "total_completed_features": 17,
+      "uncached_token_mean_interval": {
+        "lower": 1608712.3333333333,
+        "upper": 1608712.3333333333
+      },
+      "workflow_passes": 6
+    },
+    "normal_work_leaf": {
+      "bounded_token_observations": 5,
+      "feature_pass_counts": {
+        "completion": 4,
+        "status": 5,
+        "visual": 4
+      },
+      "full_feature_observations": 3,
+      "mean_completed_features": 2.6,
+      "observations": 5,
+      "quality_mean_bootstrap_95_percent": {
+        "lower": 2.2,
+        "upper": 3.0
+      },
+      "raw_observed_mean_bootstrap_95_percent": {
+        "lower": 11148106.6,
+        "upper": 14982522.2
+      },
+      "raw_observed_median": 12777778.0,
+      "raw_observed_range": {
+        "maximum": 16471729.0,
+        "minimum": 9844384.0
+      },
+      "raw_token_mean_interval": {
+        "lower": 13048628.0,
+        "upper": 35048628.0
+      },
+      "run_ids": [
+        "wl-normal-003",
+        "wl-000-003",
+        "wl-000-002",
+        "step4-normal-002",
+        "step4-normal-003"
+      ],
+      "total_completed_features": 13,
+      "uncached_token_mean_interval": {
+        "lower": 1027456.8,
+        "upper": 23027456.8
+      },
+      "workflow_passes": 4
+    }
+  },
+  "observations": [
+    {
+      "completed_features": 3,
+      "feature_checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "group": "direct",
+      "interrupted_turns": 0,
+      "measurement": "exact",
+      "outcome_note": null,
+      "raw_tokens": {
+        "lower": 41035124,
+        "upper": 41035124
+      },
+      "run_id": "point7-exact-direct",
+      "source": "bench-results/efficiency-point7-exact-accounting-20260828T113610Z/runs/direct/point7-exact-direct-three-feature-sequential-bench-artifacts/report.json",
+      "uncached_tokens": {
+        "lower": 1982580,
+        "upper": 1982580
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 2,
+      "feature_checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "group": "direct",
+      "interrupted_turns": 0,
+      "measurement": "exact",
+      "outcome_note": null,
+      "raw_tokens": {
+        "lower": 28877983,
+        "upper": 28877983
+      },
+      "run_id": "direct-003",
+      "source": "bench-results/efficiency-points8-9-20260828T145556Z/evidence.json",
+      "uncached_tokens": {
+        "lower": 1906975,
+        "upper": 1906975
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 3,
+      "feature_checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "group": "direct",
+      "interrupted_turns": 0,
+      "measurement": "exact",
+      "outcome_note": null,
+      "raw_tokens": {
+        "lower": 35677252,
+        "upper": 35677252
+      },
+      "run_id": "direct-002",
+      "source": "bench-results/efficiency-points8-9-20260828T145556Z/evidence.json",
+      "uncached_tokens": {
+        "lower": 1328068,
+        "upper": 1328068
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 3,
+      "feature_checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "group": "normal_work_leaf",
+      "interrupted_turns": 51,
+      "measurement": "conservative interval",
+      "outcome_note": null,
+      "raw_tokens": {
+        "lower": 12777778,
+        "upper": 33177778
+      },
+      "run_id": "wl-normal-003",
+      "source": "bench-results/efficiency-point7-bounded-accounting-20260828T142614Z/evidence.json",
+      "uncached_tokens": {
+        "lower": 1104690,
+        "upper": 21504690
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 3,
+      "feature_checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "group": "normal_work_leaf",
+      "interrupted_turns": 49,
+      "measurement": "conservative interval",
+      "outcome_note": null,
+      "raw_tokens": {
+        "lower": 12719646,
+        "upper": 32319646
+      },
+      "run_id": "wl-000-003",
+      "source": "bench-results/efficiency-points8-9-20260828T145556Z/evidence.json",
+      "uncached_tokens": {
+        "lower": 905246,
+        "upper": 20505246
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 2,
+      "feature_checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "fail"
+      },
+      "group": "normal_work_leaf",
+      "interrupted_turns": 84,
+      "measurement": "conservative interval",
+      "outcome_note": null,
+      "raw_tokens": {
+        "lower": 16471729,
+        "upper": 50071729
+      },
+      "run_id": "wl-000-002",
+      "source": "bench-results/efficiency-points8-9-20260828T145556Z/evidence.json",
+      "uncached_tokens": {
+        "lower": 1246769,
+        "upper": 34846769
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 2,
+      "feature_checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "group": "all_disabled_work_leaf",
+      "interrupted_turns": 103,
+      "measurement": "conservative interval",
+      "outcome_note": null,
+      "raw_tokens": {
+        "lower": 8921177,
+        "upper": 50121177
+      },
+      "run_id": "corrected-all-disabled-001",
+      "source": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/evidence.json",
+      "uncached_tokens": {
+        "lower": 777817,
+        "upper": 41977817
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 2,
+      "feature_checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "fail"
+      },
+      "group": "all_disabled_work_leaf",
+      "interrupted_turns": 63,
+      "measurement": "conservative interval",
+      "outcome_note": null,
+      "raw_tokens": {
+        "lower": 7051423,
+        "upper": 32251423
+      },
+      "run_id": "corrected-all-disabled-002",
+      "source": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/evidence.json",
+      "uncached_tokens": {
+        "lower": 719647,
+        "upper": 25919647
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 3,
+      "feature_checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "group": "all_disabled_work_leaf",
+      "interrupted_turns": 85,
+      "measurement": "conservative interval",
+      "outcome_note": null,
+      "raw_tokens": {
+        "lower": 8467571,
+        "upper": 42467571
+      },
+      "run_id": "corrected-all-disabled-003",
+      "source": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/evidence.json",
+      "uncached_tokens": {
+        "lower": 769523,
+        "upper": 34769523
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 3,
+      "feature_checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "group": "direct",
+      "interrupted_turns": 0,
+      "measurement": "exact",
+      "outcome_note": "outer launcher failed after the child report was published",
+      "raw_tokens": {
+        "lower": 35454606,
+        "upper": 35454606
+      },
+      "run_id": "step4-direct-001",
+      "source": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-001/corrected-study-step4-direct-001-three-feature-sequential-bench-artifacts/report.json",
+      "uncached_tokens": {
+        "lower": 1395086,
+        "upper": 1395086
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 3,
+      "feature_checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "group": "direct",
+      "interrupted_turns": 0,
+      "measurement": "exact",
+      "outcome_note": null,
+      "raw_tokens": {
+        "lower": 43257690,
+        "upper": 43257690
+      },
+      "run_id": "step4-direct-002",
+      "source": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-002/corrected-study-step4-direct-002-three-feature-sequential-bench-artifacts/report.json",
+      "uncached_tokens": {
+        "lower": 1672538,
+        "upper": 1672538
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 3,
+      "feature_checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "group": "direct",
+      "interrupted_turns": 0,
+      "measurement": "exact",
+      "outcome_note": null,
+      "raw_tokens": {
+        "lower": 32395635,
+        "upper": 32395635
+      },
+      "run_id": "step4-direct-003",
+      "source": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-003/corrected-study-step4-direct-003-three-feature-sequential-bench-artifacts/report.json",
+      "uncached_tokens": {
+        "lower": 1367027,
+        "upper": 1367027
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 3,
+      "feature_checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "group": "normal_work_leaf",
+      "interrupted_turns": 41,
+      "measurement": "conservative interval",
+      "outcome_note": "feature workflow completed; benchmark failed while removing its temporary AGENTS.md policy",
+      "raw_tokens": {
+        "lower": 9844384,
+        "upper": 26244384
+      },
+      "run_id": "step4-normal-002",
+      "source": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-002/corrected-study-step4-normal-002-three-feature-bench-artifacts/report.json",
+      "uncached_tokens": {
+        "lower": 953504,
+        "upper": 17353504
+      },
+      "workflow_result": "fail"
+    },
+    {
+      "completed_features": 2,
+      "feature_checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "group": "normal_work_leaf",
+      "interrupted_turns": 50,
+      "measurement": "conservative interval",
+      "outcome_note": null,
+      "raw_tokens": {
+        "lower": 13429603,
+        "upper": 33429603
+      },
+      "run_id": "step4-normal-003",
+      "source": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-003/corrected-study-step4-normal-003-three-feature-bench-artifacts/report.json",
+      "uncached_tokens": {
+        "lower": 927075,
+        "upper": 20927075
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 1,
+      "feature_checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "fail"
+      },
+      "group": "all_disabled_work_leaf",
+      "interrupted_turns": 88,
+      "measurement": "conservative interval",
+      "outcome_note": "outer launcher failed after the child report was published",
+      "raw_tokens": {
+        "lower": 10118767,
+        "upper": 45318767
+      },
+      "run_id": "step4-control-001",
+      "source": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-001/corrected-study-step4-control-001-three-feature-bench-artifacts/report.json",
+      "uncached_tokens": {
+        "lower": 765423,
+        "upper": 35965423
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 2,
+      "feature_checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "group": "all_disabled_work_leaf",
+      "interrupted_turns": 76,
+      "measurement": "conservative interval",
+      "outcome_note": null,
+      "raw_tokens": {
+        "lower": 8642699,
+        "upper": 39042699
+      },
+      "run_id": "step4-control-002",
+      "source": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-002/corrected-study-step4-control-002-three-feature-bench-artifacts/report.json",
+      "uncached_tokens": {
+        "lower": 789899,
+        "upper": 31189899
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "completed_features": 2,
+      "feature_checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "group": "all_disabled_work_leaf",
+      "interrupted_turns": 103,
+      "measurement": "conservative interval",
+      "outcome_note": "feature workflow completed; one final repository test failed",
+      "raw_tokens": {
+        "lower": 9882977,
+        "upper": 51082977
+      },
+      "run_id": "step4-control-003",
+      "source": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-003/corrected-study-step4-control-003-three-feature-bench-artifacts/report.json",
+      "uncached_tokens": {
+        "lower": 819937,
+        "upper": 42019937
+      },
+      "workflow_result": "fail"
+    }
+  ],
+  "quality_matched_full_feature_subset": {
+    "direct_observations": 5,
+    "direct_raw_token_mean_interval": {
+      "lower": 37564061.4,
+      "upper": 37564061.4
+    },
+    "direct_run_ids": [
+      "point7-exact-direct",
+      "direct-002",
+      "step4-direct-001",
+      "step4-direct-002",
+      "step4-direct-003"
+    ],
+    "interpretation": "Supporting subset only; the primary analysis retains every partial and failed workflow.",
+    "normal_work_leaf_observations": 3,
+    "normal_work_leaf_raw_token_mean_interval": {
+      "lower": 11780602.666666666,
+      "upper": 30580602.666666668
+    },
+    "normal_work_leaf_run_ids": [
+      "wl-normal-003",
+      "wl-000-003",
+      "step4-normal-002"
+    ],
+    "raw_average_saving_proven_under_cap": true,
+    "raw_mean_difference_interval": {
+      "lower": 6983458.733333331,
+      "upper": 25783458.733333334
+    }
+  },
+  "question": "Is normal concurrent Work Leaf's raw-token saving real, and do the three tested context-delivery mechanisms explain it?",
+  "schema_version": 1,
+  "source_sha256": {
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/evidence.json": "e6b7d465f4a46feb91fd09cdc0f8cc7f1944516b7157030f8bdff38b1cf9eae2",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-001/corrected-study-step4-control-001-three-feature-bench-artifacts/daemon-env.txt": "e2c651d54a8a34309db346994b2f18e33e74ba880ab4f18d8de337db379c18e4",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-001/corrected-study-step4-control-001-three-feature-bench-artifacts/final-state.json": "4bcd74b09cf683256548a8715572dc4eccc72aa2f4da7dfc2c46b03e6d8e23f7",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-001/corrected-study-step4-control-001-three-feature-bench-artifacts/observation/analysis.json": "69664c7e92c57acd42890792035ed20646bcea271fb05beeb9f13dea48698743",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-001/corrected-study-step4-control-001-three-feature-bench-artifacts/observation/app-server/00002650893224988294-567/client-to-server.raw": "a26edd1fb4ed3e98745642a44c106ba75a3b430d5a7e866ea194b432f09ed0b8",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-001/corrected-study-step4-control-001-three-feature-bench-artifacts/observation/app-server/00002650893224988294-567/server-to-client.raw": "b6945c6dcc9fa42e47b40a1b11209b31a86f7011ffad7d1ebe685bc24d4f40ec",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-001/corrected-study-step4-control-001-three-feature-bench-artifacts/observation/mechanism-summary.json": "69664c7e92c57acd42890792035ed20646bcea271fb05beeb9f13dea48698743",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-001/corrected-study-step4-control-001-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-001/corrected-study-step4-control-001-three-feature-bench-artifacts/report.json": "7a42a9eba01c8b656d04953b2111e8ee9e1f6f49400a06dde9f8d129e2fcd9f2",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-002/corrected-study-step4-control-002-three-feature-bench-artifacts/daemon-env.txt": "8a07a6434b13dc6c3cb5ef78770e1becc83b040fef22d17725ae6817b7f56b65",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-002/corrected-study-step4-control-002-three-feature-bench-artifacts/final-state.json": "44ab4dcd7b6ffefea1f117fc69e4383cd13b5b948ce89202e4cab9f6e4983860",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-002/corrected-study-step4-control-002-three-feature-bench-artifacts/observation/analysis.json": "ad270a86518d0e4ce8a5207a3fcc156339997166ed43b6a8c95da59880e8dae6",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-002/corrected-study-step4-control-002-three-feature-bench-artifacts/observation/app-server/00002655655288219188-582/client-to-server.raw": "0d47835c83fd4840445f80c3da9b6a464fee3dcc23b68e87a7be0705d9877882",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-002/corrected-study-step4-control-002-three-feature-bench-artifacts/observation/app-server/00002655655288219188-582/server-to-client.raw": "240ef00384080b89c8f55dd22b7b2d8e099a3021c180758d35ba3f136fa221ac",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-002/corrected-study-step4-control-002-three-feature-bench-artifacts/observation/mechanism-summary.json": "ad270a86518d0e4ce8a5207a3fcc156339997166ed43b6a8c95da59880e8dae6",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-002/corrected-study-step4-control-002-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-002/corrected-study-step4-control-002-three-feature-bench-artifacts/report.json": "3ea06044ae3f875665f5b3af4bc8045f91c3eb39570e801ea679f9938d0c7edf",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-003/corrected-study-step4-control-003-three-feature-bench-artifacts/daemon-env.txt": "4b2d0503bbd2e1483deb3f3ac19dbd7174136e7b5406cf75a7da337fde1f1e1b",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-003/corrected-study-step4-control-003-three-feature-bench-artifacts/final-state.json": "db9e39f8f56ccc6403688d0883cb7487bce5b4702c8121fe4059055d81cdd20d",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-003/corrected-study-step4-control-003-three-feature-bench-artifacts/observation/analysis.json": "f00f3018a9964f3eec6a86c2e0bdf2a6b11acc6c9b53ba82b69c47a8dd5fd49e",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-003/corrected-study-step4-control-003-three-feature-bench-artifacts/observation/app-server/00002661156282145866-594/client-to-server.raw": "cbc0d0182e638f1fc619c9c3b52b41b816958112bbf7d9d925be41b84571e2b2",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-003/corrected-study-step4-control-003-three-feature-bench-artifacts/observation/app-server/00002661156282145866-594/server-to-client.raw": "28042c1ae7bf0c2a12414322929283edbc2e8485c77579fa8a6e98e1d7993aa4",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-003/corrected-study-step4-control-003-three-feature-bench-artifacts/observation/mechanism-summary.json": "f00f3018a9964f3eec6a86c2e0bdf2a6b11acc6c9b53ba82b69c47a8dd5fd49e",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-003/corrected-study-step4-control-003-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-003/corrected-study-step4-control-003-three-feature-bench-artifacts/report.json": "ca3e98363b2107e77d94d85d61257578c59eafa690d776cb1d0c9c92ff1a318d",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-001/corrected-study-step4-direct-001-three-feature-sequential-bench-artifacts/observation/analysis.json": "4c40efebc573e99686c7aba8ba7065519ad5a42c60308f13c8e5e6ad12338ce3",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-001/corrected-study-step4-direct-001-three-feature-sequential-bench-artifacts/report.json": "976fa6dfa18e1ff9d355b6affa0c5c38438dbf1446fdad3fa564d60af5138eb8",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-002/corrected-study-step4-direct-002-three-feature-sequential-bench-artifacts/observation/analysis.json": "c01951cf7de584e2bca47f1f00cf31a79188737d85414e35de49162e78daa297",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-002/corrected-study-step4-direct-002-three-feature-sequential-bench-artifacts/report.json": "048e9a4905b3937f38e48899dbfea03ef6db3563f2d21dd63ceb714fada95c61",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-003/corrected-study-step4-direct-003-three-feature-sequential-bench-artifacts/observation/analysis.json": "c59d7313e527573a371831f53155509d32f9ef9ae8328c1e3840f9b8ab00086d",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-003/corrected-study-step4-direct-003-three-feature-sequential-bench-artifacts/report.json": "0db7c97ba40998923f6aab4a8ba9f8572fc5e69bc85579d79b64a7f14e21ce62",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-002/corrected-study-step4-normal-002-three-feature-bench-artifacts/daemon-env.txt": "53274c91b1437e1700c35ac44d49e0f93b75234de0a5ade3ab133d3f99ae6a9c",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-002/corrected-study-step4-normal-002-three-feature-bench-artifacts/observation/analysis.json": "c61289f4534c5c7973641e65db9fff981b49746228fed85f906d9590b2a86fa2",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-002/corrected-study-step4-normal-002-three-feature-bench-artifacts/observation/app-server/00002655655288219188-581/client-to-server.raw": "facadb99397affd8226977e1671c35a9bf55edd75a482aaac7f5fd48527fb9d1",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-002/corrected-study-step4-normal-002-three-feature-bench-artifacts/observation/app-server/00002655655288219188-581/server-to-client.raw": "d323a3e4c3977c66be11ce6d50caf5129e6f9d0e79c409890e251a91853dfee7",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-002/corrected-study-step4-normal-002-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-002/corrected-study-step4-normal-002-three-feature-bench-artifacts/report.json": "01cb3f6fc54f8f1d286056430fb39aca63e64e929f959bec57dce521706d41c7",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-003/corrected-study-step4-normal-003-three-feature-bench-artifacts/daemon-env.txt": "b71719da1b3b3411f3bfa436e01dc560d36f2eaa2e3fe25d55bea051e7b9ee00",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-003/corrected-study-step4-normal-003-three-feature-bench-artifacts/observation/analysis.json": "7820399dc76317ec5d1c689d26d616d8cd0e9fa818e1e6d5a961ca7e567bc9d2",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-003/corrected-study-step4-normal-003-three-feature-bench-artifacts/observation/app-server/00002661156282144679-593/client-to-server.raw": "608b4aa6554dff6a46a9ec35a80fcdcfa277762baf2afd3496e12ccacdb2ef2c",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-003/corrected-study-step4-normal-003-three-feature-bench-artifacts/observation/app-server/00002661156282144679-593/server-to-client.raw": "bb0f7a934046eb459969bdc05e846dddd1969286f52e2486ad5e1ef951da7f33",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-003/corrected-study-step4-normal-003-three-feature-bench-artifacts/recursive-codex-attempts.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-003/corrected-study-step4-normal-003-three-feature-bench-artifacts/report.json": "4d8c212cb4574ebb0f4f037e65f3c2df7db9c63dac6ae732159c119fef8dd342",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/scorer/score.py": "c0a4e951e96d7da53a6d414a7677176183cae6e30d0bbfab92069d5082865162",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/step4-batch2-quality.json": "46e64239cd7e1b0063354c15673284a4fa75c81cb978c7eeb0a020abfdab0ff7",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/step4-batch3-quality.json": "44c448d9b25285c5750aca16db4eb98890e942cc1ab625048f59aa0644270141",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/step4-batch4-quality.json": "09e6bdf8ea4730e51f3cc911995df1fefdd492158f92f840e9b875a874a0371b",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/step5-analyze.py": "664532cc1200ffa9be6d6897a6f09a1b0c136c3ce79d3596af4455e7db5846e8",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/test_step5_analyze.py": "792b4e9354869bcbba6affb0d7b39158360fa96f985cc6441757eacc94becb82",
+    "bench-results/efficiency-point7-bounded-accounting-20260828T142614Z/evidence.json": "f9d68c3925ff0cc68ce3ef253e4703659a88cbfcdd07acd4f9c12dd7f70a05f8",
+    "bench-results/efficiency-point7-exact-accounting-20260828T113610Z/direct-result.json": "0e31fa8b26e6199115e965abd9338c8c19775f0f25ca050eabd3b2c281e26cd2",
+    "bench-results/efficiency-point7-exact-accounting-20260828T113610Z/runs/direct/point7-exact-direct-three-feature-sequential-bench-artifacts/report.json": "99075f4699c8ed01f36c794d607a685381e05daf0f6c35b158ac06e47eba8f61",
+    "bench-results/efficiency-points8-9-20260828T145556Z/evidence.json": "87b826fd951dbe11486d2e9dc0925e11ca1c145ce9411fa24f0e3383d4f0a236",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/quality/wl-normal-003/result.json": "97b147bcd19f1635ce9c9913b602b379dd18b03795901f5d42d21448c4370f5a",
+    "bench-results/efficiency-residual-cause-20260828T070112Z/runs/wl-normal-003/residual-wl-normal-003-three-feature-bench-artifacts/report.json": "efdaac9c70f606d36ba05b8d81575073f57bb60fbdd1f80a04e4a8411ffa4b18"
+  },
+  "status": "complete",
+  "study": "efficiency-corrected-all-disabled-20260829T091341Z"
+}

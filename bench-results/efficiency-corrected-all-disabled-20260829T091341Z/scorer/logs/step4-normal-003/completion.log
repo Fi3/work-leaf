@@ -1,0 +1,59 @@
+command: cargo test --test quality_completion quality_completion_behavior -- --exact
+exit_code: 101
+duration_seconds: 0.381
+
+[stdout]
+
+running 1 test
+test quality_completion_behavior ... FAILED
+
+failures:
+
+---- quality_completion_behavior stdout ----
+
+thread 'quality_completion_behavior' (1567839) panicked at tests/quality_completion.rs:41:5:
+closing must have a visible effect
+[H┌work-leaf─────────────┐┌command───────────────────────────────────────────────────────────────────────────────────────┐
+│> work-leaf  command  ││Command chat:                                                                                 │
+│ review-fixture user-1││  new [prompt...]                                                                             │
+│[7m review-user-1 r READY[0m││  review                                                                                      │
+│                      ││  linearize                                                                                   │
+│                      ││  quit                                                                                        │
+│                      ││                                                                                              │
+│                      ││Patches and file locks are triggered automatically when agents interact with the orchestrator.│
+│                      ││work-leaf> new complete the reviewed fixture                                                  │
+│                      ││user-1 reviewed by review-user-1: rounds=1 resolved=yes                                       │
+│                      ││chat>                                                                                         │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+│                      ││                                                                                              │
+└──────────────────────┘└──────────────────────────────────────────────────────────────────────────────────────────────┘
+mode=command focus=right window=1/1                                                                                     [12;32H
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    quality_completion_behavior
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+
+[stderr]
+   Compiling work-leaf v0.1.0 (/tmp/work-leaf-score-step4-batch4/checkouts/step4-normal-003)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.32s
+     Running tests/quality_completion.rs (/tmp/work-leaf-score-step4-batch4/cargo-target/debug/deps/quality_completion-dedde6b96f0e96d0)
+error: test failed, to rerun pass `--test quality_completion`

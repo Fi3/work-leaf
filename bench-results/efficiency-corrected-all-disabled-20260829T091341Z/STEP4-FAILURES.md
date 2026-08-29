@@ -38,10 +38,10 @@ and one usable corrected-control observation. The invalid normal attempt remains
 evidence but is excluded from token and feature-efficiency distributions because the requested
 workflow never executed.
 
-Batches 3 and 4 remain the only scheduled provider work. If both complete, the final groups contain
-six usable direct observations, five usable normal Work Leaf observations, and six usable corrected
-controls after historical endpoint observations are included. Step 5 supports unequal group sizes;
-an extra provider batch is not justified solely to replace this operator-caused observation.
+Batches 3 and 4 completed the scheduled provider work. The final groups contain six direct
+observations, five normal Work Leaf observations, and six corrected controls after historical
+endpoint observations are included. Step 5 analyzes the unequal group sizes; no extra provider run
+replaces the operator-caused failure.
 
 ## Batch 3 Temporary Instruction Policy
 
@@ -66,3 +66,16 @@ The source revision for batches 1 through 3 is
 `d217f3803ac0f417671e27cc8fb18064ff0f4ea9`; batch 4 uses
 `72a9e507f57daf20a54bab5dcd6fe8f13f083d30`. This is a post-workflow cleanup correction and does not
 alter provider prompts or model behavior.
+
+## Batch 4 Corrected Control
+
+`step4-control-003` completed implementation, review, and linearization. The final repository test
+suite then failed `terminal_app_new_and_chat_work_through_spawned_codex_backend`, whose rendered
+frame did not contain the expected fake Codex launch reply. The frozen feature scorer independently
+gives the saved implementation 2/3: visual selection and `/status` pass, while reviewed-patch
+completion fails.
+
+This is a real workflow and quality outcome rather than an infrastructure failure. Its failed status,
+2/3 score, known token usage, and conservative interrupted-turn ceiling are all included in the
+all-disabled group. It was not retried and did not invalidate the direct or normal Work Leaf runs
+that launched beside it.

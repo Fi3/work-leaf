@@ -45,9 +45,12 @@ conservative usage ceiling.
 
 ## Decision After Collection
 
-The combined dataset contains six observations per group. Step 5 reports feature completion and
-token distributions for the independent groups. It uses uncertainty intervals and the conservative
-missing-usage bounds; it does not turn six runs into a claim of formal population equivalence.
+The combined dataset contains six direct observations, five normal Work Leaf observations, and six
+all-disabled observations. The sixth planned normal observation is retained only as an
+infrastructure failure because invalid switch values prevented the intended workflow from running.
+Step 5 reports feature completion and token distributions for the independent groups. It uses
+uncertainty intervals and the conservative missing-usage bounds; it does not turn these small groups
+into a claim of formal population equivalence.
 
 - Repeated overlap between normal and controlled Work Leaf weakens the claim that the three context
   mechanisms explain the observed saving.

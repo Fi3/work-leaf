@@ -1,0 +1,185 @@
+{
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "complete": true,
+  "fixtures": {
+    "completion": "4d6a19f4c6f515b9a97f184a056d08dc2882041d40d26dd82011180a949c5c87",
+    "status": "5f5295c9dec6be20abb28827b68e84342110fb748aa0cc887d8b58ffa3c6e6b5",
+    "visual": "5ce0782e37b8672e04d8016ca3fbec9caa12f6f9cfaf431cac847c1f6e6a26ca"
+  },
+  "frozen_scorer_sha256": "c0a4e951e96d7da53a6d414a7677176183cae6e30d0bbfab92069d5082865162",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "runs": [
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.415,
+          "exit_code": 0,
+          "log": "scorer/logs/step4-direct-003/completion.log",
+          "log_sha256": "5245cda3e12429688c1e00373069a5d6dd949de119cbb3eebd9afb0b83b5b697",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.213,
+          "exit_code": 0,
+          "log": "scorer/logs/step4-direct-003/status.log",
+          "log_sha256": "df6ea2fad8f772d313129a998c78f6e5701c933b778642ca9527aa41469161f4",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 5.35,
+          "exit_code": 0,
+          "log": "scorer/logs/step4-direct-003/visual.log",
+          "log_sha256": "369dd0cdc258bd334b193c691baa5898c6523778b092e5e1f932a86ad4ea9218",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "direct",
+      "final_commit": "4e388e1de35d40628a33c1f35716b19fef642cf6",
+      "id": "step4-direct-003",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-003/corrected-study-step4-direct-003-three-feature-sequential-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "c59d7313e527573a371831f53155509d32f9ef9ae8328c1e3840f9b8ab00086d",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 31028608,
+          "input_tokens": 32200781,
+          "output_tokens": 194854,
+          "raw_input_plus_output": 32395635,
+          "reasoning_output_tokens": 91719,
+          "uncached_input_plus_output": 1367027,
+          "uncached_input_tokens": 1172173
+        }
+      },
+      "report": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-003/corrected-study-step4-direct-003-three-feature-sequential-bench-artifacts/report.json",
+      "report_sha256": "0db7c97ba40998923f6aab4a8ba9f8572fc5e69bc85579d79b64a7f14e21ce62",
+      "workflow": "direct-sequential",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.381,
+          "exit_code": 101,
+          "log": "scorer/logs/step4-normal-003/completion.log",
+          "log_sha256": "d41ede7c76e79b9caccac337cb789ce9c2aca802923c492f04107cf168ff89de",
+          "status": "fail"
+        },
+        "status": {
+          "duration_seconds": 0.216,
+          "exit_code": 0,
+          "log": "scorer/logs/step4-normal-003/status.log",
+          "log_sha256": "3876e9b44a6358bf6361628105942669acc76cd1e106f954443a877bbd3e1f7d",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.305,
+          "exit_code": 0,
+          "log": "scorer/logs/step4-normal-003/visual.log",
+          "log_sha256": "d72f33bbe0e655c72ab4d4dcd060265cb384f59ea3428cba2c9b7f73d8d9a41f",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 2,
+      "condition": "normal",
+      "final_commit": "277b236e84fbc067acbc08b01298a3a938b91198",
+      "id": "step4-normal-003",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-003/corrected-study-step4-normal-003-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "7820399dc76317ec5d1c689d26d616d8cd0e9fa818e1e6d5a961ca7e567bc9d2",
+        "reasons": [
+          "measurement status is incomplete",
+          "observer analysis marks the capture incomplete"
+        ],
+        "usable": false,
+        "usage": {
+          "cached_input_tokens": 12502528,
+          "input_tokens": 13329527,
+          "output_tokens": 100076,
+          "raw_input_plus_output": 13429603,
+          "reasoning_output_tokens": 55335,
+          "uncached_input_plus_output": 927075,
+          "uncached_input_tokens": 826999
+        }
+      },
+      "report": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-003/corrected-study-step4-normal-003-three-feature-bench-artifacts/report.json",
+      "report_sha256": "4d8c212cb4574ebb0f4f037e65f3c2df7db9c63dac6ae732159c119fef8dd342",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.388,
+          "exit_code": 101,
+          "log": "scorer/logs/step4-control-003/completion.log",
+          "log_sha256": "8825f60b6b80f414476f3423b50b01d7e586818c1e54bd2da519fa30b5a07ee4",
+          "status": "fail"
+        },
+        "status": {
+          "duration_seconds": 0.218,
+          "exit_code": 0,
+          "log": "scorer/logs/step4-control-003/status.log",
+          "log_sha256": "f092c5e16d0da7b39955add29b56ba99316808f0bbc7ed52b36bee3c1c1d4b2c",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.325,
+          "exit_code": 0,
+          "log": "scorer/logs/step4-control-003/visual.log",
+          "log_sha256": "55dd5a215338e4d25ee99d9d099e7ad4ef4c7cb9fdfa6b9d46b864b5e156e3fb",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 2,
+      "condition": "corrected-all-disabled",
+      "final_commit": "2d71e16ce8c5d53bebad010197526eb941cff56b",
+      "id": "step4-control-003",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-003/corrected-study-step4-control-003-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "f00f3018a9964f3eec6a86c2e0bdf2a6b11acc6c9b53ba82b69c47a8dd5fd49e",
+        "reasons": [
+          "measurement status is incomplete",
+          "observer analysis marks the capture incomplete"
+        ],
+        "usable": false,
+        "usage": {
+          "cached_input_tokens": 9063040,
+          "input_tokens": 9809963,
+          "output_tokens": 73014,
+          "raw_input_plus_output": 9882977,
+          "reasoning_output_tokens": 38662,
+          "uncached_input_plus_output": 819937,
+          "uncached_input_tokens": 746923
+        }
+      },
+      "report": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-003/corrected-study-step4-control-003-three-feature-bench-artifacts/report.json",
+      "report_sha256": "ca3e98363b2107e77d94d85d61257578c59eafa690d776cb1d0c9c92ff1a318d",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "fail"
+    }
+  ],
+  "schema_version": 1,
+  "study": "efficiency-corrected-all-disabled-20260829T091341Z-step4-batch4",
+  "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+}
