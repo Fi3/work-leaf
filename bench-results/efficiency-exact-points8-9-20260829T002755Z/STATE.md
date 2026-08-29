@@ -4,9 +4,11 @@
 - Infrastructure: frozen and verified.
 - Planned observations: three direct, three normal Work Leaf, and three all-delivery-controls Work
   Leaf runs.
-- Completed observations: none.
+- Completed observations: none. Batch 1 was interrupted and is unusable.
 - Quality scoring: not started.
 - Analysis: not started.
 - Launch-contract tests: five passing.
 - Active provider workflows: none.
-- Next action: start batch 1 and inspect both attempts before admitting batch 2.
+- Blocking condition: the OpenAI API account reports `credit_balance_exhausted`.
+- Next action: provision API credits, confirm the provider accepts GPT-5.5 calls, and add separately
+  named replacements for the two preserved interrupted attempts before admitting another batch.
