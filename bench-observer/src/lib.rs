@@ -6,7 +6,7 @@ use std::io::{self, BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -21,8 +21,10 @@ pub const CONFIG_ENV: &str = "WORK_LEAF_OBSERVER_CONFIG";
 pub const PARENT_INVOCATION_ENV: &str = "WORK_LEAF_OBSERVER_PARENT_INVOCATION";
 pub const PRIMARY_MARKER_ENV: &str = "WORK_LEAF_OBSERVER_PRIMARY_MARKER";
 pub const ROLE_ENV: &str = "WORK_LEAF_OBSERVER_ROLE";
+pub const PROVIDER_USAGE_GRACE_ENV: &str = "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS";
 const CONFIG_FILE: &str = "observer-config.json";
 const LOCKED_COMMAND_PREFIX: &str = "trap 'trap - TERM INT; kill -TERM 0 2>/dev/null' TERM INT; (";
+const MAX_PROVIDER_USAGE_GRACE_MS: u64 = 10_000;
 
 #[derive(Debug)]
 pub struct ObserverError {
@@ -318,6 +320,8 @@ pub struct InvocationStart {
     pub parent_invocation_id: Option<String>,
     pub primary: bool,
     pub role: Option<String>,
+    #[serde(default)]
+    pub provider_usage_grace_ms: u64,
     pub start_monotonic_ns: u128,
     pub start_unix_ns: u128,
     pub real_executable: PathBuf,
@@ -426,6 +430,11 @@ pub fn run_captured_process(
             ("direct", CaptureKind::ExecJson) => role.is_some(),
             _ => false,
         };
+    let provider_usage_grace_ms = if primary && kind == CaptureKind::AppServer {
+        provider_usage_grace_ms_from_environment()?
+    } else {
+        0
+    };
     let start = InvocationStart {
         invocation_id: invocation_id.clone(),
         executable: executable_name.to_string(),
@@ -440,6 +449,7 @@ pub fn run_captured_process(
         primary,
         parent_invocation_id,
         role,
+        provider_usage_grace_ms,
         start_monotonic_ns: monotonic_time_ns(),
         start_unix_ns: unix_time_ns(),
         real_executable: real_executable.to_path_buf(),
@@ -517,13 +527,48 @@ pub fn run_captured_process(
     let stdout_chunks = create_private_file(&capture_dir.join("stdout-chunks.jsonl"))?;
     let stderr_chunks = create_private_file(&capture_dir.join("stderr-chunks.jsonl"))?;
     let stdin_done = done.clone();
-    let stdin_thread = thread::spawn(move || {
-        pump_stdin_forward_first(child_stdin, stdin_capture, stdin_chunks, stdin_done)
+    let usage_grace = (provider_usage_grace_ms > 0).then(|| {
+        Arc::new(ProviderUsageGrace::new(Duration::from_millis(
+            provider_usage_grace_ms,
+        )))
     });
-    let stdout_thread = thread::spawn(move || {
-        let output = io::stdout();
-        pump_forward_first(child_stdout, output.lock(), stdout_capture, stdout_chunks)
-    });
+    let stdin_thread = if let Some(usage_grace) = usage_grace.clone() {
+        let forwarded_capture =
+            create_private_file(&capture_dir.join("client-to-server.forwarded.raw"))?;
+        let decisions = create_private_file(&capture_dir.join("provider-usage-grace.jsonl"))?;
+        thread::spawn(move || {
+            pump_app_server_stdin_with_usage_grace(
+                child_stdin,
+                stdin_capture,
+                stdin_chunks,
+                forwarded_capture,
+                decisions,
+                stdin_done,
+                usage_grace,
+            )
+        })
+    } else {
+        thread::spawn(move || {
+            pump_stdin_forward_first(child_stdin, stdin_capture, stdin_chunks, stdin_done)
+        })
+    };
+    let stdout_thread = if let Some(usage_grace) = usage_grace {
+        thread::spawn(move || {
+            let output = io::stdout();
+            pump_app_server_stdout_with_usage_grace(
+                child_stdout,
+                output.lock(),
+                stdout_capture,
+                stdout_chunks,
+                usage_grace,
+            )
+        })
+    } else {
+        thread::spawn(move || {
+            let output = io::stdout();
+            pump_forward_first(child_stdout, output.lock(), stdout_capture, stdout_chunks)
+        })
+    };
     let stderr_thread = thread::spawn(move || {
         let output = io::stderr();
         pump_forward_first(child_stderr, output.lock(), stderr_capture, stderr_chunks)
@@ -554,6 +599,176 @@ pub fn run_captured_process(
     harden_artifact_permissions(&invocation_dir)?;
     harden_artifact_permissions(&capture_dir)?;
     Ok(ProxyOutcome { status })
+}
+
+fn provider_usage_grace_ms_from_environment() -> ObserverResult<u64> {
+    let Some(value) = std::env::var_os(PROVIDER_USAGE_GRACE_ENV) else {
+        return Ok(0);
+    };
+    let value = value.to_string_lossy();
+    let milliseconds = value.parse::<u64>().map_err(|error| {
+        ObserverError::new(format!(
+            "{PROVIDER_USAGE_GRACE_ENV} must be an integer number of milliseconds: {error}"
+        ))
+    })?;
+    if milliseconds > MAX_PROVIDER_USAGE_GRACE_MS {
+        return Err(ObserverError::new(format!(
+            "{PROVIDER_USAGE_GRACE_ENV} must not exceed {MAX_PROVIDER_USAGE_GRACE_MS} milliseconds"
+        )));
+    }
+    Ok(milliseconds)
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+struct ProviderTurnKey {
+    thread_id: String,
+    turn_id: String,
+}
+
+#[derive(Default)]
+struct ProviderTurnGraceState {
+    directive_complete: bool,
+    exact_usage_seen: bool,
+    output_resumed: bool,
+    turn_completed: bool,
+}
+
+#[derive(Default)]
+struct ProviderUsageGraceState {
+    turns: BTreeMap<ProviderTurnKey, ProviderTurnGraceState>,
+}
+
+struct ProviderUsageGrace {
+    timeout: Duration,
+    state: Mutex<ProviderUsageGraceState>,
+    changed: Condvar,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum ProviderUsageGraceOutcome {
+    NotEligible,
+    ForwardedAfterExactUsage,
+    ForwardedAfterOutputResumed,
+    ForwardedAfterTurnCompleted,
+    ForwardedAfterTimeout,
+}
+
+#[derive(Debug, Serialize)]
+struct ProviderUsageGraceRecord<'a> {
+    thread_id: &'a str,
+    turn_id: &'a str,
+    configured_grace_ms: u128,
+    waited_ms: u128,
+    outcome: ProviderUsageGraceOutcome,
+}
+
+impl ProviderUsageGrace {
+    fn new(timeout: Duration) -> Self {
+        Self {
+            timeout,
+            state: Mutex::new(ProviderUsageGraceState::default()),
+            changed: Condvar::new(),
+        }
+    }
+
+    fn observe_server_value(&self, value: &Value) {
+        let Some(key) = provider_turn_key(value) else {
+            return;
+        };
+        let method = value.get("method").and_then(Value::as_str);
+        let mut state = self
+            .state
+            .lock()
+            .expect("provider usage grace mutex poisoned");
+        let turn = state.turns.entry(key).or_default();
+        if method == Some("item/completed")
+            && extract_assistant_message(value)
+                .is_some_and(assistant_text_completes_work_leaf_directive)
+        {
+            turn.directive_complete = true;
+            turn.exact_usage_seen = false;
+        } else if method == Some("thread/tokenUsage/updated") && turn.directive_complete {
+            turn.exact_usage_seen = true;
+        } else if method == Some("turn/completed") {
+            turn.turn_completed = true;
+        } else if turn.directive_complete && provider_output_resumed(method) {
+            turn.output_resumed = true;
+        }
+        self.changed.notify_all();
+    }
+
+    fn wait_before_interrupt(
+        &self,
+        key: &ProviderTurnKey,
+        done: &AtomicBool,
+    ) -> (ProviderUsageGraceOutcome, Duration) {
+        let started = Instant::now();
+        let mut state = self
+            .state
+            .lock()
+            .expect("provider usage grace mutex poisoned");
+        if !state
+            .turns
+            .get(key)
+            .is_some_and(|turn| turn.directive_complete)
+        {
+            return (ProviderUsageGraceOutcome::NotEligible, started.elapsed());
+        }
+        loop {
+            let turn = state
+                .turns
+                .get(key)
+                .expect("eligible turn state disappeared");
+            if turn.exact_usage_seen {
+                return (
+                    ProviderUsageGraceOutcome::ForwardedAfterExactUsage,
+                    started.elapsed(),
+                );
+            }
+            if turn.output_resumed {
+                return (
+                    ProviderUsageGraceOutcome::ForwardedAfterOutputResumed,
+                    started.elapsed(),
+                );
+            }
+            if turn.turn_completed || done.load(Ordering::Acquire) {
+                return (
+                    ProviderUsageGraceOutcome::ForwardedAfterTurnCompleted,
+                    started.elapsed(),
+                );
+            }
+            let Some(remaining) = self.timeout.checked_sub(started.elapsed()) else {
+                return (
+                    ProviderUsageGraceOutcome::ForwardedAfterTimeout,
+                    started.elapsed(),
+                );
+            };
+            let (next_state, timeout) = self
+                .changed
+                .wait_timeout(state, remaining)
+                .expect("provider usage grace mutex poisoned");
+            state = next_state;
+            if timeout.timed_out() {
+                return (
+                    ProviderUsageGraceOutcome::ForwardedAfterTimeout,
+                    started.elapsed(),
+                );
+            }
+        }
+    }
+}
+
+fn provider_turn_key(value: &Value) -> Option<ProviderTurnKey> {
+    Some(ProviderTurnKey {
+        thread_id: extract_thread_id(value)?,
+        turn_id: extract_turn_id(value)?,
+    })
+}
+
+fn provider_output_resumed(method: Option<&str>) -> bool {
+    matches!(method, Some("item/started" | "item/completed"))
+        || method.is_some_and(|method| method.starts_with("item/") && method.ends_with("/delta"))
 }
 
 fn join_pump(handle: thread::JoinHandle<io::Result<()>>, stream: &str) -> ObserverResult<()> {
@@ -671,6 +886,228 @@ where
 {
     let input = io::stdin();
     pump_forward_first(input.lock(), destination, capture, chunks)
+}
+
+fn pump_app_server_stdin_with_usage_grace<W>(
+    mut destination: W,
+    mut capture: File,
+    mut chunks: File,
+    mut forwarded_capture: File,
+    mut decisions: File,
+    done: Arc<AtomicBool>,
+    usage_grace: Arc<ProviderUsageGrace>,
+) -> io::Result<()>
+where
+    W: Write,
+{
+    let mut buffer = [0_u8; 16 * 1024];
+    let mut pending = Vec::new();
+    let mut offset = 0_u64;
+    while !done.load(Ordering::Acquire) {
+        let Some(read) = read_stdin_chunk(&mut buffer)? else {
+            continue;
+        };
+        if read == 0 {
+            break;
+        }
+        capture_stream_chunk(&buffer[..read], &mut capture, &mut chunks, &mut offset)?;
+        pending.extend_from_slice(&buffer[..read]);
+        forward_complete_client_lines(
+            &mut pending,
+            &mut destination,
+            &mut forwarded_capture,
+            &mut decisions,
+            &done,
+            &usage_grace,
+        )?;
+    }
+    if !pending.is_empty() {
+        forward_app_server_client_frame(
+            &pending,
+            &mut destination,
+            &mut forwarded_capture,
+            &mut decisions,
+            &done,
+            &usage_grace,
+        )?;
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn read_stdin_chunk(buffer: &mut [u8]) -> io::Result<Option<usize>> {
+    let mut descriptor = libc::pollfd {
+        fd: libc::STDIN_FILENO,
+        events: libc::POLLIN | libc::POLLHUP,
+        revents: 0,
+    };
+    let result = unsafe { libc::poll(&mut descriptor, 1, 5) };
+    if result < 0 {
+        let error = io::Error::last_os_error();
+        if error.kind() == io::ErrorKind::Interrupted {
+            return Ok(None);
+        }
+        return Err(error);
+    }
+    if result == 0 {
+        return Ok(None);
+    }
+    let read = unsafe {
+        libc::read(
+            libc::STDIN_FILENO,
+            buffer.as_mut_ptr().cast::<libc::c_void>(),
+            buffer.len(),
+        )
+    };
+    if read < 0 {
+        let error = io::Error::last_os_error();
+        if error.kind() == io::ErrorKind::Interrupted {
+            return Ok(None);
+        }
+        return Err(error);
+    }
+    Ok(Some(read as usize))
+}
+
+#[cfg(not(unix))]
+fn read_stdin_chunk(buffer: &mut [u8]) -> io::Result<Option<usize>> {
+    io::stdin().read(buffer).map(Some)
+}
+
+fn capture_stream_chunk(
+    bytes: &[u8],
+    capture: &mut File,
+    chunks: &mut File,
+    offset: &mut u64,
+) -> io::Result<()> {
+    let received_monotonic_ns = monotonic_time_ns();
+    let received_unix_ns = unix_time_ns();
+    capture.write_all(bytes)?;
+    capture.flush()?;
+    let chunk = StreamChunk {
+        offset: *offset,
+        length: bytes.len(),
+        sha256: sha256_bytes(bytes),
+        received_monotonic_ns,
+        received_unix_ns,
+    };
+    serde_json::to_writer(&mut *chunks, &chunk)?;
+    chunks.write_all(b"\n")?;
+    chunks.flush()?;
+    *offset = offset.saturating_add(bytes.len() as u64);
+    Ok(())
+}
+
+fn forward_complete_client_lines<W>(
+    pending: &mut Vec<u8>,
+    destination: &mut W,
+    forwarded_capture: &mut File,
+    decisions: &mut File,
+    done: &AtomicBool,
+    usage_grace: &ProviderUsageGrace,
+) -> io::Result<()>
+where
+    W: Write,
+{
+    let mut consumed = 0;
+    while let Some(relative_end) = pending[consumed..].iter().position(|byte| *byte == b'\n') {
+        let end = consumed + relative_end + 1;
+        forward_app_server_client_frame(
+            &pending[consumed..end],
+            destination,
+            forwarded_capture,
+            decisions,
+            done,
+            usage_grace,
+        )?;
+        consumed = end;
+    }
+    if consumed > 0 {
+        pending.drain(..consumed);
+    }
+    Ok(())
+}
+
+fn forward_app_server_client_frame<W>(
+    frame: &[u8],
+    destination: &mut W,
+    forwarded_capture: &mut File,
+    decisions: &mut File,
+    done: &AtomicBool,
+    usage_grace: &ProviderUsageGrace,
+) -> io::Result<()>
+where
+    W: Write,
+{
+    if let Ok(value) = serde_json::from_slice::<Value>(frame)
+        && value.get("method").and_then(Value::as_str) == Some("turn/interrupt")
+        && let Some(key) = provider_turn_key(&value)
+    {
+        let (outcome, waited) = usage_grace.wait_before_interrupt(&key, done);
+        serde_json::to_writer(
+            &mut *decisions,
+            &ProviderUsageGraceRecord {
+                thread_id: &key.thread_id,
+                turn_id: &key.turn_id,
+                configured_grace_ms: usage_grace.timeout.as_millis(),
+                waited_ms: waited.as_millis(),
+                outcome,
+            },
+        )?;
+        decisions.write_all(b"\n")?;
+        decisions.flush()?;
+    }
+    destination.write_all(frame)?;
+    destination.flush()?;
+    forwarded_capture.write_all(frame)?;
+    forwarded_capture.flush()
+}
+
+fn pump_app_server_stdout_with_usage_grace<R, W>(
+    mut reader: R,
+    mut destination: W,
+    mut capture: File,
+    mut chunks: File,
+    usage_grace: Arc<ProviderUsageGrace>,
+) -> io::Result<()>
+where
+    R: Read,
+    W: Write,
+{
+    let mut buffer = [0_u8; 16 * 1024];
+    let mut pending = Vec::new();
+    let mut offset = 0_u64;
+    loop {
+        let read = reader.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        pending.extend_from_slice(&buffer[..read]);
+        observe_complete_server_lines(&mut pending, &usage_grace);
+        destination.write_all(&buffer[..read])?;
+        destination.flush()?;
+        capture_stream_chunk(&buffer[..read], &mut capture, &mut chunks, &mut offset)?;
+    }
+    if !pending.is_empty()
+        && let Ok(value) = serde_json::from_slice::<Value>(&pending)
+    {
+        usage_grace.observe_server_value(&value);
+    }
+    Ok(())
+}
+
+fn observe_complete_server_lines(pending: &mut Vec<u8>, usage_grace: &ProviderUsageGrace) {
+    let mut consumed = 0;
+    while let Some(relative_end) = pending[consumed..].iter().position(|byte| *byte == b'\n') {
+        let end = consumed + relative_end + 1;
+        if let Ok(value) = serde_json::from_slice::<Value>(&pending[consumed..end]) {
+            usage_grace.observe_server_value(&value);
+        }
+        consumed = end;
+    }
+    if consumed > 0 {
+        pending.drain(..consumed);
+    }
 }
 
 fn forward_capture_chunk<W>(
@@ -4697,6 +5134,7 @@ fn analyze_app_server(
         }
     }
 
+    let mut requested_interrupts = BTreeSet::<(String, String)>::new();
     for value in &client_values {
         if let Some(prompt) = extract_turn_prompt(value)
             && let Some(thread_id) = extract_thread_id(value)
@@ -4715,6 +5153,7 @@ fn analyze_app_server(
             if let (Some(thread_id), Some(turn_id)) =
                 (extract_thread_id(value), extract_turn_id(value))
             {
+                requested_interrupts.insert((thread_id.clone(), turn_id.clone()));
                 mechanisms.observe_interrupt(&thread_id, &turn_id);
             } else {
                 errors.push(format!(
@@ -4726,6 +5165,7 @@ fn analyze_app_server(
     }
     let mut delivery_replays = BTreeMap::<String, TurnDeliveryReplay>::new();
     let mut interrupted_turns = BTreeSet::<(String, String)>::new();
+    let mut turns_with_terminal_usage = BTreeSet::<(String, String)>::new();
     for value in &server_values {
         let thread_id = extract_thread_id(value).or_else(|| {
             extract_turn_id(value).and_then(|turn_id| turn_threads.get(&turn_id).cloned())
@@ -4795,6 +5235,13 @@ fn analyze_app_server(
             ));
             continue;
         };
+        if let Some(turn_id) = turn_id
+            && delivery_replays
+                .get(&turn_id)
+                .is_some_and(|replay| replay.interrupted_after_directive)
+        {
+            turns_with_terminal_usage.insert((thread_id.clone(), turn_id));
+        }
         if !generation_threads.contains(&thread_id) {
             continue;
         }
@@ -4832,9 +5279,13 @@ fn analyze_app_server(
                 .or_insert(replay.usage);
         }
     }
+    interrupted_turns.extend(requested_interrupts);
+    let interrupted_without_usage = interrupted_turns
+        .difference(&turns_with_terminal_usage)
+        .count();
     *thread_accounting.interrupted_provider_turns = thread_accounting
         .interrupted_provider_turns
-        .saturating_add(u64::try_from(interrupted_turns.len()).unwrap_or(u64::MAX));
+        .saturating_add(u64::try_from(interrupted_without_usage).unwrap_or(u64::MAX));
     Ok(())
 }
 

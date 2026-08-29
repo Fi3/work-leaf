@@ -26,6 +26,7 @@ Environment:
   WORK_LEAF_BENCH_WEB_UI       set to 0 to skip the local web UI helper
   WORK_LEAF_BENCH_WEB_LISTEN   web UI listen address, default 127.0.0.1:0
   WORK_LEAF_BENCH_OBSERVER_BIN bench-observer executable; defaults to bench-observer/target/release/bench-observer
+  WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS briefly delay directive interrupts for exact usage capture
   WORK_LEAF_BENCH_STUDY_ID    observer study identity, default efficiency-causal-study
   WORK_LEAF_BENCH_PAIR_ID     observer pair identity, default unpaired-<run-id>
 
@@ -166,7 +167,7 @@ launch_tmux_supervisor_if_needed() {
     WORK_LEAF_BENCH_BUSY_STALL_SECS WORK_LEAF_BENCH_IDLE_STALL_SECS WORK_LEAF_BENCH_MODEL \
     WORK_LEAF_BENCH_REASONING_EFFORT \
     WORK_LEAF_BENCH_NO_READ_PERMISSION WORK_LEAF_BENCH_WEB_UI WORK_LEAF_BENCH_WEB_LISTEN \
-    WORK_LEAF_BENCH_OBSERVER_BIN \
+    WORK_LEAF_BENCH_OBSERVER_BIN WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS \
     WORK_LEAF_BENCH_STUDY_ID WORK_LEAF_BENCH_PAIR_ID; do
     if [[ -n "${!name+x}" ]]; then
       command_text+="$name=$(shell_quote "${!name}") "

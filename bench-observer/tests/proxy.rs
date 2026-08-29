@@ -1,7 +1,7 @@
 #![cfg(unix)]
 
 use std::fs;
-use std::io::Write;
+use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::process::{CommandExt, ExitStatusExt};
 use std::process::{Command, Stdio};
@@ -275,6 +275,189 @@ fn strict_usage_rejects_interrupted_turn_without_terminal_provider_usage() {
         "{:?}",
         summary.errors
     );
+}
+
+#[test]
+fn app_server_usage_grace_waits_for_exact_usage_before_forwarding_interrupt() {
+    let root = TempDir::new().unwrap();
+    let config_path = initialize_for_condition_with_real_tools_and_usage(
+        &root,
+        "work-leaf",
+        std::path::Path::new("/bin/sh"),
+        std::path::Path::new("/bin/true"),
+        true,
+    );
+    let marker = CaptureConfig::load(&config_path)
+        .unwrap()
+        .primary_invocation_marker;
+    let proxy = root.path().join("proxy-bin/codex");
+    let mut child = Command::new(proxy)
+        .args(["app-server", "--listen", "stdio://"])
+        .env("WORK_LEAF_OBSERVER_CONFIG", &config_path)
+        .env("WORK_LEAF_OBSERVER_PRIMARY_MARKER", marker)
+        .env("WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS", "1000")
+        .env("WORK_LEAF_OBSERVER_FIXTURE_USAGE_DELAY_MS", "75")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut stdin = child.stdin.take().unwrap();
+    let mut stdout = BufReader::new(child.stdout.take().unwrap());
+    writeln!(
+        stdin,
+        "{}",
+        serde_json::json!({
+            "id": 1,
+            "method": "turn/start",
+            "params": {
+                "threadId": "thread-grace",
+                "input": [{"type": "text", "text": "Agent-ID: user-1"}],
+            },
+        })
+    )
+    .unwrap();
+    stdin.flush().unwrap();
+
+    let mut prefix = String::new();
+    loop {
+        let mut line = String::new();
+        assert_ne!(stdout.read_line(&mut line).unwrap(), 0);
+        prefix.push_str(&line);
+        if line.contains("\"method\":\"item/completed\"") {
+            break;
+        }
+    }
+    writeln!(
+        stdin,
+        "{}",
+        serde_json::json!({
+            "id": 2,
+            "method": "turn/interrupt",
+            "params": {"threadId": "thread-grace", "turnId": "turn-grace"},
+        })
+    )
+    .unwrap();
+    stdin.flush().unwrap();
+    drop(stdin);
+
+    let mut suffix = String::new();
+    stdout.read_to_string(&mut suffix).unwrap();
+    assert!(child.wait().unwrap().success());
+    let output = prefix + &suffix;
+    let usage_position = output.find("thread/tokenUsage/updated").unwrap();
+    let completion_position = output.find("turn/completed").unwrap();
+    assert!(usage_position < completion_position, "{output}");
+
+    let summary = analyze(&CaptureConfig::load(&config_path).unwrap()).unwrap();
+    assert!(summary.capture_complete, "{:?}", summary.errors);
+    assert_eq!(summary.interrupted_provider_turns, 0);
+    assert_eq!(
+        summary.usage_scopes.total_workflow.raw_input_plus_output,
+        110
+    );
+    let app_server = fs::read_dir(root.path().join("app-server"))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    assert_eq!(
+        fs::read(app_server.join("client-to-server.raw")).unwrap(),
+        fs::read(app_server.join("client-to-server.forwarded.raw")).unwrap()
+    );
+    let decision: serde_json::Value = serde_json::from_str(
+        fs::read_to_string(app_server.join("provider-usage-grace.jsonl"))
+            .unwrap()
+            .trim(),
+    )
+    .unwrap();
+    assert_eq!(decision["outcome"], "forwarded-after-exact-usage");
+}
+
+#[test]
+fn app_server_usage_grace_timeout_preserves_missing_usage_failure() {
+    let root = TempDir::new().unwrap();
+    let config_path = initialize_for_condition_with_real_tools_and_usage(
+        &root,
+        "work-leaf",
+        std::path::Path::new("/bin/sh"),
+        std::path::Path::new("/bin/true"),
+        true,
+    );
+    let marker = CaptureConfig::load(&config_path)
+        .unwrap()
+        .primary_invocation_marker;
+    let proxy = root.path().join("proxy-bin/codex");
+    let mut child = Command::new(proxy)
+        .args(["app-server", "--listen", "stdio://"])
+        .env("WORK_LEAF_OBSERVER_CONFIG", &config_path)
+        .env("WORK_LEAF_OBSERVER_PRIMARY_MARKER", marker)
+        .env("WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS", "20")
+        .env("WORK_LEAF_OBSERVER_FIXTURE_USAGE_DELAY_MS", "75")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut stdin = child.stdin.take().unwrap();
+    let mut stdout = BufReader::new(child.stdout.take().unwrap());
+    writeln!(
+        stdin,
+        "{}",
+        serde_json::json!({
+            "id": 1,
+            "method": "turn/start",
+            "params": {
+                "threadId": "thread-grace",
+                "input": [{"type": "text", "text": "Agent-ID: user-1"}],
+            },
+        })
+    )
+    .unwrap();
+    stdin.flush().unwrap();
+    loop {
+        let mut line = String::new();
+        assert_ne!(stdout.read_line(&mut line).unwrap(), 0);
+        if line.contains("\"method\":\"item/completed\"") {
+            break;
+        }
+    }
+    writeln!(
+        stdin,
+        "{}",
+        serde_json::json!({
+            "id": 2,
+            "method": "turn/interrupt",
+            "params": {"threadId": "thread-grace", "turnId": "turn-grace"},
+        })
+    )
+    .unwrap();
+    stdin.flush().unwrap();
+    drop(stdin);
+    let mut suffix = String::new();
+    stdout.read_to_string(&mut suffix).unwrap();
+    assert!(child.wait().unwrap().success());
+    assert!(suffix.contains("turn/completed"), "{suffix}");
+
+    let summary = analyze(&CaptureConfig::load(&config_path).unwrap()).unwrap();
+    assert!(!summary.capture_complete);
+    assert_eq!(summary.interrupted_provider_turns, 1);
+    assert_eq!(
+        summary.usage_scopes.total_workflow.raw_input_plus_output,
+        55
+    );
+    let app_server = fs::read_dir(root.path().join("app-server"))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let decision: serde_json::Value = serde_json::from_str(
+        fs::read_to_string(app_server.join("provider-usage-grace.jsonl"))
+            .unwrap()
+            .trim(),
+    )
+    .unwrap();
+    assert_eq!(decision["outcome"], "forwarded-after-timeout");
 }
 
 #[test]

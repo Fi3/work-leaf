@@ -204,9 +204,17 @@ direct sum is reconciled against the final usage from each task epoch in the mat
 file. The observer's `usage_scopes.total_workflow` record is the token authority for comparisons. A
 report keeps the workflow result, token-measurement status, and quality-score result separate so a
 partial or failed implementation remains evidence rather than being silently retried or discarded.
-Both benchmark drivers require complete provider usage. An interrupted app-server turn has no
-terminal provider total, so the observer records the number of interrupted turns and marks that
-token measurement incomplete while leaving the implementation workflow result unchanged.
+Both benchmark drivers require complete provider usage.
+
+`WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS` enables exact interrupted-response accounting for a
+Work Leaf benchmark. After the app server emits a complete Work Leaf directive, the observer holds
+the matching `turn/interrupt` for at most the configured interval. It forwards the original
+interrupt as soon as the matching post-directive `thread/tokenUsage/updated` event arrives, so the
+provider still receives the normal interrupt and the model output is unchanged. The observer saves
+the incoming and forwarded byte streams separately and records every decision in
+`provider-usage-grace.jsonl`. Output that resumes, a completed turn without matching usage, or an
+expired interval releases the interrupt immediately. An interrupted turn without a matching
+post-directive usage event remains incomplete; the workflow result is retained independently.
 
 `bench-candidate-common` owns candidate staging, digest checks, admission metadata, and atomic report
 publication for both drivers. `materialize-bench-candidate` can reconstruct at most one historical
