@@ -35,8 +35,23 @@ conservative raw-token ceiling based on the emitted effective context window, ma
 captured new-turn prompt size. No exact Work Leaf token percentage is reported when interrupted
 response usage is missing.
 
+## Results
+
+The three declared workflows completed. The frozen scorer gives them 2/3, 2/3, and 3/3 requested
+features. Their mean conservative raw-token range is 8.15M to 41.61M, which overlaps both the prior
+normal Work Leaf range and the prior direct Codex mean. The current evidence therefore does not
+identify a combined effect for the three disabled mechanisms.
+
+`PROVISIONAL-REPORT.md` is the plain-language result. `evidence.json` contains the verified values
+and source hashes. `quality.json` contains the frozen scorer output. `analyze.py` reproduces the
+accounting and activation audit without launching a provider.
+
+The complete attempts remain under `runs/` for local replay and reanalysis. Git stores their compact
+reports and audits rather than the large raw app-server streams and duplicate binaries.
+
 ## Commands
 
 `./test-study` validates the frozen source, binaries, schedule, and launcher contract without a
-provider call. `./run-batch` launches the three declared attempts concurrently and waits for every
-attempt to finish.
+provider call. `python3 score-study.py` reruns the frozen feature scorer, and `python3 analyze.py`
+rebuilds the evidence. `./run-batch` is historical provenance for the completed three-attempt
+collection and rejects any attempt whose preserved result already exists.

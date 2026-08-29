@@ -1,0 +1,37 @@
+{
+  "schema": "work-leaf-benchmark-candidate-v2",
+  "source_commit": "4d3ebdd389042f520c87ff6b8ce6fd7d423bb92d",
+  "entrypoint": "candidate/bin/work-leaf",
+  "executables": [
+    {
+      "path": "candidate/bin/work-leaf",
+      "sha256": "4e7e7a12110a333a7570b4e549939d8b2331d98678143bc650557ca23261f689"
+    },
+    {
+      "path": "candidate/bin/work-leaf-orchestrator",
+      "sha256": "ed57da76ead1339e9f91d729dbe279224bdcbaa942bb744f7830b1a3053dfbbc"
+    }
+  ],
+  "targets": {
+    "path": "candidate/SOURCE_TARGETS.json",
+    "sha256": "811d35751ec2d3f5f4daaf4a1e16628aa85f13c25c4682190fcc3b637dd4e76f"
+  },
+  "smoke": {
+    "schema": "work-leaf-benchmark-candidate-smoke-v2",
+    "gate": "bounded-startup-quit",
+    "command": [
+      "candidate/bin/work-leaf"
+    ],
+    "stdin_sha256": "0a7b6a054f4637f0b3077c3427e3a0491812cda612eadf6a94ccfa11398564b6",
+    "timeout_seconds": 20,
+    "exit_code": 0,
+    "stdout": {
+      "path": "candidate/SMOKE.stdout",
+      "sha256": "141c24ba22fb5984d27ff26ace3950b04f79756e11d536368994796b654d6fe8"
+    },
+    "stderr": {
+      "path": "candidate/SMOKE.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+command: cargo test --test quality_visual quality_visual_behavior -- --exact
+exit_code: 101
+duration_seconds: 2.311
+
+[stdout]
+
+running 1 test
+test quality_visual_behavior ... FAILED
+
+failures:
+
+---- quality_visual_behavior stdout ----
+
+thread 'quality_visual_behavior' (1043345) panicked at tests/quality_visual.rs:26:5:
+assertion failed: has_visual_status(&character.render_frame(), "left", "char")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    quality_visual_behavior
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+[stderr]
+   Compiling work-leaf v0.1.0 (/tmp/work-leaf-corrected-control-score-b4cok2uo/checkouts/corrected-all-disabled-002)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.29s
+     Running tests/quality_visual.rs (/tmp/work-leaf-corrected-control-score-b4cok2uo/cargo-target/debug/deps/quality_visual-7d8c033b6ad2aae9)
+error: test failed, to rerun pass `--test quality_visual`

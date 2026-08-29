@@ -1,0 +1,435 @@
+{
+  "cohort": {
+    "changed_reread_exercised_runs": 2,
+    "feature_pass_counts": {
+      "completion": 2,
+      "status": 3,
+      "visual": 2
+    },
+    "git_review_exercised_runs": 3,
+    "mean_completed_features": 2.3333333333333335,
+    "mean_observed_uncached_tokens": 755662.3333333334,
+    "observations": 3,
+    "raw_token_mean_interval": {
+      "lower": 8146723.666666667,
+      "upper": 41613390.333333336
+    },
+    "unchanged_reread_exercised_runs": 3
+  },
+  "comparisons": {
+    "all_disabled_minus_normal_work_leaf_raw_tokens": {
+      "lower": -30376327.333333332,
+      "upper": 27623672.66666667
+    },
+    "direct_minus_all_disabled_raw_tokens": {
+      "lower": -6416604.0,
+      "upper": 27050062.666666668
+    }
+  },
+  "conclusions": {
+    "combined_mechanism_effect_known": false,
+    "corrected_control_operational": true,
+    "reason": "Both token-difference intervals cross zero; interrupted-turn ceilings overlap, and mean feature completion is 2.33/3 for this control versus 2.67/3 in each prior endpoint group.",
+    "savings_disappear_when_three_mechanisms_are_disabled": "not established"
+  },
+  "frozen_setup": {
+    "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+    "conditions_are_independent_groups": true,
+    "maximum_tokens_per_interrupted_response": 400000,
+    "model": "gpt-5.5",
+    "reasoning_effort": "xhigh",
+    "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a",
+    "workflow": "normal concurrent Work Leaf"
+  },
+  "prior_comparators": {
+    "direct_sequential": {
+      "mean_completed_features": 2.6666666666666665,
+      "observations": 3,
+      "raw_token_mean_interval": {
+        "lower": 35196786.333333336,
+        "upper": 35196786.333333336
+      }
+    },
+    "normal_concurrent_work_leaf": {
+      "mean_completed_features": 2.6666666666666665,
+      "observations": 3,
+      "raw_token_mean_interval": {
+        "lower": 13989717.666666666,
+        "upper": 38523051.0
+      }
+    },
+    "source": "bench-results/efficiency-points8-9-20260828T145556Z/evidence.json"
+  },
+  "runs": [
+    {
+      "cap_audit": {
+        "applied_missing_raw_token_cap": 41200000,
+        "cap_headroom": 653900,
+        "context_output_and_prompt_upper_bound": 40546100,
+        "rounded_missing_raw_token_cap": 41200000
+      },
+      "completed_features": 2,
+      "controls": {
+        "WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY": "full",
+        "WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE": "git-reconstruct",
+        "WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY": "full"
+      },
+      "delivery_events": {
+        "changed_reread": {
+          "actual_component_bytes": 0,
+          "events": 0,
+          "full_current_events": 0,
+          "statuses": {}
+        },
+        "unchanged_reread": {
+          "actual_component_bytes": 93813,
+          "events": 2,
+          "full_current_events": 2,
+          "statuses": {
+            "full-current-delivery": 2
+          }
+        }
+      },
+      "feature_checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "observed_uncached_tokens": 777817,
+      "observer_warning_audit": {
+        "controller_identity_mapping": {
+          "all_usage_covered": true,
+          "identity_mismatches": []
+        },
+        "rollout_mapping": {
+          "all_unmapped_usage_covered": true,
+          "unmapped_threads": [
+            {
+              "covered_by_interruption_cap": true,
+              "interrupted_turns": 23,
+              "thread_id": "01a04cdd-478a-7c71-98ca-6ee4aefa272d",
+              "usage_events": 0
+            },
+            {
+              "covered_by_interruption_cap": true,
+              "interrupted_turns": 24,
+              "thread_id": "01a04ce4-7c24-7f42-9ca4-b1d7d1654665",
+              "usage_events": 0
+            }
+          ]
+        },
+        "unfinished_invocations": {
+          "capture_kinds": [
+            "locked-command"
+          ],
+          "count": 2,
+          "provider_invocations": 0
+        }
+      },
+      "observer_warnings": [
+        "invocation 00002645284719394449-24372 has no end metadata",
+        "invocation 00002645914618370128-45126 has no end metadata",
+        "rollout: 2 rollout thread(s) share an observed cwd but are absent from process capture",
+        "interrupted provider turn has no complete usage: count=103"
+      ],
+      "raw_tokens": {
+        "lower": 8921177,
+        "upper": 50121177
+      },
+      "review_control": {
+        "all_reconstructed_from_git": true,
+        "sessions": [
+          {
+            "agent_id": "review-user-1",
+            "final_marker": "NO_FINDINGS",
+            "finding_responses": 1,
+            "marker_before_done": true,
+            "mediated_git_commands": 7,
+            "review_responses": 2
+          },
+          {
+            "agent_id": "review-user-2",
+            "final_marker": "NO_FINDINGS",
+            "finding_responses": 1,
+            "marker_before_done": true,
+            "mediated_git_commands": 17,
+            "review_responses": 2
+          },
+          {
+            "agent_id": "review-user-3",
+            "final_marker": "NO_FINDINGS",
+            "finding_responses": 1,
+            "marker_before_done": true,
+            "mediated_git_commands": 19,
+            "review_responses": 2
+          }
+        ]
+      },
+      "run_id": "corrected-all-disabled-001",
+      "source_sha256": {
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-001/admission.json": "03f95d96a50310bdb65af3b728fadbd3265a34b189777ea72d800a99de06c4d6",
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-001/corrected-control-corrected-all-disabled-001-three-feature-bench-artifacts/final-state.json": "03b00bf0b091235443922797e4c27455f19442ef5dcc2287b85536a4c4b3251e",
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-001/corrected-control-corrected-all-disabled-001-three-feature-bench-artifacts/observation/analysis.json": "56b6840ccbad265581142d9e77ceffc187c4430f99f8bb7e3bd296e9ecdbc1ca",
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-001/corrected-control-corrected-all-disabled-001-three-feature-bench-artifacts/observation/mechanism-summary.json": "56b6840ccbad265581142d9e77ceffc187c4430f99f8bb7e3bd296e9ecdbc1ca",
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-001/corrected-control-corrected-all-disabled-001-three-feature-bench-artifacts/report.json": "7735045d78aeefe8d09e676f45c22f6405e1c7badab2e2f69995e05acc06a108"
+      },
+      "turn_audit": {
+        "completed_turns": 4,
+        "interrupted_prompt_json_bytes": 746900,
+        "interrupted_turns": 103,
+        "started_turns": 107
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "cap_audit": {
+        "applied_missing_raw_token_cap": 25200000,
+        "cap_headroom": 161259,
+        "context_output_and_prompt_upper_bound": 25038741,
+        "rounded_missing_raw_token_cap": 25200000
+      },
+      "completed_features": 2,
+      "controls": {
+        "WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY": "full",
+        "WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE": "git-reconstruct",
+        "WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY": "full"
+      },
+      "delivery_events": {
+        "changed_reread": {
+          "actual_component_bytes": 112564,
+          "events": 4,
+          "full_current_events": 4,
+          "statuses": {
+            "full-current-delivery": 4
+          }
+        },
+        "unchanged_reread": {
+          "actual_component_bytes": 167738,
+          "events": 5,
+          "full_current_events": 5,
+          "statuses": {
+            "full-current-delivery": 5
+          }
+        }
+      },
+      "feature_checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "fail"
+      },
+      "observed_uncached_tokens": 719647,
+      "observer_warning_audit": {
+        "controller_identity_mapping": {
+          "all_usage_covered": true,
+          "identity_mismatches": [
+            {
+              "controller_agent_id": "review-user-2",
+              "provider_total_row": "user-2",
+              "usage_already_in_provider_total": true
+            }
+          ]
+        },
+        "rollout_mapping": {
+          "all_unmapped_usage_covered": true,
+          "unmapped_threads": []
+        },
+        "unfinished_invocations": {
+          "capture_kinds": [
+            "locked-command"
+          ],
+          "count": 1,
+          "provider_invocations": 0
+        }
+      },
+      "observer_warnings": [
+        "controller usage row review-user-2 has no visible provider thread",
+        "controller usage row review-user-2 has no replayable streamed usage",
+        "controller usage for user-2 does not match replayed pre-interrupt usage",
+        "invocation 00002645862464471882-41615 has no end metadata",
+        "interrupted provider turn has no complete usage: count=63"
+      ],
+      "raw_tokens": {
+        "lower": 7051423,
+        "upper": 32251423
+      },
+      "review_control": {
+        "all_reconstructed_from_git": true,
+        "sessions": [
+          {
+            "agent_id": "review-user-1",
+            "final_marker": "NO_FINDINGS",
+            "finding_responses": 1,
+            "marker_before_done": true,
+            "mediated_git_commands": 5,
+            "review_responses": 2
+          },
+          {
+            "agent_id": "review-user-2",
+            "final_marker": "NO_FINDINGS",
+            "finding_responses": 0,
+            "marker_before_done": true,
+            "mediated_git_commands": 2,
+            "review_responses": 1
+          },
+          {
+            "agent_id": "review-user-3",
+            "final_marker": "NO_FINDINGS",
+            "finding_responses": 1,
+            "marker_before_done": true,
+            "mediated_git_commands": 7,
+            "review_responses": 2
+          }
+        ]
+      },
+      "run_id": "corrected-all-disabled-002",
+      "source_sha256": {
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-002/admission.json": "cab1f303d6c7e53457b18aa2881c8131b3de47cfa8fc87cf7391e6cce1294f82",
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-002/corrected-control-corrected-all-disabled-002-three-feature-bench-artifacts/final-state.json": "677dc39b87e91f827a2312b96c2056f35a880abd2a344cb1fc014148defd458d",
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-002/corrected-control-corrected-all-disabled-002-three-feature-bench-artifacts/observation/analysis.json": "6572b7fccc8dbe97aeb5194b0136fca2dcfc14e5020e20af9dbe1cc246b272c4",
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-002/corrected-control-corrected-all-disabled-002-three-feature-bench-artifacts/observation/mechanism-summary.json": "6572b7fccc8dbe97aeb5194b0136fca2dcfc14e5020e20af9dbe1cc246b272c4",
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-002/corrected-control-corrected-all-disabled-002-three-feature-bench-artifacts/report.json": "71d70d2f7ebfc3270ae76358793d9e3eed7f86e71fde6db670e3feb8e1217860"
+      },
+      "turn_audit": {
+        "completed_turns": 4,
+        "interrupted_prompt_json_bytes": 695541,
+        "interrupted_turns": 63,
+        "started_turns": 67
+      },
+      "workflow_result": "pass"
+    },
+    {
+      "cap_audit": {
+        "applied_missing_raw_token_cap": 34000000,
+        "cap_headroom": 74875,
+        "context_output_and_prompt_upper_bound": 33925125,
+        "rounded_missing_raw_token_cap": 34000000
+      },
+      "completed_features": 3,
+      "controls": {
+        "WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY": "full",
+        "WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE": "git-reconstruct",
+        "WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY": "full"
+      },
+      "delivery_events": {
+        "changed_reread": {
+          "actual_component_bytes": 126102,
+          "events": 4,
+          "full_current_events": 4,
+          "statuses": {
+            "full-current-delivery": 4
+          }
+        },
+        "unchanged_reread": {
+          "actual_component_bytes": 323085,
+          "events": 11,
+          "full_current_events": 11,
+          "statuses": {
+            "full-current-delivery": 11
+          }
+        }
+      },
+      "feature_checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "observed_uncached_tokens": 769523,
+      "observer_warning_audit": {
+        "controller_identity_mapping": {
+          "all_usage_covered": true,
+          "identity_mismatches": [
+            {
+              "controller_agent_id": "review-user-2",
+              "provider_total_row": "user-2",
+              "usage_already_in_provider_total": true
+            }
+          ]
+        },
+        "rollout_mapping": {
+          "all_unmapped_usage_covered": true,
+          "unmapped_threads": [
+            {
+              "covered_by_interruption_cap": true,
+              "interrupted_turns": 22,
+              "thread_id": "01a04d00-bd96-7120-8ca6-a74c391b36b0",
+              "usage_events": 0
+            }
+          ]
+        },
+        "unfinished_invocations": {
+          "capture_kinds": [
+            "locked-command"
+          ],
+          "count": 1,
+          "provider_invocations": 0
+        }
+      },
+      "observer_warnings": [
+        "controller usage row review-user-2 has no visible provider thread",
+        "controller usage row review-user-2 has no replayable streamed usage",
+        "controller usage for user-2 does not match replayed pre-interrupt usage",
+        "invocation 00002645519525909009-30479 has no end metadata",
+        "rollout: 1 rollout thread(s) share an observed cwd but are absent from process capture",
+        "interrupted provider turn has no complete usage: count=85"
+      ],
+      "raw_tokens": {
+        "lower": 8467571,
+        "upper": 42467571
+      },
+      "review_control": {
+        "all_reconstructed_from_git": true,
+        "sessions": [
+          {
+            "agent_id": "review-user-1",
+            "final_marker": "NO_FINDINGS",
+            "finding_responses": 0,
+            "marker_before_done": true,
+            "mediated_git_commands": 19,
+            "review_responses": 1
+          },
+          {
+            "agent_id": "review-user-2",
+            "final_marker": "NO_FINDINGS",
+            "finding_responses": 0,
+            "marker_before_done": true,
+            "mediated_git_commands": 2,
+            "review_responses": 1
+          },
+          {
+            "agent_id": "review-user-3",
+            "final_marker": "NO_FINDINGS",
+            "finding_responses": 1,
+            "marker_before_done": true,
+            "mediated_git_commands": 20,
+            "review_responses": 2
+          }
+        ]
+      },
+      "run_id": "corrected-all-disabled-003",
+      "source_sha256": {
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-003/admission.json": "e798ef0c2c7a1dea5377fbbb16ecf8b76470e7d0bcaefbdf5b812e8ccc33fbe3",
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-003/corrected-control-corrected-all-disabled-003-three-feature-bench-artifacts/final-state.json": "717aed727a85bfc0df101fc1c69dec753498109d5c86971ac71a1d9cac7b5cff",
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-003/corrected-control-corrected-all-disabled-003-three-feature-bench-artifacts/observation/analysis.json": "2c8ee24c83d7b0ef4408aa5866eb795373fffa19869c4dab131a6b57c05d8934",
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-003/corrected-control-corrected-all-disabled-003-three-feature-bench-artifacts/observation/mechanism-summary.json": "2c8ee24c83d7b0ef4408aa5866eb795373fffa19869c4dab131a6b57c05d8934",
+        "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-003/corrected-control-corrected-all-disabled-003-three-feature-bench-artifacts/report.json": "c2b40bf9eb29b2364bbedba6f7ae938267b20eb981cebf7b85ed73a03990c17c"
+      },
+      "turn_audit": {
+        "completed_turns": 4,
+        "interrupted_prompt_json_bytes": 1081125,
+        "interrupted_turns": 85,
+        "started_turns": 89
+      },
+      "workflow_result": "pass"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Steps 1 through 3: correct, verify, and run three all-disabled Work Leaf controls",
+  "source_sha256": {
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/quality.json": "6d34de0b996056ab8d11ce17fb351375ae70e66c4b3da1627d74d7439ebacd26",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/score-manifest.json": "c7a7303180af9bcebcd667944fa82aa42993aba6d49a7fbd5ded829d2ed4feed",
+    "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/scorer/score.py": "c0a4e951e96d7da53a6d414a7677176183cae6e30d0bbfab92069d5082865162",
+    "bench-results/efficiency-points8-9-20260828T145556Z/evidence.json": "87b826fd951dbe11486d2e9dc0925e11ca1c145ce9411fa24f0e3383d4f0a236"
+  },
+  "status": "complete",
+  "study": "efficiency-corrected-all-disabled-20260829T091341Z"
+}

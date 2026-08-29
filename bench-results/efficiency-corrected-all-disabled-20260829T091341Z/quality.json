@@ -1,0 +1,188 @@
+{
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "complete": true,
+  "fixtures": {
+    "completion": "4d6a19f4c6f515b9a97f184a056d08dc2882041d40d26dd82011180a949c5c87",
+    "status": "5f5295c9dec6be20abb28827b68e84342110fb748aa0cc887d8b58ffa3c6e6b5",
+    "visual": "5ce0782e37b8672e04d8016ca3fbec9caa12f6f9cfaf431cac847c1f6e6a26ca"
+  },
+  "frozen_scorer_sha256": "c0a4e951e96d7da53a6d414a7677176183cae6e30d0bbfab92069d5082865162",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "runs": [
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.4,
+          "exit_code": 101,
+          "log": "scorer/logs/corrected-all-disabled-001/completion.log",
+          "log_sha256": "75610f1eee0d589acee774bf107ae9c954af99d96fb74c339e372e15d6134a0c",
+          "status": "fail"
+        },
+        "status": {
+          "duration_seconds": 0.221,
+          "exit_code": 0,
+          "log": "scorer/logs/corrected-all-disabled-001/status.log",
+          "log_sha256": "90e317b4a22dd795196fc14fd3849f10b7a01b8abf236ac9309f1eb884138018",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 5.382,
+          "exit_code": 0,
+          "log": "scorer/logs/corrected-all-disabled-001/visual.log",
+          "log_sha256": "e43aa0760d1ee5e5f3a2a74037124441104222590517f3b3d7de7c22c0cb3097",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 2,
+      "condition": "corrected-all-disabled",
+      "final_commit": "4d3ebdd389042f520c87ff6b8ce6fd7d423bb92d",
+      "id": "corrected-all-disabled-001",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-001/corrected-control-corrected-all-disabled-001-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "56b6840ccbad265581142d9e77ceffc187c4430f99f8bb7e3bd296e9ecdbc1ca",
+        "reasons": [
+          "measurement status is incomplete",
+          "observer analysis marks the capture incomplete"
+        ],
+        "usable": false,
+        "usage": {
+          "cached_input_tokens": 8143360,
+          "input_tokens": 8843162,
+          "output_tokens": 78015,
+          "raw_input_plus_output": 8921177,
+          "reasoning_output_tokens": 47024,
+          "uncached_input_plus_output": 777817,
+          "uncached_input_tokens": 699802
+        }
+      },
+      "report": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-001/corrected-control-corrected-all-disabled-001-three-feature-bench-artifacts/report.json",
+      "report_sha256": "7735045d78aeefe8d09e676f45c22f6405e1c7badab2e2f69995e05acc06a108",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.422,
+          "exit_code": 0,
+          "log": "scorer/logs/corrected-all-disabled-002/completion.log",
+          "log_sha256": "71361a4ba0c1d3c16e88dba2dc88feaecb9ebcd82e6f42ad47726f308ddd067b",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.227,
+          "exit_code": 0,
+          "log": "scorer/logs/corrected-all-disabled-002/status.log",
+          "log_sha256": "3c0c7821f5d33ff736cc6d068954663405d5c271c4b8a56a1ded3b8b91dc3659",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.311,
+          "exit_code": 101,
+          "log": "scorer/logs/corrected-all-disabled-002/visual.log",
+          "log_sha256": "231d3def6dcaeedf5b9f3eab72b4aaf3ded09844225cb40217fbd4fa0dac81a7",
+          "status": "fail"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "fail"
+      },
+      "completed_features": 2,
+      "condition": "corrected-all-disabled",
+      "final_commit": "c759e540d776936e4d3a7e4b60ea1ab8630fa8d2",
+      "id": "corrected-all-disabled-002",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-002/corrected-control-corrected-all-disabled-002-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "6572b7fccc8dbe97aeb5194b0136fca2dcfc14e5020e20af9dbe1cc246b272c4",
+        "reasons": [
+          "measurement status is incomplete",
+          "observer analysis marks the capture incomplete"
+        ],
+        "usable": false,
+        "usage": {
+          "cached_input_tokens": 6331776,
+          "input_tokens": 7000409,
+          "output_tokens": 51014,
+          "raw_input_plus_output": 7051423,
+          "reasoning_output_tokens": 21299,
+          "uncached_input_plus_output": 719647,
+          "uncached_input_tokens": 668633
+        }
+      },
+      "report": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-002/corrected-control-corrected-all-disabled-002-three-feature-bench-artifacts/report.json",
+      "report_sha256": "71d70d2f7ebfc3270ae76358793d9e3eed7f86e71fde6db670e3feb8e1217860",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.433,
+          "exit_code": 0,
+          "log": "scorer/logs/corrected-all-disabled-003/completion.log",
+          "log_sha256": "f2c6375d8956d1c9516e4aec23d55064d03bc6361cea5b875d958a0d36da9087",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.218,
+          "exit_code": 0,
+          "log": "scorer/logs/corrected-all-disabled-003/status.log",
+          "log_sha256": "15e7666c99cf526fe1a89fe260981e0e3cf08fec8174f8bb4479bac12cb4d479",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.397,
+          "exit_code": 0,
+          "log": "scorer/logs/corrected-all-disabled-003/visual.log",
+          "log_sha256": "bea7991c1d1723b2ca185cad9cf4ffdf135421fc692bb9eafb34503732ae4fe0",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "corrected-all-disabled",
+      "final_commit": "c6d1a2a22a18783a73f5b26608afdae5f989482a",
+      "id": "corrected-all-disabled-003",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-003/corrected-control-corrected-all-disabled-003-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "2c8ee24c83d7b0ef4408aa5866eb795373fffa19869c4dab131a6b57c05d8934",
+        "reasons": [
+          "measurement status is incomplete",
+          "observer analysis marks the capture incomplete"
+        ],
+        "usable": false,
+        "usage": {
+          "cached_input_tokens": 7698048,
+          "input_tokens": 8373481,
+          "output_tokens": 94090,
+          "raw_input_plus_output": 8467571,
+          "reasoning_output_tokens": 55948,
+          "uncached_input_plus_output": 769523,
+          "uncached_input_tokens": 675433
+        }
+      },
+      "report": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/corrected-all-disabled-003/corrected-control-corrected-all-disabled-003-three-feature-bench-artifacts/report.json",
+      "report_sha256": "c2b40bf9eb29b2364bbedba6f7ae938267b20eb981cebf7b85ed73a03990c17c",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "pass"
+    }
+  ],
+  "schema_version": 1,
+  "study": "efficiency-corrected-all-disabled-20260829T091341Z",
+  "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+}

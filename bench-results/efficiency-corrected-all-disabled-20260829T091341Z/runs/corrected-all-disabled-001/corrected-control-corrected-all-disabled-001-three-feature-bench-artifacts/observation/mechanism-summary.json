@@ -1,0 +1,1304 @@
+{
+  "schema_version": 2,
+  "run_id": "corrected-control-corrected-all-disabled-001",
+  "condition": "work-leaf",
+  "capture_complete": false,
+  "invocation_count": 76,
+  "complete_invocation_count": 74,
+  "passthrough_invocation_count": 0,
+  "interrupted_provider_turns": 103,
+  "threads": [
+    {
+      "thread_id": "01a04cd5-9c45-7c91-8fe3-417c378a0604",
+      "invocation_id": "00002644753075017799-597",
+      "primary": true,
+      "visible": true,
+      "agent_id": "user-1",
+      "role": null,
+      "usage": {
+        "input_tokens": 1961984,
+        "cached_input_tokens": 1806464,
+        "output_tokens": 21386,
+        "reasoning_output_tokens": 16532
+      }
+    },
+    {
+      "thread_id": "01a04cd5-a036-7eb0-b957-5c31e528e31c",
+      "invocation_id": "00002644753075017799-597",
+      "primary": true,
+      "visible": true,
+      "agent_id": "user-2",
+      "role": null,
+      "usage": {
+        "input_tokens": 1397206,
+        "cached_input_tokens": 1243136,
+        "output_tokens": 14009,
+        "reasoning_output_tokens": 7903
+      }
+    },
+    {
+      "thread_id": "01a04cd5-b407-7b91-a1d5-9503b17143ae",
+      "invocation_id": "00002644753075017799-597",
+      "primary": true,
+      "visible": true,
+      "agent_id": "user-3",
+      "role": null,
+      "usage": {
+        "input_tokens": 1684753,
+        "cached_input_tokens": 1542144,
+        "output_tokens": 14381,
+        "reasoning_output_tokens": 10280
+      }
+    },
+    {
+      "thread_id": "01a04cdd-476d-70b0-8bb7-5df39b8cfdb1",
+      "invocation_id": "00002644753075017799-597",
+      "primary": true,
+      "visible": false,
+      "agent_id": "title-agent",
+      "role": null,
+      "usage": {
+        "input_tokens": 60655,
+        "cached_input_tokens": 59520,
+        "output_tokens": 428,
+        "reasoning_output_tokens": 393
+      }
+    },
+    {
+      "thread_id": "01a04ce6-bc24-7561-9df9-d30698f0e6b9",
+      "invocation_id": "00002644753075017799-597",
+      "primary": true,
+      "visible": true,
+      "agent_id": "review-user-1",
+      "role": null,
+      "usage": {
+        "input_tokens": 1028387,
+        "cached_input_tokens": 939392,
+        "output_tokens": 7292,
+        "reasoning_output_tokens": 4094
+      }
+    },
+    {
+      "thread_id": "01a04cf5-bc5b-7d22-95c8-d6848dcef4bc",
+      "invocation_id": "00002644753075017799-597",
+      "primary": true,
+      "visible": true,
+      "agent_id": "linearize",
+      "role": null,
+      "usage": {
+        "input_tokens": 2710177,
+        "cached_input_tokens": 2552704,
+        "output_tokens": 20519,
+        "reasoning_output_tokens": 7822
+      }
+    }
+  ],
+  "session_only_threads": [],
+  "model_strata": [
+    {
+      "model": "gpt-5.5",
+      "effort": "xhigh",
+      "thread_count": 6,
+      "primary_threads": 6,
+      "visible_threads": 5,
+      "descendant_threads": 0,
+      "usage": {
+        "input_tokens": 8843162,
+        "cached_input_tokens": 8143360,
+        "output_tokens": 78015,
+        "reasoning_output_tokens": 47024
+      }
+    }
+  ],
+  "usage_scopes": {
+    "visible_role": {
+      "thread_count": 5,
+      "input_tokens": 8782507,
+      "cached_input_tokens": 8083840,
+      "uncached_input_tokens": 698667,
+      "output_tokens": 77587,
+      "reasoning_output_tokens": 46631,
+      "raw_input_plus_output": 8860094,
+      "uncached_input_plus_output": 776254
+    },
+    "primary_condition": {
+      "thread_count": 6,
+      "input_tokens": 8843162,
+      "cached_input_tokens": 8143360,
+      "uncached_input_tokens": 699802,
+      "output_tokens": 78015,
+      "reasoning_output_tokens": 47024,
+      "raw_input_plus_output": 8921177,
+      "uncached_input_plus_output": 777817
+    },
+    "total_workflow": {
+      "thread_count": 6,
+      "input_tokens": 8843162,
+      "cached_input_tokens": 8143360,
+      "uncached_input_tokens": 699802,
+      "output_tokens": 78015,
+      "reasoning_output_tokens": 47024,
+      "raw_input_plus_output": 8921177,
+      "uncached_input_plus_output": 777817
+    }
+  },
+  "controller_usage_reconciliation": [
+    {
+      "agent_id": "linearize",
+      "provider_thread_ids": [
+        "01a04cf5-bc5b-7d22-95c8-d6848dcef4bc"
+      ],
+      "controller_streamed_usage": {
+        "input_tokens": 2710177,
+        "cached_input_tokens": 2552704,
+        "output_tokens": 20519,
+        "reasoning_output_tokens": 7822
+      },
+      "replayed_streamed_usage": {
+        "input_tokens": 2710177,
+        "cached_input_tokens": 2552704,
+        "output_tokens": 20519,
+        "reasoning_output_tokens": 7822
+      },
+      "provider_largest_cumulative_usage": {
+        "input_tokens": 2710177,
+        "cached_input_tokens": 2552704,
+        "output_tokens": 20519,
+        "reasoning_output_tokens": 7822
+      },
+      "controller_matches_replay": true
+    },
+    {
+      "agent_id": "review-user-1",
+      "provider_thread_ids": [
+        "01a04ce6-bc24-7561-9df9-d30698f0e6b9"
+      ],
+      "controller_streamed_usage": {
+        "input_tokens": 1028387,
+        "cached_input_tokens": 939392,
+        "output_tokens": 7292,
+        "reasoning_output_tokens": 4094
+      },
+      "replayed_streamed_usage": {
+        "input_tokens": 1028387,
+        "cached_input_tokens": 939392,
+        "output_tokens": 7292,
+        "reasoning_output_tokens": 4094
+      },
+      "provider_largest_cumulative_usage": {
+        "input_tokens": 1028387,
+        "cached_input_tokens": 939392,
+        "output_tokens": 7292,
+        "reasoning_output_tokens": 4094
+      },
+      "controller_matches_replay": true
+    },
+    {
+      "agent_id": "user-1",
+      "provider_thread_ids": [
+        "01a04cd5-9c45-7c91-8fe3-417c378a0604"
+      ],
+      "controller_streamed_usage": {
+        "input_tokens": 1832292,
+        "cached_input_tokens": 1679104,
+        "output_tokens": 21377,
+        "reasoning_output_tokens": 16532
+      },
+      "replayed_streamed_usage": {
+        "input_tokens": 1832292,
+        "cached_input_tokens": 1679104,
+        "output_tokens": 21377,
+        "reasoning_output_tokens": 16532
+      },
+      "provider_largest_cumulative_usage": {
+        "input_tokens": 1961984,
+        "cached_input_tokens": 1806464,
+        "output_tokens": 21386,
+        "reasoning_output_tokens": 16532
+      },
+      "controller_matches_replay": true
+    },
+    {
+      "agent_id": "user-2",
+      "provider_thread_ids": [
+        "01a04cd5-a036-7eb0-b957-5c31e528e31c"
+      ],
+      "controller_streamed_usage": {
+        "input_tokens": 1397206,
+        "cached_input_tokens": 1243136,
+        "output_tokens": 14009,
+        "reasoning_output_tokens": 7903
+      },
+      "replayed_streamed_usage": {
+        "input_tokens": 1397206,
+        "cached_input_tokens": 1243136,
+        "output_tokens": 14009,
+        "reasoning_output_tokens": 7903
+      },
+      "provider_largest_cumulative_usage": {
+        "input_tokens": 1397206,
+        "cached_input_tokens": 1243136,
+        "output_tokens": 14009,
+        "reasoning_output_tokens": 7903
+      },
+      "controller_matches_replay": true
+    },
+    {
+      "agent_id": "user-3",
+      "provider_thread_ids": [
+        "01a04cd5-b407-7b91-a1d5-9503b17143ae"
+      ],
+      "controller_streamed_usage": {
+        "input_tokens": 1566770,
+        "cached_input_tokens": 1426048,
+        "output_tokens": 13838,
+        "reasoning_output_tokens": 9764
+      },
+      "replayed_streamed_usage": {
+        "input_tokens": 1566770,
+        "cached_input_tokens": 1426048,
+        "output_tokens": 13838,
+        "reasoning_output_tokens": 9764
+      },
+      "provider_largest_cumulative_usage": {
+        "input_tokens": 1684753,
+        "cached_input_tokens": 1542144,
+        "output_tokens": 14381,
+        "reasoning_output_tokens": 10280
+      },
+      "controller_matches_replay": true
+    }
+  ],
+  "mechanisms": {
+    "hypotheses": [
+      {
+        "id": "H1",
+        "observed": true,
+        "evidence_count": 2
+      },
+      {
+        "id": "H2",
+        "observed": false,
+        "evidence_count": 0
+      },
+      {
+        "id": "H3",
+        "observed": true,
+        "evidence_count": 14
+      },
+      {
+        "id": "H4",
+        "observed": true,
+        "evidence_count": 61
+      },
+      {
+        "id": "H5",
+        "observed": true,
+        "evidence_count": 29
+      },
+      {
+        "id": "H6",
+        "observed": false,
+        "evidence_count": 0
+      },
+      {
+        "id": "H7",
+        "observed": true,
+        "evidence_count": 1
+      },
+      {
+        "id": "H8",
+        "observed": true,
+        "evidence_count": 116
+      },
+      {
+        "id": "H9",
+        "observed": true,
+        "evidence_count": 1
+      },
+      {
+        "id": "H10",
+        "observed": true,
+        "evidence_count": 255
+      },
+      {
+        "id": "H11",
+        "observed": true,
+        "evidence_count": 1
+      },
+      {
+        "id": "H12",
+        "observed": true,
+        "evidence_count": 12
+      },
+      {
+        "id": "H13",
+        "observed": true,
+        "evidence_count": 1
+      },
+      {
+        "id": "H14",
+        "observed": true,
+        "evidence_count": 1
+      },
+      {
+        "id": "H15",
+        "observed": true,
+        "evidence_count": 1
+      },
+      {
+        "id": "H16",
+        "observed": true,
+        "evidence_count": 182
+      }
+    ],
+    "protocol_bytes": 1614934,
+    "command_classes": {
+      "locked-command": 75,
+      "other": 180
+    },
+    "command_count": 255,
+    "command_output_bytes": 2290716,
+    "command_duration_ns": 23230961705,
+    "repeated_commands": 12,
+    "counterfactuals": [
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 818,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 1046,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 930,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 778,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 780,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 826,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 43829,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H1",
+        "status": "full-current-delivery",
+        "observed_prompt_bytes": 43829,
+        "actual_component_bytes": 43009,
+        "counterfactual_component_bytes": 60,
+        "avoided_bytes": -42949,
+        "note": "digest-verified full current text was delivered for src/terminal_app.rs instead of an unchanged digest row"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 651,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 711,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 673,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H1",
+        "status": "full-current-delivery",
+        "observed_prompt_bytes": 51052,
+        "actual_component_bytes": 50804,
+        "counterfactual_component_bytes": 51,
+        "avoided_bytes": -50753,
+        "note": "digest-verified full current text was delivered for src/cli.rs instead of an unchanged digest row"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 651,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 710,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 597,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H3",
+        "status": "descriptive-observed-path",
+        "observed_prompt_bytes": 544,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "bundle payload and observed follow-up reads are reported separately"
+      },
+      {
+        "hypothesis": "H7",
+        "status": "requires-target-reconstruction",
+        "observed_prompt_bytes": 24349,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "the reviewed AgentCommit fields could not be reconstructed from the target block"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 5547,
+        "actual_component_bytes": 4561,
+        "counterfactual_component_bytes": 4561,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646214751625847-51400; status=1; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 2930,
+        "actual_component_bytes": 1804,
+        "counterfactual_component_bytes": 1804,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646802711241232-72866; status=1; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 4304,
+        "actual_component_bytes": 3403,
+        "counterfactual_component_bytes": 3403,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646439054318386-60388; status=1; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 7553,
+        "actual_component_bytes": 6633,
+        "counterfactual_component_bytes": 6633,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646688945197396-69534; status=1; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 4952,
+        "actual_component_bytes": 4032,
+        "counterfactual_component_bytes": 4032,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646715703320735-70455; status=1; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 1672,
+        "actual_component_bytes": 1134,
+        "counterfactual_component_bytes": 1134,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646312567725398-54992; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 1465,
+        "actual_component_bytes": 901,
+        "counterfactual_component_bytes": 901,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646298904853464-54490; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 2779,
+        "actual_component_bytes": 1956,
+        "counterfactual_component_bytes": 1956,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646817829041383-73209; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 2956,
+        "actual_component_bytes": 2645,
+        "counterfactual_component_bytes": 2645,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645725794600667-37116; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 1485,
+        "actual_component_bytes": 221,
+        "counterfactual_component_bytes": 221,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646666738928850-68971; status=1; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 3414,
+        "actual_component_bytes": 3084,
+        "counterfactual_component_bytes": 3084,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645236903757166-22528; status=101; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 4246,
+        "actual_component_bytes": 3918,
+        "counterfactual_component_bytes": 3918,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645253318468887-23103; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 4165,
+        "actual_component_bytes": 3835,
+        "counterfactual_component_bytes": 3835,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645191444050567-20302; status=101; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 1510,
+        "actual_component_bytes": 1029,
+        "counterfactual_component_bytes": 1029,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646561087833143-63470; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 1779,
+        "actual_component_bytes": 535,
+        "counterfactual_component_bytes": 535,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646284722551339-53283; status=1; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 5007,
+        "actual_component_bytes": 4690,
+        "counterfactual_component_bytes": 4690,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645871893694477-41904; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 4707,
+        "actual_component_bytes": 4344,
+        "counterfactual_component_bytes": 4344,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646584510267416-64546; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 4059,
+        "actual_component_bytes": 2765,
+        "counterfactual_component_bytes": 2765,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645829610321197-40773; status=1; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 11291,
+        "actual_component_bytes": 10069,
+        "counterfactual_component_bytes": 61823,
+        "avoided_bytes": 51754,
+        "note": "paired rendered result with process-backed locked invocation 00002645284719394449-24372; status=terminated; timed_out=true; timeout=Some(\"300s\")"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 12428,
+        "actual_component_bytes": 11776,
+        "counterfactual_component_bytes": 11776,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645686034100361-34008; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10476,
+        "actual_component_bytes": 10068,
+        "counterfactual_component_bytes": 31382,
+        "avoided_bytes": 21314,
+        "note": "paired rendered result with process-backed locked invocation 00002645599123504003-32036; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10559,
+        "actual_component_bytes": 10068,
+        "counterfactual_component_bytes": 31723,
+        "avoided_bytes": 21655,
+        "note": "paired rendered result with process-backed locked invocation 00002645613439921224-32356; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 11268,
+        "actual_component_bytes": 10068,
+        "counterfactual_component_bytes": 27642,
+        "avoided_bytes": 17574,
+        "note": "paired rendered result with process-backed locked invocation 00002645656588619318-33387; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10651,
+        "actual_component_bytes": 10067,
+        "counterfactual_component_bytes": 13847,
+        "avoided_bytes": 3780,
+        "note": "paired rendered result with process-backed locked invocation 00002645671207523290-33690; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 5638,
+        "actual_component_bytes": 5241,
+        "counterfactual_component_bytes": 5241,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645629397140183-32704; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10837,
+        "actual_component_bytes": 10068,
+        "counterfactual_component_bytes": 50569,
+        "avoided_bytes": 40501,
+        "note": "paired rendered result with process-backed locked invocation 00002645636170156166-32935; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10250,
+        "actual_component_bytes": 9576,
+        "counterfactual_component_bytes": 9576,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646267566200114-52893; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10474,
+        "actual_component_bytes": 10068,
+        "counterfactual_component_bytes": 31538,
+        "avoided_bytes": 21470,
+        "note": "paired rendered result with process-backed locked invocation 00002646239963561486-52101; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10521,
+        "actual_component_bytes": 10068,
+        "counterfactual_component_bytes": 46751,
+        "avoided_bytes": 36683,
+        "note": "paired rendered result with process-backed locked invocation 00002646250973997711-52497; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "ambiguous-locked-command-pairing",
+        "observed_prompt_bytes": 11245,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "0 candidate locked commands matched thread 01a04ce6-bc24-7561-9df9-d30698f0e6b9 turn 01a04ceb-da0b-7a93-9706-52a8e73521ff command git diff --no-ext-diff --unified=80 4072bf253d1c3a706ce0a8691e64d6a8483f6411 a6117508fd009fab8b9ff5a5f9e96ff8d13baafd -- src/terminal_app.rs src/ui.rs src/ui_harness.rs tests/ui_harness.rs"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 604,
+        "actual_component_bytes": 241,
+        "counterfactual_component_bytes": 241,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645904116547182-44862; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10459,
+        "actual_component_bytes": 10068,
+        "counterfactual_component_bytes": 31859,
+        "avoided_bytes": 21791,
+        "note": "paired rendered result with process-backed locked invocation 00002645767661583980-38765; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 9595,
+        "actual_component_bytes": 9187,
+        "counterfactual_component_bytes": 9187,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645794018792001-39568; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10670,
+        "actual_component_bytes": 10067,
+        "counterfactual_component_bytes": 19731,
+        "avoided_bytes": 9664,
+        "note": "paired rendered result with process-backed locked invocation 00002645799654201024-39761; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10499,
+        "actual_component_bytes": 10068,
+        "counterfactual_component_bytes": 35248,
+        "avoided_bytes": 25180,
+        "note": "paired rendered result with process-backed locked invocation 00002645780992097879-39119; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10688,
+        "actual_component_bytes": 10068,
+        "counterfactual_component_bytes": 24256,
+        "avoided_bytes": 14188,
+        "note": "paired rendered result with process-backed locked invocation 00002645799514224797-39713; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 5685,
+        "actual_component_bytes": 5255,
+        "counterfactual_component_bytes": 5255,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646336785274821-55667; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 6031,
+        "actual_component_bytes": 5351,
+        "counterfactual_component_bytes": 5351,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645699244657177-34330; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 3155,
+        "actual_component_bytes": 2684,
+        "counterfactual_component_bytes": 2684,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645902992334224-44807; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10420,
+        "actual_component_bytes": 10067,
+        "counterfactual_component_bytes": 15660,
+        "avoided_bytes": 5593,
+        "note": "paired rendered result with process-backed locked invocation 00002645746401051201-38140; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 8699,
+        "actual_component_bytes": 8383,
+        "counterfactual_component_bytes": 8383,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646741549254455-71368; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 9933,
+        "actual_component_bytes": 9597,
+        "counterfactual_component_bytes": 9597,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645271762432945-24135; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10404,
+        "actual_component_bytes": 10068,
+        "counterfactual_component_bytes": 33085,
+        "avoided_bytes": 23017,
+        "note": "paired rendered result with process-backed locked invocation 00002645894448118844-44581; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10762,
+        "actual_component_bytes": 10067,
+        "counterfactual_component_bytes": 13760,
+        "avoided_bytes": 3693,
+        "note": "paired rendered result with process-backed locked invocation 00002646501672957454-62189; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 11113,
+        "actual_component_bytes": 10068,
+        "counterfactual_component_bytes": 25557,
+        "avoided_bytes": 15489,
+        "note": "paired rendered result with process-backed locked invocation 00002645717310883607-36934; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10442,
+        "actual_component_bytes": 10067,
+        "counterfactual_component_bytes": 14519,
+        "avoided_bytes": 4452,
+        "note": "paired rendered result with process-backed locked invocation 00002645753975955249-38444; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 1384,
+        "actual_component_bytes": 1042,
+        "counterfactual_component_bytes": 1042,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646226940765919-51784; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 10740,
+        "actual_component_bytes": 10068,
+        "counterfactual_component_bytes": 32051,
+        "avoided_bytes": 21983,
+        "note": "paired rendered result with process-backed locked invocation 00002646756806412992-71760; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 8004,
+        "actual_component_bytes": 7521,
+        "counterfactual_component_bytes": 7521,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646363899930894-56357; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 12343,
+        "actual_component_bytes": 11849,
+        "counterfactual_component_bytes": 11849,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646236182221206-52029; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 7756,
+        "actual_component_bytes": 7266,
+        "counterfactual_component_bytes": 7266,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645883426776791-44244; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 8827,
+        "actual_component_bytes": 8357,
+        "counterfactual_component_bytes": 8357,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646214942432137-51475; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 6497,
+        "actual_component_bytes": 5965,
+        "counterfactual_component_bytes": 5965,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645814381567371-40187; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 8004,
+        "actual_component_bytes": 7531,
+        "counterfactual_component_bytes": 7531,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645828278700562-40635; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 11007,
+        "actual_component_bytes": 10068,
+        "counterfactual_component_bytes": 36062,
+        "avoided_bytes": 25994,
+        "note": "paired rendered result with process-backed locked invocation 00002645735048777238-37857; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 11816,
+        "actual_component_bytes": 11324,
+        "counterfactual_component_bytes": 11324,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645748903616703-38306; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 6029,
+        "actual_component_bytes": 5466,
+        "counterfactual_component_bytes": 5466,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645770753791880-38853; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 9765,
+        "actual_component_bytes": 9294,
+        "counterfactual_component_bytes": 9294,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002645872739450705-41943; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 1573,
+        "actual_component_bytes": 1111,
+        "counterfactual_component_bytes": 1111,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646312547103045-54965; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 11018,
+        "actual_component_bytes": 10533,
+        "counterfactual_component_bytes": 10533,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646770688912757-72203; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 2423,
+        "actual_component_bytes": 2037,
+        "counterfactual_component_bytes": 2037,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00002646401547994986-57229; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H8",
+        "status": "requires-ablation",
+        "observed_prompt_bytes": null,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "interrupted terminal directives are measured, but prevented generation is not observable"
+      }
+    ],
+    "bundles": [
+      {
+        "thread_id": "01a04cd5-9c45-7c91-8fe3-417c378a0604",
+        "turn_id": "01a04cd5-d3e5-75c1-90c1-5821640f4c3b",
+        "source_path": "/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z/corrected-all-disabled-001/work-leaf-3feature-bench.O9diig/context-bundles/orchestrator-489-0/bundle-0.md",
+        "archived_path": "files/orchestrator-489-0/bundle-0.md",
+        "payload_bytes": 148489,
+        "manifest_bytes": 818,
+        "observed_follow_up_bytes": 187300,
+        "consumption": "partial",
+        "deferred_bytes": 147671,
+        "observed_path_net_bytes": -39629,
+        "sha256": "b403fe55c2ce91c4819e9b4bb0f76d70393bfd8fe61f63b4d8f79e56a1611ada"
+      },
+      {
+        "thread_id": "01a04cd5-a036-7eb0-b957-5c31e528e31c",
+        "turn_id": "01a04cd5-dda9-74f2-9a7d-d9a49873e1e3",
+        "source_path": "/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z/corrected-all-disabled-001/work-leaf-3feature-bench.O9diig/context-bundles/orchestrator-489-0/bundle-1.md",
+        "archived_path": "files/orchestrator-489-0/bundle-1.md",
+        "payload_bytes": 201190,
+        "manifest_bytes": 1046,
+        "observed_follow_up_bytes": 227433,
+        "consumption": "partial",
+        "deferred_bytes": 200144,
+        "observed_path_net_bytes": -27289,
+        "sha256": "2e577e85cd4d6f554d72c569be2e270ce9ab96db9e1d50ed257b4314b406905a"
+      },
+      {
+        "thread_id": "01a04cd5-a036-7eb0-b957-5c31e528e31c",
+        "turn_id": "01a04cef-53a8-7c02-87a7-55e5bbf514d9",
+        "source_path": "/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z/corrected-all-disabled-001/work-leaf-3feature-bench.O9diig/context-bundles/orchestrator-489-0/bundle-10.md",
+        "archived_path": "files/orchestrator-489-0/bundle-10.md",
+        "payload_bytes": 155965,
+        "manifest_bytes": 651,
+        "observed_follow_up_bytes": 73157,
+        "consumption": "partial",
+        "deferred_bytes": 155314,
+        "observed_path_net_bytes": 82157,
+        "sha256": "5d11c2f87f46a414dc5f6bed2d6452c994d3dd9a659c868754c62657582d523b"
+      },
+      {
+        "thread_id": "01a04cd5-b407-7b91-a1d5-9503b17143ae",
+        "turn_id": "01a04cef-7ef2-7c41-9af9-69afa085101f",
+        "source_path": "/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z/corrected-all-disabled-001/work-leaf-3feature-bench.O9diig/context-bundles/orchestrator-489-0/bundle-11.md",
+        "archived_path": "files/orchestrator-489-0/bundle-11.md",
+        "payload_bytes": 185226,
+        "manifest_bytes": 710,
+        "observed_follow_up_bytes": 1180,
+        "consumption": "partial",
+        "deferred_bytes": 184516,
+        "observed_path_net_bytes": 183336,
+        "sha256": "d3e053f8bb73e44eda4c876484d69aaee2293eadc629f889902f86d2c208b5b8"
+      },
+      {
+        "thread_id": "01a04cd5-a036-7eb0-b957-5c31e528e31c",
+        "turn_id": "01a04cf0-1b3e-7390-a0d9-f10cd7a4015b",
+        "source_path": "/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z/corrected-all-disabled-001/work-leaf-3feature-bench.O9diig/context-bundles/orchestrator-489-0/bundle-12.md",
+        "archived_path": "files/orchestrator-489-0/bundle-12.md",
+        "payload_bytes": 24611,
+        "manifest_bytes": 597,
+        "observed_follow_up_bytes": 11525,
+        "consumption": "partial",
+        "deferred_bytes": 24014,
+        "observed_path_net_bytes": 12489,
+        "sha256": "a9afb82ec7a96177be156ef45fb18ef480a719a41052b8dfa67c1ee392d0dd61"
+      },
+      {
+        "thread_id": "01a04cd5-9c45-7c91-8fe3-417c378a0604",
+        "turn_id": "01a04cf0-a52d-7ef0-9726-56bf4ac4a436",
+        "source_path": "/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z/corrected-all-disabled-001/work-leaf-3feature-bench.O9diig/context-bundles/orchestrator-489-0/bundle-13.md",
+        "archived_path": "files/orchestrator-489-0/bundle-13.md",
+        "payload_bytes": 50211,
+        "manifest_bytes": 544,
+        "observed_follow_up_bytes": 15633,
+        "consumption": "partial",
+        "deferred_bytes": 49667,
+        "observed_path_net_bytes": 34034,
+        "sha256": "0bd7829a9dd94c6bf19d539b5b4ebf5fa3f1d732210584408acacebe45bff8e0"
+      },
+      {
+        "thread_id": "01a04cd5-b407-7b91-a1d5-9503b17143ae",
+        "turn_id": "01a04cd5-f157-79c0-baa9-1bab8ce7d4f2",
+        "source_path": "/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z/corrected-all-disabled-001/work-leaf-3feature-bench.O9diig/context-bundles/orchestrator-489-0/bundle-2.md",
+        "archived_path": "files/orchestrator-489-0/bundle-2.md",
+        "payload_bytes": 163565,
+        "manifest_bytes": 930,
+        "observed_follow_up_bytes": 208941,
+        "consumption": "partial",
+        "deferred_bytes": 162635,
+        "observed_path_net_bytes": -46306,
+        "sha256": "09c75ed221c3996f18bd27cf4a9325b3798dcabe444a7622774676eb9980c9c5"
+      },
+      {
+        "thread_id": "01a04cd5-9c45-7c91-8fe3-417c378a0604",
+        "turn_id": "01a04cd6-b384-7c10-b994-9d67c4849d11",
+        "source_path": "/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z/corrected-all-disabled-001/work-leaf-3feature-bench.O9diig/context-bundles/orchestrator-489-0/bundle-3.md",
+        "archived_path": "files/orchestrator-489-0/bundle-3.md",
+        "payload_bytes": 111612,
+        "manifest_bytes": 778,
+        "observed_follow_up_bytes": 73911,
+        "consumption": "partial",
+        "deferred_bytes": 110834,
+        "observed_path_net_bytes": 36923,
+        "sha256": "004907702cf055a69d7a298c1b9cd55d8d93d68a1a72f25c5e0c41da9af8d9fa"
+      },
+      {
+        "thread_id": "01a04cd5-a036-7eb0-b957-5c31e528e31c",
+        "turn_id": "01a04cd6-c24a-79d1-8de3-fc0d0a032fb9",
+        "source_path": "/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z/corrected-all-disabled-001/work-leaf-3feature-bench.O9diig/context-bundles/orchestrator-489-0/bundle-4.md",
+        "archived_path": "files/orchestrator-489-0/bundle-4.md",
+        "payload_bytes": 121844,
+        "manifest_bytes": 780,
+        "observed_follow_up_bytes": 118528,
+        "consumption": "partial",
+        "deferred_bytes": 121064,
+        "observed_path_net_bytes": 2536,
+        "sha256": "fd8cd357050fac5ebd6a52e302a8daaee7f95ee768df6f4332f7b91b14819c08"
+      },
+      {
+        "thread_id": "01a04cd5-b407-7b91-a1d5-9503b17143ae",
+        "turn_id": "01a04cd7-0a9e-79f1-b6ce-745bac8ccdbf",
+        "source_path": "/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z/corrected-all-disabled-001/work-leaf-3feature-bench.O9diig/context-bundles/orchestrator-489-0/bundle-5.md",
+        "archived_path": "files/orchestrator-489-0/bundle-5.md",
+        "payload_bytes": 165841,
+        "manifest_bytes": 826,
+        "observed_follow_up_bytes": 151776,
+        "consumption": "partial",
+        "deferred_bytes": 165015,
+        "observed_path_net_bytes": 13239,
+        "sha256": "9adc28bd5dbac923b44a35b13f40f2294cb2799b2c008ba8f98584ddf5d90f76"
+      },
+      {
+        "thread_id": "01a04cd5-9c45-7c91-8fe3-417c378a0604",
+        "turn_id": "01a04cd7-6b08-7d90-aa3f-2eb287ab4934",
+        "source_path": "/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z/corrected-all-disabled-001/work-leaf-3feature-bench.O9diig/context-bundles/orchestrator-489-0/bundle-6.md",
+        "archived_path": "files/orchestrator-489-0/bundle-6.md",
+        "payload_bytes": 51162,
+        "manifest_bytes": 43829,
+        "observed_follow_up_bytes": 21605,
+        "consumption": "partial",
+        "deferred_bytes": 7333,
+        "observed_path_net_bytes": -14272,
+        "sha256": "7e05a1aa6ea8bc876dd5332663ad4233d56d138d71fdb68da902239851656d0c"
+      },
+      {
+        "thread_id": "01a04cd5-b407-7b91-a1d5-9503b17143ae",
+        "turn_id": "01a04cdc-749b-73f2-903c-9624a28369bd",
+        "source_path": "/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z/corrected-all-disabled-001/work-leaf-3feature-bench.O9diig/context-bundles/orchestrator-489-0/bundle-7.md",
+        "archived_path": "files/orchestrator-489-0/bundle-7.md",
+        "payload_bytes": 84338,
+        "manifest_bytes": 651,
+        "observed_follow_up_bytes": 14106,
+        "consumption": "partial",
+        "deferred_bytes": 83687,
+        "observed_path_net_bytes": 69581,
+        "sha256": "fb178cbbfb6c0286aa283ff5ccb06f91f7ea75ced384e519dc723592a57d7448"
+      },
+      {
+        "thread_id": "01a04ce6-bc24-7561-9df9-d30698f0e6b9",
+        "turn_id": "01a04cec-ccb9-70a1-b225-93a1096f316b",
+        "source_path": "/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z/corrected-all-disabled-001/work-leaf-3feature-bench.O9diig/context-bundles/orchestrator-489-0/bundle-8.md",
+        "archived_path": "files/orchestrator-489-0/bundle-8.md",
+        "payload_bytes": 153633,
+        "manifest_bytes": 711,
+        "observed_follow_up_bytes": 118250,
+        "consumption": "partial",
+        "deferred_bytes": 152922,
+        "observed_path_net_bytes": 34672,
+        "sha256": "f395574dc1549185458837bee28203475d53da7ae5ddf6d37f2606453459e2f2"
+      },
+      {
+        "thread_id": "01a04ce6-bc24-7561-9df9-d30698f0e6b9",
+        "turn_id": "01a04cee-648d-7113-8d86-523ddb0775b2",
+        "source_path": "/home/user/.codex/work-leaf-corrected-control-runtime-20260829T091341Z/corrected-all-disabled-001/work-leaf-3feature-bench.O9diig/context-bundles/orchestrator-489-0/bundle-9.md",
+        "archived_path": "files/orchestrator-489-0/bundle-9.md",
+        "payload_bytes": 64243,
+        "manifest_bytes": 673,
+        "observed_follow_up_bytes": 6419,
+        "consumption": "partial",
+        "deferred_bytes": 63570,
+        "observed_path_net_bytes": 57151,
+        "sha256": "696b2f7e72e2a632a83181f65e5a7f11564203afc6808ab6fc90f3ecac23445b"
+      }
+    ],
+    "terminal_directives": {
+      "observed": 13,
+      "interrupted": 13,
+      "naturally_completed": 0,
+      "failed": 0,
+      "unresolved": 0
+    },
+    "structured_edits": {
+      "submissions": 15,
+      "duplicate_submissions": 0,
+      "acknowledgements": 9,
+      "rejections": 5
+    },
+    "reviews": {
+      "prompts": 0,
+      "unique_targets": 0,
+      "duplicate_targets": 0,
+      "validated_targets": 0,
+      "unresolved_targets": 0
+    },
+    "validation": {
+      "validation_commands": 45,
+      "violations": []
+    },
+    "protocol_components": {
+      "command-result": 446513,
+      "edit-acknowledgement": 8906,
+      "file-read": 104596,
+      "linearization": 24349,
+      "other-orchestration": 184259
+    },
+    "sequential_timeline_valid": true,
+    "errors": [
+      "ambiguous locked-command pairing for thread 01a04ce6-bc24-7561-9df9-d30698f0e6b9 turn 01a04ceb-da0b-7a93-9706-52a8e73521ff: 0 candidates",
+      "locked invocation 00002645914618370128-45126 has no rendered command-result prompt"
+    ]
+  },
+  "errors": [
+    "invocation 00002645284719394449-24372 has no end metadata",
+    "invocation 00002645914618370128-45126 has no end metadata",
+    "rollout: 2 rollout thread(s) share an observed cwd but are absent from process capture",
+    "interrupted provider turn has no complete usage: count=103"
+  ]
+}
