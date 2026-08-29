@@ -42,3 +42,27 @@ Batches 3 and 4 remain the only scheduled provider work. If both complete, the f
 six usable direct observations, five usable normal Work Leaf observations, and six usable corrected
 controls after historical endpoint observations are included. Step 5 supports unequal group sizes;
 an extra provider batch is not justified solely to replace this operator-caused observation.
+
+## Batch 3 Temporary Instruction Policy
+
+`step4-normal-002` implemented and reviewed all three features, then failed after linearization. The
+frozen scorer reconstructs its saved output and scores it 3/3. Its workflow report remains `fail`,
+and its observed token count remains a lower bound because 41 interrupted turns lack final usage.
+
+The failure came from benchmark infrastructure. To prevent recursive provider calls, the benchmark
+temporarily appended a provider-isolation paragraph to tracked `AGENTS.md`. The visual-selection
+feature legitimately updated `AGENTS.md`, and its final commit consequently contained both the real
+documentation edit and the temporary paragraph. The old cleanup accepted only an entirely unchanged
+file and stopped before final checks.
+
+The batch-4 wrapper removes only the exact temporary paragraph from both the final file and its
+commit. It rejects a moved or modified policy and rejects uncommitted instruction changes. The real
+documentation edit is preserved, the commit count stays at three, and the final clean-tree check
+still applies. The regression test reproduces the committed documentation-edit case. All 20 focused
+benchmark-workflow tests pass. Production Work Leaf, the task, scorer, frozen binaries, model,
+reasoning level, and measured workflow are unchanged.
+
+The source revision for batches 1 through 3 is
+`d217f3803ac0f417671e27cc8fb18064ff0f4ea9`; batch 4 uses
+`72a9e507f57daf20a54bab5dcd6fe8f13f083d30`. This is a post-workflow cleanup correction and does not
+alter provider prompts or model behavior.

@@ -14,7 +14,7 @@ SOURCE = Path(
         "/home/user/.codex/work-leaf-corrected-control-source-20260829T091341Z",
     )
 )
-EXPECTED_COMMIT = "d217f3803ac0f417671e27cc8fb18064ff0f4ea9"
+EXPECTED_COMMIT = "72a9e507f57daf20a54bab5dcd6fe8f13f083d30"
 
 
 def digest(path: Path) -> str:
@@ -77,6 +77,8 @@ def main() -> None:
 
     manifest = json.loads(ROOT.joinpath("infrastructure/manifest.json").read_text())
     assert manifest["source_commit"] == EXPECTED_COMMIT
+    assert manifest["initial_source_commit"] == "d217f3803ac0f417671e27cc8fb18064ff0f4ea9"
+    assert manifest["source_change_scope"] == "benchmark policy cleanup only"
     for name, expected in manifest["binaries"].items():
         path = ROOT / "infrastructure" / "bin" / name
         assert path.is_file()

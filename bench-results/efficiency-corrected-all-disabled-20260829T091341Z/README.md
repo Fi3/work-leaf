@@ -17,8 +17,12 @@ routed to the patch agent as findings.
 ## Scope
 
 The production Work Leaf checkout, original three-feature task, and frozen feature scorer are not
-modified. The isolated source is commit `d217f3803ac0f417671e27cc8fb18064ff0f4ea9`, based on the
-Points 8/9 instrumentation commit `4707ceb4903a09646857d1e316cb45acb15a3d07`.
+modified. Batches 1 through 3 use isolated source commit
+`d217f3803ac0f417671e27cc8fb18064ff0f4ea9`. Batch 4 uses
+`72a9e507f57daf20a54bab5dcd6fe8f13f083d30`, whose only additional behavior removes the exact
+temporary provider-isolation paragraph when a feature legitimately commits an `AGENTS.md` update.
+Both revisions are based on the Points 8/9 instrumentation commit
+`4707ceb4903a09646857d1e316cb45acb15a3d07`.
 
 Every provider thread uses GPT-5.5 with `xhigh` reasoning. The concurrent Work Leaf workflow keeps
 its normal validation behavior and final formatting, Clippy, and test gate. Recursive provider

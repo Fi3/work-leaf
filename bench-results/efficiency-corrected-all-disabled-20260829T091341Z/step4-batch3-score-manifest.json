@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "study": "efficiency-corrected-all-disabled-20260829T091341Z-step4-batch3",
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "source_repo": "/home/user/.codex/work-leaf-corrected-control-source-20260829T091341Z",
+  "runs": [
+    {
+      "id": "step4-direct-002",
+      "condition": "direct",
+      "workflow": "direct-sequential",
+      "launcher_exit_code": 0,
+      "child_result": "pass",
+      "artifact": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-002/corrected-study-step4-direct-002-three-feature-sequential-bench-artifacts",
+      "report": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-002/corrected-study-step4-direct-002-three-feature-sequential-bench-artifacts/report.json"
+    },
+    {
+      "id": "step4-normal-002",
+      "condition": "normal",
+      "workflow": "work-leaf-concurrent",
+      "launcher_exit_code": 1,
+      "child_result": "fail",
+      "artifact": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-002/corrected-study-step4-normal-002-three-feature-bench-artifacts",
+      "report": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-normal-002/corrected-study-step4-normal-002-three-feature-bench-artifacts/report.json"
+    },
+    {
+      "id": "step4-control-002",
+      "condition": "corrected-all-disabled",
+      "workflow": "work-leaf-concurrent",
+      "launcher_exit_code": 0,
+      "child_result": "pass",
+      "artifact": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-002/corrected-study-step4-control-002-three-feature-bench-artifacts",
+      "report": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-control-002/corrected-study-step4-control-002-three-feature-bench-artifacts/report.json"
+    }
+  ]
+}
