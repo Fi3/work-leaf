@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/../.." && pwd)"
+reference_study="$repo_root/bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z"
+reference_manifest="$reference_study/infrastructure/manifest.json"
+control_manifest="$script_dir/infrastructure/continued-response-manifest.json"
+source_repo="/home/user/.codex/work-leaf-exact-normal-source-20260829T181318Z"
+runtime_root="/home/user/.codex/work-leaf-causal-validation-continued-runtime-20260829T210343Z"
+expected_commit="5b1d1ef9590850faed26052f909ddff7ff8f127d"
+observer_commit="8eb26a4bf77b7fcbffbb60682f81069cd28880a9"
+study_id="efficiency-causal-validation-20260829T210343Z"
+bin_dir="$reference_study/infrastructure/bin"
+observer_bin="$script_dir/infrastructure/bin/bench-observer"
+
+check_infrastructure() {
+  [[ -f "$reference_manifest" && -f "$control_manifest" ]] || {
+    echo "error: frozen infrastructure manifest is missing" >&2
+    return 1
+  }
+  [[ "$(jq -r '.source_commit' "$reference_manifest")" == "$expected_commit" \
+    && "$(jq -r '.work_leaf_source_commit' "$control_manifest")" == "$expected_commit" \
+    && "$(jq -r '.observer_source_commit' "$control_manifest")" == "$observer_commit" ]] || {
+    echo "error: frozen source identity differs" >&2
+    return 1
+  }
+  [[ "$(git -C "$source_repo" rev-parse HEAD)" == "$expected_commit" \
+    && -z "$(git -C "$source_repo" status --short)" ]] || {
+    echo "error: immutable Work Leaf source checkout differs" >&2
+    return 1
+  }
+  for binary in work-leaf work-leaf-orchestrator; do
+    [[ -x "$bin_dir/$binary" ]] || {
+      echo "error: frozen Work Leaf binary is missing: $binary" >&2
+      return 1
+    }
+    expected="$(jq -r --arg binary "$binary" '.binaries[$binary]' "$control_manifest")"
+    [[ "$(sha256sum "$bin_dir/$binary" | awk '{print $1}')" == "$expected" ]] || {
+      echo "error: frozen Work Leaf binary hash differs: $binary" >&2
+      return 1
+    }
+  done
+  [[ -x "$observer_bin" ]] || {
+    echo "error: continued-response observer is missing" >&2
+    return 1
+  }
+  expected="$(jq -r '.binaries["bench-observer"]' "$control_manifest")"
+  [[ "$(sha256sum "$observer_bin" | awk '{print $1}')" == "$expected" ]] || {
+    echo "error: continued-response observer hash differs" >&2
+    return 1
+  }
+}
+
+check_infrastructure
+if [[ "${1:-}" == "--check" ]]; then
+  [[ "$#" == 1 ]] || {
+    echo "usage: $0 --check | ATTEMPT_ID" >&2
+    exit 2
+  }
+  echo "CONTINUED_RESPONSE_PREFLIGHT_OK"
+  exit 0
+fi
+
+if [[ "$#" != 1 ]]; then
+  echo "usage: $0 --check | ATTEMPT_ID" >&2
+  exit 2
+fi
+
+attempt_id="$1"
+matches="$(awk -F '\t' -v attempt="$attempt_id" \
+  'NR > 1 && $2 == attempt && $3 == "work-leaf-continued-response" {count++} END {print count + 0}' \
+  "$script_dir/CONTINUED-RESPONSE-SCHEDULE.tsv")"
+[[ "$matches" == "1" ]] || {
+  echo "error: attempt is not uniquely declared: $attempt_id" >&2
+  exit 2
+}
+
+results_dir="$script_dir/runs/$attempt_id"
+log_path="$script_dir/logs/$attempt_id.log"
+status_path="$script_dir/logs/$attempt_id.exit"
+runtime_dir="$runtime_root/$attempt_id"
+[[ ! -e "$results_dir" && ! -e "$log_path" && ! -e "$status_path" \
+  && ! -e "$runtime_dir" ]] || {
+  echo "error: preserved state already exists for $attempt_id" >&2
+  exit 2
+}
+
+mkdir -p "$results_dir" "$script_dir/logs" "$runtime_dir"
+jq -n \
+  --arg attempt_id "$attempt_id" \
+  --arg source_commit "$expected_commit" \
+  --arg observer_commit "$observer_commit" \
+  --arg observer_sha256 "$(sha256sum "$observer_bin" | awk '{print $1}')" \
+  '{
+    schema_version:1,
+    attempt_id:$attempt_id,
+    batch:1,
+    condition:"work-leaf-continued-response",
+    workflow:"concurrent-work-leaf",
+    isolated_difference:"when output resumes after a complete directive, wait for exact usage before forwarding the original interrupt",
+    source_commit:$source_commit,
+    observer_source_commit:$observer_commit,
+    observer_sha256:$observer_sha256,
+    model:"gpt-5.5",
+    reasoning_effort:"xhigh",
+    provider_usage_grace_ms:120000,
+    provider_usage_grace_output_resume:"wait-for-usage",
+    analytical_pair:false,
+    retry:false
+  }' > "$results_dir/admission.json"
+
+set +e
+env \
+  -u WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY \
+  -u WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY \
+  -u WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE \
+  -u WORK_LEAF_BENCH_FEATURE_SCHEDULE \
+  WORK_LEAF_BENCH_MODEL=gpt-5.5 \
+  WORK_LEAF_BENCH_REASONING_EFFORT=xhigh \
+  WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS=120000 \
+  WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME=wait-for-usage \
+  WORK_LEAF_BENCH_TMPDIR="$runtime_dir" \
+  WORK_LEAF_BENCH_RESULTS_DIR="$results_dir" \
+  WORK_LEAF_BENCH_SKIP_BUILD=1 \
+  WORK_LEAF_BENCH_BIN_DIR="$bin_dir" \
+  WORK_LEAF_BENCH_TIMEOUT_SECS=7200 \
+  WORK_LEAF_BENCH_NO_READ_PERMISSION=0 \
+  WORK_LEAF_BENCH_WEB_UI=0 \
+  WORK_LEAF_BENCH_DISABLE_TMUX_SUPERVISOR=1 \
+  WORK_LEAF_BENCH_OBSERVER_BIN="$observer_bin" \
+  WORK_LEAF_BENCH_STUDY_ID="$study_id" \
+  WORK_LEAF_BENCH_PAIR_ID="unpaired-$attempt_id" \
+  WORK_LEAF_BENCH_RUN_ID="$attempt_id" \
+  WORK_LEAF_BENCH_OPERATOR_NOTES="causal control: normal concurrent Work Leaf; only continued provider output waits for exact usage before the original interrupt" \
+  "$source_repo/bench-three-features" > "$log_path" 2>&1
+status=$?
+set -e
+
+printf '%s\n' "$status" > "$status_path"
+exit "$status"

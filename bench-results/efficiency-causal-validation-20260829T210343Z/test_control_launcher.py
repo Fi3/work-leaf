@@ -9,6 +9,7 @@ STUDY = Path(__file__).resolve().parent
 REFERENCE_LAUNCHER = (
     STUDY.parent / "efficiency-exact-normal-work-leaf-20260829T181318Z" / "run-condition"
 )
+CONTINUED_RESPONSE_LAUNCHER = STUDY / "run-continued-response-control"
 
 
 def benchmark_environment(script: str) -> tuple[dict[str, str], set[str]]:
@@ -101,6 +102,75 @@ class ControlLauncherTest(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("CONTROL_PREFLIGHT_OK", completed.stdout)
+
+    def test_continued_response_changes_only_interrupt_release_timing(self):
+        launcher = CONTINUED_RESPONSE_LAUNCHER.read_text(encoding="utf-8")
+        reference = REFERENCE_LAUNCHER.read_text(encoding="utf-8")
+        schedule = (STUDY / "CONTINUED-RESPONSE-SCHEDULE.tsv").read_text(
+            encoding="utf-8"
+        ).splitlines()
+
+        self.assertEqual(
+            schedule,
+            [
+                "batch\tattempt_id\tcondition",
+                "1\tcontinued-response-001\twork-leaf-continued-response",
+                "1\tcontinued-response-002\twork-leaf-continued-response",
+                "1\tcontinued-response-003\twork-leaf-continued-response",
+            ],
+        )
+        self.assertIn('expected_commit="5b1d1ef9590850faed26052f909ddff7ff8f127d"', launcher)
+        self.assertIn('observer_commit="8eb26a4bf77b7fcbffbb60682f81069cd28880a9"', launcher)
+        self.assertIn("WORK_LEAF_BENCH_MODEL=gpt-5.5", launcher)
+        self.assertIn("WORK_LEAF_BENCH_REASONING_EFFORT=xhigh", launcher)
+        self.assertIn("WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS=120000", launcher)
+        self.assertIn(
+            "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME=wait-for-usage",
+            launcher,
+        )
+        self.assertIn("WORK_LEAF_BENCH_NO_READ_PERMISSION=0", launcher)
+        self.assertIn("WORK_LEAF_BENCH_TIMEOUT_SECS=7200", launcher)
+        self.assertIn("WORK_LEAF_BENCH_WEB_UI=0", launcher)
+        self.assertIn("-u WORK_LEAF_BENCH_FEATURE_SCHEDULE", launcher)
+        self.assertNotIn("/fork", launcher)
+        self.assertNotIn("validation-budget", launcher)
+
+        control_environment, control_unset = benchmark_environment(launcher)
+        reference_environment, reference_unset = benchmark_environment(reference)
+        self.assertEqual(control_unset, reference_unset)
+        intentional_differences = {
+            "WORK_LEAF_BENCH_TMPDIR",
+            "WORK_LEAF_BENCH_OBSERVER_BIN",
+            "WORK_LEAF_BENCH_STUDY_ID",
+            "WORK_LEAF_BENCH_OPERATOR_NOTES",
+            "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS",
+            "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME",
+        }
+        shared_names = control_environment.keys() & reference_environment.keys()
+        for name in shared_names - intentional_differences:
+            self.assertEqual(
+                control_environment[name],
+                reference_environment[name],
+                f"unexpected environment difference for {name}",
+            )
+        self.assertEqual(
+            set(control_environment) - set(reference_environment),
+            {"WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME"},
+        )
+        self.assertEqual(reference_environment["WORK_LEAF_BENCH_NO_READ_PERMISSION"], "0")
+        self.assertEqual(control_environment["WORK_LEAF_BENCH_NO_READ_PERMISSION"], "0")
+
+    def test_continued_response_preflight_uses_no_provider(self):
+        completed = subprocess.run(
+            [str(CONTINUED_RESPONSE_LAUNCHER), "--check"],
+            cwd=STUDY.parents[1],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("CONTINUED_RESPONSE_PREFLIGHT_OK", completed.stdout)
 
 
 if __name__ == "__main__":
