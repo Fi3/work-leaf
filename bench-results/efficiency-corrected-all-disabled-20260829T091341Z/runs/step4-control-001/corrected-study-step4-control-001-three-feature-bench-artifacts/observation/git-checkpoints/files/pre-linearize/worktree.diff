@@ -1,0 +1,18 @@
+diff --git a/src/workspace.rs b/src/workspace.rs
+index bb17dea..a8351a7 100644
+--- a/src/workspace.rs
++++ b/src/workspace.rs
+@@ -727,12 +727,7 @@ where
+         self.append_agent_line_with_dedupe(agent_id, line, false);
+     }
+ 
+-    fn append_agent_line_with_dedupe(
+-        &mut self,
+-        agent_id: &AgentId,
+-        line: String,
+-        dedupe: bool,
+-    ) {
++    fn append_agent_line_with_dedupe(&mut self, agent_id: &AgentId, line: String, dedupe: bool) {
+         if line.is_empty() {
+             return;
+         }

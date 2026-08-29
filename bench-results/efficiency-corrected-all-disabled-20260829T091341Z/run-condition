@@ -42,18 +42,27 @@ case "$condition" in
     changed="n/a"
     unchanged="n/a"
     review="n/a"
+    changed_env="n/a"
+    unchanged_env="n/a"
+    review_env="n/a"
     ;;
   normal)
     workflow="work-leaf-concurrent"
     changed="diff"
     unchanged="digest"
     review="inline-exact"
+    changed_env="normal"
+    unchanged_env="normal"
+    review_env="inline-exact"
     ;;
   corrected-all-disabled)
     workflow="work-leaf-concurrent"
     changed="full"
     unchanged="full"
     review="git-reconstruct-marker-first"
+    changed_env="full"
+    unchanged_env="full"
+    review_env="git-reconstruct"
     ;;
   *)
     echo "error: unsupported condition: $condition" >&2
@@ -117,12 +126,10 @@ if [[ "$workflow" == "direct-sequential" ]]; then
     "$source_repo/bench-three-features-sequential" >"$log_path" 2>&1
   status=$?
 else
-  review_value="$review"
-  [[ "$review_value" != "git-reconstruct-marker-first" ]] || review_value="git-reconstruct"
   env \
-    WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY="$changed" \
-    WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY="$unchanged" \
-    WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE="$review_value" \
+    WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY="$changed_env" \
+    WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY="$unchanged_env" \
+    WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE="$review_env" \
     WORK_LEAF_BENCH_MODEL=gpt-5.5 \
     WORK_LEAF_BENCH_REASONING_EFFORT=xhigh \
     WORK_LEAF_BENCH_TMPDIR="$runtime_root/$attempt_id" \
