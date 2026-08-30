@@ -4169,11 +4169,19 @@ struct CapturedThreadMetadata {
 #[derive(Clone, Debug, Default)]
 struct TurnDeliveryReplay {
     thread_id: String,
+    first_sequence: Option<usize>,
     assistant_text: String,
     usage: CapturedUsage,
     usage_events: u64,
     interrupted_after_directive: bool,
     directive_complete_sequence: Option<usize>,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct CumulativeUsageReplay {
+    sequence: usize,
+    total: CapturedUsage,
+    last: Option<CapturedUsage>,
 }
 
 pub fn analyze(config: &CaptureConfig) -> ObserverResult<AnalysisSummary> {
@@ -5221,7 +5229,7 @@ fn analyze_app_server(
     let mut delivery_replays = BTreeMap::<String, TurnDeliveryReplay>::new();
     let mut interrupted_turns = BTreeSet::<(String, String)>::new();
     let mut turns_with_terminal_usage = BTreeSet::<(String, String)>::new();
-    let mut last_cumulative_usage_sequence = BTreeMap::<String, usize>::new();
+    let mut cumulative_usage_replays = BTreeMap::<String, Vec<CumulativeUsageReplay>>::new();
     for (sequence, value) in server_values.iter().enumerate() {
         let thread_id = extract_thread_id(value).or_else(|| {
             extract_turn_id(value).and_then(|turn_id| turn_threads.get(&turn_id).cloned())
@@ -5232,6 +5240,7 @@ fn analyze_app_server(
                 .entry(turn_id)
                 .or_insert_with(|| TurnDeliveryReplay {
                     thread_id,
+                    first_sequence: Some(sequence),
                     ..TurnDeliveryReplay::default()
                 });
             if !replay.interrupted_after_directive {
@@ -5293,7 +5302,14 @@ fn analyze_app_server(
             ));
             continue;
         };
-        last_cumulative_usage_sequence.insert(thread_id.clone(), sequence);
+        cumulative_usage_replays
+            .entry(thread_id.clone())
+            .or_default()
+            .push(CumulativeUsageReplay {
+                sequence,
+                total: usage,
+                last: extract_last_usage(value),
+            });
         if let Some(turn_id) = turn_id
             && delivery_replays
                 .get(&turn_id)
@@ -5339,24 +5355,114 @@ fn analyze_app_server(
         }
     }
     interrupted_turns.extend(requested_interrupts);
-    let interrupted_without_usage = interrupted_turns
+    let interrupted_without_terminal_usage = interrupted_turns
         .difference(&turns_with_terminal_usage)
-        .filter(|(thread_id, turn_id)| {
-            let Some(directive_sequence) = delivery_replays
-                .get(turn_id)
-                .and_then(|replay| replay.directive_complete_sequence)
-            else {
-                return true;
-            };
-            last_cumulative_usage_sequence
-                .get(thread_id)
-                .is_none_or(|sequence| *sequence <= directive_sequence)
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    let recovered_from_later_cumulative_usage = interrupted_without_terminal_usage
+        .iter()
+        .filter(|turn| {
+            later_cumulative_usage_proves_interrupted_turn(
+                turn,
+                &interrupted_without_terminal_usage,
+                &delivery_replays,
+                &cumulative_usage_replays,
+            )
         })
         .count();
+    let interrupted_without_usage = interrupted_without_terminal_usage
+        .len()
+        .saturating_sub(recovered_from_later_cumulative_usage);
     *thread_accounting.interrupted_provider_turns = thread_accounting
         .interrupted_provider_turns
         .saturating_add(u64::try_from(interrupted_without_usage).unwrap_or(u64::MAX));
     Ok(())
+}
+
+fn later_cumulative_usage_proves_interrupted_turn(
+    turn: &(String, String),
+    unresolved_turns: &BTreeSet<(String, String)>,
+    delivery_replays: &BTreeMap<String, TurnDeliveryReplay>,
+    cumulative_usage_replays: &BTreeMap<String, Vec<CumulativeUsageReplay>>,
+) -> bool {
+    let (thread_id, turn_id) = turn;
+    let Some(replay) = delivery_replays.get(turn_id) else {
+        return false;
+    };
+    let Some(directive_sequence) = replay.directive_complete_sequence else {
+        return false;
+    };
+    let Some(events) = cumulative_usage_replays.get(thread_id) else {
+        return false;
+    };
+    let previous = events
+        .iter()
+        .rev()
+        .find(|event| event.sequence < directive_sequence);
+    let Some(next) = events
+        .iter()
+        .find(|event| event.sequence > directive_sequence)
+    else {
+        return false;
+    };
+
+    if unresolved_turns
+        .iter()
+        .any(|(candidate_thread, candidate_turn)| {
+            candidate_thread == thread_id
+                && delivery_replays
+                    .get(candidate_turn)
+                    .and_then(|candidate| candidate.directive_complete_sequence)
+                    .is_none()
+        })
+    {
+        return false;
+    }
+
+    let unresolved_in_interval = unresolved_turns
+        .iter()
+        .filter(|(candidate_thread, candidate_turn)| {
+            if candidate_thread != thread_id {
+                return false;
+            }
+            delivery_replays
+                .get(candidate_turn)
+                .and_then(|candidate| candidate.directive_complete_sequence)
+                .is_some_and(|sequence| {
+                    previous.is_none_or(|event| sequence > event.sequence)
+                        && sequence < next.sequence
+                })
+        })
+        .count();
+    if unresolved_in_interval != 1 {
+        return false;
+    }
+
+    if previous.is_none()
+        && delivery_replays
+            .iter()
+            .any(|(candidate_turn_id, candidate)| {
+                candidate_turn_id != turn_id
+                    && candidate.thread_id == *thread_id
+                    && candidate
+                        .first_sequence
+                        .is_some_and(|sequence| sequence < directive_sequence)
+            })
+    {
+        return false;
+    }
+
+    let previous_total = previous.map_or_else(CapturedUsage::default, |event| event.total);
+    let Some(increase) = next.total.checked_difference(previous_total) else {
+        return false;
+    };
+    let Some(last) = next.last else {
+        return false;
+    };
+    let Some(unreported) = increase.checked_difference(last) else {
+        return false;
+    };
+    unreported != CapturedUsage::default()
 }
 
 fn analyze_exec(

@@ -393,6 +393,123 @@ fn later_cumulative_thread_usage_covers_an_interrupted_turn_without_immediate_us
 }
 
 #[test]
+fn later_cumulative_usage_without_an_unreported_increment_does_not_cover_interrupted_turn() {
+    let root = TempDir::new().unwrap();
+    let config_path = initialize_for_condition_with_real_tools_and_usage(
+        &root,
+        "work-leaf",
+        std::path::Path::new("/bin/sh"),
+        std::path::Path::new("/bin/true"),
+        true,
+    );
+    let marker = CaptureConfig::load(&config_path)
+        .unwrap()
+        .primary_invocation_marker;
+    let client = json_lines([
+        serde_json::json!({"id": 1, "method": "thread/start", "params": {}}),
+        serde_json::json!({
+            "id": 2,
+            "method": "turn/start",
+            "params": {
+                "threadId": "thread-user",
+                "input": [{"type": "text", "text": "[agent_id: title-agent] first"}],
+            },
+        }),
+        serde_json::json!({
+            "id": 3,
+            "method": "turn/interrupt",
+            "params": {"threadId": "thread-user", "turnId": "turn-first"},
+        }),
+        serde_json::json!({
+            "id": 4,
+            "method": "turn/start",
+            "params": {
+                "threadId": "thread-user",
+                "input": [{"type": "text", "text": "continue"}],
+            },
+        }),
+    ]);
+    let server = json_lines([
+        serde_json::json!({"id": 1, "result": {"thread": {"id": "thread-user"}}}),
+        serde_json::json!({"id": 2, "result": {"turn": {"id": "turn-first"}}}),
+        serde_json::json!({
+            "method": "item/completed",
+            "params": {
+                "threadId": "thread-user",
+                "turnId": "turn-first",
+                "item": {"type": "agentMessage", "text": "read\n@work-leaf read src/lib.rs\n"},
+            },
+        }),
+        serde_json::json!({
+            "method": "turn/completed",
+            "params": {
+                "threadId": "thread-user",
+                "turnId": "turn-first",
+                "turn": {"id": "turn-first", "status": "interrupted"},
+            },
+        }),
+        serde_json::json!({"id": 4, "result": {"turn": {"id": "turn-second"}}}),
+        serde_json::json!({
+            "method": "thread/tokenUsage/updated",
+            "params": {
+                "threadId": "thread-user",
+                "turnId": "turn-second",
+                "tokenUsage": {
+                    "last": {
+                        "inputTokens": 60,
+                        "cachedInputTokens": 40,
+                        "outputTokens": 5,
+                        "reasoningOutputTokens": 2,
+                    },
+                    "total": {
+                        "inputTokens": 60,
+                        "cachedInputTokens": 40,
+                        "outputTokens": 5,
+                        "reasoningOutputTokens": 2,
+                    },
+                },
+            },
+        }),
+        serde_json::json!({
+            "method": "turn/completed",
+            "params": {
+                "threadId": "thread-user",
+                "turnId": "turn-second",
+                "turn": {"id": "turn-second", "status": "completed"},
+            },
+        }),
+    ]);
+
+    let proxy = root.path().join("proxy-bin/codex");
+    let mut child = Command::new(proxy)
+        .args(["app-server", "--listen", "stdio://"])
+        .env("WORK_LEAF_OBSERVER_CONFIG", &config_path)
+        .env("WORK_LEAF_OBSERVER_PRIMARY_MARKER", marker)
+        .env("WORK_LEAF_OBSERVER_FIXTURE_STDOUT", server)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(client.as_bytes())
+        .unwrap();
+    assert!(child.wait().unwrap().success());
+
+    let summary = analyze(&CaptureConfig::load(&config_path).unwrap()).unwrap();
+    assert!(!summary.capture_complete);
+    assert_eq!(summary.interrupted_provider_turns, 1);
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|error| { error == "interrupted provider turn has no complete usage: count=1" })
+    );
+}
+
+#[test]
 fn app_server_usage_grace_waits_for_exact_usage_before_forwarding_interrupt() {
     let root = TempDir::new().unwrap();
     let config_path = initialize_for_condition_with_real_tools_and_usage(

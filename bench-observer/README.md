@@ -75,6 +75,12 @@ Codex reports cumulative usage for a thread. The observer counts a captured gene
 same transport contains a matching turn start. Resume or fork metadata without a generated turn does
 not create token usage. Direct-driver accounting also deduplicates cumulative totals by thread.
 
+An interrupted app-server response without terminal usage is not made complete merely because the
+thread later reports another cumulative total. The observer subtracts the previous cumulative total
+and the later event's `last` usage. It accepts the interrupted response only when a nonzero remainder
+is attributable to exactly one unresolved interruption in that interval. Otherwise `analyze` keeps
+the recorded total as a lower bound and marks provider usage incomplete.
+
 `extract-rollouts` starts from captured thread IDs. It saves only thread identity, working directory,
 model, reasoning effort, CLI version, final cumulative usage, source digest, relative source path,
 and scope labels. It does not copy prompts, messages, reasoning text, authentication state, or

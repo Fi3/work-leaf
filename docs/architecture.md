@@ -215,10 +215,11 @@ permit additional post-directive generation; the proxy forwards and counts that 
 claiming the model output is unchanged. The observer saves the incoming and forwarded byte streams
 separately and records every decision in `provider-usage-grace.jsonl`. Output that resumes, a
 completed turn without matching usage, or an expired interval releases the interrupt immediately.
-App-server `tokenUsage.total` values are cumulative for a provider thread, so a later cumulative
-event on the same thread also accounts for an earlier interrupted response that had no immediate
-post-directive usage event. An interrupted turn remains incomplete only when neither an immediate
-event nor a later cumulative thread total is captured; the workflow result is retained
+App-server `tokenUsage.total` values are cumulative for a provider thread, while `tokenUsage.last`
+describes the response associated with that event. A later event covers one earlier interrupted
+response only when subtracting the previous cumulative total and the later event's `last` usage
+leaves a nonzero increase, with exactly one unresolved interruption in that interval. The capture
+remains incomplete when this arithmetic cannot prove coverage; the workflow result is retained
 independently.
 
 The optional `WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME=wait-for-usage` policy extends
