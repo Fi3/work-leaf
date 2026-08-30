@@ -1,0 +1,351 @@
+{
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "complete": true,
+  "fixtures": {
+    "completion": {
+      "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_completion.rs",
+      "sha256": "4d6a19f4c6f515b9a97f184a056d08dc2882041d40d26dd82011180a949c5c87"
+    },
+    "status": {
+      "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_status.rs",
+      "sha256": "5f5295c9dec6be20abb28827b68e84342110fb748aa0cc887d8b58ffa3c6e6b5"
+    },
+    "visual": {
+      "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_visual.rs",
+      "sha256": "5ce0782e37b8672e04d8016ca3fbec9caa12f6f9cfaf431cac847c1f6e6a26ca"
+    }
+  },
+  "frozen_scorer": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/score.py",
+  "frozen_scorer_sha256": "c0a4e951e96d7da53a6d414a7677176183cae6e30d0bbfab92069d5082865162",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "runs": [
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.422,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-001/completion.log",
+          "log_sha256": "8e59b8c61706896f79e304f34612b19d0defc781ab4de4b5d36c8cf33814c77a",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.216,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-001/status.log",
+          "log_sha256": "958544383125e3f01f7f560a33f2e338ad4486076dbe388a0c9f3174f4041551",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 5.492,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-001/visual.log",
+          "log_sha256": "c15b5b21886492d11242264164eb8a91beae4ce93a09c9d5a1f94c326e41d184",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "compact-direct",
+      "final_commit": "698665dfc69ad99f3b01ef60f45a2ddbf6790f96",
+      "id": "compact-direct-001",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-001/compact-direct-001-three-feature-sequential-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "f6961111c9a09ae34455d8f280567ff2bc2e76dcb375e8548f145685d385fed7",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 38729856,
+          "input_tokens": 40362356,
+          "output_tokens": 216169,
+          "raw_input_plus_output": 40578525,
+          "reasoning_output_tokens": 102875,
+          "uncached_input_plus_output": 1848669,
+          "uncached_input_tokens": 1632500
+        }
+      },
+      "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-001/compact-direct-001-three-feature-sequential-bench-artifacts/report.json",
+      "report_sha256": "cd73cc0292c007650c183d180f155ffb4339d4363bfec7d4c06f4669e032b36e",
+      "workflow": "direct-sequential",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.393,
+          "exit_code": 101,
+          "log": "scorer/logs/sequential-work-leaf-combined-001/completion.log",
+          "log_sha256": "71b1ee5f2e7ac74a1029836435f8eb7d045b51c494c02d1ef456a9702b41e14c",
+          "status": "fail"
+        },
+        "status": {
+          "duration_seconds": 0.222,
+          "exit_code": 0,
+          "log": "scorer/logs/sequential-work-leaf-combined-001/status.log",
+          "log_sha256": "38b6e391541642da929dfa3a51ae58dc1a83d80b1d16df66cf38c72c7fbf2c3d",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.402,
+          "exit_code": 0,
+          "log": "scorer/logs/sequential-work-leaf-combined-001/visual.log",
+          "log_sha256": "4f2f13e98fcc6e43f4af77e12e092216335b3eaeff04c1e7a52b6c3eb397adb7",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 2,
+      "condition": "sequential-work-leaf-combined",
+      "final_commit": "ae82ad4627c27d9925e5f0a6d1dc4a99bbb80016",
+      "id": "sequential-work-leaf-combined-001",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/sequential-work-leaf-combined-001/sequential-work-leaf-combined-001-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "0f6dbad15434d0133712b0cad1b56c3e9ff1d8c7c09eeabdea8c7bdd5783a079",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 15122816,
+          "input_tokens": 16535528,
+          "output_tokens": 169432,
+          "raw_input_plus_output": 16704960,
+          "reasoning_output_tokens": 94965,
+          "uncached_input_plus_output": 1582144,
+          "uncached_input_tokens": 1412712
+        }
+      },
+      "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/sequential-work-leaf-combined-001/sequential-work-leaf-combined-001-three-feature-bench-artifacts/report.json",
+      "report_sha256": "fce679fbd905749d617d238158ccbabb249d13364e73b67c960491b7955ed049",
+      "workflow": "work-leaf-sequential-diagnostic",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.429,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-002/completion.log",
+          "log_sha256": "5e2e2dca9175730b3fd83bc2f5b1be0871283dc05a38e73556a2431ddbcd5a77",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.215,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-002/status.log",
+          "log_sha256": "04442320214efae46c28615e38b2bfa36a0e8f5ebe721d9b1162077f54776da6",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.368,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-002/visual.log",
+          "log_sha256": "4a29ab7b5e5aa65d1717a40badabde131dd8824d329fae4d776a4ab01ca5c79c",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "compact-direct",
+      "final_commit": "e95c8b4c8e0a3f9b1e43dd721705b32909fdfde5",
+      "id": "compact-direct-002",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-002/compact-direct-002-three-feature-sequential-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "0fd72c403cf0df3e0ff9660016067e959a58b6fd86c50f8711074e59235a1ef7",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 32053376,
+          "input_tokens": 33241249,
+          "output_tokens": 196890,
+          "raw_input_plus_output": 33438139,
+          "reasoning_output_tokens": 96675,
+          "uncached_input_plus_output": 1384763,
+          "uncached_input_tokens": 1187873
+        }
+      },
+      "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-002/compact-direct-002-three-feature-sequential-bench-artifacts/report.json",
+      "report_sha256": "c3d5bb6b0a6b4f567c58242b2b10cedad7e463dc05017924154e68a74ace2538",
+      "workflow": "direct-sequential",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.418,
+          "exit_code": 0,
+          "log": "scorer/logs/sequential-work-leaf-combined-002/completion.log",
+          "log_sha256": "2930c06e6ac13787bc2c51f2c2c962714607024d15a8052f2a3b6f51de738467",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.225,
+          "exit_code": 0,
+          "log": "scorer/logs/sequential-work-leaf-combined-002/status.log",
+          "log_sha256": "e4cfce5199ad6b2cd1c6e5df1cab50ac728561e3f3c92f86d40c4091e9c451ed",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.398,
+          "exit_code": 0,
+          "log": "scorer/logs/sequential-work-leaf-combined-002/visual.log",
+          "log_sha256": "1ae5284000c3aab1d2697c930992f8d7f312a72aeaeeb6e1a83eb464efdf6101",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "sequential-work-leaf-combined",
+      "final_commit": "048c7b06253af7ff5e9e80bdb9e04a29b681e771",
+      "id": "sequential-work-leaf-combined-002",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/sequential-work-leaf-combined-002/sequential-work-leaf-combined-002-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "cb8c84b2ffbf0c4a99d25105a75e3605618870410b8c1c9220ad6c23bb3b28b8",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 15849600,
+          "input_tokens": 17469314,
+          "output_tokens": 197685,
+          "raw_input_plus_output": 17666999,
+          "reasoning_output_tokens": 115504,
+          "uncached_input_plus_output": 1817399,
+          "uncached_input_tokens": 1619714
+        }
+      },
+      "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/sequential-work-leaf-combined-002/sequential-work-leaf-combined-002-three-feature-bench-artifacts/report.json",
+      "report_sha256": "1e3b1a4b517d1d6b17caac62e79cafde6990e373a39519151011a1429ade7b53",
+      "workflow": "work-leaf-sequential-diagnostic",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.416,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-003/completion.log",
+          "log_sha256": "93cd20b6f41e79786bb2b19c7007f3dbd85124309749411dd5c201a63adf3e3e",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.223,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-003/status.log",
+          "log_sha256": "67b19a6aa500839fb9498bef75dca77297476f58b99da8d2419662154a54d29a",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.37,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-003/visual.log",
+          "log_sha256": "354100d491392dbaa9268d00aa2376c6f887ae460231d828bc97fd9b6494418f",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "compact-direct",
+      "final_commit": "5123fd47e2c865b7c0dcabc4f8ab54803757e829",
+      "id": "compact-direct-003",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-003/compact-direct-003-three-feature-sequential-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "9802434a6cfdd0fabb04dca5a91e6ed3348872519b907236fdb815d5bedd5ee8",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 31553152,
+          "input_tokens": 32748593,
+          "output_tokens": 212537,
+          "raw_input_plus_output": 32961130,
+          "reasoning_output_tokens": 108148,
+          "uncached_input_plus_output": 1407978,
+          "uncached_input_tokens": 1195441
+        }
+      },
+      "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-003/compact-direct-003-three-feature-sequential-bench-artifacts/report.json",
+      "report_sha256": "a9a281be7eaf6414ebc23333f7f6fd28f4468b94f7958a913f6b579ec4babe6b",
+      "workflow": "direct-sequential",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.422,
+          "exit_code": 0,
+          "log": "scorer/logs/sequential-work-leaf-combined-003/completion.log",
+          "log_sha256": "cc8e0c4ded563897513e0e127e68270bd2b0922ab0da5c4aafbb950b3cdb0ba9",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.224,
+          "exit_code": 0,
+          "log": "scorer/logs/sequential-work-leaf-combined-003/status.log",
+          "log_sha256": "414c28accfd75e535e31e140e493a927c360cc299bab7be70ed579d13f6327f5",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.367,
+          "exit_code": 0,
+          "log": "scorer/logs/sequential-work-leaf-combined-003/visual.log",
+          "log_sha256": "8f050b206382666eb76698bcd65000c0a33cfd1fb4982d1ca4a7b610f2baf390",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "sequential-work-leaf-combined",
+      "final_commit": "ae6f3333f90b413fdf5e408fc29bcf75fcdac69c",
+      "id": "sequential-work-leaf-combined-003",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/sequential-work-leaf-combined-003/sequential-work-leaf-combined-003-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "4d6330460249da19c12cf80d9056cd0c17148c6822c893c1678d6f6e08b452f8",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 21605632,
+          "input_tokens": 23344874,
+          "output_tokens": 218298,
+          "raw_input_plus_output": 23563172,
+          "reasoning_output_tokens": 125617,
+          "uncached_input_plus_output": 1957540,
+          "uncached_input_tokens": 1739242
+        }
+      },
+      "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/sequential-work-leaf-combined-003/sequential-work-leaf-combined-003-three-feature-bench-artifacts/report.json",
+      "report_sha256": "9f0d3083766265c9b3b41fd415ceb4237e9fec340116e71ecff9105ce63ec22c",
+      "workflow": "work-leaf-sequential-diagnostic",
+      "workflow_result": "pass"
+    }
+  ],
+  "schema_version": 1,
+  "study": "efficiency-mechanism-attribution-20260830T081131Z",
+  "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+}

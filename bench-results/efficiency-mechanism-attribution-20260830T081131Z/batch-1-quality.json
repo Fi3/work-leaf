@@ -1,0 +1,189 @@
+{
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "complete": true,
+  "fixtures": {
+    "completion": {
+      "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_completion.rs",
+      "sha256": "4d6a19f4c6f515b9a97f184a056d08dc2882041d40d26dd82011180a949c5c87"
+    },
+    "status": {
+      "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_status.rs",
+      "sha256": "5f5295c9dec6be20abb28827b68e84342110fb748aa0cc887d8b58ffa3c6e6b5"
+    },
+    "visual": {
+      "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_visual.rs",
+      "sha256": "5ce0782e37b8672e04d8016ca3fbec9caa12f6f9cfaf431cac847c1f6e6a26ca"
+    }
+  },
+  "frozen_scorer": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/score.py",
+  "frozen_scorer_sha256": "c0a4e951e96d7da53a6d414a7677176183cae6e30d0bbfab92069d5082865162",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "runs": [
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.42,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-001/completion.log",
+          "log_sha256": "2e12e71858a92ed58355d9cb5183a10c8cbf32a9e18b3600d70af34321e8fcd7",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.225,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-001/status.log",
+          "log_sha256": "459ad44e167e1fcd53c8c09d861edb1edfddd347a04245f7f09fe7981c742114",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 6.785,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-001/visual.log",
+          "log_sha256": "e049137cc40d12bd799107a6397fb94a5a44e7bc4a801b2457ed971bf35de1cf",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "compact-direct",
+      "final_commit": "698665dfc69ad99f3b01ef60f45a2ddbf6790f96",
+      "id": "compact-direct-001",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-001/compact-direct-001-three-feature-sequential-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "f6961111c9a09ae34455d8f280567ff2bc2e76dcb375e8548f145685d385fed7",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 38729856,
+          "input_tokens": 40362356,
+          "output_tokens": 216169,
+          "raw_input_plus_output": 40578525,
+          "reasoning_output_tokens": 102875,
+          "uncached_input_plus_output": 1848669,
+          "uncached_input_tokens": 1632500
+        }
+      },
+      "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-001/compact-direct-001-three-feature-sequential-bench-artifacts/report.json",
+      "report_sha256": "cd73cc0292c007650c183d180f155ffb4339d4363bfec7d4c06f4669e032b36e",
+      "workflow": "direct-sequential",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.409,
+          "exit_code": 101,
+          "log": "scorer/logs/sequential-work-leaf-combined-001/completion.log",
+          "log_sha256": "2e56be4b18024ff53605c05b0bdb3591c5cf8388c39bdfa3298a500bde77cedb",
+          "status": "fail"
+        },
+        "status": {
+          "duration_seconds": 0.225,
+          "exit_code": 0,
+          "log": "scorer/logs/sequential-work-leaf-combined-001/status.log",
+          "log_sha256": "1447ec1c1b912b40af6eeee4fdb3e0b9c4b7550ce83066ed4afaf9ba16fb69a2",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.447,
+          "exit_code": 0,
+          "log": "scorer/logs/sequential-work-leaf-combined-001/visual.log",
+          "log_sha256": "7c7510bd031b6f46ea4416f89f4c42d0490014f40f50c55704a788088476daf5",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 2,
+      "condition": "sequential-work-leaf-combined",
+      "final_commit": "ae82ad4627c27d9925e5f0a6d1dc4a99bbb80016",
+      "id": "sequential-work-leaf-combined-001",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/sequential-work-leaf-combined-001/sequential-work-leaf-combined-001-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "0f6dbad15434d0133712b0cad1b56c3e9ff1d8c7c09eeabdea8c7bdd5783a079",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 15122816,
+          "input_tokens": 16535528,
+          "output_tokens": 169432,
+          "raw_input_plus_output": 16704960,
+          "reasoning_output_tokens": 94965,
+          "uncached_input_plus_output": 1582144,
+          "uncached_input_tokens": 1412712
+        }
+      },
+      "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/sequential-work-leaf-combined-001/sequential-work-leaf-combined-001-three-feature-bench-artifacts/report.json",
+      "report_sha256": "fce679fbd905749d617d238158ccbabb249d13364e73b67c960491b7955ed049",
+      "workflow": "work-leaf-sequential-diagnostic",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.474,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-002/completion.log",
+          "log_sha256": "a2987cfa12802092481818bb2439780acfe7b53bf58c4294b86982b39dc169d9",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.258,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-002/status.log",
+          "log_sha256": "81d9281abe954d4b789848951182b53e78fb05cefdbfd6e16e5457025f82427f",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.86,
+          "exit_code": 0,
+          "log": "scorer/logs/compact-direct-002/visual.log",
+          "log_sha256": "eff097aec1893c611ebe722152ceae5b6c49ab876f3c37357b5d00d0b31d8b36",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "compact-direct",
+      "final_commit": "e95c8b4c8e0a3f9b1e43dd721705b32909fdfde5",
+      "id": "compact-direct-002",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-002/compact-direct-002-three-feature-sequential-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "0fd72c403cf0df3e0ff9660016067e959a58b6fd86c50f8711074e59235a1ef7",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 32053376,
+          "input_tokens": 33241249,
+          "output_tokens": 196890,
+          "raw_input_plus_output": 33438139,
+          "reasoning_output_tokens": 96675,
+          "uncached_input_plus_output": 1384763,
+          "uncached_input_tokens": 1187873
+        }
+      },
+      "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-002/compact-direct-002-three-feature-sequential-bench-artifacts/report.json",
+      "report_sha256": "c3d5bb6b0a6b4f567c58242b2b10cedad7e463dc05017924154e68a74ace2538",
+      "workflow": "direct-sequential",
+      "workflow_result": "pass"
+    }
+  ],
+  "schema_version": 1,
+  "study": "efficiency-mechanism-attribution-20260830T081131Z",
+  "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+}

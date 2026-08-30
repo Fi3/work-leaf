@@ -1,0 +1,2589 @@
+{
+  "causal_coverage": {
+    "mechanisms": [
+      "work_leaf_orchestration",
+      "mediated_reads_and_interruption"
+    ],
+    "share_of_endpoint_gap_percent": 98.01979989147675,
+    "tokens": 18275644.333333332
+  },
+  "counterchecks": {
+    "compact_direct_vs_sequential_work_leaf_raw": {
+      "complete_separation": true,
+      "observed_mean_difference": 16347554.333333332,
+      "one_sided_p": 0.05,
+      "partitions": 20
+    },
+    "compact_direct_vs_sequential_work_leaf_usage_changes": {
+      "complete_separation": true,
+      "observed_mean_difference": 113.0,
+      "one_sided_p": 0.05,
+      "partitions": 20
+    },
+    "full_quality_raw": {
+      "complete_separation": true,
+      "observed_mean_difference": 15044179.166666664,
+      "one_sided_p": 0.1,
+      "partitions": 10
+    },
+    "quality": {
+      "compact_direct": {
+        "completed_features": 9,
+        "full_quality_runs": 3,
+        "possible_features": 9
+      },
+      "sequential_work_leaf": {
+        "completed_features": 8,
+        "full_quality_runs": 2,
+        "possible_features": 9
+      }
+    }
+  },
+  "groups": {
+    "C": {
+      "completed_features": 8,
+      "full_quality_runs": 2,
+      "mean_input_context_per_usage_change": 97043.62731871838,
+      "mean_usage": {
+        "cached_input_tokens": 17336448.0,
+        "input_tokens": 19182290.333333332,
+        "output_tokens": 217331.66666666666,
+        "raw_input_plus_output": 19399622.0,
+        "reasoning_output_tokens": 116172.0,
+        "uncached_input_plus_output": 2063174.0,
+        "uncached_input_tokens": 1845842.3333333333
+      },
+      "mean_usage_changes": 197.66666666666666,
+      "range": {
+        "raw_input_plus_output": {
+          "maximum": 23861127,
+          "minimum": 17149987
+        },
+        "uncached_input_plus_output": {
+          "maximum": 2354567,
+          "minimum": 1728547
+        }
+      },
+      "run_rows": [
+        {
+          "analysis": "bench-results/efficiency-causal-validation-20260829T210343Z/runs/combined-control-001/combined-control-001-three-feature-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "418a21cf23228dd34e11bf5e742e450571bc549e1d54139b7e05ec6c6ea80c13",
+          "completed_features": 3,
+          "group": "work_leaf",
+          "id": "combined-control-001",
+          "input_tokens_per_usage_change": 93856.591160221,
+          "quality": {
+            "completion": "pass",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "report": "bench-results/efficiency-causal-validation-20260829T210343Z/runs/combined-control-001/combined-control-001-three-feature-bench-artifacts/report.json",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 7927808,
+              "input_tokens": 9008789,
+              "output_tokens": 129335,
+              "raw_input_plus_output": 9138124,
+              "reasoning_output_tokens": 59536,
+              "uncached_input_plus_output": 1210316,
+              "uncached_input_tokens": 1080981,
+              "usage_changes": 80
+            },
+            "linearization": {
+              "cached_input_tokens": 2721408,
+              "input_tokens": 2852394,
+              "output_tokens": 18630,
+              "raw_input_plus_output": 2871024,
+              "reasoning_output_tokens": 5866,
+              "uncached_input_plus_output": 149616,
+              "uncached_input_tokens": 130986,
+              "usage_changes": 47
+            },
+            "review": {
+              "cached_input_tokens": 4382848,
+              "input_tokens": 5066691,
+              "output_tokens": 51341,
+              "raw_input_plus_output": 5118032,
+              "reasoning_output_tokens": 36134,
+              "uncached_input_plus_output": 735184,
+              "uncached_input_tokens": 683843,
+              "usage_changes": 51
+            },
+            "title": {
+              "cached_input_tokens": 49280,
+              "input_tokens": 60169,
+              "output_tokens": 403,
+              "raw_input_plus_output": 60572,
+              "reasoning_output_tokens": 368,
+              "uncached_input_plus_output": 11292,
+              "uncached_input_tokens": 10889,
+              "usage_changes": 3
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 15081344,
+            "input_tokens": 16988043,
+            "output_tokens": 199709,
+            "raw_input_plus_output": 17187752,
+            "reasoning_output_tokens": 101904,
+            "uncached_input_plus_output": 2106408,
+            "uncached_input_tokens": 1906699
+          },
+          "usage_changes": 181,
+          "usage_events": 182,
+          "workflow_activity": {
+            "command_count": 435,
+            "command_output_bytes": 2901817,
+            "protocol_bytes": 506265,
+            "repeated_commands": 41,
+            "validation_commands": 12
+          }
+        },
+        {
+          "analysis": "bench-results/efficiency-causal-validation-20260829T210343Z/runs/combined-control-002/combined-control-002-three-feature-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "f57e059bc3d1cd21225b95531651bfb12847cc7ac5837de6af6bf1cfcf12fbba",
+          "completed_features": 3,
+          "group": "work_leaf",
+          "id": "combined-control-002",
+          "input_tokens_per_usage_change": 107286.5090909091,
+          "quality": {
+            "completion": "pass",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "report": "bench-results/efficiency-causal-validation-20260829T210343Z/runs/combined-control-002/combined-control-002-three-feature-bench-artifacts/report.json",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 11290880,
+              "input_tokens": 12304148,
+              "output_tokens": 163086,
+              "raw_input_plus_output": 12467234,
+              "reasoning_output_tokens": 71736,
+              "uncached_input_plus_output": 1176354,
+              "uncached_input_tokens": 1013268,
+              "usage_changes": 102
+            },
+            "linearization": {
+              "cached_input_tokens": 3262848,
+              "input_tokens": 3406727,
+              "output_tokens": 19278,
+              "raw_input_plus_output": 3426005,
+              "reasoning_output_tokens": 6880,
+              "uncached_input_plus_output": 163157,
+              "uncached_input_tokens": 143879,
+              "usage_changes": 49
+            },
+            "review": {
+              "cached_input_tokens": 6909696,
+              "input_tokens": 7831988,
+              "output_tokens": 75119,
+              "raw_input_plus_output": 7907107,
+              "reasoning_output_tokens": 52837,
+              "uncached_input_plus_output": 997411,
+              "uncached_input_tokens": 922292,
+              "usage_changes": 66
+            },
+            "title": {
+              "cached_input_tokens": 43136,
+              "input_tokens": 60169,
+              "output_tokens": 612,
+              "raw_input_plus_output": 60781,
+              "reasoning_output_tokens": 577,
+              "uncached_input_plus_output": 17645,
+              "uncached_input_tokens": 17033,
+              "usage_changes": 3
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 21506560,
+            "input_tokens": 23603032,
+            "output_tokens": 258095,
+            "raw_input_plus_output": 23861127,
+            "reasoning_output_tokens": 132030,
+            "uncached_input_plus_output": 2354567,
+            "uncached_input_tokens": 2096472
+          },
+          "usage_changes": 220,
+          "usage_events": 220,
+          "workflow_activity": {
+            "command_count": 501,
+            "command_output_bytes": 3110976,
+            "protocol_bytes": 542219,
+            "repeated_commands": 42,
+            "validation_commands": 19
+          }
+        },
+        {
+          "analysis": "bench-results/efficiency-causal-validation-20260829T210343Z/runs/combined-control-003/combined-control-003-three-feature-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "73ff92d08c8ae38475fff18d3ff5b40b7e0f490dcc9f968c3bae2892a4a19979",
+          "completed_features": 2,
+          "group": "work_leaf",
+          "id": "combined-control-003",
+          "input_tokens_per_usage_change": 88311.4375,
+          "quality": {
+            "completion": "fail",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "report": "bench-results/efficiency-causal-validation-20260829T210343Z/runs/combined-control-003/combined-control-003-three-feature-bench-artifacts/report.json",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 6407808,
+              "input_tokens": 7167746,
+              "output_tokens": 118559,
+              "raw_input_plus_output": 7286305,
+              "reasoning_output_tokens": 70345,
+              "uncached_input_plus_output": 878497,
+              "uncached_input_tokens": 759938,
+              "usage_changes": 71
+            },
+            "linearization": {
+              "cached_input_tokens": 2691712,
+              "input_tokens": 2799348,
+              "output_tokens": 19212,
+              "raw_input_plus_output": 2818560,
+              "reasoning_output_tokens": 6659,
+              "uncached_input_plus_output": 126848,
+              "uncached_input_tokens": 107636,
+              "usage_changes": 55
+            },
+            "review": {
+              "cached_input_tokens": 6272640,
+              "input_tokens": 6928533,
+              "output_tokens": 56045,
+              "raw_input_plus_output": 6984578,
+              "reasoning_output_tokens": 37238,
+              "uncached_input_plus_output": 711938,
+              "uncached_input_tokens": 655893,
+              "usage_changes": 63
+            },
+            "title": {
+              "cached_input_tokens": 49280,
+              "input_tokens": 60169,
+              "output_tokens": 375,
+              "raw_input_plus_output": 60544,
+              "reasoning_output_tokens": 340,
+              "uncached_input_plus_output": 11264,
+              "uncached_input_tokens": 10889,
+              "usage_changes": 3
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 15421440,
+            "input_tokens": 16955796,
+            "output_tokens": 194191,
+            "raw_input_plus_output": 17149987,
+            "reasoning_output_tokens": 114582,
+            "uncached_input_plus_output": 1728547,
+            "uncached_input_tokens": 1534356
+          },
+          "usage_changes": 192,
+          "usage_events": 192,
+          "workflow_activity": {
+            "command_count": 427,
+            "command_output_bytes": 2540543,
+            "protocol_bytes": 399363,
+            "repeated_commands": 59,
+            "validation_commands": 10
+          }
+        }
+      ],
+      "runs": 3
+    },
+    "D": {
+      "completed_features": 17,
+      "full_quality_runs": 5,
+      "mean_input_context_per_usage_change": 112147.79281624153,
+      "mean_usage": {
+        "cached_input_tokens": 34507669.333333336,
+        "input_tokens": 35905985.0,
+        "output_tokens": 210396.66666666666,
+        "raw_input_plus_output": 36116381.666666664,
+        "reasoning_output_tokens": 101769.83333333333,
+        "uncached_input_plus_output": 1608712.3333333333,
+        "uncached_input_tokens": 1398315.6666666667
+      },
+      "mean_usage_changes": 320.1666666666667,
+      "range": {
+        "raw_input_plus_output": {
+          "maximum": 43257690,
+          "minimum": 28877983
+        },
+        "uncached_input_plus_output": {
+          "maximum": 1982580,
+          "minimum": 1328068
+        }
+      },
+      "run_rows": [
+        {
+          "analysis": "bench-results/efficiency-point7-exact-accounting-20260828T113610Z/runs/direct/point7-exact-direct-three-feature-sequential-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "f556090b0050bc919a36e0b6f121bdf77ef1a5479d0feb24e5d13a2595a1e917",
+          "completed_features": 3,
+          "group": "direct",
+          "id": "point7-exact-direct",
+          "input_tokens_per_usage_change": 109064.13368983957,
+          "quality": {
+            "completion": "pass",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "report": "bench-results/efficiency-point7-exact-accounting-20260828T113610Z/runs/direct/point7-exact-direct-three-feature-sequential-bench-artifacts/report.json",
+          "report_sha256": "99075f4699c8ed01f36c794d607a685381e05daf0f6c35b158ac06e47eba8f61",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 22613248,
+              "input_tokens": 23354627,
+              "output_tokens": 134364,
+              "raw_input_plus_output": 23488991,
+              "reasoning_output_tokens": 63865,
+              "uncached_input_plus_output": 875743,
+              "uncached_input_tokens": 741379,
+              "usage_changes": 206
+            },
+            "linearization": {
+              "cached_input_tokens": 8788480,
+              "input_tokens": 8998609,
+              "output_tokens": 28229,
+              "raw_input_plus_output": 9026838,
+              "reasoning_output_tokens": 8687,
+              "uncached_input_plus_output": 238358,
+              "uncached_input_tokens": 210129,
+              "usage_changes": 68
+            },
+            "review": {
+              "cached_input_tokens": 7650816,
+              "input_tokens": 8436750,
+              "output_tokens": 82545,
+              "raw_input_plus_output": 8519295,
+              "reasoning_output_tokens": 50333,
+              "uncached_input_plus_output": 868479,
+              "uncached_input_tokens": 785934,
+              "usage_changes": 100
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 39052544,
+            "input_tokens": 40789986,
+            "output_tokens": 245138,
+            "raw_input_plus_output": 41035124,
+            "reasoning_output_tokens": 122885,
+            "uncached_input_plus_output": 1982580,
+            "uncached_input_tokens": 1737442
+          },
+          "usage_changes": 374,
+          "usage_events": 378,
+          "workflow_activity": {
+            "command_count": 775,
+            "command_output_bytes": 3785850,
+            "protocol_bytes": 100,
+            "repeated_commands": 194,
+            "validation_commands": 60
+          }
+        },
+        {
+          "analysis": "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-003/points89-direct-003-three-feature-sequential-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "f3c3d304835ab8c5143367db474e84a5cb139b381edbcc5de6e58687f94d1af6",
+          "completed_features": 2,
+          "group": "direct",
+          "id": "direct-003",
+          "input_tokens_per_usage_change": 109903.13409961686,
+          "quality": {
+            "completion": "fail",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "report": "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-003/points89-direct-003-three-feature-sequential-bench-artifacts/report.json",
+          "report_sha256": "01ebb52993811f16649c36fbb4efb418e8e66aaad898a55c27e7ed70be117b31",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 16067200,
+              "input_tokens": 16899758,
+              "output_tokens": 113951,
+              "raw_input_plus_output": 17013709,
+              "reasoning_output_tokens": 57706,
+              "uncached_input_plus_output": 946509,
+              "uncached_input_tokens": 832558,
+              "usage_changes": 151
+            },
+            "linearization": {
+              "cached_input_tokens": 5181184,
+              "input_tokens": 5524626,
+              "output_tokens": 21707,
+              "raw_input_plus_output": 5546333,
+              "reasoning_output_tokens": 4921,
+              "uncached_input_plus_output": 365149,
+              "uncached_input_tokens": 343442,
+              "usage_changes": 42
+            },
+            "review": {
+              "cached_input_tokens": 5722624,
+              "input_tokens": 6260334,
+              "output_tokens": 57607,
+              "raw_input_plus_output": 6317941,
+              "reasoning_output_tokens": 35135,
+              "uncached_input_plus_output": 595317,
+              "uncached_input_tokens": 537710,
+              "usage_changes": 68
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 26971008,
+            "input_tokens": 28684718,
+            "output_tokens": 193265,
+            "raw_input_plus_output": 28877983,
+            "reasoning_output_tokens": 97762,
+            "uncached_input_plus_output": 1906975,
+            "uncached_input_tokens": 1713710
+          },
+          "usage_changes": 261,
+          "usage_events": 261,
+          "workflow_activity": {
+            "command_count": 584,
+            "command_output_bytes": 3318716,
+            "protocol_bytes": 100,
+            "repeated_commands": 130,
+            "validation_commands": 45
+          }
+        },
+        {
+          "analysis": "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-002/points89-direct-002-three-feature-sequential-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "281db04eb8fa2c55dc4bfd6ec192a6181e5c2111361b51baa1b24c5a4e93c837",
+          "completed_features": 3,
+          "group": "direct",
+          "id": "direct-002",
+          "input_tokens_per_usage_change": 107177.51359516617,
+          "quality": {
+            "completion": "pass",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "report": "bench-results/efficiency-points8-9-20260828T145556Z/runs/direct-002/points89-direct-002-three-feature-sequential-bench-artifacts/report.json",
+          "report_sha256": "ae5d803eeaf49252ad65c6d3be0f5916b3ca148354e89187f446a811a6f0a66a",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 24810880,
+              "input_tokens": 25429837,
+              "output_tokens": 115961,
+              "raw_input_plus_output": 25545798,
+              "reasoning_output_tokens": 54088,
+              "uncached_input_plus_output": 734918,
+              "uncached_input_tokens": 618957,
+              "usage_changes": 209
+            },
+            "linearization": {
+              "cached_input_tokens": 2936320,
+              "input_tokens": 3057868,
+              "output_tokens": 19538,
+              "raw_input_plus_output": 3077406,
+              "reasoning_output_tokens": 4797,
+              "uncached_input_plus_output": 141086,
+              "uncached_input_tokens": 121548,
+              "usage_changes": 36
+            },
+            "review": {
+              "cached_input_tokens": 6601984,
+              "input_tokens": 6988052,
+              "output_tokens": 65996,
+              "raw_input_plus_output": 7054048,
+              "reasoning_output_tokens": 39398,
+              "uncached_input_plus_output": 452064,
+              "uncached_input_tokens": 386068,
+              "usage_changes": 86
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 34349184,
+            "input_tokens": 35475757,
+            "output_tokens": 201495,
+            "raw_input_plus_output": 35677252,
+            "reasoning_output_tokens": 98283,
+            "uncached_input_plus_output": 1328068,
+            "uncached_input_tokens": 1126573
+          },
+          "usage_changes": 331,
+          "usage_events": 331,
+          "workflow_activity": {
+            "command_count": 612,
+            "command_output_bytes": 2713292,
+            "protocol_bytes": 100,
+            "repeated_commands": 122,
+            "validation_commands": 55
+          }
+        },
+        {
+          "analysis": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-001/corrected-study-step4-direct-001-three-feature-sequential-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "4c40efebc573e99686c7aba8ba7065519ad5a42c60308f13c8e5e6ad12338ce3",
+          "completed_features": 3,
+          "group": "direct",
+          "id": "step4-direct-001",
+          "input_tokens_per_usage_change": 113725.82258064517,
+          "quality": {
+            "completion": "pass",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "report": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-001/corrected-study-step4-direct-001-three-feature-sequential-bench-artifacts/report.json",
+          "report_sha256": "976fa6dfa18e1ff9d355b6affa0c5c38438dbf1446fdad3fa564d60af5138eb8",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 20639616,
+              "input_tokens": 21280913,
+              "output_tokens": 114246,
+              "raw_input_plus_output": 21395159,
+              "reasoning_output_tokens": 48954,
+              "uncached_input_plus_output": 755543,
+              "uncached_input_tokens": 641297,
+              "usage_changes": 173
+            },
+            "linearization": {
+              "cached_input_tokens": 8869376,
+              "input_tokens": 9076321,
+              "output_tokens": 31141,
+              "raw_input_plus_output": 9107462,
+              "reasoning_output_tokens": 10737,
+              "uncached_input_plus_output": 238086,
+              "uncached_input_tokens": 206945,
+              "usage_changes": 68
+            },
+            "review": {
+              "cached_input_tokens": 4550528,
+              "input_tokens": 4897771,
+              "output_tokens": 54214,
+              "raw_input_plus_output": 4951985,
+              "reasoning_output_tokens": 30602,
+              "uncached_input_plus_output": 401457,
+              "uncached_input_tokens": 347243,
+              "usage_changes": 69
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 34059520,
+            "input_tokens": 35255005,
+            "output_tokens": 199601,
+            "raw_input_plus_output": 35454606,
+            "reasoning_output_tokens": 90293,
+            "uncached_input_plus_output": 1395086,
+            "uncached_input_tokens": 1195485
+          },
+          "usage_changes": 310,
+          "usage_events": 311,
+          "workflow_activity": {
+            "command_count": 640,
+            "command_output_bytes": 3141548,
+            "protocol_bytes": 150,
+            "repeated_commands": 130,
+            "validation_commands": 62
+          }
+        },
+        {
+          "analysis": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-002/corrected-study-step4-direct-002-three-feature-sequential-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "c01951cf7de584e2bca47f1f00cf31a79188737d85414e35de49162e78daa297",
+          "completed_features": 3,
+          "group": "direct",
+          "id": "step4-direct-002",
+          "input_tokens_per_usage_change": 126557.83235294117,
+          "quality": {
+            "completion": "pass",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "report": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-002/corrected-study-step4-direct-002-three-feature-sequential-bench-artifacts/report.json",
+          "report_sha256": "048e9a4905b3937f38e48899dbfea03ef6db3563f2d21dd63ceb714fada95c61",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 28575488,
+              "input_tokens": 29357464,
+              "output_tokens": 134903,
+              "raw_input_plus_output": 29492367,
+              "reasoning_output_tokens": 58522,
+              "uncached_input_plus_output": 916879,
+              "uncached_input_tokens": 781976,
+              "usage_changes": 218
+            },
+            "linearization": {
+              "cached_input_tokens": 6021504,
+              "input_tokens": 6194219,
+              "output_tokens": 22741,
+              "raw_input_plus_output": 6216960,
+              "reasoning_output_tokens": 7174,
+              "uncached_input_plus_output": 195456,
+              "uncached_input_tokens": 172715,
+              "usage_changes": 49
+            },
+            "review": {
+              "cached_input_tokens": 6988160,
+              "input_tokens": 7477980,
+              "output_tokens": 70383,
+              "raw_input_plus_output": 7548363,
+              "reasoning_output_tokens": 43981,
+              "uncached_input_plus_output": 560203,
+              "uncached_input_tokens": 489820,
+              "usage_changes": 73
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 41585152,
+            "input_tokens": 43029663,
+            "output_tokens": 228027,
+            "raw_input_plus_output": 43257690,
+            "reasoning_output_tokens": 109677,
+            "uncached_input_plus_output": 1672538,
+            "uncached_input_tokens": 1444511
+          },
+          "usage_changes": 340,
+          "usage_events": 340,
+          "workflow_activity": {
+            "command_count": 659,
+            "command_output_bytes": 3512546,
+            "protocol_bytes": 100,
+            "repeated_commands": 131,
+            "validation_commands": 87
+          }
+        },
+        {
+          "analysis": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-003/corrected-study-step4-direct-003-three-feature-sequential-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "c59d7313e527573a371831f53155509d32f9ef9ae8328c1e3840f9b8ab00086d",
+          "completed_features": 3,
+          "group": "direct",
+          "id": "step4-direct-003",
+          "input_tokens_per_usage_change": 105576.33114754099,
+          "quality": {
+            "completion": "pass",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "report": "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/runs/step4-direct-003/corrected-study-step4-direct-003-three-feature-sequential-bench-artifacts/report.json",
+          "report_sha256": "0db7c97ba40998923f6aab4a8ba9f8572fc5e69bc85579d79b64a7f14e21ce62",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 20897536,
+              "input_tokens": 21468109,
+              "output_tokens": 113030,
+              "raw_input_plus_output": 21581139,
+              "reasoning_output_tokens": 52607,
+              "uncached_input_plus_output": 683603,
+              "uncached_input_tokens": 570573,
+              "usage_changes": 194
+            },
+            "linearization": {
+              "cached_input_tokens": 5543808,
+              "input_tokens": 5731852,
+              "output_tokens": 23624,
+              "raw_input_plus_output": 5755476,
+              "reasoning_output_tokens": 5949,
+              "uncached_input_plus_output": 211668,
+              "uncached_input_tokens": 188044,
+              "usage_changes": 45
+            },
+            "review": {
+              "cached_input_tokens": 4587264,
+              "input_tokens": 5000820,
+              "output_tokens": 58200,
+              "raw_input_plus_output": 5059020,
+              "reasoning_output_tokens": 33163,
+              "uncached_input_plus_output": 471756,
+              "uncached_input_tokens": 413556,
+              "usage_changes": 66
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 31028608,
+            "input_tokens": 32200781,
+            "output_tokens": 194854,
+            "raw_input_plus_output": 32395635,
+            "reasoning_output_tokens": 91719,
+            "uncached_input_plus_output": 1367027,
+            "uncached_input_tokens": 1172173
+          },
+          "usage_changes": 305,
+          "usage_events": 305,
+          "workflow_activity": {
+            "command_count": 625,
+            "command_output_bytes": 3379206,
+            "protocol_bytes": 100,
+            "repeated_commands": 137,
+            "validation_commands": 38
+          }
+        }
+      ],
+      "runs": 6
+    },
+    "L": {
+      "changed_lines": [
+        1653,
+        1566,
+        1452
+      ],
+      "completed_features": 9,
+      "full_quality_runs": 3,
+      "mean_provider_actions": {
+        "apply_patch": 59.666666666666664,
+        "exec_command": 616.0,
+        "update_plan": 6.666666666666667
+      },
+      "mean_provider_actions_by_stage": {
+        "implementation": {
+          "apply_patch": 55.0,
+          "exec_command": 279.3333333333333,
+          "update_plan": 2.3333333333333335
+        },
+        "linearization": {
+          "apply_patch": 4.666666666666667,
+          "exec_command": 87.33333333333333,
+          "update_plan": 4.333333333333333
+        },
+        "review": {
+          "exec_command": 249.33333333333334
+        }
+      },
+      "mean_review_rounds": 6.0,
+      "mean_stage_usage": {
+        "implementation": {
+          "cached_input_tokens": 22290432.0,
+          "input_tokens": 22898603.0,
+          "output_tokens": 115788.0,
+          "raw_input_plus_output": 23014391.0,
+          "reasoning_output_tokens": 54979.666666666664,
+          "uncached_input_plus_output": 723959.0,
+          "uncached_input_tokens": 608171.0
+        },
+        "linearization": {
+          "cached_input_tokens": 4352682.666666667,
+          "input_tokens": 4492025.0,
+          "output_tokens": 21634.333333333332,
+          "raw_input_plus_output": 4513659.333333333,
+          "reasoning_output_tokens": 6073.666666666667,
+          "uncached_input_plus_output": 160976.66666666666,
+          "uncached_input_tokens": 139342.33333333334
+        },
+        "review": {
+          "cached_input_tokens": 7469013.333333333,
+          "input_tokens": 8060104.666666667,
+          "output_tokens": 71109.66666666667,
+          "raw_input_plus_output": 8131214.333333333,
+          "reasoning_output_tokens": 41512.666666666664,
+          "uncached_input_plus_output": 662201.0,
+          "uncached_input_tokens": 591091.3333333334
+        }
+      },
+      "mean_usage": {
+        "cached_input_tokens": 34112128.0,
+        "input_tokens": 35450732.666666664,
+        "output_tokens": 208532.0,
+        "raw_input_plus_output": 35659264.666666664,
+        "reasoning_output_tokens": 102566.0,
+        "uncached_input_plus_output": 1547136.6666666667,
+        "uncached_input_tokens": 1338604.6666666667
+      },
+      "mean_usage_changes": 311.0,
+      "mean_usage_changes_by_stage": {
+        "implementation": 186.66666666666666,
+        "linearization": 45.333333333333336,
+        "review": 79.0
+      },
+      "mean_work_leaf_directives": {
+        "edit": 0.0,
+        "locks_run": 0.0,
+        "read": 0.0
+      },
+      "mean_workflow_activity": {
+        "command_count": 632.0,
+        "command_output_bytes": 3154073.0,
+        "protocol_bytes": 116.66666666666667,
+        "repeated_commands": 123.33333333333333,
+        "structured_edit_submissions": 0.0,
+        "validation_commands": 50.666666666666664
+      },
+      "range": {
+        "raw_input_plus_output": {
+          "maximum": 40578525,
+          "minimum": 32961130
+        },
+        "uncached_input_plus_output": {
+          "maximum": 1848669,
+          "minimum": 1384763
+        }
+      },
+      "run_rows": [
+        {
+          "activation": {
+            "active": true,
+            "commit_count": 7,
+            "feature_target_count": 3,
+            "prompt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-001/compact-direct-001-three-feature-sequential-bench-artifacts/runs/linearize-plan.prompt.txt",
+            "prompt_sha256": "7af30d828b8dcf61a781af9b04093d5f90577ffbd69ecd184450910031089527"
+          },
+          "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-001/compact-direct-001-three-feature-sequential-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "f6961111c9a09ae34455d8f280567ff2bc2e76dcb375e8548f145685d385fed7",
+          "changed_lines_total": 1653,
+          "checks": {
+            "completion": "pass",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "completed_features": 3,
+          "condition": "compact-direct",
+          "id": "compact-direct-001",
+          "provider_actions": {
+            "apply_patch": 63,
+            "exec_command": 675,
+            "update_plan": 7
+          },
+          "provider_actions_by_stage": {
+            "implementation": {
+              "apply_patch": 59,
+              "exec_command": 326,
+              "update_plan": 1
+            },
+            "linearization": {
+              "apply_patch": 4,
+              "exec_command": 102,
+              "update_plan": 6
+            },
+            "review": {
+              "exec_command": 247
+            }
+          },
+          "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-001/compact-direct-001-three-feature-sequential-bench-artifacts/report.json",
+          "report_sha256": "cd73cc0292c007650c183d180f155ffb4339d4363bfec7d4c06f4669e032b36e",
+          "review_rounds": 7,
+          "rollout_integrity": [
+            {
+              "sha256": "ef4de3c95b77fdc2c76c63e3277844a023a96bce36eae4dcd0b72334083e4f54",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T10-22-55-01a051c3-b3e6-73f3-8147-6c9989515f1a.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a051c3-b3e6-73f3-8147-6c9989515f1a",
+              "usage_changes": 55,
+              "usage_events": 55
+            },
+            {
+              "sha256": "874beea2778b7385dac3b884a8d02b0a6ba8820bb555567e9ec8d105143dc18a",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T10-35-40-01a051cf-61b1-7f50-b00f-76e2dca3a416.jsonl",
+              "stage": "review",
+              "thread_id": "01a051cf-61b1-7f50-b00f-76e2dca3a416",
+              "usage_changes": 17,
+              "usage_events": 17
+            },
+            {
+              "sha256": "1ffa081dcb6ac84e48d5d9fccc86c73a9129949fe34f621915f0caa3b870dcf4",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T10-46-11-01a051d9-015a-7261-8736-b8fe5d080a36.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a051d9-015a-7261-8736-b8fe5d080a36",
+              "usage_changes": 71,
+              "usage_events": 71
+            },
+            {
+              "sha256": "0d1b071c4424587685d3e392e9c2295b0c31d843c75a2cda7014dc0d5750a5b0",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T10-55-45-01a051e1-c429-7e32-8c20-e5b8bd452aeb.jsonl",
+              "stage": "review",
+              "thread_id": "01a051e1-c429-7e32-8c20-e5b8bd452aeb",
+              "usage_changes": 20,
+              "usage_events": 20
+            },
+            {
+              "sha256": "a7b1e33e53136efbed043c5f488fe22c587d42445395b9dd9afb19e240a0b716",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T11-05-06-01a051ea-523f-74b1-a6e1-9457f20d1659.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a051ea-523f-74b1-a6e1-9457f20d1659",
+              "usage_changes": 87,
+              "usage_events": 87
+            },
+            {
+              "sha256": "be59a51a5699f536ec93e1dac4660e27862d8406b3284218c2b78435607083d3",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T11-17-11-01a051f5-643c-7b62-9b1d-590a0f828171.jsonl",
+              "stage": "review",
+              "thread_id": "01a051f5-643c-7b62-9b1d-590a0f828171",
+              "usage_changes": 48,
+              "usage_events": 49
+            },
+            {
+              "sha256": "5971d7e6a5f284e311102d8660a7cf3e9e950e3c4efe16b537abd6df87ef5a8c",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T11-32-39-01a05203-8cf3-73d0-873b-ea833deb3556.jsonl",
+              "stage": "linearization",
+              "thread_id": "01a05203-8cf3-73d0-873b-ea833deb3556",
+              "usage_changes": 49,
+              "usage_events": 49
+            }
+          ],
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 25176960,
+              "input_tokens": 25844039,
+              "output_tokens": 123408,
+              "raw_input_plus_output": 25967447,
+              "reasoning_output_tokens": 58194,
+              "uncached_input_plus_output": 790487,
+              "uncached_input_tokens": 667079
+            },
+            "linearization": {
+              "cached_input_tokens": 4810112,
+              "input_tokens": 4952618,
+              "output_tokens": 24319,
+              "raw_input_plus_output": 4976937,
+              "reasoning_output_tokens": 5723,
+              "uncached_input_plus_output": 166825,
+              "uncached_input_tokens": 142506
+            },
+            "review": {
+              "cached_input_tokens": 8742784,
+              "input_tokens": 9565699,
+              "output_tokens": 68442,
+              "raw_input_plus_output": 9634141,
+              "reasoning_output_tokens": 38958,
+              "uncached_input_plus_output": 891357,
+              "uncached_input_tokens": 822915
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 38729856,
+            "input_tokens": 40362356,
+            "output_tokens": 216169,
+            "raw_input_plus_output": 40578525,
+            "reasoning_output_tokens": 102875,
+            "uncached_input_plus_output": 1848669,
+            "uncached_input_tokens": 1632500
+          },
+          "usage_changes": 347,
+          "usage_changes_by_stage": {
+            "implementation": 213,
+            "linearization": 49,
+            "review": 85
+          },
+          "usage_events": 348,
+          "work_leaf_directives": {
+            "edit": 0,
+            "locks_run": 0,
+            "read": 0
+          },
+          "workflow_activity": {
+            "command_count": 689,
+            "command_output_bytes": 3466528,
+            "protocol_bytes": 100,
+            "repeated_commands": 159,
+            "structured_edit_submissions": 0,
+            "validation_commands": 63
+          },
+          "workflow_result": "pass"
+        },
+        {
+          "activation": {
+            "active": true,
+            "commit_count": 4,
+            "feature_target_count": 3,
+            "prompt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-002/compact-direct-002-three-feature-sequential-bench-artifacts/runs/linearize-plan.prompt.txt",
+            "prompt_sha256": "7fb4e4727542bc60a28fbf332b86339c63ba296113b58e9dbbbf6910793b6ac0"
+          },
+          "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-002/compact-direct-002-three-feature-sequential-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "0fd72c403cf0df3e0ff9660016067e959a58b6fd86c50f8711074e59235a1ef7",
+          "changed_lines_total": 1566,
+          "checks": {
+            "completion": "pass",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "completed_features": 3,
+          "condition": "compact-direct",
+          "id": "compact-direct-002",
+          "provider_actions": {
+            "apply_patch": 65,
+            "exec_command": 571,
+            "update_plan": 6
+          },
+          "provider_actions_by_stage": {
+            "implementation": {
+              "apply_patch": 59,
+              "exec_command": 265,
+              "update_plan": 6
+            },
+            "linearization": {
+              "apply_patch": 6,
+              "exec_command": 80
+            },
+            "review": {
+              "exec_command": 226
+            }
+          },
+          "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-002/compact-direct-002-three-feature-sequential-bench-artifacts/report.json",
+          "report_sha256": "c3d5bb6b0a6b4f567c58242b2b10cedad7e463dc05017924154e68a74ace2538",
+          "review_rounds": 4,
+          "rollout_integrity": [
+            {
+              "sha256": "bc623fe79aef5805762cbc2b123e59008e217c0d84a0edd3740715ca0413050b",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T10-22-55-01a051c3-b3b2-7652-85be-77748a089a13.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a051c3-b3b2-7652-85be-77748a089a13",
+              "usage_changes": 68,
+              "usage_events": 68
+            },
+            {
+              "sha256": "aa103452875974d5c482c3cc4e1e52645392c259c0b7b6224d25167dc682e140",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T10-38-26-01a051d1-ea22-7000-8380-3a6c5d89199f.jsonl",
+              "stage": "review",
+              "thread_id": "01a051d1-ea22-7000-8380-3a6c5d89199f",
+              "usage_changes": 34,
+              "usage_events": 34
+            },
+            {
+              "sha256": "1f07e8bff201d0a320bcf3ea5edae124813a51d599079b27077507172741869e",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T10-53-59-01a051e0-268c-7dc2-b1a3-58b55d6ca0f4.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a051e0-268c-7dc2-b1a3-58b55d6ca0f4",
+              "usage_changes": 30,
+              "usage_events": 30
+            },
+            {
+              "sha256": "bc51167f1d281535977e1bd23e99bc5e421117f562971fc95be946c265c59cc1",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T11-00-07-01a051e5-c2ef-7992-bcc8-968fd89cd0d1.jsonl",
+              "stage": "review",
+              "thread_id": "01a051e5-c2ef-7992-bcc8-968fd89cd0d1",
+              "usage_changes": 17,
+              "usage_events": 17
+            },
+            {
+              "sha256": "7fbe30834f8d49b0c13922dc205ef490205695c5ffebef6049f522422a94c6ed",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T11-04-13-01a051e9-82fc-7633-bd02-00476be93dc7.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a051e9-82fc-7633-bd02-00476be93dc7",
+              "usage_changes": 88,
+              "usage_events": 88
+            },
+            {
+              "sha256": "19487f176934fa6c6bb31ba82b9ce45b49d9a89eca5549a743f1e4463089217b",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T11-21-05-01a051f8-f618-7901-a9af-5ea86dabd4e3.jsonl",
+              "stage": "review",
+              "thread_id": "01a051f8-f618-7901-a9af-5ea86dabd4e3",
+              "usage_changes": 17,
+              "usage_events": 17
+            },
+            {
+              "sha256": "c436f61ad6d363e67df37ebdc87eebd0a5627d68d996f64e35e0c76cdb092aa8",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T11-26-16-01a051fd-b375-7222-b968-a52676554f57.jsonl",
+              "stage": "linearization",
+              "thread_id": "01a051fd-b375-7222-b968-a52676554f57",
+              "usage_changes": 45,
+              "usage_events": 45
+            }
+          ],
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 22700800,
+              "input_tokens": 23317502,
+              "output_tokens": 113971,
+              "raw_input_plus_output": 23431473,
+              "reasoning_output_tokens": 54422,
+              "uncached_input_plus_output": 730673,
+              "uncached_input_tokens": 616702
+            },
+            "linearization": {
+              "cached_input_tokens": 3396480,
+              "input_tokens": 3508861,
+              "output_tokens": 19104,
+              "raw_input_plus_output": 3527965,
+              "reasoning_output_tokens": 5960,
+              "uncached_input_plus_output": 131485,
+              "uncached_input_tokens": 112381
+            },
+            "review": {
+              "cached_input_tokens": 5956096,
+              "input_tokens": 6414886,
+              "output_tokens": 63815,
+              "raw_input_plus_output": 6478701,
+              "reasoning_output_tokens": 36293,
+              "uncached_input_plus_output": 522605,
+              "uncached_input_tokens": 458790
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 32053376,
+            "input_tokens": 33241249,
+            "output_tokens": 196890,
+            "raw_input_plus_output": 33438139,
+            "reasoning_output_tokens": 96675,
+            "uncached_input_plus_output": 1384763,
+            "uncached_input_tokens": 1187873
+          },
+          "usage_changes": 299,
+          "usage_changes_by_stage": {
+            "implementation": 186,
+            "linearization": 45,
+            "review": 68
+          },
+          "usage_events": 299,
+          "work_leaf_directives": {
+            "edit": 0,
+            "locks_run": 0,
+            "read": 0
+          },
+          "workflow_activity": {
+            "command_count": 592,
+            "command_output_bytes": 2775435,
+            "protocol_bytes": 150,
+            "repeated_commands": 96,
+            "structured_edit_submissions": 0,
+            "validation_commands": 40
+          },
+          "workflow_result": "pass"
+        },
+        {
+          "activation": {
+            "active": true,
+            "commit_count": 7,
+            "feature_target_count": 3,
+            "prompt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-003/compact-direct-003-three-feature-sequential-bench-artifacts/runs/linearize-plan.prompt.txt",
+            "prompt_sha256": "c4b4fb3dd24ddbaeabe3696106bbda1f802553b84b76b28d4317c547a607a88b"
+          },
+          "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-003/compact-direct-003-three-feature-sequential-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "9802434a6cfdd0fabb04dca5a91e6ed3348872519b907236fdb815d5bedd5ee8",
+          "changed_lines_total": 1452,
+          "checks": {
+            "completion": "pass",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "completed_features": 3,
+          "condition": "compact-direct",
+          "id": "compact-direct-003",
+          "provider_actions": {
+            "apply_patch": 51,
+            "exec_command": 602,
+            "update_plan": 7
+          },
+          "provider_actions_by_stage": {
+            "implementation": {
+              "apply_patch": 47,
+              "exec_command": 247
+            },
+            "linearization": {
+              "apply_patch": 4,
+              "exec_command": 80,
+              "update_plan": 7
+            },
+            "review": {
+              "exec_command": 275
+            }
+          },
+          "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/compact-direct-003/compact-direct-003-three-feature-sequential-bench-artifacts/report.json",
+          "report_sha256": "a9a281be7eaf6414ebc23333f7f6fd28f4468b94f7958a913f6b579ec4babe6b",
+          "review_rounds": 7,
+          "rollout_integrity": [
+            {
+              "sha256": "c71cf01b795c14de2f0abfdfd307c2c69fdeebc791da2e4201d412e43cb65489",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T11-45-52-01a0520f-a7b7-74f0-8805-6056122aa04d.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a0520f-a7b7-74f0-8805-6056122aa04d",
+              "usage_changes": 73,
+              "usage_events": 73
+            },
+            {
+              "sha256": "b6a74922bdd22ebbeb861623b3891f613e20be17444cb1c84b68a841d24a3066",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T11-57-34-01a0521a-5c37-75d0-999b-57161ac7ade4.jsonl",
+              "stage": "review",
+              "thread_id": "01a0521a-5c37-75d0-999b-57161ac7ade4",
+              "usage_changes": 35,
+              "usage_events": 35
+            },
+            {
+              "sha256": "99f3a59770d81ab3b694eda58022307403c08e9d4938b6c60bf5d78c4164c99e",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-14-26-01a05229-cd5c-7bb3-9df5-ed0881d05d6f.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a05229-cd5c-7bb3-9df5-ed0881d05d6f",
+              "usage_changes": 30,
+              "usage_events": 30
+            },
+            {
+              "sha256": "77691b4833e1d2948987c7f826ac19d9ce3c523ce23bb6ed0bfa9ff44a746635",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-20-04-01a0522e-f5a7-7940-8c4e-fd49bceefaec.jsonl",
+              "stage": "review",
+              "thread_id": "01a0522e-f5a7-7940-8c4e-fd49bceefaec",
+              "usage_changes": 21,
+              "usage_events": 21
+            },
+            {
+              "sha256": "98ea7a95daabd50ad2db817e920c41d3ec5323d5b4a5567a64bf3f9c08e89570",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-25-06-01a05233-918b-7c40-aa18-ef25e424e53f.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a05233-918b-7c40-aa18-ef25e424e53f",
+              "usage_changes": 58,
+              "usage_events": 58
+            },
+            {
+              "sha256": "6a39686b602217f11e53715fe54f4d229c2b3121298cebaf85a5846b514d96c8",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-34-23-01a0523c-10a0-74c3-90aa-3714bf9d008f.jsonl",
+              "stage": "review",
+              "thread_id": "01a0523c-10a0-74c3-90aa-3714bf9d008f",
+              "usage_changes": 28,
+              "usage_events": 28
+            },
+            {
+              "sha256": "9c61c1e0e7ff69d5c48b48c5458e38dcf3dabd46428c7fc34078de78a706ceaf",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-52-52-01a0524c-fed3-7d12-bf5b-71291fb0958b.jsonl",
+              "stage": "linearization",
+              "thread_id": "01a0524c-fed3-7d12-bf5b-71291fb0958b",
+              "usage_changes": 42,
+              "usage_events": 42
+            }
+          ],
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 18993536,
+              "input_tokens": 19534268,
+              "output_tokens": 109985,
+              "raw_input_plus_output": 19644253,
+              "reasoning_output_tokens": 52323,
+              "uncached_input_plus_output": 650717,
+              "uncached_input_tokens": 540732
+            },
+            "linearization": {
+              "cached_input_tokens": 4851456,
+              "input_tokens": 5014596,
+              "output_tokens": 21480,
+              "raw_input_plus_output": 5036076,
+              "reasoning_output_tokens": 6538,
+              "uncached_input_plus_output": 184620,
+              "uncached_input_tokens": 163140
+            },
+            "review": {
+              "cached_input_tokens": 7708160,
+              "input_tokens": 8199729,
+              "output_tokens": 81072,
+              "raw_input_plus_output": 8280801,
+              "reasoning_output_tokens": 49287,
+              "uncached_input_plus_output": 572641,
+              "uncached_input_tokens": 491569
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 31553152,
+            "input_tokens": 32748593,
+            "output_tokens": 212537,
+            "raw_input_plus_output": 32961130,
+            "reasoning_output_tokens": 108148,
+            "uncached_input_plus_output": 1407978,
+            "uncached_input_tokens": 1195441
+          },
+          "usage_changes": 287,
+          "usage_changes_by_stage": {
+            "implementation": 161,
+            "linearization": 42,
+            "review": 84
+          },
+          "usage_events": 287,
+          "work_leaf_directives": {
+            "edit": 0,
+            "locks_run": 0,
+            "read": 0
+          },
+          "workflow_activity": {
+            "command_count": 615,
+            "command_output_bytes": 3220256,
+            "protocol_bytes": 100,
+            "repeated_commands": 115,
+            "structured_edit_submissions": 0,
+            "validation_commands": 49
+          },
+          "workflow_result": "pass"
+        }
+      ],
+      "runs": 3
+    },
+    "S": {
+      "changed_lines": [
+        1584,
+        1355,
+        1287
+      ],
+      "completed_features": 8,
+      "full_quality_runs": 2,
+      "mean_provider_actions": {
+        "apply_patch": 6.0,
+        "exec_command": 386.3333333333333,
+        "update_plan": 1.3333333333333333
+      },
+      "mean_provider_actions_by_stage": {
+        "implementation": {
+          "exec_command": 153.0
+        },
+        "linearization": {
+          "apply_patch": 6.0,
+          "exec_command": 86.33333333333333,
+          "update_plan": 1.3333333333333333
+        },
+        "review": {
+          "exec_command": 147.0
+        },
+        "title": {}
+      },
+      "mean_review_rounds": 10.666666666666666,
+      "mean_stage_usage": {
+        "implementation": {
+          "cached_input_tokens": 7771264.0,
+          "input_tokens": 8523076.333333334,
+          "output_tokens": 117109.0,
+          "raw_input_plus_output": 8640185.333333334,
+          "reasoning_output_tokens": 67282.66666666667,
+          "uncached_input_plus_output": 868921.3333333334,
+          "uncached_input_tokens": 751812.3333333334
+        },
+        "linearization": {
+          "cached_input_tokens": 4393600.0,
+          "input_tokens": 4577070.333333333,
+          "output_tokens": 23593.0,
+          "raw_input_plus_output": 4600663.333333333,
+          "reasoning_output_tokens": 8737.666666666666,
+          "uncached_input_plus_output": 207063.33333333334,
+          "uncached_input_tokens": 183470.33333333334
+        },
+        "review": {
+          "cached_input_tokens": 5310506.666666667,
+          "input_tokens": 5956195.333333333,
+          "output_tokens": 54006.666666666664,
+          "raw_input_plus_output": 6010202.0,
+          "reasoning_output_tokens": 35614.0,
+          "uncached_input_plus_output": 699695.3333333334,
+          "uncached_input_tokens": 645688.6666666666
+        },
+        "title": {
+          "cached_input_tokens": 50645.333333333336,
+          "input_tokens": 60230.0,
+          "output_tokens": 429.6666666666667,
+          "raw_input_plus_output": 60659.666666666664,
+          "reasoning_output_tokens": 394.3333333333333,
+          "uncached_input_plus_output": 10014.333333333334,
+          "uncached_input_tokens": 9584.666666666666
+        }
+      },
+      "mean_usage": {
+        "cached_input_tokens": 17526016.0,
+        "input_tokens": 19116572.0,
+        "output_tokens": 195138.33333333334,
+        "raw_input_plus_output": 19311710.333333332,
+        "reasoning_output_tokens": 112028.66666666667,
+        "uncached_input_plus_output": 1785694.3333333333,
+        "uncached_input_tokens": 1590556.0
+      },
+      "mean_usage_changes": 198.0,
+      "mean_usage_changes_by_stage": {
+        "implementation": 80.33333333333333,
+        "linearization": 55.0,
+        "review": 59.666666666666664,
+        "title": 3.0
+      },
+      "mean_work_leaf_directives": {
+        "edit": 11.666666666666666,
+        "locks_run": 11.333333333333334,
+        "read": 0.0
+      },
+      "mean_workflow_activity": {
+        "command_count": 418.6666666666667,
+        "command_output_bytes": 2710360.6666666665,
+        "protocol_bytes": 485226.0,
+        "repeated_commands": 39.0,
+        "structured_edit_submissions": 11.666666666666666,
+        "validation_commands": 21.666666666666668
+      },
+      "range": {
+        "raw_input_plus_output": {
+          "maximum": 23563172,
+          "minimum": 16704960
+        },
+        "uncached_input_plus_output": {
+          "maximum": 1957540,
+          "minimum": 1582144
+        }
+      },
+      "run_rows": [
+        {
+          "activation": {
+            "active": true,
+            "direct_read_mode": true,
+            "feature_starts": 3,
+            "interrupted_provider_turns": 0,
+            "log": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/logs/sequential-work-leaf-combined-001.log",
+            "log_sha256": "4241e7fdfd934e929881e3672aa634caccf2c23d5cd232b6e778d3086f83bea6",
+            "prior_feature_terminal_at_later_starts": [
+              true,
+              true
+            ]
+          },
+          "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/sequential-work-leaf-combined-001/sequential-work-leaf-combined-001-three-feature-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "0f6dbad15434d0133712b0cad1b56c3e9ff1d8c7c09eeabdea8c7bdd5783a079",
+          "changed_lines_total": 1584,
+          "checks": {
+            "completion": "fail",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "completed_features": 2,
+          "condition": "sequential-work-leaf-combined",
+          "id": "sequential-work-leaf-combined-001",
+          "provider_actions": {
+            "apply_patch": 3,
+            "exec_command": 353,
+            "update_plan": 4
+          },
+          "provider_actions_by_stage": {
+            "implementation": {
+              "exec_command": 147
+            },
+            "linearization": {
+              "apply_patch": 3,
+              "exec_command": 57,
+              "update_plan": 4
+            },
+            "review": {
+              "exec_command": 149
+            },
+            "title": {}
+          },
+          "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/sequential-work-leaf-combined-001/sequential-work-leaf-combined-001-three-feature-bench-artifacts/report.json",
+          "report_sha256": "fce679fbd905749d617d238158ccbabb249d13364e73b67c960491b7955ed049",
+          "review_rounds": 10,
+          "rollout_integrity": [
+            {
+              "sha256": "2381e46d5d8750fbb9d3edea96574d4e3f2ba21c94e83994f610265c3b7f3d20",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T10-22-55-01a051c3-b408-7cc1-bf9f-d983991cb9c3.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a051c3-b408-7cc1-bf9f-d983991cb9c3",
+              "usage_changes": 31,
+              "usage_events": 32
+            },
+            {
+              "sha256": "ec98d77baa7e9a1a98ff2386cc4cf07498fff6c49a1f75399cc774e1264c52ad",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T10-40-41-01a051d3-f8b1-78e3-9072-17feadd46095.jsonl",
+              "stage": "title",
+              "thread_id": "01a051d3-f8b1-78e3-9072-17feadd46095",
+              "usage_changes": 3,
+              "usage_events": 3
+            },
+            {
+              "sha256": "d7052c49a2ae868311f5a5d7800d093e4ec820808c681586ed3fa23fffe89dd8",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T10-40-41-01a051d3-f8bc-78a1-9613-ac19c243b413.jsonl",
+              "stage": "review",
+              "thread_id": "01a051d3-f8bc-78a1-9613-ac19c243b413",
+              "usage_changes": 27,
+              "usage_events": 27
+            },
+            {
+              "sha256": "ea1328fecd88fd890f7eac633b4bccf16344915dae4fd453c48731dfe38b4e8a",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T10-52-00-01a051de-557e-7b53-99c7-e1195bc58bbc.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a051de-557e-7b53-99c7-e1195bc58bbc",
+              "usage_changes": 15,
+              "usage_events": 15
+            },
+            {
+              "sha256": "4597ad9f9ae2f52f0f70688972e0fc6b79f0efef3a0a67dfdeb063bb0db5c4e5",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T10-55-53-01a051e1-e4b6-7841-906e-5ecd55e9f33d.jsonl",
+              "stage": "review",
+              "thread_id": "01a051e1-e4b6-7841-906e-5ecd55e9f33d",
+              "usage_changes": 17,
+              "usage_events": 17
+            },
+            {
+              "sha256": "a835d2a006e8a4dcf2adfeb0347ee338102342c6119107861a23e92f4194845f",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T10-58-46-01a051e4-8658-78e2-bd03-efba7ad9b527.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a051e4-8658-78e2-bd03-efba7ad9b527",
+              "usage_changes": 37,
+              "usage_events": 37
+            },
+            {
+              "sha256": "0770a6ddf05a6a7083fc2cc9b10d2843bbb155754f2220b7f432b7669e3ec083",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T11-10-56-01a051ef-ac39-7d72-b156-7d5af40fbdf9.jsonl",
+              "stage": "review",
+              "thread_id": "01a051ef-ac39-7d72-b156-7d5af40fbdf9",
+              "usage_changes": 18,
+              "usage_events": 18
+            },
+            {
+              "sha256": "6dfe0108f93afd32614e60e9eb2ae300c2201dc36595e37fabf0c9e5fb576c36",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T11-19-04-01a051f7-1c49-7b43-9a21-f9edafd5004f.jsonl",
+              "stage": "linearization",
+              "thread_id": "01a051f7-1c49-7b43-9a21-f9edafd5004f",
+              "usage_changes": 37,
+              "usage_events": 37
+            }
+          ],
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 7342208,
+              "input_tokens": 8008519,
+              "output_tokens": 100071,
+              "raw_input_plus_output": 8108590,
+              "reasoning_output_tokens": 55411,
+              "uncached_input_plus_output": 766382,
+              "uncached_input_tokens": 666311
+            },
+            "linearization": {
+              "cached_input_tokens": 2823040,
+              "input_tokens": 2996841,
+              "output_tokens": 19431,
+              "raw_input_plus_output": 3016272,
+              "reasoning_output_tokens": 7915,
+              "uncached_input_plus_output": 193232,
+              "uncached_input_tokens": 173801
+            },
+            "review": {
+              "cached_input_tokens": 4908288,
+              "input_tokens": 5469935,
+              "output_tokens": 49527,
+              "raw_input_plus_output": 5519462,
+              "reasoning_output_tokens": 31272,
+              "uncached_input_plus_output": 611174,
+              "uncached_input_tokens": 561647
+            },
+            "title": {
+              "cached_input_tokens": 49280,
+              "input_tokens": 60233,
+              "output_tokens": 403,
+              "raw_input_plus_output": 60636,
+              "reasoning_output_tokens": 367,
+              "uncached_input_plus_output": 11356,
+              "uncached_input_tokens": 10953
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 15122816,
+            "input_tokens": 16535528,
+            "output_tokens": 169432,
+            "raw_input_plus_output": 16704960,
+            "reasoning_output_tokens": 94965,
+            "uncached_input_plus_output": 1582144,
+            "uncached_input_tokens": 1412712
+          },
+          "usage_changes": 185,
+          "usage_changes_by_stage": {
+            "implementation": 83,
+            "linearization": 37,
+            "review": 62,
+            "title": 3
+          },
+          "usage_events": 186,
+          "work_leaf_directives": {
+            "edit": 14,
+            "locks_run": 13,
+            "read": 0
+          },
+          "workflow_activity": {
+            "command_count": 380,
+            "command_output_bytes": 2372651,
+            "protocol_bytes": 504540,
+            "repeated_commands": 26,
+            "structured_edit_submissions": 14,
+            "validation_commands": 28
+          },
+          "workflow_result": "pass"
+        },
+        {
+          "activation": {
+            "active": true,
+            "direct_read_mode": true,
+            "feature_starts": 3,
+            "interrupted_provider_turns": 0,
+            "log": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/logs/sequential-work-leaf-combined-002.log",
+            "log_sha256": "8de1c9a70f69015d079ad1516111815fd3caf72016a4a3830b80528df16b2af0",
+            "prior_feature_terminal_at_later_starts": [
+              true,
+              true
+            ]
+          },
+          "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/sequential-work-leaf-combined-002/sequential-work-leaf-combined-002-three-feature-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "cb8c84b2ffbf0c4a99d25105a75e3605618870410b8c1c9220ad6c23bb3b28b8",
+          "changed_lines_total": 1355,
+          "checks": {
+            "completion": "pass",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "completed_features": 3,
+          "condition": "sequential-work-leaf-combined",
+          "id": "sequential-work-leaf-combined-002",
+          "provider_actions": {
+            "apply_patch": 8,
+            "exec_command": 393
+          },
+          "provider_actions_by_stage": {
+            "implementation": {
+              "exec_command": 159
+            },
+            "linearization": {
+              "apply_patch": 8,
+              "exec_command": 88
+            },
+            "review": {
+              "exec_command": 146
+            },
+            "title": {}
+          },
+          "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/sequential-work-leaf-combined-002/sequential-work-leaf-combined-002-three-feature-bench-artifacts/report.json",
+          "report_sha256": "1e3b1a4b517d1d6b17caac62e79cafde6990e373a39519151011a1429ade7b53",
+          "review_rounds": 10,
+          "rollout_integrity": [
+            {
+              "sha256": "325d739086cf277155f2d5168043cb35cc28b9b0211a3b3936a6d7a496bcead4",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T11-45-53-01a0520f-a9ba-7ee0-91da-b41d4afdb0e8.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a0520f-a9ba-7ee0-91da-b41d4afdb0e8",
+              "usage_changes": 27,
+              "usage_events": 28
+            },
+            {
+              "sha256": "9f0d400be189eada90260fe4bdf3c2559cb49e8c7c38b2fdab3f74f51945f1a7",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-10-19-01a05226-07b6-7ad2-a6f2-89b3d65cdbd4.jsonl",
+              "stage": "review",
+              "thread_id": "01a05226-07b6-7ad2-a6f2-89b3d65cdbd4",
+              "usage_changes": 21,
+              "usage_events": 21
+            },
+            {
+              "sha256": "4a9582f9d09ba35dd47e757672fd8d613d123d3dbebda8e1cc54c73db0a05282",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-10-19-01a05226-07c0-78f0-b77d-aac7dd0a2ced.jsonl",
+              "stage": "title",
+              "thread_id": "01a05226-07c0-78f0-b77d-aac7dd0a2ced",
+              "usage_changes": 3,
+              "usage_events": 3
+            },
+            {
+              "sha256": "a3701497be6936fe194644789bc7880cf46fb6bd7ec5c9f7971c16998fe5d3ca",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-18-54-01a0522d-e636-7141-81e2-0161c1261a74.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a0522d-e636-7141-81e2-0161c1261a74",
+              "usage_changes": 21,
+              "usage_events": 21
+            },
+            {
+              "sha256": "84fb4030c1fc6668fb418dee90099ca419463746b48164c58ade10110456d4f6",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-25-30-01a05233-ee57-71a2-91b8-1c4756d5b294.jsonl",
+              "stage": "review",
+              "thread_id": "01a05233-ee57-71a2-91b8-1c4756d5b294",
+              "usage_changes": 13,
+              "usage_events": 13
+            },
+            {
+              "sha256": "fa84f92300a26d26c1b10e14af03ca1b57afea6dcc8ed26cd15462db6a65dc73",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-29-28-01a05237-90b9-74a2-aab4-f4d8c5d558d3.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a05237-90b9-74a2-aab4-f4d8c5d558d3",
+              "usage_changes": 23,
+              "usage_events": 24
+            },
+            {
+              "sha256": "1b3c688db73bc6e13af1e36a14a45a2acfcfbbc31d8fee8c41a9e5fd69ccb1a6",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-45-52-01a05246-9362-7783-9b44-e7331c674526.jsonl",
+              "stage": "review",
+              "thread_id": "01a05246-9362-7783-9b44-e7331c674526",
+              "usage_changes": 21,
+              "usage_events": 21
+            },
+            {
+              "sha256": "e9deb9fc68220e07f7a3310a13488dd1d05d3fdf61f2ddf40204bc90a6d29d8d",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-52-07-01a0524c-4d9c-7d23-99dc-f139f29d31a0.jsonl",
+              "stage": "linearization",
+              "thread_id": "01a0524c-4d9c-7d23-99dc-f139f29d31a0",
+              "usage_changes": 58,
+              "usage_events": 58
+            }
+          ],
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 6387328,
+              "input_tokens": 7158690,
+              "output_tokens": 127237,
+              "raw_input_plus_output": 7285927,
+              "reasoning_output_tokens": 77236,
+              "uncached_input_plus_output": 898599,
+              "uncached_input_tokens": 771362
+            },
+            "linearization": {
+              "cached_input_tokens": 4428544,
+              "input_tokens": 4617881,
+              "output_tokens": 19483,
+              "raw_input_plus_output": 4637364,
+              "reasoning_output_tokens": 4800,
+              "uncached_input_plus_output": 208820,
+              "uncached_input_tokens": 189337
+            },
+            "review": {
+              "cached_input_tokens": 4982400,
+              "input_tokens": 5632519,
+              "output_tokens": 50614,
+              "raw_input_plus_output": 5683133,
+              "reasoning_output_tokens": 33152,
+              "uncached_input_plus_output": 700733,
+              "uncached_input_tokens": 650119
+            },
+            "title": {
+              "cached_input_tokens": 51328,
+              "input_tokens": 60224,
+              "output_tokens": 351,
+              "raw_input_plus_output": 60575,
+              "reasoning_output_tokens": 316,
+              "uncached_input_plus_output": 9247,
+              "uncached_input_tokens": 8896
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 15849600,
+            "input_tokens": 17469314,
+            "output_tokens": 197685,
+            "raw_input_plus_output": 17666999,
+            "reasoning_output_tokens": 115504,
+            "uncached_input_plus_output": 1817399,
+            "uncached_input_tokens": 1619714
+          },
+          "usage_changes": 187,
+          "usage_changes_by_stage": {
+            "implementation": 71,
+            "linearization": 58,
+            "review": 55,
+            "title": 3
+          },
+          "usage_events": 189,
+          "work_leaf_directives": {
+            "edit": 9,
+            "locks_run": 6,
+            "read": 0
+          },
+          "workflow_activity": {
+            "command_count": 420,
+            "command_output_bytes": 2669310,
+            "protocol_bytes": 434658,
+            "repeated_commands": 46,
+            "structured_edit_submissions": 9,
+            "validation_commands": 9
+          },
+          "workflow_result": "pass"
+        },
+        {
+          "activation": {
+            "active": true,
+            "direct_read_mode": true,
+            "feature_starts": 3,
+            "interrupted_provider_turns": 0,
+            "log": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/logs/sequential-work-leaf-combined-003.log",
+            "log_sha256": "d8d5e3c0c01a90de144b65ecaefe8820d5a2a0aaca8097035d22990717e51784",
+            "prior_feature_terminal_at_later_starts": [
+              true,
+              true
+            ]
+          },
+          "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/sequential-work-leaf-combined-003/sequential-work-leaf-combined-003-three-feature-bench-artifacts/observation/analysis.json",
+          "analysis_sha256": "4d6330460249da19c12cf80d9056cd0c17148c6822c893c1678d6f6e08b452f8",
+          "changed_lines_total": 1287,
+          "checks": {
+            "completion": "pass",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "completed_features": 3,
+          "condition": "sequential-work-leaf-combined",
+          "id": "sequential-work-leaf-combined-003",
+          "provider_actions": {
+            "apply_patch": 7,
+            "exec_command": 413
+          },
+          "provider_actions_by_stage": {
+            "implementation": {
+              "exec_command": 153
+            },
+            "linearization": {
+              "apply_patch": 7,
+              "exec_command": 114
+            },
+            "review": {
+              "exec_command": 146
+            },
+            "title": {}
+          },
+          "report": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/runs/sequential-work-leaf-combined-003/sequential-work-leaf-combined-003-three-feature-bench-artifacts/report.json",
+          "report_sha256": "9f0d3083766265c9b3b41fd415ceb4237e9fec340116e71ecff9105ce63ec22c",
+          "review_rounds": 12,
+          "rollout_integrity": [
+            {
+              "sha256": "2c649971e3255f8e0dba2506e7650a219cd33bab9ca144e1bd7668deb225ed87",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T11-45-53-01a0520f-a984-7a61-b8b9-5261fb2639f4.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a0520f-a984-7a61-b8b9-5261fb2639f4",
+              "usage_changes": 44,
+              "usage_events": 45
+            },
+            {
+              "sha256": "01dddda7639c76c0261e946f099698b7506ea3418aa486483d1b20de51b61352",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-08-37-01a05224-7917-7b80-a4ce-a5dd0d6c2d7f.jsonl",
+              "stage": "title",
+              "thread_id": "01a05224-7917-7b80-a4ce-a5dd0d6c2d7f",
+              "usage_changes": 3,
+              "usage_events": 3
+            },
+            {
+              "sha256": "de6d0a9852d8292cc32b8c1eb884919adca17f7e4a7ea66f408dead149f7a926",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-08-37-01a05224-7931-7c62-a90b-2797fcef4af2.jsonl",
+              "stage": "review",
+              "thread_id": "01a05224-7931-7c62-a90b-2797fcef4af2",
+              "usage_changes": 26,
+              "usage_events": 26
+            },
+            {
+              "sha256": "c2d5abdcd56adaad84d69987eed933a36908e158fd1b322fa34999f7f500bdc6",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-24-39-01a05233-29ef-7b82-a0a7-3f51d287e37d.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a05233-29ef-7b82-a0a7-3f51d287e37d",
+              "usage_changes": 14,
+              "usage_events": 14
+            },
+            {
+              "sha256": "a1a8bded3b4b501afabe1d801c221e1770cda6a7e9780f1d607c312607db6442",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-29-08-01a05237-418b-7762-9878-23ae3c2a1bab.jsonl",
+              "stage": "review",
+              "thread_id": "01a05237-418b-7762-9878-23ae3c2a1bab",
+              "usage_changes": 12,
+              "usage_events": 12
+            },
+            {
+              "sha256": "f1b86f63ee7cf04b928571a9eba13b5117e9f64b1156203b2d2d3845bb9cddc8",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-32-35-01a0523a-6d5d-7630-bd34-3943e98137ed.jsonl",
+              "stage": "implementation",
+              "thread_id": "01a0523a-6d5d-7630-bd34-3943e98137ed",
+              "usage_changes": 29,
+              "usage_events": 29
+            },
+            {
+              "sha256": "58200fe330d3fca9c8b2fce0da4135f0e02d5b434fad267a8236073616a278ce",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-44-40-01a05245-7d33-7272-8511-0d93d6a9f285.jsonl",
+              "stage": "review",
+              "thread_id": "01a05245-7d33-7272-8511-0d93d6a9f285",
+              "usage_changes": 24,
+              "usage_events": 24
+            },
+            {
+              "sha256": "caa36267c315cb273a45f73ba3a9d080986fcc14da0db57a461ac63d3b64b591",
+              "source": "/home/user/.codex/sessions/2026/08/30/rollout-2026-08-30T12-52-33-01a0524c-b379-76d0-beef-8ae2c8db35c0.jsonl",
+              "stage": "linearization",
+              "thread_id": "01a0524c-b379-76d0-beef-8ae2c8db35c0",
+              "usage_changes": 70,
+              "usage_events": 70
+            }
+          ],
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 9584256,
+              "input_tokens": 10402020,
+              "output_tokens": 124019,
+              "raw_input_plus_output": 10526039,
+              "reasoning_output_tokens": 69201,
+              "uncached_input_plus_output": 941783,
+              "uncached_input_tokens": 817764
+            },
+            "linearization": {
+              "cached_input_tokens": 5929216,
+              "input_tokens": 6116489,
+              "output_tokens": 31865,
+              "raw_input_plus_output": 6148354,
+              "reasoning_output_tokens": 13498,
+              "uncached_input_plus_output": 219138,
+              "uncached_input_tokens": 187273
+            },
+            "review": {
+              "cached_input_tokens": 6040832,
+              "input_tokens": 6766132,
+              "output_tokens": 61879,
+              "raw_input_plus_output": 6828011,
+              "reasoning_output_tokens": 42418,
+              "uncached_input_plus_output": 787179,
+              "uncached_input_tokens": 725300
+            },
+            "title": {
+              "cached_input_tokens": 51328,
+              "input_tokens": 60233,
+              "output_tokens": 535,
+              "raw_input_plus_output": 60768,
+              "reasoning_output_tokens": 500,
+              "uncached_input_plus_output": 9440,
+              "uncached_input_tokens": 8905
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 21605632,
+            "input_tokens": 23344874,
+            "output_tokens": 218298,
+            "raw_input_plus_output": 23563172,
+            "reasoning_output_tokens": 125617,
+            "uncached_input_plus_output": 1957540,
+            "uncached_input_tokens": 1739242
+          },
+          "usage_changes": 222,
+          "usage_changes_by_stage": {
+            "implementation": 87,
+            "linearization": 70,
+            "review": 62,
+            "title": 3
+          },
+          "usage_events": 223,
+          "work_leaf_directives": {
+            "edit": 12,
+            "locks_run": 15,
+            "read": 0
+          },
+          "workflow_activity": {
+            "command_count": 456,
+            "command_output_bytes": 3089121,
+            "protocol_bytes": 516480,
+            "repeated_commands": 45,
+            "structured_edit_submissions": 12,
+            "validation_commands": 28
+          },
+          "workflow_result": "pass"
+        }
+      ],
+      "runs": 3
+    },
+    "W": {
+      "completed_features": 13,
+      "full_quality_runs": 2,
+      "mean_input_context_per_usage_change": 81359.23155416011,
+      "mean_usage": {
+        "cached_input_tokens": 16128128.0,
+        "input_tokens": 17275276.833333332,
+        "output_tokens": 196255.16666666666,
+        "raw_input_plus_output": 17471532.0,
+        "reasoning_output_tokens": 109976.0,
+        "uncached_input_plus_output": 1343404.0,
+        "uncached_input_tokens": 1147148.8333333333
+      },
+      "mean_usage_changes": 212.33333333333334,
+      "range": {
+        "raw_input_plus_output": {
+          "maximum": 21800967,
+          "minimum": 13214206
+        },
+        "uncached_input_plus_output": {
+          "maximum": 1497991,
+          "minimum": 1179134
+        }
+      },
+      "run_rows": [
+        {
+          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/observation/analysis-cumulative.json",
+          "analysis_sha256": "cc882f8ca18f8e193489fd90c0f49956fdef64981738198dc34ec55074f509e7",
+          "completed_features": 2,
+          "group": "work_leaf",
+          "id": "exact-normal-001",
+          "input_tokens_per_usage_change": 87697.11403508772,
+          "quality": {
+            "completion": "fail",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "report": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/report.json",
+          "report_sha256": "f7697ded0326681b039027bbc83eae92551fcb0edcfc20c800844858495c6694",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 10525952,
+              "input_tokens": 11267653,
+              "output_tokens": 151299,
+              "raw_input_plus_output": 11418952,
+              "reasoning_output_tokens": 77155,
+              "uncached_input_plus_output": 893000,
+              "uncached_input_tokens": 741701,
+              "usage_changes": 118
+            },
+            "linearization": {
+              "cached_input_tokens": 5242496,
+              "input_tokens": 5445226,
+              "output_tokens": 31201,
+              "raw_input_plus_output": 5476427,
+              "reasoning_output_tokens": 13205,
+              "uncached_input_plus_output": 233931,
+              "uncached_input_tokens": 202730,
+              "usage_changes": 63
+            },
+            "review": {
+              "cached_input_tokens": 2932224,
+              "input_tokens": 3221422,
+              "output_tokens": 43896,
+              "raw_input_plus_output": 3265318,
+              "reasoning_output_tokens": 32061,
+              "uncached_input_plus_output": 333094,
+              "uncached_input_tokens": 289198,
+              "usage_changes": 44
+            },
+            "title": {
+              "cached_input_tokens": 49280,
+              "input_tokens": 60641,
+              "output_tokens": 376,
+              "raw_input_plus_output": 61017,
+              "reasoning_output_tokens": 341,
+              "uncached_input_plus_output": 11737,
+              "uncached_input_tokens": 11361,
+              "usage_changes": 3
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 18749952,
+            "input_tokens": 19994942,
+            "output_tokens": 226772,
+            "raw_input_plus_output": 20221714,
+            "reasoning_output_tokens": 122762,
+            "uncached_input_plus_output": 1471762,
+            "uncached_input_tokens": 1244990
+          },
+          "usage_changes": 228,
+          "usage_events": 230,
+          "workflow_activity": {
+            "command_count": 292,
+            "command_output_bytes": 1966688,
+            "protocol_bytes": 596436,
+            "repeated_commands": 18,
+            "validation_commands": 22
+          }
+        },
+        {
+          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/observation/analysis-cumulative.json",
+          "analysis_sha256": "e98d64e50ec37753de19346fcf0baee918873952238a345a113a604dc72c9ff0",
+          "completed_features": 3,
+          "group": "work_leaf",
+          "id": "exact-normal-002",
+          "input_tokens_per_usage_change": 74223.74431818182,
+          "quality": {
+            "completion": "pass",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "report": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/report.json",
+          "report_sha256": "70e80066156aab07c0ef64fc2ec4daecbacf8f20445044f37c445bac78e28e1e",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 5353984,
+              "input_tokens": 5927531,
+              "output_tokens": 93852,
+              "raw_input_plus_output": 6021383,
+              "reasoning_output_tokens": 42885,
+              "uncached_input_plus_output": 667399,
+              "uncached_input_tokens": 573547,
+              "usage_changes": 76
+            },
+            "linearization": {
+              "cached_input_tokens": 2353664,
+              "input_tokens": 2493630,
+              "output_tokens": 15585,
+              "raw_input_plus_output": 2509215,
+              "reasoning_output_tokens": 4944,
+              "uncached_input_plus_output": 155551,
+              "uncached_input_tokens": 139966,
+              "usage_changes": 36
+            },
+            "review": {
+              "cached_input_tokens": 4276096,
+              "input_tokens": 4581584,
+              "output_tokens": 40985,
+              "raw_input_plus_output": 4622569,
+              "reasoning_output_tokens": 28876,
+              "uncached_input_plus_output": 346473,
+              "uncached_input_tokens": 305488,
+              "usage_changes": 61
+            },
+            "title": {
+              "cached_input_tokens": 51328,
+              "input_tokens": 60634,
+              "output_tokens": 405,
+              "raw_input_plus_output": 61039,
+              "reasoning_output_tokens": 370,
+              "uncached_input_plus_output": 9711,
+              "uncached_input_tokens": 9306,
+              "usage_changes": 3
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 12035072,
+            "input_tokens": 13063379,
+            "output_tokens": 150827,
+            "raw_input_plus_output": 13214206,
+            "reasoning_output_tokens": 77075,
+            "uncached_input_plus_output": 1179134,
+            "uncached_input_tokens": 1028307
+          },
+          "usage_changes": 176,
+          "usage_events": 182,
+          "workflow_activity": {
+            "command_count": 207,
+            "command_output_bytes": 1817766,
+            "protocol_bytes": 478297,
+            "repeated_commands": 12,
+            "validation_commands": 11
+          }
+        },
+        {
+          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/observation/analysis-cumulative.json",
+          "analysis_sha256": "5012980eb7e32eaf836591453e049ec4861bd5dc552314fcc55ae529d210b2a0",
+          "completed_features": 3,
+          "group": "work_leaf",
+          "id": "exact-normal-003",
+          "input_tokens_per_usage_change": 72895.87046632124,
+          "quality": {
+            "completion": "pass",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "report": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/report.json",
+          "report_sha256": "2204c623092127c272aefafa2d3ae01f4a3c6640be325bbcd614e5e478a4f30e",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 5576960,
+              "input_tokens": 6072742,
+              "output_tokens": 103996,
+              "raw_input_plus_output": 6176738,
+              "reasoning_output_tokens": 65817,
+              "uncached_input_plus_output": 599778,
+              "uncached_input_tokens": 495782,
+              "usage_changes": 78
+            },
+            "linearization": {
+              "cached_input_tokens": 2457472,
+              "input_tokens": 2582101,
+              "output_tokens": 19212,
+              "raw_input_plus_output": 2601313,
+              "reasoning_output_tokens": 6710,
+              "uncached_input_plus_output": 143841,
+              "uncached_input_tokens": 124629,
+              "usage_changes": 45
+            },
+            "review": {
+              "cached_input_tokens": 4969600,
+              "input_tokens": 5353435,
+              "output_tokens": 51129,
+              "raw_input_plus_output": 5404564,
+              "reasoning_output_tokens": 34920,
+              "uncached_input_plus_output": 434964,
+              "uncached_input_tokens": 383835,
+              "usage_changes": 67
+            },
+            "title": {
+              "cached_input_tokens": 51328,
+              "input_tokens": 60625,
+              "output_tokens": 467,
+              "raw_input_plus_output": 61092,
+              "reasoning_output_tokens": 431,
+              "uncached_input_plus_output": 9764,
+              "uncached_input_tokens": 9297,
+              "usage_changes": 3
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 13055360,
+            "input_tokens": 14068903,
+            "output_tokens": 174804,
+            "raw_input_plus_output": 14243707,
+            "reasoning_output_tokens": 107878,
+            "uncached_input_plus_output": 1188347,
+            "uncached_input_tokens": 1013543
+          },
+          "usage_changes": 193,
+          "usage_events": 213,
+          "workflow_activity": {
+            "command_count": 266,
+            "command_output_bytes": 1722714,
+            "protocol_bytes": 495890,
+            "repeated_commands": 13,
+            "validation_commands": 36
+          }
+        },
+        {
+          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-004/exact-normal-004-three-feature-bench-artifacts/observation/analysis-cumulative.json",
+          "analysis_sha256": "f16979427c65eab05a64a5fe6ed52ddbbe7932ee460f356c8a79b91cd3b50caf",
+          "completed_features": 1,
+          "group": "work_leaf",
+          "id": "exact-normal-004",
+          "input_tokens_per_usage_change": 77813.47263681592,
+          "quality": {
+            "completion": "fail",
+            "status": "pass",
+            "visual": "fail"
+          },
+          "report": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-004/exact-normal-004-three-feature-bench-artifacts/report.json",
+          "report_sha256": "062fa443d5241276a812adc405ec6802060ab9cca1602344115d56d428a176c1",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 6155008,
+              "input_tokens": 6789344,
+              "output_tokens": 93570,
+              "raw_input_plus_output": 6882914,
+              "reasoning_output_tokens": 59364,
+              "uncached_input_plus_output": 727906,
+              "uncached_input_tokens": 634336,
+              "usage_changes": 90
+            },
+            "linearization": {
+              "cached_input_tokens": 4933504,
+              "input_tokens": 5147648,
+              "output_tokens": 22951,
+              "raw_input_plus_output": 5170599,
+              "reasoning_output_tokens": 8655,
+              "uncached_input_plus_output": 237095,
+              "uncached_input_tokens": 214144,
+              "usage_changes": 53
+            },
+            "review": {
+              "cached_input_tokens": 3302016,
+              "input_tokens": 3642870,
+              "output_tokens": 40998,
+              "raw_input_plus_output": 3683868,
+              "reasoning_output_tokens": 31070,
+              "uncached_input_plus_output": 381852,
+              "uncached_input_tokens": 340854,
+              "usage_changes": 55
+            },
+            "title": {
+              "cached_input_tokens": 59520,
+              "input_tokens": 60646,
+              "output_tokens": 380,
+              "raw_input_plus_output": 61026,
+              "reasoning_output_tokens": 345,
+              "uncached_input_plus_output": 1506,
+              "uncached_input_tokens": 1126,
+              "usage_changes": 3
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 14450048,
+            "input_tokens": 15640508,
+            "output_tokens": 157899,
+            "raw_input_plus_output": 15798407,
+            "reasoning_output_tokens": 99434,
+            "uncached_input_plus_output": 1348359,
+            "uncached_input_tokens": 1190460
+          },
+          "usage_changes": 201,
+          "usage_events": 201,
+          "workflow_activity": {
+            "command_count": 264,
+            "command_output_bytes": 2042737,
+            "protocol_bytes": 472040,
+            "repeated_commands": 16,
+            "validation_commands": 10
+          }
+        },
+        {
+          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/observation/analysis-cumulative.json",
+          "analysis_sha256": "ab957fb21a016c9a1004bafe9ee75875c09ed18216bf2cec54fc3b635a1c3458",
+          "completed_features": 2,
+          "group": "work_leaf",
+          "id": "exact-normal-005",
+          "input_tokens_per_usage_change": 88697.81069958847,
+          "quality": {
+            "completion": "fail",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "report": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/report.json",
+          "report_sha256": "60171a9173a99bc27756a0d48de5a33e054cc71cc929d3d298cefec3b6b391e1",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 9502720,
+              "input_tokens": 10191498,
+              "output_tokens": 155093,
+              "raw_input_plus_output": 10346591,
+              "reasoning_output_tokens": 79277,
+              "uncached_input_plus_output": 843871,
+              "uncached_input_tokens": 688778,
+              "usage_changes": 112
+            },
+            "linearization": {
+              "cached_input_tokens": 3598720,
+              "input_tokens": 3787288,
+              "output_tokens": 22139,
+              "raw_input_plus_output": 3809427,
+              "reasoning_output_tokens": 7557,
+              "uncached_input_plus_output": 210707,
+              "uncached_input_tokens": 188568,
+              "usage_changes": 41
+            },
+            "review": {
+              "cached_input_tokens": 7150208,
+              "input_tokens": 7514141,
+              "output_tokens": 69689,
+              "raw_input_plus_output": 7583830,
+              "reasoning_output_tokens": 47029,
+              "uncached_input_plus_output": 433622,
+              "uncached_input_tokens": 363933,
+              "usage_changes": 87
+            },
+            "title": {
+              "cached_input_tokens": 51328,
+              "input_tokens": 60641,
+              "output_tokens": 478,
+              "raw_input_plus_output": 61119,
+              "reasoning_output_tokens": 444,
+              "uncached_input_plus_output": 9791,
+              "uncached_input_tokens": 9313,
+              "usage_changes": 3
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 20302976,
+            "input_tokens": 21553568,
+            "output_tokens": 247399,
+            "raw_input_plus_output": 21800967,
+            "reasoning_output_tokens": 134307,
+            "uncached_input_plus_output": 1497991,
+            "uncached_input_tokens": 1250592
+          },
+          "usage_changes": 243,
+          "usage_events": 246,
+          "workflow_activity": {
+            "command_count": 284,
+            "command_output_bytes": 2212686,
+            "protocol_bytes": 645182,
+            "repeated_commands": 11,
+            "validation_commands": 15
+          }
+        },
+        {
+          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/observation/analysis-cumulative.json",
+          "analysis_sha256": "e33daf919d4ff15be5695fdd6b50cbe0e9fa09f000202686ace5f42acb62c2a2",
+          "completed_features": 2,
+          "group": "work_leaf",
+          "id": "exact-normal-006",
+          "input_tokens_per_usage_change": 82962.92274678111,
+          "quality": {
+            "completion": "fail",
+            "status": "pass",
+            "visual": "pass"
+          },
+          "report": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/report.json",
+          "report_sha256": "a1b24490b68b7bd74c1e43cc50f7fdeabbf5ec9a76ad1e518afb269b20f7fbca",
+          "stages": {
+            "implementation": {
+              "cached_input_tokens": 11238784,
+              "input_tokens": 11961990,
+              "output_tokens": 153255,
+              "raw_input_plus_output": 12115245,
+              "reasoning_output_tokens": 77874,
+              "uncached_input_plus_output": 876461,
+              "uncached_input_tokens": 723206,
+              "usage_changes": 121
+            },
+            "linearization": {
+              "cached_input_tokens": 2978560,
+              "input_tokens": 3102058,
+              "output_tokens": 19322,
+              "raw_input_plus_output": 3121380,
+              "reasoning_output_tokens": 7874,
+              "uncached_input_plus_output": 142820,
+              "uncached_input_tokens": 123498,
+              "usage_changes": 50
+            },
+            "review": {
+              "cached_input_tokens": 3898496,
+              "input_tokens": 4205681,
+              "output_tokens": 46869,
+              "raw_input_plus_output": 4252550,
+              "reasoning_output_tokens": 32302,
+              "uncached_input_plus_output": 354054,
+              "uncached_input_tokens": 307185,
+              "usage_changes": 59
+            },
+            "title": {
+              "cached_input_tokens": 59520,
+              "input_tokens": 60632,
+              "output_tokens": 384,
+              "raw_input_plus_output": 61016,
+              "reasoning_output_tokens": 350,
+              "uncached_input_plus_output": 1496,
+              "uncached_input_tokens": 1112,
+              "usage_changes": 3
+            }
+          },
+          "usage": {
+            "cached_input_tokens": 18175360,
+            "input_tokens": 19330361,
+            "output_tokens": 219830,
+            "raw_input_plus_output": 19550191,
+            "reasoning_output_tokens": 118400,
+            "uncached_input_plus_output": 1374831,
+            "uncached_input_tokens": 1155001
+          },
+          "usage_changes": 233,
+          "usage_events": 234,
+          "workflow_activity": {
+            "command_count": 262,
+            "command_output_bytes": 1772001,
+            "protocol_bytes": 693873,
+            "repeated_commands": 19,
+            "validation_commands": 16
+          }
+        }
+      ],
+      "runs": 6
+    }
+  },
+  "ordered_attribution": {
+    "raw": {
+      "allocated_tokens": 18644849.666666664,
+      "conditions": {
+        "C": 19399622.0,
+        "D": 36116381.666666664,
+        "L": 35659264.666666664,
+        "S": 19311710.333333332,
+        "W": 17471532.0
+      },
+      "endpoint_gap": 18644849.666666664,
+      "steps": [
+        {
+          "left": "D",
+          "name": "compact_linearization",
+          "right": "L",
+          "share_of_endpoint_gap_percent": 2.451706547236128,
+          "tokens": 457117.0
+        },
+        {
+          "left": "L",
+          "name": "work_leaf_orchestration",
+          "right": "S",
+          "share_of_endpoint_gap_percent": 87.67865992805271,
+          "tokens": 16347554.333333332
+        },
+        {
+          "left": "S",
+          "name": "concurrent_scheduling",
+          "right": "C",
+          "share_of_endpoint_gap_percent": -0.47150643871286735,
+          "tokens": -87911.66666666791
+        },
+        {
+          "left": "C",
+          "name": "mediated_reads_and_interruption",
+          "right": "W",
+          "share_of_endpoint_gap_percent": 10.341139963424038,
+          "tokens": 1928090.0
+        }
+      ],
+      "unallocated_tokens": 0.0
+    },
+    "uncached": {
+      "allocated_tokens": 265308.33333333326,
+      "conditions": {
+        "C": 2063174.0,
+        "D": 1608712.3333333333,
+        "L": 1547136.6666666667,
+        "S": 1785694.3333333333,
+        "W": 1343404.0
+      },
+      "endpoint_gap": 265308.33333333326,
+      "steps": [
+        {
+          "left": "D",
+          "name": "compact_linearization",
+          "right": "L",
+          "share_of_endpoint_gap_percent": 23.209096334453573,
+          "tokens": 61575.66666666651
+        },
+        {
+          "left": "L",
+          "name": "work_leaf_orchestration",
+          "right": "S",
+          "share_of_endpoint_gap_percent": -89.9171404340861,
+          "tokens": -238557.6666666665
+        },
+        {
+          "left": "S",
+          "name": "concurrent_scheduling",
+          "right": "C",
+          "share_of_endpoint_gap_percent": -104.58761818010498,
+          "tokens": -277479.66666666674
+        },
+        {
+          "left": "C",
+          "name": "mediated_reads_and_interruption",
+          "right": "W",
+          "share_of_endpoint_gap_percent": 271.2956622797375,
+          "tokens": 719770.0
+        }
+      ],
+      "unallocated_tokens": 0.0
+    }
+  },
+  "quality_file": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/quality.json",
+  "quality_file_sha256": "849c523d9eb20ebf2e180310b2bcc339517c38845c112464ec2fab4319597caf",
+  "schema_version": 1,
+  "source_evidence": {
+    "prior": "/home/user/src/work-leaf/bench-results/efficiency-causal-validation-20260829T210343Z/combined-evidence.json",
+    "prior_sha256": "b8930b8c02b221a1ef10e90181a6c40ab61498b0232ec0c2de33d1375afc2658"
+  },
+  "status": "complete",
+  "study": "efficiency-mechanism-attribution-20260830T081131Z",
+  "work_leaf_orchestration_behavior": {
+    "native_exec_calls": {
+      "implementation": {
+        "compact_direct": 279.3333333333333,
+        "sequential_work_leaf": 153.0
+      },
+      "linearization": {
+        "compact_direct": 87.33333333333333,
+        "sequential_work_leaf": 86.33333333333333
+      },
+      "review": {
+        "compact_direct": 249.33333333333334,
+        "sequential_work_leaf": 147.0
+      }
+    },
+    "patch_agent_writes": {
+      "compact_direct_native_apply_patch_calls": 55.0,
+      "sequential_work_leaf_native_apply_patch_calls": 0.0,
+      "sequential_work_leaf_structured_edit_submissions": 11.666666666666666
+    },
+    "provider_usage_changes": {
+      "by_stage": {
+        "implementation": {
+          "compact_direct": 186.66666666666666,
+          "sequential_work_leaf": 80.33333333333333
+        },
+        "linearization": {
+          "compact_direct": 45.333333333333336,
+          "sequential_work_leaf": 55.0
+        },
+        "review": {
+          "compact_direct": 79.0,
+          "sequential_work_leaf": 59.666666666666664
+        },
+        "title": {
+          "compact_direct": 0.0,
+          "sequential_work_leaf": 3.0
+        }
+      },
+      "compact_direct": 311.0,
+      "difference": 113.0,
+      "reduction_percent": 36.33440514469453,
+      "sequential_work_leaf": 198.0
+    },
+    "raw_reduction_relative_to_compact_direct_percent": 45.84377856959735,
+    "review_rounds": {
+      "compact_direct": 6.0,
+      "sequential_work_leaf": 10.666666666666666
+    },
+    "token_class_difference": {
+      "cached_input_tokens": 16586112.0,
+      "input_tokens": 16334160.666666664,
+      "output_tokens": 13393.666666666657,
+      "raw_input_plus_output": 16347554.333333332,
+      "reasoning_output_tokens": -9462.666666666672,
+      "uncached_input_plus_output": -238557.6666666665,
+      "uncached_input_tokens": -251951.33333333326
+    }
+  },
+  "work_leaf_orchestration_stage_attribution": {
+    "raw_share_of_endpoint_gap_percent": {
+      "implementation": 77.09477911406776,
+      "linearization": -0.46663824892911904,
+      "review": 11.375861813062977,
+      "title": -0.32534275014892855
+    },
+    "raw_tokens": {
+      "implementation": 14374205.666666666,
+      "linearization": -87004.0,
+      "review": 2121012.333333333,
+      "title": -60659.666666666664
+    },
+    "sum_raw_tokens": 16347554.333333332,
+    "transition_raw_tokens": 16347554.333333332
+  }
+}
