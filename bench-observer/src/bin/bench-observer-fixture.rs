@@ -136,6 +136,13 @@ fn run_delayed_usage_app_server(delay_ms: u64) -> io::Result<()> {
                 match receiver.recv_timeout(Duration::from_millis(delay_ms)) {
                     Ok(line) => pending = Some(line),
                     Err(mpsc::RecvTimeoutError::Timeout) => {
+                        let stale_usage =
+                            env::var_os("WORK_LEAF_OBSERVER_FIXTURE_STALE_USAGE").is_some();
+                        let (total_usage, last_usage) = if stale_usage {
+                            ((50, 40, 5, 2), (50, 40, 5, 2))
+                        } else {
+                            ((100, 80, 10, 5), (50, 40, 5, 3))
+                        };
                         write_fixture_message(
                             &mut stdout,
                             &serde_json::json!({
@@ -145,16 +152,16 @@ fn run_delayed_usage_app_server(delay_ms: u64) -> io::Result<()> {
                                     "turnId": "turn-grace",
                                     "tokenUsage": {
                                         "total": {
-                                            "inputTokens": 100,
-                                            "cachedInputTokens": 80,
-                                            "outputTokens": 10,
-                                            "reasoningOutputTokens": 5,
+                                            "inputTokens": total_usage.0,
+                                            "cachedInputTokens": total_usage.1,
+                                            "outputTokens": total_usage.2,
+                                            "reasoningOutputTokens": total_usage.3,
                                         },
                                         "last": {
-                                            "inputTokens": 100,
-                                            "cachedInputTokens": 80,
-                                            "outputTokens": 10,
-                                            "reasoningOutputTokens": 5,
+                                            "inputTokens": last_usage.0,
+                                            "cachedInputTokens": last_usage.1,
+                                            "outputTokens": last_usage.2,
+                                            "reasoningOutputTokens": last_usage.3,
                                         },
                                     },
                                 },

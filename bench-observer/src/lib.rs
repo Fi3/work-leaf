@@ -678,6 +678,7 @@ struct ProviderTurnGraceState {
 #[derive(Default)]
 struct ProviderUsageGraceState {
     turns: BTreeMap<ProviderTurnKey, ProviderTurnGraceState>,
+    thread_totals: BTreeMap<String, CapturedUsage>,
 }
 
 struct ProviderUsageGrace {
@@ -727,6 +728,17 @@ impl ProviderUsageGrace {
             .state
             .lock()
             .expect("provider usage grace mutex poisoned");
+        let fresh_usage = if method == Some("thread/tokenUsage/updated") {
+            extract_usage(value).is_some_and(|(kind, total)| {
+                if kind != "thread-total" {
+                    return false;
+                }
+                let previous = state.thread_totals.insert(key.thread_id.clone(), total);
+                cumulative_usage_contains_last_response(previous, total, extract_last_usage(value))
+            })
+        } else {
+            false
+        };
         let turn = state.turns.entry(key).or_default();
         if method == Some("item/completed")
             && extract_assistant_message(value)
@@ -734,7 +746,7 @@ impl ProviderUsageGrace {
         {
             turn.directive_complete = true;
             turn.exact_usage_seen = false;
-        } else if method == Some("thread/tokenUsage/updated") && turn.directive_complete {
+        } else if fresh_usage && turn.directive_complete {
             turn.exact_usage_seen = true;
         } else if method == Some("turn/completed") {
             turn.turn_completed = true;
@@ -1468,6 +1480,24 @@ impl CapturedUsage {
     pub fn uncached_input_tokens(self) -> u64 {
         self.input_tokens.saturating_sub(self.cached_input_tokens)
     }
+}
+
+fn cumulative_usage_contains_last_response(
+    previous: Option<CapturedUsage>,
+    total: CapturedUsage,
+    last: Option<CapturedUsage>,
+) -> bool {
+    let previous_total = previous.unwrap_or_default();
+    let Some(increase) = total.checked_difference(previous_total) else {
+        return false;
+    };
+    if increase == CapturedUsage::default() {
+        return false;
+    }
+    let Some(last) = last.filter(|usage| *usage != CapturedUsage::default()) else {
+        return false;
+    };
+    increase.checked_difference(last).is_some()
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -4177,7 +4207,7 @@ struct TurnDeliveryReplay {
     directive_complete_sequence: Option<usize>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 struct CumulativeUsageReplay {
     sequence: usize,
     total: CapturedUsage,
@@ -5302,18 +5332,26 @@ fn analyze_app_server(
             ));
             continue;
         };
+        let last = extract_last_usage(value);
+        let previous = cumulative_usage_replays
+            .get(&thread_id)
+            .and_then(|events| events.last())
+            .map(|event| event.total);
+        let same_turn_usage_is_fresh =
+            turn_id.is_some() && cumulative_usage_contains_last_response(previous, usage, last);
         cumulative_usage_replays
             .entry(thread_id.clone())
             .or_default()
             .push(CumulativeUsageReplay {
                 sequence,
                 total: usage,
-                last: extract_last_usage(value),
+                last,
             });
         if let Some(turn_id) = turn_id
             && delivery_replays
                 .get(&turn_id)
                 .is_some_and(|replay| replay.interrupted_after_directive)
+            && same_turn_usage_is_fresh
         {
             turns_with_terminal_usage.insert((thread_id.clone(), turn_id));
         }
@@ -5399,10 +5437,14 @@ fn later_cumulative_usage_proves_interrupted_turn(
         .iter()
         .rev()
         .find(|event| event.sequence < directive_sequence);
-    let Some(next) = events
-        .iter()
-        .find(|event| event.sequence > directive_sequence)
-    else {
+    let previous_total = previous.map_or_else(CapturedUsage::default, |event| event.total);
+    let Some(next) = events.iter().find(|event| {
+        event.sequence > directive_sequence
+            && event
+                .total
+                .checked_difference(previous_total)
+                .is_some_and(|increase| increase != CapturedUsage::default())
+    }) else {
         return false;
     };
 
@@ -5452,7 +5494,6 @@ fn later_cumulative_usage_proves_interrupted_turn(
         return false;
     }
 
-    let previous_total = previous.map_or_else(CapturedUsage::default, |event| event.total);
     let Some(increase) = next.total.checked_difference(previous_total) else {
         return false;
     };
@@ -7891,7 +7932,10 @@ pub fn exit_like_child(outcome: ProxyOutcome) -> ! {
 
 #[cfg(test)]
 mod tests {
-    use super::assistant_text_completes_work_leaf_directive;
+    use super::{
+        CapturedUsage, assistant_text_completes_work_leaf_directive,
+        cumulative_usage_contains_last_response,
+    };
 
     #[test]
     fn streamed_directive_replay_waits_for_complete_edit_blocks() {
@@ -7902,6 +7946,28 @@ mod tests {
         )));
         assert!(assistant_text_completes_work_leaf_directive(
             "need context\n@work-leaf read src/lib.rs\n"
+        ));
+    }
+
+    #[test]
+    fn cumulative_increase_without_last_usage_does_not_prove_a_response() {
+        let previous = CapturedUsage {
+            input_tokens: 100,
+            cached_input_tokens: 80,
+            output_tokens: 10,
+            reasoning_output_tokens: 5,
+        };
+        let total = CapturedUsage {
+            input_tokens: 200,
+            cached_input_tokens: 160,
+            output_tokens: 20,
+            reasoning_output_tokens: 10,
+        };
+
+        assert!(!cumulative_usage_contains_last_response(
+            Some(previous),
+            total,
+            None,
         ));
     }
 }

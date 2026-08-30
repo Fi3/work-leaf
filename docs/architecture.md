@@ -209,18 +209,22 @@ Both benchmark drivers require complete provider usage.
 `WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS` enables exact interrupted-response accounting for a
 Work Leaf benchmark. After the app server emits a complete Work Leaf directive, the observer holds
 the matching `turn/interrupt` for at most the configured interval. It forwards the original
-interrupt as soon as the matching post-directive `thread/tokenUsage/updated` event arrives, so the
-provider still receives the original interrupt bytes. Holding that request changes timing and can
-permit additional post-directive generation; the proxy forwards and counts that output rather than
-claiming the model output is unchanged. The observer saves the incoming and forwarded byte streams
-separately and records every decision in `provider-usage-grace.jsonl`. Output that resumes, a
-completed turn without matching usage, or an expired interval releases the interrupt immediately.
+interrupt as soon as a matching post-directive `thread/tokenUsage/updated` event advances that
+thread's cumulative usage and reports a nonzero `last` response contained in that advance, so the
+provider still receives the original interrupt bytes. A repeated cumulative total or an advance
+without attributable `last` usage cannot release the interrupt as exact or prove that the
+interrupted response was counted. Holding the request changes timing and can permit additional
+post-directive generation; the proxy forwards and counts that output rather than claiming the model
+output is unchanged. The observer saves the incoming and forwarded byte streams separately and
+records every decision in `provider-usage-grace.jsonl`. Output that resumes, a completed turn without
+matching fresh usage, or an expired interval releases the interrupt immediately.
+
 App-server `tokenUsage.total` values are cumulative for a provider thread, while `tokenUsage.last`
 describes the response associated with that event. A later event covers one earlier interrupted
 response only when subtracting the previous cumulative total and the later event's `last` usage
-leaves a nonzero increase, with exactly one unresolved interruption in that interval. The capture
-remains incomplete when this arithmetic cannot prove coverage; the workflow result is retained
-independently.
+leaves a nonzero increase, with exactly one unresolved interruption in that interval. Unchanged
+cumulative notifications are skipped during this recovery check. The capture remains incomplete
+when this arithmetic cannot prove coverage; the workflow result is retained independently.
 
 The optional `WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME=wait-for-usage` policy extends
 that bounded wait when provider output resumes after the directive. The observer waits for the
