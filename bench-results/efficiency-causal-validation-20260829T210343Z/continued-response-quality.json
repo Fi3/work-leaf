@@ -1,0 +1,189 @@
+{
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "complete": true,
+  "fixtures": {
+    "completion": {
+      "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_completion.rs",
+      "sha256": "4d6a19f4c6f515b9a97f184a056d08dc2882041d40d26dd82011180a949c5c87"
+    },
+    "status": {
+      "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_status.rs",
+      "sha256": "5f5295c9dec6be20abb28827b68e84342110fb748aa0cc887d8b58ffa3c6e6b5"
+    },
+    "visual": {
+      "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_visual.rs",
+      "sha256": "5ce0782e37b8672e04d8016ca3fbec9caa12f6f9cfaf431cac847c1f6e6a26ca"
+    }
+  },
+  "frozen_scorer": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/score.py",
+  "frozen_scorer_sha256": "c0a4e951e96d7da53a6d414a7677176183cae6e30d0bbfab92069d5082865162",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "runs": [
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.433,
+          "exit_code": 101,
+          "log": "scorer/logs/continued-response-001/completion.log",
+          "log_sha256": "8f0b10bf71eef1cc26eee1c8d2f1105a78636b0b0d0a032be55ccb33e2f1d19d",
+          "status": "fail"
+        },
+        "status": {
+          "duration_seconds": 0.236,
+          "exit_code": 0,
+          "log": "scorer/logs/continued-response-001/status.log",
+          "log_sha256": "9b47b6c7c0100482f650315f128200805186fdacdf2ce6b4735fee9ca7437cbe",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 5.557,
+          "exit_code": 0,
+          "log": "scorer/logs/continued-response-001/visual.log",
+          "log_sha256": "55f91d21dd547a6be6b6f3fb1c350682dc80eca3975815187a64d06636411396",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 2,
+      "condition": "work-leaf-continued-response",
+      "final_commit": "f1d00f7e4c2ff4d57597f70540eb7fde34ca3291",
+      "id": "continued-response-001",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-causal-validation-20260829T210343Z/runs/continued-response-001/continued-response-001-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "362eba5601ef01076a0682ec7736746c9c5000ec58fcd333d9c2c4ff5e1d2b9e",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 21487872,
+          "input_tokens": 23060897,
+          "output_tokens": 251951,
+          "raw_input_plus_output": 23312848,
+          "reasoning_output_tokens": 142666,
+          "uncached_input_plus_output": 1824976,
+          "uncached_input_tokens": 1573025
+        }
+      },
+      "report": "bench-results/efficiency-causal-validation-20260829T210343Z/runs/continued-response-001/continued-response-001-three-feature-bench-artifacts/report.json",
+      "report_sha256": "34f593168602593f4ab7ea9ba609c2ddbd01ded37d80705ea24d9ff1216163e5",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.458,
+          "exit_code": 0,
+          "log": "scorer/logs/continued-response-002/completion.log",
+          "log_sha256": "7ca3cc776f95def3a50f6b0199d9828750c46f36f5ff3f7170ac014d3e3dd303",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.235,
+          "exit_code": 0,
+          "log": "scorer/logs/continued-response-002/status.log",
+          "log_sha256": "2a27eae82c394106c6bb0e166e6615679f92c3b1bc80a9ad6269fa203e77d418",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.488,
+          "exit_code": 0,
+          "log": "scorer/logs/continued-response-002/visual.log",
+          "log_sha256": "c20e38b1f578d32a7aa90739f22a60810ca2024b6f8f64859c7b9e169d76b1a9",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "work-leaf-continued-response",
+      "final_commit": "86e12df7d8ec794ba75240ea6f2f0747915679f4",
+      "id": "continued-response-002",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-causal-validation-20260829T210343Z/runs/continued-response-002/continued-response-002-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "acab26940042d7e29eff6c91d2a17096351b54b0f1f7f31167eb2f3831a31c51",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 21625088,
+          "input_tokens": 23000912,
+          "output_tokens": 275574,
+          "raw_input_plus_output": 23276486,
+          "reasoning_output_tokens": 156642,
+          "uncached_input_plus_output": 1651398,
+          "uncached_input_tokens": 1375824
+        }
+      },
+      "report": "bench-results/efficiency-causal-validation-20260829T210343Z/runs/continued-response-002/continued-response-002-three-feature-bench-artifacts/report.json",
+      "report_sha256": "b92c4ef6b43ada6a160726cf83874d637bac810374cd01af16b822da051f6871",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.417,
+          "exit_code": 101,
+          "log": "scorer/logs/continued-response-003/completion.log",
+          "log_sha256": "1b106b163d9042e1c4acc649f3c1f50a3b436dfd60ac74ed1a8c63640a723f1c",
+          "status": "fail"
+        },
+        "status": {
+          "duration_seconds": 0.245,
+          "exit_code": 0,
+          "log": "scorer/logs/continued-response-003/status.log",
+          "log_sha256": "e1d72ff0a8896593c0a8f73a4478c2bfe28d699083b763b836c81aee3ce1d609",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.438,
+          "exit_code": 101,
+          "log": "scorer/logs/continued-response-003/visual.log",
+          "log_sha256": "fd737e22f56b3b3df63df799de069d95476a12cae810e01ea01e16e6bcddc37e",
+          "status": "fail"
+        }
+      },
+      "checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "fail"
+      },
+      "completed_features": 1,
+      "condition": "work-leaf-continued-response",
+      "final_commit": "0bed68d2f230fcacf00acae174df0fe0b0977ca7",
+      "id": "continued-response-003",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-causal-validation-20260829T210343Z/runs/continued-response-003/continued-response-003-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "a7c6a8c8fd14b72c0276ee4110b15a4f4a326e4002bc74d18be8f63dea893924",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 19544320,
+          "input_tokens": 20730710,
+          "output_tokens": 233462,
+          "raw_input_plus_output": 20964172,
+          "reasoning_output_tokens": 142087,
+          "uncached_input_plus_output": 1419852,
+          "uncached_input_tokens": 1186390
+        }
+      },
+      "report": "bench-results/efficiency-causal-validation-20260829T210343Z/runs/continued-response-003/continued-response-003-three-feature-bench-artifacts/report.json",
+      "report_sha256": "7bd3541720f0e6ef6895e7ccee1966f41fe85f845e99a1ea1705d04eecbfc03d",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "pass"
+    }
+  ],
+  "schema_version": 1,
+  "study": "efficiency-causal-validation-20260829T210343Z",
+  "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+}

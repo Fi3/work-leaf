@@ -40,6 +40,28 @@ class ScoreControlTest(unittest.TestCase):
             "c0a4e951e96d7da53a6d414a7677176183cae6e30d0bbfab92069d5082865162",
         )
 
+    def test_manifest_scores_exactly_three_continued_response_controls(self):
+        manifest = json.loads(
+            (STUDY / "continued-response-score-manifest.json").read_text()
+        )
+        self.assertEqual(manifest["base_commit"], "c92a0b7060a36eac6db2d869b85e589a7a9480f9")
+        self.assertEqual(manifest["model"], "gpt-5.5")
+        self.assertEqual(manifest["reasoning_effort"], "xhigh")
+        self.assertEqual(
+            [run["id"] for run in manifest["runs"]],
+            [
+                "continued-response-001",
+                "continued-response-002",
+                "continued-response-003",
+            ],
+        )
+        self.assertTrue(
+            all(
+                run["condition"] == "work-leaf-continued-response"
+                for run in manifest["runs"]
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,8 +2,9 @@
 
 ## Current Step
 
-The endpoint audit, offline decomposition, and three-run direct-read control are complete. The
-current step is auditing an immediate-interruption control for the remaining raw-token gap.
+The endpoint audit, offline decomposition, direct-read control, and continued-response control are
+complete. The current step is measuring the interaction between direct reads and continued
+responses with a combined three-run control.
 
 ## Completed
 
@@ -43,12 +44,18 @@ current step is auditing an immediate-interruption control for the remaining raw
 - Direct reads add 264,000 uncached tokens, accounting for 99.49% of the current uncached gap.
 - Direct reads increase context per provider usage change but do not increase the number of usage
   changes. Work Leaf still uses 46.78% fewer raw tokens than direct Codex with direct reads enabled.
+- Letting resumed provider output finish raises mean raw use by 5.05M tokens, or 27.07% of the
+  current endpoint gap. It raises mean provider usage changes by 47 and context per change by 4,492
+  tokens.
+- The continued-response runs pass all workflow and accounting gates and complete 6/9 frozen
+  feature checks. Eight turns activate fully; one additional turn reaches the 120-second bound and
+  falls back to the original interrupt with exact later cumulative usage.
+- Direct-read traces resume output much more often than normal mediated-read traces. The two causal
+  fractions cannot be added until their interaction is measured.
 
 ## Next
 
-1. Audit a benchmark-only control that lets provider turns finish naturally after a complete
-   orchestrator directive while leaving Work Leaf, task text, validation, review, and scoring fixed.
-2. Reject the control before launch if it can race later turns, hide output from accounting, or
-   change anything besides directive interruption.
-3. If the control is valid, run three independent workflows concurrently and apply the same
-   activation, exact-accounting, and quality gates before interpreting the remaining raw gap.
+1. Run three combined direct-read plus continued-response controls concurrently.
+2. Measure the read/interruption interaction rather than adding their separate percentages.
+3. Recheck every accounting, fairness, quality, and alternative-cause hypothesis before publishing
+   the final causal report.
