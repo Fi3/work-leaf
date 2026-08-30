@@ -1,34 +1,38 @@
 {
   "accounting": {
-    "method": "Ten interrupted responses lacked an immediate usage event, but every one was followed by a later cumulative total on the same provider thread. Each final thread total therefore includes those responses; no estimate or ceiling is used.",
+    "bound_source": "bench-results/efficiency-point7-bounded-accounting-20260828T142614Z/evidence.json",
+    "corrected_observer_source": "bench-observer/src/lib.rs",
+    "corrected_observer_source_sha256": "fd8a89fcdda20a22755d73579532b46b8fdad1c78567688552ab39a3162e91da",
+    "maximum_raw_tokens_per_unresolved_response": 400000,
+    "method": "One capture is exact. Ten interrupted responses across the other five captures have no terminal usage. Recorded totals are lower bounds; each unresolved response adds at most 400,000 raw tokens to the upper bound. The same amount is added to the uncached upper bound because the missing cached-input split is unknown.",
     "timing_caveat": "The observer held each complete-directive interrupt for at most 1000 milliseconds. This can add post-directive generation before interruption; all such usage is counted, but later thread behavior may differ from an uninstrumented run."
   },
   "comparisons": {
     "direct_minus_normal_work_leaf": {
       "completed_feature_mean_difference": 0.666666666666667,
       "raw_tokens": {
-        "lower": 18644849.666666664,
+        "lower": 17978182.999999996,
         "upper": 18644849.666666664
       },
       "raw_work_leaf_reduction_percent": {
-        "lower": 51.62435661121276,
+        "lower": 49.77847217899134,
         "upper": 51.62435661121276
       },
       "uncached_tokens": {
-        "lower": 265308.33333333326,
+        "lower": -401358.3333333335,
         "upper": 265308.33333333326
       },
       "uncached_work_leaf_reduction_percent": {
-        "lower": 16.4919686283253,
+        "lower": -24.94904309595854,
         "upper": 16.4919686283253
       }
     }
   },
   "conclusions": {
     "equal_quality_average_claim_supported": false,
-    "full_feature_subset_raw_saving_is_exact": true,
-    "raw_saving_is_exact": true,
-    "uncached_saving_is_exact": true
+    "full_feature_subset_raw_saving_proven_under_conservative_bound": true,
+    "raw_saving_proven_under_conservative_bound": true,
+    "uncached_saving_proven_under_conservative_bound": false
   },
   "groups": {
     "direct": {
@@ -39,7 +43,6 @@
         "status": 6,
         "visual": 6
       },
-      "immediate_usage_gaps_recovered": 0,
       "mean_completed_features": 2.8333333333333335,
       "missing_provider_responses": 0,
       "observations": 6,
@@ -63,20 +66,19 @@
       "workflow_passes": 6
     },
     "normal_work_leaf": {
-      "bounded_token_observations": 0,
-      "exact_token_observations": 6,
+      "bounded_token_observations": 5,
+      "exact_token_observations": 1,
       "feature_pass_counts": {
         "completion": 2,
         "status": 6,
         "visual": 5
       },
-      "immediate_usage_gaps_recovered": 10,
       "mean_completed_features": 2.1666666666666665,
-      "missing_provider_responses": 0,
+      "missing_provider_responses": 10,
       "observations": 6,
       "raw_token_mean_interval": {
         "lower": 17471532.0,
-        "upper": 17471532.0
+        "upper": 18138198.666666668
       },
       "run_ids": [
         "exact-normal-001",
@@ -89,7 +91,7 @@
       "total_completed_features": 13,
       "uncached_token_mean_interval": {
         "lower": 1343404.0,
-        "upper": 1343404.0
+        "upper": 2010070.6666666667
       },
       "workflow_passes": 6
     }
@@ -240,7 +242,7 @@
       "workflow_result": "pass"
     },
     {
-      "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/observation/analysis-cumulative.json",
+      "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
       "completed_features": 2,
       "feature_checks": {
         "completion": "fail",
@@ -248,23 +250,23 @@
         "visual": "pass"
       },
       "group": "normal_work_leaf",
-      "immediate_usage_gaps": 1,
-      "measurement": "exact",
-      "missing_responses": 0,
+      "maximum_raw_tokens_per_missing_response": 400000,
+      "measurement": "bounded",
+      "missing_responses": 1,
       "raw_tokens": {
         "lower": 20221714,
-        "upper": 20221714
+        "upper": 20621714
       },
       "run_id": "exact-normal-001",
       "source": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/report.json",
       "uncached_tokens": {
         "lower": 1471762,
-        "upper": 1471762
+        "upper": 1871762
       },
       "workflow_result": "pass"
     },
     {
-      "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/observation/analysis-cumulative.json",
+      "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
       "completed_features": 3,
       "feature_checks": {
         "completion": "pass",
@@ -272,23 +274,23 @@
         "visual": "pass"
       },
       "group": "normal_work_leaf",
-      "immediate_usage_gaps": 3,
-      "measurement": "exact",
-      "missing_responses": 0,
+      "maximum_raw_tokens_per_missing_response": 400000,
+      "measurement": "bounded",
+      "missing_responses": 3,
       "raw_tokens": {
         "lower": 13214206,
-        "upper": 13214206
+        "upper": 14414206
       },
       "run_id": "exact-normal-002",
       "source": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/report.json",
       "uncached_tokens": {
         "lower": 1179134,
-        "upper": 1179134
+        "upper": 2379134
       },
       "workflow_result": "pass"
     },
     {
-      "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/observation/analysis-cumulative.json",
+      "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
       "completed_features": 3,
       "feature_checks": {
         "completion": "pass",
@@ -296,23 +298,23 @@
         "visual": "pass"
       },
       "group": "normal_work_leaf",
-      "immediate_usage_gaps": 3,
-      "measurement": "exact",
-      "missing_responses": 0,
+      "maximum_raw_tokens_per_missing_response": 400000,
+      "measurement": "bounded",
+      "missing_responses": 3,
       "raw_tokens": {
         "lower": 14243707,
-        "upper": 14243707
+        "upper": 15443707
       },
       "run_id": "exact-normal-003",
       "source": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/report.json",
       "uncached_tokens": {
         "lower": 1188347,
-        "upper": 1188347
+        "upper": 2388347
       },
       "workflow_result": "pass"
     },
     {
-      "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-004/exact-normal-004-three-feature-bench-artifacts/observation/analysis-cumulative.json",
+      "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-004/exact-normal-004-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
       "completed_features": 1,
       "feature_checks": {
         "completion": "fail",
@@ -320,7 +322,7 @@
         "visual": "fail"
       },
       "group": "normal_work_leaf",
-      "immediate_usage_gaps": 0,
+      "maximum_raw_tokens_per_missing_response": 400000,
       "measurement": "exact",
       "missing_responses": 0,
       "raw_tokens": {
@@ -336,7 +338,7 @@
       "workflow_result": "pass"
     },
     {
-      "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/observation/analysis-cumulative.json",
+      "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
       "completed_features": 2,
       "feature_checks": {
         "completion": "fail",
@@ -344,23 +346,23 @@
         "visual": "pass"
       },
       "group": "normal_work_leaf",
-      "immediate_usage_gaps": 2,
-      "measurement": "exact",
-      "missing_responses": 0,
+      "maximum_raw_tokens_per_missing_response": 400000,
+      "measurement": "bounded",
+      "missing_responses": 2,
       "raw_tokens": {
         "lower": 21800967,
-        "upper": 21800967
+        "upper": 22600967
       },
       "run_id": "exact-normal-005",
       "source": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/report.json",
       "uncached_tokens": {
         "lower": 1497991,
-        "upper": 1497991
+        "upper": 2297991
       },
       "workflow_result": "pass"
     },
     {
-      "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/observation/analysis-cumulative.json",
+      "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
       "completed_features": 2,
       "feature_checks": {
         "completion": "fail",
@@ -368,18 +370,18 @@
         "visual": "pass"
       },
       "group": "normal_work_leaf",
-      "immediate_usage_gaps": 1,
-      "measurement": "exact",
-      "missing_responses": 0,
+      "maximum_raw_tokens_per_missing_response": 400000,
+      "measurement": "bounded",
+      "missing_responses": 1,
       "raw_tokens": {
         "lower": 19550191,
-        "upper": 19550191
+        "upper": 19950191
       },
       "run_id": "exact-normal-006",
       "source": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/report.json",
       "uncached_tokens": {
         "lower": 1374831,
-        "upper": 1374831
+        "upper": 1774831
       },
       "workflow_result": "pass"
     }
@@ -393,7 +395,6 @@
         "status": 5,
         "visual": 5
       },
-      "immediate_usage_gaps_recovered": 0,
       "mean_completed_features": 3.0,
       "missing_provider_responses": 0,
       "observations": 5,
@@ -418,37 +419,36 @@
     "direct_minus_normal_work_leaf": {
       "completed_feature_mean_difference": 0.0,
       "raw_tokens": {
-        "lower": 23835104.9,
+        "lower": 22635104.9,
         "upper": 23835104.9
       },
       "raw_work_leaf_reduction_percent": {
-        "lower": 63.451884625020874,
+        "lower": 60.257341875178604,
         "upper": 63.451884625020874
       },
       "uncached_tokens": {
-        "lower": 365319.30000000005,
+        "lower": -834680.7,
         "upper": 365319.30000000005
       },
       "uncached_work_leaf_reduction_percent": {
-        "lower": 23.58329226541158,
+        "lower": -53.88305215847703,
         "upper": 23.58329226541158
       }
     },
     "normal_work_leaf": {
-      "bounded_token_observations": 0,
-      "exact_token_observations": 2,
+      "bounded_token_observations": 2,
+      "exact_token_observations": 0,
       "feature_pass_counts": {
         "completion": 2,
         "status": 2,
         "visual": 2
       },
-      "immediate_usage_gaps_recovered": 6,
       "mean_completed_features": 3.0,
-      "missing_provider_responses": 0,
+      "missing_provider_responses": 6,
       "observations": 2,
       "raw_token_mean_interval": {
         "lower": 13728956.5,
-        "upper": 13728956.5
+        "upper": 14928956.5
       },
       "run_ids": [
         "exact-normal-002",
@@ -457,24 +457,26 @@
       "total_completed_features": 6,
       "uncached_token_mean_interval": {
         "lower": 1183740.5,
-        "upper": 1183740.5
+        "upper": 2383740.5
       },
       "workflow_passes": 2
     },
     "warning": "This post-hoc subset contains only runs that completed all three features. It is descriptive and cannot replace the primary all-run quality comparison."
   },
-  "question": "Does concurrent Work Leaf under the recorded interrupt grace use fewer tokens than normal direct sequential Codex on the frozen three-feature task when provider usage is captured exactly?",
+  "question": "Does concurrent Work Leaf under the recorded interrupt grace use fewer tokens than normal direct sequential Codex on the frozen three-feature task after unresolved interrupted responses receive a conservative token cap?",
   "schema_version": 1,
   "source_sha256": {
+    "bench-observer/src/lib.rs": "fd8a89fcdda20a22755d73579532b46b8fdad1c78567688552ab39a3162e91da",
     "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/final-evidence.json": "ef7854807123f5a26a620c2347b2ba5093a5acb43be0c0086aa000f35a316638",
     "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/quality.json": "f92cdaa71c84c73487cf2038fb2ce49ac5401f1fe4ad6356e04623012b92120e",
-    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/observation/analysis-cumulative.json": "cc882f8ca18f8e193489fd90c0f49956fdef64981738198dc34ec55074f509e7",
-    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/observation/analysis-cumulative.json": "e98d64e50ec37753de19346fcf0baee918873952238a345a113a604dc72c9ff0",
-    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/observation/analysis-cumulative.json": "5012980eb7e32eaf836591453e049ec4861bd5dc552314fcc55ae529d210b2a0",
-    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-004/exact-normal-004-three-feature-bench-artifacts/observation/analysis-cumulative.json": "f16979427c65eab05a64a5fe6ed52ddbbe7932ee460f356c8a79b91cd3b50caf",
-    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/observation/analysis-cumulative.json": "ab957fb21a016c9a1004bafe9ee75875c09ed18216bf2cec54fc3b635a1c3458",
-    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/observation/analysis-cumulative.json": "e33daf919d4ff15be5695fdd6b50cbe0e9fa09f000202686ace5f42acb62c2a2"
+    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/observation/analysis-request-accounting.json": "89ed556d86f439a19982f1b0f41e985196572ea7357975ba2658d66c072c572d",
+    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/observation/analysis-request-accounting.json": "1efcc02128aca3a9214cb95746cc531df605848b6f2696695339420eeb55b3ed",
+    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/observation/analysis-request-accounting.json": "d99110d2166abd08a6ce3cafbdb43d75bdfbcb94d603514c9bb0f122d1022000",
+    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-004/exact-normal-004-three-feature-bench-artifacts/observation/analysis-request-accounting.json": "f16979427c65eab05a64a5fe6ed52ddbbe7932ee460f356c8a79b91cd3b50caf",
+    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/observation/analysis-request-accounting.json": "db9ca7b9500888b5b1cffa9cb2746435c3ba66e839560dfea4047057a8224b40",
+    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/observation/analysis-request-accounting.json": "eeb78b59f6b25e071e4eff991c50c6b7a70fda7dbed9228a726411669e784f3c",
+    "bench-results/efficiency-point7-bounded-accounting-20260828T142614Z/evidence.json": "f9d68c3925ff0cc68ce3ef253e4703659a88cbfcdd07acd4f9c12dd7f70a05f8"
   },
-  "status": "complete",
+  "status": "complete_with_bounded_work_leaf_usage",
   "study": "efficiency-exact-normal-work-leaf-20260829T181318Z"
 }

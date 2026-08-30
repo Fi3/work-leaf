@@ -20,8 +20,8 @@ The accepted endpoint cohorts are:
 
 | Endpoint | Runs | Feature checks | Mean raw tokens |
 | --- | ---: | ---: | ---: |
-| Normal direct sequential Codex | 6 | 17/18 | 36,116,382 |
-| Normal concurrent Work Leaf | 6 | 13/18 | 17,471,532 |
+| Normal direct sequential Codex | 6 | 17/18 | 36,116,382 exact |
+| Normal concurrent Work Leaf | 6 | 13/18 | 17,471,532-18,138,199 bounded |
 
 Every implementation outcome remains evidence. A partial feature result is scored and retained; it
 is not retried merely because its quality is lower.
@@ -36,7 +36,7 @@ Five conditions form one ordered bridge. Adjacent conditions change one mechanis
 | `L` | Direct sequential Codex with compact exact linearization targets | Linearization handoff only |
 | `S` | Sequential diagnostic Work Leaf with direct reads and completed responses | Work Leaf orchestration protocol |
 | `C` | Concurrent Work Leaf with direct reads and completed responses | Scheduling only |
-| `W` | Normal concurrent Work Leaf | Mediated reads and immediate directive interruption |
+| `W` | Normal concurrent Work Leaf under the recorded one-second usage grace | Mediated reads and early directive interruption |
 
 The allocation is calculated in this order:
 
@@ -48,9 +48,10 @@ reads plus interruption        = C - W
 total                          = D - W
 ```
 
-The four terms telescope exactly to the endpoint difference. They must not be added to percentages
-from another intervention order. This is an ordered causal decomposition, not a claim that the
-mechanisms are independent.
+The four terms telescope exactly within either endpoint scenario. The normal Work Leaf lower bound
+produces one bridge and its conservative upper bound produces the other. Percentages from another
+intervention order must not be mixed into this bridge. This is an ordered causal decomposition, not
+a claim that the mechanisms are independent.
 
 `S` is not a proposed product workflow and must never enter the benchmark dashboard's normal Work
 Leaf comparison. It exists only because holding the Work Leaf protocol fixed while changing the
@@ -86,8 +87,10 @@ changes from one-at-a-time to all three together.
 ### `C` to `W`
 
 This transition uses the completed controls from the prior study. It restores normal orchestrator
-file reads and normal immediate interruption. Their joint effect is used because the prior factorial
-test proved that their separate effects overlap.
+file reads and early interruption under the endpoint's recorded one-second usage grace. Their joint
+effect is bounded because ten normal endpoint responses lack terminal usage; every missing response
+receives the frozen 400,000-token maximum. The joint transition is retained because the prior
+factorial test showed that the separate effects overlap.
 
 ## Required Gates
 
@@ -95,7 +98,8 @@ Every new observation must satisfy all of these gates:
 
 1. The source, generated driver, Work Leaf binaries, observer, task, model, reasoning, and scorer
    hashes match the admission record.
-2. Provider usage is exact and reconciles with saved provider rollouts.
+2. Provider usage is exact and reconciles with saved provider rollouts for every new control. The
+   normal endpoint remains bounded and must use its corrected conservative allowance.
 3. There are no descendant or recursive provider sessions.
 4. The intended substitution activates. Compact-target prompts must contain the exact provisional
    commits. Sequential Work Leaf sessions must not overlap feature implementation/review phases.

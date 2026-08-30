@@ -96,9 +96,17 @@ def stage_for(thread, group):
     return "implementation"
 
 
-def analyze_run(run_id, group, analysis_path, quality, rollout_integrity):
+def analyze_run(
+    run_id,
+    group,
+    analysis_path,
+    quality,
+    rollout_integrity,
+    *,
+    allow_incomplete=False,
+):
     analysis = load(analysis_path)
-    if not analysis["capture_complete"]:
+    if not analysis["capture_complete"] and not allow_incomplete:
         raise ValueError(f"{run_id} capture is incomplete: {analysis['errors']}")
     metadata_path = analysis_path.parent / "rollout-metadata.jsonl"
     metadata = [json.loads(line) for line in metadata_path.read_text().splitlines() if line.strip()]
@@ -144,6 +152,10 @@ def analyze_run(run_id, group, analysis_path, quality, rollout_integrity):
         "group": group,
         "quality": quality,
         "completed_features": sum(status == "pass" for status in quality.values()),
+        "measurement": "exact" if analysis["capture_complete"] else "recorded_lower_bound",
+        "unresolved_provider_responses": int(
+            analysis.get("interrupted_provider_turns", 0)
+        ),
         "usage": {key: workflow_usage[key] for key in USAGE_KEYS},
         "usage_changes": total_changes,
         "usage_events": total_events,
@@ -186,6 +198,7 @@ def current_runs(rollout_integrity):
             analysis_path,
             observation["feature_checks"],
             rollout_integrity,
+            allow_incomplete=group == "work_leaf",
         )
         expected_raw = observation["raw_tokens"]["lower"]
         if run["usage"]["raw_input_plus_output"] != expected_raw:
@@ -210,6 +223,7 @@ def historical_runs(current, rollout_integrity):
             source["features"],
             rollout_integrity,
         )
+        run["measurement"] = "legacy_cumulative_assumption_not_revalidated"
         if run["usage"] != source["usage"]:
             raise ValueError(f"{run_id} usage does not match endpoint evidence")
         runs.append(run)
@@ -390,6 +404,9 @@ def aggregate_work_leaf_mechanisms(runs):
 
 
 def build_evidence():
+    endpoint = load(CURRENT / "evidence.json")
+    normal_work_leaf = endpoint["groups"]["normal_work_leaf"]
+    missing_responses = int(normal_work_leaf["missing_provider_responses"])
     rollout_integrity = {}
     current = current_runs(rollout_integrity)
     historical = historical_runs(current, rollout_integrity)
@@ -402,7 +419,27 @@ def build_evidence():
     return {
         "schema_version": 1,
         "study": STUDY.name,
-        "status": "complete" if not mismatches else "invalid",
+        "status": (
+            "invalid"
+            if mismatches
+            else "superseded_by_bounded_endpoint_analysis"
+        ),
+        "accounting": {
+            "reason": (
+                "The normal Work Leaf endpoint has unresolved interrupted responses. Cycle and "
+                "context values for that group describe recorded lower-bound events, not exact "
+                "workflow totals."
+            ),
+            "unresolved_provider_responses": missing_responses,
+            "normal_work_leaf_raw_mean_interval": normal_work_leaf[
+                "raw_token_mean_interval"
+            ],
+            "endpoint_evidence": relative(CURRENT / "evidence.json"),
+            "current_analysis": relative(
+                ROOT
+                / "bench-results/efficiency-mechanism-attribution-20260830T081131Z/evidence.json"
+            ),
+        },
         "rollout_integrity": {
             "checked_files": len(rollout_integrity),
             "hash_mismatches": mismatches,

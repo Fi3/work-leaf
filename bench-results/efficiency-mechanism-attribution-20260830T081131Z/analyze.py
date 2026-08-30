@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 from collections import Counter, defaultdict
 from itertools import combinations
@@ -16,6 +17,11 @@ STUDY = Path(__file__).resolve().parent
 ROOT = STUDY.parents[1]
 SESSIONS = Path.home() / ".codex/sessions"
 PRIOR = ROOT / "bench-results/efficiency-causal-validation-20260829T210343Z"
+ENDPOINT_CORRECTION = (
+    ROOT
+    / "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z"
+    / "evidence.json"
+)
 USAGE_FIELDS = (
     "input_tokens",
     "cached_input_tokens",
@@ -118,6 +124,78 @@ def selected_causal_coverage(
         "mechanisms": list(mechanisms),
         "tokens": tokens,
         "share_of_endpoint_gap_percent": tokens / float(bridge["endpoint_gap"]) * 100.0,
+    }
+
+
+def numeric_interval(*values: float) -> dict[str, float]:
+    return {"lower": min(values), "upper": max(values)}
+
+
+def bounded_endpoint_bridge(
+    values: dict[str, float], work_leaf_interval: dict[str, float]
+) -> dict[str, Any]:
+    scenarios = {
+        "recorded_lower_bound": ordered_bridge(
+            {**values, "W": float(work_leaf_interval["lower"])}
+        ),
+        "conservative_upper_bound": ordered_bridge(
+            {**values, "W": float(work_leaf_interval["upper"])}
+        ),
+    }
+    steps = []
+    for index, (name, left, right) in enumerate(BRIDGE_STEPS):
+        scenario_steps = [scenario["steps"][index] for scenario in scenarios.values()]
+        if any(step["name"] != name for step in scenario_steps):
+            raise ValueError(f"bridge step order changed at {name}")
+        steps.append(
+            {
+                "name": name,
+                "left": left,
+                "right": right,
+                "tokens": numeric_interval(
+                    *(float(step["tokens"]) for step in scenario_steps)
+                ),
+                "share_of_endpoint_gap_percent": numeric_interval(
+                    *(
+                        float(step["share_of_endpoint_gap_percent"])
+                        for step in scenario_steps
+                    )
+                ),
+            }
+        )
+    return {
+        "work_leaf_mean_tokens": work_leaf_interval,
+        "endpoint_gap": numeric_interval(
+            *(float(scenario["endpoint_gap"]) for scenario in scenarios.values())
+        ),
+        "steps": steps,
+        "scenarios": scenarios,
+    }
+
+
+def bounded_selected_causal_coverage(
+    bridge: dict[str, Any], mechanisms: tuple[str, ...]
+) -> dict[str, Any]:
+    by_name = {step["name"]: step for step in bridge["steps"]}
+    unknown = [name for name in mechanisms if name not in by_name]
+    if unknown:
+        raise ValueError(f"unknown bridge mechanism: {', '.join(unknown)}")
+    scenario_results = {
+        name: selected_causal_coverage(scenario, mechanisms)
+        for name, scenario in bridge["scenarios"].items()
+    }
+    return {
+        "mechanisms": list(mechanisms),
+        "tokens": numeric_interval(
+            *(float(result["tokens"]) for result in scenario_results.values())
+        ),
+        "share_of_endpoint_gap_percent": numeric_interval(
+            *(
+                float(result["share_of_endpoint_gap_percent"])
+                for result in scenario_results.values()
+            )
+        ),
+        "scenarios": scenario_results,
     }
 
 
@@ -540,12 +618,38 @@ def build_evidence(quality_path: Path) -> dict[str, Any]:
     if len(compact) != 3 or len(sequential) != 3:
         raise ValueError("final analysis requires exactly three L and three S observations")
     prior = load_json(PRIOR / "combined-evidence.json")
+    endpoint_correction = load_json(ENDPOINT_CORRECTION)
     groups = {
         "D": prior["groups"]["direct_sequential"],
         "L": summarize_new_group(compact),
         "S": summarize_new_group(sequential),
         "C": prior["groups"]["combined_work_leaf"],
         "W": prior["groups"]["normal_work_leaf"],
+    }
+    corrected_direct = endpoint_correction["groups"]["direct"][
+        "raw_token_mean_interval"
+    ]
+    if corrected_direct["lower"] != corrected_direct["upper"]:
+        raise ValueError("corrected direct endpoint is not exact")
+    if not math.isclose(
+        float(groups["D"]["mean_usage"]["raw_input_plus_output"]),
+        float(corrected_direct["lower"]),
+    ):
+        raise ValueError("direct endpoint does not match corrected evidence")
+    work_leaf_raw_interval = endpoint_correction["groups"]["normal_work_leaf"][
+        "raw_token_mean_interval"
+    ]
+    work_leaf_uncached_interval = endpoint_correction["groups"]["normal_work_leaf"][
+        "uncached_token_mean_interval"
+    ]
+    if not math.isclose(
+        float(groups["W"]["mean_usage"]["raw_input_plus_output"]),
+        float(work_leaf_raw_interval["lower"]),
+    ):
+        raise ValueError("recorded Work Leaf endpoint does not match corrected evidence")
+    groups["W"]["mean_usage_interval"] = {
+        "raw_input_plus_output": work_leaf_raw_interval,
+        "uncached_input_plus_output": work_leaf_uncached_interval,
     }
     raw = ordered_bridge(
         {
@@ -559,6 +663,24 @@ def build_evidence(quality_path: Path) -> dict[str, Any]:
             for symbol, group in groups.items()
         }
     )
+    raw_bounded = bounded_endpoint_bridge(
+        {
+            symbol: float(group["mean_usage"]["raw_input_plus_output"])
+            for symbol, group in groups.items()
+            if symbol != "W"
+        },
+        work_leaf_raw_interval,
+    )
+    uncached_bounded = bounded_endpoint_bridge(
+        {
+            symbol: float(group["mean_usage"]["uncached_input_plus_output"])
+            for symbol, group in groups.items()
+            if symbol != "W"
+        },
+        work_leaf_uncached_interval,
+    )
+    raw["measurement"] = "recorded Work Leaf lower-bound scenario"
+    uncached["measurement"] = "recorded Work Leaf lower-bound scenario"
     l_stage = {
         stage: values["raw_input_plus_output"]
         for stage, values in groups["L"]["mean_stage_usage"].items()
@@ -580,6 +702,10 @@ def build_evidence(quality_path: Path) -> dict[str, Any]:
         raw,
         ("work_leaf_orchestration", "mediated_reads_and_interruption"),
     )
+    causal_coverage_bounded = bounded_selected_causal_coverage(
+        raw_bounded,
+        ("work_leaf_orchestration", "mediated_reads_and_interruption"),
+    )
     l_usage = groups["L"]["mean_usage"]
     s_usage = groups["S"]["mean_usage"]
     l_changes = float(groups["L"]["mean_usage_changes"])
@@ -589,12 +715,28 @@ def build_evidence(quality_path: Path) -> dict[str, Any]:
     return {
         "schema_version": 1,
         "study": STUDY.name,
-        "status": "complete",
+        "status": "complete_with_bounded_normal_endpoint",
         "quality_file": str(quality_path),
         "quality_file_sha256": sha256(quality_path),
+        "endpoint_accounting": {
+            "normal_work_leaf_measurement": "bounded",
+            "unresolved_provider_responses": endpoint_correction["groups"][
+                "normal_work_leaf"
+            ]["missing_provider_responses"],
+            "raw_mean_interval": work_leaf_raw_interval,
+            "uncached_mean_interval": work_leaf_uncached_interval,
+            "source": str(ENDPOINT_CORRECTION.relative_to(ROOT)),
+            "source_sha256": sha256(ENDPOINT_CORRECTION),
+        },
         "groups": groups,
-        "ordered_attribution": {"raw": raw, "uncached": uncached},
+        "ordered_attribution": {
+            "raw": raw,
+            "raw_bounded": raw_bounded,
+            "uncached": uncached,
+            "uncached_bounded": uncached_bounded,
+        },
         "causal_coverage": causal_coverage,
+        "causal_coverage_bounded": causal_coverage_bounded,
         "work_leaf_orchestration_behavior": {
             "raw_reduction_relative_to_compact_direct_percent": (
                 (l_usage["raw_input_plus_output"] - s_usage["raw_input_plus_output"])
@@ -691,6 +833,8 @@ def build_evidence(quality_path: Path) -> dict[str, Any]:
         "source_evidence": {
             "prior": str(PRIOR / "combined-evidence.json"),
             "prior_sha256": sha256(PRIOR / "combined-evidence.json"),
+            "endpoint_correction": str(ENDPOINT_CORRECTION.relative_to(ROOT)),
+            "endpoint_correction_sha256": sha256(ENDPOINT_CORRECTION),
         },
     }
 

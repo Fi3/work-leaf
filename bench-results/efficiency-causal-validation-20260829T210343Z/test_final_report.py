@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import re
 import unittest
 from pathlib import Path
 
@@ -13,31 +12,29 @@ class FinalReportTest(unittest.TestCase):
         report = (STUDY / "FINAL-REPORT.md").read_text(encoding="utf-8")
 
         self.assertIn("## Abstract", report)
-        self.assertIn('"Raw tokens" means input plus output', report)
-        self.assertIn("Direct sequential Codex", report)
-        self.assertIn("Concurrent Work Leaf", report)
-        self.assertIn("The exact percentage should not be generalized", report)
-        self.assertNotIn("wl-000", report)
+        self.assertIn("Raw tokens mean input plus output", report)
+        self.assertIn("normal Work Leaf endpoint", report)
+        self.assertIn("not a formal equal-quality comparison", report)
+        self.assertIn("ten interrupted responses", report)
 
     def test_report_contains_reproducible_final_numbers(self):
         report = (STUDY / "FINAL-REPORT.md").read_text(encoding="utf-8")
 
         for expected in (
-            "51.62%",
-            "60.25%",
-            "10.34%",
-            "89.66%",
-            "76.62%",
-            "23.38%",
-            "16.72 million",
+            "49.78%-51.62%",
+            "19,220,509",
+            "22,517,835",
+            "19,399,622",
+            "35.66 million versus 19.31 million",
+            "97.95%-98.02%",
         ):
             self.assertIn(expected, report)
-        self.assertRegex(report, re.compile(r"17\.17\s+million"))
 
     def test_state_marks_no_required_step_remaining(self):
         state = (STUDY / "STATE.md").read_text(encoding="utf-8")
-        self.assertIn("The causal study is complete.", state)
-        self.assertIn("No required study step remains.", state)
+        self.assertIn("Collection is complete.", state)
+        self.assertIn("17,471,532-18,138,199", state)
+        self.assertIn("decompose.py` refuses", state)
 
 
 if __name__ == "__main__":

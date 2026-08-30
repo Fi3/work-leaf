@@ -22,7 +22,14 @@ class CombinedAnalysisTest(unittest.TestCase):
     def test_combined_control_passes_every_infrastructure_gate(self):
         evidence = load_module().build_evidence()
 
-        self.assertEqual(evidence["status"], "complete")
+        self.assertEqual(
+            evidence["status"],
+            "complete_controls_with_bounded_normal_endpoint",
+        )
+        self.assertEqual(
+            evidence["normal_endpoint_accounting"]["unresolved_provider_responses"],
+            10,
+        )
         self.assertEqual(evidence["rollout_integrity"]["hash_mismatches"], [])
         self.assertEqual(len(evidence["activation"]), 3)
         self.assertTrue(all(row["passed"] for row in evidence["activation"]))

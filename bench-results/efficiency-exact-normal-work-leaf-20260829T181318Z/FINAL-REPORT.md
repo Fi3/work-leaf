@@ -1,134 +1,125 @@
-# Exact Normal Work Leaf Follow-up
+# Bounded Normal Work Leaf Follow-up
 
 ## Abstract
 
-This study answers whether interrupted Work Leaf responses were being omitted from token counts. It
-ran six concurrent workflows using the normal Work Leaf implementation on the frozen three-feature
-benchmark with GPT-5.5 at `xhigh`, three runs at a time. It compares them with six previously
-collected, exactly measured normal direct Codex runs using the same task and validation rules.
+This study compares six normal concurrent Work Leaf runs with six normal direct sequential Codex
+runs on the same three-feature Rust task. Every run used GPT-5.5 with `xhigh` reasoning, the same
+base commit, normal validation freedom, the same final checks, and the same feature scorer.
 
-No Work Leaf response is missing from the final totals. Ten interrupted responses did not have a
-usage event immediately before interruption, but each affected provider thread later reported a
-cumulative total that includes the response. No estimate or 400,000-token ceiling is used.
+The original analysis called all six Work Leaf token totals exact. That was wrong. A later
+cumulative thread total proves an earlier interrupted response was counted only when the arithmetic
+contains an extra token increase that cannot belong to the later response. The corrected observer
+finds ten unresolved interrupted responses across five runs; only one Work Leaf run is exact.
 
-Work Leaf averaged 17.47 million raw tokens, 51.62% below direct Codex, and 1.34 million uncached
-tokens, 16.49% below direct Codex. This is an exact descriptive token difference. It is not yet a
-clean equal-quality efficiency result because Work Leaf completed 13 of 18 scored features while
-direct Codex completed 17 of 18.
+Using a conservative allowance of 400,000 raw tokens for every unresolved response, Work Leaf
+averaged between 17.47 and 18.14 million raw tokens. Direct Codex averaged 36.12 million. Work Leaf
+therefore used between 49.78% and 51.62% fewer raw tokens in these samples, even under the maximum
+allowance. The raw-token reduction is proven for this collected group, but its exact percentage is
+not known.
 
-## Direct Answer
+The average feature score differs: direct Codex completed 17 of 18 checks and Work Leaf completed
+13 of 18. The result is not an equal-quality average comparison. The uncached-token result is also
+inconclusive because the missing responses do not report their cached-input split.
 
-The interrupted-response accounting problem is resolved for these six runs: all provider usage is
-included exactly. The earlier wide interval from adding up to 400,000 tokens per apparently missing
-response was unnecessary.
+## What Was Compared
 
-The data still show lower Work Leaf token use, but they do not by themselves prove how much Work
-Leaf would save at the same average implementation quality. The quality gap must remain visible.
+| Workflow | Runs | Scheduling | Model | Reasoning | Feature checks |
+| --- | ---: | --- | --- | --- | ---: |
+| Direct Codex | 6 | normal sequential | GPT-5.5 | `xhigh` | 17/18 |
+| Work Leaf | 6 | normal concurrent | GPT-5.5 | `xhigh` | 13/18 |
 
-## What Ran
+The task asks for visual selection and copy, `/status` forwarding, and reviewed-patch close/reopen.
+`/fork` is not part of the task and is not scored. Runs are independent group observations, not
+matched pairs. No success, partial implementation, or measurement gap was discarded.
 
-| Workflow | Runs | Scheduling | Model | Reasoning |
-| --- | ---: | --- | --- | --- |
-| Direct Codex | 6 | normal sequential | GPT-5.5 | `xhigh` |
-| Work Leaf | 6 | concurrent, with measured interrupt delay | GPT-5.5 | `xhigh` |
+Both workflows use the same base commit, task text, model, reasoning level, time allowances, normal
+validation freedom, final format/Clippy/test gate, and scorer. Direct Codex does not use Work Leaf.
+Work Leaf uses its normal concurrent implementation.
 
-The Work Leaf runs were launched in two batches of three. Simultaneous runs are independent
-observations, not matched pairs. Every success and partial implementation is retained.
+The Work Leaf observer held an already requested interrupt for at most one second while waiting for
+provider usage. This changes interrupt timing and can permit extra generation after a directive.
+That observed work is counted. Across 287 interrupts, the combined delay was 15.0 seconds. The
+incoming and forwarded request bytes match in all six captures.
 
-The fixed task has three features: visual selection and copy, slash-command forwarding, and
-reviewed-patch close/reopen. The scorer exercises the slash-command feature with `/status`.
-`/fork` is not required and is not scored.
+## Accounting Correction
 
-Both workflows use the same base commit, task information, model, reasoning level, time allowances,
-normal validation freedom, final format/Clippy/test gate, and quality scorer. Direct Codex does not
-use Work Leaf. Work Leaf uses its normal concurrent implementation. The observer changes only when
-an already requested interrupt reaches the provider; incoming and forwarded request bytes match in
-all six Work Leaf captures.
+Codex reports `tokenUsage.total` as a cumulative total for a provider thread and `tokenUsage.last`
+as the usage of the response that produced that event. The earlier analyzer treated any later
+cumulative event on a thread as proof that a prior interrupted response was included. That is not
+enough.
 
-The observer can hold that interrupt for up to one second. Across 287 interrupts, 252 were released
-after immediate exact usage, 34 were released when output resumed, and one reached the timeout. The
-mean wait was 52 milliseconds and the combined wait was 15.0 seconds. This can add post-directive
-provider work, and every added token is included. It means the workflow code is normal but the
-provider timing is instrumented. The timing effect tends to add Work Leaf tokens on the affected
-turn, but its possible effect on later thread behavior is not measured.
+For example, if the next cumulative total rises by exactly the next event's `last` value, the
+increase contains no tokens attributable to the earlier interruption. The corrected rule recovers
+an interrupted response only when all of these facts hold:
 
-## Exact Accounting
+1. The next cumulative total is later than the interrupted directive.
+2. Exactly one unresolved interrupted response lies between the surrounding cumulative totals.
+3. Subtracting the previous total and the next event's `last` value leaves a nonzero token increase.
 
-Work Leaf communicates with Codex through app-server threads. Each
-`thread/tokenUsage/updated.params.tokenUsage.total` value is the cumulative token count for its
-thread. The observer keeps the largest final cumulative value for each thread and sums the threads.
+The implementation is in
+`bench-observer/src/lib.rs::later_cumulative_usage_proves_interrupted_turn`. The regression test is
+`bench-observer/tests/proxy.rs::later_cumulative_usage_without_an_unreported_increment_does_not_cover_interrupted_turn`.
 
-The first analysis required a usage event immediately after every completed directive. It therefore
-flagged ten interrupted responses. Replaying the saved streams showed that all ten affected threads
-later emitted a cumulative total. Because that later total includes all earlier work on the thread,
-the response was already in the recorded final total.
+Replaying the six saved provider streams with that rule gives one exact run and five bounded runs:
 
-The observer analysis in `bench-observer/src/lib.rs::analyze_app_server` treats an interrupted turn
-as missing only when there is neither an immediate usage event nor a later cumulative total on the
-same thread. The regression test
-`bench-observer/tests/proxy.rs::later_cumulative_thread_usage_covers_an_interrupted_turn_without_immediate_usage`
-locks this behavior down.
+| Work Leaf run | Recorded raw lower bound | Conservative raw upper bound | Unresolved responses | Features |
+| --- | ---: | ---: | ---: | ---: |
+| `exact-normal-001` | 20,221,714 | 20,621,714 | 1 | 2/3 |
+| `exact-normal-002` | 13,214,206 | 14,414,206 | 3 | 3/3 |
+| `exact-normal-003` | 14,243,707 | 15,443,707 | 3 | 3/3 |
+| `exact-normal-004` | 15,798,407 | 15,798,407 | 0 | 1/3 |
+| `exact-normal-005` | 21,800,967 | 22,600,967 | 2 | 2/3 |
+| `exact-normal-006` | 19,550,191 | 19,950,191 | 1 | 2/3 |
 
-All six captures are complete, report zero unresolved interrupted responses, and preserve identical
-incoming and forwarded client streams. These results use exact totals, not bounds.
+The 400,000-token allowance comes from the previously frozen bound: a 258,400-token active context
+window, a 128,000-token maximum output, and enough room for the captured new-turn prompt. Its source
+and arithmetic are retained in
+`bench-results/efficiency-point7-bounded-accounting-20260828T142614Z/evidence.json`.
 
 ## Token Result
 
-Raw tokens count input plus output, including cached input. Uncached tokens count uncached input plus
+Raw tokens are input plus output, including cached input. Uncached tokens are uncached input plus
 output.
 
-| Group | Runs | Mean raw | Mean uncached |
-| --- | ---: | ---: | ---: |
-| Direct Codex | 6 | 36,116,382 | 1,608,712 |
-| Work Leaf | 6 | 17,471,532 | 1,343,404 |
-| Work Leaf reduction | | 51.62% | 16.49% |
+| Group | Mean raw tokens | Mean uncached tokens |
+| --- | ---: | ---: |
+| Direct Codex | 36,116,382 exact | 1,608,712 exact |
+| Work Leaf | 17,471,532-18,138,199 | 1,343,404-2,010,071 |
+| Work Leaf change | 49.78%-51.62% fewer | 24.95% more to 16.49% fewer |
 
-The exact mean differences are 18,644,850 fewer raw tokens and 265,308 fewer uncached tokens per
-workflow.
+The full six-run group proves a raw-token reduction under the conservative bound. It does not prove
+an uncached-token reduction.
 
-| Work Leaf run | Raw tokens | Uncached tokens | Scored features |
-| --- | ---: | ---: | ---: |
-| `exact-normal-001` | 20,221,714 | 1,471,762 | 2/3 |
-| `exact-normal-002` | 13,214,206 | 1,179,134 | 3/3 |
-| `exact-normal-003` | 14,243,707 | 1,188,347 | 3/3 |
-| `exact-normal-004` | 15,798,407 | 1,348,359 | 1/3 |
-| `exact-normal-005` | 21,800,967 | 1,497,991 | 2/3 |
-| `exact-normal-006` | 19,550,191 | 1,374,831 | 2/3 |
+As a limited quality check, five fully successful direct runs averaged 37.56 million raw tokens.
+The two fully successful Work Leaf runs averaged between 13.73 and 14.93 million. That is a bounded
+60.26%-63.45% reduction, but the Work Leaf subset has only two observations and was selected after
+scoring. It supports a real effect; it does not replace a planned quality-balanced comparison.
 
-## Quality Result
+## Why No Replacement Runs Were Needed
 
-| Group | Visual | `/status` | Close/reopen | Total | Mean per run |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Direct Codex | 6/6 | 6/6 | 5/6 | 17/18 | 2.83/3 |
-| Work Leaf | 5/6 | 6/6 | 2/6 | 13/18 | 2.17/3 |
+Repeating the same normal Work Leaf workflow would not make interrupted-response accounting exact.
+Codex 0.150.1 can acknowledge an interrupted turn without emitting terminal usage for that
+response. The saved lower bounds plus the conservative maximum already prove the raw result, so new
+paid runs would add samples without repairing this transport limitation.
 
-All six Work Leaf benchmark workflows and final repository gates passed. That does not mean every
-requested feature passed the independent scorer. Workflow validity, token completeness, and feature
-quality are separate results.
-
-The lower-quality Work Leaf average could require less model work, so the 51.62% and 16.49%
-reductions must not be described as equal-quality savings.
-
-As a limited check, the fully successful candidates averaged 37,564,061 raw and 1,549,060 uncached
-tokens for five direct runs, versus 13,728,957 raw and 1,183,741 uncached tokens for two Work Leaf
-runs. That is 63.45% lower raw and 23.58% lower uncached use for Work Leaf. This supports a real
-effect, but the two-run Work Leaf subset is too small and was selected after scoring, so it is not a
-replacement for a quality-balanced comparison.
+Exact normal-workflow accounting would require provider telemetry that reports usage for cancelled
+responses. Until that exists, normal Work Leaf results must remain bounded whenever the corrected
+observer reports unresolved interrupted responses.
 
 ## Conclusion
 
-This study establishes three facts for the frozen benchmark:
+The defensible result is:
 
-1. The six new Work Leaf token totals are exact; interrupted responses are not undercounted.
-2. The observed Work Leaf group mean is lower for both raw and uncached tokens.
-3. The complete six-run groups differ in implementation quality, so the exact fraction attributable
-   to workflow efficiency at equal quality is not established.
+- Work Leaf used at least 49.78% fewer raw tokens in this six-versus-six sample.
+- The exact raw reduction lies between 49.78% and 51.62%.
+- The uncached-token direction is unknown.
+- The all-run quality averages differ, so this is not an equal-quality average claim.
+- The two fully successful Work Leaf runs remain far below every fully successful direct average
+  even under the conservative bound, but that subset is small and descriptive.
 
-The token difference is therefore not explained by the interrupted-response accounting bug. The
-remaining likely explanation is that Work Leaf reaches its result through fewer or shorter model
-and tool cycles, but this study does not isolate which mechanism causes what fraction. A causal
-allocation requires normal-workflow controls that disable one mechanism at a time without changing
-validation behavior or task quality.
+The corrected machine-readable result is `evidence.json`. Full corrected replay outputs are named
+`analysis-request-accounting.json` inside each saved run's `observation` directory. The older
+`analysis-cumulative.json` files are retained as superseded evidence of the rejected rule.
 
 ## Reproduce The Analysis
 
@@ -139,6 +130,3 @@ python3 bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/
 python3 bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/test_analyze.py
 python3 bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/analyze.py
 ```
-
-The machine-readable result is `evidence.json`; per-run quality evidence is `quality.json`. Raw
-provider streams and the cumulative reanalysis are retained under `runs/`.

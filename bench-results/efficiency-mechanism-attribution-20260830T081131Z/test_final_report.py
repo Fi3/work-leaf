@@ -41,6 +41,26 @@ class FinalReportTest(unittest.TestCase):
         self.assertIn('"Raw tokens" means all input plus output tokens', normalized)
         self.assertIn('"Uncached tokens" means fresh input plus output', normalized)
 
+    def test_report_includes_the_conservative_endpoint_scenario(self):
+        evidence = json.loads((STUDY / "evidence.json").read_text(encoding="utf-8"))
+        report = (STUDY / "FINAL-REPORT.md").read_text(encoding="utf-8")
+        bounded = evidence["causal_coverage_bounded"]
+        raw = evidence["ordered_attribution"]["raw_bounded"]
+
+        self.assertEqual(
+            evidence["status"],
+            "complete_with_bounded_normal_endpoint",
+        )
+        self.assertIn(
+            f"{bounded['share_of_endpoint_gap_percent']['lower']:.2f}%",
+            report,
+        )
+        self.assertIn(
+            f"{raw['endpoint_gap']['lower']:,.0f}",
+            report,
+        )
+        self.assertIn("ten unresolved responses", report)
+
 
 if __name__ == "__main__":
     unittest.main()

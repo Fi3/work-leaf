@@ -184,6 +184,11 @@ def make_row(definition, report, usage, analysis):
         },
         "provider_capture_complete": analysis is None or analysis["capture_complete"],
         "unresolved_provider_turns": 0 if analysis is None else analysis["interrupted_provider_turns"],
+        "measurement": (
+            "exact_direct_invocation_totals"
+            if analysis is None
+            else "legacy_cumulative_assumption_not_revalidated"
+        ),
         "provider_threads": None if analysis is None else len(analysis["threads"]),
         "controller_provider_differences": (
             0
@@ -289,7 +294,11 @@ def build_evidence():
     inexact = [
         row["id"]
         for row in direct + work_leaf
-        if not row["provider_capture_complete"] or row["unresolved_provider_turns"]
+        if (
+            not row["provider_capture_complete"]
+            or row["unresolved_provider_turns"]
+            or row["measurement"] != "exact_direct_invocation_totals"
+        )
     ]
     direct_raw = [row["usage"]["raw_input_plus_output"] for row in direct]
     work_leaf_raw = [row["usage"]["raw_input_plus_output"] for row in work_leaf]
@@ -298,7 +307,11 @@ def build_evidence():
     return {
         "schema_version": 1,
         "study": STUDY.name,
-        "status": "complete" if not failures and not inexact else "invalid",
+        "status": (
+            "legacy_sanity_check_only"
+            if not failures
+            else "invalid"
+        ),
         "scope": "frozen three-feature Rust benchmark",
         "fairness": {
             "base_commit": BASE_COMMIT,
@@ -311,12 +324,16 @@ def build_evidence():
             "failed_checks": failures,
         },
         "accounting": {
-            "authority": "final cumulative provider totals from hash-verified rollout records",
+            "authority": (
+                "Direct totals are exact. Work Leaf rows preserve the recorded totals from the "
+                "rejected cumulative-usage assumption and are not exact evidence."
+            ),
             "controller_counter_role": "audit only; repeated stale last-turn values can overcount it",
             "inexact_runs": inexact,
         },
         "groups": {"direct": direct_summary, "work_leaf": work_leaf_summary},
         "comparison": {
+            "measurement": "recorded Work Leaf lower-bound scenario",
             "raw_difference_tokens": raw_gap,
             "uncached_difference_tokens": uncached_gap,
             "raw_reduction_percent": raw_gap / direct_summary["mean_raw_tokens"] * 100,

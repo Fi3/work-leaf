@@ -10,7 +10,7 @@ runs. It does not claim that the result automatically generalizes to every proje
 
 | Explanation | Why it could fit | Counterchecks | Judgment |
 | --- | --- | --- | --- |
-| Work Leaf tokens are missing | Interrupted provider output previously created incomplete totals. | Every admitted thread has exact cumulative usage, 594 combined app-server updates reconcile by component, all rollout hashes match, and no provider descendants exist. | Very unlikely. |
+| Work Leaf tokens are missing | Interrupted provider output can lack terminal usage. | The corrected arithmetic finds ten unresolved responses in the normal endpoint. The direct-read, continued-response, and combined controls remain exact. | Confirmed for the normal endpoint and covered by a conservative bound. |
 | Direct resume tokens are counted twice | Direct Codex launches and resumes the same thread several times. | Resume invocation totals are non-monotonic and sum exactly to the independent final total saved in each Codex rollout. They are per invocation, not repeated cumulative totals. | Very unlikely. |
 | The direct workflow receives more required work | A stricter task or final gate would naturally cost more. | Both workflows use the same three requests, base commit, model, reasoning, focused implementation guidance, review duties, linearization contract, timeout, final formatting, Clippy, tests, build, replay, and scorer. | Very unlikely. |
 | Work Leaf implements less | The current normal cohort scores 13/18 versus direct's 17/18. | An older equal-quality cohort scores 8/9 in both groups and preserves the gap. Combined Work Leaf scores 8/9, has comparable changed-line counts, performs more review rounds, and still sits below every direct run. | Cannot explain the saving. |

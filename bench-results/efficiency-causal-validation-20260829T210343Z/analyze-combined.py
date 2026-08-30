@@ -570,6 +570,9 @@ def build_evidence():
     normal_runs = [run for run in current if run["group"] == "work_leaf"]
     direct = base.summarize_group(direct_runs)
     normal = base.summarize_group(normal_runs)
+    normal_missing_responses = sum(
+        int(run.get("unresolved_provider_responses", 0)) for run in normal_runs
+    )
     direct_read = direct_read_evidence["groups"]["direct_read_work_leaf"]
     continued = continued_evidence["groups"]["continued_response_work_leaf"]
     combined = base.summarize_group(combined_runs)
@@ -627,13 +630,27 @@ def build_evidence():
         key: factorial_for(key, direct, normal, direct_read, continued, combined)
         for key in USAGE_KEYS
     }
+    for value in factorial.values():
+        value["measurement"] = "recorded normal Work Leaf lower-bound scenario"
     raw_factorial = factorial["raw_input_plus_output"]
     uncached_factorial = factorial["uncached_input_plus_output"]
 
     return {
         "schema_version": 1,
         "study": STUDY.name,
-        "status": "complete" if infrastructure_valid else "invalid",
+        "status": (
+            "complete_controls_with_bounded_normal_endpoint"
+            if infrastructure_valid
+            else "invalid"
+        ),
+        "normal_endpoint_accounting": {
+            "measurement": "bounded",
+            "unresolved_provider_responses": normal_missing_responses,
+            "recorded_mean_raw_tokens": normal["mean_usage"][
+                "raw_input_plus_output"
+            ],
+            "factorial_values_use": "recorded lower-bound scenario",
+        },
         "references": {
             "decomposition": {"path": relative(DECOMPOSITION), "sha256": sha256(DECOMPOSITION)},
             "direct_read": {"path": relative(DIRECT_READ), "sha256": sha256(DIRECT_READ)},

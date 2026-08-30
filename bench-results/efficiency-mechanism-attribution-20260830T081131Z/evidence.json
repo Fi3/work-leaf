@@ -7,6 +7,38 @@
     "share_of_endpoint_gap_percent": 98.01979989147675,
     "tokens": 18275644.333333332
   },
+  "causal_coverage_bounded": {
+    "mechanisms": [
+      "work_leaf_orchestration",
+      "mediated_reads_and_interruption"
+    ],
+    "scenarios": {
+      "conservative_upper_bound": {
+        "mechanisms": [
+          "work_leaf_orchestration",
+          "mediated_reads_and_interruption"
+        ],
+        "share_of_endpoint_gap_percent": 97.94637014578541,
+        "tokens": 17608977.666666664
+      },
+      "recorded_lower_bound": {
+        "mechanisms": [
+          "work_leaf_orchestration",
+          "mediated_reads_and_interruption"
+        ],
+        "share_of_endpoint_gap_percent": 98.01979989147675,
+        "tokens": 18275644.333333332
+      }
+    },
+    "share_of_endpoint_gap_percent": {
+      "lower": 97.94637014578541,
+      "upper": 98.01979989147675
+    },
+    "tokens": {
+      "lower": 17608977.666666664,
+      "upper": 18275644.333333332
+    }
+  },
   "counterchecks": {
     "compact_direct_vs_sequential_work_leaf_raw": {
       "complete_separation": true,
@@ -38,6 +70,20 @@
         "possible_features": 9
       }
     }
+  },
+  "endpoint_accounting": {
+    "normal_work_leaf_measurement": "bounded",
+    "raw_mean_interval": {
+      "lower": 17471532.0,
+      "upper": 18138198.666666668
+    },
+    "source": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/evidence.json",
+    "source_sha256": "ec98966e7a0c38e5b1419cd9fc753959143ea50075f1bb9fb7a7588b3899adef",
+    "uncached_mean_interval": {
+      "lower": 1343404.0,
+      "upper": 2010070.6666666667
+    },
+    "unresolved_provider_responses": 10
   },
   "groups": {
     "C": {
@@ -72,6 +118,7 @@
           "group": "work_leaf",
           "id": "combined-control-001",
           "input_tokens_per_usage_change": 93856.591160221,
+          "measurement": "exact",
           "quality": {
             "completion": "pass",
             "status": "pass",
@@ -120,6 +167,7 @@
               "usage_changes": 3
             }
           },
+          "unresolved_provider_responses": 0,
           "usage": {
             "cached_input_tokens": 15081344,
             "input_tokens": 16988043,
@@ -146,6 +194,7 @@
           "group": "work_leaf",
           "id": "combined-control-002",
           "input_tokens_per_usage_change": 107286.5090909091,
+          "measurement": "exact",
           "quality": {
             "completion": "pass",
             "status": "pass",
@@ -194,6 +243,7 @@
               "usage_changes": 3
             }
           },
+          "unresolved_provider_responses": 0,
           "usage": {
             "cached_input_tokens": 21506560,
             "input_tokens": 23603032,
@@ -220,6 +270,7 @@
           "group": "work_leaf",
           "id": "combined-control-003",
           "input_tokens_per_usage_change": 88311.4375,
+          "measurement": "exact",
           "quality": {
             "completion": "fail",
             "status": "pass",
@@ -268,6 +319,7 @@
               "usage_changes": 3
             }
           },
+          "unresolved_provider_responses": 0,
           "usage": {
             "cached_input_tokens": 15421440,
             "input_tokens": 16955796,
@@ -322,6 +374,7 @@
           "group": "direct",
           "id": "point7-exact-direct",
           "input_tokens_per_usage_change": 109064.13368983957,
+          "measurement": "exact",
           "quality": {
             "completion": "pass",
             "status": "pass",
@@ -361,6 +414,7 @@
               "usage_changes": 100
             }
           },
+          "unresolved_provider_responses": 0,
           "usage": {
             "cached_input_tokens": 39052544,
             "input_tokens": 40789986,
@@ -387,6 +441,7 @@
           "group": "direct",
           "id": "direct-003",
           "input_tokens_per_usage_change": 109903.13409961686,
+          "measurement": "exact",
           "quality": {
             "completion": "fail",
             "status": "pass",
@@ -426,6 +481,7 @@
               "usage_changes": 68
             }
           },
+          "unresolved_provider_responses": 0,
           "usage": {
             "cached_input_tokens": 26971008,
             "input_tokens": 28684718,
@@ -452,6 +508,7 @@
           "group": "direct",
           "id": "direct-002",
           "input_tokens_per_usage_change": 107177.51359516617,
+          "measurement": "exact",
           "quality": {
             "completion": "pass",
             "status": "pass",
@@ -491,6 +548,7 @@
               "usage_changes": 86
             }
           },
+          "unresolved_provider_responses": 0,
           "usage": {
             "cached_input_tokens": 34349184,
             "input_tokens": 35475757,
@@ -517,6 +575,7 @@
           "group": "direct",
           "id": "step4-direct-001",
           "input_tokens_per_usage_change": 113725.82258064517,
+          "measurement": "exact",
           "quality": {
             "completion": "pass",
             "status": "pass",
@@ -556,6 +615,7 @@
               "usage_changes": 69
             }
           },
+          "unresolved_provider_responses": 0,
           "usage": {
             "cached_input_tokens": 34059520,
             "input_tokens": 35255005,
@@ -582,6 +642,7 @@
           "group": "direct",
           "id": "step4-direct-002",
           "input_tokens_per_usage_change": 126557.83235294117,
+          "measurement": "exact",
           "quality": {
             "completion": "pass",
             "status": "pass",
@@ -621,6 +682,7 @@
               "usage_changes": 73
             }
           },
+          "unresolved_provider_responses": 0,
           "usage": {
             "cached_input_tokens": 41585152,
             "input_tokens": 43029663,
@@ -647,6 +709,7 @@
           "group": "direct",
           "id": "step4-direct-003",
           "input_tokens_per_usage_change": 105576.33114754099,
+          "measurement": "exact",
           "quality": {
             "completion": "pass",
             "status": "pass",
@@ -686,6 +749,7 @@
               "usage_changes": 66
             }
           },
+          "unresolved_provider_responses": 0,
           "usage": {
             "cached_input_tokens": 31028608,
             "input_tokens": 32200781,
@@ -1951,6 +2015,16 @@
         "uncached_input_tokens": 1147148.8333333333
       },
       "mean_usage_changes": 212.33333333333334,
+      "mean_usage_interval": {
+        "raw_input_plus_output": {
+          "lower": 17471532.0,
+          "upper": 18138198.666666668
+        },
+        "uncached_input_plus_output": {
+          "lower": 1343404.0,
+          "upper": 2010070.6666666667
+        }
+      },
       "range": {
         "raw_input_plus_output": {
           "maximum": 21800967,
@@ -1963,12 +2037,13 @@
       },
       "run_rows": [
         {
-          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/observation/analysis-cumulative.json",
-          "analysis_sha256": "cc882f8ca18f8e193489fd90c0f49956fdef64981738198dc34ec55074f509e7",
+          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
+          "analysis_sha256": "89ed556d86f439a19982f1b0f41e985196572ea7357975ba2658d66c072c572d",
           "completed_features": 2,
           "group": "work_leaf",
           "id": "exact-normal-001",
           "input_tokens_per_usage_change": 87697.11403508772,
+          "measurement": "recorded_lower_bound",
           "quality": {
             "completion": "fail",
             "status": "pass",
@@ -2018,6 +2093,7 @@
               "usage_changes": 3
             }
           },
+          "unresolved_provider_responses": 1,
           "usage": {
             "cached_input_tokens": 18749952,
             "input_tokens": 19994942,
@@ -2038,12 +2114,13 @@
           }
         },
         {
-          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/observation/analysis-cumulative.json",
-          "analysis_sha256": "e98d64e50ec37753de19346fcf0baee918873952238a345a113a604dc72c9ff0",
+          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
+          "analysis_sha256": "1efcc02128aca3a9214cb95746cc531df605848b6f2696695339420eeb55b3ed",
           "completed_features": 3,
           "group": "work_leaf",
           "id": "exact-normal-002",
           "input_tokens_per_usage_change": 74223.74431818182,
+          "measurement": "recorded_lower_bound",
           "quality": {
             "completion": "pass",
             "status": "pass",
@@ -2093,6 +2170,7 @@
               "usage_changes": 3
             }
           },
+          "unresolved_provider_responses": 3,
           "usage": {
             "cached_input_tokens": 12035072,
             "input_tokens": 13063379,
@@ -2113,12 +2191,13 @@
           }
         },
         {
-          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/observation/analysis-cumulative.json",
-          "analysis_sha256": "5012980eb7e32eaf836591453e049ec4861bd5dc552314fcc55ae529d210b2a0",
+          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
+          "analysis_sha256": "d99110d2166abd08a6ce3cafbdb43d75bdfbcb94d603514c9bb0f122d1022000",
           "completed_features": 3,
           "group": "work_leaf",
           "id": "exact-normal-003",
           "input_tokens_per_usage_change": 72895.87046632124,
+          "measurement": "recorded_lower_bound",
           "quality": {
             "completion": "pass",
             "status": "pass",
@@ -2168,6 +2247,7 @@
               "usage_changes": 3
             }
           },
+          "unresolved_provider_responses": 3,
           "usage": {
             "cached_input_tokens": 13055360,
             "input_tokens": 14068903,
@@ -2188,12 +2268,13 @@
           }
         },
         {
-          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-004/exact-normal-004-three-feature-bench-artifacts/observation/analysis-cumulative.json",
+          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-004/exact-normal-004-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
           "analysis_sha256": "f16979427c65eab05a64a5fe6ed52ddbbe7932ee460f356c8a79b91cd3b50caf",
           "completed_features": 1,
           "group": "work_leaf",
           "id": "exact-normal-004",
           "input_tokens_per_usage_change": 77813.47263681592,
+          "measurement": "exact",
           "quality": {
             "completion": "fail",
             "status": "pass",
@@ -2243,6 +2324,7 @@
               "usage_changes": 3
             }
           },
+          "unresolved_provider_responses": 0,
           "usage": {
             "cached_input_tokens": 14450048,
             "input_tokens": 15640508,
@@ -2263,12 +2345,13 @@
           }
         },
         {
-          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/observation/analysis-cumulative.json",
-          "analysis_sha256": "ab957fb21a016c9a1004bafe9ee75875c09ed18216bf2cec54fc3b635a1c3458",
+          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
+          "analysis_sha256": "db9ca7b9500888b5b1cffa9cb2746435c3ba66e839560dfea4047057a8224b40",
           "completed_features": 2,
           "group": "work_leaf",
           "id": "exact-normal-005",
           "input_tokens_per_usage_change": 88697.81069958847,
+          "measurement": "recorded_lower_bound",
           "quality": {
             "completion": "fail",
             "status": "pass",
@@ -2318,6 +2401,7 @@
               "usage_changes": 3
             }
           },
+          "unresolved_provider_responses": 2,
           "usage": {
             "cached_input_tokens": 20302976,
             "input_tokens": 21553568,
@@ -2338,12 +2422,13 @@
           }
         },
         {
-          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/observation/analysis-cumulative.json",
-          "analysis_sha256": "e33daf919d4ff15be5695fdd6b50cbe0e9fa09f000202686ace5f42acb62c2a2",
+          "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
+          "analysis_sha256": "eeb78b59f6b25e071e4eff991c50c6b7a70fda7dbed9228a726411669e784f3c",
           "completed_features": 2,
           "group": "work_leaf",
           "id": "exact-normal-006",
           "input_tokens_per_usage_change": 82962.92274678111,
+          "measurement": "recorded_lower_bound",
           "quality": {
             "completion": "fail",
             "status": "pass",
@@ -2393,6 +2478,7 @@
               "usage_changes": 3
             }
           },
+          "unresolved_provider_responses": 1,
           "usage": {
             "cached_input_tokens": 18175360,
             "input_tokens": 19330361,
@@ -2427,6 +2513,7 @@
         "W": 17471532.0
       },
       "endpoint_gap": 18644849.666666664,
+      "measurement": "recorded Work Leaf lower-bound scenario",
       "steps": [
         {
           "left": "D",
@@ -2459,6 +2546,156 @@
       ],
       "unallocated_tokens": 0.0
     },
+    "raw_bounded": {
+      "endpoint_gap": {
+        "lower": 17978182.999999996,
+        "upper": 18644849.666666664
+      },
+      "scenarios": {
+        "conservative_upper_bound": {
+          "allocated_tokens": 17978182.999999996,
+          "conditions": {
+            "C": 19399622.0,
+            "D": 36116381.666666664,
+            "L": 35659264.666666664,
+            "S": 19311710.333333332,
+            "W": 18138198.666666668
+          },
+          "endpoint_gap": 17978182.999999996,
+          "steps": [
+            {
+              "left": "D",
+              "name": "compact_linearization",
+              "right": "L",
+              "share_of_endpoint_gap_percent": 2.542620686417532,
+              "tokens": 457117.0
+            },
+            {
+              "left": "L",
+              "name": "work_leaf_orchestration",
+              "right": "S",
+              "share_of_endpoint_gap_percent": 90.92995845761129,
+              "tokens": 16347554.333333332
+            },
+            {
+              "left": "S",
+              "name": "concurrent_scheduling",
+              "right": "C",
+              "share_of_endpoint_gap_percent": -0.4889908322029425,
+              "tokens": -87911.66666666791
+            },
+            {
+              "left": "C",
+              "name": "mediated_reads_and_interruption",
+              "right": "W",
+              "share_of_endpoint_gap_percent": 7.016411688174118,
+              "tokens": 1261423.333333332
+            }
+          ],
+          "unallocated_tokens": 0.0
+        },
+        "recorded_lower_bound": {
+          "allocated_tokens": 18644849.666666664,
+          "conditions": {
+            "C": 19399622.0,
+            "D": 36116381.666666664,
+            "L": 35659264.666666664,
+            "S": 19311710.333333332,
+            "W": 17471532.0
+          },
+          "endpoint_gap": 18644849.666666664,
+          "steps": [
+            {
+              "left": "D",
+              "name": "compact_linearization",
+              "right": "L",
+              "share_of_endpoint_gap_percent": 2.451706547236128,
+              "tokens": 457117.0
+            },
+            {
+              "left": "L",
+              "name": "work_leaf_orchestration",
+              "right": "S",
+              "share_of_endpoint_gap_percent": 87.67865992805271,
+              "tokens": 16347554.333333332
+            },
+            {
+              "left": "S",
+              "name": "concurrent_scheduling",
+              "right": "C",
+              "share_of_endpoint_gap_percent": -0.47150643871286735,
+              "tokens": -87911.66666666791
+            },
+            {
+              "left": "C",
+              "name": "mediated_reads_and_interruption",
+              "right": "W",
+              "share_of_endpoint_gap_percent": 10.341139963424038,
+              "tokens": 1928090.0
+            }
+          ],
+          "unallocated_tokens": 0.0
+        }
+      },
+      "steps": [
+        {
+          "left": "D",
+          "name": "compact_linearization",
+          "right": "L",
+          "share_of_endpoint_gap_percent": {
+            "lower": 2.451706547236128,
+            "upper": 2.542620686417532
+          },
+          "tokens": {
+            "lower": 457117.0,
+            "upper": 457117.0
+          }
+        },
+        {
+          "left": "L",
+          "name": "work_leaf_orchestration",
+          "right": "S",
+          "share_of_endpoint_gap_percent": {
+            "lower": 87.67865992805271,
+            "upper": 90.92995845761129
+          },
+          "tokens": {
+            "lower": 16347554.333333332,
+            "upper": 16347554.333333332
+          }
+        },
+        {
+          "left": "S",
+          "name": "concurrent_scheduling",
+          "right": "C",
+          "share_of_endpoint_gap_percent": {
+            "lower": -0.4889908322029425,
+            "upper": -0.47150643871286735
+          },
+          "tokens": {
+            "lower": -87911.66666666791,
+            "upper": -87911.66666666791
+          }
+        },
+        {
+          "left": "C",
+          "name": "mediated_reads_and_interruption",
+          "right": "W",
+          "share_of_endpoint_gap_percent": {
+            "lower": 7.016411688174118,
+            "upper": 10.341139963424038
+          },
+          "tokens": {
+            "lower": 1261423.333333332,
+            "upper": 1928090.0
+          }
+        }
+      ],
+      "work_leaf_mean_tokens": {
+        "lower": 17471532.0,
+        "upper": 18138198.666666668
+      }
+    },
     "uncached": {
       "allocated_tokens": 265308.33333333326,
       "conditions": {
@@ -2469,6 +2706,7 @@
         "W": 1343404.0
       },
       "endpoint_gap": 265308.33333333326,
+      "measurement": "recorded Work Leaf lower-bound scenario",
       "steps": [
         {
           "left": "D",
@@ -2500,16 +2738,168 @@
         }
       ],
       "unallocated_tokens": 0.0
+    },
+    "uncached_bounded": {
+      "endpoint_gap": {
+        "lower": -401358.3333333335,
+        "upper": 265308.33333333326
+      },
+      "scenarios": {
+        "conservative_upper_bound": {
+          "allocated_tokens": -401358.3333333335,
+          "conditions": {
+            "C": 2063174.0,
+            "D": 1608712.3333333333,
+            "L": 1547136.6666666667,
+            "S": 1785694.3333333333,
+            "W": 2010070.6666666667
+          },
+          "endpoint_gap": -401358.3333333335,
+          "steps": [
+            {
+              "left": "D",
+              "name": "compact_linearization",
+              "right": "L",
+              "share_of_endpoint_gap_percent": -15.341818408321698,
+              "tokens": 61575.66666666651
+            },
+            {
+              "left": "L",
+              "name": "work_leaf_orchestration",
+              "right": "S",
+              "share_of_endpoint_gap_percent": 59.43757656292168,
+              "tokens": -238557.6666666665
+            },
+            {
+              "left": "S",
+              "name": "concurrent_scheduling",
+              "right": "C",
+              "share_of_endpoint_gap_percent": 69.1351452359695,
+              "tokens": -277479.66666666674
+            },
+            {
+              "left": "C",
+              "name": "mediated_reads_and_interruption",
+              "right": "W",
+              "share_of_endpoint_gap_percent": -13.230903390569502,
+              "tokens": 53103.333333333256
+            }
+          ],
+          "unallocated_tokens": 0.0
+        },
+        "recorded_lower_bound": {
+          "allocated_tokens": 265308.33333333326,
+          "conditions": {
+            "C": 2063174.0,
+            "D": 1608712.3333333333,
+            "L": 1547136.6666666667,
+            "S": 1785694.3333333333,
+            "W": 1343404.0
+          },
+          "endpoint_gap": 265308.33333333326,
+          "steps": [
+            {
+              "left": "D",
+              "name": "compact_linearization",
+              "right": "L",
+              "share_of_endpoint_gap_percent": 23.209096334453573,
+              "tokens": 61575.66666666651
+            },
+            {
+              "left": "L",
+              "name": "work_leaf_orchestration",
+              "right": "S",
+              "share_of_endpoint_gap_percent": -89.9171404340861,
+              "tokens": -238557.6666666665
+            },
+            {
+              "left": "S",
+              "name": "concurrent_scheduling",
+              "right": "C",
+              "share_of_endpoint_gap_percent": -104.58761818010498,
+              "tokens": -277479.66666666674
+            },
+            {
+              "left": "C",
+              "name": "mediated_reads_and_interruption",
+              "right": "W",
+              "share_of_endpoint_gap_percent": 271.2956622797375,
+              "tokens": 719770.0
+            }
+          ],
+          "unallocated_tokens": 0.0
+        }
+      },
+      "steps": [
+        {
+          "left": "D",
+          "name": "compact_linearization",
+          "right": "L",
+          "share_of_endpoint_gap_percent": {
+            "lower": -15.341818408321698,
+            "upper": 23.209096334453573
+          },
+          "tokens": {
+            "lower": 61575.66666666651,
+            "upper": 61575.66666666651
+          }
+        },
+        {
+          "left": "L",
+          "name": "work_leaf_orchestration",
+          "right": "S",
+          "share_of_endpoint_gap_percent": {
+            "lower": -89.9171404340861,
+            "upper": 59.43757656292168
+          },
+          "tokens": {
+            "lower": -238557.6666666665,
+            "upper": -238557.6666666665
+          }
+        },
+        {
+          "left": "S",
+          "name": "concurrent_scheduling",
+          "right": "C",
+          "share_of_endpoint_gap_percent": {
+            "lower": -104.58761818010498,
+            "upper": 69.1351452359695
+          },
+          "tokens": {
+            "lower": -277479.66666666674,
+            "upper": -277479.66666666674
+          }
+        },
+        {
+          "left": "C",
+          "name": "mediated_reads_and_interruption",
+          "right": "W",
+          "share_of_endpoint_gap_percent": {
+            "lower": -13.230903390569502,
+            "upper": 271.2956622797375
+          },
+          "tokens": {
+            "lower": 53103.333333333256,
+            "upper": 719770.0
+          }
+        }
+      ],
+      "work_leaf_mean_tokens": {
+        "lower": 1343404.0,
+        "upper": 2010070.6666666667
+      }
     }
   },
   "quality_file": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-attribution-20260830T081131Z/quality.json",
   "quality_file_sha256": "849c523d9eb20ebf2e180310b2bcc339517c38845c112464ec2fab4319597caf",
   "schema_version": 1,
   "source_evidence": {
+    "endpoint_correction": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/evidence.json",
+    "endpoint_correction_sha256": "ec98966e7a0c38e5b1419cd9fc753959143ea50075f1bb9fb7a7588b3899adef",
     "prior": "/home/user/src/work-leaf/bench-results/efficiency-causal-validation-20260829T210343Z/combined-evidence.json",
-    "prior_sha256": "b8930b8c02b221a1ef10e90181a6c40ab61498b0232ec0c2de33d1375afc2658"
+    "prior_sha256": "ed2d76541b8ba00298ed2624d98f6a662bf24bc64cff19ffa6dc59f55d5726f9"
   },
-  "status": "complete",
+  "status": "complete_with_bounded_normal_endpoint",
   "study": "efficiency-mechanism-attribution-20260830T081131Z",
   "work_leaf_orchestration_behavior": {
     "native_exec_calls": {

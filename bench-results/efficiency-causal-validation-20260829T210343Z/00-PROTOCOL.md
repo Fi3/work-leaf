@@ -1,5 +1,12 @@
 # Causal Validation Protocol
 
+## Current Accounting Constraint
+
+The normal Work Leaf endpoint is bounded, not exact. Ten interrupted responses lack terminal usage.
+Any protocol step below that describes the normal endpoint as exact is superseded by
+`ACCOUNTING-STATUS.md`. The direct-read, continued-response, and combined controls retain exact
+usage and remain valid.
+
 ## Goal
 
 Answer two separate questions for the frozen three-feature Rust benchmark:

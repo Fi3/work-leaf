@@ -18,30 +18,29 @@ def load_module():
 
 
 class DecompositionTest(unittest.TestCase):
-    def test_two_cohorts_reproduce_the_same_mechanism_direction(self):
+    def test_incomplete_normal_endpoint_rejects_exact_decomposition(self):
         evidence = load_module().build_evidence()
 
-        self.assertEqual(evidence["status"], "complete")
-        self.assertEqual(evidence["rollout_integrity"]["hash_mismatches"], [])
+        self.assertEqual(
+            evidence["status"],
+            "superseded_by_bounded_endpoint_analysis",
+        )
+        self.assertEqual(evidence["accounting"]["unresolved_provider_responses"], 10)
+        self.assertEqual(
+            evidence["accounting"]["normal_work_leaf_raw_mean_interval"],
+            {"lower": 17_471_532.0, "upper": 18_138_198.666666668},
+        )
         current = evidence["cohorts"]["current_detailed_6_by_6"]
-        historical = evidence["cohorts"]["historical_quality_balanced_3_by_3"]
-        self.assertAlmostEqual(current["token_gap"]["raw_tokens"], 18_644_849.666666668)
-        self.assertGreater(current["token_gap"]["cached_input_share_of_raw_gap_percent"], 98.5)
-        self.assertAlmostEqual(current["usage_changes"]["direct_mean"], 320.1666666666667)
-        self.assertAlmostEqual(current["usage_changes"]["work_leaf_mean"], 212.33333333333334)
-        self.assertGreater(current["context_per_change"]["direct_mean_input_tokens"], 110_000)
-        self.assertLess(current["context_per_change"]["work_leaf_mean_input_tokens"], 85_000)
-        self.assertAlmostEqual(
-            current["input_gap_factorization"]["sum_tokens"],
-            current["token_gap"]["input_tokens"],
+        work_leaf = [
+            run for run in current["runs"] if run["group"] == "work_leaf"
+        ]
+        self.assertEqual(len(work_leaf), 6)
+        self.assertTrue(
+            all(run["measurement"] in {"exact", "recorded_lower_bound"} for run in work_leaf)
         )
-        self.assertLess(
-            historical["usage_changes"]["work_leaf_mean"],
-            historical["usage_changes"]["direct_mean"],
-        )
-        self.assertLess(
-            historical["context_per_change"]["work_leaf_mean_input_tokens"],
-            historical["context_per_change"]["direct_mean_input_tokens"],
+        self.assertEqual(
+            sum(run["unresolved_provider_responses"] for run in work_leaf),
+            10,
         )
 
 

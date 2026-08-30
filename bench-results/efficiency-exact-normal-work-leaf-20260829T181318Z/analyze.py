@@ -19,8 +19,16 @@ DIRECT_EVIDENCE = (
     / "final-evidence.json"
 )
 QUALITY = STUDY_DIR / "quality.json"
+BOUND_EVIDENCE = (
+    REPO_ROOT
+    / "bench-results"
+    / "efficiency-point7-bounded-accounting-20260828T142614Z"
+    / "evidence.json"
+)
+CORRECTED_OBSERVER_SOURCE = REPO_ROOT / "bench-observer" / "src" / "lib.rs"
 RUN_IDS = [f"exact-normal-{index:03d}" for index in range(1, 7)]
 FEATURES = ("visual", "status", "completion")
+MAXIMUM_RAW_TOKENS_PER_UNRESOLVED_RESPONSE = 400_000
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -58,9 +66,6 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "exact_token_observations": sum(row["measurement"] == "exact" for row in rows),
         "bounded_token_observations": sum(row["measurement"] == "bounded" for row in rows),
         "missing_provider_responses": sum(int(row["missing_responses"]) for row in rows),
-        "immediate_usage_gaps_recovered": sum(
-            int(row.get("immediate_usage_gaps", 0)) for row in rows
-        ),
         "raw_token_mean_interval": mean_interval(rows, "raw_tokens"),
         "uncached_token_mean_interval": mean_interval(rows, "uncached_tokens"),
     }
@@ -109,10 +114,8 @@ def load_work_leaf_rows() -> list[dict[str, Any]]:
     for run_id in RUN_IDS:
         artifact = STUDY_DIR / "runs" / run_id / f"{run_id}-three-feature-bench-artifacts"
         report_path = artifact / "report.json"
-        original_analysis_path = artifact / "observation" / "analysis.json"
-        analysis_path = artifact / "observation" / "analysis-cumulative.json"
+        analysis_path = artifact / "observation" / "analysis-request-accounting.json"
         report = read_json(report_path)
-        original_analysis = read_json(original_analysis_path)
         analysis = read_json(analysis_path)
 
         expected_report = {
@@ -136,10 +139,20 @@ def load_work_leaf_rows() -> list[dict[str, Any]]:
 
         usage = analysis["usage_scopes"]["total_workflow"]
         missing = int(analysis["interrupted_provider_turns"])
-        if not analysis["capture_complete"] or analysis["errors"] or missing != 0:
-            raise ValueError(f"{run_id} cumulative usage analysis is incomplete")
+        expected_complete = missing == 0
+        if bool(analysis["capture_complete"]) != expected_complete:
+            raise ValueError(f"{run_id} has inconsistent capture completeness")
+        if expected_complete and analysis["errors"]:
+            raise ValueError(f"{run_id} exact analysis reports errors")
+        if not expected_complete and analysis["errors"] != [
+            f"interrupted provider turn has no complete usage: count={missing}"
+        ]:
+            raise ValueError(f"{run_id} bounded analysis reports unexpected errors")
         raw_lower = int(usage["raw_input_plus_output"])
         uncached_lower = int(usage["uncached_input_plus_output"])
+        missing_raw_cap = (
+            missing * MAXIMUM_RAW_TOKENS_PER_UNRESOLVED_RESPONSE
+        )
         score = scored[run_id]
         rows.append(
             {
@@ -148,13 +161,18 @@ def load_work_leaf_rows() -> list[dict[str, Any]]:
                 "workflow_result": score["workflow_result"],
                 "completed_features": int(score["completed_features"]),
                 "feature_checks": score["checks"],
-                "measurement": "exact",
+                "measurement": "exact" if expected_complete else "bounded",
                 "missing_responses": missing,
-                "immediate_usage_gaps": int(original_analysis["interrupted_provider_turns"]),
-                "raw_tokens": {"lower": raw_lower, "upper": raw_lower},
+                "maximum_raw_tokens_per_missing_response": (
+                    MAXIMUM_RAW_TOKENS_PER_UNRESOLVED_RESPONSE
+                ),
+                "raw_tokens": {
+                    "lower": raw_lower,
+                    "upper": raw_lower + missing_raw_cap,
+                },
                 "uncached_tokens": {
                     "lower": uncached_lower,
-                    "upper": uncached_lower,
+                    "upper": uncached_lower + missing_raw_cap,
                 },
                 "source": str(report_path.relative_to(REPO_ROOT)),
                 "analysis": str(analysis_path.relative_to(REPO_ROOT)),
@@ -206,17 +224,29 @@ def build_evidence() -> dict[str, Any]:
     return {
         "schema_version": 1,
         "study": STUDY_DIR.name,
-        "status": "complete",
+        "status": "complete_with_bounded_work_leaf_usage",
         "question": (
             "Does concurrent Work Leaf under the recorded interrupt grace use fewer tokens than "
-            "normal direct sequential Codex on the frozen three-feature task when provider usage "
-            "is captured exactly?"
+            "normal direct sequential Codex on the frozen three-feature task after unresolved "
+            "interrupted responses receive a conservative token cap?"
         ),
         "accounting": {
             "method": (
-                "Ten interrupted responses lacked an immediate usage event, but every one was "
-                "followed by a later cumulative total on the same provider thread. Each final "
-                "thread total therefore includes those responses; no estimate or ceiling is used."
+                "One capture is exact. Ten interrupted responses across the other five captures "
+                "have no terminal usage. Recorded totals are lower bounds; each unresolved "
+                "response adds at most 400,000 raw tokens to the upper bound. The same amount is "
+                "added to the uncached upper bound because the missing cached-input split is "
+                "unknown."
+            ),
+            "maximum_raw_tokens_per_unresolved_response": (
+                MAXIMUM_RAW_TOKENS_PER_UNRESOLVED_RESPONSE
+            ),
+            "bound_source": str(BOUND_EVIDENCE.relative_to(REPO_ROOT)),
+            "corrected_observer_source": str(
+                CORRECTED_OBSERVER_SOURCE.relative_to(REPO_ROOT)
+            ),
+            "corrected_observer_source_sha256": sha256_file(
+                CORRECTED_OBSERVER_SOURCE
             ),
             "timing_caveat": (
                 "The observer held each complete-directive interrupt for at most 1000 milliseconds. "
@@ -237,17 +267,27 @@ def build_evidence() -> dict[str, Any]:
             "direct_minus_normal_work_leaf": full_comparison,
         },
         "conclusions": {
-            "raw_saving_is_exact": comparison["raw_tokens"]["lower"] > 0,
-            "uncached_saving_is_exact": comparison["uncached_tokens"]["lower"] > 0,
+            "raw_saving_proven_under_conservative_bound": (
+                comparison["raw_tokens"]["lower"] > 0
+            ),
+            "uncached_saving_proven_under_conservative_bound": (
+                comparison["uncached_tokens"]["lower"] > 0
+            ),
             "equal_quality_average_claim_supported": (
                 direct["total_completed_features"] == work_leaf["total_completed_features"]
                 and direct["feature_pass_counts"] == work_leaf["feature_pass_counts"]
             ),
-            "full_feature_subset_raw_saving_is_exact": full_comparison["raw_tokens"]["lower"] > 0,
+            "full_feature_subset_raw_saving_proven_under_conservative_bound": (
+                full_comparison["raw_tokens"]["lower"] > 0
+            ),
         },
         "source_sha256": {
             str(DIRECT_EVIDENCE.relative_to(REPO_ROOT)): sha256_file(DIRECT_EVIDENCE),
             str(QUALITY.relative_to(REPO_ROOT)): sha256_file(QUALITY),
+            str(BOUND_EVIDENCE.relative_to(REPO_ROOT)): sha256_file(BOUND_EVIDENCE),
+            str(CORRECTED_OBSERVER_SOURCE.relative_to(REPO_ROOT)): sha256_file(
+                CORRECTED_OBSERVER_SOURCE
+            ),
             **{
                 row["analysis"]: sha256_file(REPO_ROOT / row["analysis"])
                 for row in work_leaf_rows

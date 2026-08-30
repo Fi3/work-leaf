@@ -2,134 +2,92 @@
 
 ## Answer
 
-Two controlled mechanism groups explain 98.02% of the observed raw-token difference between normal
-direct sequential Codex and normal concurrent Work Leaf:
+Two controlled Work Leaf mechanism groups explain 97.95%-98.02% of the observed raw-token
+difference on the frozen three-feature benchmark:
 
-1. The Work Leaf orchestration protocol explains 87.68%.
-2. Work Leaf's mediated file reads plus immediate interruption after a complete directive explain
-   another 10.34%.
+1. The Work Leaf orchestration protocol saves exactly 16,347,554 raw tokens in its controlled
+   comparison. This is 87.68%-90.93% of the bounded normal endpoint gap.
+2. Mediated reads plus early interruption after a complete directive, under the recorded one-second
+   measurement grace, save between 1,261,423 and 1,928,090 raw tokens. This is 7.02%-10.34% of the
+   endpoint gap.
 
-The first group is the main answer. It was tested before concurrency: both sides processed the same
-three features one at a time, read files directly, let provider responses finish, received compact
-exact linearization targets, used GPT-5.5 with `xhigh` reasoning, and ran the same final checks. The
-only intentional difference was direct Codex tools versus Work Leaf's normal patch, command,
-ownership, and review protocol.
+The range exists because ten responses in the normal Work Leaf endpoint were interrupted without
+terminal usage. Charging each one the conservative 400,000-token maximum changes the endpoint gap
+from 18,644,850 to 17,978,183 raw tokens. It does not change the exact main control.
 
-## Why The Protocol Saves Tokens
+## Main Causal Control
 
-A direct Codex agent reads, edits, and validates through native tools inside a long provider thread.
-After each tool result, the model generates again with the accumulated thread as input. Repeated
-small edits and commands therefore replay an increasingly large cached prompt.
+The main control compares compact direct Codex with sequential Work Leaf. Both process the same
+features one at a time, read files directly, let responses finish, use compact exact linearization
+targets, retain normal validation freedom, and run the same final checks. The intended difference is
+the native direct tool loop versus Work Leaf's structured edit, command, ownership, and review
+protocol.
 
-Work Leaf changes that loop in four connected ways:
-
-1. `src/agent.rs::PromptPolicy::for_read_permission` requires patch agents to return a structured
-   edit instead of writing through native tools, and requires write-producing commands to go through
-   `@work-leaf locks run`.
-2. `src/orchestrator.rs::parse_agent_directives` parses those requests, while
-   `handle_agent_directives_streaming` applies the edit, records ownership, and creates the
-   provisional commit outside the provider thread.
-3. `src/orchestrator.rs::render_patch_applied_prompt` returns a compact acknowledgement, directs the
-   agent to one relevant focused validation step, and then asks it to finish. Broad formatting,
-   Clippy, and test checks still run at final linearization for both workflows.
-4. `src/workspace.rs::should_start_review` and `start_review_for_patch_agent` start review from the
-   recorded provisional commit and route findings back to the owning patch agent.
-
-This protocol makes an edit, validation, and review handoff a small number of explicit workflow
-steps. Direct Codex is free to perform the same work through many native tool cycles. The controls
-show that replacing the direct loop with this protocol causes the token reduction; the provider
-histories show the concrete path through which it happens.
-
-## Controlled Evidence
-
-| Measurement per workflow | Compact direct | Sequential Work Leaf |
+| Measurement | Compact direct | Sequential Work Leaf |
 | --- | ---: | ---: |
 | Runs | 3 | 3 |
 | Feature checks | 9/9 | 8/9 |
 | Mean raw tokens | 35,659,265 | 19,311,710 |
-| Raw-token range | 32.96M-40.58M | 16.70M-23.56M |
-| Distinct provider usage changes | 311.00 | 198.00 |
-| Implementation-stage usage changes | 186.67 | 80.33 |
-| Patch-agent native `apply_patch` calls | 55.00 | 0.00 |
-| Patch-agent structured edit submissions | 0.00 | 11.67 |
-| Implementation native command calls | 279.33 | 153.00 |
-| Review native command calls | 249.33 | 147.00 |
+| Raw range | 32.96M-40.58M | 16.70M-23.56M |
+| Model generations | 311.00 | 198.00 |
+| Implementation generations | 186.67 | 80.33 |
+| Patch-agent native patch calls | 55.00 | 0.00 |
+| Structured edit submissions | 0.00 | 11.67 |
 | Review rounds | 6.00 | 10.67 |
 
-Each distinct cumulative provider-usage change corresponds to another measured model generation in
-the saved rollout. Work Leaf reduces these generations by 36.33%. The largest reduction is in
-implementation, where patch agents replace an average of 55 native patch calls with 11.67
-orchestrator-applied structured edits.
+All three Work Leaf totals are below all three direct totals. Both fully correct Work Leaf runs are
+also below every direct run. The exact one-sided three-versus-three permutation result is 0.05.
 
-The review result rules out omitted review work. Sequential Work Leaf performs more review rounds,
-not fewer, while still using 2.12 million fewer review-stage raw tokens. Linearization also cannot
-explain the saving: sequential Work Leaf uses 87,004 more tokens in that stage.
+## Causal Procedure
 
-The token classes identify what those avoided cycles save. Across the protocol transition, Work
-Leaf saves 16.59 million cached input tokens while using about 252,000 more fresh input tokens and
-about 9,500 more reasoning-output tokens. The saving is repeated context replay, not less fresh task
-information or suppressed reasoning.
+Direct Codex repeatedly reads, edits, and validates through native tools in a long model thread.
+Each tool result leads to another model generation with the accumulated conversation.
 
-## Complete Allocation
+Work Leaf changes that loop:
 
-The ordered bridge uses five conditions:
+1. `src/agent.rs::PromptPolicy::for_read_permission` requests structured edits and mediated writes.
+2. `src/orchestrator.rs::parse_agent_directives` recognizes those operations.
+3. `src/orchestrator.rs::handle_agent_directives_streaming` applies them, records ownership, and
+   creates provisional commits outside the model thread.
+4. `src/orchestrator.rs::render_patch_applied_prompt` returns a compact result and focused next step.
+5. `src/workspace.rs::start_review_for_patch_agent` reviews the recorded commit and routes findings
+   to its owner.
 
-- Normal direct sequential Codex.
-- Direct sequential Codex with compact exact linearization targets.
-- Sequential diagnostic Work Leaf with direct reads and completed provider responses.
-- Concurrent Work Leaf with direct reads and completed provider responses.
-- Normal concurrent Work Leaf.
+This procedure replaces many small native tool loops with fewer complete handoffs. The saved token
+classes confirm the result: Work Leaf saves 16.59 million cached input tokens across the protocol
+transition while consuming more fresh input and slightly more reasoning output.
 
-Adjacent conditions change one mechanism group. Their mean differences add exactly to the 18.645
-million-token endpoint gap.
+## Bounded Allocation
 
-| Controlled transition | Raw tokens | Share of endpoint gap |
+| Transition | Raw-token effect | Share of endpoint gap |
 | --- | ---: | ---: |
-| Compact exact linearization handoff | 457,117 fewer | 2.45% |
-| Work Leaf orchestration protocol | 16,347,554 fewer | 87.68% |
-| Concurrent rather than sequential scheduling | 87,912 more | -0.47% |
-| Mediated reads plus immediate directive interruption | 1,928,090 fewer | 10.34% |
-| Total | 18,644,850 fewer | 100.00% |
+| Compact linearization | 457,117 fewer | 2.45%-2.54% |
+| Work Leaf orchestration | 16,347,554 fewer | 87.68%-90.93% |
+| Concurrent scheduling | 87,912 more | -0.49% to -0.47% |
+| Mediated reads and interruption under the recorded grace | 1,261,423-1,928,090 fewer | 7.02%-10.34% |
+| Endpoint total | 17,978,183-18,644,850 fewer | 100% |
 
-The two repeatable Work Leaf mechanisms together account for 18,275,644 tokens, or 98.02% of the
-endpoint gap. The remaining net 1.98% is the small compact-handoff benefit offset by the small
-concurrency cost. Those two small values are within ordinary run variation and are not needed for
-the 90% causal-coverage goal.
-
-Within the orchestration transition, the saved tokens occur in these stages:
-
-| Stage | Raw tokens | Share of endpoint gap |
-| --- | ---: | ---: |
-| Implementation and fixes | 14,374,206 fewer | 77.09% |
-| Review | 2,121,012 fewer | 11.38% |
-| Linearization | 87,004 more | -0.47% |
-| Work Leaf title session | 60,660 more | -0.33% |
-
-Implementation and review therefore account for the entire protocol saving; linearization and the
-extra title session slightly reduce it.
+The bridge adds exactly within either endpoint scenario. The ranges are correlated: choosing the
+maximum Work Leaf allowance produces both the smaller total gap and the smaller read/interruption
+effect. Under that most conservative scenario, the two Work Leaf mechanism groups still cover
+97.95% of the gap.
 
 ## Alternative Explanations
 
-| Explanation | Check | Conclusion |
+| Explanation | Check | Result |
 | --- | --- | --- |
-| Token-accounting error | Every provider rollout is hash-locked and reconciled; there are no missing, interrupted, or descendant sessions. | Contradicted. |
-| Ordinary model variation | All three sequential Work Leaf results are below all three compact-direct results; the exact one-sided three-versus-three permutation result is 0.05. | Unlikely to create the observed effect. |
-| Lower implementation quality | The groups score 9/9 and 8/9. Both 3/3 Work Leaf runs remain below every direct run. | Cannot explain the effect. |
-| Less review | Work Leaf averages 10.67 review rounds versus 6.00. | Contradicted. |
-| Skipped final validation | Every candidate passes the same final formatting, Clippy, full test, build, and replay gates. | Contradicted. |
-| Concurrency | The main control is sequential; changing only scheduling costs 0.47% in this bridge. | Not the saving. |
-| Compact linearization | Both main-control workflows receive exact compact targets; the stage itself costs Work Leaf slightly more. | Not the main saving. |
-| Read and interruption optimization | The prior joint control measures 10.34%. | Real but secondary. |
-| Work Leaf orchestration protocol | Replacing only the direct workflow loop produces complete range separation and 16.35M fewer tokens. | Main causal explanation. |
+| Missing Work Leaf tokens | Ten normal-endpoint responses remain unresolved. | Included through a conservative maximum; the raw conclusion survives. |
+| Direct resume accounting | Direct invocations reconcile with their rollout epochs. | No unexplained direct overcount was found. |
+| Ordinary variation | Main-control ranges do not overlap across three runs per group. | Unlikely to create the protocol effect; small bridge steps remain noisy. |
+| Lower quality | Main control scores 9/9 versus 8/9; both 3/3 Work Leaf runs remain below every direct run. | Cannot plausibly explain the full protocol effect, but formal equivalence is not proven. |
+| Less review | Work Leaf performs 10.67 review rounds versus 6.00. | Rejected. |
+| Skipped validation | Every control candidate passes the same final format, Clippy, test, build, and replay checks. | Rejected. |
+| Concurrency | The main protocol control is sequential; the separate scheduling transition is small and negative. | Not the cause of the saving. |
+| Compact linearization | Both main-control workflows receive compact exact targets. | Not the main cause. |
 
 ## Scope
 
-The controlled result proves the orchestration package as a group. It does not assign separate
-causal percentages to structured edits, write-command mediation, compact command responses, patch
-ownership, and review routing because those parts were not disabled one at a time. The saved
-histories identify structured patch and command cycles as the dominant path, but a finer percentage
-split would require additional controls.
-
-The conclusion applies to this frozen three-feature Rust benchmark and normal workflows represented
-here. Cross-project generalization and tighter statistical confidence require separate follow-up
-studies; they are not prerequisites for the current 98.02% causal-coverage result.
+The controlled result identifies the orchestration protocol as one package. It does not separately
+measure structured edits, write-command mediation, compact acknowledgements, ownership, and review
+routing. It applies to this frozen Rust benchmark; cross-project generalization and formal
+equal-quality precision require separate studies.

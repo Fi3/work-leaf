@@ -72,6 +72,42 @@ class AnalyzeTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unknown bridge mechanism"):
             module.selected_causal_coverage(bridge, ("not-a-step",))
 
+    def test_bounded_endpoint_bridge_keeps_fixed_steps_exact(self):
+        module = load_module()
+        result = module.bounded_endpoint_bridge(
+            {"D": 100.0, "L": 90.0, "S": 60.0, "C": 55.0},
+            {"lower": 50.0, "upper": 52.0},
+        )
+        steps = {step["name"]: step for step in result["steps"]}
+
+        self.assertEqual(result["endpoint_gap"], {"lower": 48.0, "upper": 50.0})
+        self.assertEqual(
+            steps["work_leaf_orchestration"]["tokens"],
+            {"lower": 30.0, "upper": 30.0},
+        )
+        self.assertEqual(
+            steps["mediated_reads_and_interruption"]["tokens"],
+            {"lower": 3.0, "upper": 5.0},
+        )
+
+        coverage = module.bounded_selected_causal_coverage(
+            result,
+            ("work_leaf_orchestration", "mediated_reads_and_interruption"),
+        )
+        self.assertEqual(coverage["tokens"], {"lower": 33.0, "upper": 35.0})
+        self.assertTrue(
+            math.isclose(
+                coverage["share_of_endpoint_gap_percent"]["lower"],
+                68.75,
+            )
+        )
+        self.assertTrue(
+            math.isclose(
+                coverage["share_of_endpoint_gap_percent"]["upper"],
+                70.0,
+            )
+        )
+
     def test_stage_difference_sums_to_the_group_transition(self):
         module = load_module()
         left = {

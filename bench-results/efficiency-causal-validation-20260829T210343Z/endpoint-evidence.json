@@ -1,12 +1,17 @@
 {
   "accounting": {
-    "authority": "final cumulative provider totals from hash-verified rollout records",
+    "authority": "Direct totals are exact. Work Leaf rows preserve the recorded totals from the rejected cumulative-usage assumption and are not exact evidence.",
     "controller_counter_role": "audit only; repeated stale last-turn values can overcount it",
-    "inexact_runs": []
+    "inexact_runs": [
+      "wl-000-002",
+      "wl-000-003",
+      "wl-normal-003"
+    ]
   },
   "comparison": {
     "complete_raw_separation": true,
     "complete_uncached_separation": true,
+    "measurement": "recorded Work Leaf lower-bound scenario",
     "raw_difference_tokens": 21207068.66666667,
     "raw_exact_permutation": {
       "one_sided": 0.05,
@@ -68,6 +73,7 @@
           },
           "id": "point7-exact-direct",
           "linearize_completed": "yes",
+          "measurement": "exact_direct_invocation_totals",
           "model": "gpt-5.5",
           "no_read_permission": "n/a-direct-agent",
           "provider_capture_complete": true,
@@ -110,6 +116,7 @@
           },
           "id": "direct-003",
           "linearize_completed": "yes",
+          "measurement": "exact_direct_invocation_totals",
           "model": "gpt-5.5",
           "no_read_permission": "n/a-direct-agent",
           "provider_capture_complete": true,
@@ -152,6 +159,7 @@
           },
           "id": "direct-002",
           "linearize_completed": "yes",
+          "measurement": "exact_direct_invocation_totals",
           "model": "gpt-5.5",
           "no_read_permission": "n/a-direct-agent",
           "provider_capture_complete": true,
@@ -212,6 +220,7 @@
           },
           "id": "wl-000-002",
           "linearize_completed": "yes",
+          "measurement": "legacy_cumulative_assumption_not_revalidated",
           "model": "gpt-5.5",
           "no_read_permission": "0",
           "provider_capture_complete": true,
@@ -255,6 +264,7 @@
           },
           "id": "wl-000-003",
           "linearize_completed": "yes",
+          "measurement": "legacy_cumulative_assumption_not_revalidated",
           "model": "gpt-5.5",
           "no_read_permission": "0",
           "provider_capture_complete": true,
@@ -298,6 +308,7 @@
           },
           "id": "wl-normal-003",
           "linearize_completed": "yes",
+          "measurement": "legacy_cumulative_assumption_not_revalidated",
           "model": "gpt-5.5",
           "no_read_permission": "0",
           "provider_capture_complete": true,
@@ -337,6 +348,6 @@
   ],
   "schema_version": 1,
   "scope": "frozen three-feature Rust benchmark",
-  "status": "complete",
+  "status": "legacy_sanity_check_only",
   "study": "efficiency-causal-validation-20260829T210343Z"
 }

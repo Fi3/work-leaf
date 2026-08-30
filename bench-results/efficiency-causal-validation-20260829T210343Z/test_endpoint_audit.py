@@ -21,9 +21,12 @@ class EndpointAuditTest(unittest.TestCase):
     def test_frozen_endpoint_result(self):
         evidence = load_module().build_evidence()
 
-        self.assertEqual(evidence["status"], "complete")
+        self.assertEqual(evidence["status"], "legacy_sanity_check_only")
         self.assertEqual(evidence["fairness"]["failed_checks"], [])
-        self.assertEqual(evidence["accounting"]["inexact_runs"], [])
+        self.assertEqual(
+            evidence["accounting"]["inexact_runs"],
+            ["wl-000-002", "wl-000-003", "wl-normal-003"],
+        )
         self.assertEqual(evidence["groups"]["direct"]["run_count"], 3)
         self.assertEqual(evidence["groups"]["work_leaf"]["run_count"], 3)
         self.assertEqual(evidence["groups"]["direct"]["completed_features"], 8)
@@ -43,6 +46,10 @@ class EndpointAuditTest(unittest.TestCase):
         self.assertAlmostEqual(
             evidence["comparison"]["uncached_reduction_percent"],
             37.58259268636313,
+        )
+        self.assertEqual(
+            evidence["comparison"]["measurement"],
+            "recorded Work Leaf lower-bound scenario",
         )
         self.assertTrue(evidence["comparison"]["complete_raw_separation"])
         self.assertTrue(evidence["comparison"]["complete_uncached_separation"])
