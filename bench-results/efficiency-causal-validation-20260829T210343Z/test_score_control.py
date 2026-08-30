@@ -62,6 +62,26 @@ class ScoreControlTest(unittest.TestCase):
             )
         )
 
+    def test_manifest_scores_exactly_three_combined_controls(self):
+        manifest = json.loads((STUDY / "combined-score-manifest.json").read_text())
+        self.assertEqual(manifest["base_commit"], "c92a0b7060a36eac6db2d869b85e589a7a9480f9")
+        self.assertEqual(manifest["model"], "gpt-5.5")
+        self.assertEqual(manifest["reasoning_effort"], "xhigh")
+        self.assertEqual(
+            [run["id"] for run in manifest["runs"]],
+            [
+                "combined-control-001",
+                "combined-control-002",
+                "combined-control-003",
+            ],
+        )
+        self.assertTrue(
+            all(
+                run["condition"] == "work-leaf-direct-read-continued-response"
+                for run in manifest["runs"]
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

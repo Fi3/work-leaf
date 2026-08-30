@@ -2,9 +2,9 @@
 
 ## Current Step
 
-The endpoint audit, offline decomposition, direct-read control, and continued-response control are
-complete. The current step is measuring the interaction between direct reads and continued
-responses with a combined three-run control.
+The causal study is complete. The endpoint audit, decomposition, direct-read control,
+continued-response control, combined interaction control, final hypothesis audit, and plain-language
+report are all recorded in this directory.
 
 ## Completed
 
@@ -52,10 +52,18 @@ responses with a combined three-run control.
   falls back to the original interrupt with exact later cumulative usage.
 - Direct-read traces resume output much more often than normal mediated-read traces. The two causal
   fractions cannot be added until their interaction is measured.
+- Three combined controls passed all workflow, accounting, activation, and candidate-replay gates.
+  They completed 8/9 frozen feature checks and averaged 19.40M raw tokens.
+- Direct reads and continued responses together move 1.93M raw tokens, 10.34% of the current endpoint
+  gap. Their interaction is negative 4.87M, so separate percentages are not additive.
+- Combined Work Leaf remains 46.29% below direct Codex. The remaining gap is 17.17M cached input
+  tokens, while combined Work Leaf receives more uncached input and emits more output.
+- Fewer provider generations explain 76.62% of the residual input gap arithmetically; smaller context
+  per generation explains 23.38%. Provider histories show substantially fewer separate writes,
+  repeated commands, and validation commands.
 
 ## Next
 
-1. Run three combined direct-read plus continued-response controls concurrently.
-2. Measure the read/interruption interaction rather than adding their separate percentages.
-3. Recheck every accounting, fairness, quality, and alternative-cause hypothesis before publishing
-   the final causal report.
+No required study step remains. `NEXT-STEPS.md` lists optional replication, cross-project, and
+individual-mechanism controls. The latter require explicit authorization because they would change
+Work Leaf behavior or prompts.
