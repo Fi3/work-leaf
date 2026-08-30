@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$script_dir/run-combined-control" --check
+
+attempts=(combined-control-001 combined-control-002 combined-control-003)
+pids=()
+for attempt in "${attempts[@]}"; do
+  "$script_dir/run-combined-control" "$attempt" &
+  pids+=("$!")
+done
+
+status=0
+for pid in "${pids[@]}"; do
+  if ! wait "$pid"; then
+    status=1
+  fi
+done
+exit "$status"
