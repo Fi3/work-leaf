@@ -25,10 +25,10 @@ class DecompositionTest(unittest.TestCase):
             evidence["status"],
             "superseded_by_bounded_endpoint_analysis",
         )
-        self.assertEqual(evidence["accounting"]["unresolved_provider_responses"], 10)
+        self.assertEqual(evidence["accounting"]["unresolved_provider_responses"], 35)
         self.assertEqual(
             evidence["accounting"]["normal_work_leaf_raw_mean_interval"],
-            {"lower": 17_471_532.0, "upper": 18_138_198.666666668},
+            {"lower": 17_471_532.0, "upper": 23_304_865.333333332},
         )
         current = evidence["cohorts"]["current_detailed_6_by_6"]
         work_leaf = [
@@ -40,7 +40,7 @@ class DecompositionTest(unittest.TestCase):
         )
         self.assertEqual(
             sum(run["unresolved_provider_responses"] for run in work_leaf),
-            10,
+            35,
         )
 
 

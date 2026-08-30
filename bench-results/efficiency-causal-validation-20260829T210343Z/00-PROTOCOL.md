@@ -2,7 +2,8 @@
 
 ## Current Accounting Constraint
 
-The normal Work Leaf endpoint is bounded, not exact. Ten interrupted responses lack terminal usage.
+The normal Work Leaf endpoint is bounded, not exact. Thirty-five interrupted responses lack
+provable terminal usage.
 Any protocol step below that describes the normal endpoint as exact is superseded by
 `ACCOUNTING-STATUS.md`. The direct-read, continued-response, and combined controls retain exact
 usage and remain valid.
@@ -83,8 +84,8 @@ Leaf reads through orchestrator directives.
 
 ## Planned Outputs
 
-- `01-ENDPOINT-AUDIT.md`: exact uninstrumented endpoint result and fairness audit.
-- `02-MECHANISM-DECOMPOSITION.md`: token-class, stage, cycle, and context decomposition.
+- `01-ENDPOINT-AUDIT.md`: bounded endpoint result and fairness audit.
+- `02-MECHANISM-DECOMPOSITION.md`: explanation of why the endpoint decomposition is not exact.
 - `03-CONTROL-DESIGN.md`: accepted and rejected causal controls with code paths.
 - `04-PILOT-RESULT.md`: first paid causal batch or the reason no paid run is justified.
 - `FINAL-REPORT.md`: plain-language answer, uncertainty, rejected explanations, and remaining work.

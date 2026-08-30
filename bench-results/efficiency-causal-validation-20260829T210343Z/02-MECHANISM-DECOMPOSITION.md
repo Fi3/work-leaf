@@ -2,7 +2,7 @@
 
 ## Status
 
-An exact cycle/context decomposition of the six normal Work Leaf runs is not available. Ten
+An exact cycle/context decomposition of the six normal Work Leaf runs is not available. Thirty-five
 interrupted responses lack terminal usage. Those responses may contain both tokens and provider
 generations that do not appear in the saved cumulative events, so dividing the recorded lower bound
 by recorded generation counts cannot produce an exact allocation.

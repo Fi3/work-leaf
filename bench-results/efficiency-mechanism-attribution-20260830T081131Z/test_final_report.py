@@ -59,7 +59,7 @@ class FinalReportTest(unittest.TestCase):
             f"{raw['endpoint_gap']['lower']:,.0f}",
             report,
         )
-        self.assertIn("ten unresolved responses", report)
+        self.assertIn("35 unresolved responses", report)
 
 
 if __name__ == "__main__":

@@ -89,7 +89,7 @@ incomplete accounting is retained but does not enter an exact token mean.
 ### Different task or validation burden
 
 The launcher reuses the frozen source checkout, benchmark script, binaries, model profile, timeout,
-and final checks from the exact normal Work Leaf study. It removes old experiment variables and does
+and final checks from the normal Work Leaf follow-up. It removes old experiment variables and does
 not set a validation budget. The only workflow switch is direct read permission.
 
 ### Different implementation quality
@@ -146,9 +146,10 @@ The control group is compared with the six current normal Work Leaf runs using:
 - workflow stage totals;
 - all three feature scores and workflow outcomes.
 
-If direct reading repeatedly raises tokens while quality stays comparable, mediated context delivery
-causes at least part of the saving. The observed increase divided by the direct-Codex versus normal
-Work-Leaf gap is reported as a descriptive sample fraction, with no claim of population precision.
+The direct-read total is compared with both ends of the bounded normal Work Leaf interval. Mediated
+context delivery counts as a supported raw-token cause only if the direction survives that full
+interval with comparable quality. A percentage calculated from the recorded lower bound alone is a
+descriptive scenario, not a causal estimate.
 
 If direct reading overlaps normal Work Leaf, the read route is not supported as a material cause by
 this batch. The next control must target a different mechanism; the benchmark implementation is not

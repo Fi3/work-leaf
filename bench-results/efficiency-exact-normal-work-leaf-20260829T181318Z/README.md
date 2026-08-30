@@ -20,14 +20,20 @@ counted and incoming and forwarded request streams are retained.
 
 ## Accounting
 
-The corrected observer accepts a later cumulative total as coverage for an interrupted response
-only when the cumulative increase, after subtracting the later response's own `last` usage, contains
-a nonzero unexplained increment. Five runs contain ten unresolved responses; one run is exact.
+The observer accepts a same-turn usage event only when its cumulative total advances and its nonzero
+`last` usage fits inside that advance. It accepts a later turn as coverage for an interrupted
+response only when the cumulative increase, after subtracting the later response's own `last`
+usage, contains a nonzero unexplained increment. Five runs contain 35 unresolved responses; one run
+is exact.
 
-Each unresolved response receives a conservative 400,000 raw-token allowance. `FINAL-REPORT.md`
+Each unresolved final response receives a conservative 1,000,000 raw-token allowance. The observed
+258,400-token Codex context limit plus GPT-5.5's 128,000-token output limit permits at most 386,400
+raw tokens for one response. The allowance leaves 613,600 tokens of extra headroom and is more than
+five times the largest provider-reported response in the captures. `FINAL-REPORT.md`
 explains the arithmetic and result. `evidence.json` contains the machine-readable comparison, and
-`quality.json` preserves every candidate's feature score. The old `analysis-cumulative.json` files
-are superseded; corrected replay outputs are named `analysis-request-accounting.json`.
+`quality.json` preserves every candidate's feature score. Corrected replay outputs are named
+`analysis-request-accounting.json`; `analysis-pre-same-turn-accounting.json` and
+`analysis-cumulative.json` preserve the superseded analyses.
 
 ## Collection
 

@@ -19,7 +19,7 @@ DIRECT_EVIDENCE = (
     / "final-evidence.json"
 )
 QUALITY = STUDY_DIR / "quality.json"
-BOUND_EVIDENCE = (
+MAXIMUM_OUTPUT_EVIDENCE = (
     REPO_ROOT
     / "bench-results"
     / "efficiency-point7-bounded-accounting-20260828T142614Z"
@@ -28,7 +28,7 @@ BOUND_EVIDENCE = (
 CORRECTED_OBSERVER_SOURCE = REPO_ROOT / "bench-observer" / "src" / "lib.rs"
 RUN_IDS = [f"exact-normal-{index:03d}" for index in range(1, 7)]
 FEATURES = ("visual", "status", "completion")
-MAXIMUM_RAW_TOKENS_PER_UNRESOLVED_RESPONSE = 400_000
+MAXIMUM_RAW_TOKENS_PER_UNRESOLVED_RESPONSE = 1_000_000
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -91,6 +91,88 @@ def reduction_interval(
     }
 
 
+def read_json_lines(path: Path) -> list[tuple[str, dict[str, Any]]]:
+    records: list[tuple[str, dict[str, Any]]] = []
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line:
+            continue
+        value = json.loads(line)
+        if not isinstance(value, dict):
+            raise ValueError(f"{path}:{line_number} is not a JSON object")
+        records.append((line, value))
+    return records
+
+
+def capture_bound_audit(run_id: str, app_server: Path) -> dict[str, Any]:
+    client_path = app_server / "client-to-server.raw"
+    server_path = app_server / "server-to-client.raw"
+    turn_starts = 0
+    context_windows: set[int] = set()
+    usage_events = 0
+    observed_last_response_raw_tokens: list[int] = []
+
+    for _, value in read_json_lines(client_path):
+        if value.get("method") == "turn/start":
+            turn_starts += 1
+
+    server_records = read_json_lines(server_path)
+    for _, value in server_records:
+        params = value.get("params")
+        if not isinstance(params, dict):
+            continue
+        if value.get("method") == "thread/tokenUsage/updated":
+            token_usage = params.get("tokenUsage")
+            if not isinstance(token_usage, dict):
+                continue
+            context_window = token_usage.get("modelContextWindow")
+            if context_window is not None:
+                context_windows.add(int(context_window))
+                usage_events += 1
+            last = token_usage.get("last")
+            if isinstance(last, dict):
+                observed_last_response_raw_tokens.append(
+                    int(last.get("inputTokens", 0)) + int(last.get("outputTokens", 0))
+                )
+
+    if len(context_windows) != 1:
+        raise ValueError(
+            f"{run_id} does not have one effective context window: {context_windows}"
+        )
+    context_window = next(iter(context_windows))
+    bound = read_json(MAXIMUM_OUTPUT_EVIDENCE)["bound"]
+    maximum_output = int(bound["documented_maximum_output_tokens"])
+    maximum_observed_response = max(observed_last_response_raw_tokens, default=0)
+    maximum_single_response = context_window + maximum_output
+    if maximum_single_response > MAXIMUM_RAW_TOKENS_PER_UNRESOLVED_RESPONSE:
+        raise ValueError(
+            f"{run_id} allows {maximum_single_response} tokens in one response but the declared "
+            "cap is "
+            f"{MAXIMUM_RAW_TOKENS_PER_UNRESOLVED_RESPONSE}"
+        )
+    if maximum_observed_response > MAXIMUM_RAW_TOKENS_PER_UNRESOLVED_RESPONSE:
+        raise ValueError(
+            f"{run_id} observed a {maximum_observed_response}-token response but the declared "
+            f"cap is {MAXIMUM_RAW_TOKENS_PER_UNRESOLVED_RESPONSE}"
+        )
+    return {
+        "run_id": run_id,
+        "turns": turn_starts,
+        "usage_events_with_context_window": usage_events,
+        "effective_context_window_tokens": context_window,
+        "maximum_output_tokens": maximum_output,
+        "maximum_observed_last_response_raw_tokens": maximum_observed_response,
+        "maximum_single_response_raw_tokens": maximum_single_response,
+        "declared_response_cap": MAXIMUM_RAW_TOKENS_PER_UNRESOLVED_RESPONSE,
+        "response_cap_headroom_tokens": (
+            MAXIMUM_RAW_TOKENS_PER_UNRESOLVED_RESPONSE - maximum_single_response
+        ),
+        "client_stream": str(client_path.relative_to(REPO_ROOT)),
+        "client_stream_sha256": sha256_file(client_path),
+        "server_stream": str(server_path.relative_to(REPO_ROOT)),
+        "server_stream_sha256": sha256_file(server_path),
+    }
+
+
 def load_direct_rows() -> list[dict[str, Any]]:
     evidence = read_json(DIRECT_EVIDENCE)
     rows = [row for row in evidence["observations"] if row["group"] == "direct"]
@@ -103,10 +185,11 @@ def load_direct_rows() -> list[dict[str, Any]]:
     return rows
 
 
-def load_work_leaf_rows() -> list[dict[str, Any]]:
+def load_work_leaf_rows() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     quality = read_json(QUALITY)
     scored = {row["id"]: row for row in quality["runs"]}
     rows: list[dict[str, Any]] = []
+    bound_audits: list[dict[str, Any]] = []
 
     if set(scored) != set(RUN_IDS):
         raise ValueError("quality evidence does not contain the declared six runs")
@@ -132,6 +215,7 @@ def load_work_leaf_rows() -> list[dict[str, Any]]:
         app_servers = [path for path in (artifact / "observation" / "app-server").iterdir() if path.is_dir()]
         if len(app_servers) != 1:
             raise ValueError(f"{run_id} has {len(app_servers)} app-server captures")
+        bound_audits.append(capture_bound_audit(run_id, app_servers[0]))
         incoming = app_servers[0] / "client-to-server.raw"
         forwarded = app_servers[0] / "client-to-server.forwarded.raw"
         if incoming.read_bytes() != forwarded.read_bytes():
@@ -178,7 +262,7 @@ def load_work_leaf_rows() -> list[dict[str, Any]]:
                 "analysis": str(analysis_path.relative_to(REPO_ROOT)),
             }
         )
-    return rows
+    return rows, bound_audits
 
 
 def compare_groups(
@@ -210,7 +294,7 @@ def compare_groups(
 
 def build_evidence() -> dict[str, Any]:
     direct_rows = load_direct_rows()
-    work_leaf_rows = load_work_leaf_rows()
+    work_leaf_rows, bound_audits = load_work_leaf_rows()
     direct = summarize(direct_rows)
     work_leaf = summarize(work_leaf_rows)
     comparison = compare_groups(direct, work_leaf)
@@ -232,16 +316,36 @@ def build_evidence() -> dict[str, Any]:
         ),
         "accounting": {
             "method": (
-                "One capture is exact. Ten interrupted responses across the other five captures "
-                "have no terminal usage. Recorded totals are lower bounds; each unresolved "
-                "response adds at most 400,000 raw tokens to the upper bound. The same amount is "
-                "added to the uncached upper bound because the missing cached-input split is "
-                "unknown."
+                "One capture is exact. Thirty-five interrupted responses across the other five "
+                "captures have no provable terminal usage. Recorded totals are lower bounds; each "
+                "unresolved final response receives a 1,000,000-token cap. The effective context "
+                "window plus documented maximum output permits at most 386,400 raw tokens for one "
+                "response, leaving 613,600 tokens of additional headroom. The same cap is added to "
+                "the uncached upper bound because the missing cached-input split is unknown."
             ),
             "maximum_raw_tokens_per_unresolved_response": (
                 MAXIMUM_RAW_TOKENS_PER_UNRESOLVED_RESPONSE
             ),
-            "bound_source": str(BOUND_EVIDENCE.relative_to(REPO_ROOT)),
+            "maximum_output_source": str(
+                MAXIMUM_OUTPUT_EVIDENCE.relative_to(REPO_ROOT)
+            ),
+            "effective_context_window_tokens": max(
+                audit["effective_context_window_tokens"] for audit in bound_audits
+            ),
+            "maximum_output_tokens": max(
+                audit["maximum_output_tokens"] for audit in bound_audits
+            ),
+            "maximum_observed_last_response_raw_tokens": max(
+                audit["maximum_observed_last_response_raw_tokens"]
+                for audit in bound_audits
+            ),
+            "maximum_single_response_raw_tokens": max(
+                audit["maximum_single_response_raw_tokens"] for audit in bound_audits
+            ),
+            "response_cap_headroom_tokens": min(
+                audit["response_cap_headroom_tokens"] for audit in bound_audits
+            ),
+            "capture_bound_audits": bound_audits,
             "corrected_observer_source": str(
                 CORRECTED_OBSERVER_SOURCE.relative_to(REPO_ROOT)
             ),
@@ -284,7 +388,9 @@ def build_evidence() -> dict[str, Any]:
         "source_sha256": {
             str(DIRECT_EVIDENCE.relative_to(REPO_ROOT)): sha256_file(DIRECT_EVIDENCE),
             str(QUALITY.relative_to(REPO_ROOT)): sha256_file(QUALITY),
-            str(BOUND_EVIDENCE.relative_to(REPO_ROOT)): sha256_file(BOUND_EVIDENCE),
+            str(MAXIMUM_OUTPUT_EVIDENCE.relative_to(REPO_ROOT)): sha256_file(
+                MAXIMUM_OUTPUT_EVIDENCE
+            ),
             str(CORRECTED_OBSERVER_SOURCE.relative_to(REPO_ROOT)): sha256_file(
                 CORRECTED_OBSERVER_SOURCE
             ),

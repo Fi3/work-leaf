@@ -1,14 +1,17 @@
 # Accounting Status
 
-The normal concurrent Work Leaf endpoint is bounded, not exact. Reanalysis with the corrected
-observer finds ten interrupted responses without terminal usage across five of its six runs. A
-later cumulative event covers an earlier interrupted response only when subtracting the previous
-total and the later event's own `last` usage leaves a nonzero increase attributable to exactly one
-unresolved interruption.
+The normal concurrent Work Leaf endpoint is bounded, not exact. Strict replay finds 35 interrupted
+responses without provable terminal usage across five of its six runs. A same-turn usage event
+counts only when its cumulative total advances and its nonzero `last` usage fits inside that
+advance. A later cumulative event covers an earlier interrupted response only when subtracting the
+previous total and the later event's own `last` usage leaves a nonzero increase attributable to
+exactly one unresolved interruption.
 
 The normal Work Leaf mean is 17,471,532 recorded raw tokens with a conservative upper bound of
-18,138,199. The exact direct mean is 36,116,382. The resulting normal raw-token reduction is
-49.78%-51.62%. The uncached direction is unknown.
+23,304,865. The exact direct mean is 36,116,382. The resulting normal raw-token reduction is
+35.47%-51.62%. The uncached direction is unknown. The upper bound charges 1,000,000 raw tokens to
+every unresolved final response, which exceeds the observed context-plus-output single-response
+limit by 613,600 tokens.
 
 These parts of this study remain exact:
 

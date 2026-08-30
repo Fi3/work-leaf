@@ -58,6 +58,15 @@ class AnalyzeControlTest(unittest.TestCase):
             "full_quality_direct_read_minus_normal_work_leaf"
         ]
         self.assertAlmostEqual(full_quality["raw_fraction_of_direct_gap_percent"], 23.039765042807378)
+        bounded = self.evidence["bounded_normal_comparison"]
+        self.assertEqual(bounded["unresolved_provider_responses"], 35)
+        self.assertEqual(
+            bounded["normal_work_leaf_raw_mean_interval"],
+            {"lower": 17_471_532.0, "upper": 23_304_865.333333332},
+        )
+        self.assertAlmostEqual(bounded["control_minus_normal_raw_tokens"]["lower"], -4_084_356.666666664)
+        self.assertAlmostEqual(bounded["control_minus_normal_raw_tokens"]["upper"], 1_748_976.666666668)
+        self.assertFalse(bounded["direction_proven"])
 
 
 if __name__ == "__main__":

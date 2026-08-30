@@ -1,87 +1,55 @@
 # Continued-Response Control Result
 
-## Answer From This Control
+## Current Answer
 
-Stopping a provider response after a complete Work Leaf directive saves tokens in this scenario.
-It is a contributor, not the whole explanation.
+The three continued-response controls are exact, but the bounded normal endpoint does not establish
+the direction of directive interruption by itself. Continued-response Work Leaf averaged 22,517,835
+raw tokens. Relative to normal Work Leaf's 17,471,532-23,304,865 interval, allowing resumed output
+to finish ranges from using 787,030 fewer tokens to using 5,046,303 more. The sign changes across
+the valid endpoint interval.
 
-The three-run control allowed generation that had resumed after a directive to reach exact usage
-before sending the same interrupt. Mean raw use rose from 17.47 million tokens for six normal Work
-Leaf runs to 22.52 million, an increase of 5.05 million or 28.88%. That movement is 27.07% of the
-18.64-million-token difference between direct sequential Codex and normal concurrent Work Leaf in
-the current detailed cohort.
+The 27.07% interruption figure in `continued-response-evidence.json` uses only the recorded normal
+Work Leaf lower bound. It is a descriptive scenario, not a current causal estimate.
+The control also completed 6 of 9 feature checks versus 13 of 18 for normal Work Leaf, so its quality
+does not provide a stronger matched comparison.
 
-An exact label-permutation check over the six normal and three control observations gives `p=0.0238`
-for a raw-token increase and `p=0.0357` for an uncached-token increase. These values describe this
-small collected sample. The groups were collected in separate batches, and three controls are not a
-precise population estimate.
+## Exact Control Runs
 
-## Runs And Quality
-
-All three workflows passed implementation, review, linearization, final formatting, Clippy, tests,
-candidate build, and candidate replay. The frozen feature scorer retained every result:
-
-| Run | Continued responses | Timeouts | Features | Raw tokens | Uncached tokens |
+| Run | Completed continuations | Timeouts | Features | Raw tokens | Uncached tokens |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | `continued-response-001` | 2 | 0 | 2/3 | 23,312,848 | 1,824,976 |
 | `continued-response-002` | 2 | 1 | 3/3 | 23,276,486 | 1,651,398 |
 | `continued-response-003` | 4 | 0 | 1/3 | 20,964,172 | 1,419,852 |
 
-The control completed 6/9 feature checks, compared with 13/18 for normal Work Leaf. Higher control
-tokens were not caused by completing more scored features. The one full-quality control used 9.55
-million more raw tokens than the two full-quality normal Work Leaf runs, but a one-versus-two subset
-is too small for a useful effect estimate.
+Every run passed implementation, review, linearization, final formatting, Clippy, tests, candidate
+build, replay, and exact provider accounting. All 24 rollout files match their recorded hashes.
+Each run has eight primary GPT-5.5/`xhigh` threads, no descendants, preserved interrupt bytes, and
+no recursive provider attempts.
 
-Run 002 had one read response that did not finish within the declared 120-second bound. The observer
-forwarded the original interrupt, and later cumulative provider usage made the workflow total exact.
-That turn is a partial activation, not a missing measurement and not a reason to retry the run.
+Run 002 had one read response that did not finish within 120 seconds. The observer forwarded the
+original interrupt, and later cumulative usage made the workflow total exact. This is a partial
+activation, not a missing measurement.
 
-## What Moved
+## Activation Evidence
 
-The control added an average of 47 provider usage changes and 4,492 input tokens per change. A
-symmetric arithmetic split of its 4.99-million input-token increase attributes:
+The control allowed eight resumed responses to finish: two patch-agent responses and six reviewer
+responses. It added an average of 47 recorded provider usage changes relative to the normal
+lower-bound trace and moved tokens in implementation, review, and later linearization. This shows
+that changing interruption timing can alter downstream workflow behavior, not merely append a few
+output tokens to one response.
 
-- 3.93 million tokens to the greater number of provider usage changes; and
-- 1.06 million tokens to larger accumulated context per change.
+Those recorded event differences explain the lower-bound scenario but do not overcome the 35
+missing normal responses. Direct reads also change how often output resumes, so read delivery and
+interruption cannot be treated as independent effects.
 
-The stage increases were 2.65 million raw tokens in implementation, 1.68 million in linearization,
-and 717,000 in review. The eight completed continuations occurred in two patch-agent turns and six
-reviewer turns. The later linearization increase is therefore a downstream workflow effect, not
-text generated directly inside a linearizer continuation.
+## Conclusion
 
-This supports a concrete mechanism: an immediate interrupt prevents some continuation work from
-entering provider history, which can also prevent later model cycles and context replay. It does not
-mean that every directive saves tokens. In the six normal runs, 252 of 287 interrupts happened only
-after the current provider response had already completed; 34 interrupted resumed output and one
-timed out.
+Directive interruption is an active mechanism, but its independent raw-token direction and share
+are not proven by this cohort. Even the exact continued-response group uses 37.65% fewer raw tokens
+than direct Codex; that comparison still includes the rest of the Work Leaf protocol and therefore
+does not assign the saving to interruption.
 
-## Validity
-
-Every run used the frozen Work Leaf binaries at commit
-`5b1d1ef9590850faed26052f909ddff7ff8f127d`, GPT-5.5 with `xhigh` reasoning, normal mediated reads,
-normal concurrent submission, normal validation freedom, the original three requests, and the
-frozen `/status` scorer. The only proxy behavior changed was the release time of an interrupt after
-output resumed.
-
-All 24 provider rollout files match their recorded hashes. Each run has eight primary provider
-threads, no descendants, exact cumulative totals, preserved client-to-server interrupt bytes, and no
-recursive provider attempts. The custom observer also contains a later cumulative-usage analyzer
-fix; that code runs after collection and does not alter proxy forwarding.
-
-## Why The Percentages Cannot Be Added Yet
-
-The direct-read control moved raw use by 9.38% of the endpoint gap, while this control moved it by
-27.07%. Adding those figures would assume the mechanisms are independent.
-
-They are not independent in the observed traces. Direct-read Work Leaf resumed output after 71 of
-114 directives, while normal mediated-read Work Leaf did so after 34 of 287. Changing the read route
-therefore changes how often the interruption mechanism can activate. A combined direct-read plus
-continued-response control is required to measure that interaction.
-
-Even with only continued responses changed, Work Leaf remained 37.65% below direct Codex in raw
-tokens. That comparison has unequal feature totals and is not a new fair endpoint result; it only
-shows that directive interruption cannot be the sole source of the original gap.
-
-`continued-response-evidence.json` contains the individual rows, exact arithmetic, activation
-records, hashes, stage totals, and permutation checks. `analyze-continued-response.py` rebuilds it
-without launching a provider.
+`continued-response-evidence.json` preserves the exact runs, activation records, hashes, and the
+lower-bound-only scenario. The combined control and final bounded interpretation are in
+`08-COMBINED-CONTROL-RESULT.md` and
+`bench-results/efficiency-mechanism-attribution-20260830T081131Z/FINAL-REPORT.md`.

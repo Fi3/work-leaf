@@ -10,24 +10,24 @@ runs. It does not claim that the result automatically generalizes to every proje
 
 | Explanation | Why it could fit | Counterchecks | Judgment |
 | --- | --- | --- | --- |
-| Work Leaf tokens are missing | Interrupted provider output can lack terminal usage. | The corrected arithmetic finds ten unresolved responses in the normal endpoint. The direct-read, continued-response, and combined controls remain exact. | Confirmed for the normal endpoint and covered by a conservative bound. |
+| Work Leaf tokens are missing | Interrupted provider output can lack terminal usage, and repeated cumulative notifications can be stale. | Strict same-turn freshness and later-turn arithmetic find 35 unresolved responses in the normal endpoint. The direct-read, continued-response, and combined controls remain exact. | Confirmed for the normal endpoint and covered by a capture-audited conservative ceiling. |
 | Direct resume tokens are counted twice | Direct Codex launches and resumes the same thread several times. | Resume invocation totals are non-monotonic and sum exactly to the independent final total saved in each Codex rollout. They are per invocation, not repeated cumulative totals. | Very unlikely. |
 | The direct workflow receives more required work | A stricter task or final gate would naturally cost more. | Both workflows use the same three requests, base commit, model, reasoning, focused implementation guidance, review duties, linearization contract, timeout, final formatting, Clippy, tests, build, replay, and scorer. | Very unlikely. |
-| Work Leaf implements less | The current normal cohort scores 13/18 versus direct's 17/18. | An older equal-quality cohort scores 8/9 in both groups and preserves the gap. Combined Work Leaf scores 8/9, has comparable changed-line counts, performs more review rounds, and still sits below every direct run. | Cannot explain the saving. |
-| Ordinary model variation | Individual runs vary by millions of tokens. | All six normal Work Leaf runs and all three combined runs are below all six direct runs. The current direct-versus-normal label permutation is `1/924`; direct-versus-combined is `1/84`. | Saving is strongly supported in this benchmark; exact percentage remains imprecise. |
+| Work Leaf implements less | The current normal cohort scores 13/18 versus direct's 17/18. | The later exact main control scores 9/9 for compact direct and 8/9 for sequential Work Leaf. Both fully correct Work Leaf controls remain below every direct control, but only two Work Leaf observations are fully correct. | Cannot plausibly explain the full controlled effect; formal quality equivalence is not proven. |
+| Ordinary model variation | Individual runs vary by millions of tokens. | In the exact main control, all three sequential Work Leaf totals are below all three compact-direct totals; the one-sided permutation result is `0.05`. The bounded normal endpoint also remains below direct on average under the maximum allowance. | Unlikely to explain the full effect in this benchmark; the sample is too small for a population estimate. |
 | Codex CLI version drift | Three early direct rows use 0.149.1. | Restricting direct Codex to its three 0.150.1 rows gives 37.04M raw tokens and 9/9 features. Combined Work Leaf on 0.150.1 gives 19.40M and 8/9, 47.62% lower. | Very unlikely. |
 | Hidden reviewer, title, or linearizer threads are omitted | Work Leaf has more internal sessions than direct Codex. | Every observed thread is inventoried. Work Leaf includes eight primary threads, including the hidden title thread; direct includes all implementation, review, and linearization invocations. | Ruled out. |
 | Lower output or reasoning causes the gap | Stopping early could reduce generated text. | Combined Work Leaf emits 6,935 more output tokens and 14,402 more reasoning tokens than direct Codex while using 16.72M fewer raw tokens. | Ruled out for the residual gap. |
 | Cached-token accounting creates an illusion | Most of the raw difference is cached input. | Raw tokens count cached input at full token volume. Combined Work Leaf also uses 448,000 more uncached input than direct Codex. The real difference is less repeated context, not missing fresh context. | Cached replay is the measured source, not an accounting error. |
-| Mediated file reads are the main cause | Digests, diffs, and bundles reduce delivered file bytes. | Direct reads alone move 9.38% of the raw endpoint gap. In the combined control, reads and interruption together move only 10.34% because they overlap. | Real contributor, not the main raw cause. |
-| Immediate directive interruption is the main cause | It prevents unnecessary post-directive generation. | Continued responses alone move 27.07% of the raw endpoint gap, but with direct reads they add only 179,000 raw tokens over direct-read Work Leaf. | Real contributor with strong overlap, not the main raw cause. |
+| Mediated file reads are the main cause | Digests, diffs, and bundles reduce delivered file bytes. | Direct-read Work Leaf averages 19.22M exact, while normal Work Leaf is bounded at 17.47M-23.30M. The effect changes sign across that interval. | Not proven as an independent raw-token saving; not needed for the dominant protocol effect. |
+| Immediate directive interruption is the main cause | It prevents unnecessary post-directive generation. | Continued-response Work Leaf averages 22.52M exact, while normal Work Leaf is bounded at 17.47M-23.30M. The effect changes sign across that interval. | Active mechanism, but its independent raw-token direction is unresolved. |
 | Command-output compaction is the main cause | Smaller tool output could shrink every later prompt. | Normal-run counterfactuals measured zero avoided command-output bytes, and direct versus combined command-output volume differs by less than 0.5 MB before replay. | Unlikely. |
 | Less review is the main cause | Review loops can be expensive. | Combined Work Leaf averages 10.33 review rounds versus direct's 6.50, and its review stage uses slightly more raw tokens. | Ruled out. |
 | Fewer provider generations cause the residual gap | Every extra generation replays accumulated context. | Combined Work Leaf has 38.26% fewer usage changes. The symmetric arithmetic split assigns 76.62% of the residual input gap to the lower count. | Strong proximate cause. |
 | Smaller context per generation causes the residual gap | Shorter histories cost less on each generation. | Combined Work Leaf carries 13.47% less input per usage change. The arithmetic split assigns 23.38% of the residual input gap to this difference. | Strong proximate cause. |
-| Structured workflow batching causes fewer generations | Work Leaf agents submit cohesive structured edits and mediated commands instead of many direct tool calls. | Direct averages 63.67 write submissions, combined Work Leaf 17.67; shell-tool calls fall from 634 to 429, repeated commands from 141 to 47, and validation commands from 58 to 14. Candidate size and review effort remain comparable. | High likelihood; the remaining mechanisms were tested only as a group. |
-| Compact linearization causes part of the residual | Work Leaf gives the linearizer exact reviewed history rather than making it reconstruct the full workflow. | Linearization accounts for 3.42M raw tokens of the direct-minus-combined gap with only one fewer provider usage change, pointing to much smaller context rather than less linearization work. | High likelihood; not individually randomized. |
-| Parallel scheduling alone causes the result | Concurrent agents may see different shared-worktree timing. | Raw-token totals measure model input, not wall time. The study does not run sequential Work Leaf because that is not a relevant product endpoint. Shared-worktree orchestration may contribute to batching, but no fraction is assigned to timing alone. | Possible part of the product workflow, not isolated. |
+| Structured workflow batching causes fewer generations | Work Leaf agents submit cohesive structured edits and mediated commands instead of many direct tool calls. | The later exact main control holds scheduling, reads, response completion, and compact targets fixed. Sequential Work Leaf uses 16.35M fewer raw tokens and 113 fewer model generations than compact direct Codex. | Confirmed as the dominant orchestration package for this benchmark. |
+| Compact linearization causes part of the residual | Work Leaf gives the linearizer exact reviewed history rather than making it reconstruct the full workflow. | The later exact `D` to `L` control saves 457,117 raw tokens, only 2.45%-3.57% of the bounded endpoint gap. | Small contributor, not the main cause. |
+| Parallel scheduling alone causes the result | Concurrent agents may see different shared-worktree timing. | The later exact sequential-to-concurrent Work Leaf control changes raw use by only 87,912 tokens in the opposite direction. | Not the cause of the saving in this benchmark. |
 
 ## Code Paths Behind The Interpretation
 
@@ -49,11 +49,12 @@ rollout metadata, provider action records, feature scores, review rounds, and th
 
 ## Boundary Of The Answer
 
-The study causally isolates mediated reads, directive interruption, and their interaction. It proves
-that the remaining Work Leaf workflow mechanisms collectively retain most of the raw advantage. It
-does not assign separate causal percentages to structured edit batching, locked-command mediation,
-focused validation policy, exact review targeting, and compact linearization.
+The read, continued-response, and combined controls are exact, but their effects relative to normal
+Work Leaf are bounded and change sign under the maximum missing-token allowance. They therefore do
+not prove separate raw-token percentages for reads or interruption. The later exact main control
+proves that the Work Leaf orchestration package retains the dominant advantage when scheduling,
+reads, response completion, and compact targets are held fixed.
 
-Separating those mechanisms would require new experimental Work Leaf modes or altered prompts and
-sandboxes. That would change the implementation under test and was therefore not done without user
-authorization.
+Separating structured edit batching, write-command mediation, compact acknowledgements, ownership,
+and review routing inside that package requires new experimental modes or altered prompts and
+sandboxes. That was not done without user authorization.

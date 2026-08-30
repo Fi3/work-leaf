@@ -68,6 +68,11 @@ class AnalyzeContinuedResponseTest(unittest.TestCase):
         self.assertAlmostEqual(comparison["usage_changes"], 47.0)
         self.assertGreater(comparison["input_context_per_usage_change"], 0)
         self.assertFalse(self.evidence["causal_summary"]["fractions_are_additive"])
+        bounded = self.evidence["bounded_normal_comparison"]
+        self.assertEqual(bounded["unresolved_provider_responses"], 35)
+        self.assertAlmostEqual(bounded["control_minus_normal_raw_tokens"]["lower"], -787_030.0)
+        self.assertAlmostEqual(bounded["control_minus_normal_raw_tokens"]["upper"], 5_046_303.333333332)
+        self.assertFalse(bounded["direction_proven"])
 
 
 if __name__ == "__main__":

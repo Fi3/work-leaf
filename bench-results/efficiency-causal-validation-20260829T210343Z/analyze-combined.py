@@ -634,6 +634,24 @@ def build_evidence():
         value["measurement"] = "recorded normal Work Leaf lower-bound scenario"
     raw_factorial = factorial["raw_input_plus_output"]
     uncached_factorial = factorial["uncached_input_plus_output"]
+    bounded = base.bounded_control_comparison(
+        decomposition,
+        direct["mean_usage"]["raw_input_plus_output"],
+        combined["mean_usage"]["raw_input_plus_output"],
+    )
+    bounded["combined_minus_normal_raw_tokens"] = bounded.pop(
+        "control_minus_normal_raw_tokens"
+    )
+    normal_interval = bounded["normal_work_leaf_raw_mean_interval"]
+    interaction_constant = (
+        combined["mean_usage"]["raw_input_plus_output"]
+        - direct_read["mean_usage"]["raw_input_plus_output"]
+        - continued["mean_usage"]["raw_input_plus_output"]
+    )
+    bounded["raw_interaction_tokens"] = {
+        "lower": interaction_constant + normal_interval["lower"],
+        "upper": interaction_constant + normal_interval["upper"],
+    }
 
     return {
         "schema_version": 1,
@@ -649,8 +667,10 @@ def build_evidence():
             "recorded_mean_raw_tokens": normal["mean_usage"][
                 "raw_input_plus_output"
             ],
+            "raw_token_mean_interval": normal_interval,
             "factorial_values_use": "recorded lower-bound scenario",
         },
+        "bounded_normal_comparison": bounded,
         "references": {
             "decomposition": {"path": relative(DECOMPOSITION), "sha256": sha256(DECOMPOSITION)},
             "direct_read": {"path": relative(DIRECT_READ), "sha256": sha256(DIRECT_READ)},
@@ -750,6 +770,7 @@ def build_evidence():
                 + combined_action_mean.get("apply_patch", 0),
             },
             "raw_rank_separation": {
+                "measurement": "recorded normal Work Leaf lower-bound scenario",
                 "direct_vs_normal": base.exact_permutation_greater(
                     raw_values(normal_runs), raw_values(direct_runs)
                 ),
@@ -762,6 +783,7 @@ def build_evidence():
             },
         },
         "causal_summary": {
+            "measurement": "recorded normal Work Leaf lower-bound scenario",
             "endpoint_raw_gap_tokens": raw_factorial["endpoint_gap"],
             "combined_raw_movement_tokens": raw_factorial["combined_minus_normal"],
             "combined_raw_fraction_of_endpoint_gap_percent": raw_factorial[
@@ -779,6 +801,10 @@ def build_evidence():
                 "The combined control has a large negative raw-token interaction. Direct reads "
                 "make post-directive continuation much more common, and the two changes replace "
                 "some of the same later provider cycles rather than adding independent costs."
+            ),
+            "bounded_direction": (
+                "The combined-minus-normal raw-token interval and interaction interval both "
+                "cross zero, so their directions are not established."
             ),
             "residual_raw_gap_after_combined_control": (
                 direct["mean_usage"]["raw_input_plus_output"]

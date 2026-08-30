@@ -344,6 +344,9 @@ def build_evidence():
     partial_activation = any(row["timeout_count"] > 0 for row in activations)
     direct_raw = direct["mean_usage"]["raw_input_plus_output"]
     control_raw = control["mean_usage"]["raw_input_plus_output"]
+    bounded = base.bounded_control_comparison(
+        decomposition, direct_raw, control_raw
+    )
 
     return {
         "schema_version": 1,
@@ -386,6 +389,7 @@ def build_evidence():
             "normal_work_leaf": normal,
             "continued_response_work_leaf": control,
         },
+        "bounded_normal_comparison": bounded,
         "comparisons": {
             "continued_response_minus_normal_work_leaf": comparison,
             "full_quality_continued_response_minus_normal_work_leaf": full_comparison,
@@ -402,6 +406,7 @@ def build_evidence():
             },
         },
         "causal_summary": {
+            "measurement": "recorded normal Work Leaf lower-bound scenario",
             "endpoint_raw_gap_tokens": (
                 direct["mean_usage"]["raw_input_plus_output"]
                 - normal["mean_usage"]["raw_input_plus_output"]
@@ -422,6 +427,10 @@ def build_evidence():
                 "The continued-response group completed 6/9 checks versus 13/18 for normal Work "
                 "Leaf. Its higher token use was not caused by completing more scored features, "
                 "but three runs do not remove ordinary model variation."
+            ),
+            "bounded_direction": (
+                "The control-minus-normal raw-token interval crosses zero, so directive "
+                "interruption's independent raw-token direction is not established."
             ),
         },
     }

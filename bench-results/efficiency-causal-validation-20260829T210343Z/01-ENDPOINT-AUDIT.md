@@ -8,9 +8,9 @@ runs on the same frozen task:
 | Workflow | Feature checks | Mean raw tokens |
 | --- | ---: | ---: |
 | Direct Codex | 17/18 | 36,116,382 exact |
-| Work Leaf | 13/18 | 17,471,532-18,138,199 bounded |
+| Work Leaf | 13/18 | 17,471,532-23,304,865 bounded |
 
-The bounded raw-token reduction is 49.78%-51.62%. The uncached direction is unknown because ten
+The bounded raw-token reduction is 35.47%-51.62%. The uncached direction is unknown because 35
 interrupted Work Leaf responses do not report their cached-input split.
 
 Runs are independent group observations, not matched pairs. Every quality result is retained. The
@@ -19,13 +19,14 @@ still establishes a large difference in the collected sample.
 
 ## Accounting
 
-The recorded Work Leaf mean is a lower bound. The corrected observer recovers an interrupted
-response from a later cumulative event only when subtracting the previous total and the later
-event's `last` usage leaves a nonzero increase attributable to exactly one unresolved interruption.
-Five runs contain ten responses that do not meet this rule.
+The recorded Work Leaf mean is a lower bound. A same-turn usage notification counts only when its
+cumulative total advances and its nonzero `last` usage fits inside that advance. The observer
+recovers an interrupted response from a later cumulative event only when subtracting the previous
+total and the later event's `last` usage leaves a nonzero increase attributable to exactly one
+unresolved interruption. Five runs contain 35 responses that do not meet these rules.
 
-Each unresolved response receives the frozen conservative maximum of 400,000 raw tokens. This
-produces the 18,138,199 upper mean. The full calculation is in
+Each unresolved response receives the capture-audited conservative ceiling of 1,000,000 raw tokens.
+This produces the 23,304,865 upper mean. The full calculation is in
 `bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/FINAL-REPORT.md`.
 
 ## Fairness

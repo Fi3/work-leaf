@@ -145,6 +145,33 @@
       "workflow_result": "pass"
     }
   ],
+  "bounded_normal_comparison": {
+    "control_minus_normal_raw_tokens": {
+      "lower": -4084356.666666664,
+      "upper": 1748976.666666668
+    },
+    "direction_proven": false,
+    "measurement": "bounded",
+    "normal_work_leaf_raw_mean_interval": {
+      "lower": 17471532.0,
+      "upper": 23304865.333333332
+    },
+    "scenarios": {
+      "conservative_upper_bound": {
+        "control_minus_normal_raw_tokens": -4084356.666666664,
+        "endpoint_gap_raw_tokens": 12811516.333333332,
+        "normal_work_leaf_raw_tokens": 23304865.333333332,
+        "share_of_endpoint_gap_percent": -31.88035327278068
+      },
+      "recorded_lower_bound": {
+        "control_minus_normal_raw_tokens": 1748976.666666668,
+        "endpoint_gap_raw_tokens": 18644849.666666664,
+        "normal_work_leaf_raw_tokens": 17471532.0,
+        "share_of_endpoint_gap_percent": 9.380481462360596
+      }
+    },
+    "unresolved_provider_responses": 35
+  },
   "comparisons": {
     "direct_read_minus_normal_work_leaf": {
       "exact_permutation": {
@@ -169,6 +196,7 @@
         "sum_tokens": 1780032.8333333365
       },
       "input_tokens": 1780032.8333333358,
+      "measurement": "recorded normal Work Leaf lower-bound scenario",
       "raw_fraction_of_direct_gap_percent": 9.380481462360596,
       "raw_increase_over_normal_percent": 10.010436787493322,
       "raw_tokens": 1748976.666666668,
@@ -208,6 +236,7 @@
         "sum_tokens": 5489168.666666668
       },
       "input_tokens": 5489168.666666668,
+      "measurement": "recorded normal Work Leaf lower-bound scenario",
       "raw_fraction_of_direct_gap_percent": 23.039765042807378,
       "raw_increase_over_normal_percent": 39.99977832741089,
       "raw_tokens": 5491552.166666668,
@@ -928,7 +957,7 @@
       "run_rows": [
         {
           "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
-          "analysis_sha256": "89ed556d86f439a19982f1b0f41e985196572ea7357975ba2658d66c072c572d",
+          "analysis_sha256": "d575609760a2f213d0531b7f2f346d0b11a2eb198b007205f6efc289d54418a2",
           "completed_features": 2,
           "group": "work_leaf",
           "id": "exact-normal-001",
@@ -983,7 +1012,7 @@
               "usage_changes": 3
             }
           },
-          "unresolved_provider_responses": 1,
+          "unresolved_provider_responses": 2,
           "usage": {
             "cached_input_tokens": 18749952,
             "input_tokens": 19994942,
@@ -1005,7 +1034,7 @@
         },
         {
           "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
-          "analysis_sha256": "1efcc02128aca3a9214cb95746cc531df605848b6f2696695339420eeb55b3ed",
+          "analysis_sha256": "7b35a22692ca8272b4a774e88ffcb94cd761394815ee49e7da6c0ece6f3727dc",
           "completed_features": 3,
           "group": "work_leaf",
           "id": "exact-normal-002",
@@ -1060,7 +1089,7 @@
               "usage_changes": 3
             }
           },
-          "unresolved_provider_responses": 3,
+          "unresolved_provider_responses": 5,
           "usage": {
             "cached_input_tokens": 12035072,
             "input_tokens": 13063379,
@@ -1082,7 +1111,7 @@
         },
         {
           "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
-          "analysis_sha256": "d99110d2166abd08a6ce3cafbdb43d75bdfbcb94d603514c9bb0f122d1022000",
+          "analysis_sha256": "d55dc949a36d6b7de92c0b31ad9a5fdf0395fad1743f3c4175850c9a2d861a3e",
           "completed_features": 3,
           "group": "work_leaf",
           "id": "exact-normal-003",
@@ -1137,7 +1166,7 @@
               "usage_changes": 3
             }
           },
-          "unresolved_provider_responses": 3,
+          "unresolved_provider_responses": 22,
           "usage": {
             "cached_input_tokens": 13055360,
             "input_tokens": 14068903,
@@ -1236,7 +1265,7 @@
         },
         {
           "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
-          "analysis_sha256": "db9ca7b9500888b5b1cffa9cb2746435c3ba66e839560dfea4047057a8224b40",
+          "analysis_sha256": "6c5b5317663066a1baae61b6ea539a85e2f0c773025b7d6ce56523f7e66e7d37",
           "completed_features": 2,
           "group": "work_leaf",
           "id": "exact-normal-005",
@@ -1291,7 +1320,7 @@
               "usage_changes": 3
             }
           },
-          "unresolved_provider_responses": 2,
+          "unresolved_provider_responses": 4,
           "usage": {
             "cached_input_tokens": 20302976,
             "input_tokens": 21553568,
@@ -1313,7 +1342,7 @@
         },
         {
           "analysis": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/observation/analysis-request-accounting.json",
-          "analysis_sha256": "eeb78b59f6b25e071e4eff991c50c6b7a70fda7dbed9228a726411669e784f3c",
+          "analysis_sha256": "d6c8f622a9e0dcee2b239e4b1b8d1f44185a830c28ebac5415382dd031b802ad",
           "completed_features": 2,
           "group": "work_leaf",
           "id": "exact-normal-006",
@@ -1368,7 +1397,7 @@
               "usage_changes": 3
             }
           },
-          "unresolved_provider_responses": 1,
+          "unresolved_provider_responses": 2,
           "usage": {
             "cached_input_tokens": 18175360,
             "input_tokens": 19330361,
@@ -1393,11 +1422,11 @@
     }
   },
   "interpretation": {
-    "next_hypothesis": "Immediate interruption after complete orchestrator directives is the next isolated candidate; command-output compaction and review or linearization alone lack enough observed magnitude.",
-    "raw_limit": "The read route explains only a minority of the raw-token gap; its all-run sample allocation is 9.38% and its full-quality subset allocation is larger but imprecise.",
+    "lower_bound_scenario": "The 9.38% allocation uses recorded normal Work Leaf totals only and is not the bounded causal estimate.",
+    "raw_limit": "The direct-read effect changes sign across the bounded normal endpoint, so its independent raw-token direction is not established.",
     "remaining": "Direct-read Work Leaf still has far fewer usage changes than direct sequential Codex, so a separate Work Leaf mechanism causes most cached-input savings.",
     "statistical_limit": "The control has three runs and the normal reference has six. Exact permutation results and ranges are descriptive, not a population estimate.",
-    "supported": "Mediated reads reduce uncached context and increase context efficiency in this sample."
+    "supported": "The exact direct-read controls show that the large Work Leaf advantage remains without mediated reads."
   },
   "references": {
     "control_quality": {
@@ -1406,7 +1435,7 @@
     },
     "decomposition": {
       "path": "bench-results/efficiency-causal-validation-20260829T210343Z/decomposition-evidence.json",
-      "sha256": "5840f470d8729eb1eee205a45734e161562dc214c05e99abda4f6d13f9b12085"
+      "sha256": "a0868d250ec23942754da8c46f1f3265ef579416eed86598baf2ca092af2786a"
     },
     "launcher_commit": "cb875a0",
     "launcher_sha256": "ee885b8cea0c81e4cf2bdc12481f4885b9d71748f1266d74b94121f663177826",

@@ -28,7 +28,7 @@ class CombinedAnalysisTest(unittest.TestCase):
         )
         self.assertEqual(
             evidence["normal_endpoint_accounting"]["unresolved_provider_responses"],
-            10,
+            35,
         )
         self.assertEqual(evidence["rollout_integrity"]["hash_mismatches"], [])
         self.assertEqual(len(evidence["activation"]), 3)
@@ -61,6 +61,12 @@ class CombinedAnalysisTest(unittest.TestCase):
             10.341139963424038,
         )
         self.assertFalse(evidence["causal_summary"]["separate_effects_are_additive"])
+        bounded = evidence["bounded_normal_comparison"]
+        self.assertAlmostEqual(bounded["combined_minus_normal_raw_tokens"]["lower"], -3_905_243.333333332)
+        self.assertAlmostEqual(bounded["combined_minus_normal_raw_tokens"]["upper"], 1_928_090.0)
+        self.assertAlmostEqual(bounded["raw_interaction_tokens"]["lower"], -4_867_190.0)
+        self.assertAlmostEqual(bounded["raw_interaction_tokens"]["upper"], 966_143.3333333321)
+        self.assertFalse(bounded["direction_proven"])
 
     def test_quality_and_same_cli_counterchecks_are_retained(self):
         evidence = load_module().build_evidence()

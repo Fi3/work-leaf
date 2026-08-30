@@ -4,11 +4,11 @@
 
 This study collected controlled Work Leaf workflows to test file-read mediation, directive
 interruption, and their combination. Those control runs remain valid and have complete provider
-usage. The normal Work Leaf endpoint used for the original comparison does not: corrected
-accounting finds ten interrupted responses without terminal usage.
+usage. The normal Work Leaf endpoint used for the comparison does not: strict cumulative
+accounting finds 35 interrupted responses without provable terminal usage.
 
-The normal endpoint is therefore bounded. Work Leaf averaged 17.47-18.14 million raw tokens versus
-36.12 million for direct Codex, a 49.78%-51.62% reduction in the collected samples. The uncached
+The normal endpoint is therefore bounded. Work Leaf averaged 17.47-23.30 million raw tokens versus
+36.12 million for direct Codex, a 35.47%-51.62% reduction in the collected samples. The uncached
 direction is unknown. Direct completed 17 of 18 feature checks and Work Leaf completed 13 of 18, so
 the all-run result is not a formal equal-quality comparison.
 
@@ -57,9 +57,10 @@ linearization targets fixed. It measures 35.66 million versus 19.31 million raw 
 provider histories show 311 versus 198 model generations, with the largest reduction during
 implementation and review.
 
-After propagating the normal endpoint bound, Work Leaf's orchestration protocol plus mediated reads
-and early interruption under the recorded measurement grace explain 97.95%-98.02% of the observed
-raw-token gap.
+After propagating the normal endpoint bound, Work Leaf's orchestration protocol plus the bounded
+mediated-read and interruption transition net to 97.12%-98.02% of the observed raw-token gap. The
+exact orchestration transition saves 16.35 million tokens. The second transition ranges from a cost
+to a saving, so its individual direction is not established.
 
 ## Evidence Map
 

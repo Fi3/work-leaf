@@ -305,6 +305,7 @@ def compare_groups(direct, normal, control):
         run["usage"]["uncached_input_plus_output"] for run in control["run_rows"]
     ]
     return {
+        "measurement": "recorded normal Work Leaf lower-bound scenario",
         "raw_tokens": raw_delta,
         "uncached_tokens": uncached_delta,
         "input_tokens": input_delta,
@@ -330,6 +331,38 @@ def compare_groups(direct, normal, control):
             "raw_tokens": exact_permutation_greater(normal_raw, control_raw),
             "uncached_tokens": exact_permutation_greater(normal_uncached, control_uncached),
         },
+    }
+
+
+def bounded_control_comparison(decomposition, direct_raw, control_raw):
+    accounting = decomposition["accounting"]
+    interval = accounting["normal_work_leaf_raw_mean_interval"]
+    scenarios = {}
+    for name, normal_raw in (
+        ("recorded_lower_bound", interval["lower"]),
+        ("conservative_upper_bound", interval["upper"]),
+    ):
+        movement = control_raw - normal_raw
+        endpoint_gap = direct_raw - normal_raw
+        scenarios[name] = {
+            "normal_work_leaf_raw_tokens": normal_raw,
+            "control_minus_normal_raw_tokens": movement,
+            "endpoint_gap_raw_tokens": endpoint_gap,
+            "share_of_endpoint_gap_percent": movement / endpoint_gap * 100,
+        }
+    movement = {
+        "lower": control_raw - interval["upper"],
+        "upper": control_raw - interval["lower"],
+    }
+    return {
+        "measurement": "bounded",
+        "unresolved_provider_responses": accounting[
+            "unresolved_provider_responses"
+        ],
+        "normal_work_leaf_raw_mean_interval": interval,
+        "control_minus_normal_raw_tokens": movement,
+        "direction_proven": movement["lower"] > 0 or movement["upper"] < 0,
+        "scenarios": scenarios,
     }
 
 
@@ -372,6 +405,7 @@ def build_evidence():
     direct_raw = direct["mean_usage"]["raw_input_plus_output"]
     direct_read_uncached = control["mean_usage"]["uncached_input_plus_output"]
     direct_uncached = direct["mean_usage"]["uncached_input_plus_output"]
+    bounded = bounded_control_comparison(decomposition, direct_raw, direct_read_raw)
     return {
         "schema_version": 1,
         "study": STUDY.name,
@@ -403,6 +437,7 @@ def build_evidence():
             "normal_work_leaf": normal,
             "direct_read_work_leaf": control,
         },
+        "bounded_normal_comparison": bounded,
         "comparisons": {
             "direct_read_minus_normal_work_leaf": comparison,
             "full_quality_direct_read_minus_normal_work_leaf": full_comparison,
@@ -425,10 +460,10 @@ def build_evidence():
             },
         },
         "interpretation": {
-            "supported": "Mediated reads reduce uncached context and increase context efficiency in this sample.",
-            "raw_limit": "The read route explains only a minority of the raw-token gap; its all-run sample allocation is 9.38% and its full-quality subset allocation is larger but imprecise.",
+            "supported": "The exact direct-read controls show that the large Work Leaf advantage remains without mediated reads.",
+            "raw_limit": "The direct-read effect changes sign across the bounded normal endpoint, so its independent raw-token direction is not established.",
             "remaining": "Direct-read Work Leaf still has far fewer usage changes than direct sequential Codex, so a separate Work Leaf mechanism causes most cached-input savings.",
-            "next_hypothesis": "Immediate interruption after complete orchestrator directives is the next isolated candidate; command-output compaction and review or linearization alone lack enough observed magnitude.",
+            "lower_bound_scenario": "The 9.38% allocation uses recorded normal Work Leaf totals only and is not the bounded causal estimate.",
             "statistical_limit": "The control has three runs and the normal reference has six. Exact permutation results and ranges are descriptive, not a population estimate.",
         },
     }

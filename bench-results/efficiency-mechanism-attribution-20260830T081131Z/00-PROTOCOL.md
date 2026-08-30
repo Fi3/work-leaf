@@ -21,7 +21,7 @@ The accepted endpoint cohorts are:
 | Endpoint | Runs | Feature checks | Mean raw tokens |
 | --- | ---: | ---: | ---: |
 | Normal direct sequential Codex | 6 | 17/18 | 36,116,382 exact |
-| Normal concurrent Work Leaf | 6 | 13/18 | 17,471,532-18,138,199 bounded |
+| Normal concurrent Work Leaf | 6 | 13/18 | 17,471,532-23,304,865 bounded |
 
 Every implementation outcome remains evidence. A partial feature result is scored and retained; it
 is not retried merely because its quality is lower.
@@ -88,9 +88,9 @@ changes from one-at-a-time to all three together.
 
 This transition uses the completed controls from the prior study. It restores normal orchestrator
 file reads and early interruption under the endpoint's recorded one-second usage grace. Their joint
-effect is bounded because ten normal endpoint responses lack terminal usage; every missing response
-receives the frozen 400,000-token maximum. The joint transition is retained because the prior
-factorial test showed that the separate effects overlap.
+effect is bounded because 35 normal endpoint responses lack provable terminal usage; every missing
+response receives the capture-audited 1,000,000-token ceiling. The joint transition is retained
+because the prior factorial test showed that the separate effects overlap.
 
 ## Required Gates
 

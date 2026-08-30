@@ -16,11 +16,12 @@ while sequential Work Leaf averaged 19,311,710, a 45.84% reduction. Direct Codex
 generations and sequential Work Leaf averaged 198. Most of the reduction occurs during
 implementation and review.
 
-The normal Work Leaf endpoint contains ten interrupted responses without terminal usage. Applying
-the frozen conservative maximum of 400,000 raw tokens to each one puts the normal endpoint reduction
-between 49.78% and 51.62%. With that correction, the orchestration protocol plus mediated reads and
-early directive interruption explain between 97.95% and 98.02% of the observed raw-token gap. The
-causal coverage remains above the requested 90% even under the maximum missing-token allowance.
+The normal Work Leaf endpoint contains 35 interrupted responses without provable terminal usage.
+Applying the capture-audited ceiling of 1,000,000 raw tokens to each one puts the normal endpoint
+reduction between 35.47% and 51.62%. The orchestration protocol plus the bounded mediated-read and
+interruption transition net to 97.12%-98.02% of the observed raw-token gap. The second transition's
+individual direction is unresolved under the wider ceiling, but the exact orchestration control is
+unchanged.
 
 This is not a formal equal-quality population estimate. The six normal direct runs completed 17 of
 18 feature checks and the six normal Work Leaf runs completed 13 of 18. The exact main control is
@@ -34,10 +35,10 @@ The endpoint contains six normal runs from each workflow:
 | Normal workflow | Runs | Feature checks | Mean raw tokens |
 | --- | ---: | ---: | ---: |
 | Direct sequential Codex | 6 | 17/18 | 36,116,382 exact |
-| Concurrent Work Leaf | 6 | 13/18 | 17,471,532-18,138,199 |
+| Concurrent Work Leaf | 6 | 13/18 | 17,471,532-23,304,865 |
 
 "Raw tokens" means all input plus output tokens, including cached input. "Uncached tokens" means
-fresh input plus output. The uncached endpoint is not conclusive because the ten missing responses
+fresh input plus output. The uncached endpoint is not conclusive because the 35 missing responses
 do not report their cached-input split.
 
 All workflows use the original three requests, base commit
@@ -119,16 +120,18 @@ The exact controlled steps remain single values.
 
 | Cause | Raw tokens saved | Share of endpoint gap |
 | --- | ---: | ---: |
-| Compact exact linearization handoff | 457,117 | 2.45%-2.54% |
-| Work Leaf orchestration protocol | 16,347,554 | 87.68%-90.93% |
-| Concurrent scheduling | 87,912 more | -0.49% to -0.47% |
-| Mediated reads plus early directive interruption under the recorded grace | 1,261,423-1,928,090 | 7.02%-10.34% |
-| Total endpoint gap | 17,978,183-18,644,850 | 100% |
+| Compact exact linearization handoff | 457,117 fewer | 2.45%-3.57% |
+| Work Leaf orchestration protocol | 16,347,554 fewer | 87.68%-127.60% |
+| Concurrent scheduling | 87,912 more | -0.69% to -0.47% |
+| Mediated reads plus early directive interruption under the recorded grace | 3,905,243 more to 1,928,090 fewer | -30.48%-10.34% |
+| Total endpoint gap | 12,811,516-18,644,850 fewer | 100% |
 
 At the recorded Work Leaf lower bound, the gap is 18.645 million tokens and the two Work Leaf
 mechanism groups cover 98.02%: 87.68% from orchestration and 10.34% from reads and interruption. At
-the conservative Work Leaf upper bound, those groups cover 97.95%: the exact orchestration effect is
-90.93% and the bounded read/interruption effect is 7.02%.
+the conservative Work Leaf upper bound, the gap is 12.812 million. The exact orchestration effect is
+127.60% of that smaller gap, while the bounded read/interruption transition offsets 30.48%; their
+net coverage is 97.12%. This ordered allocation proves the dominant protocol effect but does not
+prove that reads plus interruption independently save tokens.
 
 The compact-linearization benefit and small concurrency cost nearly cancel. They are minor compared
 with the protocol effect and normal run variation.
@@ -137,16 +140,19 @@ Inside the exact orchestration transition, implementation and fixes save 14.37 m
 and review saves 2.12 million. Linearization and Work Leaf's title session together use about
 148,000 more, slightly reducing the net saving.
 
-## Accounting Correction
+## Accounting Rule
 
-The earlier report treated any later cumulative provider total as proof that an earlier interrupted
-response had been counted. The corrected observer requires arithmetic proof: after subtracting the
-previous total and the later response's own `last` usage, a nonzero increase must remain and exactly
-one unresolved interruption must occupy that interval.
+The observer accepts same-turn terminal usage only when the cumulative total advances and its
+nonzero `last` usage fits inside that advance; a repeated total or an unattributed advance is not
+proof of the response. A later turn covers an earlier interrupted response only when, after
+subtracting the previous total and the later response's own `last` usage, a nonzero increase remains
+and exactly one unresolved interruption occupies that interval.
 
-Five of the six normal Work Leaf runs contain ten unresolved responses under this rule. Their
-recorded totals are lower bounds. The conservative upper bound adds 400,000 raw tokens to every
-unresolved response. The exact-normal correction is documented in
+Five of the six normal Work Leaf runs contain 35 unresolved responses under these rules. Their
+recorded totals are lower bounds. The conservative upper bound adds 1,000,000 raw tokens to every
+unresolved final response. The observed 258,400-token context limit plus the 128,000-token output
+limit permits at most 386,400 raw tokens for that response; the declared ceiling leaves 613,600
+tokens of additional headroom. The exact-normal accounting is documented in
 `bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/FINAL-REPORT.md`.
 
 The six main-control runs, the three completed-response control runs, and the three combined-control
@@ -161,9 +167,10 @@ The evidence supports these conclusions for this frozen benchmark:
 - Work Leaf's orchestration protocol causes the main reduction as one connected mechanism package.
 - That package reduces repeated model/tool cycles and cached-context replay during implementation
   and review.
-- Mediated reads and early directive interruption under the recorded measurement grace add a
-  smaller bounded contribution.
-- Together those two mechanism groups cover at least 97.95% of the observed raw-token gap.
+- The individual ordered contribution of mediated reads and early directive interruption is
+  unresolved under the conservative endpoint ceiling.
+- The orchestration and read/interruption transitions together net to at least 97.12% of the
+  observed raw-token gap.
 
 The evidence does not establish:
 
@@ -182,9 +189,10 @@ outside the model thread. This avoids repeatedly sending the growing cached conv
 the model.
 
 The exact main control measures a 16.35 million-token protocol effect. After conservatively bounding
-the normal endpoint's ten unresolved responses, orchestration plus mediated reads and interruption
-still explain 97.95%-98.02% of the observed raw-token difference. This meets the requested 90%
-causal-coverage target without hiding the endpoint's measurement and quality limits.
+the normal endpoint's 35 unresolved responses, orchestration plus the bounded mediated-read and
+interruption transition net to 97.12%-98.02% of the observed raw-token difference. This meets the
+requested 90% causal-coverage target without hiding that the second transition changes sign at the
+conservative extreme or that the endpoint groups differ in measured quality.
 
 Machine-readable values are in `evidence.json`; the detailed controlled chain is in
 `05-CAUSAL-ANALYSIS.md`.

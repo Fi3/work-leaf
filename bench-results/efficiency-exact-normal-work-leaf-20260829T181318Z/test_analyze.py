@@ -31,10 +31,34 @@ class ExactNormalAnalysisTests(unittest.TestCase):
         self.assertEqual(work_leaf["total_completed_features"], 13)
         self.assertEqual(work_leaf["exact_token_observations"], 1)
         self.assertEqual(work_leaf["bounded_token_observations"], 5)
-        self.assertEqual(work_leaf["missing_provider_responses"], 10)
+        self.assertEqual(work_leaf["missing_provider_responses"], 35)
         self.assertEqual(
             work_leaf["raw_token_mean_interval"],
-            {"lower": 17_471_532.0, "upper": 18_138_198.666666668},
+            {"lower": 17_471_532.0, "upper": 23_304_865.333333332},
+        )
+        self.assertEqual(
+            evidence["accounting"]["maximum_raw_tokens_per_unresolved_response"],
+            1_000_000,
+        )
+        self.assertEqual(
+            evidence["accounting"]["effective_context_window_tokens"],
+            258_400,
+        )
+        self.assertEqual(
+            evidence["accounting"]["maximum_output_tokens"],
+            128_000,
+        )
+        self.assertEqual(
+            evidence["accounting"]["maximum_observed_last_response_raw_tokens"],
+            180_949,
+        )
+        self.assertEqual(
+            evidence["accounting"]["maximum_single_response_raw_tokens"],
+            386_400,
+        )
+        self.assertEqual(
+            evidence["accounting"]["response_cap_headroom_tokens"],
+            613_600,
         )
         self.assertGreater(comparison["raw_tokens"]["lower"], 0)
         self.assertLess(comparison["uncached_tokens"]["lower"], 0)
@@ -56,7 +80,7 @@ class ExactNormalAnalysisTests(unittest.TestCase):
             subset["normal_work_leaf"]["run_ids"],
             ["exact-normal-002", "exact-normal-003"],
         )
-        self.assertEqual(subset["normal_work_leaf"]["missing_provider_responses"], 6)
+        self.assertEqual(subset["normal_work_leaf"]["missing_provider_responses"], 27)
         self.assertGreater(
             subset["direct_minus_normal_work_leaf"]["raw_tokens"]["lower"], 0
         )
