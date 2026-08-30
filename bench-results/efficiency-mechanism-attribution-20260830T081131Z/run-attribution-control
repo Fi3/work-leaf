@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/../.." && pwd)"
+source_repo="/home/user/.codex/work-leaf-exact-normal-source-20260829T181318Z"
+runtime_root="/home/user/.codex/work-leaf-mechanism-attribution-runtime-20260830T081131Z"
+reference_study="$repo_root/bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z"
+control_study="$repo_root/bench-results/efficiency-causal-validation-20260829T210343Z"
+manifest="$script_dir/infrastructure/manifest.json"
+schedule="$script_dir/SCHEDULE.tsv"
+generator="$script_dir/generate_diagnostic_driver.py"
+bin_dir="$reference_study/infrastructure/bin"
+observer_bin="$control_study/infrastructure/bin/bench-observer"
+study_id="efficiency-mechanism-attribution-20260830T081131Z"
+
+sha256() {
+  sha256sum "$1" | awk '{print $1}'
+}
+
+manifest_value() {
+  jq -er "$1" "$manifest"
+}
+
+check_file_hash() {
+  local path="$1"
+  local expected="$2"
+  local label="$3"
+  [[ -f "$path" && "$(sha256 "$path")" == "$expected" ]] || {
+    echo "error: $label hash differs" >&2
+    return 1
+  }
+}
+
+generate_checked_driver() {
+  local mode="$1"
+  local source="$2"
+  local output="$3"
+  local expected
+  python3 "$generator" "$mode" "$source" "$output" >/dev/null
+  expected="$(manifest_value ".generated_driver_sha256[\"$mode\"]")"
+  check_file_hash "$output" "$expected" "generated $mode driver"
+  bash -n "$output"
+}
+
+check_infrastructure() {
+  [[ -f "$manifest" && -f "$schedule" && -x "$generator" ]] || {
+    echo "error: attribution infrastructure is incomplete" >&2
+    return 1
+  }
+  [[ "$(git -C "$source_repo" rev-parse HEAD)" == "$(manifest_value '.work_leaf_source_commit')" \
+    && -z "$(git -C "$source_repo" status --short)" ]] || {
+    echo "error: frozen Work Leaf source checkout differs" >&2
+    return 1
+  }
+  check_file_hash \
+    "$source_repo/bench-three-features" \
+    "$(manifest_value '.source_sha256["bench-three-features"]')" \
+    "frozen Work Leaf benchmark"
+  check_file_hash \
+    "$source_repo/bench-three-features-direct-common" \
+    "$(manifest_value '.source_sha256["bench-three-features-direct-common"]')" \
+    "frozen direct benchmark"
+  check_file_hash "$generator" "$(manifest_value '.generator_sha256')" "driver generator"
+  check_file_hash \
+    "$observer_bin" "$(manifest_value '.binaries["bench-observer"]')" "bench observer"
+  check_file_hash "$bin_dir/work-leaf" "$(manifest_value '.binaries["work-leaf"]')" "Work Leaf"
+  check_file_hash \
+    "$bin_dir/work-leaf-orchestrator" \
+    "$(manifest_value '.binaries["work-leaf-orchestrator"]')" \
+    "Work Leaf orchestrator"
+
+  local preflight_root
+  preflight_root="$(mktemp -d "${TMPDIR:-/tmp}/work-leaf-attribution-preflight.XXXXXX")"
+  generate_checked_driver \
+    sequential-work-leaf "$source_repo/bench-three-features" "$preflight_root/work-leaf"
+  generate_checked_driver \
+    compact-direct-linearizer \
+    "$source_repo/bench-three-features-direct-common" \
+    "$preflight_root/direct"
+  rm -rf "$preflight_root"
+}
+
+check_infrastructure
+if [[ "${1:-}" == "--check" ]]; then
+  [[ "$#" == 1 ]] || {
+    echo "usage: $0 --check | ATTEMPT_ID" >&2
+    exit 2
+  }
+  echo "ATTRIBUTION_CONTROL_PREFLIGHT_OK"
+  exit 0
+fi
+
+if [[ "$#" != 1 ]]; then
+  echo "usage: $0 --check | ATTEMPT_ID" >&2
+  exit 2
+fi
+
+attempt_id="$1"
+row="$(awk -F '\t' -v attempt="$attempt_id" \
+  'NR > 1 && $2 == attempt {print $1 "\t" $3}' "$schedule")"
+[[ "$(printf '%s\n' "$row" | sed '/^$/d' | wc -l | tr -d ' ')" == "1" ]] || {
+  echo "error: attempt is not uniquely declared: $attempt_id" >&2
+  exit 2
+}
+batch="${row%%$'\t'*}"
+condition="${row#*$'\t'}"
+
+results_dir="$script_dir/runs/$attempt_id"
+log_path="$script_dir/logs/$attempt_id.log"
+status_path="$script_dir/logs/$attempt_id.exit"
+runtime_dir="$runtime_root/$attempt_id"
+[[ ! -e "$results_dir" && ! -e "$log_path" && ! -e "$status_path" \
+  && ! -e "$runtime_dir" ]] || {
+  echo "error: preserved state already exists for $attempt_id" >&2
+  exit 2
+}
+
+mkdir -p "$results_dir" "$script_dir/logs" "$runtime_dir"
+case "$condition" in
+  direct-compact-linearizer)
+    driver_mode="compact-direct-linearizer"
+    source_driver="$source_repo/bench-three-features-direct-common"
+    workflow="direct-sequential-with-compact-linearizer"
+    ;;
+  sequential-work-leaf-combined)
+    driver_mode="sequential-work-leaf"
+    source_driver="$source_repo/bench-three-features"
+    workflow="sequential-diagnostic-work-leaf"
+    ;;
+  *)
+    echo "error: unknown scheduled condition: $condition" >&2
+    exit 2
+    ;;
+esac
+
+generated_driver="$runtime_dir/generated-driver"
+generate_checked_driver "$driver_mode" "$source_driver" "$generated_driver"
+generated_driver_sha256="$(sha256 "$generated_driver")"
+
+jq -n \
+  --arg attempt_id "$attempt_id" \
+  --argjson batch "$batch" \
+  --arg condition "$condition" \
+  --arg workflow "$workflow" \
+  --arg source_commit "$(manifest_value '.work_leaf_source_commit')" \
+  --arg observer_commit "$(manifest_value '.observer_source_commit')" \
+  --arg source_driver "$source_driver" \
+  --arg source_driver_sha256 "$(sha256 "$source_driver")" \
+  --arg driver_mode "$driver_mode" \
+  --arg generated_driver_sha256 "$generated_driver_sha256" \
+  --arg observer_sha256 "$(sha256 "$observer_bin")" \
+  '{
+    schema_version:1,
+    attempt_id:$attempt_id,
+    batch:$batch,
+    condition:$condition,
+    workflow:$workflow,
+    source_commit:$source_commit,
+    observer_source_commit:$observer_commit,
+    source_driver:$source_driver,
+    source_driver_sha256:$source_driver_sha256,
+    driver_mode:$driver_mode,
+    generated_driver_sha256:$generated_driver_sha256,
+    observer_sha256:$observer_sha256,
+    base_commit:"c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+    model:"gpt-5.5",
+    reasoning_effort:"xhigh",
+    analytical_pair:false,
+    retry:false,
+    normal_work_leaf_modified:false,
+    normal_benchmark_launchers_modified:false
+  }' > "$results_dir/admission.json"
+
+set +e
+if [[ "$condition" == "direct-compact-linearizer" ]]; then
+  env \
+    -u WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY \
+    -u WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY \
+    -u WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE \
+    -u WORK_LEAF_BENCH_FEATURE_SCHEDULE \
+    WORK_LEAF_DIAGNOSTIC_SOURCE_REPO="$source_repo" \
+    WORK_LEAF_DIRECT_BENCH_MODEL=gpt-5.5 \
+    WORK_LEAF_DIRECT_BENCH_REASONING_EFFORT=xhigh \
+    WORK_LEAF_DIRECT_BENCH_TMPDIR="$runtime_dir" \
+    WORK_LEAF_DIRECT_BENCH_RESULTS_DIR="$results_dir" \
+    WORK_LEAF_DIRECT_BENCH_SKIP_BUILD=1 \
+    WORK_LEAF_DIRECT_BENCH_BIN_DIR="$bin_dir" \
+    WORK_LEAF_DIRECT_BENCH_TIMEOUT_SECS=7200 \
+    WORK_LEAF_BENCH_OBSERVER_BIN="$observer_bin" \
+    WORK_LEAF_BENCH_STUDY_ID="$study_id" \
+    WORK_LEAF_BENCH_PAIR_ID="unpaired-$attempt_id" \
+    WORK_LEAF_DIRECT_BENCH_RUN_ID="$attempt_id" \
+    WORK_LEAF_DIRECT_BENCH_OPERATOR_NOTES="causal bridge L: normal direct sequential workflow with only a compact exact linearization target handoff" \
+    "$generated_driver" sequential > "$log_path" 2>&1
+  status=$?
+else
+  env \
+    -u WORK_LEAF_EXPERIMENT_CHANGED_REPEAT_DELIVERY \
+    -u WORK_LEAF_EXPERIMENT_UNCHANGED_REPEAT_DELIVERY \
+    -u WORK_LEAF_EXPERIMENT_REVIEW_PROVENANCE \
+    -u WORK_LEAF_BENCH_FEATURE_SCHEDULE \
+    WORK_LEAF_DIAGNOSTIC_SOURCE_REPO="$source_repo" \
+    WORK_LEAF_BENCH_MODEL=gpt-5.5 \
+    WORK_LEAF_BENCH_REASONING_EFFORT=xhigh \
+    WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS=120000 \
+    WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME=wait-for-usage \
+    WORK_LEAF_BENCH_TMPDIR="$runtime_dir" \
+    WORK_LEAF_BENCH_RESULTS_DIR="$results_dir" \
+    WORK_LEAF_BENCH_SKIP_BUILD=1 \
+    WORK_LEAF_BENCH_BIN_DIR="$bin_dir" \
+    WORK_LEAF_BENCH_TIMEOUT_SECS=7200 \
+    WORK_LEAF_BENCH_NO_READ_PERMISSION=1 \
+    WORK_LEAF_BENCH_WEB_UI=0 \
+    WORK_LEAF_BENCH_DISABLE_TMUX_SUPERVISOR=1 \
+    WORK_LEAF_BENCH_OBSERVER_BIN="$observer_bin" \
+    WORK_LEAF_BENCH_STUDY_ID="$study_id" \
+    WORK_LEAF_BENCH_PAIR_ID="unpaired-$attempt_id" \
+    WORK_LEAF_BENCH_RUN_ID="$attempt_id" \
+    WORK_LEAF_BENCH_OPERATOR_NOTES="causal bridge S: sequential diagnostic Work Leaf with direct reads and completed responses; normal Work Leaf binaries unchanged" \
+    "$generated_driver" > "$log_path" 2>&1
+  status=$?
+fi
+set -e
+
+printf '%s\n' "$status" > "$status_path"
+exit "$status"

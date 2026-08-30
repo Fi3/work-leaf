@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+batch="${1:-}"
+[[ "$batch" == "1" || "$batch" == "2" ]] || {
+  echo "usage: $0 1|2" >&2
+  exit 2
+}
+
+"$script_dir/run-attribution-control" --check
+mapfile -t attempts < <(awk -F '\t' -v batch="$batch" \
+  'NR > 1 && $1 == batch {print $2}' "$script_dir/SCHEDULE.tsv")
+[[ "${#attempts[@]}" == "3" ]] || {
+  echo "error: batch $batch does not contain exactly three attempts" >&2
+  exit 2
+}
+
+pids=()
+for attempt in "${attempts[@]}"; do
+  "$script_dir/run-attribution-control" "$attempt" &
+  pids+=("$!")
+done
+
+status=0
+for pid in "${pids[@]}"; do
+  if ! wait "$pid"; then
+    status=1
+  fi
+done
+exit "$status"
