@@ -5,10 +5,10 @@
 Three exact Work Leaf controls used direct file reads and allowed resumed output to finish. They
 averaged 19,399,622 raw tokens and completed 8 of 9 feature checks. The controls are valid, but their
 movement relative to normal Work Leaf is bounded because the normal endpoint is
-17,471,532-23,304,865 raw tokens.
+17,471,532-19,725,532 raw tokens.
 
-The combined transition therefore ranges from using 3,905,243 fewer tokens to using 1,928,090 more.
-Its ordered share of the endpoint gap ranges from -30.48% to 10.34%. The sign changes, so this study
+The combined transition therefore ranges from using 325,910 fewer tokens to using 1,928,090 more.
+Its ordered share of the endpoint gap ranges from -1.99% to 10.34%. The sign changes, so this study
 does not prove that mediated reads plus interruption independently save raw tokens.
 
 ## Conditions
@@ -29,7 +29,7 @@ linearization, validation freedom, final checks, GPT-5.5/`xhigh`, and scorer rem
 | Group | Runs | Feature checks | Mean raw tokens | Mean uncached tokens |
 | --- | ---: | ---: | ---: | ---: |
 | Direct sequential Codex | 6 | 17/18 | 36,116,382 exact | 1,608,712 exact |
-| Normal concurrent Work Leaf | 6 | 13/18 | 17,471,532-23,304,865 | 1,343,404-7,176,737 |
+| Normal concurrent Work Leaf | 6 | 13/18 | 17,471,532-19,725,532 | 1,343,404-3,597,404 |
 | Direct-read Work Leaf | 3 | 9/9 | 19,220,509 exact | 1,607,367 exact |
 | Continued-response Work Leaf | 3 | 6/9 | 22,517,835 exact | 1,632,075 exact |
 | Combined Work Leaf | 3 | 8/9 | 19,399,622 exact | 2,063,174 exact |
@@ -50,9 +50,9 @@ rollout matches its recorded SHA-256.
 
 Using the recorded normal Work Leaf lower bound gives the former interaction result: direct reads
 add 1.75M raw tokens, completed responses add 5.05M, their combination adds 1.93M, and the
-interaction is -4.87M. Under the conservative normal upper bound, all three movements change and
-the interaction becomes +0.97M. The valid interaction interval is therefore -4.87M to +0.97M; its
-sign is not established.
+interaction is -4.87M. Under the conservative normal upper bound, the interaction is -2.61M. The
+valid interaction interval is therefore -4.87M to -2.61M. Its sign remains negative, proving that
+the read and continuation effects are not additive in these samples.
 
 The lower-bound traces still show why a simple addition was inappropriate: direct reads made output
 resume after directives more often, and completed continuations changed later turns. This is useful

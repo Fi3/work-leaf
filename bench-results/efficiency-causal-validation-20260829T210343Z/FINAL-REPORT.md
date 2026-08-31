@@ -7,8 +7,8 @@ interruption, and their combination. Those control runs remain valid and have co
 usage. The normal Work Leaf endpoint used for the comparison does not: strict cumulative
 accounting finds 35 interrupted responses without provable terminal usage.
 
-The normal endpoint is therefore bounded. Work Leaf averaged 17.47-23.30 million raw tokens versus
-36.12 million for direct Codex, a 35.47%-51.62% reduction in the collected samples. The uncached
+The normal endpoint is therefore bounded. Work Leaf averaged 17.47-19.73 million raw tokens versus
+36.12 million for direct Codex, a 45.38%-51.62% reduction in the collected samples. The uncached
 direction is unknown. Direct completed 17 of 18 feature checks and Work Leaf completed 13 of 18, so
 the all-run result is not a formal equal-quality comparison.
 
@@ -58,9 +58,11 @@ provider histories show 311 versus 198 model generations, with the largest reduc
 implementation and review.
 
 After propagating the normal endpoint bound, Work Leaf's orchestration protocol plus the bounded
-mediated-read and interruption transition net to 97.12%-98.02% of the observed raw-token gap. The
+mediated-read and interruption transition net to 97.75%-98.02% of the observed raw-token gap. The
 exact orchestration transition saves 16.35 million tokens. The second transition ranges from a cost
-to a saving, so its individual direction is not established.
+to a saving, so its joint direction is not established. Separately, the completed-response control
+uses 2.79M-5.05M more tokens than early interruption, establishing interruption as a saving in these
+samples; mediated reads and the interaction prevent assigning that same direction to the joint step.
 
 ## Evidence Map
 

@@ -803,8 +803,10 @@ def build_evidence():
                 "some of the same later provider cycles rather than adding independent costs."
             ),
             "bounded_direction": (
-                "The combined-minus-normal raw-token interval and interaction interval both "
-                "cross zero, so their directions are not established."
+                "The combined-minus-normal raw-token interval crosses zero, so the joint "
+                "read-plus-interruption movement is not established. The interaction interval "
+                "is entirely negative, proving that the separate read and continuation effects "
+                "are not additive in these samples."
             ),
             "residual_raw_gap_after_combined_control": (
                 direct["mean_usage"]["raw_input_plus_output"]

@@ -2,14 +2,14 @@
 
 ## Current Answer
 
-The three continued-response controls are exact, but the bounded normal endpoint does not establish
-the direction of directive interruption by itself. Continued-response Work Leaf averaged 22,517,835
-raw tokens. Relative to normal Work Leaf's 17,471,532-23,304,865 interval, allowing resumed output
-to finish ranges from using 787,030 fewer tokens to using 5,046,303 more. The sign changes across
-the valid endpoint interval.
+The three continued-response controls are exact. Continued-response Work Leaf averaged 22,517,835
+raw tokens. Relative to normal Work Leaf's 17,471,532-19,725,532 interval, allowing resumed output
+to finish uses 2,792,303-5,046,303 more raw tokens. Early directive interruption therefore saves raw
+tokens in these collected samples even after every unresolved normal response receives its maximum
+allowance.
 
-The 27.07% interruption figure in `continued-response-evidence.json` uses only the recorded normal
-Work Leaf lower bound. It is a descriptive scenario, not a current causal estimate.
+The bounded interruption contribution is 17.04%-27.07% of the endpoint gap. The upper percentage
+uses only the recorded normal Work Leaf lower bound; the lower percentage uses the maximum allowance.
 The control also completed 6 of 9 feature checks versus 13 of 18 for normal Work Leaf, so its quality
 does not provide a stronger matched comparison.
 
@@ -38,16 +38,16 @@ lower-bound trace and moved tokens in implementation, review, and later lineariz
 that changing interruption timing can alter downstream workflow behavior, not merely append a few
 output tokens to one response.
 
-Those recorded event differences explain the lower-bound scenario but do not overcome the 35
-missing normal responses. Direct reads also change how often output resumes, so read delivery and
-interruption cannot be treated as independent effects.
+Those recorded event differences show that interruption changes later workflow behavior, not just
+the final few output tokens. Direct reads also change how often output resumes, so read delivery and
+interruption cannot be added as independent effects.
 
 ## Conclusion
 
-Directive interruption is an active mechanism, but its independent raw-token direction and share
-are not proven by this cohort. Even the exact continued-response group uses 37.65% fewer raw tokens
-than direct Codex; that comparison still includes the rest of the Work Leaf protocol and therefore
-does not assign the saving to interruption.
+Directive interruption is a proven raw-token saving in this bounded three-run control, with a
+2.79M-5.05M effect relative to the collected normal endpoint. This does not make it the main cause:
+even the exact continued-response group uses 37.65% fewer raw tokens than direct Codex, and that
+comparison still includes the rest of the Work Leaf protocol.
 
 `continued-response-evidence.json` preserves the exact runs, activation records, hashes, and the
 lower-bound-only scenario. The combined control and final bounded interpretation are in

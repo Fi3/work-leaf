@@ -8,10 +8,11 @@ previous total and the later event's own `last` usage leaves a nonzero increase 
 exactly one unresolved interruption.
 
 The normal Work Leaf mean is 17,471,532 recorded raw tokens with a conservative upper bound of
-23,304,865. The exact direct mean is 36,116,382. The resulting normal raw-token reduction is
-35.47%-51.62%. The uncached direction is unknown. The upper bound charges 1,000,000 raw tokens to
-every unresolved final response, which exceeds the observed context-plus-output single-response
-limit by 613,600 tokens.
+19,725,532. The exact direct mean is 36,116,382. The resulting normal raw-token reduction is
+45.38%-51.62%. The uncached direction is unknown. Raw-event replay isolates one response and zero
+intervening tool boundaries for every gap. The upper bound charges the derived maximum of 386,400
+raw tokens to each response: the frozen client enforces a 258,400-token hard active-context limit
+and GPT-5.5 permits 128,000 output tokens.
 
 These parts of this study remain exact:
 

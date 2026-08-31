@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "frozen_client": {
+    "version": "codex-cli 0.150.1",
+    "binary_sha256": "134063e133f0b4244fa3b251acf973d4fe4b4aeeacbdc135211bf480f59f1477",
+    "model": "gpt-5.5",
+    "catalog_context_window_tokens": 272000,
+    "catalog_max_context_window_tokens": 272000,
+    "effective_context_window_percent": 95,
+    "hard_active_context_window_tokens": 258400,
+    "catalog_source": "https://github.com/openai/codex/blob/rust-v0.150.1/codex-rs/models-manager/models.json#L613-L645",
+    "effective_window_source": "https://github.com/openai/codex/blob/rust-v0.150.1/codex-rs/core/src/session/turn_context.rs#L368-L375",
+    "hard_cap_source": "https://github.com/openai/codex/blob/rust-v0.150.1/codex-rs/core/src/session/context_window.rs#L53-L76"
+  },
+  "model": {
+    "maximum_output_tokens": 128000,
+    "source": "https://developers.openai.com/api/docs/models/gpt-5.5"
+  },
+  "bound": {
+    "maximum_raw_tokens_per_response": 386400,
+    "arithmetic": "258400 hard active-context limit + 128000 maximum model output = 386400 raw tokens"
+  }
+}

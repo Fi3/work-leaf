@@ -62,9 +62,12 @@ class AnalyzeControlTest(unittest.TestCase):
         self.assertEqual(bounded["unresolved_provider_responses"], 35)
         self.assertEqual(
             bounded["normal_work_leaf_raw_mean_interval"],
-            {"lower": 17_471_532.0, "upper": 23_304_865.333333332},
+            {"lower": 17_471_532.0, "upper": 19_725_532.0},
         )
-        self.assertAlmostEqual(bounded["control_minus_normal_raw_tokens"]["lower"], -4_084_356.666666664)
+        self.assertAlmostEqual(
+            bounded["control_minus_normal_raw_tokens"]["lower"],
+            -505_023.3333333321,
+        )
         self.assertAlmostEqual(bounded["control_minus_normal_raw_tokens"]["upper"], 1_748_976.666666668)
         self.assertFalse(bounded["direction_proven"])
 

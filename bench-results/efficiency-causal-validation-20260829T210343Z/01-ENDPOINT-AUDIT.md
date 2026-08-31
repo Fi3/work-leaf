@@ -8,9 +8,9 @@ runs on the same frozen task:
 | Workflow | Feature checks | Mean raw tokens |
 | --- | ---: | ---: |
 | Direct Codex | 17/18 | 36,116,382 exact |
-| Work Leaf | 13/18 | 17,471,532-23,304,865 bounded |
+| Work Leaf | 13/18 | 17,471,532-19,725,532 bounded |
 
-The bounded raw-token reduction is 35.47%-51.62%. The uncached direction is unknown because 35
+The bounded raw-token reduction is 45.38%-51.62%. The uncached direction is unknown because 35
 interrupted Work Leaf responses do not report their cached-input split.
 
 Runs are independent group observations, not matched pairs. Every quality result is retained. The
@@ -25,8 +25,11 @@ recovers an interrupted response from a later cumulative event only when subtrac
 total and the later event's `last` usage leaves a nonzero increase attributable to exactly one
 unresolved interruption. Five runs contain 35 responses that do not meet these rules.
 
-Each unresolved response receives the capture-audited conservative ceiling of 1,000,000 raw tokens.
-This produces the 23,304,865 upper mean. The full calculation is in
+The raw event streams isolate exactly one response and zero intervening tool boundaries for every
+unresolved gap. Each response receives the derived 386,400-token ceiling: the frozen Codex client
+enforces a 258,400-token hard active-context limit and GPT-5.5 permits 128,000 output tokens. This
+produces the 19,725,532 upper mean.
+The full audit and calculation are in
 `bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/FINAL-REPORT.md`.
 
 ## Fairness

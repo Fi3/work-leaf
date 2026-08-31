@@ -12,9 +12,9 @@ unresolved responses across five runs; one Work Leaf run is exact. A repeated cu
 not count as new usage, and a later turn proves coverage only when its cumulative increase contains
 tokens beyond that later response's own usage.
 
-The recorded Work Leaf totals average 17.47 million raw tokens. Charging a deliberately
-conservative maximum of 1,000,000 raw tokens to every unresolved response raises the average to
-23.30 million. Direct Codex averaged 36.12 million. Work Leaf therefore used between 35.47% and
+The recorded Work Leaf totals average 17.47 million raw tokens. Charging the derived maximum of
+386,400 raw tokens to every unresolved response raises the average to 19.73 million. Direct Codex
+averaged 36.12 million. Work Leaf therefore used between 45.38% and
 51.62% fewer raw tokens in these samples. The raw-token reduction survives the conservative bound,
 but its exact percentage is unknown.
 
@@ -69,35 +69,45 @@ Applying those rules to the saved streams gives:
 
 | Work Leaf run | Recorded raw lower bound | Conservative raw upper bound | Unresolved responses | Features |
 | --- | ---: | ---: | ---: | ---: |
-| `exact-normal-001` | 20,221,714 | 22,221,714 | 2 | 2/3 |
-| `exact-normal-002` | 13,214,206 | 18,214,206 | 5 | 3/3 |
-| `exact-normal-003` | 14,243,707 | 36,243,707 | 22 | 3/3 |
+| `exact-normal-001` | 20,221,714 | 20,994,514 | 2 | 2/3 |
+| `exact-normal-002` | 13,214,206 | 15,146,206 | 5 | 3/3 |
+| `exact-normal-003` | 14,243,707 | 22,744,507 | 22 | 3/3 |
 | `exact-normal-004` | 15,798,407 | 15,798,407 | 0 | 1/3 |
-| `exact-normal-005` | 21,800,967 | 25,800,967 | 4 | 2/3 |
-| `exact-normal-006` | 19,550,191 | 21,550,191 | 2 | 2/3 |
+| `exact-normal-005` | 21,800,967 | 23,346,567 | 4 | 2/3 |
+| `exact-normal-006` | 19,550,191 | 20,322,991 | 2 | 2/3 |
 
-## Why The Ceiling Is Conservative
+## Why One Bound Applies To Each Gap
 
 Each unresolved unit is the final model response that produced a complete Work Leaf directive, not
 an entire multi-response app-server turn. Earlier usage notifications in that turn remain in the
-recorded cumulative lower bound, and Work Leaf requests the interrupt before another tool cycle can
-begin. The evidence generator audits the raw client and server streams for every run and records
-their hashes in `evidence.json`.
+recorded cumulative lower bound.
 
-Each missing final response receives a 1,000,000-token ceiling:
+The evidence generator checked all 35 unresolved event tails. Every tail contains exactly one
+completed directive response and no tool call, tool result, or second user input between the last
+counted usage event and that directive. After the directive, 25 tails contain only a duplicate of
+the previous cumulative usage total and 10 contain no usage event. In 34 tails one continuation
+item starts but never completes before interruption; the remaining tail reaches the grace timeout.
+No tail contains an unrecognized protocol event or a second completed output item. Work Leaf thus
+interrupts the same response before another model/tool cycle can begin. The per-turn audit and
+raw-stream hashes are recorded in `evidence.json`.
+
+Each missing final response receives this derived 386,400-token ceiling:
 
 | Component | Maximum |
 | --- | ---: |
-| Effective model context window | 258,400 tokens |
+| [Frozen Codex 0.150.1 GPT-5.5 catalog context](https://github.com/openai/codex/blob/rust-v0.150.1/codex-rs/models-manager/models.json#L613-L645) | 272,000 tokens |
+| [Hard active-context limit after the client's 95% factor](https://github.com/openai/codex/blob/rust-v0.150.1/codex-rs/core/src/session/turn_context.rs#L368-L375) | 258,400 tokens |
 | [GPT-5.5 output limit](https://developers.openai.com/api/docs/models/gpt-5.5) | 128,000 tokens |
 | Maximum raw tokens in one response | 386,400 tokens |
-| Declared ceiling | 1,000,000 tokens |
-| Extra headroom | 613,600 tokens |
 
-The largest provider-reported response in the six captures is 180,949 raw tokens. The ceiling is
-more than five times that observed maximum and more than twice the model-limit calculation. It is a
-ceiling rather than an estimate of likely usage. If a future capture changes the context limit or
-exceeds the declared ceiling, the analysis fails instead of silently retaining the bound.
+Codex 0.150.1 explicitly treats the effective active-context window as a
+[hard cap](https://github.com/openai/codex/blob/rust-v0.150.1/codex-rs/core/src/session/context_window.rs#L53-L76).
+Adding the full 258,400-token hard context and the full 128,000-token output allowance is
+conservative because it lets both maxima occur together. The largest provider-reported response in
+the six captures is 180,949 raw tokens. The 386,400 value is a worst-case bound, not an estimate of
+likely usage. `response-bound.json` freezes the binary identity, sources, and arithmetic; the
+analysis fails if the run version, binary hash, captured window, protocol tail, or arithmetic
+disagrees.
 
 ## Token Result
 
@@ -107,15 +117,15 @@ output.
 | Group | Mean raw tokens | Mean uncached tokens |
 | --- | ---: | ---: |
 | Direct Codex | 36,116,382 exact | 1,608,712 exact |
-| Work Leaf | 17,471,532-23,304,865 | 1,343,404-7,176,737 |
-| Work Leaf change | 35.47%-51.62% fewer | 346.12% more to 16.49% fewer |
+| Work Leaf | 17,471,532-19,725,532 | 1,343,404-3,597,404 |
+| Work Leaf change | 45.38%-51.62% fewer | 123.62% more to 16.49% fewer |
 
 The six-versus-six sample proves a raw-token reduction under the declared ceiling. It does not
 prove an uncached-token reduction.
 
 As a limited quality check, five fully successful direct runs averaged 37.56 million raw tokens.
-The two fully successful Work Leaf runs averaged between 13.73 and 27.23 million. This is a bounded
-27.51%-63.45% reduction. The Work Leaf subset has only two observations and was selected after
+The two fully successful Work Leaf runs averaged between 13.73 and 18.95 million. This is a bounded
+49.57%-63.45% reduction. The Work Leaf subset has only two observations and was selected after
 scoring, so it is descriptive and does not replace a planned quality-balanced comparison.
 
 ## Limits
@@ -136,8 +146,8 @@ result for this collected sample without another paid run.
 
 The defensible result is:
 
-- Work Leaf used at least 35.47% fewer raw tokens in this six-versus-six sample.
-- The bounded raw reduction lies between 35.47% and 51.62%.
+- Work Leaf used at least 45.38% fewer raw tokens in this six-versus-six sample.
+- The bounded raw reduction lies between 45.38% and 51.62%.
 - The uncached-token direction is unknown.
 - The all-run comparison does not establish equal-quality efficiency.
 - The post-hoc fully successful subset also remains below direct Codex under the ceiling, but it is

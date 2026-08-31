@@ -2,125 +2,2073 @@
   "accounting": {
     "capture_bound_audits": [
       {
+        "catalog_max_context_window_tokens": 272000,
         "client_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/observation/app-server/00002676642578624406-641/client-to-server.raw",
         "client_stream_sha256": "90d9e5a624d9f04bb2c7809cb73d1af18b787a0cd2d270718c64c659bf906e54",
-        "declared_response_cap": 1000000,
+        "declared_response_cap": 386400,
         "effective_context_window_tokens": 258400,
+        "hard_active_context_window_tokens": 258400,
         "maximum_observed_last_response_raw_tokens": 178779,
         "maximum_output_tokens": 128000,
         "maximum_single_response_raw_tokens": 386400,
-        "response_cap_headroom_tokens": 613600,
+        "response_cap_headroom_tokens": 0,
         "run_id": "exact-normal-001",
         "server_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/observation/app-server/00002676642578624406-641/server-to-client.raw",
         "server_stream_sha256": "42379ffc5bd1c929738a69982f70f1439ed20a3c2774a751d9d1b29fbbb7d339",
         "turns": 67,
+        "unresolved_response_tail_audit": {
+          "audited_responses": 2,
+          "details": [
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 59471,
+              "directive_sequence": 59466,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 58629,
+              "thread_id": "01a04ed1-65f9-7f30-ba98-36aa573b93f1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed1-6651-7ab3-bf11-14542891aa59",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 28,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 63595,
+              "directive_sequence": 63589,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 62090,
+              "response_start_sequence": 63574,
+              "thread_id": "01a04ed1-65f9-7f30-ba98-36aa573b93f1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed6-d041-7b32-a809-d54eed83f80e",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 9,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            }
+          ],
+          "duplicate_usage_after_directive": 1,
+          "grace_outcomes": {
+            "forwarded-after-output-resumed": 2
+          },
+          "grace_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/observation/app-server/00002676642578624406-641/provider-usage-grace.jsonl",
+          "grace_stream_sha256": "1ec4a6fc53cdd4badf2cf39ea1e996c2d6dbcdee8e903a07b8b42e69907747bf",
+          "no_usage_after_directive": 1,
+          "run_id": "exact-normal-001",
+          "single_response_bound_proven": true,
+          "tool_boundaries_in_uncovered_tails": 0,
+          "unfinished_items_after_directive": 2
+        },
         "usage_events_with_context_window": 230
       },
       {
+        "catalog_max_context_window_tokens": 272000,
         "client_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/observation/app-server/00002676642578623219-639/client-to-server.raw",
         "client_stream_sha256": "3bb9f3541b8f5d89ddf5ea15dfcd9de817a432f6b9aa9d54ed7e0d21e8861d42",
-        "declared_response_cap": 1000000,
+        "declared_response_cap": 386400,
         "effective_context_window_tokens": 258400,
+        "hard_active_context_window_tokens": 258400,
         "maximum_observed_last_response_raw_tokens": 147444,
         "maximum_output_tokens": 128000,
         "maximum_single_response_raw_tokens": 386400,
-        "response_cap_headroom_tokens": 613600,
+        "response_cap_headroom_tokens": 0,
         "run_id": "exact-normal-002",
         "server_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/observation/app-server/00002676642578623219-639/server-to-client.raw",
         "server_stream_sha256": "670459b291165a08996e8db5943a0be3b801d1d198d4fd065650ec725528154f",
         "turns": 50,
+        "unresolved_response_tail_audit": {
+          "audited_responses": 5,
+          "details": [
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 3324,
+              "directive_sequence": 3319,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 3263,
+              "thread_id": "01a04ec0-6387-71a0-8035-6a61a231423c",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec0-6410-7d81-9845-6e12c16797fe",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 33,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 38159,
+              "directive_sequence": 38154,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 37716,
+              "thread_id": "01a04ec8-1d0f-7223-84d6-9307433bad37",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec8-1d69-72b3-9f42-e5e5a475b357",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 34,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 43546,
+              "directive_sequence": 43540,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 43065,
+              "response_start_sequence": 43066,
+              "thread_id": "01a04ec8-1d0f-7223-84d6-9307433bad37",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec8-5138-7531-9041-7025bb12a9ac",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 17,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 55678,
+              "directive_sequence": 55673,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 55222,
+              "thread_id": "01a04ecd-86a1-7903-a30e-d349ede11946",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ecd-86fb-7910-85d3-cc37c0ac65e6",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 28,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 58044,
+              "directive_sequence": 58038,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 56066,
+              "response_start_sequence": 58008,
+              "thread_id": "01a04ecd-86a1-7903-a30e-d349ede11946",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed4-387a-71c1-8fa4-a22f739b5108",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 24,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            }
+          ],
+          "duplicate_usage_after_directive": 2,
+          "grace_outcomes": {
+            "forwarded-after-output-resumed": 5
+          },
+          "grace_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/observation/app-server/00002676642578623219-639/provider-usage-grace.jsonl",
+          "grace_stream_sha256": "ce1653a783adf47f0d91eee4c2e7b7baa76814cab98f6b2d511acb76e3ec7560",
+          "no_usage_after_directive": 3,
+          "run_id": "exact-normal-002",
+          "single_response_bound_proven": true,
+          "tool_boundaries_in_uncovered_tails": 0,
+          "unfinished_items_after_directive": 5
+        },
         "usage_events_with_context_window": 182
       },
       {
+        "catalog_max_context_window_tokens": 272000,
         "client_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/observation/app-server/00002676642578620844-642/client-to-server.raw",
         "client_stream_sha256": "784dc35bb6bd618896304125ee891448b396a0c3dd37c0731bee32cbe0e55c31",
-        "declared_response_cap": 1000000,
+        "declared_response_cap": 386400,
         "effective_context_window_tokens": 258400,
+        "hard_active_context_window_tokens": 258400,
         "maximum_observed_last_response_raw_tokens": 137611,
         "maximum_output_tokens": 128000,
         "maximum_single_response_raw_tokens": 386400,
-        "response_cap_headroom_tokens": 613600,
+        "response_cap_headroom_tokens": 0,
         "run_id": "exact-normal-003",
         "server_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/observation/app-server/00002676642578620844-642/server-to-client.raw",
         "server_stream_sha256": "d7c9e8b7f35ff152e56c0ebe25240ec5de6f95ce0440667b7a5fd5cda0a689ba",
         "turns": 58,
+        "unresolved_response_tail_audit": {
+          "audited_responses": 22,
+          "details": [
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 189,
+              "directive_sequence": 184,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 28,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ebc-4cc4-7ce0-a3f6-3d89205a608e",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 41,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 539,
+              "directive_sequence": 533,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 482,
+              "response_start_sequence": 483,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ebc-8328-7c11-ad44-8fa2f7800258",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 24,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 1770,
+              "directive_sequence": 1764,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 1745,
+              "response_start_sequence": 1746,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ebc-f2e0-7db1-a856-b1cd566dc7fb",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 14,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 15794,
+              "directive_sequence": 15788,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 5484,
+              "response_start_sequence": 5485,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ebe-ac68-77b2-94a8-0833acf3f329",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 3889,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 22857,
+              "directive_sequence": 22851,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 15790,
+              "response_start_sequence": 15797,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec4-0657-7cb3-a794-a6ec1f5aec2f",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 3992,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 22899,
+              "directive_sequence": 22893,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 22853,
+              "response_start_sequence": 22860,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec5-5064-71d0-bac7-f823d2eab165",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 27,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 28182,
+              "directive_sequence": 28176,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 23195,
+              "response_start_sequence": 23196,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec5-810b-73c1-a31b-1d310331a9dc",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 4006,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 28996,
+              "directive_sequence": 28988,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 28178,
+              "response_start_sequence": 28187,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec7-b625-7a73-8572-de8fe1f8536d",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 74,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 30431,
+              "directive_sequence": 30425,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 30014,
+              "response_start_sequence": 30015,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec7-edd0-7831-a62c-84e6e8696c10",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 16,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 37724,
+              "directive_sequence": 37717,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 33963,
+              "response_start_sequence": 33964,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec8-4712-7461-96fd-c8374011836c",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 1063,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 38028,
+              "directive_sequence": 38021,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 37719,
+              "response_start_sequence": 37728,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec9-f2ad-74a0-b0c6-7f85c37211dd",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 74,
+                "item/completed": 2,
+                "item/started": 2,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 38294,
+              "directive_sequence": 38288,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 38023,
+              "response_start_sequence": 38136,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04eca-0937-7b02-802b-11ef26c8ba59",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 6,
+                "item/completed": 2,
+                "item/started": 2,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 38524,
+              "directive_sequence": 38519,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 38415,
+              "thread_id": "01a04eca-1f92-7b92-b7dd-475a58ef5a11",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04eca-1fee-7011-89ba-c7f109b6b576",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 51,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 39396,
+              "directive_sequence": 39391,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 39341,
+              "thread_id": "01a04ecc-5fdd-7b90-8f7e-d398bf241844",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ecc-601f-7313-bf02-b98d3f55efdb",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 27,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 39968,
+              "directive_sequence": 39962,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 38290,
+              "response_start_sequence": 39940,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ecf-4bcc-7510-8b2b-3a1153dcfd53",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 16,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 40850,
+              "directive_sequence": 40844,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 40106,
+              "response_start_sequence": 40107,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ecf-6a5d-7a63-8696-456a2bac2302",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 724,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 40892,
+              "directive_sequence": 40886,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 40846,
+              "response_start_sequence": 40853,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed0-7083-7261-9d30-b57647e55df4",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 27,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 40991,
+              "directive_sequence": 40986,
+              "grace_outcome": "forwarded-after-timeout",
+              "post_directive_protocol_methods": {
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 40972,
+              "response_start_sequence": 40973,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed0-89dd-73a1-a120-8f9a02512fe9",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 11,
+                "item/completed": 1,
+                "item/started": 1
+              },
+              "unfinished_items_after_directive": 0
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 41567,
+              "directive_sequence": 41561,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 41076,
+              "response_start_sequence": 41077,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed0-aeec-70f3-8782-84322b024aab",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 482,
+                "item/completed": 1,
+                "item/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 41607,
+              "directive_sequence": 41601,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 41563,
+              "response_start_sequence": 41570,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed1-1a1d-7a20-98bf-0358399504ad",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 27,
+                "item/completed": 2,
+                "item/started": 2,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 41627,
+              "directive_sequence": 41620,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/agentMessage/delta": 1,
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 41603,
+              "response_start_sequence": 41610,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed1-2c27-7040-9baa-450ab72c091b",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 6,
+                "item/completed": 2,
+                "item/started": 2,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 41657,
+              "directive_sequence": 41651,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 39934,
+              "response_start_sequence": 41630,
+              "thread_id": "01a04eca-1f92-7b92-b7dd-475a58ef5a11",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed1-3d8c-7522-81eb-0851415b428a",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 15,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            }
+          ],
+          "duplicate_usage_after_directive": 19,
+          "grace_outcomes": {
+            "forwarded-after-output-resumed": 21,
+            "forwarded-after-timeout": 1
+          },
+          "grace_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/observation/app-server/00002676642578620844-642/provider-usage-grace.jsonl",
+          "grace_stream_sha256": "e8d678fe932de0b57df1c41a61af570e23f3fb767b6a8b6472a7ed7297d649a4",
+          "no_usage_after_directive": 3,
+          "run_id": "exact-normal-003",
+          "single_response_bound_proven": true,
+          "tool_boundaries_in_uncovered_tails": 0,
+          "unfinished_items_after_directive": 21
+        },
         "usage_events_with_context_window": 213
       },
       {
+        "catalog_max_context_window_tokens": 272000,
         "client_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-004/exact-normal-004-three-feature-bench-artifacts/observation/app-server/00002679513471323065-646/client-to-server.raw",
         "client_stream_sha256": "598ce84b96e05232df0257f8b7304746c8d1aaa219d64d264c4ea1412e50b61a",
-        "declared_response_cap": 1000000,
+        "declared_response_cap": 386400,
         "effective_context_window_tokens": 258400,
+        "hard_active_context_window_tokens": 258400,
         "maximum_observed_last_response_raw_tokens": 128576,
         "maximum_output_tokens": 128000,
         "maximum_single_response_raw_tokens": 386400,
-        "response_cap_headroom_tokens": 613600,
+        "response_cap_headroom_tokens": 0,
         "run_id": "exact-normal-004",
         "server_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-004/exact-normal-004-three-feature-bench-artifacts/observation/app-server/00002679513471323065-646/server-to-client.raw",
         "server_stream_sha256": "353021d33cb79748afa810f1d128cd09bf18ed93d13f7b583e0f0e8347053eed",
         "turns": 42,
+        "unresolved_response_tail_audit": {
+          "audited_responses": 0,
+          "details": [],
+          "duplicate_usage_after_directive": 0,
+          "grace_outcomes": {},
+          "grace_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-004/exact-normal-004-three-feature-bench-artifacts/observation/app-server/00002679513471323065-646/provider-usage-grace.jsonl",
+          "grace_stream_sha256": "ca219486c9059b790a628832e8e8ab96b636888ff86a75640af7ed3f39fdc425",
+          "no_usage_after_directive": 0,
+          "run_id": "exact-normal-004",
+          "single_response_bound_proven": true,
+          "tool_boundaries_in_uncovered_tails": 0,
+          "unfinished_items_after_directive": 0
+        },
         "usage_events_with_context_window": 201
       },
       {
+        "catalog_max_context_window_tokens": 272000,
         "client_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/observation/app-server/00002679513471141406-639/client-to-server.raw",
         "client_stream_sha256": "8c444063cad8ad04e1f2be9224266e7947660621380c32ad08dc6c70ad418bdd",
-        "declared_response_cap": 1000000,
+        "declared_response_cap": 386400,
         "effective_context_window_tokens": 258400,
+        "hard_active_context_window_tokens": 258400,
         "maximum_observed_last_response_raw_tokens": 154410,
         "maximum_output_tokens": 128000,
         "maximum_single_response_raw_tokens": 386400,
-        "response_cap_headroom_tokens": 613600,
+        "response_cap_headroom_tokens": 0,
         "run_id": "exact-normal-005",
         "server_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/observation/app-server/00002679513471141406-639/server-to-client.raw",
         "server_stream_sha256": "c35711c5398eff5bff47bc3c763db5813ae4ae18606854f6d8870927d1cdcac1",
         "turns": 65,
+        "unresolved_response_tail_audit": {
+          "audited_responses": 4,
+          "details": [
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 3831,
+              "directive_sequence": 3826,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 3750,
+              "thread_id": "01a04eed-5a7b-7970-bba6-85a88639879d",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04eed-5b0b-7ed3-8a40-9d1114c6a0c6",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 54,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 32393,
+              "directive_sequence": 32386,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 23605,
+              "response_start_sequence": 31925,
+              "thread_id": "01a04eed-5a7b-7970-bba6-85a88639879d",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ef5-07bb-72c0-b378-2c2e9333c6c1",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 35,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 66270,
+              "directive_sequence": 66265,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 66210,
+              "thread_id": "01a04eff-9c7d-7523-8191-eea6bab26717",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04eff-9cd6-7d22-a49d-a5ba447503dc",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 34,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 68338,
+              "directive_sequence": 68332,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 66598,
+              "response_start_sequence": 68307,
+              "thread_id": "01a04eff-9c7d-7523-8191-eea6bab26717",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04f07-ed23-7ea1-a2f0-24bb4a9d2f15",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 19,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            }
+          ],
+          "duplicate_usage_after_directive": 2,
+          "grace_outcomes": {
+            "forwarded-after-output-resumed": 4
+          },
+          "grace_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/observation/app-server/00002679513471141406-639/provider-usage-grace.jsonl",
+          "grace_stream_sha256": "933c61cf9ba12058caa8bf09be595575106384bf42932242c53258cd4c4630db",
+          "no_usage_after_directive": 2,
+          "run_id": "exact-normal-005",
+          "single_response_bound_proven": true,
+          "tool_boundaries_in_uncovered_tails": 0,
+          "unfinished_items_after_directive": 4
+        },
         "usage_events_with_context_window": 246
       },
       {
+        "catalog_max_context_window_tokens": 272000,
         "client_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/observation/app-server/00002679513471141406-640/client-to-server.raw",
         "client_stream_sha256": "e2b4ed1812205251473e8e012da25e1fd329c10d39dfe492f02f184cb369b113",
-        "declared_response_cap": 1000000,
+        "declared_response_cap": 386400,
         "effective_context_window_tokens": 258400,
+        "hard_active_context_window_tokens": 258400,
         "maximum_observed_last_response_raw_tokens": 180949,
         "maximum_output_tokens": 128000,
         "maximum_single_response_raw_tokens": 386400,
-        "response_cap_headroom_tokens": 613600,
+        "response_cap_headroom_tokens": 0,
         "run_id": "exact-normal-006",
         "server_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/observation/app-server/00002679513471141406-640/server-to-client.raw",
         "server_stream_sha256": "e0e473c2b3c548dbfafd0abad88abe71466e7c3138bc4f329889cf53d12bd454",
         "turns": 73,
+        "unresolved_response_tail_audit": {
+          "audited_responses": 2,
+          "details": [
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 22378,
+              "directive_sequence": 22373,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 22274,
+              "thread_id": "01a04ef0-245d-7ec3-8ba5-179076348000",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ef0-24a3-7352-a8fe-59fffbecf638",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 31,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 58232,
+              "directive_sequence": 58226,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 32769,
+              "response_start_sequence": 58188,
+              "thread_id": "01a04ef0-245d-7ec3-8ba5-179076348000",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04efc-a6de-7443-ac1c-0d7b5e3ad2ce",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 31,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            }
+          ],
+          "duplicate_usage_after_directive": 1,
+          "grace_outcomes": {
+            "forwarded-after-output-resumed": 2
+          },
+          "grace_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/observation/app-server/00002679513471141406-640/provider-usage-grace.jsonl",
+          "grace_stream_sha256": "d74741106b0a405cf9a8e8f2a93f0172644dab238c143a7d8e8412257857d0c9",
+          "no_usage_after_directive": 1,
+          "run_id": "exact-normal-006",
+          "single_response_bound_proven": true,
+          "tool_boundaries_in_uncovered_tails": 0,
+          "unfinished_items_after_directive": 2
+        },
         "usage_events_with_context_window": 234
       }
     ],
+    "catalog_max_context_window_tokens": 272000,
     "corrected_observer_source": "bench-observer/src/lib.rs",
     "corrected_observer_source_sha256": "4a30ec2f5c5d55b85abdefe0dd0527aa5258339b4948b2425ed3c7402c29ce97",
     "effective_context_window_tokens": 258400,
+    "hard_active_context_window_tokens": 258400,
     "maximum_observed_last_response_raw_tokens": 180949,
-    "maximum_output_source": "bench-results/efficiency-point7-bounded-accounting-20260828T142614Z/evidence.json",
+    "maximum_output_source": "https://developers.openai.com/api/docs/models/gpt-5.5",
     "maximum_output_tokens": 128000,
-    "maximum_raw_tokens_per_unresolved_response": 1000000,
+    "maximum_raw_tokens_per_unresolved_response": 386400,
     "maximum_single_response_raw_tokens": 386400,
-    "method": "One capture is exact. Thirty-five interrupted responses across the other five captures have no provable terminal usage. Recorded totals are lower bounds; each unresolved final response receives a 1,000,000-token cap. The effective context window plus documented maximum output permits at most 386,400 raw tokens for one response, leaving 613,600 tokens of additional headroom. The same cap is added to the uncached upper bound because the missing cached-input split is unknown.",
-    "response_cap_headroom_tokens": 613600,
-    "timing_caveat": "The observer held each complete-directive interrupt for at most 1000 milliseconds. This can add post-directive generation before interruption; all such usage is counted, but later thread behavior may differ from an uninstrumented run."
+    "method": "One capture is exact. Thirty-five interrupted responses across the other five captures have no provable terminal usage. Recorded totals are lower bounds; each unresolved final response receives a 386,400-token cap. All 35 raw event tails contain one completed directive response and no intervening tool boundary. The frozen Codex 0.150.1 client enforces a 258,400-token hard active-context limit and the model limits output to 128,000 tokens, so one response can contribute no more than 386,400 raw tokens. The same cap is added to the uncached upper bound because the missing cached-input split is unknown.",
+    "response_bound_source": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/response-bound.json",
+    "response_bound_source_sha256": "e9223c7cc0e45fa43b6eb764ce49c523f79f6910d1252992339604c95695b255",
+    "response_cap_headroom_tokens": 0,
+    "timing_caveat": "The observer held each complete-directive interrupt for at most 1000 milliseconds. This can add post-directive generation before interruption; all such usage is counted, but later thread behavior may differ from an uninstrumented run.",
+    "unresolved_response_tail_audit": {
+      "audited_responses": 35,
+      "duplicate_usage_after_directive": 25,
+      "grace_outcomes": {
+        "forwarded-after-output-resumed": 34,
+        "forwarded-after-timeout": 1
+      },
+      "no_usage_after_directive": 10,
+      "runs": [
+        {
+          "audited_responses": 2,
+          "details": [
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 59471,
+              "directive_sequence": 59466,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 58629,
+              "thread_id": "01a04ed1-65f9-7f30-ba98-36aa573b93f1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed1-6651-7ab3-bf11-14542891aa59",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 28,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 63595,
+              "directive_sequence": 63589,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 62090,
+              "response_start_sequence": 63574,
+              "thread_id": "01a04ed1-65f9-7f30-ba98-36aa573b93f1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed6-d041-7b32-a809-d54eed83f80e",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 9,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            }
+          ],
+          "duplicate_usage_after_directive": 1,
+          "grace_outcomes": {
+            "forwarded-after-output-resumed": 2
+          },
+          "grace_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/observation/app-server/00002676642578624406-641/provider-usage-grace.jsonl",
+          "grace_stream_sha256": "1ec4a6fc53cdd4badf2cf39ea1e996c2d6dbcdee8e903a07b8b42e69907747bf",
+          "no_usage_after_directive": 1,
+          "run_id": "exact-normal-001",
+          "single_response_bound_proven": true,
+          "tool_boundaries_in_uncovered_tails": 0,
+          "unfinished_items_after_directive": 2
+        },
+        {
+          "audited_responses": 5,
+          "details": [
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 3324,
+              "directive_sequence": 3319,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 3263,
+              "thread_id": "01a04ec0-6387-71a0-8035-6a61a231423c",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec0-6410-7d81-9845-6e12c16797fe",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 33,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 38159,
+              "directive_sequence": 38154,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 37716,
+              "thread_id": "01a04ec8-1d0f-7223-84d6-9307433bad37",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec8-1d69-72b3-9f42-e5e5a475b357",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 34,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 43546,
+              "directive_sequence": 43540,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 43065,
+              "response_start_sequence": 43066,
+              "thread_id": "01a04ec8-1d0f-7223-84d6-9307433bad37",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec8-5138-7531-9041-7025bb12a9ac",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 17,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 55678,
+              "directive_sequence": 55673,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 55222,
+              "thread_id": "01a04ecd-86a1-7903-a30e-d349ede11946",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ecd-86fb-7910-85d3-cc37c0ac65e6",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 28,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 58044,
+              "directive_sequence": 58038,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 56066,
+              "response_start_sequence": 58008,
+              "thread_id": "01a04ecd-86a1-7903-a30e-d349ede11946",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed4-387a-71c1-8fa4-a22f739b5108",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 24,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            }
+          ],
+          "duplicate_usage_after_directive": 2,
+          "grace_outcomes": {
+            "forwarded-after-output-resumed": 5
+          },
+          "grace_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/observation/app-server/00002676642578623219-639/provider-usage-grace.jsonl",
+          "grace_stream_sha256": "ce1653a783adf47f0d91eee4c2e7b7baa76814cab98f6b2d511acb76e3ec7560",
+          "no_usage_after_directive": 3,
+          "run_id": "exact-normal-002",
+          "single_response_bound_proven": true,
+          "tool_boundaries_in_uncovered_tails": 0,
+          "unfinished_items_after_directive": 5
+        },
+        {
+          "audited_responses": 22,
+          "details": [
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 189,
+              "directive_sequence": 184,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 28,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ebc-4cc4-7ce0-a3f6-3d89205a608e",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 41,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 539,
+              "directive_sequence": 533,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 482,
+              "response_start_sequence": 483,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ebc-8328-7c11-ad44-8fa2f7800258",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 24,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 1770,
+              "directive_sequence": 1764,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 1745,
+              "response_start_sequence": 1746,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ebc-f2e0-7db1-a856-b1cd566dc7fb",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 14,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 15794,
+              "directive_sequence": 15788,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 5484,
+              "response_start_sequence": 5485,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ebe-ac68-77b2-94a8-0833acf3f329",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 3889,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 22857,
+              "directive_sequence": 22851,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 15790,
+              "response_start_sequence": 15797,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec4-0657-7cb3-a794-a6ec1f5aec2f",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 3992,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 22899,
+              "directive_sequence": 22893,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 22853,
+              "response_start_sequence": 22860,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec5-5064-71d0-bac7-f823d2eab165",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 27,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 28182,
+              "directive_sequence": 28176,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 23195,
+              "response_start_sequence": 23196,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec5-810b-73c1-a31b-1d310331a9dc",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 4006,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 28996,
+              "directive_sequence": 28988,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 28178,
+              "response_start_sequence": 28187,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec7-b625-7a73-8572-de8fe1f8536d",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 74,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 30431,
+              "directive_sequence": 30425,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 30014,
+              "response_start_sequence": 30015,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec7-edd0-7831-a62c-84e6e8696c10",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 16,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 37724,
+              "directive_sequence": 37717,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 33963,
+              "response_start_sequence": 33964,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec8-4712-7461-96fd-c8374011836c",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 1063,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 38028,
+              "directive_sequence": 38021,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 37719,
+              "response_start_sequence": 37728,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ec9-f2ad-74a0-b0c6-7f85c37211dd",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 74,
+                "item/completed": 2,
+                "item/started": 2,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 38294,
+              "directive_sequence": 38288,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 38023,
+              "response_start_sequence": 38136,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04eca-0937-7b02-802b-11ef26c8ba59",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 6,
+                "item/completed": 2,
+                "item/started": 2,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 38524,
+              "directive_sequence": 38519,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 38415,
+              "thread_id": "01a04eca-1f92-7b92-b7dd-475a58ef5a11",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04eca-1fee-7011-89ba-c7f109b6b576",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 51,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 39396,
+              "directive_sequence": 39391,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 39341,
+              "thread_id": "01a04ecc-5fdd-7b90-8f7e-d398bf241844",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ecc-601f-7313-bf02-b98d3f55efdb",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 27,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 39968,
+              "directive_sequence": 39962,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 38290,
+              "response_start_sequence": 39940,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ecf-4bcc-7510-8b2b-3a1153dcfd53",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 16,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 40850,
+              "directive_sequence": 40844,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 40106,
+              "response_start_sequence": 40107,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ecf-6a5d-7a63-8696-456a2bac2302",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 724,
+                "item/completed": 2,
+                "item/started": 2
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 40892,
+              "directive_sequence": 40886,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 40846,
+              "response_start_sequence": 40853,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed0-7083-7261-9d30-b57647e55df4",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 27,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 40991,
+              "directive_sequence": 40986,
+              "grace_outcome": "forwarded-after-timeout",
+              "post_directive_protocol_methods": {
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 40972,
+              "response_start_sequence": 40973,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed0-89dd-73a1-a120-8f9a02512fe9",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 11,
+                "item/completed": 1,
+                "item/started": 1
+              },
+              "unfinished_items_after_directive": 0
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 41567,
+              "directive_sequence": 41561,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 41076,
+              "response_start_sequence": 41077,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed0-aeec-70f3-8782-84322b024aab",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 482,
+                "item/completed": 1,
+                "item/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 41607,
+              "directive_sequence": 41601,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 41563,
+              "response_start_sequence": 41570,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed1-1a1d-7a20-98bf-0358399504ad",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 27,
+                "item/completed": 2,
+                "item/started": 2,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 41627,
+              "directive_sequence": 41620,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/agentMessage/delta": 1,
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 41603,
+              "response_start_sequence": 41610,
+              "thread_id": "01a04ebc-4c57-7cd2-8454-115efa9c3cd1",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed1-2c27-7040-9baa-450ab72c091b",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 6,
+                "item/completed": 2,
+                "item/started": 2,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 41657,
+              "directive_sequence": 41651,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 39934,
+              "response_start_sequence": 41630,
+              "thread_id": "01a04eca-1f92-7b92-b7dd-475a58ef5a11",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ed1-3d8c-7522-81eb-0851415b428a",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 15,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            }
+          ],
+          "duplicate_usage_after_directive": 19,
+          "grace_outcomes": {
+            "forwarded-after-output-resumed": 21,
+            "forwarded-after-timeout": 1
+          },
+          "grace_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/observation/app-server/00002676642578620844-642/provider-usage-grace.jsonl",
+          "grace_stream_sha256": "e8d678fe932de0b57df1c41a61af570e23f3fb767b6a8b6472a7ed7297d649a4",
+          "no_usage_after_directive": 3,
+          "run_id": "exact-normal-003",
+          "single_response_bound_proven": true,
+          "tool_boundaries_in_uncovered_tails": 0,
+          "unfinished_items_after_directive": 21
+        },
+        {
+          "audited_responses": 0,
+          "details": [],
+          "duplicate_usage_after_directive": 0,
+          "grace_outcomes": {},
+          "grace_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-004/exact-normal-004-three-feature-bench-artifacts/observation/app-server/00002679513471323065-646/provider-usage-grace.jsonl",
+          "grace_stream_sha256": "ca219486c9059b790a628832e8e8ab96b636888ff86a75640af7ed3f39fdc425",
+          "no_usage_after_directive": 0,
+          "run_id": "exact-normal-004",
+          "single_response_bound_proven": true,
+          "tool_boundaries_in_uncovered_tails": 0,
+          "unfinished_items_after_directive": 0
+        },
+        {
+          "audited_responses": 4,
+          "details": [
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 3831,
+              "directive_sequence": 3826,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 3750,
+              "thread_id": "01a04eed-5a7b-7970-bba6-85a88639879d",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04eed-5b0b-7ed3-8a40-9d1114c6a0c6",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 54,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 32393,
+              "directive_sequence": 32386,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 23605,
+              "response_start_sequence": 31925,
+              "thread_id": "01a04eed-5a7b-7970-bba6-85a88639879d",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ef5-07bb-72c0-b378-2c2e9333c6c1",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 35,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 66270,
+              "directive_sequence": 66265,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 66210,
+              "thread_id": "01a04eff-9c7d-7523-8191-eea6bab26717",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04eff-9cd6-7d22-a49d-a5ba447503dc",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 34,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 68338,
+              "directive_sequence": 68332,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 66598,
+              "response_start_sequence": 68307,
+              "thread_id": "01a04eff-9c7d-7523-8191-eea6bab26717",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04f07-ed23-7ea1-a2f0-24bb4a9d2f15",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 19,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            }
+          ],
+          "duplicate_usage_after_directive": 2,
+          "grace_outcomes": {
+            "forwarded-after-output-resumed": 4
+          },
+          "grace_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/observation/app-server/00002679513471141406-639/provider-usage-grace.jsonl",
+          "grace_stream_sha256": "933c61cf9ba12058caa8bf09be595575106384bf42932242c53258cd4c4630db",
+          "no_usage_after_directive": 2,
+          "run_id": "exact-normal-005",
+          "single_response_bound_proven": true,
+          "tool_boundaries_in_uncovered_tails": 0,
+          "unfinished_items_after_directive": 4
+        },
+        {
+          "audited_responses": 2,
+          "details": [
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 22378,
+              "directive_sequence": 22373,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "absent",
+              "previous_usage_sequence": -1,
+              "response_start_sequence": 22274,
+              "thread_id": "01a04ef0-245d-7ec3-8ba5-179076348000",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04ef0-24a3-7352-a8fe-59fffbecf638",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 31,
+                "item/completed": 3,
+                "item/started": 3,
+                "mcpServer/startupStatus/updated": 1,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            },
+            {
+              "completed_agent_messages_in_uncovered_tail": 1,
+              "completion_sequence": 58232,
+              "directive_sequence": 58226,
+              "grace_outcome": "forwarded-after-output-resumed",
+              "post_directive_protocol_methods": {
+                "item/started": 1,
+                "thread/status/changed": 1,
+                "thread/tokenUsage/updated": 1,
+                "turn/completed": 1
+              },
+              "post_directive_usage": "duplicate",
+              "previous_usage_sequence": 32769,
+              "response_start_sequence": 58188,
+              "thread_id": "01a04ef0-245d-7ec3-8ba5-179076348000",
+              "tool_boundaries_in_uncovered_tail": 0,
+              "turn_id": "01a04efc-a6de-7443-ac1c-0d7b5e3ad2ce",
+              "uncovered_protocol_methods": {
+                "item/agentMessage/delta": 31,
+                "item/completed": 3,
+                "item/started": 3,
+                "turn/started": 1
+              },
+              "unfinished_items_after_directive": 1
+            }
+          ],
+          "duplicate_usage_after_directive": 1,
+          "grace_outcomes": {
+            "forwarded-after-output-resumed": 2
+          },
+          "grace_stream": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/observation/app-server/00002679513471141406-640/provider-usage-grace.jsonl",
+          "grace_stream_sha256": "d74741106b0a405cf9a8e8f2a93f0172644dab238c143a7d8e8412257857d0c9",
+          "no_usage_after_directive": 1,
+          "run_id": "exact-normal-006",
+          "single_response_bound_proven": true,
+          "tool_boundaries_in_uncovered_tails": 0,
+          "unfinished_items_after_directive": 2
+        }
+      ],
+      "single_response_bound_proven": true,
+      "tool_boundaries_in_uncovered_tails": 0,
+      "unfinished_items_after_directive": 34
+    }
   },
   "comparisons": {
     "direct_minus_normal_work_leaf": {
       "completed_feature_mean_difference": 0.666666666666667,
       "raw_tokens": {
-        "lower": 12811516.333333332,
+        "lower": 16390849.666666664,
         "upper": 18644849.666666664
       },
       "raw_work_leaf_reduction_percent": {
-        "lower": 35.472867829275444,
+        "lower": 45.38342134587218,
         "upper": 51.62435661121276
       },
       "uncached_tokens": {
-        "lower": -5568025.0,
+        "lower": -1988691.6666666667,
         "upper": 265308.33333333326
       },
       "uncached_work_leaf_reduction_percent": {
-        "lower": -346.11688395915826,
+        "lower": -123.62009201147835,
         "upper": 16.4919686283253
       }
     }
@@ -175,7 +2123,7 @@
       "observations": 6,
       "raw_token_mean_interval": {
         "lower": 17471532.0,
-        "upper": 23304865.333333332
+        "upper": 19725532.0
       },
       "run_ids": [
         "exact-normal-001",
@@ -188,7 +2136,7 @@
       "total_completed_features": 13,
       "uncached_token_mean_interval": {
         "lower": 1343404.0,
-        "upper": 7176737.333333333
+        "upper": 3597404.0
       },
       "workflow_passes": 6
     }
@@ -347,18 +2295,18 @@
         "visual": "pass"
       },
       "group": "normal_work_leaf",
-      "maximum_raw_tokens_per_missing_response": 1000000,
+      "maximum_raw_tokens_per_missing_response": 386400,
       "measurement": "bounded",
       "missing_responses": 2,
       "raw_tokens": {
         "lower": 20221714,
-        "upper": 22221714
+        "upper": 20994514
       },
       "run_id": "exact-normal-001",
       "source": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/report.json",
       "uncached_tokens": {
         "lower": 1471762,
-        "upper": 3471762
+        "upper": 2244562
       },
       "workflow_result": "pass"
     },
@@ -371,18 +2319,18 @@
         "visual": "pass"
       },
       "group": "normal_work_leaf",
-      "maximum_raw_tokens_per_missing_response": 1000000,
+      "maximum_raw_tokens_per_missing_response": 386400,
       "measurement": "bounded",
       "missing_responses": 5,
       "raw_tokens": {
         "lower": 13214206,
-        "upper": 18214206
+        "upper": 15146206
       },
       "run_id": "exact-normal-002",
       "source": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/report.json",
       "uncached_tokens": {
         "lower": 1179134,
-        "upper": 6179134
+        "upper": 3111134
       },
       "workflow_result": "pass"
     },
@@ -395,18 +2343,18 @@
         "visual": "pass"
       },
       "group": "normal_work_leaf",
-      "maximum_raw_tokens_per_missing_response": 1000000,
+      "maximum_raw_tokens_per_missing_response": 386400,
       "measurement": "bounded",
       "missing_responses": 22,
       "raw_tokens": {
         "lower": 14243707,
-        "upper": 36243707
+        "upper": 22744507
       },
       "run_id": "exact-normal-003",
       "source": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/report.json",
       "uncached_tokens": {
         "lower": 1188347,
-        "upper": 23188347
+        "upper": 9689147
       },
       "workflow_result": "pass"
     },
@@ -419,7 +2367,7 @@
         "visual": "fail"
       },
       "group": "normal_work_leaf",
-      "maximum_raw_tokens_per_missing_response": 1000000,
+      "maximum_raw_tokens_per_missing_response": 386400,
       "measurement": "exact",
       "missing_responses": 0,
       "raw_tokens": {
@@ -443,18 +2391,18 @@
         "visual": "pass"
       },
       "group": "normal_work_leaf",
-      "maximum_raw_tokens_per_missing_response": 1000000,
+      "maximum_raw_tokens_per_missing_response": 386400,
       "measurement": "bounded",
       "missing_responses": 4,
       "raw_tokens": {
         "lower": 21800967,
-        "upper": 25800967
+        "upper": 23346567
       },
       "run_id": "exact-normal-005",
       "source": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/report.json",
       "uncached_tokens": {
         "lower": 1497991,
-        "upper": 5497991
+        "upper": 3043591
       },
       "workflow_result": "pass"
     },
@@ -467,18 +2415,18 @@
         "visual": "pass"
       },
       "group": "normal_work_leaf",
-      "maximum_raw_tokens_per_missing_response": 1000000,
+      "maximum_raw_tokens_per_missing_response": 386400,
       "measurement": "bounded",
       "missing_responses": 2,
       "raw_tokens": {
         "lower": 19550191,
-        "upper": 21550191
+        "upper": 20322991
       },
       "run_id": "exact-normal-006",
       "source": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/report.json",
       "uncached_tokens": {
         "lower": 1374831,
-        "upper": 3374831
+        "upper": 2147631
       },
       "workflow_result": "pass"
     }
@@ -516,19 +2464,19 @@
     "direct_minus_normal_work_leaf": {
       "completed_feature_mean_difference": 0.0,
       "raw_tokens": {
-        "lower": 10335104.899999999,
+        "lower": 18618704.9,
         "upper": 23835104.9
       },
       "raw_work_leaf_reduction_percent": {
-        "lower": 27.513278689295294,
+        "lower": 49.5652072914565,
         "upper": 63.451884625020874
       },
       "uncached_tokens": {
-        "lower": -13134680.7,
+        "lower": -4851080.7,
         "upper": 365319.30000000005
       },
       "uncached_work_leaf_reduction_percent": {
-        "lower": -847.9130825033352,
+        "lower": -313.1629069452322,
         "upper": 23.58329226541158
       }
     },
@@ -545,7 +2493,7 @@
       "observations": 2,
       "raw_token_mean_interval": {
         "lower": 13728956.5,
-        "upper": 27228956.5
+        "upper": 18945356.5
       },
       "run_ids": [
         "exact-normal-002",
@@ -554,7 +2502,7 @@
       "total_completed_features": 6,
       "uncached_token_mean_interval": {
         "lower": 1183740.5,
-        "upper": 14683740.5
+        "upper": 6400140.5
       },
       "workflow_passes": 2
     },
@@ -566,13 +2514,13 @@
     "bench-observer/src/lib.rs": "4a30ec2f5c5d55b85abdefe0dd0527aa5258339b4948b2425ed3c7402c29ce97",
     "bench-results/efficiency-corrected-all-disabled-20260829T091341Z/final-evidence.json": "ef7854807123f5a26a620c2347b2ba5093a5acb43be0c0086aa000f35a316638",
     "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/quality.json": "f92cdaa71c84c73487cf2038fb2ce49ac5401f1fe4ad6356e04623012b92120e",
+    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/response-bound.json": "e9223c7cc0e45fa43b6eb764ce49c523f79f6910d1252992339604c95695b255",
     "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-001/exact-normal-001-three-feature-bench-artifacts/observation/analysis-request-accounting.json": "d575609760a2f213d0531b7f2f346d0b11a2eb198b007205f6efc289d54418a2",
     "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-002/exact-normal-002-three-feature-bench-artifacts/observation/analysis-request-accounting.json": "7b35a22692ca8272b4a774e88ffcb94cd761394815ee49e7da6c0ece6f3727dc",
     "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-003/exact-normal-003-three-feature-bench-artifacts/observation/analysis-request-accounting.json": "d55dc949a36d6b7de92c0b31ad9a5fdf0395fad1743f3c4175850c9a2d861a3e",
     "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-004/exact-normal-004-three-feature-bench-artifacts/observation/analysis-request-accounting.json": "f16979427c65eab05a64a5fe6ed52ddbbe7932ee460f356c8a79b91cd3b50caf",
     "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-005/exact-normal-005-three-feature-bench-artifacts/observation/analysis-request-accounting.json": "6c5b5317663066a1baae61b6ea539a85e2f0c773025b7d6ce56523f7e66e7d37",
-    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/observation/analysis-request-accounting.json": "d6c8f622a9e0dcee2b239e4b1b8d1f44185a830c28ebac5415382dd031b802ad",
-    "bench-results/efficiency-point7-bounded-accounting-20260828T142614Z/evidence.json": "f9d68c3925ff0cc68ce3ef253e4703659a88cbfcdd07acd4f9c12dd7f70a05f8"
+    "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/runs/exact-normal-006/exact-normal-006-three-feature-bench-artifacts/observation/analysis-request-accounting.json": "d6c8f622a9e0dcee2b239e4b1b8d1f44185a830c28ebac5415382dd031b802ad"
   },
   "status": "complete_with_bounded_work_leaf_usage",
   "study": "efficiency-exact-normal-work-leaf-20260829T181318Z"

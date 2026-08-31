@@ -62,10 +62,15 @@ class CombinedAnalysisTest(unittest.TestCase):
         )
         self.assertFalse(evidence["causal_summary"]["separate_effects_are_additive"])
         bounded = evidence["bounded_normal_comparison"]
-        self.assertAlmostEqual(bounded["combined_minus_normal_raw_tokens"]["lower"], -3_905_243.333333332)
+        self.assertAlmostEqual(
+            bounded["combined_minus_normal_raw_tokens"]["lower"], -325_910.0
+        )
         self.assertAlmostEqual(bounded["combined_minus_normal_raw_tokens"]["upper"], 1_928_090.0)
         self.assertAlmostEqual(bounded["raw_interaction_tokens"]["lower"], -4_867_190.0)
-        self.assertAlmostEqual(bounded["raw_interaction_tokens"]["upper"], 966_143.3333333321)
+        self.assertAlmostEqual(
+            bounded["raw_interaction_tokens"]["upper"], -2_613_190.0
+        )
+        self.assertLess(bounded["raw_interaction_tokens"]["upper"], 0)
         self.assertFalse(bounded["direction_proven"])
 
     def test_quality_and_same_cli_counterchecks_are_retained(self):

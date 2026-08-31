@@ -281,25 +281,25 @@
   ],
   "bounded_normal_comparison": {
     "combined_minus_normal_raw_tokens": {
-      "lower": -3905243.333333332,
+      "lower": -325910.0,
       "upper": 1928090.0
     },
     "direction_proven": false,
     "measurement": "bounded",
     "normal_work_leaf_raw_mean_interval": {
       "lower": 17471532.0,
-      "upper": 23304865.333333332
+      "upper": 19725532.0
     },
     "raw_interaction_tokens": {
       "lower": -4867190.0,
-      "upper": 966143.3333333321
+      "upper": -2613190.0
     },
     "scenarios": {
       "conservative_upper_bound": {
-        "control_minus_normal_raw_tokens": -3905243.333333332,
-        "endpoint_gap_raw_tokens": 12811516.333333332,
-        "normal_work_leaf_raw_tokens": 23304865.333333332,
-        "share_of_endpoint_gap_percent": -30.482288214179377
+        "control_minus_normal_raw_tokens": -325910.0,
+        "endpoint_gap_raw_tokens": 16390849.666666664,
+        "normal_work_leaf_raw_tokens": 19725532.0,
+        "share_of_endpoint_gap_percent": -1.9883655004339924
       },
       "recorded_lower_bound": {
         "control_minus_normal_raw_tokens": 1928090.0,
@@ -311,7 +311,7 @@
     "unresolved_provider_responses": 35
   },
   "causal_summary": {
-    "bounded_direction": "The combined-minus-normal raw-token interval and interaction interval both cross zero, so their directions are not established.",
+    "bounded_direction": "The combined-minus-normal raw-token interval crosses zero, so the joint read-plus-interruption movement is not established. The interaction interval is entirely negative, proving that the separate read and continuation effects are not additive in these samples.",
     "combined_raw_fraction_of_endpoint_gap_percent": 10.341139963424038,
     "combined_raw_movement_tokens": 1928090.0,
     "combined_uncached_fraction_of_endpoint_gap_percent": 271.2956622797375,
@@ -2524,7 +2524,7 @@
     "measurement": "bounded",
     "raw_token_mean_interval": {
       "lower": 17471532.0,
-      "upper": 23304865.333333332
+      "upper": 19725532.0
     },
     "recorded_mean_raw_tokens": 17471532.0,
     "unresolved_provider_responses": 35
@@ -2532,15 +2532,15 @@
   "references": {
     "continued_response": {
       "path": "bench-results/efficiency-causal-validation-20260829T210343Z/continued-response-evidence.json",
-      "sha256": "2c24907606c48a410b16a589367fe2a118e3b54ecc16cc957dbd5cbc9b4a98e0"
+      "sha256": "9549ccb59dab003b4d091d997462264168a792886abb3e5cac9dd79664ff20f8"
     },
     "decomposition": {
       "path": "bench-results/efficiency-causal-validation-20260829T210343Z/decomposition-evidence.json",
-      "sha256": "a0868d250ec23942754da8c46f1f3265ef579416eed86598baf2ca092af2786a"
+      "sha256": "9d72f9c52f12ed63d75598b3d8614024e60c4c9229ec32d6c1f4c87847c3e7b2"
     },
     "direct_read": {
       "path": "bench-results/efficiency-causal-validation-20260829T210343Z/control-evidence.json",
-      "sha256": "0c4067e47fc1577055c3f36a11e6a214d94ed8dab56e782d96603e52886b9210"
+      "sha256": "296d3509c5fbe2571cf67261f708c531c9aae3fdf8f2e6a91b5271c273c69561"
     },
     "launcher": {
       "path": "bench-results/efficiency-causal-validation-20260829T210343Z/run-combined-control",

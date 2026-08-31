@@ -186,21 +186,21 @@
   ],
   "bounded_normal_comparison": {
     "control_minus_normal_raw_tokens": {
-      "lower": -787030.0,
+      "lower": 2792303.333333332,
       "upper": 5046303.333333332
     },
-    "direction_proven": false,
+    "direction_proven": true,
     "measurement": "bounded",
     "normal_work_leaf_raw_mean_interval": {
       "lower": 17471532.0,
-      "upper": 23304865.333333332
+      "upper": 19725532.0
     },
     "scenarios": {
       "conservative_upper_bound": {
-        "control_minus_normal_raw_tokens": -787030.0,
-        "endpoint_gap_raw_tokens": 12811516.333333332,
-        "normal_work_leaf_raw_tokens": 23304865.333333332,
-        "share_of_endpoint_gap_percent": -6.143144804431035
+        "control_minus_normal_raw_tokens": 2792303.333333332,
+        "endpoint_gap_raw_tokens": 16390849.666666664,
+        "normal_work_leaf_raw_tokens": 19725532.0,
+        "share_of_endpoint_gap_percent": 17.03574488278002
       },
       "recorded_lower_bound": {
         "control_minus_normal_raw_tokens": 5046303.333333332,
@@ -212,7 +212,7 @@
     "unresolved_provider_responses": 35
   },
   "causal_summary": {
-    "bounded_direction": "The control-minus-normal raw-token interval crosses zero, so directive interruption's independent raw-token direction is not established.",
+    "bounded_direction": "The completed-response control uses 2.79-5.05 million more raw tokens than normal early interruption under the endpoint bound, so early interruption's raw-token saving is established for these collected samples.",
     "continued_response_sample_fraction_percent": 27.06540102790495,
     "endpoint_raw_gap_tokens": 18644849.666666664,
     "fractions_are_additive": false,
@@ -1524,11 +1524,11 @@
     },
     "decomposition": {
       "path": "bench-results/efficiency-causal-validation-20260829T210343Z/decomposition-evidence.json",
-      "sha256": "a0868d250ec23942754da8c46f1f3265ef579416eed86598baf2ca092af2786a"
+      "sha256": "9d72f9c52f12ed63d75598b3d8614024e60c4c9229ec32d6c1f4c87847c3e7b2"
     },
     "direct_read_control": {
       "path": "bench-results/efficiency-causal-validation-20260829T210343Z/control-evidence.json",
-      "sha256": "0c4067e47fc1577055c3f36a11e6a214d94ed8dab56e782d96603e52886b9210"
+      "sha256": "296d3509c5fbe2571cf67261f708c531c9aae3fdf8f2e6a91b5271c273c69561"
     },
     "launcher": {
       "path": "bench-results/efficiency-causal-validation-20260829T210343Z/run-continued-response-control",

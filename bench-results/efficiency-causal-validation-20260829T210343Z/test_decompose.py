@@ -28,7 +28,7 @@ class DecompositionTest(unittest.TestCase):
         self.assertEqual(evidence["accounting"]["unresolved_provider_responses"], 35)
         self.assertEqual(
             evidence["accounting"]["normal_work_leaf_raw_mean_interval"],
-            {"lower": 17_471_532.0, "upper": 23_304_865.333333332},
+            {"lower": 17_471_532.0, "upper": 19_725_532.0},
         )
         current = evidence["cohorts"]["current_detailed_6_by_6"]
         work_leaf = [

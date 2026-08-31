@@ -4,7 +4,7 @@
 
 The three direct-read Work Leaf controls are exact, but they do not establish the raw-token effect
 of mediated file reads. Direct-read Work Leaf averaged 19,220,509 raw tokens. Normal Work Leaf is
-bounded between 17,471,532 and 23,304,865, so direct reads range from using 4,084,356 fewer tokens to
+bounded between 17,471,532 and 19,725,532, so direct reads range from using 505,023 fewer tokens to
 using 1,748,977 more. The sign changes across the valid endpoint interval.
 
 The 9.38% read-effect figure in `control-evidence.json` uses only the recorded normal Work Leaf
@@ -17,7 +17,7 @@ input split.
 | Group | Runs | Feature checks | Mean raw tokens | Mean uncached tokens |
 | --- | ---: | ---: | ---: | ---: |
 | Direct sequential Codex | 6 | 17/18 | 36,116,382 exact | 1,608,712 exact |
-| Normal concurrent Work Leaf | 6 | 13/18 | 17,471,532-23,304,865 | 1,343,404-7,176,737 |
+| Normal concurrent Work Leaf | 6 | 13/18 | 17,471,532-19,725,532 | 1,343,404-3,597,404 |
 | Direct-read concurrent Work Leaf | 3 | 9/9 | 19,220,509 exact | 1,607,367 exact |
 
 The three direct-read runs span 16.92M-21.76M raw tokens. All three complete every feature. Their

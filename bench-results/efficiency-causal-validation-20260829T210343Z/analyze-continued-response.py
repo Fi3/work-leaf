@@ -429,8 +429,12 @@ def build_evidence():
                 "but three runs do not remove ordinary model variation."
             ),
             "bounded_direction": (
-                "The control-minus-normal raw-token interval crosses zero, so directive "
-                "interruption's independent raw-token direction is not established."
+                "The completed-response control uses "
+                f"{bounded['control_minus_normal_raw_tokens']['lower'] / 1_000_000:.2f}-"
+                f"{bounded['control_minus_normal_raw_tokens']['upper'] / 1_000_000:.2f} million "
+                "more raw tokens than "
+                "normal early interruption under the endpoint bound, so early interruption's "
+                "raw-token saving is established for these collected samples."
             ),
         },
     }

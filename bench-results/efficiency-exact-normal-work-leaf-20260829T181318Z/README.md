@@ -26,12 +26,14 @@ response only when the cumulative increase, after subtracting the later response
 usage, contains a nonzero unexplained increment. Five runs contain 35 unresolved responses; one run
 is exact.
 
-Each unresolved final response receives a conservative 1,000,000 raw-token allowance. The observed
-258,400-token Codex context limit plus GPT-5.5's 128,000-token output limit permits at most 386,400
-raw tokens for one response. The allowance leaves 613,600 tokens of extra headroom and is more than
-five times the largest provider-reported response in the captures. `FINAL-REPORT.md`
-explains the arithmetic and result. `evidence.json` contains the machine-readable comparison, and
-`quality.json` preserves every candidate's feature score. Corrected replay outputs are named
+The raw event streams prove that each unresolved unit contains one response and no intervening tool
+boundary. Each receives a derived 386,400 raw-token allowance. The frozen Codex 0.150.1 catalog
+declares 272,000 context tokens, the client applies its 95% factor and enforces the resulting
+258,400-token active-context window as a hard cap, and GPT-5.5 can emit at most 128,000 output
+tokens.
+`response-bound.json` freezes the sources and arithmetic. `FINAL-REPORT.md` explains the audit and
+result. `evidence.json` contains the machine-readable comparison, and `quality.json` preserves every
+candidate's feature score. Corrected replay outputs are named
 `analysis-request-accounting.json`; `analysis-pre-same-turn-accounting.json` and
 `analysis-cumulative.json` preserve the superseded analyses.
 
