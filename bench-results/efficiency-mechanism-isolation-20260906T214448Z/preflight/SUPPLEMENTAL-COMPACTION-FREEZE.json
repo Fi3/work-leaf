@@ -1,0 +1,51 @@
+{
+  "schema": "work-leaf-supplemental-compaction-freeze-v1",
+  "recorded_at_utc": "2026-09-06T22:41:12Z",
+  "scope": "Separately versioned provider-free supplemental audit; primary frozen analyzer and benchmark launch environment are unchanged.",
+  "development_inputs": ["synthetic fixtures", "completed historical pilot captures"],
+  "fresh_screening_outcomes_inspected_during_development": false,
+  "historical_replay_is_excluded_from_new_study_observations": true,
+  "files": [
+    {
+      "path": "audit_compaction.py",
+      "sha256": "dd5127f937ec1cc4d41a443ba7640fca93e82484f345ac8c56aeef5325d68153"
+    },
+    {
+      "path": "test_audit_compaction.py",
+      "sha256": "34fecc2b5b60db5b5df79c3d4cf126d151c935fba4c7e1ced57c335aab6a0e80"
+    }
+  ],
+  "verification": {
+    "supplemental_tests": {"count": 18, "status": "GREEN"},
+    "primary_frozen_tests": {"count": 22, "status": "GREEN"},
+    "red_regressions_observed": [
+      "new helper absent before implementation",
+      "empty native/observer inventory incorrectly classified as audited",
+      "workflow scope reconciliation fields absent",
+      "unsupported native payload caused an uncaught exception",
+      "non-string native identifiers aliased through Python bool/integer equality",
+      "numeric raw response identifier incorrectly accepted",
+      "unsupported observer thread row caused an uncaught exception"
+    ],
+    "independent_review": "bench_feature: both reported identity/unknown-shape findings resolved; 18 tests independently GREEN; no remaining findings",
+    "complexity": "linear parsing and hash-map joins, with O(n log n) sorting; no quadratic joins",
+    "real_agent_workflow": "Not affected: the helper only reads retained metadata and captures, performs offline arithmetic, and writes a separate report. It performs no provider invocation or runtime mutation."
+  },
+  "historical_replay": {
+    "full_inventory": "preflight/HISTORICAL-COMPACTION-AUDIT-v3.json",
+    "full_inventory_sha256": "cc71db645cdb1a71695541721552bebf6da3652942ab23657d61cfcb5bb935ff",
+    "final_helper_rerun_matches_all_v3_run_results_exactly": true,
+    "note": "The full v3 inventory records its earlier helper hash. The final helper rerun after the observer-row type guard produced exactly equal run results; the earlier audit files remain retained.",
+    "direct": {"native_response_ids": 389, "compaction_markers": 1, "native_minus_observer_raw": 215299},
+    "work_leaf": {"native_response_ids": 242, "exact_raw_identity_matches": 242, "compaction_markers": 0, "native_minus_observer_raw": 0},
+    "primary_totals_rewritten": false
+  },
+  "interpretation": [
+    "Compaction adjacency is reported as an association candidate, not proof of internal provider call type.",
+    "Native/raw response identities are deduplicated and validated on thread, turn, and four usage fields.",
+    "No compaction observed is not evidence that compaction ledger coverage was exercised.",
+    "The audit never establishes whole-workflow coverage by itself; frozen completion, tail, and hidden-work assumptions remain required.",
+    "Every admitted manifest outcome remains present, including missing artifacts, launch failures, and unknown shapes.",
+    "No automatic primary total adjustment or causal estimate is produced."
+  ]
+}
