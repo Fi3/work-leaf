@@ -36,6 +36,19 @@ For any request that produces a large artifact (multi-thousand-line docs, specs,
 2) Use objective gates and do not stop until they pass.
 3) Prefer writing to disk and only reporting results in chat.
 
+## Benchmark execution policy
+
+For this user's benchmark studies, the default is **three complete benchmark workflows running
+concurrently**, with separate checkouts and artifact directories, whenever at least three approved
+runs are available. This counts top-level benchmarks, not feature agents inside one Work Leaf run.
+Do not assume a two-workflow concurrency limit. A smaller explicitly approved pilot or remaining
+batch may use fewer slots; available capacity does not authorize extra observations, replacements,
+or bypassing a requested pause.
+
+Codex benchmark generation uses the user's existing ChatGPT subscription, not API-key authentication
+or API credits. Before planning or launching a batch, read `docs/benchmark-operator-policy.md` and
+its study's frozen protocol. Preserve admitted runs and record all outcomes.
+
 ## Documentation writing rule
 When updating documentation anywhere in the repo, including any `README.md` and anything under `./docs`,
 agents must describe the system in its current resulting state, not the fact that it was changed.
