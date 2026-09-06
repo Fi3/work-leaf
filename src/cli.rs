@@ -45,6 +45,8 @@ fn launch_agent_streaming_interruptible<B>(
 where
     B: AgentBackend,
 {
+    #[cfg(feature = "bench-experiments")]
+    crate::bench_experiment::initialize()?;
     let agent_id = launch.id.clone();
     let mut detector = DirectiveStreamInterruptDetector::default();
     let mut sink = |event| stream(&agent_id, event);
@@ -2174,6 +2176,8 @@ pub(crate) fn selected_agent_backend(
     read_permission: ReadPermission,
     agent: SelectedAgent,
 ) -> Result<SelectedAgentBackend, CliError> {
+    #[cfg(feature = "bench-experiments")]
+    crate::bench_experiment::initialize().map_err(CliError::Io)?;
     match agent {
         SelectedAgent::Codex => {
             codex_backend(project_dir, model, read_permission).map(SelectedAgentBackend::Codex)

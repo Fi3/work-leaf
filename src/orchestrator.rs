@@ -693,6 +693,8 @@ pub(crate) fn handle_agent_directives_streaming<B>(
 where
     B: AgentBackend,
 {
+    #[cfg(feature = "bench-experiments")]
+    crate::bench_experiment::initialize().map_err(AgentError::Io)?;
     let mut run = DirectiveRun::default();
     let directives = match parse_agent_directives(text) {
         Ok(directives) => directives,
@@ -982,7 +984,7 @@ where
         let reply = send_agent_streaming_interruptible(
             backend,
             agent_id,
-            &render_patch_applied_prompt(&files),
+            &render_patch_applied_prompt(&files).finish(agent_id, "patch-applied")?,
             stream,
         )?;
         run.follow_up_replies
@@ -1209,6 +1211,7 @@ where
             &diff,
         )
     };
+    let prompt = prompt.finish(agent_id, "command-result")?;
     let reply = send_agent_streaming_interruptible(backend, agent_id, &prompt, stream)?;
     run.follow_up_replies
         .push(follow_up(agent_id.clone(), reply));
@@ -2381,12 +2384,28 @@ fn render_command_classification(command: &[String], intent: &CommandWriteIntent
     )
 }
 
+struct ContinuationPrompt {
+    text: String,
+    #[cfg(feature = "bench-experiments")]
+    cue: std::ops::Range<usize>,
+}
+
+impl ContinuationPrompt {
+    fn finish(self, _agent_id: &AgentId, _site: &str) -> Result<String, AgentError> {
+        #[cfg(feature = "bench-experiments")]
+        return crate::bench_experiment::forward(_site, _agent_id, self.text, self.cue)
+            .map_err(AgentError::Io);
+        #[cfg(not(feature = "bench-experiments"))]
+        Ok(self.text)
+    }
+}
+
 fn render_command_result(
     command: &str,
     locked_paths: &[PathBuf],
     output: &CommandRunOutput,
     other_agent_owned_tests: &[(PathBuf, OwnedPatchPath)],
-) -> String {
+) -> ContinuationPrompt {
     let mut text = format!(
         "work-leaf command result\ncommand: {command}\nstatus: {}\nlocked paths: {}",
         display_status(output.status),
@@ -2402,14 +2421,22 @@ fn render_command_result(
     if command_failed(output) {
         append_cross_agent_validation_guard(&mut text, other_agent_owned_tests);
     }
+    #[cfg(feature = "bench-experiments")]
+    let cue_start = text.len();
     text.push_str(
         "\nnext: Reply with the next Work Leaf directive, such as `@work-leaf done`, `@work-leaf edit`, `@work-leaf read`, or another `@work-leaf locks run`. Keep any non-directive explanation brief.",
     );
+    #[cfg(feature = "bench-experiments")]
+    let cue_end = text.len();
     text.push_str("\nstdout:\n");
     text.push_str(&render_command_output(&output.stdout));
     text.push_str("stderr:\n");
     text.push_str(&render_command_output(&output.stderr));
-    text
+    ContinuationPrompt {
+        text,
+        #[cfg(feature = "bench-experiments")]
+        cue: cue_start..cue_end,
+    }
 }
 
 fn render_command_result_with_pending_changes(
@@ -2419,15 +2446,16 @@ fn render_command_result_with_pending_changes(
     other_agent_owned_tests: &[(PathBuf, OwnedPatchPath)],
     files: &[PathBuf],
     diff: &str,
-) -> String {
-    let mut text = render_command_result(command, locked_paths, output, other_agent_owned_tests);
+) -> ContinuationPrompt {
+    let mut prompt = render_command_result(command, locked_paths, output, other_agent_owned_tests);
+    let text = &mut prompt.text;
     text.push('\n');
     text.push_str("tracked command changes: captured and reverted from the shared checkout\n");
     text.push_str(
         "The locked command wrote tracked files. Work Leaf captured the diff below, restored those files to HEAD, and recorded the diff as pending for this patch agent so other agents do not see uncommitted command output.\n",
     );
     text.push_str(&render_pending_command_changes_prompt(files, diff));
-    text
+    prompt
 }
 
 fn append_cross_agent_validation_guard(
@@ -2635,14 +2663,26 @@ fn render_already_applied_patch_prompt(files: &[PathBuf]) -> String {
     text
 }
 
-fn render_patch_applied_prompt(files: &[PathBuf]) -> String {
+fn render_patch_applied_prompt(files: &[PathBuf]) -> ContinuationPrompt {
     let mut text = format!("work-leaf patch applied\nfiles: {}\n", display_paths(files));
     text.push_str("The orchestrator has already saved this patch as a provisional git commit. Do not resend this patch, do not rebase this same diff, and do not restate the patch body.\n");
-    text.push_str("Next step: run at most one focused validation step that is relevant to files you touched or checks you added. Use `@work-leaf locks run <path>... -- <command>` when that command may write files.\n");
+    text.push_str("Next step: ");
+    #[cfg(feature = "bench-experiments")]
+    let cue_start = text.len();
+    text.push_str("run at most one focused validation step that is relevant to files you touched or checks you added.");
+    #[cfg(feature = "bench-experiments")]
+    let cue_end = text.len();
+    text.push_str(
+        " Use `@work-leaf locks run <path>... -- <command>` when that command may write files.\n",
+    );
     text.push_str("Do not run another patch agent's focused tests as local validation. If a broad check is blocked only by another patch agent's owned files or tests, report that exact blocker once.\n");
     text.push_str("If validation fails in another feature's test or behavior, do not edit that test or unrelated implementation unless your patch clearly caused the failure.\n");
     text.push_str("After the focused validation passes, or after you report an external blocker, emit a top-level `@work-leaf done` so review can start. Send another edit only if validation found a concrete issue in your own patch.");
-    text
+    ContinuationPrompt {
+        text,
+        #[cfg(feature = "bench-experiments")]
+        cue: cue_start..cue_end,
+    }
 }
 
 fn render_other_agent_test_command_prompt(blocked_paths: &[(PathBuf, OwnedPatchPath)]) -> String {

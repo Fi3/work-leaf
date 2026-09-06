@@ -189,6 +189,20 @@ runs `cargo fmt -- --check`, `cargo clippy --all-targets --all-features -- -D wa
 comparison is concurrent Work Leaf against direct sequential Codex with the same tasks, model,
 reasoning level, stage responsibilities, time allowances, final verification, and quality scorer.
 
+The nondefault `bench-experiments` Cargo feature provides private, provider-neutral prompt
+interventions for separately admitted mechanism studies. Default builds exclude
+`src/bench_experiment.rs` and its activation hooks. Feature-enabled builds remain inactive unless
+`WORK_LEAF_BENCH_EXPERIMENT=1`, `WORK_LEAF_BENCH_EXPERIMENT_MANIFEST`, and a matching
+`WORK_LEAF_BENCH_RUN_ID` identify a valid run. Initialization validates the manifest before agent
+launch and exclusively creates its evidence file; invalid or reused activation fails closed.
+`src/orchestrator.rs` supplies renderer-owned instruction spans at patch-acknowledgment and
+command-result continuation boundaries. The private adapter either preserves the original prompt
+or transforms only the condition's declared span, then records both strings without adding agent
+messages. Control and variants use identical logging and retain normal command execution,
+ownership, provider, and interruption paths. These conditions are benchmark interventions, not
+normal Work Leaf settings or a public extension API. Study protocols and immutable per-phase
+manifests define permitted variants, scheduling, source identities, and causal interpretation.
+
 Both benchmark drivers use `bench-agent-profile-common` to create a run-local Codex wrapper. The
 wrapper pins the requested model and reasoning effort directly on every allowed Codex invocation
 without reading or changing the user's global Codex configuration. Each temporary benchmark

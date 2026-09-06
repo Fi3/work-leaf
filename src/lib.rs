@@ -1,5 +1,7 @@
 pub mod agent;
 pub mod agent_runtime;
+#[cfg(feature = "bench-experiments")]
+mod bench_experiment;
 mod chat_title;
 pub mod claude;
 pub mod cli;
