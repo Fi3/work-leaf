@@ -1,0 +1,70 @@
+{
+  "launch_order": [
+    "work-leaf-001",
+    "direct-001"
+  ],
+  "runs": [
+    {
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/direct-001/direct-001-three-feature-sequential-bench-artifacts",
+      "condition": "direct",
+      "driver": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/source/bench-three-features-sequential",
+      "environment_overrides": {
+        "PATH": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/infrastructure/provider:<inherited PATH>",
+        "WORK_LEAF_BENCH_OBSERVER_BIN": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/infrastructure/bin/bench-observer",
+        "WORK_LEAF_BENCH_PAIR_ID": "first-pair",
+        "WORK_LEAF_BENCH_STUDY_ID": "efficiency-raw-token-pilot-20260906T185328Z",
+        "WORK_LEAF_DIRECT_BENCH_AGENT": "codex",
+        "WORK_LEAF_DIRECT_BENCH_BIN_DIR": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/infrastructure/bin",
+        "WORK_LEAF_DIRECT_BENCH_LINEARIZE_SANDBOX": "danger-full-access",
+        "WORK_LEAF_DIRECT_BENCH_MODEL": "gpt-5.5",
+        "WORK_LEAF_DIRECT_BENCH_REASONING_EFFORT": "xhigh",
+        "WORK_LEAF_DIRECT_BENCH_RESULTS_DIR": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/direct-001",
+        "WORK_LEAF_DIRECT_BENCH_REVIEW_ROUNDS": "0",
+        "WORK_LEAF_DIRECT_BENCH_REVIEW_SANDBOX": "read-only",
+        "WORK_LEAF_DIRECT_BENCH_RUN_ID": "direct-001",
+        "WORK_LEAF_DIRECT_BENCH_SANDBOX": "workspace-write",
+        "WORK_LEAF_DIRECT_BENCH_SKIP_BUILD": "1",
+        "WORK_LEAF_DIRECT_BENCH_TIMEOUT_SECS": "7200",
+        "WORK_LEAF_DIRECT_BENCH_TMPDIR": "/tmp/work-leaf-raw-token-pilot.1Vv9v5/direct-001"
+      },
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/direct-001/direct-001-three-feature-sequential-bench-artifacts/report.json",
+      "results_dir": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/direct-001",
+      "run_id": "direct-001",
+      "runtime_dir": "/tmp/work-leaf-raw-token-pilot.1Vv9v5/direct-001",
+      "workflow": "direct-sequential"
+    },
+    {
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts",
+      "condition": "work-leaf",
+      "driver": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/source/bench-three-features",
+      "environment_overrides": {
+        "PATH": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/infrastructure/provider:<inherited PATH>",
+        "WORK_LEAF_BENCH_BIN_DIR": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/infrastructure/bin",
+        "WORK_LEAF_BENCH_BUSY_STALL_SECS": "1800",
+        "WORK_LEAF_BENCH_DISABLE_TMUX_SUPERVISOR": "1",
+        "WORK_LEAF_BENCH_IDLE_STALL_SECS": "300",
+        "WORK_LEAF_BENCH_LISTEN": "127.0.0.1:0",
+        "WORK_LEAF_BENCH_MODEL": "gpt-5.5",
+        "WORK_LEAF_BENCH_NO_READ_PERMISSION": "0",
+        "WORK_LEAF_BENCH_OBSERVER_BIN": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/infrastructure/bin/bench-observer",
+        "WORK_LEAF_BENCH_PAIR_ID": "first-pair",
+        "WORK_LEAF_BENCH_REASONING_EFFORT": "xhigh",
+        "WORK_LEAF_BENCH_RESULTS_DIR": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/work-leaf-001",
+        "WORK_LEAF_BENCH_RUN_ID": "work-leaf-001",
+        "WORK_LEAF_BENCH_SKIP_BUILD": "1",
+        "WORK_LEAF_BENCH_STUDY_ID": "efficiency-raw-token-pilot-20260906T185328Z",
+        "WORK_LEAF_BENCH_TIMEOUT_SECS": "7200",
+        "WORK_LEAF_BENCH_TMPDIR": "/tmp/work-leaf-raw-token-pilot.1Vv9v5/work-leaf-001",
+        "WORK_LEAF_BENCH_WEB_UI": "0",
+        "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS": "1000",
+        "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME": "forward",
+        "WORK_LEAF_OBSERVER_RAW_RESPONSE_USAGE": "1"
+      },
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/report.json",
+      "results_dir": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/work-leaf-001",
+      "run_id": "work-leaf-001",
+      "runtime_dir": "/tmp/work-leaf-raw-token-pilot.1Vv9v5/work-leaf-001",
+      "workflow": "work-leaf-concurrent"
+    }
+  ]
+}

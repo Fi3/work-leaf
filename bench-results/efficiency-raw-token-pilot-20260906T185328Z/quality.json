@@ -1,0 +1,151 @@
+{
+  "frozen_scorer": {
+    "analysis_helper": {
+      "path": "bench-results/efficiency-measurement-gate-20260906/batch_analysis.py",
+      "sha256": "dacbfc8416467312c8a447ac1cd846da3e1f78da96f3733ee16c3dad1781d7c3"
+    },
+    "analysis_tests": {
+      "path": "bench-results/efficiency-measurement-gate-20260906/test_batch_analysis.py",
+      "sha256": "e149bde096af9c591a866c0ccbd060564e01d378c8b0e736a5fab30ec66e73b3"
+    },
+    "fixtures": [
+      {
+        "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_visual.rs",
+        "sha256": "5ce0782e37b8672e04d8016ca3fbec9caa12f6f9cfaf431cac847c1f6e6a26ca"
+      },
+      {
+        "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_status.rs",
+        "sha256": "5f5295c9dec6be20abb28827b68e84342110fb748aa0cc887d8b58ffa3c6e6b5"
+      },
+      {
+        "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_completion.rs",
+        "sha256": "4d6a19f4c6f515b9a97f184a056d08dc2882041d40d26dd82011180a949c5c87"
+      }
+    ],
+    "quality_scope": "Canonical saved-implementation feature checks only; independent of raw-token accounting admission.",
+    "schema_version": 1,
+    "scorer": {
+      "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/score.py",
+      "sha256": "c0a4e951e96d7da53a6d414a7677176183cae6e30d0bbfab92069d5082865162"
+    },
+    "stage_helper": {
+      "path": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/analyze.py",
+      "sha256": "efa36c8c6d57ed8929ff32c19fcfc8a4469403cee014566c3d33db284710208e"
+    },
+    "stage_scope": "Recorded usage and cumulative usage advances by role; not an exhaustive model-call inventory."
+  },
+  "runs": [
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.497,
+          "exit_code": 0,
+          "log": "scorer/logs/direct-001/completion.log",
+          "log_sha256": "408d6b0bd6aa44943600672f065080cfa7eb136bd49fac54e25a25b1e853e471",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.242,
+          "exit_code": 0,
+          "log": "scorer/logs/direct-001/status.log",
+          "log_sha256": "59c5ec4c2b1ff4e8582caa511dd3bffdfae1a166f0ce4ec56d069f164ee68490",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 6.687,
+          "exit_code": 0,
+          "log": "scorer/logs/direct-001/visual.log",
+          "log_sha256": "7acbc5932d0046e6c5444be8e70d515fb26a27962bac70de4c53c32ff279e116",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 3,
+      "condition": "direct",
+      "final_commit": "672436de3afa623d44afb2bed40ace6d0adabe58",
+      "id": "direct-001",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/direct-001/direct-001-three-feature-sequential-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "f47edbe3cfe2656f70ca6a2d96f5fe380953fc3505ee4694a532db3e1f0a0f7d",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 45107712,
+          "input_tokens": 46758502,
+          "output_tokens": 255255,
+          "raw_input_plus_output": 47013757,
+          "reasoning_output_tokens": 127926,
+          "uncached_input_plus_output": 1906045,
+          "uncached_input_tokens": 1650790
+        }
+      },
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/direct-001/direct-001-three-feature-sequential-bench-artifacts/report.json",
+      "report_sha256": "12ac62e0c1ff5cd28d20ff584866aa7e0535fdcd9517fee0c9ab9fecb541e2d0",
+      "workflow": "direct-sequential",
+      "workflow_result": "pass"
+    },
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.481,
+          "exit_code": 0,
+          "log": "scorer/logs/work-leaf-001/completion.log",
+          "log_sha256": "4c86d51d7cd41c6b036e638e7fa09eee26fb2e54ea2ca7043fa8c0fdb22a21df",
+          "status": "pass"
+        },
+        "status": {
+          "duration_seconds": 0.251,
+          "exit_code": 0,
+          "log": "scorer/logs/work-leaf-001/status.log",
+          "log_sha256": "6a131fdbc5acabcd8e0f8b75b987772e096991fbe55c3d3980a55cd587d6af5f",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 2.704,
+          "exit_code": 101,
+          "log": "scorer/logs/work-leaf-001/visual.log",
+          "log_sha256": "79ac08f27e9aead5469b435582d749fe4c0781f84a96309892d127671a503815",
+          "status": "fail"
+        }
+      },
+      "checks": {
+        "completion": "pass",
+        "status": "pass",
+        "visual": "fail"
+      },
+      "completed_features": 2,
+      "condition": "work-leaf",
+      "final_commit": "7fde10894aa4eb3f8ed408a3ba966f26542c6296",
+      "id": "work-leaf-001",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "a00760c3243a201f35a7bfbaeac74fcf8cf0d80f87331ab2d06acce1b7865f11",
+        "reasons": [
+          "measurement status is incomplete",
+          "observer analysis marks the capture incomplete"
+        ],
+        "usable": false,
+        "usage": {
+          "cached_input_tokens": 21067520,
+          "input_tokens": 22553632,
+          "output_tokens": 233337,
+          "raw_input_plus_output": 22786969,
+          "reasoning_output_tokens": 149924,
+          "uncached_input_plus_output": 1719449,
+          "uncached_input_tokens": 1486112
+        }
+      },
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/report.json",
+      "report_sha256": "683aba03028718ea98039d3d4c4ff0724fe3d77482e314b4a22c66fccb77788c",
+      "workflow": "work-leaf-concurrent",
+      "workflow_result": "pass"
+    }
+  ],
+  "scope": "feature quality; separate from token measurement"
+}

@@ -1,0 +1,524 @@
+{
+  "schema_version": 1,
+  "classification": "post_hoc_conditional_supplement_not_frozen_primary",
+  "scope": "Completed Work Leaf observation only; no additional benchmark, provider invocation, quality score, or frozen-input mutation.",
+  "sequence_convention": "Zero-based JSONL record sequence; physical line is sequence + 1 for this capture.",
+  "source_sha256": {
+    "runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/report.json": "683aba03028718ea98039d3d4c4ff0724fe3d77482e314b4a22c66fccb77788c",
+    "runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/observation/analysis.json": "a00760c3243a201f35a7bfbaeac74fcf8cf0d80f87331ab2d06acce1b7865f11",
+    "runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/observation/app-server/00000422153032163608-2899396/server-to-client.raw": "701a611f120e7718f1ebabfac8d4d676a0ab76da237c8c3201d0b2b76a65eb9f",
+    "runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/observation/app-server/00000422153032163608-2899396/client-to-server.raw": "3be1a143ed5f66960daa92816800a8ac1ec63ae9af9ed43f1eca93ba90ad7ece",
+    "runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/observation/app-server/00000422153032163608-2899396/client-to-server.forwarded.raw": "e53439e87beae540c08093a70a24d7f01743d458a356e6300303d916f8e5f7c7",
+    "runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/observation/app-server/00000422153032163608-2899396/raw-response-rewrites.jsonl": "842b20597b1db78ebdfbd64767e1c5d1312247f72da6c41453029e12e112ccde",
+    "runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/observation/app-server/00000422153032163608-2899396/provider-usage-grace.jsonl": "418be3775d695528208342c62ff66abbc1ea440f874482159dede7650c50a738",
+    "runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/observation/app-server/00000422153032163608-2899396/response-usage.json": "ed8b172e1555f1799e39299df6a0abb4022a6400d75f5063f3198280fd7e55d8",
+    "infrastructure/evidence/bench-results/efficiency-measurement-gate-20260906/batch_analysis.py": "dacbfc8416467312c8a447ac1cd846da3e1f78da96f3733ee16c3dad1781d7c3",
+    "infrastructure/evidence/bench-results/efficiency-measurement-gate-20260906/BATCH-BOUND-POLICY.json": "8fa67964523b9c4dd238eda14bb56f3b5a1cba042fa3e3ea5c0c85daa6d03a2b",
+    "FIRST-BATCH-MANIFEST.json": "5de3e31bf4ebc06ecd330d67778eaa24b8321a67e848977911f3f761eafa3842"
+  },
+  "strict_replay": {
+    "status": "unbounded_accounting_gap",
+    "reasons": [],
+    "recorded_usage": {
+      "input_tokens": 22553632,
+      "cached_input_tokens": 21067520,
+      "output_tokens": 233337,
+      "reasoning_output_tokens": 149924,
+      "uncached_input_tokens": 1486112,
+      "raw_input_plus_output": 22786969,
+      "uncached_input_plus_output": 1719449
+    },
+    "bounds": {
+      "raw_input_plus_output": {
+        "lower": 22786969,
+        "upper": null
+      },
+      "uncached_input_plus_output": {
+        "lower": 1719449,
+        "upper": null
+      }
+    }
+  },
+  "strict_inventory": {
+    "gaps": [
+      {
+        "thread_id": "01a07830-f0f9-7301-abbf-ee60f8ae9377",
+        "turn_id": "01a07830-f16c-7ad2-b896-889ba67052b3",
+        "response_count_upper": 1,
+        "proof": "isolated_normal_response_tail",
+        "reason": null,
+        "previous_usage_sequence": -1,
+        "response_start_sequence": 25092,
+        "directive_sequence": 25192,
+        "completion_sequence": 25197,
+        "paired_items": 3,
+        "post_directive_unfinished_items": 1,
+        "no_tool_boundary": true
+      },
+      {
+        "thread_id": "01a07830-f0f9-7301-abbf-ee60f8ae9377",
+        "turn_id": "01a07831-274a-7de1-b368-44f60b499ffe",
+        "response_count_upper": null,
+        "proof": null,
+        "reason": "isolated response tail not established"
+      },
+      {
+        "thread_id": "01a07830-f0f9-7301-abbf-ee60f8ae9377",
+        "turn_id": "01a0783f-554e-7ec3-bb8b-c5b9a7ebbfb7",
+        "response_count_upper": 1,
+        "proof": "isolated_normal_response_tail",
+        "reason": null,
+        "previous_usage_sequence": 26976,
+        "response_start_sequence": 39750,
+        "directive_sequence": 39780,
+        "completion_sequence": 39786,
+        "paired_items": 3,
+        "post_directive_unfinished_items": 1,
+        "no_tool_boundary": true
+      },
+      {
+        "thread_id": "01a07830-f0f9-7301-abbf-ee60f8ae9377",
+        "turn_id": "01a0783f-769b-7a02-b9e7-81b5cc792567",
+        "response_count_upper": 1,
+        "proof": "isolated_normal_response_tail",
+        "reason": null,
+        "previous_usage_sequence": 39782,
+        "response_start_sequence": 39789,
+        "directive_sequence": 39864,
+        "completion_sequence": 39870,
+        "paired_items": 3,
+        "post_directive_unfinished_items": 1,
+        "no_tool_boundary": true
+      }
+    ],
+    "errors": [],
+    "raw_response_count": 242,
+    "captured_turn_count": 76,
+    "model_call_inventory_exhaustive": false
+  },
+  "multi_message_responses": [
+    {
+      "response_id": "resp_03fee1970559bc89016a9dbbfb5e2087d2952ae9134b5e95e5",
+      "raw_response_sequence": 925,
+      "thread_id": "01a07825-376e-7661-a88d-4be15e65dd86",
+      "turn_id": "01a07825-6a46-7dd3-a85a-fe83216d68a1",
+      "output_tokens": 98,
+      "reasoning_output_tokens": 0,
+      "assistant_item_output_sum": 98,
+      "output_equals_item_sum_plus_reasoning": true,
+      "items": [
+        {
+          "item_id": "msg_03fee1970559bc89016a9dbbfbfcdc87d2b535f68ea601d7cd",
+          "output_tokens": 61,
+          "completed_sequence": 886,
+          "phase": "commentary"
+        },
+        {
+          "item_id": "msg_03fee1970559bc89016a9dbbfd1bcc87d2bc953e506fd65a37",
+          "output_tokens": 37,
+          "completed_sequence": 924,
+          "phase": "final_answer"
+        }
+      ]
+    },
+    {
+      "response_id": "resp_0a14ac765075b68e016a9dbcb5d7c487d29bf688bd64641fd3",
+      "raw_response_sequence": 3768,
+      "thread_id": "01a07825-2392-7d82-983c-78f2b5be16c9",
+      "turn_id": "01a07826-60ab-7e41-a5ad-21db2758b8b6",
+      "output_tokens": 2821,
+      "reasoning_output_tokens": 1034,
+      "assistant_item_output_sum": 1787,
+      "output_equals_item_sum_plus_reasoning": true,
+      "items": [
+        {
+          "item_id": "msg_0a14ac765075b68e016a9dbcc937a087d28466c61046a81f4e",
+          "output_tokens": 58,
+          "completed_sequence": 1985,
+          "phase": "commentary"
+        },
+        {
+          "item_id": "msg_0a14ac765075b68e016a9dbcca404087d2b4e6c44a75d6c4e7",
+          "output_tokens": 1729,
+          "completed_sequence": 3767,
+          "phase": "final_answer"
+        }
+      ]
+    },
+    {
+      "response_id": "resp_03fee1970559bc89016a9dbc64ffe887d295919db2bba583a5",
+      "raw_response_sequence": 9815,
+      "thread_id": "01a07825-376e-7661-a88d-4be15e65dd86",
+      "turn_id": "01a07826-57c9-78f1-b788-dc9adc2894a9",
+      "output_tokens": 15019,
+      "reasoning_output_tokens": 10855,
+      "assistant_item_output_sum": 4164,
+      "output_equals_item_sum_plus_reasoning": true,
+      "items": [
+        {
+          "item_id": "msg_03fee1970559bc89016a9dbd2931b487d2ac511d6075c2ebb3",
+          "output_tokens": 67,
+          "completed_sequence": 4954,
+          "phase": "commentary"
+        },
+        {
+          "item_id": "msg_03fee1970559bc89016a9dbd2a635c87d28de45c21ffaf572a",
+          "output_tokens": 4097,
+          "completed_sequence": 9814,
+          "phase": "final_answer"
+        }
+      ]
+    },
+    {
+      "response_id": "resp_0df7b469066abcd8016a9dbe0719f087d2a441588788ddbdc8",
+      "raw_response_sequence": 20868,
+      "thread_id": "01a0782b-8100-71f1-a935-ca076774eabb",
+      "turn_id": "01a0782c-cda8-7372-b29f-103caf5169aa",
+      "output_tokens": 1254,
+      "reasoning_output_tokens": 1190,
+      "assistant_item_output_sum": 64,
+      "output_equals_item_sum_plus_reasoning": true,
+      "items": [
+        {
+          "item_id": "msg_0df7b469066abcd8016a9dbe095a4887d2a2b2cdeb3e156b73",
+          "output_tokens": 55,
+          "completed_sequence": 18503,
+          "phase": "commentary"
+        },
+        {
+          "item_id": "msg_0df7b469066abcd8016a9dbe1e7c1487d28bf29693d58d2c34",
+          "output_tokens": 9,
+          "completed_sequence": 20861,
+          "phase": "final_answer"
+        }
+      ]
+    },
+    {
+      "response_id": "resp_03fee1970559bc89016a9dbd76b47c87d28294ed77b14dd34c",
+      "raw_response_sequence": 22992,
+      "thread_id": "01a07825-376e-7661-a88d-4be15e65dd86",
+      "turn_id": "01a0782c-0dda-7d70-82bb-d7eca1dd7afa",
+      "output_tokens": 10357,
+      "reasoning_output_tokens": 6207,
+      "assistant_item_output_sum": 4150,
+      "output_equals_item_sum_plus_reasoning": true,
+      "items": [
+        {
+          "item_id": "msg_03fee1970559bc89016a9dbd8124d087d294271a540156e2c9",
+          "output_tokens": 64,
+          "completed_sequence": 9899,
+          "phase": "commentary"
+        },
+        {
+          "item_id": "msg_03fee1970559bc89016a9dbde8ba0c87d2a7b4bb18a1092c2c",
+          "output_tokens": 4086,
+          "completed_sequence": 22986,
+          "phase": "final_answer"
+        }
+      ]
+    },
+    {
+      "response_id": "resp_03fee1970559bc89016a9dc1a948d887d2a7d06163923d548a",
+      "raw_response_sequence": 36303,
+      "thread_id": "01a07825-376e-7661-a88d-4be15e65dd86",
+      "turn_id": "01a0783c-478f-7d92-8b73-bb7fcc3f7848",
+      "output_tokens": 3759,
+      "reasoning_output_tokens": 2588,
+      "assistant_item_output_sum": 1171,
+      "output_equals_item_sum_plus_reasoning": true,
+      "items": [
+        {
+          "item_id": "msg_03fee1970559bc89016a9dc1b381d087d28ca86c2cd9a64699",
+          "output_tokens": 60,
+          "completed_sequence": 33957,
+          "phase": "commentary"
+        },
+        {
+          "item_id": "msg_03fee1970559bc89016a9dc1d9ce1c87d282d417983accde33",
+          "output_tokens": 1111,
+          "completed_sequence": 36301,
+          "phase": "final_answer"
+        }
+      ]
+    },
+    {
+      "response_id": "resp_0c79ac7c5de691aa016a9dc2200be887d2a53decfb24bea5ac",
+      "raw_response_sequence": 39224,
+      "thread_id": "01a07825-10a9-77b3-bd6a-f75800663294",
+      "turn_id": "01a0783e-46b2-76a0-a828-c619ccca2678",
+      "output_tokens": 185,
+      "reasoning_output_tokens": 0,
+      "assistant_item_output_sum": 185,
+      "output_equals_item_sum_plus_reasoning": true,
+      "items": [
+        {
+          "item_id": "msg_0c79ac7c5de691aa016a9dc221142887d2aa2f8cba3fd97c75",
+          "output_tokens": 49,
+          "completed_sequence": 39052,
+          "phase": "commentary"
+        },
+        {
+          "item_id": "msg_0c79ac7c5de691aa016a9dc221fa0487d2b074a4318e6a6e9f",
+          "output_tokens": 136,
+          "completed_sequence": 39223,
+          "phase": "final_answer"
+        }
+      ]
+    },
+    {
+      "response_id": "resp_0c79ac7c5de691aa016a9dc2451af887d2ae0ef3c983e05b48",
+      "raw_response_sequence": 39696,
+      "thread_id": "01a07825-10a9-77b3-bd6a-f75800663294",
+      "turn_id": "01a0783e-a943-7c00-9663-15e67202fcd1",
+      "output_tokens": 1212,
+      "reasoning_output_tokens": 1021,
+      "assistant_item_output_sum": 191,
+      "output_equals_item_sum_plus_reasoning": true,
+      "items": [
+        {
+          "item_id": "msg_0c79ac7c5de691aa016a9dc246132887d2aa134becb6c56fae",
+          "output_tokens": 72,
+          "completed_sequence": 39578,
+          "phase": "commentary"
+        },
+        {
+          "item_id": "msg_0c79ac7c5de691aa016a9dc259c33c87d2b5fca94f9b705141",
+          "output_tokens": 119,
+          "completed_sequence": 39695,
+          "phase": "final_answer"
+        }
+      ]
+    },
+    {
+      "response_id": "resp_03fee1970559bc89016a9dc352d99087d2a1973b8307dd6792",
+      "raw_response_sequence": 43558,
+      "thread_id": "01a07825-376e-7661-a88d-4be15e65dd86",
+      "turn_id": "01a07842-f8e5-73b3-910b-a2ee232061a3",
+      "output_tokens": 671,
+      "reasoning_output_tokens": 516,
+      "assistant_item_output_sum": 155,
+      "output_equals_item_sum_plus_reasoning": true,
+      "items": [
+        {
+          "item_id": "msg_03fee1970559bc89016a9dc35d6e7487d2b47e64f53c9b8314",
+          "output_tokens": 70,
+          "completed_sequence": 43476,
+          "phase": "commentary"
+        },
+        {
+          "item_id": "msg_03fee1970559bc89016a9dc35eab1887d2ac19d77e28e63bdc",
+          "output_tokens": 85,
+          "completed_sequence": 43557,
+          "phase": "final_answer"
+        }
+      ]
+    }
+  ],
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "per_response": {
+    "input_upper": 1050000,
+    "output_upper": 128000,
+    "raw_upper": 1178000,
+    "scope": "model_limit_not_response_count_proof",
+    "source_url": "https://developers.openai.com/api/docs/models/gpt-5.5",
+    "source_markdown_url": "https://developers.openai.com/api/docs/models/gpt-5.5.md",
+    "source_markdown_sha256": "4b8e8f9e7e4c15e404d50e629c63d9bcc31224a9a9e7305142dfd48839ec9c75",
+    "retrieved_utc_date": "2026-09-06",
+    "derivation": "Input cannot exceed the documented 1,050,000-token model context window; output is bounded separately by the documented 128,000-token maximum. Their sum is a deliberately loose per-response upper bound, not a typical response length.",
+    "applicability": "Conditional on the captured subscription provider honoring the documented limits of the same gpt-5.5 model. The frozen run and rollout profile must match; this is not an API generation experiment.",
+    "input_cap_not_used": "The local Codex catalog's effective context/compaction budget is not treated as a hard upstream request-token ceiling. The historical 386,400 response bound is not reused."
+  },
+  "strict_summary": {
+    "accepted_tails": 3,
+    "rejected_tails": 1,
+    "primary_status": "unbounded_accounting_gap",
+    "primary_result_retained": true
+  },
+  "supplemental": {
+    "status": "conditionally_bounded_post_hoc",
+    "supersedes_frozen_primary": false,
+    "assumptions": [
+      "The documented gpt-5.5 model limits apply to the captured subscription provider.",
+      "The capture exposes all relevant normal model-response and tool/compaction boundaries.",
+      "No hidden retry, opaque upstream subresponse, or unobserved preemption occurs within an uncovered segment.",
+      "Each of the four inventoried interrupted normal-loop tails has at most one unaccounted response under those assumptions."
+    ],
+    "unaccounted_response_count_upper": 4,
+    "per_response_raw_upper": 1178000,
+    "added_upper": 4712000,
+    "bounds": {
+      "raw_input_plus_output": {
+        "lower": 22786969,
+        "upper": 27498969
+      },
+      "uncached_input_plus_output": {
+        "lower": 1719449,
+        "upper": 6431449
+      }
+    },
+    "interpretation": "Descriptive conditional accounting envelope, not a sampling confidence interval, unconditional billing guarantee, exact usage recovery, or quality-equivalence finding.",
+    "gap_rows": [
+      {
+        "thread_id": "01a07830-f0f9-7301-abbf-ee60f8ae9377",
+        "turn_id": "01a07830-f16c-7ad2-b896-889ba67052b3",
+        "frozen_response_count_upper": 1,
+        "supplemental_response_count_upper": 1,
+        "post_hoc_predicate_relaxation": "None; retains frozen isolated-tail predicate"
+      },
+      {
+        "thread_id": "01a07830-f0f9-7301-abbf-ee60f8ae9377",
+        "turn_id": "01a07831-274a-7de1-b368-44f60b499ffe",
+        "frozen_response_count_upper": null,
+        "supplemental_response_count_upper": 1,
+        "post_hoc_predicate_relaxation": "Allow multiple assistant output items inside one visible normal response tail"
+      },
+      {
+        "thread_id": "01a07830-f0f9-7301-abbf-ee60f8ae9377",
+        "turn_id": "01a0783f-554e-7ec3-bb8b-c5b9a7ebbfb7",
+        "frozen_response_count_upper": 1,
+        "supplemental_response_count_upper": 1,
+        "post_hoc_predicate_relaxation": "None; retains frozen isolated-tail predicate"
+      },
+      {
+        "thread_id": "01a07830-f0f9-7301-abbf-ee60f8ae9377",
+        "turn_id": "01a0783f-769b-7a02-b9e7-81b5cc792567",
+        "frozen_response_count_upper": 1,
+        "supplemental_response_count_upper": 1,
+        "post_hoc_predicate_relaxation": "None; retains frozen isolated-tail predicate"
+      }
+    ]
+  },
+  "disputed_segment": {
+    "thread_id": "01a07830-f0f9-7301-abbf-ee60f8ae9377",
+    "turn_id": "01a07831-274a-7de1-b368-44f60b499ffe",
+    "turn_start_sequence": 25200,
+    "previous_usage_sequence": 26319,
+    "uncovered_first_sequence": 26320,
+    "directive_sequence": 26630,
+    "interrupted_completion_sequence": 26636,
+    "completed_assistant_items": 2,
+    "paired_pre_directive_items": 4,
+    "post_directive_unfinished_reasoning_items": 1,
+    "raw_response_completed_count": 0,
+    "tool_boundary_count": 0,
+    "compaction_boundary_count": 0,
+    "foreign_turn_count": 0,
+    "warning_or_retry_event_count": 0,
+    "unknown_method_count": 0,
+    "prior_response_id": "resp_056b6b9b26cbfc93016a9dbf76c95887d2b812c41173d63948",
+    "prior_response_total_tokens": 99570,
+    "prior_cumulative_total_tokens": 1165015,
+    "post_directive_usage_is_stale": true,
+    "post_directive_cumulative_total_tokens": 1165015,
+    "timeline": [
+      {
+        "sequence": 26316,
+        "event": "Previously accounted rawResponse/completed"
+      },
+      {
+        "sequence": 26317,
+        "event": "Previously accounted commandExecution item/started"
+      },
+      {
+        "sequence": 26318,
+        "event": "Previously accounted commandExecution item/completed"
+      },
+      {
+        "sequence": 26319,
+        "event": "Previous cumulative usage",
+        "utc": "2026-09-06T19:31:51.024Z"
+      },
+      {
+        "sequence": 26326,
+        "event": "reasoning item/started"
+      },
+      {
+        "sequence": 26514,
+        "event": "reasoning item/completed"
+      },
+      {
+        "sequence": 26515,
+        "event": "commentary agentMessage item/started"
+      },
+      {
+        "sequence": 26571,
+        "event": "Ordinary commentary agentMessage item/completed",
+        "utc": "2026-09-06T19:33:47.310Z"
+      },
+      {
+        "sequence": 26572,
+        "event": "reasoning item/started"
+      },
+      {
+        "sequence": 26579,
+        "event": "reasoning item/completed"
+      },
+      {
+        "sequence": 26580,
+        "event": "commentary agentMessage item/started"
+      },
+      {
+        "sequence": 26630,
+        "event": "Directive commentary agentMessage item/completed",
+        "utc": "2026-09-06T19:33:56.738Z"
+      },
+      {
+        "sequence": 26631,
+        "event": "Unfinished reasoning item/started"
+      },
+      {
+        "sequence": 26632,
+        "event": "Stale cumulative usage, identical total and last fields to sequence 26319"
+      },
+      {
+        "sequence": 26636,
+        "event": "turn/completed interrupted",
+        "utc": "2026-09-06T19:33:56.764Z"
+      }
+    ],
+    "conclusion": "The frozen rejection is the exactly-one-completed-agentMessage predicate. Two message items do not establish two responses. The conditional normal-loop interpretation is one response with multiple output items; hidden unobserved requests cannot be excluded unconditionally."
+  },
+  "source_semantics": {
+    "current_tag": "rust-v0.153.4",
+    "turn_source_url": "https://github.com/openai/codex/blob/rust-v0.153.4/codex-rs/core/src/session/turn.rs",
+    "source_review": "Parent independently fetched and verified the tagged source; no local source snapshot hash is claimed.",
+    "physical_line_anchors": {
+      "run_turn_documentation": 143,
+      "client_session_stream": 2259,
+      "output_item_done": 2347,
+      "preempt_for_mailbox": 2451,
+      "response_completed": 2591,
+      "completed_break": 2632
+    },
+    "interpretation": "A sampling stream handles successive output items and a Completed event. Message items are not sampling-request boundaries. The mailbox-preemption path can exit earlier; excluding unobserved preemption is necessary for the supplemental cardinality assumption.",
+    "response_api_url": "https://developers.openai.com/api/reference/cli/resources/responses/methods/create"
+  },
+  "native_log_corroboration": {
+    "database_path": "/home/user/.codex/logs_2.sqlite",
+    "read_only": true,
+    "selected_thread_id": "01a07830-f0f9-7301-abbf-ee60f8ae9377",
+    "selected_submission_id": "01a07831-274a-7de1-b368-44f60b499ffe",
+    "selected_time_window": "After 2026-09-06T19:31:51.024Z through second 2026-09-06T19:33:56Z",
+    "selected_row_ids": [
+      527639887,
+      527639888,
+      527639906,
+      527640496,
+      527640498,
+      527640556,
+      527640558,
+      527640590,
+      527640592,
+      527640645,
+      527640647
+    ],
+    "responses_auth_start_count": 1,
+    "warning_or_error_count": 0,
+    "local_source_annotations": [
+      "core/src/session/turn.rs",
+      "core/src/stream_events_utils.rs:419"
+    ],
+    "role": "Corroboration only, not an exhaustive request inventory or proof against hidden retry/preemption. Raw log bodies and credentials are not copied."
+  }
+}

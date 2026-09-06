@@ -1,0 +1,407 @@
+{
+  "schema_version": 1,
+  "classification": "post_hoc_conditional_pair_comparison_not_frozen_primary",
+  "benchmark_observations": {
+    "direct": 1,
+    "work-leaf": 1
+  },
+  "paired_sample_size": 1,
+  "primary_metric": "raw_input_plus_output",
+  "secondary_metric": "uncached_input_plus_output",
+  "denominator_scope": "Each metric uses the exact Direct total_workflow denominator. All attempted workflow work, implementation, review, linearization, and Work Leaf title activity are retained; no per-successful-feature or selected-stage denominator.",
+  "formula": "saving_percent = 100 * (Direct_total - Work_Leaf_total) / Direct_total; lower uses Work_Leaf_upper, upper uses Work_Leaf_lower.",
+  "frozen_primary": {
+    "direct_measurement_status": "exact",
+    "work_leaf_measurement_status": "unbounded_accounting_gap",
+    "finite_saving_lower_bound": null,
+    "retained_source": "pair-analysis.json",
+    "superseded": false
+  },
+  "supplemental_status": "conditionally_bounded_post_hoc",
+  "missing_response_usage_recovered": false,
+  "observations": [
+    {
+      "condition": "direct",
+      "id": "direct-001",
+      "workflow_result": "pass",
+      "measurement_status": "exact",
+      "recorded_usage": {
+        "cached_input_tokens": 45107712,
+        "input_tokens": 46758502,
+        "output_tokens": 255255,
+        "raw_input_plus_output": 47013757,
+        "reasoning_output_tokens": 127926,
+        "uncached_input_plus_output": 1906045,
+        "uncached_input_tokens": 1650790
+      },
+      "stage_recorded_usage": {
+        "implementation": {
+          "cached_input_tokens": 29116032,
+          "input_tokens": 29993431,
+          "output_tokens": 156145,
+          "raw_input_plus_output": 30149576,
+          "reasoning_output_tokens": 73254,
+          "uncached_input_plus_output": 1033544,
+          "uncached_input_tokens": 877399
+        },
+        "linearization": {
+          "cached_input_tokens": 7092352,
+          "input_tokens": 7339569,
+          "output_tokens": 23943,
+          "raw_input_plus_output": 7363512,
+          "reasoning_output_tokens": 6122,
+          "uncached_input_plus_output": 271160,
+          "uncached_input_tokens": 247217
+        },
+        "review": {
+          "cached_input_tokens": 8899328,
+          "input_tokens": 9425502,
+          "output_tokens": 75167,
+          "raw_input_plus_output": 9500669,
+          "reasoning_output_tokens": 48550,
+          "uncached_input_plus_output": 601341,
+          "uncached_input_tokens": 526174
+        }
+      },
+      "stage_usage_scope": "recorded lower bounds; missing tails not allocated",
+      "generation_activity": {
+        "exact_model_call_count": false,
+        "interpretation": "Cumulative usage changes are a reported-generation proxy, not an exhaustive count of model calls. Tool actions and stage mapping reuse the frozen historical helper.",
+        "reported_usage_advances": 388,
+        "reported_usage_advances_by_stage": {
+          "implementation": 247,
+          "linearization": 43,
+          "review": 98
+        },
+        "status": "available"
+      },
+      "reported_actions": {
+        "apply_patch": 73,
+        "exec_command": 745
+      },
+      "reported_actions_by_stage": {
+        "implementation": {
+          "apply_patch": 70,
+          "exec_command": 391
+        },
+        "linearization": {
+          "apply_patch": 3,
+          "exec_command": 115
+        },
+        "review": {
+          "exec_command": 239
+        }
+      },
+      "mechanism_observations": {
+        "command_count": 766,
+        "command_classes": {
+          "locked-command": 21,
+          "other": 745
+        },
+        "repeated_commands": 182,
+        "validation": {
+          "validation_commands": 69,
+          "violations": []
+        },
+        "terminal_directives": {
+          "failed": 0,
+          "interrupted": 0,
+          "naturally_completed": 0,
+          "observed": 0,
+          "unresolved": 0
+        },
+        "structured_edits": {
+          "acknowledgements": 0,
+          "duplicate_submissions": 0,
+          "rejections": 0,
+          "submissions": 0
+        }
+      },
+      "quality": {
+        "checks": {
+          "completion": "pass",
+          "status": "pass",
+          "visual": "pass"
+        },
+        "completed_features": 3,
+        "final_commit": "672436de3afa623d44afb2bed40ace6d0adabe58",
+        "check_details": {
+          "completion": {
+            "duration_seconds": 0.497,
+            "exit_code": 0,
+            "log": "scorer/logs/direct-001/completion.log",
+            "log_sha256": "408d6b0bd6aa44943600672f065080cfa7eb136bd49fac54e25a25b1e853e471",
+            "status": "pass"
+          },
+          "status": {
+            "duration_seconds": 0.242,
+            "exit_code": 0,
+            "log": "scorer/logs/direct-001/status.log",
+            "log_sha256": "59c5ec4c2b1ff4e8582caa511dd3bffdfae1a166f0ce4ec56d069f164ee68490",
+            "status": "pass"
+          },
+          "visual": {
+            "duration_seconds": 6.687,
+            "exit_code": 0,
+            "log": "scorer/logs/direct-001/visual.log",
+            "log_sha256": "7acbc5932d0046e6c5444be8e70d515fb26a27962bac70de4c53c32ff279e116",
+            "status": "pass"
+          }
+        }
+      }
+    },
+    {
+      "condition": "work-leaf",
+      "id": "work-leaf-001",
+      "workflow_result": "pass",
+      "measurement_status": "unbounded_accounting_gap",
+      "recorded_usage": {
+        "cached_input_tokens": 21067520,
+        "input_tokens": 22553632,
+        "output_tokens": 233337,
+        "raw_input_plus_output": 22786969,
+        "reasoning_output_tokens": 149924,
+        "uncached_input_plus_output": 1719449,
+        "uncached_input_tokens": 1486112
+      },
+      "stage_recorded_usage": {
+        "implementation": {
+          "cached_input_tokens": 13419392,
+          "input_tokens": 14293685,
+          "output_tokens": 150681,
+          "raw_input_plus_output": 14444366,
+          "reasoning_output_tokens": 96370,
+          "uncached_input_plus_output": 1024974,
+          "uncached_input_tokens": 874293
+        },
+        "linearization": {
+          "cached_input_tokens": 3775488,
+          "input_tokens": 3941031,
+          "output_tokens": 21954,
+          "raw_input_plus_output": 3962985,
+          "reasoning_output_tokens": 7135,
+          "uncached_input_plus_output": 187497,
+          "uncached_input_tokens": 165543
+        },
+        "review": {
+          "cached_input_tokens": 3814144,
+          "input_tokens": 4258969,
+          "output_tokens": 60122,
+          "raw_input_plus_output": 4319091,
+          "reasoning_output_tokens": 45874,
+          "uncached_input_plus_output": 504947,
+          "uncached_input_tokens": 444825
+        },
+        "title": {
+          "cached_input_tokens": 58496,
+          "input_tokens": 59947,
+          "output_tokens": 580,
+          "raw_input_plus_output": 60527,
+          "reasoning_output_tokens": 545,
+          "uncached_input_plus_output": 2031,
+          "uncached_input_tokens": 1451
+        }
+      },
+      "stage_usage_scope": "recorded lower bounds; missing tails not allocated",
+      "generation_activity": {
+        "exact_model_call_count": false,
+        "interpretation": "Cumulative usage changes are a reported-generation proxy, not an exhaustive count of model calls. Tool actions and stage mapping reuse the frozen historical helper.",
+        "reported_usage_advances": 242,
+        "reported_usage_advances_by_stage": {
+          "implementation": 133,
+          "linearization": 48,
+          "review": 58,
+          "title": 3
+        },
+        "status": "available"
+      },
+      "reported_actions": {
+        "apply_patch": 5,
+        "exec_command": 250
+      },
+      "reported_actions_by_stage": {
+        "implementation": {
+          "exec_command": 93
+        },
+        "linearization": {
+          "apply_patch": 5,
+          "exec_command": 75
+        },
+        "review": {
+          "exec_command": 82
+        },
+        "title": {}
+      },
+      "mechanism_observations": {
+        "command_count": 285,
+        "command_classes": {
+          "locked-command": 35,
+          "other": 250
+        },
+        "repeated_commands": 12,
+        "validation": {
+          "validation_commands": 23,
+          "violations": []
+        },
+        "terminal_directives": {
+          "failed": 0,
+          "interrupted": 8,
+          "naturally_completed": 0,
+          "observed": 11,
+          "unresolved": 3
+        },
+        "structured_edits": {
+          "acknowledgements": 13,
+          "duplicate_submissions": 0,
+          "rejections": 5,
+          "submissions": 16
+        }
+      },
+      "quality": {
+        "checks": {
+          "completion": "pass",
+          "status": "pass",
+          "visual": "fail"
+        },
+        "completed_features": 2,
+        "final_commit": "7fde10894aa4eb3f8ed408a3ba966f26542c6296",
+        "check_details": {
+          "completion": {
+            "duration_seconds": 0.481,
+            "exit_code": 0,
+            "log": "scorer/logs/work-leaf-001/completion.log",
+            "log_sha256": "4c86d51d7cd41c6b036e638e7fa09eee26fb2e54ea2ca7043fa8c0fdb22a21df",
+            "status": "pass"
+          },
+          "status": {
+            "duration_seconds": 0.251,
+            "exit_code": 0,
+            "log": "scorer/logs/work-leaf-001/status.log",
+            "log_sha256": "6a131fdbc5acabcd8e0f8b75b987772e096991fbe55c3d3980a55cd587d6af5f",
+            "status": "pass"
+          },
+          "visual": {
+            "duration_seconds": 2.704,
+            "exit_code": 101,
+            "log": "scorer/logs/work-leaf-001/visual.log",
+            "log_sha256": "79ac08f27e9aead5469b435582d749fe4c0781f84a96309892d127671a503815",
+            "status": "fail"
+          }
+        }
+      }
+    }
+  ],
+  "comparison": {
+    "raw_input_plus_output": {
+      "direct": {
+        "lower": 47013757,
+        "upper": 47013757
+      },
+      "work_leaf": {
+        "lower": 22786969,
+        "upper": 27498969
+      },
+      "saving_tokens": {
+        "lower": 19514788,
+        "upper": 24226788
+      },
+      "saving_percent": {
+        "lower": 41.50867585417605,
+        "upper": 51.531274133228706
+      },
+      "width_percentage_points": 10.02259827905266
+    },
+    "uncached_input_plus_output": {
+      "direct": {
+        "lower": 1906045,
+        "upper": 1906045
+      },
+      "work_leaf": {
+        "lower": 1719449,
+        "upper": 6431449
+      },
+      "saving_tokens": {
+        "lower": -4525404,
+        "upper": 186596
+      },
+      "saving_percent": {
+        "lower": -237.42377540928993,
+        "upper": 9.789695416425111
+      },
+      "width_percentage_points": 247.21347082571504
+    }
+  },
+  "source_sha256": {
+    "quality.json": "3d2a6a97345e3c199df9ad13208e6219e7aad4cabcb407553dd77ef2ed648106",
+    "pair-analysis.json": "95870e751cfbff454d1813a3bdc5d501822ad6a3f887351a85a026f6895a66a1",
+    "supplemental-tail-audit.json": "7ab0c45b0794c501e8441898786dd3a4822629db6f8e955be592462f4a455b47",
+    "SUPPLEMENTAL-TAIL-AUDIT.md": "2dc45277b5947fbf92a464af16ac8a2554bab4790569bfac8c929ff0640d6da9",
+    "FIRST-BATCH-MANIFEST.json": "5de3e31bf4ebc06ecd330d67778eaa24b8321a67e848977911f3f761eafa3842",
+    "FIRST-BATCH-RESULT.json": "dd05e2ee60e42355bdc28eeb717b16e5f54edf3544b4e12070c769432f661dd0",
+    "score-manifest.json": "60b3c169034e86e2313d2e96f113e0809b3eb4fc0894cd0ec43240e9e150f43c",
+    "infrastructure/evidence/bench-results/efficiency-measurement-gate-20260906/batch_analysis.py": "dacbfc8416467312c8a447ac1cd846da3e1f78da96f3733ee16c3dad1781d7c3",
+    "infrastructure/evidence/bench-results/efficiency-measurement-gate-20260906/BATCH-BOUND-POLICY.json": "8fa67964523b9c4dd238eda14bb56f3b5a1cba042fa3e3ea5c0c85daa6d03a2b",
+    "infrastructure/evidence/bench-results/efficiency-measurement-gate-20260906/BATCH-SCORER.json": "4e35a729f53f030eb1ebf73eaa8f27bd6b66fed67411a94f5339dcfb0562ab70",
+    "runs/direct-001/direct-001-three-feature-sequential-bench-artifacts/report.json": "12ac62e0c1ff5cd28d20ff584866aa7e0535fdcd9517fee0c9ab9fecb541e2d0",
+    "runs/direct-001/direct-001-three-feature-sequential-bench-artifacts/observation/analysis.json": "f47edbe3cfe2656f70ca6a2d96f5fe380953fc3505ee4694a532db3e1f0a0f7d",
+    "scorer/logs/direct-001/completion.log": "408d6b0bd6aa44943600672f065080cfa7eb136bd49fac54e25a25b1e853e471",
+    "scorer/logs/direct-001/status.log": "59c5ec4c2b1ff4e8582caa511dd3bffdfae1a166f0ce4ec56d069f164ee68490",
+    "scorer/logs/direct-001/visual.log": "7acbc5932d0046e6c5444be8e70d515fb26a27962bac70de4c53c32ff279e116",
+    "runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/report.json": "683aba03028718ea98039d3d4c4ff0724fe3d77482e314b4a22c66fccb77788c",
+    "runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/observation/analysis.json": "a00760c3243a201f35a7bfbaeac74fcf8cf0d80f87331ab2d06acce1b7865f11",
+    "scorer/logs/work-leaf-001/completion.log": "4c86d51d7cd41c6b036e638e7fa09eee26fb2e54ea2ca7043fa8c0fdb22a21df",
+    "scorer/logs/work-leaf-001/status.log": "6a131fdbc5acabcd8e0f8b75b987772e096991fbe55c3d3980a55cd587d6af5f",
+    "scorer/logs/work-leaf-001/visual.log": "79ac08f27e9aead5469b435582d749fe4c0781f84a96309892d127671a503815"
+  },
+  "external_rollout_sha256": {
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-14-50-01a07825-1052-7cd0-a87e-507552c13d67.jsonl": "301f3c9d4b3b8ea9bf063bfa549f8ad1767e40757b05ba7abb41827f94b3474f",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-31-02-01a07833-e768-7030-a8ae-2b7c5237fa32.jsonl": "b6b424afe8fb0c265c6475732da35f54732096f1d6520c7d1728af507ea01e51",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-42-08-01a0783e-120a-7480-8659-cd65cfb1eb5c.jsonl": "14f5959eaa66281bf97e49176fbfa2e2f78944604b9489c73d21a155abaf7d8d",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-50-03-01a07845-5050-7a72-854d-77422792fc8d.jsonl": "93290f27d14b9ffc09a7eea39336a340d3d730fa9c2aa4db031082b46c83363c",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T22-00-16-01a0784e-abd2-7803-a0b5-e83fd25653a8.jsonl": "45ac06df86e00002dce1e2d103500e6d275bbf7679750852d7e57056741bcebb",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T22-18-43-01a0785f-8e68-77b3-bf39-c8125edf1e14.jsonl": "c1f9b93ac21c83f8c2e98b92408e69eeb82b56c7abe31910b53721fd4327f6c1",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T22-48-26-01a0787a-c2e6-7b52-aa52-14c14803b153.jsonl": "c8129196bfd552438d9e45c7b9e00e0b3f485e114051f475d5693fc5de3df026",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-14-50-01a07825-10a9-77b3-bd6a-f75800663294.jsonl": "7fbac978405e8b800da2a86bfe44e52f8684c97d483dcc168f196718937756c5",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-14-54-01a07825-2392-7d82-983c-78f2b5be16c9.jsonl": "a5d48cfb9de2529efd7cfa458969fd3836ab2aee836a1f295e1d3e8f181c2691",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-15-00-01a07825-376e-7661-a88d-4be15e65dd86.jsonl": "38198b31532dc00d02cef3da13d8c593209d80750019d8e622f71414225e37c7",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-21-52-01a0782b-80e7-7401-897c-f604f237763b.jsonl": "a09121a0d90285786e86c5c68b3d5662f2d3672b3364e1582b5dfd97e681fefb",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-21-52-01a0782b-8100-71f1-a935-ca076774eabb.jsonl": "4466b583555f74cc83dac00dfc69d7803ca4112b96a029abce7bf5e73baed68c",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-26-21-01a0782f-9e9f-7b71-adac-8ceec9c0d954.jsonl": "7aff3b6a487d46d2e001a942e116d542566972a331dc9d79e49ebc9727406d9d",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-27-48-01a07830-f0f9-7301-abbf-ee60f8ae9377.jsonl": "4c75438c3d42ed9afbf260b85b13b95b3d7b5aacf7e8c1d7d677be57f0846390",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-50-56-01a07846-1e5c-7352-8b45-819244e3c659.jsonl": "7e93a6d9e5c1cb83858645d3365e5b96c016290c32ab08996c24c679d55a78c1"
+  },
+  "assumptions": [
+    "The documented gpt-5.5 model limits apply to the captured subscription provider.",
+    "The capture exposes all relevant normal model-response and tool/compaction boundaries.",
+    "No hidden retry, opaque upstream subresponse, or unobserved preemption occurs within an uncovered segment.",
+    "Each of the four inventoried interrupted normal-loop tails has at most one unaccounted response under those assumptions."
+  ],
+  "quality_interpretation": "Both workflow reports pass, but the frozen independent scorer passes all three checks for Direct and only two for Work Leaf. Equal quality is not established; this pair is not evidence of equal-quality token savings.",
+  "observed_visual_failure": {
+    "condition": "work-leaf",
+    "fixture": "tests/quality_visual.rs",
+    "line": 26,
+    "assertion": "has_visual_status(&character.render_frame(), \"left\", \"char\")",
+    "status": "fail",
+    "exit_code": 101,
+    "scope": "The observed assertion failure only; no broader visual-feature diagnosis or scorer retry."
+  },
+  "post_run_integrity": {
+    "status": "external_config_identity_drift_detected",
+    "path": "/home/user/.codex/config.toml",
+    "report": "POST-RUN-INTEGRITY-AUDIT.md",
+    "interpretation": "The frozen external configuration identity was not preserved. Behavioral impact is not established by this arithmetic report; no stable-configuration causal claim is made."
+  },
+  "generation_and_tool_interpretation": "Reported cumulative usage advances and tool actions are descriptive proxies, not an exhaustive model-call inventory or causal shares. Direct and Work Leaf expose different tool/workflow mechanisms; missing Work Leaf usage is not allocated to stage totals.",
+  "sampling_confidence_interval": false,
+  "causal_mechanism_attribution": false,
+  "generalization": "One observed pair only, with unequal scorer outcomes, missing Work Leaf usage, post-hoc cardinality assumptions, and detected configuration drift.",
+  "next_action": "pause",
+  "execution_record": {
+    "canonical_score_executions": 1,
+    "canonical_analyze_executions": 1,
+    "provider_calls_in_scoring_or_analysis": 0,
+    "benchmark_retries": 0,
+    "frozen_helpers_modified": false
+  }
+}

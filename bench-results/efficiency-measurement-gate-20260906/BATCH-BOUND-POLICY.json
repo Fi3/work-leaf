@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "cli_version": "0.153.4",
+  "cli_launcher_path": "/usr/bin/codex",
+  "cli_launcher_sha256": "61b0194f3bb6534439c8d26a3ed57d0805f84b884588b761795323eeb92fcf70",
+  "cli_native_path": "/usr/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex",
+  "cli_native_sha256": "56ef98ab4032d317ab26e9b5e5a175650717351edb16ed9cde0cb6d1734d62da",
+  "primary_metric": "raw_input_plus_output",
+  "secondary_metric": "uncached_input_plus_output",
+  "interval_width_admission_threshold": null,
+  "per_response": {
+    "input_upper": 1050000,
+    "output_upper": 128000,
+    "raw_upper": 1178000,
+    "scope": "model_limit_not_response_count_proof",
+    "source_url": "https://developers.openai.com/api/docs/models/gpt-5.5",
+    "source_markdown_url": "https://developers.openai.com/api/docs/models/gpt-5.5.md",
+    "source_markdown_sha256": "4b8e8f9e7e4c15e404d50e629c63d9bcc31224a9a9e7305142dfd48839ec9c75",
+    "retrieved_utc_date": "2026-09-06",
+    "derivation": "Input cannot exceed the documented 1,050,000-token model context window; output is bounded separately by the documented 128,000-token maximum. Their sum is a deliberately loose per-response upper bound, not a typical response length.",
+    "applicability": "Conditional on the captured subscription provider honoring the documented limits of the same gpt-5.5 model. The frozen run and rollout profile must match; this is not an API generation experiment.",
+    "input_cap_not_used": "The local Codex catalog's effective context/compaction budget is not treated as a hard upstream request-token ceiling. The historical 386,400 response bound is not reused."
+  },
+  "local_catalog_observation": {
+    "source_path": "/home/user/.codex/models_cache.json",
+    "source_sha256": "4d4eb18af26eb0a0f55ea7f9c51b7d2bbec558fb27d18709c94847d52ce0a23d",
+    "client_version": "0.153.4",
+    "fetched_at": "2026-09-06T19:03:47.518351908Z",
+    "context_window": 272000,
+    "max_context_window": 272000,
+    "effective_context_window_percent": 95,
+    "used_as_hard_cap": false
+  },
+  "cardinality_rule": {
+    "name": "isolated_normal_response_tail",
+    "source_path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/analyze.py",
+    "source_sha256": "0e06493042b0e7f719ce8fbb61db2dfbeb81031f184266f8badc9bc245807764",
+    "source_symbol": "audit_unresolved_response_tails",
+    "maximum_responses_per_proven_tail": 1,
+    "conditions": [
+      "Exactly one local typed-RPC turn/start, matching interrupt, completed directive message and interrupted turn completion.",
+      "The response segment starts after the prior same-thread cumulative usage barrier or at turn start.",
+      "All pre-directive user/reasoning/agent items pair exactly; exactly one agent message completes; no tool boundary, foreign concurrent turn or unsupported protocol event occurs.",
+      "After the directive there is at most one unfinished reasoning/agent item and no fresh cumulative usage. Resumed-output grace requires that one unfinished item.",
+      "Every nonexact grace decision has the supported output-resumed or timeout outcome and the inventory count agrees with the strict observer's missing-usage error."
+    ],
+    "scope_limit": "The rule bounds the isolated normal tool-loop tail conditional on complete visibility of model-response and tool boundaries. It is not an unconditional bound against opaque upstream retries, subresponses or hidden auxiliary provider work. It is not a rule for arbitrary interrupted turns. Unsupported shapes retain an unknown upper bound. Raw completion records cannot silently clear the missing tail."
+  },
+  "formulas": {
+    "recorded_raw": "input_tokens + output_tokens",
+    "recorded_secondary": "input_tokens - cached_input_tokens + output_tokens",
+    "workflow_upper": "recorded_lower + sum(proven_missing_response_count * 1178000); null if any missing tail lacks the cardinality proof",
+    "saving_lower_percent": "100 * (direct_lower - work_leaf_upper) / direct_lower",
+    "saving_upper_percent": "100 * (direct_upper - work_leaf_lower) / direct_upper",
+    "width_percentage_points": "saving_upper_percent - saving_lower_percent",
+    "ineligible": "Any non-accounting capture error, unsupported model/profile, inconsistent usage or mismatch between strict observer and gap inventory.",
+    "quality": "All saved implementation outcomes are scored separately with the frozen canonical scorer; one pair cannot establish quality equivalence or sampling confidence."
+  }
+}
