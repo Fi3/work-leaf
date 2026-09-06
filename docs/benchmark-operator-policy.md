@@ -37,10 +37,21 @@ not asserted to be original execution times. The user reaffirmed this concurrenc
 the current conversation on 2026-09-06 and requested a durable repository record. An earlier
 two-slot proposal in the history is not the general concurrency limit.
 
-## Current admitted pilot
+## Raw-token pilot
 
 `bench-results/efficiency-raw-token-pilot-20260906T185328Z/FIRST-BATCH-MANIFEST.json` admits exactly one
 Direct sequential workflow and one normal concurrent Work Leaf workflow, followed by a pause.
 Its two scheduled runs are a smaller pilot, not evidence of a two-workflow capacity restriction.
 `bench-results/efficiency-measurement-gate-20260906/PROTOCOL.md` describes that pilot's study rules;
 the admitted manifest's frozen copy identifies its actual prelaunch protocol.
+
+## Mechanism-isolation study
+
+`bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROTOCOL.md` governs the separate
+WL-only causal investigation authorized after the pilot result. Its initial screen contains one
+control and two single-factor prompt variants in one three-workflow wave; a separately frozen
+confirmation uses fresh observations. The study permits benchmark-only implementation controls
+while preserving default Work Leaf behavior, subscription authentication, and non-target settings.
+Each phase's `PHASE-MANIFEST.json` is its admission authority. Screening observations are not
+confirmation evidence, failed observations remain retained, and the completed pilot's records are
+not rewritten to cover the later study.

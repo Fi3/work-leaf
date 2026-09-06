@@ -1,0 +1,844 @@
+{
+  "causal_interpretation": "None. Tiny diagnostic token totals and byte deltas verify plumbing/accounting, not token-saving mechanisms or intervention effect sizes.",
+  "cli_version": "0.153.4",
+  "full_smoke_passes": 4,
+  "model": "gpt-5.5",
+  "normal_transport_bound_assumptions": "Conditional on complete visible normal response/tool boundaries, no hidden retries or opaque provider responses, and no unobserved preemption. Item count is not response count. A model ceiling is not a proof of call cardinality.",
+  "observer_policy": {
+    "output_resume": "forward",
+    "raw_response_usage": true,
+    "usage_grace_ms": 1000
+  },
+  "provider_route": "Existing ChatGPT subscription through the recorded subscription-only wrapper; no API-key generation or credential copying.",
+  "reasoning_effort": "xhigh",
+  "retained_diagnostics": 7,
+  "retained_full_smoke_failures": 3,
+  "runs": [
+    {
+      "accounting_status": "unavailable_unfinalized_capture",
+      "bidirectional_prompt_integrity": true,
+      "capture": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/observation/app-server/00000432216842466071-3200270",
+      "capture_inventory_errors": [],
+      "condition": "control",
+      "diagnostic": "handoff-control",
+      "directory": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control",
+      "duration_seconds": 23.99,
+      "exact_completed_response_ids": [
+        "resp_0694fc7f2551178b016a9de2fc820887d2a661fcbc9d536685",
+        "resp_0694fc7f2551178b016a9de302b7cc87d2b7146baf64331f91"
+      ],
+      "excluded_from_benchmark_observations": true,
+      "failure": "Original diagnostic stopped the provider while its final interruption was still held; failed teardown and absent invocation end metadata are retained, not waived.",
+      "forwarded_interrupt_count": 2,
+      "full_smoke_pass": false,
+      "observer_run_id": "smoke-control",
+      "original_interrupt_count": 3,
+      "prompt_links": [
+        {
+          "agent_id": "user-handoff-smoke",
+          "byte_delta": 0,
+          "cue_end": 318,
+          "cue_start": 220,
+          "forwarded_sha256": "2fbfeafc8775819d20f0fe51327825d65ccdc251f2d1845479f9576892eae839",
+          "link_status": "linked",
+          "original_sha256": "2fbfeafc8775819d20f0fe51327825d65ccdc251f2d1845479f9576892eae839",
+          "rpc_id": "5",
+          "sequence": 1,
+          "site": "patch-applied",
+          "thread_id": "01a078be-a138-7b40-a0d4-e74fd61ebc41",
+          "turn_id": "01a078be-b949-7fb3-928f-cac4393b8623"
+        },
+        {
+          "agent_id": "user-handoff-smoke",
+          "byte_delta": 0,
+          "cue_end": 342,
+          "cue_start": 153,
+          "forwarded_sha256": "eceb7011214ce397633098f57cc06d46cad84a6dfed0614c8150838da9d031d8",
+          "link_status": "linked",
+          "original_sha256": "eceb7011214ce397633098f57cc06d46cad84a6dfed0614c8150838da9d031d8",
+          "rpc_id": "7",
+          "sequence": 2,
+          "site": "command-result",
+          "thread_id": "01a078be-a138-7b40-a0d4-e74fd61ebc41",
+          "turn_id": "01a078be-c800-76d1-9f1e-ab48dae3c348"
+        }
+      ],
+      "provenance_complete": false,
+      "provenance_errors": [
+        "[Errno 2] No such file or directory: '/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/observation/invocations/00000432216842466071-3200270/end.json'"
+      ],
+      "provider_turn_starts": 3,
+      "recognized_boundary_requests": 2,
+      "sites": {
+        "command-result": {
+          "byte_delta": 0,
+          "changed": 0,
+          "exposures": 1,
+          "linked": 1
+        },
+        "patch-applied": {
+          "byte_delta": 0,
+          "changed": 0,
+          "exposures": 1,
+          "linked": 1
+        }
+      },
+      "unmatched_boundary_requests": 0,
+      "unresolved_tail_count": 1
+    },
+    {
+      "accounting_status": "unavailable_unfinalized_capture",
+      "bidirectional_prompt_integrity": true,
+      "capture": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/observation/app-server/00000432216849107897-3200292",
+      "capture_inventory_errors": [],
+      "condition": "ack-validation-unlimited",
+      "diagnostic": "handoff-ack-validation-unlimited",
+      "directory": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited",
+      "duration_seconds": 24.75,
+      "exact_completed_response_ids": [
+        "resp_03f05d737de0747c016a9de2fc840c87d2836f5da2ee19a705",
+        "resp_03f05d737de0747c016a9de302d73887d2ae899a78e8c6bd20"
+      ],
+      "excluded_from_benchmark_observations": true,
+      "failure": "Original diagnostic stopped the provider while its final interruption was still held; failed teardown and absent invocation end metadata are retained, not waived.",
+      "forwarded_interrupt_count": 2,
+      "full_smoke_pass": false,
+      "observer_run_id": "smoke-ack-validation-unlimited",
+      "original_interrupt_count": 3,
+      "prompt_links": [
+        {
+          "agent_id": "user-handoff-smoke",
+          "byte_delta": 3,
+          "cue_end": 318,
+          "cue_start": 220,
+          "forwarded_sha256": "64d1b553cf0459fcb498a46861124acf396117b961d719cd7bbc848c3e44ba10",
+          "link_status": "linked",
+          "original_sha256": "2fbfeafc8775819d20f0fe51327825d65ccdc251f2d1845479f9576892eae839",
+          "rpc_id": "5",
+          "sequence": 1,
+          "site": "patch-applied",
+          "thread_id": "01a078be-a14f-73b2-b4d1-e3678c7a4416",
+          "turn_id": "01a078be-ba05-7c53-a903-50879c4b18b7"
+        },
+        {
+          "agent_id": "user-handoff-smoke",
+          "byte_delta": 0,
+          "cue_end": 342,
+          "cue_start": 153,
+          "forwarded_sha256": "eceb7011214ce397633098f57cc06d46cad84a6dfed0614c8150838da9d031d8",
+          "link_status": "linked",
+          "original_sha256": "eceb7011214ce397633098f57cc06d46cad84a6dfed0614c8150838da9d031d8",
+          "rpc_id": "7",
+          "sequence": 2,
+          "site": "command-result",
+          "thread_id": "01a078be-a14f-73b2-b4d1-e3678c7a4416",
+          "turn_id": "01a078be-c99e-7392-8741-98f7840539ff"
+        }
+      ],
+      "provenance_complete": false,
+      "provenance_errors": [
+        "[Errno 2] No such file or directory: '/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/observation/invocations/00000432216849107897-3200292/end.json'"
+      ],
+      "provider_turn_starts": 3,
+      "recognized_boundary_requests": 2,
+      "sites": {
+        "command-result": {
+          "byte_delta": 0,
+          "changed": 0,
+          "exposures": 1,
+          "linked": 1
+        },
+        "patch-applied": {
+          "byte_delta": 3,
+          "changed": 1,
+          "exposures": 1,
+          "linked": 1
+        }
+      },
+      "unmatched_boundary_requests": 0,
+      "unresolved_tail_count": 1
+    },
+    {
+      "accounting_status": "unavailable_unfinalized_capture",
+      "bidirectional_prompt_integrity": true,
+      "capture": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/observation/app-server/00000432216846701214-3200285",
+      "capture_inventory_errors": [],
+      "condition": "command-guidance-neutral",
+      "diagnostic": "handoff-command-guidance-neutral",
+      "directory": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral",
+      "duration_seconds": 24.25,
+      "exact_completed_response_ids": [
+        "resp_018ea3616bc3ae00016a9de2fc70d087d2967dd92d746714c4",
+        "resp_018ea3616bc3ae00016a9de303236887d299e513a4383cac32"
+      ],
+      "excluded_from_benchmark_observations": true,
+      "failure": "Original diagnostic stopped the provider while its final interruption was still held; failed teardown and absent invocation end metadata are retained, not waived.",
+      "forwarded_interrupt_count": 2,
+      "full_smoke_pass": false,
+      "observer_run_id": "smoke-command-guidance-neutral",
+      "original_interrupt_count": 3,
+      "prompt_links": [
+        {
+          "agent_id": "user-handoff-smoke",
+          "byte_delta": 0,
+          "cue_end": 318,
+          "cue_start": 220,
+          "forwarded_sha256": "2fbfeafc8775819d20f0fe51327825d65ccdc251f2d1845479f9576892eae839",
+          "link_status": "linked",
+          "original_sha256": "2fbfeafc8775819d20f0fe51327825d65ccdc251f2d1845479f9576892eae839",
+          "rpc_id": "5",
+          "sequence": 1,
+          "site": "patch-applied",
+          "thread_id": "01a078be-a14c-7301-ad5c-21df40c572f5",
+          "turn_id": "01a078be-baf2-7172-9e2c-f78a00acecd5"
+        },
+        {
+          "agent_id": "user-handoff-smoke",
+          "byte_delta": -189,
+          "cue_end": 342,
+          "cue_start": 153,
+          "forwarded_sha256": "ac8503a0030afa319d93175f78ee89a9effa276393d35b8225f6a8f8db6e2080",
+          "link_status": "linked",
+          "original_sha256": "eceb7011214ce397633098f57cc06d46cad84a6dfed0614c8150838da9d031d8",
+          "rpc_id": "7",
+          "sequence": 2,
+          "site": "command-result",
+          "thread_id": "01a078be-a14c-7301-ad5c-21df40c572f5",
+          "turn_id": "01a078be-cab3-72b2-ad02-0ecc3328f8af"
+        }
+      ],
+      "provenance_complete": false,
+      "provenance_errors": [
+        "[Errno 2] No such file or directory: '/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/observation/invocations/00000432216846701214-3200285/end.json'"
+      ],
+      "provider_turn_starts": 3,
+      "recognized_boundary_requests": 2,
+      "sites": {
+        "command-result": {
+          "byte_delta": -189,
+          "changed": 1,
+          "exposures": 1,
+          "linked": 1
+        },
+        "patch-applied": {
+          "byte_delta": 0,
+          "changed": 0,
+          "exposures": 1,
+          "linked": 1
+        }
+      },
+      "unmatched_boundary_requests": 0,
+      "unresolved_tail_count": 1
+    },
+    {
+      "accounting_status": "exact",
+      "bidirectional_prompt_integrity": true,
+      "bounds": {
+        "raw_input_plus_output": {
+          "lower": 47159,
+          "upper": 47159
+        },
+        "uncached_input_plus_output": {
+          "lower": 10167,
+          "upper": 10167
+        }
+      },
+      "capture": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/observation/app-server/00000432802612767710-3228092",
+      "capture_inventory_errors": [],
+      "complete_invocations": 2,
+      "condition": "control",
+      "diagnostic": "handoff-v2-control",
+      "directory": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control",
+      "duration_seconds": 11.36,
+      "exact_completed_response_ids": [
+        "resp_0a787545157237ef016a9de545f1c487d2be50ee72ce9a269e",
+        "resp_0a787545157237ef016a9de549f58087d2b3f174b682c2433d",
+        "resp_0a787545157237ef016a9de54ddbc487d2b74d0c5954e2c005"
+      ],
+      "excluded_from_benchmark_observations": true,
+      "forwarded_interrupt_count": 3,
+      "full_smoke_pass": true,
+      "invocations": 2,
+      "matched_rollout_metadata": [
+        {
+          "cli_version": "0.153.4",
+          "cwd": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/project",
+          "descendant": false,
+          "effort": "xhigh",
+          "model": "gpt-5.5",
+          "primary": true,
+          "source_relative_path": "2026/09/07/rollout-2026-09-07T00-12-19-01a078c7-9104-7860-a9c6-5ee179dd1cdd.jsonl",
+          "source_sha256": "edeed3f686d859a7a560caa31c226265c97649bb649e8363d49550b65e37a7c2",
+          "thread_id": "01a078c7-9104-7860-a9c6-5ee179dd1cdd",
+          "usage": {
+            "cached_input_tokens": 36992,
+            "input_tokens": 47068,
+            "output_tokens": 91,
+            "reasoning_output_tokens": 0
+          },
+          "visible": true
+        }
+      ],
+      "model_strata": [
+        {
+          "descendant_threads": 0,
+          "effort": "xhigh",
+          "model": "gpt-5.5",
+          "primary_threads": 1,
+          "thread_count": 1,
+          "usage": {
+            "cached_input_tokens": 36992,
+            "input_tokens": 47068,
+            "output_tokens": 91,
+            "reasoning_output_tokens": 0
+          },
+          "visible_threads": 1
+        }
+      ],
+      "observer_capture_complete": true,
+      "observer_errors": [],
+      "observer_run_id": "smoke-v2-control",
+      "original_interrupt_count": 3,
+      "prompt_links": [
+        {
+          "agent_id": "user-handoff-smoke",
+          "byte_delta": 0,
+          "cue_end": 318,
+          "cue_start": 220,
+          "forwarded_sha256": "2fbfeafc8775819d20f0fe51327825d65ccdc251f2d1845479f9576892eae839",
+          "link_status": "linked",
+          "original_sha256": "2fbfeafc8775819d20f0fe51327825d65ccdc251f2d1845479f9576892eae839",
+          "rpc_id": "5",
+          "sequence": 1,
+          "site": "patch-applied",
+          "thread_id": "01a078c7-9104-7860-a9c6-5ee179dd1cdd",
+          "turn_id": "01a078c7-9fc8-73f2-b2b2-affb0f055ca7"
+        },
+        {
+          "agent_id": "user-handoff-smoke",
+          "byte_delta": 0,
+          "cue_end": 342,
+          "cue_start": 153,
+          "forwarded_sha256": "eceb7011214ce397633098f57cc06d46cad84a6dfed0614c8150838da9d031d8",
+          "link_status": "linked",
+          "original_sha256": "eceb7011214ce397633098f57cc06d46cad84a6dfed0614c8150838da9d031d8",
+          "rpc_id": "7",
+          "sequence": 2,
+          "site": "command-result",
+          "thread_id": "01a078c7-9104-7860-a9c6-5ee179dd1cdd",
+          "turn_id": "01a078c7-af66-7842-a9a2-fb1154e0a90f"
+        }
+      ],
+      "provenance_complete": true,
+      "provenance_errors": [],
+      "provider_turn_starts": 3,
+      "raw_response_sum_reconciles_with_thread_total": true,
+      "real_agent_scenario": "One actual Codex subscription session applies the structured fixture edit, resumes for a real locked validation command, then resumes for done; observer teardown waits for the existing final interrupt receipt without another provider call.",
+      "recognized_boundary_requests": 2,
+      "recorded_usage": {
+        "cached_input_tokens": 36992,
+        "input_tokens": 47068,
+        "output_tokens": 91,
+        "raw_input_plus_output": 47159,
+        "reasoning_output_tokens": 0,
+        "thread_count": 1,
+        "uncached_input_plus_output": 10167,
+        "uncached_input_tokens": 10076
+      },
+      "sites": {
+        "command-result": {
+          "byte_delta": 0,
+          "changed": 0,
+          "exposures": 1,
+          "linked": 1
+        },
+        "patch-applied": {
+          "byte_delta": 0,
+          "changed": 0,
+          "exposures": 1,
+          "linked": 1
+        }
+      },
+      "unmatched_boundary_requests": 0,
+      "unresolved_tail_count": 0
+    },
+    {
+      "accounting_status": "exact",
+      "bidirectional_prompt_integrity": true,
+      "bounds": {
+        "raw_input_plus_output": {
+          "lower": 47316,
+          "upper": 47316
+        },
+        "uncached_input_plus_output": {
+          "lower": 10324,
+          "upper": 10324
+        }
+      },
+      "capture": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/observation/app-server/00000432802610573558-3228084",
+      "capture_inventory_errors": [],
+      "complete_invocations": 2,
+      "condition": "ack-validation-unlimited",
+      "diagnostic": "handoff-v2-ack-validation-unlimited",
+      "directory": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited",
+      "duration_seconds": 16.55,
+      "exact_completed_response_ids": [
+        "resp_05bbef84c0b14473016a9de5469dc087d2bbaefbfbf3f17026",
+        "resp_05bbef84c0b14473016a9de54e07ac87d2a4379dfb08c4a1fa",
+        "resp_05bbef84c0b14473016a9de552c03c87d297b7988f3a69656f"
+      ],
+      "excluded_from_benchmark_observations": true,
+      "forwarded_interrupt_count": 3,
+      "full_smoke_pass": true,
+      "invocations": 2,
+      "matched_rollout_metadata": [
+        {
+          "cli_version": "0.153.4",
+          "cwd": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/project",
+          "descendant": false,
+          "effort": "xhigh",
+          "model": "gpt-5.5",
+          "primary": true,
+          "source_relative_path": "2026/09/07/rollout-2026-09-07T00-12-19-01a078c7-9103-7613-939d-4c7b405a74e8.jsonl",
+          "source_sha256": "f965741875e7bbe1d17d11667e6790440639cc0d3349641c6050a91425b990d1",
+          "thread_id": "01a078c7-9103-7613-939d-4c7b405a74e8",
+          "usage": {
+            "cached_input_tokens": 36992,
+            "input_tokens": 47090,
+            "output_tokens": 226,
+            "reasoning_output_tokens": 133
+          },
+          "visible": true
+        }
+      ],
+      "model_strata": [
+        {
+          "descendant_threads": 0,
+          "effort": "xhigh",
+          "model": "gpt-5.5",
+          "primary_threads": 1,
+          "thread_count": 1,
+          "usage": {
+            "cached_input_tokens": 36992,
+            "input_tokens": 47090,
+            "output_tokens": 226,
+            "reasoning_output_tokens": 133
+          },
+          "visible_threads": 1
+        }
+      ],
+      "observer_capture_complete": true,
+      "observer_errors": [],
+      "observer_run_id": "smoke-v2-ack-validation-unlimited",
+      "original_interrupt_count": 3,
+      "prompt_links": [
+        {
+          "agent_id": "user-handoff-smoke",
+          "byte_delta": 3,
+          "cue_end": 318,
+          "cue_start": 220,
+          "forwarded_sha256": "64d1b553cf0459fcb498a46861124acf396117b961d719cd7bbc848c3e44ba10",
+          "link_status": "linked",
+          "original_sha256": "2fbfeafc8775819d20f0fe51327825d65ccdc251f2d1845479f9576892eae839",
+          "rpc_id": "5",
+          "sequence": 1,
+          "site": "patch-applied",
+          "thread_id": "01a078c7-9103-7613-939d-4c7b405a74e8",
+          "turn_id": "01a078c7-b089-7450-8742-8ff849079c96"
+        },
+        {
+          "agent_id": "user-handoff-smoke",
+          "byte_delta": 0,
+          "cue_end": 342,
+          "cue_start": 153,
+          "forwarded_sha256": "eceb7011214ce397633098f57cc06d46cad84a6dfed0614c8150838da9d031d8",
+          "link_status": "linked",
+          "original_sha256": "eceb7011214ce397633098f57cc06d46cad84a6dfed0614c8150838da9d031d8",
+          "rpc_id": "7",
+          "sequence": 2,
+          "site": "command-result",
+          "thread_id": "01a078c7-9103-7613-939d-4c7b405a74e8",
+          "turn_id": "01a078c7-c01e-7d12-b8ef-3acace53de37"
+        }
+      ],
+      "provenance_complete": true,
+      "provenance_errors": [],
+      "provider_turn_starts": 3,
+      "raw_response_sum_reconciles_with_thread_total": true,
+      "real_agent_scenario": "One actual Codex subscription session applies the structured fixture edit, resumes for a real locked validation command, then resumes for done; observer teardown waits for the existing final interrupt receipt without another provider call.",
+      "recognized_boundary_requests": 2,
+      "recorded_usage": {
+        "cached_input_tokens": 36992,
+        "input_tokens": 47090,
+        "output_tokens": 226,
+        "raw_input_plus_output": 47316,
+        "reasoning_output_tokens": 133,
+        "thread_count": 1,
+        "uncached_input_plus_output": 10324,
+        "uncached_input_tokens": 10098
+      },
+      "sites": {
+        "command-result": {
+          "byte_delta": 0,
+          "changed": 0,
+          "exposures": 1,
+          "linked": 1
+        },
+        "patch-applied": {
+          "byte_delta": 3,
+          "changed": 1,
+          "exposures": 1,
+          "linked": 1
+        }
+      },
+      "unmatched_boundary_requests": 0,
+      "unresolved_tail_count": 0
+    },
+    {
+      "accounting_status": "exact",
+      "bidirectional_prompt_integrity": true,
+      "bounds": {
+        "raw_input_plus_output": {
+          "lower": 47238,
+          "upper": 47238
+        },
+        "uncached_input_plus_output": {
+          "lower": 6150,
+          "upper": 6150
+        }
+      },
+      "capture": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/observation/app-server/00000432802616251282-3228105",
+      "capture_inventory_errors": [],
+      "complete_invocations": 2,
+      "condition": "command-guidance-neutral",
+      "diagnostic": "handoff-v2-command-guidance-neutral",
+      "directory": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral",
+      "duration_seconds": 15.01,
+      "exact_completed_response_ids": [
+        "resp_00c119dda5e37921016a9de546c4cc87d2b154f4002d13dba5",
+        "resp_00c119dda5e37921016a9de54d7b3487d299af0fb58bc61402",
+        "resp_00c119dda5e37921016a9de551738887d2ae95b199ff5f8048"
+      ],
+      "excluded_from_benchmark_observations": true,
+      "forwarded_interrupt_count": 3,
+      "full_smoke_pass": true,
+      "invocations": 2,
+      "matched_rollout_metadata": [
+        {
+          "cli_version": "0.153.4",
+          "cwd": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/project",
+          "descendant": false,
+          "effort": "xhigh",
+          "model": "gpt-5.5",
+          "primary": true,
+          "source_relative_path": "2026/09/07/rollout-2026-09-07T00-12-19-01a078c7-90fa-7fa2-a129-3ef07d50bbc2.jsonl",
+          "source_sha256": "9a7394d5806615e5cd9c49ab555f7b0b01d2ee9dabe3c81f1a9eb73512d0747d",
+          "thread_id": "01a078c7-90fa-7fa2-a129-3ef07d50bbc2",
+          "usage": {
+            "cached_input_tokens": 41088,
+            "input_tokens": 47035,
+            "output_tokens": 203,
+            "reasoning_output_tokens": 110
+          },
+          "visible": true
+        }
+      ],
+      "model_strata": [
+        {
+          "descendant_threads": 0,
+          "effort": "xhigh",
+          "model": "gpt-5.5",
+          "primary_threads": 1,
+          "thread_count": 1,
+          "usage": {
+            "cached_input_tokens": 41088,
+            "input_tokens": 47035,
+            "output_tokens": 203,
+            "reasoning_output_tokens": 110
+          },
+          "visible_threads": 1
+        }
+      ],
+      "observer_capture_complete": true,
+      "observer_errors": [],
+      "observer_run_id": "smoke-v2-command-guidance-neutral",
+      "original_interrupt_count": 3,
+      "prompt_links": [
+        {
+          "agent_id": "user-handoff-smoke",
+          "byte_delta": 0,
+          "cue_end": 318,
+          "cue_start": 220,
+          "forwarded_sha256": "2fbfeafc8775819d20f0fe51327825d65ccdc251f2d1845479f9576892eae839",
+          "link_status": "linked",
+          "original_sha256": "2fbfeafc8775819d20f0fe51327825d65ccdc251f2d1845479f9576892eae839",
+          "rpc_id": "5",
+          "sequence": 1,
+          "site": "patch-applied",
+          "thread_id": "01a078c7-90fa-7fa2-a129-3ef07d50bbc2",
+          "turn_id": "01a078c7-ac78-7270-b70f-88bd3d3f5138"
+        },
+        {
+          "agent_id": "user-handoff-smoke",
+          "byte_delta": -189,
+          "cue_end": 342,
+          "cue_start": 153,
+          "forwarded_sha256": "ac8503a0030afa319d93175f78ee89a9effa276393d35b8225f6a8f8db6e2080",
+          "link_status": "linked",
+          "original_sha256": "eceb7011214ce397633098f57cc06d46cad84a6dfed0614c8150838da9d031d8",
+          "rpc_id": "7",
+          "sequence": 2,
+          "site": "command-result",
+          "thread_id": "01a078c7-90fa-7fa2-a129-3ef07d50bbc2",
+          "turn_id": "01a078c7-bc99-72c1-9620-7af6eb5728b0"
+        }
+      ],
+      "provenance_complete": true,
+      "provenance_errors": [],
+      "provider_turn_starts": 3,
+      "raw_response_sum_reconciles_with_thread_total": true,
+      "real_agent_scenario": "One actual Codex subscription session applies the structured fixture edit, resumes for a real locked validation command, then resumes for done; observer teardown waits for the existing final interrupt receipt without another provider call.",
+      "recognized_boundary_requests": 2,
+      "recorded_usage": {
+        "cached_input_tokens": 41088,
+        "input_tokens": 47035,
+        "output_tokens": 203,
+        "raw_input_plus_output": 47238,
+        "reasoning_output_tokens": 110,
+        "thread_count": 1,
+        "uncached_input_plus_output": 6150,
+        "uncached_input_tokens": 5947
+      },
+      "sites": {
+        "command-result": {
+          "byte_delta": -189,
+          "changed": 1,
+          "exposures": 1,
+          "linked": 1
+        },
+        "patch-applied": {
+          "byte_delta": 0,
+          "changed": 0,
+          "exposures": 1,
+          "linked": 1
+        }
+      },
+      "unmatched_boundary_requests": 0,
+      "unresolved_tail_count": 0
+    },
+    {
+      "accounting_note": "One missing first interrupted response remains; finite upper endpoints are conditional on the study visibility/model-ceiling assumptions, not exact recovered usage.",
+      "accounting_status": "bounded",
+      "bounds": {
+        "raw_input_plus_output": {
+          "lower": 15849,
+          "upper": 1193849
+        },
+        "uncached_input_plus_output": {
+          "lower": 2153,
+          "upper": 1180153
+        }
+      },
+      "capture": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/observation/app-server/00000432460915850916-3206189",
+      "capture_inventory_errors": [],
+      "complete_invocations": 1,
+      "diagnostic": "normal-transport-01",
+      "directory": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01",
+      "duration_seconds": 5.56,
+      "exact_completed_response_ids": [
+        "resp_0caf589122ced223016a9de3f1fa2087d28094a7100a904f5a"
+      ],
+      "excluded_from_benchmark_observations": true,
+      "forwarded_interrupt_count": 1,
+      "full_smoke_pass": true,
+      "invocations": 1,
+      "matched_rollout_metadata": [
+        {
+          "cli_version": "0.153.4",
+          "cwd": "/tmp/work-leaf-mechanism-normal-smoke.QbPUcw",
+          "descendant": false,
+          "effort": "xhigh",
+          "model": "gpt-5.5",
+          "primary": true,
+          "source_relative_path": "2026/09/07/rollout-2026-09-07T00-06-38-01a078c2-5a0a-76d3-92ea-4f98112aec28.jsonl",
+          "source_sha256": "a369a1bc715c2988ced6942275b4e19d04e085b23749bb40eea4a8cb9a26c6b7",
+          "thread_id": "01a078c2-5a0a-76d3-92ea-4f98112aec28",
+          "usage": {
+            "cached_input_tokens": 13696,
+            "input_tokens": 15831,
+            "output_tokens": 18,
+            "reasoning_output_tokens": 0
+          },
+          "visible": true
+        }
+      ],
+      "model_strata": [
+        {
+          "descendant_threads": 0,
+          "effort": "xhigh",
+          "model": "gpt-5.5",
+          "primary_threads": 1,
+          "thread_count": 1,
+          "usage": {
+            "cached_input_tokens": 13696,
+            "input_tokens": 15831,
+            "output_tokens": 18,
+            "reasoning_output_tokens": 0
+          },
+          "visible_threads": 1
+        }
+      ],
+      "observer_capture_complete": false,
+      "observer_errors": [
+        "interrupted provider turn has no complete usage: count=1"
+      ],
+      "observer_run_id": "smoke-normal-transport-01",
+      "original_interrupt_count": 1,
+      "provenance_complete": true,
+      "provenance_errors": [],
+      "provider_turn_starts": 2,
+      "real_agent_scenario": "Normal directive interruption followed by one raw, noninterruptible continuation in the same Codex subscription session; the raw follow-up completes with the expected marker.",
+      "recorded_usage": {
+        "cached_input_tokens": 13696,
+        "input_tokens": 15831,
+        "output_tokens": 18,
+        "raw_input_plus_output": 15849,
+        "reasoning_output_tokens": 0,
+        "thread_count": 1,
+        "uncached_input_plus_output": 2153,
+        "uncached_input_tokens": 2135
+      },
+      "unresolved_tail_count": 1
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Real-agent verification and provider-free evidence audit only; seven diagnostics are retained and none is a mechanism-study benchmark observation.",
+  "source_sha256": {
+    "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T00-06-38-01a078c2-5a0a-76d3-92ea-4f98112aec28.jsonl": "a369a1bc715c2988ced6942275b4e19d04e085b23749bb40eea4a8cb9a26c6b7",
+    "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T00-12-19-01a078c7-90fa-7fa2-a129-3ef07d50bbc2.jsonl": "9a7394d5806615e5cd9c49ab555f7b0b01d2ee9dabe3c81f1a9eb73512d0747d",
+    "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T00-12-19-01a078c7-9103-7613-939d-4c7b405a74e8.jsonl": "f965741875e7bbe1d17d11667e6790440639cc0d3349641c6050a91425b990d1",
+    "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T00-12-19-01a078c7-9104-7860-a9c6-5ee179dd1cdd.jsonl": "edeed3f686d859a7a560caa31c226265c97649bb649e8363d49550b65e37a7c2",
+    "/home/user/src/work-leaf/Cargo.toml": "09d25465a66dfd04f1c4deddc573e485e886843baf1d7c7a785cae3f2f7b8e72",
+    "/home/user/src/work-leaf/bench-observer/target/release/bench-observer": "531bae2df9744891c19bfd090fb37bce0b1d64c0d4f098fa8c0815b9511058df",
+    "/home/user/src/work-leaf/bench-results/efficiency-measurement-gate-20260906/subscription-codex": "0977db361b4477e2bf68ea08c05571a4a35fb1e5c958cc9a953f2cc738de7078",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/analyze.py": "2bb28891a2e158d51cf577bcf7c1fc2781065e38dc5ec4c6c30f7d4c146f2f78",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/FAILED-HANDOFF-01.md": "6f65a714c42647edc874dda0b5862da77a2f75aca287cb779159a2eb13cbea51",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/HANDOFF-TRACE-LINKS.json": "a1ad0919f03183ee8abc80a7b497e91e71be40f2ce878adb535068ea8816103e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/experiment.json": "8623af3cec16ee7f4c4daae3bea939a492ac0866056cf3acc87f4a2164d16555",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/observation/app-server/00000432216849107897-3200292/client-to-server.forwarded.raw": "f3f475bab49f8284e1b76b9e50ebc62a31b35f81ab80e4b3de1ce11f05e7e552",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/observation/app-server/00000432216849107897-3200292/client-to-server.raw": "5feb65e0ee32ff8e30cd0e351610f7f25c1719198ff5c8c79ceb608354accbbf",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/observation/app-server/00000432216849107897-3200292/provider-usage-grace.jsonl": "c1937963e48307571a38f9fa6dadfaba47a373237fc2237a21296d3a71d99732",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/observation/app-server/00000432216849107897-3200292/server-to-client.raw": "2551631a0943f00b0f15449e3257f3b07210cd58193abfbde0b157b0e35cd293",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/observation/invocations/00000432216849107897-3200292/start.json": "930387062b067ec93cc82bbef69170c51a423f29a0d0d4fc3a68433151699006",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/observation/observer-config.json": "35a6df017e8c209c3aaf0950c9fd0409ae459caba463807ef992824544f3c84b",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/project/fixture.txt": "53a8e63ec54d02dd39132db6df251f20f01e3157eb482020e574f99b00663a39",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/prompt-events.jsonl": "d5aef9e2299527d75685146166b36d681b771ef5f2fef9bc1756b1850acbf560",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/smoke.log": "ccc6100ce76a2e7bb95a331ec71e0804ecc87c015910a337d6018d8baf8c18e6",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/experiment.json": "1430a0717529048d6b29c363035ffab21a746b748fd0262ba0bb842393bc42ad",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/observation/app-server/00000432216846701214-3200285/client-to-server.forwarded.raw": "81e7b039f7216cfcfc2f02d6542b0ee94ed05b9d08099dec88a2934c1df7cc3a",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/observation/app-server/00000432216846701214-3200285/client-to-server.raw": "75cf96cb448515f7261dee4c7b3e680b9f972e4069730bb909d3e5427c38ec46",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/observation/app-server/00000432216846701214-3200285/provider-usage-grace.jsonl": "353f19ad10ef55ea85323007c2377c96b2d27da8a6b357ab9466350092eca815",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/observation/app-server/00000432216846701214-3200285/server-to-client.raw": "cdcb6d833eb287af6b3659771090c828efe371a556a1eb9341bbc5a3889ec897",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/observation/invocations/00000432216846701214-3200285/start.json": "5d1ed1880b2bc6c8f6eb9287cc60e0ca8fa26cb54042980d4e3607a30f7fa371",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/observation/observer-config.json": "264ebde4ed12284b1338aef57dec1d52942ed692dd081f6a63a9f0fb62f5dd0d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/project/fixture.txt": "53a8e63ec54d02dd39132db6df251f20f01e3157eb482020e574f99b00663a39",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/prompt-events.jsonl": "b6fce8b7223af4dfa04a36d53f2d4639c325c9cc08acb58e45b1c71e81e7a077",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/smoke.log": "5e59d9aae4662a5483070793f66a2aa4c61961cf71ea0607d5c59833a1e3d9c2",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/experiment.json": "97c758eb2c0a48bcf28aec4eed55319d0477e055cf44b1962653617d9cf2d2ee",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/observation/app-server/00000432216842466071-3200270/client-to-server.forwarded.raw": "f397531551bee33af47db4e9a978561b08fc878043de4c44e5e442778ddf79ee",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/observation/app-server/00000432216842466071-3200270/client-to-server.raw": "a41773d85bf429d5433d7ae872f040662cc114e50c77fbb39b084846f01e1d82",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/observation/app-server/00000432216842466071-3200270/provider-usage-grace.jsonl": "60abc76ef36c6788d137179b350f496d734d53920fddb64bbc9a635286a081b1",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/observation/app-server/00000432216842466071-3200270/server-to-client.raw": "cb7acfee5e688bee4a91cba3d5c72fc094febd6099f1e2b269016811cf0ccd86",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/observation/invocations/00000432216842466071-3200270/start.json": "46010b1f27d25c1c22cfe81783e7ecb1ef81ce9b3c35825c272646a2ad7939d4",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/observation/observer-config.json": "70e2903d4d31930b91892a110b1d851b69f4d3197e5753e7403aff98b285c9db",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/project/fixture.txt": "53a8e63ec54d02dd39132db6df251f20f01e3157eb482020e574f99b00663a39",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/prompt-events.jsonl": "04f31669a1a56b150b10a5da331886c8a1b86fd03bb821eaef650004c3a37597",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/smoke.log": "67d87db2024091cb2d6cb23eb1f92a0ccc729fe050945b36de25675fc97afa02",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/experiment.json": "5244f195b49e90fd469a778736007aa1b964c1bb01b0076b8c1b6b2a44978d03",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/observation/analysis-pre-rollout.json": "3f02a8d4cf5e91a37f6306b112ef7a90fc9c2fabf2b2b8573323de4316736ff7",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/observation/analysis.json": "3055b52c881ddb047635eaf45db77678d29a1b31ace1bba6182c7c5890fd5035",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/observation/app-server/00000432802610573558-3228084/client-to-server.forwarded.raw": "c130f911c675a6008faef1ccee1fce2328fedc0e5bb7cba7d158732779967e50",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/observation/app-server/00000432802610573558-3228084/client-to-server.raw": "1282a18f242423f0941f52c12fd0556d71f2d03d4f7e57721ecb829830115bda",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/observation/app-server/00000432802610573558-3228084/provider-usage-grace.jsonl": "0825a389d161f3d703402afbb6c40a664067cb1ec4f52040acb4dfb535e72375",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/observation/app-server/00000432802610573558-3228084/raw-response-rewrites.jsonl": "5403cb3dd89b07388f18b38a69c6789cff8922a28ed9e6fa9bb82ffc24f666c9",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/observation/app-server/00000432802610573558-3228084/raw-response-usage.json": "5fe78a48e4e2e4847e7de54400e6a88a55c533b33bb68f882593947acb90ea89",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/observation/app-server/00000432802610573558-3228084/server-to-client.raw": "003f4fdff5b63fdd5b68e02bc388f9781422a00b94675dedcc87aa3beb5afaa4",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/observation/invocations/00000432802610573558-3228084/end.json": "48c5cb5b8711d92c0afccc3e2203eb1caad2a47d526e19a424f1afe8c18c44da",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/observation/invocations/00000432802610573558-3228084/start.json": "ea98ea946b035ed964fe05812963970d96c8d3a3eed1396e60b2d137e32f4256",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/observation/observer-config.json": "346533030e1b681b648728550dbe9fed5cbcbd7ada36edb87d2c0afd351903df",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/observation/rollout-extraction.json": "c355d954c245e5e5d045535bfe40aa9056ae88e4fae21de5b15674d2d039933a",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/observation/rollout-metadata.jsonl": "da5c0df8dfd66bef82e1430d913afb3b81adbae52134fae887fd60dc086acf55",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/project/fixture.txt": "53a8e63ec54d02dd39132db6df251f20f01e3157eb482020e574f99b00663a39",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/prompt-events.jsonl": "29b325b19f72ba76b0a8caad422934f03a2b1e043df5036e1b3101287638a13d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-ack-validation-unlimited/smoke.log": "1d64f90a15eb4f010cc03ecc3530a2af1b99ab30e4c7b7946ade6cc41965d024",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/experiment.json": "7c82dc2527e0eba42e1b1a9a00fe1d91d08127e166cb1cef8b9f59e03f576541",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/observation/analysis-pre-rollout.json": "b88e6d62490ea38b7fc0df682d69766e5ac9fda3c2dca7e292f069adc7a285b9",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/observation/analysis.json": "0b8a498cf83c051d616a40886ffa7016f447677fa4ae90d7f6b035998755bb33",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/observation/app-server/00000432802616251282-3228105/client-to-server.forwarded.raw": "182c6e7d96a3d8de6b145f2646891ada6bf76c57dd0260216d0a71cf123e6d69",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/observation/app-server/00000432802616251282-3228105/client-to-server.raw": "0e3e6c3b808c8ffb2461529e36bf727f064a6e95ea159ffbf86e16ef4c34b91b",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/observation/app-server/00000432802616251282-3228105/provider-usage-grace.jsonl": "89cc08adbdc70cffa1b45285dd50574f15b0631df40ecbeccdbbd677246af44b",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/observation/app-server/00000432802616251282-3228105/raw-response-rewrites.jsonl": "70e83d23d16b6badcad957a3ae13b4b0db1504b4677c79f25c78a0e790e69a4e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/observation/app-server/00000432802616251282-3228105/raw-response-usage.json": "5fe78a48e4e2e4847e7de54400e6a88a55c533b33bb68f882593947acb90ea89",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/observation/app-server/00000432802616251282-3228105/server-to-client.raw": "69b707168086410ac6d7af020b7f8f584c0cfe2dfa0e16c1b752e8af066aa06d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/observation/invocations/00000432802616251282-3228105/end.json": "183a81e40c79ef3cb29eae462a1ca7c8a2aaa6a2a6cf47e0c3c33e9934b89d1f",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/observation/invocations/00000432802616251282-3228105/start.json": "5e774ba8f33321f3d3fd57d3e820b43f39e14077434d4e467afac4b8dfcf3c94",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/observation/observer-config.json": "a36b54f32e0c8da8bd75fe48701330442d3a9b1110e70edc7aa248e05bc10f27",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/observation/rollout-extraction.json": "c355d954c245e5e5d045535bfe40aa9056ae88e4fae21de5b15674d2d039933a",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/observation/rollout-metadata.jsonl": "c627e5821cbd70f10a23332fbfd85aa5b3bbfebb0021d8f9068ed468cd85241b",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/project/fixture.txt": "53a8e63ec54d02dd39132db6df251f20f01e3157eb482020e574f99b00663a39",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/prompt-events.jsonl": "24d74edc82798c065dd10f4a10f012cf4ff8f99a878b9e882ef23dee907fa9ec",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-command-guidance-neutral/smoke.log": "4a756cf9f2b451d77b5d0cdd74642101f29f0ecce53d399a1cd810eb7972de96",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/experiment.json": "8c3c8b0aee31786d62af2d43308c6e2c665495587188499542368217537a38a8",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/observation/analysis-pre-rollout.json": "6f80842901ef78a99dd97deeeb57ff3cbaf0795e1f2d5e14cba881e34bed8f99",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/observation/analysis.json": "637325d7fa4bc6c5a2ca3b4c674a5a0515acc0509ecc88b4d4226983e1a8e018",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/observation/app-server/00000432802612767710-3228092/client-to-server.forwarded.raw": "69d9b3aad880afa3f03ce0e3bb39b96050a9b28b55a768e806959d53120b0c0d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/observation/app-server/00000432802612767710-3228092/client-to-server.raw": "294ae96c03c74ca9c3a4d617d5d596cde7dfcf091f3cbcda03d3f54098e5038f",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/observation/app-server/00000432802612767710-3228092/provider-usage-grace.jsonl": "2295ae36dcc6a9da58e4dc6e35a4cec2b51b60d07435648544930190c7885bd7",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/observation/app-server/00000432802612767710-3228092/raw-response-rewrites.jsonl": "458283d69358263dd6bd87bbce9cbac4ca5fb2a723e43ccd2d53f49fab1e515e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/observation/app-server/00000432802612767710-3228092/raw-response-usage.json": "5fe78a48e4e2e4847e7de54400e6a88a55c533b33bb68f882593947acb90ea89",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/observation/app-server/00000432802612767710-3228092/server-to-client.raw": "1e09c6f434039fac4fc762192b8873efd43c3f409fc60ccf1bbfd0b9be18efd1",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/observation/invocations/00000432802612767710-3228092/end.json": "e4149d62710ea32ec8315dc90c95c5265b4f45277c86756a8281cd4d9b2a0582",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/observation/invocations/00000432802612767710-3228092/start.json": "c4847b597dca0aa4443958cfc297510b969a97426bdaf912c64ee714e8f67221",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/observation/observer-config.json": "fde3b8726b9e3ac800682e93e9518e2a56e0174040ef07fe8446b313e59b17d5",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/observation/rollout-extraction.json": "c355d954c245e5e5d045535bfe40aa9056ae88e4fae21de5b15674d2d039933a",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/observation/rollout-metadata.jsonl": "d4e1545beaa54c4050cc11e00b185d8bbbc73aee6e871b21b08b676455e78e72",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/project/fixture.txt": "53a8e63ec54d02dd39132db6df251f20f01e3157eb482020e574f99b00663a39",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/prompt-events.jsonl": "de3f7f29c44e19adaa2336e7b9a99e188725a5ddf00794c20a6138f0e7cfdbde",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-v2-control/smoke.log": "eb93e26dfa1d23d93e9575f948d3a71509df5652eb3431cad07b2f890a3c9644",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/observation/analysis-pre-rollout.json": "606039b05cb15655982e136cdac978ca83f4a7510f7cc4e9849b6ddeee900096",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/observation/analysis.json": "f91f03d243e0ae614358371b4430fb2968f27ba28bd9d55d67e43e3583ad7175",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/observation/app-server/00000432460915850916-3206189/client-to-server.forwarded.raw": "93b47eae964e1943f6f028869935eeef1fbfe4ed2423baa22aab18944ad0ddc4",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/observation/app-server/00000432460915850916-3206189/client-to-server.raw": "4c1f8789987d9ea9d4358ab51808ae4015987fb04a265c11b45573ba23a6eef8",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/observation/app-server/00000432460915850916-3206189/provider-usage-grace.jsonl": "c99a2668efcbfd05cb97588c15cebbcc54c19789d1f45ba916adfda147347164",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/observation/app-server/00000432460915850916-3206189/raw-response-rewrites.jsonl": "0431d286eed2cbbbcce539eb313e5a04d868f3a3955d38bcba063e5dfe1cad35",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/observation/app-server/00000432460915850916-3206189/raw-response-usage.json": "5fe78a48e4e2e4847e7de54400e6a88a55c533b33bb68f882593947acb90ea89",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/observation/app-server/00000432460915850916-3206189/server-to-client.raw": "0483dcf64545c32cfd35761ef110a965777a8f814b44bc567634b45acbbeeedd",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/observation/invocations/00000432460915850916-3206189/end.json": "71e53f15593e645743b4bcb904fff0885a45d2f23649b95557e86bc1ae978e18",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/observation/invocations/00000432460915850916-3206189/start.json": "f6efa58282cf08792d2317d322aed287b33d77c2631241c8b624890d5730f4a7",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/observation/observer-config.json": "87f6a1cda9148a02fed32f6430959c7c337288074e18f83ff4f187004153e774",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/observation/rollout-extraction.json": "c355d954c245e5e5d045535bfe40aa9056ae88e4fae21de5b15674d2d039933a",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/observation/rollout-metadata.jsonl": "0420e9b658dcc06c2c1c33c03c8126e3357ac4a0a4607782f3f360c89971516e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/normal-transport-01/smoke.log": "9c34a99171878c66125d72c6f4a770e640b4d9cc2f07bbfc060c7ab534b88d00",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_analysis.py": "9a15fe40b9bf958729fa91e99b6e1252a68814fa4b2795ce1c200507ad47a35b",
+    "/home/user/src/work-leaf/src/bench_experiment.rs": "427c121d0992450454cbfc7dd5bae314feaae385f3d01cda1801e62697866a2a",
+    "/home/user/src/work-leaf/src/cli.rs": "70d5107a5b022f4dba118e8567a5c2f54330a51319f5d97d84299380e6246c0d",
+    "/home/user/src/work-leaf/src/orchestrator.rs": "0a257cc4033abd1dc3d621cf8b3705f284035985b13c715055a8538ab44c1fc2",
+    "/home/user/src/work-leaf/tests/bench_experiment_subscription_smoke.rs": "3ed00491a4ecd575a40ade530145c0a92b79a458d56f8a45839554c809b6e9ec",
+    "/home/user/src/work-leaf/tests/observer_subscription_smoke.rs": "e19763602a5351102202a30c7ce9a1b940884dcd5e3fd2192cd416bc14887ecf"
+  },
+  "status": "real_agent_verification_passed_with_retained_failed_preflights",
+  "successful_handoff_conditions": [
+    "control",
+    "ack-validation-unlimited",
+    "command-guidance-neutral"
+  ],
+  "teardown_fix_scope": "Only the ignored diagnostic waits for exact final interrupt forwarding, typed RPC acknowledgement, and matching terminal turn before stopping its observer. Product behavior, experimental prompts, provider-call budget, normal benchmark driver, observer binary and interruption settings are unchanged.",
+  "verification_commands": [
+    "cargo test --features bench-experiments --test bench_experiment_subscription_smoke real_subscription_experimental_patch_and_command_handoffs -- --ignored --exact --nocapture (one separately configured process per condition)",
+    "cargo test --features bench-experiments --test observer_subscription_smoke real_subscription_directive_interrupt_and_raw_follow_up -- --ignored --exact --nocapture",
+    "bench-observer analyze --config <diagnostic>/observation/observer-config.json",
+    "bench-observer extract-rollouts --config <diagnostic>/observation/observer-config.json --sessions-root /home/user/.codex/sessions",
+    "bench-observer analyze --config <diagnostic>/observation/observer-config.json",
+    "analyze.capture_provenance + analyze.inventory + analyze.STRICT.accounting + analyze.prompt_chains (provider-free in-memory replay)"
+  ]
+}

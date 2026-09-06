@@ -1,0 +1,1119 @@
+{
+  "schema_version": 1,
+  "scope": "Exploratory historical episode audit only; prior pilot observations excluded from the fresh mechanism study. No new provider work and no historical result retotaling.",
+  "raw_token_identity": {
+    "recorded_implementation_direct": 30149576,
+    "recorded_implementation_wl": 14444366,
+    "recorded_gap": 15705210,
+    "cached_input_gap": 15696640,
+    "uncached_input_gap": 3106,
+    "output_gap": 5464,
+    "causal_share": null
+  },
+  "feature3_first_ready_checkpoints": {
+    "scope": "Different first-ready artifacts, not established equivalent intermediate quality. Direct first implementation completion versus WL first done before review.",
+    "direct": {
+      "responses": 67,
+      "provider_turns": 1,
+      "native_apply_patch_calls": 18,
+      "usage": {
+        "input_tokens": 9699605,
+        "cached_input_tokens": 9478272,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 43028,
+        "reasoning_output_tokens": 21837,
+        "total_tokens": 9742633
+      }
+    },
+    "wl": {
+      "responses": 27,
+      "provider_turns": 8,
+      "structured_edit_submissions": 3,
+      "one_rejected_and_two_applied": true,
+      "usage": {
+        "input_tokens": 1886533,
+        "cached_input_tokens": 1694848,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 32266,
+        "reasoning_output_tokens": 20686,
+        "total_tokens": 1918799
+      }
+    }
+  },
+  "direct_red_then_per_file_implementation": [
+    {
+      "index": 16,
+      "line": 250,
+      "timestamp": "2026-09-06T20:07:13.649Z",
+      "response_id": "resp_01d562340375954e016a9dc794f69087d2ad0eb6ff37afb6c5",
+      "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+      "usage": {
+        "input_tokens": 129018,
+        "cached_input_tokens": 120192,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4842,
+        "reasoning_output_tokens": 4142,
+        "total_tokens": 133860
+      },
+      "calls": [
+        {
+          "name": "apply_patch",
+          "call_id": "call_L2SDPW8qRsBDx0m3czi9PUwg",
+          "line": 249,
+          "edited_paths": [
+            "tests/workspace.rs"
+          ],
+          "output": {
+            "line": 252,
+            "exit_code": null,
+            "output_sha256": "e500c4c06df539b925cc1aa82b1af7f84c153112d7b369a649597b41a89af2f6"
+          }
+        }
+      ],
+      "directives": [],
+      "structured_edit_paths": []
+    },
+    {
+      "index": 17,
+      "line": 257,
+      "timestamp": "2026-09-06T20:07:32.964Z",
+      "response_id": "resp_01d562340375954e016a9dc7f3d18487d2af5a2361bf67dcc4",
+      "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+      "usage": {
+        "input_tokens": 133938,
+        "cached_input_tokens": 128384,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 856,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 134794
+      },
+      "calls": [
+        {
+          "name": "apply_patch",
+          "call_id": "call_qskZiNEEKQCcH67BZqg5aEIS",
+          "line": 256,
+          "edited_paths": [
+            "tests/terminal_app.rs"
+          ],
+          "output": {
+            "line": 259,
+            "exit_code": null,
+            "output_sha256": "649347fb09f93baa0ffec6eb3f772780a9c07efcb401ffad81a7b34a81f97e0d"
+          }
+        }
+      ],
+      "directives": [],
+      "structured_edit_paths": []
+    },
+    {
+      "index": 18,
+      "line": 267,
+      "timestamp": "2026-09-06T20:07:41.554Z",
+      "response_id": "resp_01d562340375954e016a9dc807311c87d2944583ca879ad4da",
+      "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+      "usage": {
+        "input_tokens": 134873,
+        "cached_input_tokens": 133504,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 235,
+        "reasoning_output_tokens": 11,
+        "total_tokens": 135108
+      },
+      "calls": [
+        {
+          "name": "exec_command",
+          "call_id": "call_O0XbUbF0DmCPqY8wRYWwPzfy",
+          "line": 265,
+          "command": "cargo test --test workspace controller_asks_patch_agent_for_feature_done_confirmation_after_review",
+          "output": {
+            "line": 269,
+            "exit_code": 101,
+            "output_sha256": "ea66d435ae0709c5b2fad99537deb668483d669769141cdac81578f50b074348"
+          }
+        },
+        {
+          "name": "exec_command",
+          "call_id": "call_zsyBovW94LgrNLjrP0dordYy",
+          "line": 266,
+          "command": "cargo test --test terminal_app terminal_app_highlights_patch_chat_after_review_and_closes_until_typed_again",
+          "output": {
+            "line": 271,
+            "exit_code": 101,
+            "output_sha256": "fd152b6c8f0de4b454bccc573369379d31cf8ab837d526a8af9a53cd8eddb7cf"
+          }
+        }
+      ],
+      "directives": [],
+      "structured_edit_paths": []
+    },
+    {
+      "index": 20,
+      "line": 289,
+      "timestamp": "2026-09-06T20:08:20.463Z",
+      "response_id": "resp_01d562340375954e016a9dc817302087d2be8fdeae07ee5d81",
+      "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+      "usage": {
+        "input_tokens": 136348,
+        "cached_input_tokens": 135552,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1280,
+        "reasoning_output_tokens": 43,
+        "total_tokens": 137628
+      },
+      "calls": [
+        {
+          "name": "apply_patch",
+          "call_id": "call_EOZYjkvnINAMJ9salO5uH0J1",
+          "line": 287,
+          "edited_paths": [
+            "src/workspace.rs"
+          ],
+          "output": {
+            "line": 290,
+            "exit_code": null,
+            "output_sha256": "e5b14148002c9e65be63ca8285f85d4349a971fb718422017a31dbe72c812b6f"
+          }
+        }
+      ],
+      "directives": [],
+      "structured_edit_paths": []
+    },
+    {
+      "index": 21,
+      "line": 297,
+      "timestamp": "2026-09-06T20:08:41.423Z",
+      "response_id": "resp_01d562340375954e016a9dc836dfb887d2a4a65dbf57cddce7",
+      "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+      "usage": {
+        "input_tokens": 137706,
+        "cached_input_tokens": 135552,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 931,
+        "reasoning_output_tokens": 31,
+        "total_tokens": 138637
+      },
+      "calls": [
+        {
+          "name": "apply_patch",
+          "call_id": "call_k7Zb5MQxMat7XYastiZX8TwA",
+          "line": 296,
+          "edited_paths": [
+            "src/terminal_app.rs"
+          ],
+          "output": {
+            "line": 299,
+            "exit_code": null,
+            "output_sha256": "f58040fac22e610f2240e47e0205621a81696a86ad85604a65eb3820b42f2309"
+          }
+        }
+      ],
+      "directives": [],
+      "structured_edit_paths": []
+    },
+    {
+      "index": 22,
+      "line": 306,
+      "timestamp": "2026-09-06T20:08:55.868Z",
+      "response_id": "resp_01d562340375954e016a9dc84b9bec87d29f98e89704ebdaa6",
+      "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+      "usage": {
+        "input_tokens": 138716,
+        "cached_input_tokens": 137600,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 494,
+        "reasoning_output_tokens": 53,
+        "total_tokens": 139210
+      },
+      "calls": [
+        {
+          "name": "apply_patch",
+          "call_id": "call_SmZbrNcVgHDcc8Nm6N19T9b0",
+          "line": 305,
+          "edited_paths": [
+            "src/ui.rs"
+          ],
+          "output": {
+            "line": 308,
+            "exit_code": null,
+            "output_sha256": "e68973d4ab5f840959045f0e36238f3cd483a99d8557c20691dc06416aaab1f5"
+          }
+        }
+      ],
+      "directives": [],
+      "structured_edit_paths": []
+    },
+    {
+      "index": 23,
+      "line": 316,
+      "timestamp": "2026-09-06T20:09:04.971Z",
+      "response_id": "resp_01d562340375954e016a9dc85a520887d29f92fce361536f6c",
+      "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+      "usage": {
+        "input_tokens": 139287,
+        "cached_input_tokens": 138624,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 283,
+        "reasoning_output_tokens": 45,
+        "total_tokens": 139570
+      },
+      "calls": [
+        {
+          "name": "exec_command",
+          "call_id": "call_1EdGuX1j39xV2PHglSZ7jme6",
+          "line": 314,
+          "command": "cargo test --test workspace controller_asks_patch_agent_for_feature_done_confirmation_after_review",
+          "output": {
+            "line": 318,
+            "exit_code": 0,
+            "output_sha256": "6457364f4b7f2c41936bf4640d6f944b28218f98a48d97f5c2b31f90eb596eb8"
+          }
+        },
+        {
+          "name": "exec_command",
+          "call_id": "call_ic5xeXvOGofzPeRWyvxJbZiY",
+          "line": 315,
+          "command": "cargo test --test terminal_app terminal_app_highlights_patch_chat_after_review_and_closes_until_typed_again",
+          "output": {
+            "line": 320,
+            "exit_code": 101,
+            "output_sha256": "c8915d5f2170486cdd4ae786c417c90f31814ddf0d0b67b1991c468420fdea6c"
+          }
+        }
+      ],
+      "directives": [],
+      "structured_edit_paths": []
+    },
+    {
+      "index": 24,
+      "line": 328,
+      "timestamp": "2026-09-06T20:09:24.746Z",
+      "response_id": "resp_01d562340375954e016a9dc864b5ac87d2a3ae1e79290c82ac",
+      "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+      "usage": {
+        "input_tokens": 140140,
+        "cached_input_tokens": 138624,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 811,
+        "reasoning_output_tokens": 516,
+        "total_tokens": 140951
+      },
+      "calls": [
+        {
+          "name": "apply_patch",
+          "call_id": "call_HnqhwVpY2wCApcgWOCqSxBc6",
+          "line": 326,
+          "edited_paths": [
+            "tests/terminal_app.rs"
+          ],
+          "output": {
+            "line": 329,
+            "exit_code": null,
+            "output_sha256": "649347fb09f93baa0ffec6eb3f772780a9c07efcb401ffad81a7b34a81f97e0d"
+          }
+        }
+      ],
+      "directives": [],
+      "structured_edit_paths": []
+    },
+    {
+      "index": 25,
+      "line": 336,
+      "timestamp": "2026-09-06T20:09:30.501Z",
+      "response_id": "resp_01d562340375954e016a9dc877095087d28a440b668ff4170e",
+      "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+      "usage": {
+        "input_tokens": 141030,
+        "cached_input_tokens": 139648,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 139,
+        "reasoning_output_tokens": 10,
+        "total_tokens": 141169
+      },
+      "calls": [
+        {
+          "name": "exec_command",
+          "call_id": "call_zwYDPEOTgutE5RH7pu4Dx4GM",
+          "line": 335,
+          "command": "cargo test --test terminal_app terminal_app_highlights_patch_chat_after_review_and_closes_until_typed_again",
+          "output": {
+            "line": 338,
+            "exit_code": 0,
+            "output_sha256": "6f4fbef791e17ef5198627eae70c68bc54d629bccdbbb62590b3a343d4f2071d"
+          }
+        }
+      ],
+      "directives": [],
+      "structured_edit_paths": []
+    }
+  ],
+  "direct_repeated_validation_batteries": {
+    "response_indices": [
+      47,
+      48,
+      49,
+      50,
+      53,
+      54,
+      55,
+      60,
+      61,
+      62
+    ],
+    "usage": {
+      "input_tokens": 1765889,
+      "cached_input_tokens": 1754880,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2283,
+      "reasoning_output_tokens": 794,
+      "total_tokens": 1768172
+    },
+    "responses": [
+      {
+        "index": 47,
+        "line": 540,
+        "timestamp": "2026-09-06T20:14:49.229Z",
+        "response_id": "resp_01d562340375954e016a9dc9a7d4ac87d283d6e1a494fb1f2b",
+        "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+        "usage": {
+          "input_tokens": 168331,
+          "cached_input_tokens": 167296,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 898,
+          "reasoning_output_tokens": 771,
+          "total_tokens": 169229
+        },
+        "calls": [
+          {
+            "name": "exec_command",
+            "call_id": "call_z8zGQNDjd7BVfJKkUMjXtZYj",
+            "line": 539,
+            "command": "cargo test --test workspace",
+            "output": {
+              "line": 542,
+              "exit_code": 0,
+              "output_sha256": "64bd0a56ff811e67ea6b7e1a66dc6dac325c8cf7c96729b6b7c68e367bf0d474"
+            }
+          }
+        ],
+        "directives": [],
+        "structured_edit_paths": []
+      },
+      {
+        "index": 48,
+        "line": 547,
+        "timestamp": "2026-09-06T20:14:54.758Z",
+        "response_id": "resp_01d562340375954e016a9dc9bbaa7487d2bbf105feec8abcdb",
+        "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+        "usage": {
+          "input_tokens": 169693,
+          "cached_input_tokens": 168320,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 103,
+          "reasoning_output_tokens": 0,
+          "total_tokens": 169796
+        },
+        "calls": [
+          {
+            "name": "exec_command",
+            "call_id": "call_5kJyzwpS7LThBNqyg1YBaLqI",
+            "line": 546,
+            "command": "cargo test --test terminal_app",
+            "output": {
+              "line": 549,
+              "exit_code": 0,
+              "output_sha256": "06c032ec41651fd7568265b55c2bf646cefe1d153bebb68b60ea4e231f75451e"
+            }
+          }
+        ],
+        "directives": [],
+        "structured_edit_paths": []
+      },
+      {
+        "index": 49,
+        "line": 555,
+        "timestamp": "2026-09-06T20:15:00.249Z",
+        "response_id": "resp_01d562340375954e016a9dc9c145f887d288a7aefc2ab12750",
+        "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+        "usage": {
+          "input_tokens": 170720,
+          "cached_input_tokens": 169344,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 107,
+          "reasoning_output_tokens": 0,
+          "total_tokens": 170827
+        },
+        "calls": [
+          {
+            "name": "exec_command",
+            "call_id": "call_JgiHkDoEpdmeaADuCdVol62r",
+            "line": 553,
+            "command": "cargo test --test ui_harness",
+            "output": {
+              "line": 556,
+              "exit_code": 0,
+              "output_sha256": "7446aa589a48753dbac03d1ad9ad43d507ef2d597447ad353f0ed67e7aadbfe4"
+            }
+          }
+        ],
+        "directives": [],
+        "structured_edit_paths": []
+      },
+      {
+        "index": 50,
+        "line": 562,
+        "timestamp": "2026-09-06T20:15:07.173Z",
+        "response_id": "resp_01d562340375954e016a9dc9c6a5ec87d29730481ea245533b",
+        "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+        "usage": {
+          "input_tokens": 171546,
+          "cached_input_tokens": 170368,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 193,
+          "reasoning_output_tokens": 0,
+          "total_tokens": 171739
+        },
+        "calls": [
+          {
+            "name": "exec_command",
+            "call_id": "call_ndUTtr3w9tLrCpNYSH5eps4e",
+            "line": 560,
+            "command": "cargo test --test terminal_ui",
+            "output": {
+              "line": 564,
+              "exit_code": 0,
+              "output_sha256": "e763bba072c290acd4dff808fd764b8ef0decc1f6c18c0a962ec08d9a09b69b8"
+            }
+          },
+          {
+            "name": "exec_command",
+            "call_id": "call_plJeq09uvFWg99f23Jti8yyI",
+            "line": 561,
+            "command": "cargo test --lib",
+            "output": {
+              "line": 566,
+              "exit_code": 0,
+              "output_sha256": "d5c52a80d8dc7c5cdd3415086f2cd1e0abad9f51ad7cd0e9d48e51a6205dd0e5"
+            }
+          }
+        ],
+        "directives": [],
+        "structured_edit_paths": []
+      },
+      {
+        "index": 53,
+        "line": 591,
+        "timestamp": "2026-09-06T20:15:43.119Z",
+        "response_id": "resp_01d562340375954e016a9dc9ebaaa087d2b8c4ff219b2875fb",
+        "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+        "usage": {
+          "input_tokens": 174233,
+          "cached_input_tokens": 173440,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 119,
+          "reasoning_output_tokens": 12,
+          "total_tokens": 174352
+        },
+        "calls": [
+          {
+            "name": "exec_command",
+            "call_id": "call_lako2BWKLavRyDnjirdSOMtM",
+            "line": 590,
+            "command": "cargo test --test workspace",
+            "output": {
+              "line": 593,
+              "exit_code": 0,
+              "output_sha256": "1a9c2d094a5c5ba983cb72ce9e3542eac8b372c49c1f6cf14ca82bc09bf4bd2d"
+            }
+          }
+        ],
+        "directives": [],
+        "structured_edit_paths": []
+      },
+      {
+        "index": 54,
+        "line": 598,
+        "timestamp": "2026-09-06T20:15:49.153Z",
+        "response_id": "resp_01d562340375954e016a9dc9f1b5dc87d28ed19c652d564367",
+        "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+        "usage": {
+          "input_tokens": 174817,
+          "cached_input_tokens": 173440,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 99,
+          "reasoning_output_tokens": 0,
+          "total_tokens": 174916
+        },
+        "calls": [
+          {
+            "name": "exec_command",
+            "call_id": "call_wzun3tgpzr94J6OMwswC2kRu",
+            "line": 597,
+            "command": "cargo test --test terminal_app",
+            "output": {
+              "line": 600,
+              "exit_code": 0,
+              "output_sha256": "8d34c0dbec4b9eeb43956f0e66e784b434769d83db1983c9744fa2b4911c8854"
+            }
+          }
+        ],
+        "directives": [],
+        "structured_edit_paths": []
+      },
+      {
+        "index": 55,
+        "line": 607,
+        "timestamp": "2026-09-06T20:15:58.585Z",
+        "response_id": "resp_01d562340375954e016a9dc9f7bb4087d2bb60a7105b1de857",
+        "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+        "usage": {
+          "input_tokens": 175839,
+          "cached_input_tokens": 174464,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 280,
+          "reasoning_output_tokens": 0,
+          "total_tokens": 176119
+        },
+        "calls": [
+          {
+            "name": "exec_command",
+            "call_id": "call_Y5aecLtphumGp1s8NkQ3Priv",
+            "line": 604,
+            "command": "cargo test --test ui_harness",
+            "output": {
+              "line": 610,
+              "exit_code": 0,
+              "output_sha256": "bd6bd38c36ee43459cc52da8b222f8d08074a371fd0f24ddbed8c138b167d8d9"
+            }
+          },
+          {
+            "name": "exec_command",
+            "call_id": "call_kyvnzcF2FeH2RsfJvr5AJIJ5",
+            "line": 605,
+            "command": "cargo test --test terminal_ui",
+            "output": {
+              "line": 611,
+              "exit_code": 0,
+              "output_sha256": "03ee23e9624059cb88568f5aee5f86486492640ee42072f80b3ef4a15cda1782"
+            }
+          },
+          {
+            "name": "exec_command",
+            "call_id": "call_ggDEp5ThmJiEfEggutHg9bMY",
+            "line": 606,
+            "command": "cargo test --lib",
+            "output": {
+              "line": 613,
+              "exit_code": 0,
+              "output_sha256": "739557610c8d66eb7e95e6ac975a1689014a5067ed2e100004b382baa676aed5"
+            }
+          }
+        ],
+        "directives": [],
+        "structured_edit_paths": []
+      },
+      {
+        "index": 60,
+        "line": 662,
+        "timestamp": "2026-09-06T20:17:04.533Z",
+        "response_id": "resp_01d562340375954e016a9dca3c4bfc87d2821519cc9cc3f31d",
+        "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+        "usage": {
+          "input_tokens": 186175,
+          "cached_input_tokens": 185728,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 115,
+          "reasoning_output_tokens": 11,
+          "total_tokens": 186290
+        },
+        "calls": [
+          {
+            "name": "exec_command",
+            "call_id": "call_GI1jgFYaGbjwgS9R1sMICQB6",
+            "line": 661,
+            "command": "cargo test --test workspace",
+            "output": {
+              "line": 664,
+              "exit_code": 0,
+              "output_sha256": "d488450acb93cc5576e31337fd765005b11e019ef666c5eeaff8a3004ce9d650"
+            }
+          }
+        ],
+        "directives": [],
+        "structured_edit_paths": []
+      },
+      {
+        "index": 61,
+        "line": 669,
+        "timestamp": "2026-09-06T20:17:09.982Z",
+        "response_id": "resp_01d562340375954e016a9dca42eb9c87d2816bd8d01313a7cf",
+        "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+        "usage": {
+          "input_tokens": 186753,
+          "cached_input_tokens": 185728,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 99,
+          "reasoning_output_tokens": 0,
+          "total_tokens": 186852
+        },
+        "calls": [
+          {
+            "name": "exec_command",
+            "call_id": "call_LHkmPDlC6ZId2hd0EIu9zv9x",
+            "line": 668,
+            "command": "cargo test --test terminal_app",
+            "output": {
+              "line": 671,
+              "exit_code": 0,
+              "output_sha256": "75e05b50b59acde774ba0d1477c5b80b44c24d42a31947d941589a8f8bb34782"
+            }
+          }
+        ],
+        "directives": [],
+        "structured_edit_paths": []
+      },
+      {
+        "index": 62,
+        "line": 678,
+        "timestamp": "2026-09-06T20:17:20.805Z",
+        "response_id": "resp_01d562340375954e016a9dca48b49087d2a0016de60f2402bf",
+        "turn_id": "01a0784e-ac4f-7ba2-86ef-d0f50e97f439",
+        "usage": {
+          "input_tokens": 187782,
+          "cached_input_tokens": 186752,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 270,
+          "reasoning_output_tokens": 0,
+          "total_tokens": 188052
+        },
+        "calls": [
+          {
+            "name": "exec_command",
+            "call_id": "call_GZGcBmDjS3GBB0jzmDFvqiRs",
+            "line": 675,
+            "command": "cargo test --test ui_harness",
+            "output": {
+              "line": 680,
+              "exit_code": 0,
+              "output_sha256": "0f1306635f7d544a251377002a37f18a747d7280c1902d108ddb72a79d52a1e6"
+            }
+          },
+          {
+            "name": "exec_command",
+            "call_id": "call_vmI0MhMJBzqkZ0EaU6aXxZnP",
+            "line": 676,
+            "command": "cargo test --test terminal_ui",
+            "output": {
+              "line": 682,
+              "exit_code": 0,
+              "output_sha256": "5854f8332bf90a6b1e356d3ecc8f7788d4e75d848bebbe71080dfadc53f4c496"
+            }
+          },
+          {
+            "name": "exec_command",
+            "call_id": "call_NEPYrPCmGkBUs60emOvYNlNT",
+            "line": 677,
+            "command": "cargo test --lib",
+            "output": {
+              "line": 684,
+              "exit_code": 0,
+              "output_sha256": "7e7c5d9f9f871969258957db7a646755c14f50f8a58362202bf60ccd8f4c7e97"
+            }
+          }
+        ],
+        "directives": [],
+        "structured_edit_paths": []
+      }
+    ]
+  },
+  "wl_cohesive_patch_then_focused_check_and_done": [
+    {
+      "index": 22,
+      "line": 164,
+      "timestamp": "2026-09-06T19:22:28.180Z",
+      "response_id": "resp_03fee1970559bc89016a9dbc64ffe887d295919db2bba583a5",
+      "turn_id": "01a07826-57c9-78f1-b788-dc9adc2894a9",
+      "usage": {
+        "input_tokens": 99480,
+        "cached_input_tokens": 97664,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 15019,
+        "reasoning_output_tokens": 10855,
+        "total_tokens": 114499
+      },
+      "calls": [],
+      "directives": [
+        "@work-leaf edit ADD reviewed patch-agent completion prompt with terminal close and reopen behavior"
+      ],
+      "structured_edit_paths": [
+        "src/workspace.rs",
+        "src/ui.rs",
+        "src/terminal_app.rs",
+        "src/ui_harness.rs",
+        "tests/ui_harness.rs",
+        "tests/terminal_app.rs",
+        "tests/workspace.rs"
+      ]
+    },
+    {
+      "index": 23,
+      "line": 181,
+      "timestamp": "2026-09-06T19:25:38.532Z",
+      "response_id": "resp_03fee1970559bc89016a9dbd76b47c87d28294ed77b14dd34c",
+      "turn_id": "01a0782c-0dda-7d70-82bb-d7eca1dd7afa",
+      "usage": {
+        "input_tokens": 102744,
+        "cached_input_tokens": 57728,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 10357,
+        "reasoning_output_tokens": 6207,
+        "total_tokens": 113101
+      },
+      "calls": [],
+      "directives": [
+        "@work-leaf edit ADD reviewed patch-agent completion prompt with terminal close and reopen behavior"
+      ],
+      "structured_edit_paths": [
+        "src/workspace.rs",
+        "src/ui.rs",
+        "src/terminal_app.rs",
+        "src/ui_harness.rs",
+        "tests/ui_harness.rs",
+        "tests/terminal_app.rs",
+        "tests/workspace.rs"
+      ]
+    },
+    {
+      "index": 24,
+      "line": 194,
+      "timestamp": "2026-09-06T19:25:51.687Z",
+      "response_id": "resp_03fee1970559bc89016a9dbe35050c87d2a72688f4a1e475e3",
+      "turn_id": "01a0782e-f56a-7933-a1b6-606d82ad2e0a",
+      "usage": {
+        "input_tokens": 107184,
+        "cached_input_tokens": 101760,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 543,
+        "reasoning_output_tokens": 516,
+        "total_tokens": 107727
+      },
+      "calls": [],
+      "directives": [
+        "@work-leaf locks run target -- cargo test review_done_prompt --all-targets --all-features"
+      ],
+      "structured_edit_paths": []
+    },
+    {
+      "index": 25,
+      "line": 207,
+      "timestamp": "2026-09-06T19:26:08.840Z",
+      "response_id": "resp_03fee1970559bc89016a9dbe4476a487d285a302a5d2a77df1",
+      "turn_id": "01a0782f-39a6-7272-b034-450d2cce732e",
+      "usage": {
+        "input_tokens": 108716,
+        "cached_input_tokens": 106880,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 635,
+        "reasoning_output_tokens": 516,
+        "total_tokens": 109351
+      },
+      "calls": [],
+      "directives": [
+        "@work-leaf edit FIX reviewed chat close assertion to distinguish reviewer ids from patch-agent rows"
+      ],
+      "structured_edit_paths": [
+        "tests/terminal_app.rs"
+      ]
+    },
+    {
+      "index": 26,
+      "line": 218,
+      "timestamp": "2026-09-06T19:26:12.935Z",
+      "response_id": "resp_03fee1970559bc89016a9dbe534f2487d2a40f58fed892d4d6",
+      "turn_id": "01a0782f-6bd1-7683-8881-3fd6963f489b",
+      "usage": {
+        "input_tokens": 109093,
+        "cached_input_tokens": 107904,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 34,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 109127
+      },
+      "calls": [],
+      "directives": [
+        "@work-leaf locks run target -- cargo test terminal_app_review_done_prompt_closes_and_reopens_patch_chat --test terminal_app --all-features"
+      ],
+      "structured_edit_paths": []
+    },
+    {
+      "index": 27,
+      "line": 229,
+      "timestamp": "2026-09-06T19:26:17.968Z",
+      "response_id": "resp_03fee1970559bc89016a9dbe57b67487d2a5dbd57caf060816",
+      "turn_id": "01a0782f-7daf-7e40-bd96-98dc4a880e58",
+      "usage": {
+        "input_tokens": 109471,
+        "cached_input_tokens": 108928,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 9,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 109480
+      },
+      "calls": [],
+      "directives": [
+        "@work-leaf done"
+      ],
+      "structured_edit_paths": []
+    }
+  ],
+  "both_arm_compaction_audit": [
+    {
+      "arm": "direct",
+      "thread_id": "01a07825-1052-7cd0-a87e-507552c13d67",
+      "role": "sequential-feature-1-fix-1",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-14-50-01a07825-1052-7cd0-a87e-507552c13d67.jsonl",
+      "unique_response_ids": 71,
+      "compactions": [],
+      "native_minus_observer": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "arm": "direct",
+      "thread_id": "01a07833-e768-7030-a8ae-2b7c5237fa32",
+      "role": "sequential-feature-1-review-2",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-31-02-01a07833-e768-7030-a8ae-2b7c5237fa32.jsonl",
+      "unique_response_ids": 24,
+      "compactions": [],
+      "native_minus_observer": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "arm": "direct",
+      "thread_id": "01a0783e-120a-7480-8659-cd65cfb1eb5c",
+      "role": "sequential-feature-2-fix-1",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-42-08-01a0783e-120a-7480-8659-cd65cfb1eb5c.jsonl",
+      "unique_response_ids": 36,
+      "compactions": [],
+      "native_minus_observer": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "arm": "direct",
+      "thread_id": "01a07845-5050-7a72-854d-77422792fc8d",
+      "role": "sequential-feature-2-review-2",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-50-03-01a07845-5050-7a72-854d-77422792fc8d.jsonl",
+      "unique_response_ids": 35,
+      "compactions": [],
+      "native_minus_observer": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "arm": "direct",
+      "thread_id": "01a0784e-abd2-7803-a0b5-e83fd25653a8",
+      "role": "sequential-feature-3-fix-2",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T22-00-16-01a0784e-abd2-7803-a0b5-e83fd25653a8.jsonl",
+      "unique_response_ids": 141,
+      "compactions": [
+        {
+          "compacted_line": 838,
+          "preceding_usage_record": {
+            "line": 837,
+            "response_id": "resp_0b59e72c1bec5db3016a9dcce4c60c87d29322821e8d60b29f",
+            "usage": {
+              "input_tokens": 213688,
+              "cached_input_tokens": 212352,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 1611,
+              "reasoning_output_tokens": 0,
+              "total_tokens": 215299
+            },
+            "turn_id": "01a07866-0a9f-7342-a1cf-1931a583d6b5"
+          }
+        }
+      ],
+      "native_minus_observer": {
+        "input_tokens": 213688,
+        "cached_input_tokens": 212352,
+        "output_tokens": 1611,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "arm": "direct",
+      "thread_id": "01a0785f-8e68-77b3-bf39-c8125edf1e14",
+      "role": "sequential-feature-3-review-3",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T22-18-43-01a0785f-8e68-77b3-bf39-c8125edf1e14.jsonl",
+      "unique_response_ids": 39,
+      "compactions": [],
+      "native_minus_observer": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "arm": "direct",
+      "thread_id": "01a0787a-c2e6-7b52-aa52-14c14803b153",
+      "role": "linearize-accept",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T22-48-26-01a0787a-c2e6-7b52-aa52-14c14803b153.jsonl",
+      "unique_response_ids": 43,
+      "compactions": [],
+      "native_minus_observer": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "arm": "wl",
+      "thread_id": "01a07825-10a9-77b3-bd6a-f75800663294",
+      "role": "user-1",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-14-50-01a07825-10a9-77b3-bd6a-f75800663294.jsonl",
+      "unique_response_ids": 45,
+      "compactions": [],
+      "native_minus_observer": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "arm": "wl",
+      "thread_id": "01a07825-2392-7d82-983c-78f2b5be16c9",
+      "role": "user-2",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-14-54-01a07825-2392-7d82-983c-78f2b5be16c9.jsonl",
+      "unique_response_ids": 24,
+      "compactions": [],
+      "native_minus_observer": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "arm": "wl",
+      "thread_id": "01a07825-376e-7661-a88d-4be15e65dd86",
+      "role": "user-3",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-15-00-01a07825-376e-7661-a88d-4be15e65dd86.jsonl",
+      "unique_response_ids": 64,
+      "compactions": [],
+      "native_minus_observer": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "arm": "wl",
+      "thread_id": "01a0782b-80e7-7401-897c-f604f237763b",
+      "role": "title-agent",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-21-52-01a0782b-80e7-7401-897c-f604f237763b.jsonl",
+      "unique_response_ids": 3,
+      "compactions": [],
+      "native_minus_observer": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "arm": "wl",
+      "thread_id": "01a0782b-8100-71f1-a935-ca076774eabb",
+      "role": "review-user-2",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-21-52-01a0782b-8100-71f1-a935-ca076774eabb.jsonl",
+      "unique_response_ids": 14,
+      "compactions": [],
+      "native_minus_observer": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "arm": "wl",
+      "thread_id": "01a0782f-9e9f-7b71-adac-8ceec9c0d954",
+      "role": "review-user-3",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-26-21-01a0782f-9e9f-7b71-adac-8ceec9c0d954.jsonl",
+      "unique_response_ids": 21,
+      "compactions": [],
+      "native_minus_observer": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "arm": "wl",
+      "thread_id": "01a07830-f0f9-7301-abbf-ee60f8ae9377",
+      "role": "review-user-1",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-27-48-01a07830-f0f9-7301-abbf-ee60f8ae9377.jsonl",
+      "unique_response_ids": 23,
+      "compactions": [],
+      "native_minus_observer": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "arm": "wl",
+      "thread_id": "01a07846-1e5c-7352-8b45-819244e3c659",
+      "role": "linearize",
+      "source": "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-50-56-01a07846-1e5c-7352-8b45-819244e3c659.jsonl",
+      "unique_response_ids": 48,
+      "compactions": [],
+      "native_minus_observer": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      }
+    }
+  ],
+  "compaction_interpretation": "One Direct native compaction response lies outside the frozen CLI/cumulative usage scope. No WL compacted marker was observed, so these runs cannot empirically establish app-server raw-ledger compaction coverage. Equal captured prefixes do not resolve missing interrupted tails.",
+  "source_sha256": {
+    "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/direct-001/direct-001-three-feature-sequential-bench-artifacts/observation/analysis.json": "f47edbe3cfe2656f70ca6a2d96f5fe380953fc3505ee4694a532db3e1f0a0f7d",
+    "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/direct-001/direct-001-three-feature-sequential-bench-artifacts/observation/rollout-metadata.jsonl": "375c9bab0377c781a5ea8c1fd02b7da7a52d06b2647251d8033b6a784316a4a8",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-14-50-01a07825-1052-7cd0-a87e-507552c13d67.jsonl": "301f3c9d4b3b8ea9bf063bfa549f8ad1767e40757b05ba7abb41827f94b3474f",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-31-02-01a07833-e768-7030-a8ae-2b7c5237fa32.jsonl": "b6b424afe8fb0c265c6475732da35f54732096f1d6520c7d1728af507ea01e51",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-42-08-01a0783e-120a-7480-8659-cd65cfb1eb5c.jsonl": "14f5959eaa66281bf97e49176fbfa2e2f78944604b9489c73d21a155abaf7d8d",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-50-03-01a07845-5050-7a72-854d-77422792fc8d.jsonl": "93290f27d14b9ffc09a7eea39336a340d3d730fa9c2aa4db031082b46c83363c",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T22-00-16-01a0784e-abd2-7803-a0b5-e83fd25653a8.jsonl": "45ac06df86e00002dce1e2d103500e6d275bbf7679750852d7e57056741bcebb",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T22-18-43-01a0785f-8e68-77b3-bf39-c8125edf1e14.jsonl": "c1f9b93ac21c83f8c2e98b92408e69eeb82b56c7abe31910b53721fd4327f6c1",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T22-48-26-01a0787a-c2e6-7b52-aa52-14c14803b153.jsonl": "c8129196bfd552438d9e45c7b9e00e0b3f485e114051f475d5693fc5de3df026",
+    "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/observation/analysis.json": "a00760c3243a201f35a7bfbaeac74fcf8cf0d80f87331ab2d06acce1b7865f11",
+    "/home/user/src/work-leaf/bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/observation/rollout-metadata.jsonl": "d4692c2fdfe8639bacabd931dae54886139fe45a9bf74a1110b2d02c92e80e9e",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-14-50-01a07825-10a9-77b3-bd6a-f75800663294.jsonl": "7fbac978405e8b800da2a86bfe44e52f8684c97d483dcc168f196718937756c5",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-14-54-01a07825-2392-7d82-983c-78f2b5be16c9.jsonl": "a5d48cfb9de2529efd7cfa458969fd3836ab2aee836a1f295e1d3e8f181c2691",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-15-00-01a07825-376e-7661-a88d-4be15e65dd86.jsonl": "38198b31532dc00d02cef3da13d8c593209d80750019d8e622f71414225e37c7",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-21-52-01a0782b-80e7-7401-897c-f604f237763b.jsonl": "a09121a0d90285786e86c5c68b3d5662f2d3672b3364e1582b5dfd97e681fefb",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-21-52-01a0782b-8100-71f1-a935-ca076774eabb.jsonl": "4466b583555f74cc83dac00dfc69d7803ca4112b96a029abce7bf5e73baed68c",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-26-21-01a0782f-9e9f-7b71-adac-8ceec9c0d954.jsonl": "7aff3b6a487d46d2e001a942e116d542566972a331dc9d79e49ebc9727406d9d",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-27-48-01a07830-f0f9-7301-abbf-ee60f8ae9377.jsonl": "4c75438c3d42ed9afbf260b85b13b95b3d7b5aacf7e8c1d7d677be57f0846390",
+    "/home/user/.codex/sessions/2026/09/06/rollout-2026-09-06T21-50-56-01a07846-1e5c-7352-8b45-819244e3c659.jsonl": "7e93a6d9e5c1cb83858645d3365e5b96c016290c32ab08996c24c679d55a78c1"
+  }
+}

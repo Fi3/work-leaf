@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "scope": "Historical provider-free analyzer diagnostic; excluded from screening and confirmation observations. No historical artifacts are modified.",
+  "provider_work_started": false,
+  "study_observation": false,
+  "analyzer_sha256_at_replay": "837321da70d692b3bf254da915d36b8afc301bbb3b657663f2ce7c32973b85d7",
+  "analyzer_test_sha256_at_replay": "323ef40ef55ffba612dcac0c6046a4060e659ad41a105a3a327ac9c86d364ff1",
+  "replay_entrypoints": ["capture_provenance", "inventory", "strict_inventory", "STRICT.accounting"],
+  "capture": "bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/observation/app-server/00000422153032163608-2899396",
+  "checks": {
+    "original_and_forwarded_metadata_provenance_errors": [],
+    "checked_client_frames": 148,
+    "unique_completed_response_ids": 242,
+    "prospective_status": "bounded",
+    "prospective_raw_bounds": {"lower": 22786969, "upper": 27498969},
+    "prospective_uncached_plus_output_bounds": {"lower": 1719449, "upper": 6431449},
+    "predecessor_strict_status": "unbounded_accounting_gap",
+    "predecessor_strict_raw_bounds": {"lower": 22786969, "upper": null},
+    "conditional_tail_count": 4,
+    "paired_assistant_items_per_tail": [1, 2, 1, 1],
+    "tail_count_is_not_assistant_item_count": true,
+    "per_response_ceiling": 1178000,
+    "automated_assertions_passed": true
+  },
+  "assumptions": "Conditional on complete visible normal response/tool boundaries, no hidden retries or opaque provider responses, and no unobserved preemption. The model ceiling is not a proof of call cardinality. Accounting bounds are not sampling confidence intervals.",
+  "source_sha256": {
+    "analysis.json": "a00760c3243a201f35a7bfbaeac74fcf8cf0d80f87331ab2d06acce1b7865f11",
+    "invocations/00000422153032163608-2899396/start.json": "012ee19b5a9be03ebf57e014b98ed1e38b7d4fe6f12716419d88651d0429ab84",
+    "invocations/00000422153032163608-2899396/end.json": "f59dcc6ba152887ed92e6c7ad07081b8d8834794e5971850af2b13a511321a97",
+    "app-server/00000422153032163608-2899396/provider-usage-grace.jsonl": "418be3775d695528208342c62ff66abbc1ea440f874482159dede7650c50a738",
+    "app-server/00000422153032163608-2899396/raw-response-rewrites.jsonl": "842b20597b1db78ebdfbd64767e1c5d1312247f72da6c41453029e12e112ccde",
+    "app-server/00000422153032163608-2899396/raw-response-usage.json": "5fe78a48e4e2e4847e7de54400e6a88a55c533b33bb68f882593947acb90ea89",
+    "app-server/00000422153032163608-2899396/client-to-server.forwarded.raw": "e53439e87beae540c08093a70a24d7f01743d458a356e6300303d916f8e5f7c7",
+    "app-server/00000422153032163608-2899396/client-to-server.raw": "3be1a143ed5f66960daa92816800a8ac1ec63ae9af9ed43f1eca93ba90ad7ece",
+    "app-server/00000422153032163608-2899396/server-to-client.raw": "701a611f120e7718f1ebabfac8d4d676a0ab76da237c8c3201d0b2b76a65eb9f"
+  },
+  "source_path_base": "bench-results/efficiency-raw-token-pilot-20260906T185328Z/runs/work-leaf-001/work-leaf-001-three-feature-bench-artifacts/observation"
+}

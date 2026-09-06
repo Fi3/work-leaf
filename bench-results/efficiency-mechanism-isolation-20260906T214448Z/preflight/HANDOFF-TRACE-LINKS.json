@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "scope": "Real diagnostic trace-link replay only. Original smoke tests failed teardown; incomplete observer provenance is NOT a passing real-agent verification. Excluded from mechanism benchmark observations.",
+  "mapping_basis": "Each bounded fixture has exactly one captured provider thread and one agent and asserts same-session handoffs. Exact forwarded text occurrence and typed RPC replies provide the turn links.",
+  "analyzer_sha256": "2bb28891a2e158d51cf577bcf7c1fc2781065e38dc5ec4c6c30f7d4c146f2f78",
+  "runs": [
+    {
+      "condition": "control",
+      "full_smoke_pass": false,
+      "provenance_complete": false,
+      "errors": [],
+      "recognized_boundary_requests": 2,
+      "unmatched_boundary_requests": 0,
+      "sites": {
+        "patch-applied": {
+          "exposures": 1,
+          "changed": 0,
+          "byte_delta": 0,
+          "linked": 1
+        },
+        "command-result": {
+          "exposures": 1,
+          "changed": 0,
+          "byte_delta": 0,
+          "linked": 1
+        }
+      },
+      "links": [
+        {
+          "site": "patch-applied",
+          "turn_id": "01a078be-b949-7fb3-928f-cac4393b8623",
+          "link_status": "linked",
+          "response_ids": [
+            "resp_0694fc7f2551178b016a9de302b7cc87d2b7146baf64331f91"
+          ]
+        },
+        {
+          "site": "command-result",
+          "turn_id": "01a078be-c800-76d1-9f1e-ab48dae3c348",
+          "link_status": "linked",
+          "response_ids": []
+        }
+      ],
+      "source_sha256": {
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/prompt-events.jsonl": "04f31669a1a56b150b10a5da331886c8a1b86fd03bb821eaef650004c3a37597",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/observation/app-server/00000432216842466071-3200270/client-to-server.raw": "a41773d85bf429d5433d7ae872f040662cc114e50c77fbb39b084846f01e1d82",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/observation/app-server/00000432216842466071-3200270/server-to-client.raw": "cb7acfee5e688bee4a91cba3d5c72fc094febd6099f1e2b269016811cf0ccd86",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-control/observation/app-server/00000432216842466071-3200270/provider-usage-grace.jsonl": "60abc76ef36c6788d137179b350f496d734d53920fddb64bbc9a635286a081b1"
+      }
+    },
+    {
+      "condition": "ack-validation-unlimited",
+      "full_smoke_pass": false,
+      "provenance_complete": false,
+      "errors": [],
+      "recognized_boundary_requests": 2,
+      "unmatched_boundary_requests": 0,
+      "sites": {
+        "patch-applied": {
+          "exposures": 1,
+          "changed": 1,
+          "byte_delta": 3,
+          "linked": 1
+        },
+        "command-result": {
+          "exposures": 1,
+          "changed": 0,
+          "byte_delta": 0,
+          "linked": 1
+        }
+      },
+      "links": [
+        {
+          "site": "patch-applied",
+          "turn_id": "01a078be-ba05-7c53-a903-50879c4b18b7",
+          "link_status": "linked",
+          "response_ids": [
+            "resp_03f05d737de0747c016a9de302d73887d2ae899a78e8c6bd20"
+          ]
+        },
+        {
+          "site": "command-result",
+          "turn_id": "01a078be-c99e-7392-8741-98f7840539ff",
+          "link_status": "linked",
+          "response_ids": []
+        }
+      ],
+      "source_sha256": {
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/prompt-events.jsonl": "d5aef9e2299527d75685146166b36d681b771ef5f2fef9bc1756b1850acbf560",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/observation/app-server/00000432216849107897-3200292/client-to-server.raw": "5feb65e0ee32ff8e30cd0e351610f7f25c1719198ff5c8c79ceb608354accbbf",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/observation/app-server/00000432216849107897-3200292/server-to-client.raw": "2551631a0943f00b0f15449e3257f3b07210cd58193abfbde0b157b0e35cd293",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-ack-validation-unlimited/observation/app-server/00000432216849107897-3200292/provider-usage-grace.jsonl": "c1937963e48307571a38f9fa6dadfaba47a373237fc2237a21296d3a71d99732"
+      }
+    },
+    {
+      "condition": "command-guidance-neutral",
+      "full_smoke_pass": false,
+      "provenance_complete": false,
+      "errors": [],
+      "recognized_boundary_requests": 2,
+      "unmatched_boundary_requests": 0,
+      "sites": {
+        "patch-applied": {
+          "exposures": 1,
+          "changed": 0,
+          "byte_delta": 0,
+          "linked": 1
+        },
+        "command-result": {
+          "exposures": 1,
+          "changed": 1,
+          "byte_delta": -189,
+          "linked": 1
+        }
+      },
+      "links": [
+        {
+          "site": "patch-applied",
+          "turn_id": "01a078be-baf2-7172-9e2c-f78a00acecd5",
+          "link_status": "linked",
+          "response_ids": [
+            "resp_018ea3616bc3ae00016a9de303236887d299e513a4383cac32"
+          ]
+        },
+        {
+          "site": "command-result",
+          "turn_id": "01a078be-cab3-72b2-ad02-0ecc3328f8af",
+          "link_status": "linked",
+          "response_ids": []
+        }
+      ],
+      "source_sha256": {
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/prompt-events.jsonl": "b6fce8b7223af4dfa04a36d53f2d4639c325c9cc08acb58e45b1c71e81e7a077",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/observation/app-server/00000432216846701214-3200285/client-to-server.raw": "75cf96cb448515f7261dee4c7b3e680b9f972e4069730bb909d3e5427c38ec46",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/observation/app-server/00000432216846701214-3200285/server-to-client.raw": "cdcb6d833eb287af6b3659771090c828efe371a556a1eb9341bbc5a3889ec897",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/handoff-command-guidance-neutral/observation/app-server/00000432216846701214-3200285/provider-usage-grace.jsonl": "353f19ad10ef55ea85323007c2377c96b2d27da8a6b357ab9466350092eca815"
+      }
+    }
+  ]
+}

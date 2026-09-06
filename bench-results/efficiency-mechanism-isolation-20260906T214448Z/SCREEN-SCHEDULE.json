@@ -1,0 +1,38 @@
+{
+  "phase": "screen-01",
+  "phase_kind": "screening",
+  "randomization": {
+    "method": "uniform permutation of three labels over fixed workflow slots using random.SystemRandom.shuffle; drawn before provider admission",
+    "unit": "workflow",
+    "scheme": "within_block",
+    "mixed_waves": true,
+    "block_condition_counts": {
+      "screen-block-01": {
+        "control": 1,
+        "ack-validation-unlimited": 1,
+        "command-guidance-neutral": 1
+      }
+    },
+    "drawn_at": "2026-09-06T22:03:05.772404+00:00"
+  },
+  "runs": [
+    {
+      "run_id": "screen-01-001",
+      "condition": "ack-validation-unlimited",
+      "wave": 1,
+      "block_id": "screen-block-01"
+    },
+    {
+      "run_id": "screen-01-002",
+      "condition": "control",
+      "wave": 1,
+      "block_id": "screen-block-01"
+    },
+    {
+      "run_id": "screen-01-003",
+      "condition": "command-guidance-neutral",
+      "wave": 1,
+      "block_id": "screen-block-01"
+    }
+  ]
+}
