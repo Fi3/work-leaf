@@ -1,0 +1,72 @@
+{
+  "schema": "work-leaf-supplemental-input-attribution-freeze-v1",
+  "recorded_at_utc": "2026-09-06T23:07:48Z",
+  "scope": "Provider-free supplemental observed input attribution; no primary retotal, new experiment, runtime mutation, or causal-share estimate.",
+  "development_inputs": ["synthetic fixtures", "completed historical pilot captures"],
+  "fresh_screening_outcomes_inspected_during_development": false,
+  "historical_replay_excluded_from_new_study_observations": true,
+  "files": [
+    {"path": "audit_input_attribution.py", "sha256": "ad6861e834c09f0027305abe223dbe80ae03401740abdae6288580d880bb0740"},
+    {"path": "test_audit_input_attribution.py", "sha256": "f3960f3ebf64e8f1df7244c5cf80ebbe2194b8011a4d2838da893e4da5f73baa"}
+  ],
+  "verification": {
+    "tests": {"count": 20, "status": "GREEN"},
+    "primary_frozen_tests": {"count": 22, "status": "GREEN"},
+    "compaction_tests": {"count": 18, "status": "GREEN"},
+    "red_regressions_observed": [
+      "helper absent before implementation",
+      "same output item accepted for two distinct response IDs",
+      "native boolean usage compared equal to recorded integer usage",
+      "generated message output accepted without assistant role",
+      "safe optional native input projection absent"
+    ],
+    "independent_review": "bench_feature: arithmetic/output review and optional input-enrichment review closed; final 20 tests independently GREEN; no remaining findings",
+    "complexity": "linear passes in captured metadata size plus O(M log M) input-item ranking; no quadratic join",
+    "real_agent_workflow": "Not affected: retained metadata and captures are read offline; no provider calls, agent prompts, launch behavior, or runtime state are changed."
+  },
+  "historical_replay": {
+    "evidence": "preflight/HISTORICAL-INPUT-ATTRIBUTION.json",
+    "sha256": "586533b10c4ffa94b9b2dbaf5ebf91762f8ea103b500238ae6b6e1265f0100c6",
+    "size_bytes": 8321479,
+    "note": "Full per-response/item evidence is a generated artifact; this freeze record is its compact summary and source identity.",
+    "direct": {"status": "unknown", "reason": "no completed raw response attribution capture"},
+    "work_leaf": {
+      "completed_responses": 242,
+      "exact_input_cached_output_reasoning_cachewrite_reconciliations": 242,
+      "input_item_identities": 1023,
+      "exact_native_input_identity_links": 1023,
+      "input_item_identities_charged_in_multiple_responses": 948,
+      "residuals": "zero in every reconciled field of every response"
+    },
+    "example": {
+      "thread_id": "01a07825-376e-7661-a88d-4be15e65dd86",
+      "item_id": "fco_01a07826-f481-7740-b78e-987a3b917b5b",
+      "kind": "function_call_output",
+      "call_id": "call_bvg9dEV4exTKHqtupXBqmFph",
+      "source_line": 116,
+      "response_charge_count": 49,
+      "input_tokens": 506023,
+      "repeated_after_first_input_tokens": 495696,
+      "interpretation": "One exact retained tool-result item is charged as input across 49 observed responses; not 49 separate file reads and not a causal allocation of savings."
+    }
+  },
+  "method": [
+    "Verify pinned helper hashes, native source hashes/thread/model scope, and original-versus-forwarded app capture provenance.",
+    "Deduplicate response IDs and reject conflicting response metadata or output-item ownership.",
+    "Sum top-level attribution.items plus request_fields only; nested content subdivisions are not summed again.",
+    "Reconcile input, cached input, output, reasoning output, and cache-write counts; retain signed residuals and unknown shapes.",
+    "Join generated output IDs to exact native thread/item identities; message outputs require assistant role.",
+    "Key repeated input charges by thread/item identity. Optional native links use exact IDs only, never prefixes, call_id similarity, or content matching.",
+    "Store safe input metadata once per item identity. Missing native links remain unlinked without invalidating otherwise exact provider arithmetic.",
+    "Retain all admitted manifest rows and failures; do not copy prompt, command-argument, or content bodies."
+  ],
+  "post_screen_use": [
+    "Use the frozen whole-workflow bounds and compaction audit before interpreting mechanism evidence.",
+    "Read prompt_activity.exposures for exact site, agent, thread, turn, byte-span, and same-agent RPC links; controls use the same unchanged eligible site.",
+    "Separate per-thread work before the first target site from later work. Concurrent cross-agent effects prevent labelling every locally unexposed thread causally untouched.",
+    "Follow each exposure through the whole local directive/command-result/edit/read/done cycle. The frozen following_turn alone is not the complete cycle.",
+    "Join following_turn action item IDs to this audit's output_items and response IDs, then inspect exact input-item charges on additional continuations.",
+    "Treat +3 bytes per ACK replacement and -189 bytes per removed command cue as exact byte effects, not identified counterfactual token costs. Persistent history can carry cue text into later requests.",
+    "Use stage differences as descriptive context only; do not assign causal savings shares from cached-input arithmetic or a single exploratory screen."
+  ]
+}
