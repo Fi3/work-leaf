@@ -14,6 +14,11 @@ intervening tool boundaries for every gap. The upper bound charges the derived m
 raw tokens to each response: the frozen client enforces a 258,400-token hard active-context limit
 and GPT-5.5 permits 128,000 output tokens.
 
+These are descriptive accounting bounds for the collected sample means. They vary missing usage
+only and do not include sampling uncertainty, establish quality equivalence, or prove at least 90%
+causal coverage. Normal-endpoint measurement remains incomplete. The later exact main controls
+use 15.42% more uncached tokens under sequential Work Leaf while using fewer raw tokens.
+
 These parts of this study remain exact:
 
 - six direct sequential observations;
@@ -23,6 +28,9 @@ These parts of this study remain exact:
 - their saved provider histories and quality scores.
 
 Tables that use the 17,471,532 normal Work Leaf value describe the recorded lower-bound scenario.
-They do not include the conservative missing-response allowance. The current causal interpretation
-and bounded allocation are in
+They do not include the conservative missing-response allowance. The controlled findings and
+descriptive allocation are in
 `bench-results/efficiency-mechanism-attribution-20260830T081131Z/FINAL-REPORT.md`.
+
+Further normal-workflow measurement is governed by the exact-telemetry gate and fixed first-batch
+stop in [`PROTOCOL.md`](../efficiency-measurement-gate-20260906/PROTOCOL.md).

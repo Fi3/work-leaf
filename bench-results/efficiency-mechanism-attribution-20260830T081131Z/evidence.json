@@ -5,6 +5,8 @@
       "mediated_reads_and_interruption"
     ],
     "share_of_endpoint_gap_percent": 98.01979989147675,
+    "share_of_endpoint_gap_reason": null,
+    "share_of_endpoint_gap_status": "defined",
     "tokens": 18275644.333333332
   },
   "causal_coverage_bounded": {
@@ -19,6 +21,8 @@
           "mediated_reads_and_interruption"
         ],
         "share_of_endpoint_gap_percent": 97.74749118659682,
+        "share_of_endpoint_gap_reason": null,
+        "share_of_endpoint_gap_status": "defined",
         "tokens": 16021644.333333332
       },
       "recorded_lower_bound": {
@@ -27,6 +31,8 @@
           "mediated_reads_and_interruption"
         ],
         "share_of_endpoint_gap_percent": 98.01979989147675,
+        "share_of_endpoint_gap_reason": null,
+        "share_of_endpoint_gap_status": "defined",
         "tokens": 18275644.333333332
       }
     },
@@ -34,6 +40,8 @@
       "lower": 97.74749118659682,
       "upper": 98.01979989147675
     },
+    "share_of_endpoint_gap_reason": null,
+    "share_of_endpoint_gap_status": "bounded",
     "tokens": {
       "lower": 16021644.333333332,
       "upper": 18275644.333333332
@@ -2502,6 +2510,19 @@
       "runs": 6
     }
   },
+  "interpretation": {
+    "bounds": {
+      "coverage": "missing_response_token_allowance_only",
+      "kind": "descriptive_accounting_bounds",
+      "sampling_confidence_interval": false
+    },
+    "causal_attribution": {
+      "causal_coverage_target_established": false,
+      "kind": "ordered_group_mean_differences",
+      "sampling_uncertainty_quantified": false
+    },
+    "quality_equivalence": "not_established"
+  },
   "ordered_attribution": {
     "raw": {
       "allocated_tokens": 18644849.666666664,
@@ -2514,6 +2535,8 @@
       },
       "endpoint_gap": 18644849.666666664,
       "measurement": "recorded Work Leaf lower-bound scenario",
+      "share_of_endpoint_gap_reason": null,
+      "share_of_endpoint_gap_status": "defined",
       "steps": [
         {
           "left": "D",
@@ -2562,6 +2585,8 @@
             "W": 19725532.0
           },
           "endpoint_gap": 16390849.666666664,
+          "share_of_endpoint_gap_reason": null,
+          "share_of_endpoint_gap_status": "defined",
           "steps": [
             {
               "left": "D",
@@ -2604,6 +2629,8 @@
             "W": 17471532.0
           },
           "endpoint_gap": 18644849.666666664,
+          "share_of_endpoint_gap_reason": null,
+          "share_of_endpoint_gap_status": "defined",
           "steps": [
             {
               "left": "D",
@@ -2637,6 +2664,8 @@
           "unallocated_tokens": 0.0
         }
       },
+      "share_of_endpoint_gap_reason": null,
+      "share_of_endpoint_gap_status": "bounded",
       "steps": [
         {
           "left": "D",
@@ -2707,6 +2736,8 @@
       },
       "endpoint_gap": 265308.33333333326,
       "measurement": "recorded Work Leaf lower-bound scenario",
+      "share_of_endpoint_gap_reason": null,
+      "share_of_endpoint_gap_status": "defined",
       "steps": [
         {
           "left": "D",
@@ -2755,6 +2786,8 @@
             "W": 3597404.0
           },
           "endpoint_gap": -1988691.6666666667,
+          "share_of_endpoint_gap_reason": null,
+          "share_of_endpoint_gap_status": "defined",
           "steps": [
             {
               "left": "D",
@@ -2797,6 +2830,8 @@
             "W": 1343404.0
           },
           "endpoint_gap": 265308.33333333326,
+          "share_of_endpoint_gap_reason": null,
+          "share_of_endpoint_gap_status": "defined",
           "steps": [
             {
               "left": "D",
@@ -2830,15 +2865,14 @@
           "unallocated_tokens": 0.0
         }
       },
+      "share_of_endpoint_gap_reason": "endpoint_gap_interval_contains_zero",
+      "share_of_endpoint_gap_status": "undefined",
       "steps": [
         {
           "left": "D",
           "name": "compact_linearization",
           "right": "L",
-          "share_of_endpoint_gap_percent": {
-            "lower": -3.0962902745942604,
-            "upper": 23.209096334453573
-          },
+          "share_of_endpoint_gap_percent": null,
           "tokens": {
             "lower": 61575.66666666651,
             "upper": 61575.66666666651
@@ -2848,10 +2882,7 @@
           "left": "L",
           "name": "work_leaf_orchestration",
           "right": "S",
-          "share_of_endpoint_gap_percent": {
-            "lower": -89.9171404340861,
-            "upper": 11.995709071709616
-          },
+          "share_of_endpoint_gap_percent": null,
           "tokens": {
             "lower": -238557.6666666665,
             "upper": -238557.6666666665
@@ -2861,10 +2892,7 @@
           "left": "S",
           "name": "concurrent_scheduling",
           "right": "C",
-          "share_of_endpoint_gap_percent": {
-            "lower": -104.58761818010498,
-            "upper": 13.95287521527973
-          },
+          "share_of_endpoint_gap_percent": null,
           "tokens": {
             "lower": -277479.66666666674,
             "upper": -277479.66666666674
@@ -2874,10 +2902,7 @@
           "left": "C",
           "name": "mediated_reads_and_interruption",
           "right": "W",
-          "share_of_endpoint_gap_percent": {
-            "lower": 77.14770598760491,
-            "upper": 271.2956622797375
-          },
+          "share_of_endpoint_gap_percent": null,
           "tokens": {
             "lower": -1534230.0,
             "upper": 719770.0
@@ -2899,7 +2924,7 @@
     "prior": "/home/user/src/work-leaf/bench-results/efficiency-causal-validation-20260829T210343Z/combined-evidence.json",
     "prior_sha256": "e13187d71d7a8bc9052897129d54f27cd13e810bdb985ed404f1a08d849c069b"
   },
-  "status": "complete_with_bounded_normal_endpoint",
+  "status": "incomplete_normal_endpoint_measurement",
   "study": "efficiency-mechanism-attribution-20260830T081131Z",
   "work_leaf_orchestration_behavior": {
     "native_exec_calls": {

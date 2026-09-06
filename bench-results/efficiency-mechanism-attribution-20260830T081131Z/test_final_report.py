@@ -49,7 +49,7 @@ class FinalReportTest(unittest.TestCase):
 
         self.assertEqual(
             evidence["status"],
-            "complete_with_bounded_normal_endpoint",
+            "incomplete_normal_endpoint_measurement",
         )
         self.assertIn(
             f"{bounded['share_of_endpoint_gap_percent']['lower']:.2f}%",

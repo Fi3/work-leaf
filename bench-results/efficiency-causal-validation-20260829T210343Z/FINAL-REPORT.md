@@ -15,9 +15,11 @@ the all-run result is not a formal equal-quality comparison.
 Raw tokens mean input plus output, including cached input. Uncached tokens mean fresh input plus
 output.
 
-This directory preserves the controls and their history. The current causal answer, including the
-exact orchestration control and bounded allocation, is
-`bench-results/efficiency-mechanism-attribution-20260830T081131Z/FINAL-REPORT.md`.
+This directory preserves the controls and their history. The exact orchestration control,
+descriptive allocation, and unresolved measurement and interpretation limits are documented in
+`bench-results/efficiency-mechanism-attribution-20260830T081131Z/FINAL-REPORT.md`. Normal-endpoint
+measurement remains incomplete; the accounting bounds do not include sampling uncertainty or
+establish at least 90% causal coverage.
 
 ## Valid Evidence
 
@@ -35,8 +37,8 @@ totals were preserved. No unresolved interrupted response enters these three mea
 
 The combined-control result shows that direct reads plus completed responses do not remove the
 large difference from direct Codex. It does not by itself prove which remaining Work Leaf mechanism
-causes the difference. That question is answered by the later compact-direct versus sequential Work
-Leaf control.
+causes the difference. The later compact-direct versus sequential Work Leaf control supports a
+substantial effect of the orchestration protocol as one package.
 
 ## Withdrawn Interpretation
 
@@ -55,14 +57,21 @@ The exact main mechanism control in the later study compares compact direct Code
 Work Leaf while holding scheduling, reads, response completion, validation, and compact
 linearization targets fixed. It measures 35.66 million versus 19.31 million raw tokens. Saved
 provider histories show 311 versus 198 model generations, with the largest reduction during
-implementation and review.
+implementation and review. Its uncached-token sample means are 1,547,137 for compact direct and
+1,785,694 for sequential Work Leaf, a 15.42% increase under Work Leaf. Exact provider totals do not
+establish the precision of expected effects.
 
 After propagating the normal endpoint bound, Work Leaf's orchestration protocol plus the bounded
-mediated-read and interruption transition net to 97.75%-98.02% of the observed raw-token gap. The
-exact orchestration transition saves 16.35 million tokens. The second transition ranges from a cost
-to a saving, so its joint direction is not established. Separately, the completed-response control
-uses 2.79M-5.05M more tokens than early interruption, establishing interruption as a saving in these
-samples; mediated reads and the interaction prevent assigning that same direction to the joint step.
+mediated-read and interruption transition net to 97.75%-98.02% of the observed raw-token gap as a
+descriptive allocation of sample means. The main-control difference is 16.35 million tokens. The
+second transition ranges from a cost to a saving, so its joint direction is not established.
+Separately, the completed-response control uses 2.79M-5.05M more tokens than the interrupted-response
+endpoint in these samples. These bounds vary only missing usage while holding cohort means fixed;
+they do not establish at least 90% causal coverage or equal-quality efficiency.
+
+The authorized next step is an exact-telemetry gate followed, only if it passes, by one measurement
+pilot observation per normal workflow. Its collection and stopping rules are in
+[`PROTOCOL.md`](../efficiency-measurement-gate-20260906/PROTOCOL.md).
 
 ## Evidence Map
 

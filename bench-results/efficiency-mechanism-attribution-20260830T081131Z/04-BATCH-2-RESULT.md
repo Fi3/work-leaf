@@ -40,6 +40,10 @@ average 19,311,710, a difference of 16,347,554 tokens. The ranges do not overlap
 - sequential Work Leaf: 16,704,960 to 23,563,172.
 
 Both fully correct sequential Work Leaf candidates remain below the lowest compact-direct result.
-This makes lower implementation quality an inadequate explanation for the token difference.
+This passing subset is selected after scoring and remains descriptive; it does not establish
+equal-quality efficiency. The full main-control sample uses 15.42% more uncached tokens under
+sequential Work Leaf despite its lower raw-token use. Exact usage totals do not establish the
+precision of expected effects or resolve the normal endpoint's missing telemetry.
 
-The complete causal interpretation is in `05-CAUSAL-ANALYSIS.md`.
+The descriptive allocation, controlled findings, and outstanding measurement and interpretation
+limits are in `05-CAUSAL-ANALYSIS.md`.

@@ -83,12 +83,14 @@ def exact_permutation_greater(
     }
 
 
-def ordered_bridge(values: dict[str, float]) -> dict[str, Any]:
+def ordered_bridge(
+    values: dict[str, float], *, allow_zero_gap: bool = False
+) -> dict[str, Any]:
     missing = sorted({"D", "L", "S", "C", "W"} - values.keys())
     if missing:
         raise ValueError(f"bridge is missing conditions: {', '.join(missing)}")
     endpoint_gap = values["D"] - values["W"]
-    if endpoint_gap == 0:
+    if endpoint_gap == 0 and not allow_zero_gap:
         raise ValueError("endpoint gap is zero")
     steps = []
     for name, left, right in BRIDGE_STEPS:
@@ -99,13 +101,17 @@ def ordered_bridge(values: dict[str, float]) -> dict[str, Any]:
                 "left": left,
                 "right": right,
                 "tokens": tokens,
-                "share_of_endpoint_gap_percent": tokens / endpoint_gap * 100.0,
+                "share_of_endpoint_gap_percent": (
+                    tokens / endpoint_gap * 100.0 if endpoint_gap != 0 else None
+                ),
             }
         )
     allocated = sum(step["tokens"] for step in steps)
     return {
         "conditions": values,
         "endpoint_gap": endpoint_gap,
+        "share_of_endpoint_gap_status": "defined" if endpoint_gap != 0 else "undefined",
+        "share_of_endpoint_gap_reason": "endpoint_gap_is_zero" if endpoint_gap == 0 else None,
         "steps": steps,
         "allocated_tokens": allocated,
         "unallocated_tokens": endpoint_gap - allocated,
@@ -120,10 +126,15 @@ def selected_causal_coverage(
     if unknown:
         raise ValueError(f"unknown bridge mechanism: {', '.join(unknown)}")
     tokens = sum(float(by_name[name]["tokens"]) for name in mechanisms)
+    endpoint_gap = float(bridge["endpoint_gap"])
     return {
         "mechanisms": list(mechanisms),
         "tokens": tokens,
-        "share_of_endpoint_gap_percent": tokens / float(bridge["endpoint_gap"]) * 100.0,
+        "share_of_endpoint_gap_percent": (
+            tokens / endpoint_gap * 100.0 if endpoint_gap != 0 else None
+        ),
+        "share_of_endpoint_gap_status": "defined" if endpoint_gap != 0 else "undefined",
+        "share_of_endpoint_gap_reason": "endpoint_gap_is_zero" if endpoint_gap == 0 else None,
     }
 
 
@@ -136,12 +147,16 @@ def bounded_endpoint_bridge(
 ) -> dict[str, Any]:
     scenarios = {
         "recorded_lower_bound": ordered_bridge(
-            {**values, "W": float(work_leaf_interval["lower"])}
+            {**values, "W": float(work_leaf_interval["lower"])}, allow_zero_gap=True
         ),
         "conservative_upper_bound": ordered_bridge(
-            {**values, "W": float(work_leaf_interval["upper"])}
+            {**values, "W": float(work_leaf_interval["upper"])}, allow_zero_gap=True
         ),
     }
+    endpoint_gap = numeric_interval(
+        *(float(scenario["endpoint_gap"]) for scenario in scenarios.values())
+    )
+    gap_contains_zero = endpoint_gap["lower"] <= 0 <= endpoint_gap["upper"]
     steps = []
     for index, (name, left, right) in enumerate(BRIDGE_STEPS):
         scenario_steps = [scenario["steps"][index] for scenario in scenarios.values()]
@@ -155,18 +170,24 @@ def bounded_endpoint_bridge(
                 "tokens": numeric_interval(
                     *(float(step["tokens"]) for step in scenario_steps)
                 ),
-                "share_of_endpoint_gap_percent": numeric_interval(
-                    *(
-                        float(step["share_of_endpoint_gap_percent"])
-                        for step in scenario_steps
+                "share_of_endpoint_gap_percent": (
+                    None
+                    if gap_contains_zero
+                    else numeric_interval(
+                        *(
+                            float(step["share_of_endpoint_gap_percent"])
+                            for step in scenario_steps
+                        )
                     )
                 ),
             }
         )
     return {
         "work_leaf_mean_tokens": work_leaf_interval,
-        "endpoint_gap": numeric_interval(
-            *(float(scenario["endpoint_gap"]) for scenario in scenarios.values())
+        "endpoint_gap": endpoint_gap,
+        "share_of_endpoint_gap_status": "undefined" if gap_contains_zero else "bounded",
+        "share_of_endpoint_gap_reason": (
+            "endpoint_gap_interval_contains_zero" if gap_contains_zero else None
         ),
         "steps": steps,
         "scenarios": scenarios,
@@ -184,16 +205,25 @@ def bounded_selected_causal_coverage(
         name: selected_causal_coverage(scenario, mechanisms)
         for name, scenario in bridge["scenarios"].items()
     }
+    gap_contains_zero = bridge["endpoint_gap"]["lower"] <= 0 <= bridge["endpoint_gap"]["upper"]
     return {
         "mechanisms": list(mechanisms),
         "tokens": numeric_interval(
             *(float(result["tokens"]) for result in scenario_results.values())
         ),
-        "share_of_endpoint_gap_percent": numeric_interval(
-            *(
-                float(result["share_of_endpoint_gap_percent"])
-                for result in scenario_results.values()
+        "share_of_endpoint_gap_percent": (
+            None
+            if gap_contains_zero
+            else numeric_interval(
+                *(
+                    float(result["share_of_endpoint_gap_percent"])
+                    for result in scenario_results.values()
+                )
             )
+        ),
+        "share_of_endpoint_gap_status": "undefined" if gap_contains_zero else "bounded",
+        "share_of_endpoint_gap_reason": (
+            "endpoint_gap_interval_contains_zero" if gap_contains_zero else None
         ),
         "scenarios": scenario_results,
     }
@@ -715,7 +745,20 @@ def build_evidence(quality_path: Path) -> dict[str, Any]:
     return {
         "schema_version": 1,
         "study": STUDY.name,
-        "status": "complete_with_bounded_normal_endpoint",
+        "status": "incomplete_normal_endpoint_measurement",
+        "interpretation": {
+            "bounds": {
+                "kind": "descriptive_accounting_bounds",
+                "sampling_confidence_interval": False,
+                "coverage": "missing_response_token_allowance_only",
+            },
+            "causal_attribution": {
+                "kind": "ordered_group_mean_differences",
+                "sampling_uncertainty_quantified": False,
+                "causal_coverage_target_established": False,
+            },
+            "quality_equivalence": "not_established",
+        },
         "quality_file": str(quality_path),
         "quality_file_sha256": sha256(quality_path),
         "endpoint_accounting": {

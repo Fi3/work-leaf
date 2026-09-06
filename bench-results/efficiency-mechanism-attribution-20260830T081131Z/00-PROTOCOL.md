@@ -2,12 +2,14 @@
 
 ## Goal
 
-Explain at least 90% of the observed raw-token difference between normal direct sequential Codex
-and normal concurrent Work Leaf with controlled workflow substitutions.
+Assess whether controlled workflow substitutions explain at least 90% of the raw-token difference
+between normal direct sequential Codex and normal concurrent Work Leaf. The collected controls
+support a descriptive allocation; exact normal-endpoint measurement, quality equivalence, and
+sampling precision remain unresolved, so that target is not established.
 
-The earlier causal study established that the difference exists for this benchmark, but it directly
-explained only the joint read-and-interruption effect. Counts such as fewer model generations,
-commands, or validations locate the saved tokens; they do not by themselves explain why those
+The endpoint samples have a raw-token difference under the declared missing-response ceiling. The
+earlier causal controls measure the read-and-interruption substitutions. Counts such as fewer model
+generations, commands, or validations locate the saved tokens; they do not by themselves explain why those
 actions did not occur. This study treats those counts as outcomes, not causes.
 
 ## Frozen Endpoint
@@ -50,8 +52,10 @@ total                          = D - W
 
 The four terms telescope exactly within either endpoint scenario. The normal Work Leaf lower bound
 produces one bridge and its conservative upper bound produces the other. Percentages from another
-intervention order must not be mixed into this bridge. This is an ordered causal decomposition, not
-a claim that the mechanisms are independent.
+intervention order must not be mixed into this bridge. This is an ordered allocation of the collected
+sample means. Telescoping guarantees a zero arithmetic remainder; it does not establish causal
+coverage, independence, or the precision of expected effects. The endpoint scenarios vary only the
+missing-token allowance and do not account for sampling uncertainty in any condition.
 
 `S` is not a proposed product workflow and must never enter the benchmark dashboard's normal Work
 Leaf comparison. It exists only because holding the Work Leaf protocol fixed while changing the
@@ -116,11 +120,20 @@ second. Do not pair outcomes; compare condition groups.
 If a run reaches the provider, preserve it. Retry only an infrastructure failure that occurred
 before the task reached a provider, and analyze the failure before deciding to retry.
 
-## Completion Rule
+## Interpretation And Outstanding Gates
 
-The study is complete when valid observations permit the bridge to cover at least 90% of the
-endpoint raw-token gap and quality remains comparable enough to interpret the transitions. If a
-single grouped transition dominates, saved provider histories must show which stage and concrete
-protocol actions changed. If the bridge cannot cover 90%, the report must name the unresolved gap
-and the smallest additional control needed; it must not replace missing evidence with command-count
-correlation.
+The collected controls permit exact usage comparisons and a descriptive bridge for the observed
+samples. Saved provider histories locate the main difference in implementation and review and show
+the concrete protocol actions associated with it. They support an orchestration-package effect
+without assigning independent effects to each action.
+
+An at-least-90% causal-coverage conclusion requires more than a bridge whose arithmetic allocation
+exceeds that threshold. The normal endpoint lacks exact interrupted-response usage, the allocation
+does not include sampling uncertainty, and the conditions have unequal measured quality. The
+protocol has no predetermined quality-equivalence margin or precision criterion, so its collected
+results cannot establish equal-quality efficiency or completion of the requested causal target.
+
+Further measurement requires exact telemetry for the unchanged normal workflow and a separate
+protocol that defines the estimand, quality criterion, randomized collection schedule, precision
+target, and stopping rule before collection. Every implementation outcome must remain evidence;
+additional runs must not be selected or stopped solely because their observed direction is favorable.

@@ -1,31 +1,37 @@
-# Final Report: Why Work Leaf Uses Fewer Tokens
+# Study Report: Raw-Token Mechanism Controls And Measurement Limits
 
 ## Abstract
 
 This study asks why normal concurrent Work Leaf used fewer GPT-5.5/`xhigh` tokens than a fair normal
 direct sequential Codex workflow on the same three-feature Rust task.
 
-The main cause is Work Leaf's orchestration protocol. Patch agents return complete structured edits
-and mediated write commands; Work Leaf applies and commits them, returns compact results, and starts
+The main controlled comparison supports Work Leaf's orchestration protocol as a source of the
+raw-token difference. Patch agents return complete structured edits and mediated write commands;
+Work Leaf applies and commits them, returns compact results, and starts
 review from recorded commits. Direct Codex performs the same kind of work through many more native
 edit, command, and review cycles. Every extra cycle asks the model to generate again with the growing
 conversation, which repeatedly replays cached input tokens.
 
-The controlled protocol comparison is exact: compact direct Codex averaged 35,659,265 raw tokens,
+Provider usage in the main controls is exact: compact direct Codex averaged 35,659,265 raw tokens,
 while sequential Work Leaf averaged 19,311,710, a 45.84% reduction. Direct Codex averaged 311 model
 generations and sequential Work Leaf averaged 198. Most of the reduction occurs during
-implementation and review.
+implementation and review. Sequential Work Leaf averaged 1,785,694 uncached tokens against direct
+Codex's 1,547,137, or 15.42% more. Exact usage does not make these sample differences precise estimates
+of expected effects.
 
 The normal Work Leaf endpoint contains 35 interrupted responses without provable terminal usage.
 Raw-event replay proves that every gap contains one response and no intervening tool boundary.
 Applying the derived maximum of 386,400 raw tokens to each response puts the normal endpoint
 reduction between 45.38% and 51.62%. The orchestration protocol plus the bounded mediated-read and
-interruption transition net to 97.75%-98.02% of the observed raw-token gap. The joint transition's
-direction remains unresolved, but a separate completed-response control proves that early
-interruption saves 2.79M-5.05M tokens in these samples.
+interruption transition net to 97.75%-98.02% of the observed raw-token gap as a descriptive allocation
+of the collected sample means. This range accounts for missing usage only; it is not a confidence
+interval and does not establish at least 90% causal coverage. The joint transition's direction
+remains unresolved. The separate completed-response control uses 2.79M-5.05M more raw tokens than the
+interrupted-response endpoint in the collected samples.
 
-This is not a formal equal-quality population estimate. The six normal direct runs completed 17 of
-18 feature checks and the six normal Work Leaf runs completed 13 of 18. The exact main control is
+Normal-endpoint measurement remains incomplete. This is not a formal equal-quality population
+estimate. The six normal direct runs completed 17 of 18 feature checks and the six normal Work Leaf
+runs completed 13 of 18. The exact main control is
 closer at 9/9 versus 8/9, and both fully correct Work Leaf control runs used fewer tokens than every
 direct control run.
 
@@ -69,15 +75,18 @@ comparing the two workflow loops:
 The intended difference is direct Codex's normal native tool loop versus Work Leaf's structured
 patch, write-command, ownership, and review protocol.
 
-| Main control | Runs | Feature checks | Mean raw tokens | Range |
-| --- | ---: | ---: | ---: | ---: |
-| Compact direct Codex | 3 | 9/9 | 35,659,265 | 32.96M-40.58M |
-| Sequential Work Leaf | 3 | 8/9 | 19,311,710 | 16.70M-23.56M |
+| Main control | Runs | Feature checks | Mean raw tokens | Raw range | Mean uncached tokens |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Compact direct Codex | 3 | 9/9 | 35,659,265 | 32.96M-40.58M | 1,547,137 |
+| Sequential Work Leaf | 3 | 8/9 | 19,311,710 | 16.70M-23.56M | 1,785,694 |
 
 Sequential Work Leaf used 16,347,554 fewer raw tokens, or 45.84% less than compact direct Codex.
-All three Work Leaf results are below all three direct results. The exact one-sided permutation
-result is 0.05 for this three-versus-three sample. Both 3/3 Work Leaf runs are also below the lowest
-direct result, though two observations are too few for a precise quality-balanced estimate.
+All three Work Leaf results are below all three direct results. The pooled one-sided permutation
+calculation is 0.05 under exchangeability of all six condition labels; it does not model the two
+collection batches or establish causal-share precision. Both 3/3 Work Leaf runs are also below the
+lowest direct result. That subset is selected after scoring and remains descriptive; two Work Leaf
+observations do not establish quality equivalence. The full main-control sample uses 238,558 more
+uncached tokens under Work Leaf, a 15.42% increase.
 
 ## What Produces The Difference
 
@@ -109,17 +118,27 @@ The measured consequences per workflow are:
 | Review native commands | 249.33 | 147.00 | 41.05% fewer |
 | Review rounds | 6.00 | 10.67 | more, not omitted |
 
-Across this transition, Work Leaf saved 16.59 million cached input tokens while using about 252,000
-more fresh input tokens and about 9,500 more reasoning-output tokens. The saving is therefore not
-less fresh task information or suppressed reasoning. It is fewer repeated model generations that
-replay a growing cached conversation.
+Across this transition, Work Leaf used 16.59 million fewer cached input tokens while using about
+252,000 more fresh input tokens and about 9,500 more reasoning-output tokens. The raw-token
+difference is concentrated in cached-context replay. The recorded reduction in model generations is
+consistent with the structured handoff mechanism; these counts do not separately establish each
+protocol action's causal contribution or an uncached-token saving.
 
 ## Allocation Of The Raw Saving
 
 The normal Work Leaf endpoint is a range, so its gap and the affected bridge step are ranges too.
-The exact controlled steps remain single values.
+The exactly measured controls supply sample means. Every range below varies only the missing-usage
+allowance while holding those sample means fixed. Sampling uncertainty, unequal quality, and
+differences between collection batches are not represented by these bounds.
 
-| Cause | Raw tokens saved | Share of endpoint gap |
+`analyze.py::bounded_endpoint_bridge` retains absolute token ranges when the endpoint difference
+interval includes zero, but writes `share_of_endpoint_gap_percent: null` with status `undefined`.
+`bounded_selected_causal_coverage` applies the same rule to grouped transitions. This applies to the
+uncached endpoint: percentages evaluated at its two bounds cannot bound a ratio across a zero
+denominator. `evidence.json::interpretation` identifies the remaining numeric ranges as descriptive
+accounting bounds and records the unresolved causal-coverage and quality-equivalence conclusions.
+
+| Controlled transition | Sample raw-token difference | Descriptive share of sample endpoint gap |
 | --- | ---: | ---: |
 | Compact exact linearization handoff | 457,117 fewer | 2.45%-2.80% |
 | Work Leaf orchestration protocol | 16,347,554 fewer | 87.68%-99.74% |
@@ -128,14 +147,16 @@ The exact controlled steps remain single values.
 | Total endpoint gap | 16,390,850-18,644,850 fewer | 100% |
 
 At the recorded Work Leaf lower bound, the gap is 18.645 million tokens and the two Work Leaf
-mechanism groups cover 98.02%: 87.68% from orchestration and 10.34% from reads and interruption. At
-the conservative Work Leaf upper bound, the gap is 16.391 million. The exact orchestration effect is
-99.74% of that smaller gap, while the bounded read/interruption transition offsets 1.99%; their
-net coverage is 97.75%. This ordered allocation proves the dominant protocol effect but does not
-prove that reads plus interruption independently save tokens.
+mechanism groups account arithmetically for 98.02%: 87.68% from orchestration and 10.34% from reads and
+interruption. At the conservative Work Leaf upper bound, the gap is 16.391 million. The main-control
+difference is 99.74% of that smaller gap, while the bounded read/interruption transition offsets 1.99%; their
+net allocation is 97.75%. The full bridge telescopes to 100% by construction, so its zero remainder
+does not test explanatory completeness. The exact controls support a substantial orchestration
+effect, but this allocation does not establish at least 90% causal coverage or that reads plus
+interruption independently save tokens.
 
-The compact-linearization benefit and small concurrency cost nearly cancel. They are minor compared
-with the protocol effect and normal run variation.
+The compact-linearization and scheduling sample differences nearly cancel. Their magnitudes are
+small relative to variation between the recorded runs; their expected directions remain uncertain.
 
 Inside the exact orchestration transition, implementation and fixes save 14.37 million raw tokens
 and review saves 2.12 million. Linearization and Work Leaf's title session together use about
@@ -161,41 +182,47 @@ The six main-control runs, the three completed-response control runs, and the th
 runs have complete usage. Their controlled differences do not depend on the corrected normal
 endpoint accounting.
 
-## What Is Proven And What Is Not
+## Supported Findings And Limits
 
 The evidence supports these conclusions for this frozen benchmark:
 
 - A large raw-token reduction remains after the maximum missing-token allowance.
-- Work Leaf's orchestration protocol causes the main reduction as one connected mechanism package.
-- That package reduces repeated model/tool cycles and cached-context replay during implementation
-  and review.
-- Early directive interruption saves 2.79M-5.05M raw tokens in the completed-response control.
+- The controlled comparison supports a substantial raw-token effect from Work Leaf's orchestration
+  protocol as one connected mechanism package.
+- The main controls record fewer model/tool cycles and less cached-context replay during
+  implementation and review, together with 15.42% more uncached tokens under Work Leaf.
+- The completed-response control uses 2.79M-5.05M more raw tokens than the interrupted-response
+  endpoint in the collected samples under the declared missing-usage ceiling.
 - Mediated reads do not have a proven independent direction, and the joint read/interruption bridge
   remains unresolved because those interventions interact.
-- The orchestration and read/interruption transitions together net to at least 97.75% of the
-  observed raw-token gap.
+- The orchestration and read/interruption sample differences together net to 97.75%-98.02% of the
+  observed raw-token gap in the descriptive bridge.
 
 The evidence does not establish:
 
 - an exact normal-workflow reduction percentage;
 - an uncached-token reduction;
-- formal equal-quality equivalence for the full six-run groups;
+- at least 90% causal coverage with sampling uncertainty accounted for;
+- formal equal-quality equivalence for either the endpoint or main-control groups;
 - separate percentages for structured edits, write-command mediation, compact acknowledgements,
   ownership, and review routing inside the orchestration package;
 - generalization to other repositories or task types.
 
 ## Conclusion
 
-Work Leaf saves raw tokens here mainly by changing the implementation and review loop. It replaces
-many native model/tool cycles with fewer structured handoffs that Work Leaf applies and records
+The main controls support changing the implementation and review loop as a source of raw-token
+savings. Work Leaf replaces many native model/tool cycles with fewer structured handoffs that it applies and records
 outside the model thread. This avoids repeatedly sending the growing cached conversation through
 the model.
 
-The exact main control measures a 16.35 million-token protocol effect. After conservatively bounding
-the normal endpoint's 35 unresolved responses, orchestration plus the bounded mediated-read and
-interruption transition net to 97.75%-98.02% of the observed raw-token difference. This meets the
-requested 90% causal-coverage target without hiding that the second transition changes sign at the
-conservative extreme or that the endpoint groups differ in measured quality.
+The exact main-control usage totals yield a 16.35 million-token difference in sample means. After
+conservatively bounding the normal endpoint's 35 unresolved responses, orchestration plus the bounded mediated-read and
+interruption transition net to 97.75%-98.02% of the observed raw-token difference as a descriptive
+allocation. Normal-endpoint measurement remains incomplete, and the requested 90% causal-coverage
+target is not established. A further study needs exact normal-workflow telemetry and predetermined
+quality, sampling precision, and stopping criteria before collecting provider runs. The authorized
+telemetry gate and first measurement batch are defined in
+[`PROTOCOL.md`](../efficiency-measurement-gate-20260906/PROTOCOL.md).
 
 Machine-readable values are in `evidence.json`; the detailed controlled chain is in
 `05-CAUSAL-ANALYSIS.md`.
