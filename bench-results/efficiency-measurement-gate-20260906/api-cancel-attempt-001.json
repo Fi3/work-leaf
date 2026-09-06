@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "endpoint_hostname": "api.openai.com",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "max_output_tokens": 2048,
+  "background": true,
+  "stream": true,
+  "tools_provided": false,
+  "model_requests_attempted": 1,
+  "create_http_status": 200,
+  "in_progress_seen": true,
+  "output_text_delta_seen": false,
+  "events_seen": ["response.created", "response.in_progress", "response.failed"],
+  "terminal_before_cancel": {"status": "failed", "usage": null},
+  "cancel_trigger": "cleanup_after_stream_end_or_timeout",
+  "cancel_error": {
+    "http_status": 400,
+    "local_error_type": "HTTPError",
+    "error_code": null,
+    "error_type": "invalid_request_error"
+  },
+  "post_cancel_observations": [
+    {"elapsed_seconds": 7.506, "http_status": 200, "status": "failed", "usage": null},
+    {"elapsed_seconds": 9.907, "http_status": 200, "status": "failed", "usage": null},
+    {"elapsed_seconds": 15.306, "http_status": 200, "status": "failed", "usage": null}
+  ],
+  "elapsed_seconds": 15.306,
+  "response_id_sha256": "82ee4c79f869859d31ca459d107f403640bce2f6fd75c2ef17959589ecf805b5",
+  "evidence_limitations": [
+    "Response ID was retained only as a digest, preventing subsequent retrieval by ID.",
+    "The diagnostic omitted the terminal response.error object.",
+    "Failure before visible output does not verify in-progress cancellation or establish API unavailability."
+  ]
+}

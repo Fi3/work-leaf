@@ -226,6 +226,26 @@ leaves a nonzero increase, with exactly one unresolved interruption in that inte
 cumulative notifications are skipped during this recovery check. The capture remains incomplete
 when this arithmetic cannot prove coverage; the workflow result is retained independently.
 
+The external observer's optional `WORK_LEAF_OBSERVER_RAW_RESPONSE_USAGE=1` mode enables Codex
+experimental response-usage metadata on primary Work Leaf app-server captures. Its private
+`raw_capture` module rewrites only initialization capabilities and the thread-start raw-event
+option, suppresses raw response-item notifications, and preserves original and forwarded request
+streams with rewrite provenance. It does not change the product backend, model-facing prompts,
+tools, authentication, or the usage-grace state machine. Metadata transport overhead remains part
+of the recorded instrumentation condition.
+Serialized invocation metadata records the opt-in and provenance digests without extending the
+public invocation structs. Analysis verifies the digests and reconstructs the allowed forwarded
+frames; incomplete or inconsistent provenance is a measurement error, not a workflow failure.
+
+The observer's private `response_usage` module writes a response-ID ledger in each app-server
+capture's `response-usage.json`. Exact counters require a matching captured turn start, valid token
+arithmetic, and consistent response identity. Identical repeats count once; conflicting records are
+capture errors. A locally started empty thread permits comparison of the response sum with its
+cumulative total; resumed/forked history without that baseline does not. This audit is separate from
+`usage_scopes.total_workflow`: it never adds response sums to cumulative totals or treats an equal
+completed prefix as proof that an interrupted tail was counted. Null counters and missing events
+remain incomplete evidence. The experimental notification stream is not an exhaustive call inventory.
+
 The optional `WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME=wait-for-usage` policy extends
 that bounded wait when provider output resumes after the directive. The observer waits for the
 matching exact usage event before forwarding the original interrupt, up to the configured grace

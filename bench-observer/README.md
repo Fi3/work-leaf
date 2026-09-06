@@ -81,6 +81,37 @@ and the later event's `last` usage. It accepts the interrupted response only whe
 is attributable to exactly one unresolved interruption in that interval. Otherwise `analyze` keeps
 the recorded total as a lower bound and marks provider usage incomplete.
 
+### Optional response-identity audit
+
+`WORK_LEAF_OBSERVER_RAW_RESPONSE_USAGE=1` opts a primary Work Leaf app-server capture into
+response-scoped usage notifications on a compatible Codex version. The proxy enables experimental
+capabilities and `thread/start.params.experimentalRawEvents`, and opts out of
+`rawResponseItem/completed` to avoid requesting duplicate raw item content. It leaves turn starts,
+prompts, tools, resumes, interrupts, and the existing usage-grace decision rules unchanged. Additional
+metadata has transport overhead; this mode does not claim timing equivalence with capture disabled.
+
+Each opted-in invocation records its settings in `raw-response-usage.json`, metadata rewrite hashes
+in `raw-response-rewrites.jsonl`, original requests in `client-to-server.raw`, and actual forwarded
+requests in `client-to-server.forwarded.raw`. The opt-in does not change authentication or select a
+provider. Unsupported or absent notifications remain absent evidence, not zero-token responses.
+Invocation start/end metadata records the opt-in and SHA-256 digests of the start record, settings,
+rewrite decisions, forwarded bytes, and configured grace log. Analysis verifies those digests and
+replays the allowed metadata-only transformation; missing, altered, extra, or reordered evidence
+rejects the capture. Legacy captures without the opt-in retain their existing accounting path.
+
+`analyze` writes `response-usage.json` beside each app-server capture. It validates the required
+response/thread/turn identities and exact counters from `rawResponse/completed`, deduplicates equal
+response IDs, and rejects conflicting identities, malformed counters, or impossible arithmetic.
+Usage must belong to a captured `turn/start` request/reply. A null or absent usage object is unknown.
+Per-thread sums reconcile against cumulative totals only for a locally started empty thread;
+resume/fork history without a verified zero baseline remains unreconciled.
+
+The ledger audits completed-response evidence. It is not added to cumulative workflow totals and
+cannot clear an unresolved interruption. Equality with cumulative usage can describe a completed
+prefix while a later cancelled response remains unreported. The experimental stream is not assumed
+to inventory every hidden or auxiliary provider call. Whole-workflow completeness retains its
+existing checks independently of this audit.
+
 `extract-rollouts` starts from captured thread IDs. It saves only thread identity, working directory,
 model, reasoning effort, CLI version, final cumulative usage, source digest, relative source path,
 and scope labels. It does not copy prompts, messages, reasoning text, authentication state, or

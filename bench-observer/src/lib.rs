@@ -14,6 +14,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
+mod raw_capture;
+mod response_usage;
+
 #[cfg(unix)]
 use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
 
@@ -444,6 +447,8 @@ pub fn run_captured_process(
     } else {
         ProviderUsageGraceOutputResume::Forward
     };
+    let raw_response_usage =
+        primary && kind == CaptureKind::AppServer && raw_capture::enabled_from_environment()?;
     let start = InvocationStart {
         invocation_id: invocation_id.clone(),
         executable: executable_name.to_string(),
@@ -473,7 +478,8 @@ pub fn run_captured_process(
     create_private_directory(&capture_root)?;
     create_private_directory(&invocation_dir)?;
     create_private_directory(&capture_dir)?;
-    write_json_atomic(&invocation_dir.join("start.json"), &start)?;
+    let start_metadata = raw_capture::start_metadata(&start, raw_response_usage)?;
+    write_json_atomic(&invocation_dir.join("start.json"), &start_metadata)?;
 
     let stdin_path = match kind {
         CaptureKind::AppServer => capture_dir.join("client-to-server.raw"),
@@ -490,6 +496,14 @@ pub fn run_captured_process(
     create_private_file(&stdin_path)?;
     create_private_file(&stdout_path)?;
     create_private_file(&stderr_path)?;
+    let raw_capture_files = if raw_response_usage {
+        Some(raw_capture::CaptureFiles::create(
+            &capture_dir,
+            provider_usage_grace_ms > 0,
+        )?)
+    } else {
+        None
+    };
 
     let mut command = Command::new(real_executable);
     command
@@ -543,7 +557,19 @@ pub fn run_captured_process(
             provider_usage_grace_output_resume,
         ))
     });
-    let stdin_thread = if let Some(usage_grace) = usage_grace.clone() {
+    let stdin_thread = if let Some(files) = raw_capture_files {
+        let usage_grace = usage_grace.clone();
+        thread::spawn(move || {
+            raw_capture::pump_stdin(
+                child_stdin,
+                stdin_capture,
+                stdin_chunks,
+                files,
+                stdin_done,
+                usage_grace,
+            )
+        })
+    } else if let Some(usage_grace) = usage_grace.clone() {
         let forwarded_capture =
             create_private_file(&capture_dir.join("client-to-server.forwarded.raw"))?;
         let decisions = create_private_file(&capture_dir.join("provider-usage-grace.jsonl"))?;
@@ -602,10 +628,17 @@ pub fn run_captured_process(
         stdout_sha256: sha256_file(&stdout_path)?,
         stderr_sha256: sha256_file(&stderr_path)?,
     };
-    write_completion_json(&invocation_dir.join("end.json"), &end)?;
+    let end_metadata = raw_capture::end_metadata(
+        &end,
+        raw_response_usage,
+        provider_usage_grace_ms > 0,
+        &invocation_dir.join("start.json"),
+        &capture_dir,
+    )?;
+    write_completion_json(&invocation_dir.join("end.json"), &end_metadata)?;
     write_json_atomic(
         &capture_dir.join("meta.json"),
-        &json!({ "start": start, "end": end }),
+        &json!({ "start": start_metadata, "end": end_metadata }),
     )?;
     harden_artifact_permissions(&invocation_dir)?;
     harden_artifact_permissions(&capture_dir)?;
@@ -4638,6 +4671,20 @@ fn verify_process_capture(
             errors,
         )?;
     }
+    if process.start.capture_kind == CaptureKind::AppServer
+        && let Err(error) = raw_capture::verify_capture(
+            &config
+                .root
+                .join("invocations")
+                .join(&process.start.invocation_id),
+            &directory,
+        )
+    {
+        errors.push(format!(
+            "invocation {}: {error}",
+            process.start.invocation_id
+        ));
+    }
     Ok(())
 }
 
@@ -5190,6 +5237,21 @@ fn analyze_app_server(
 
     let client_values = parse_top_level_json_lines(&client_bytes, errors, start, "client")?;
     let server_values = parse_top_level_json_lines(&server_bytes, errors, start, "server")?;
+    let response_usage = response_usage::analyze(&client_values, &server_values);
+    write_json_atomic(&directory.join("response-usage.json"), &response_usage)?;
+    if let Some(response_errors) = response_usage["errors"].as_array() {
+        errors.extend(
+            response_errors
+                .iter()
+                .filter_map(Value::as_str)
+                .map(|error| {
+                    format!(
+                        "response usage in invocation {}: {error}",
+                        start.invocation_id
+                    )
+                }),
+        );
+    }
     let mut agents = BTreeMap::<String, String>::new();
     let mut pending_turn_threads = BTreeMap::<String, String>::new();
     for value in &client_values {

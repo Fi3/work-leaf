@@ -1,0 +1,86 @@
+{
+  "api_key_present": true,
+  "cancel_error": {
+    "error": {
+      "code": null,
+      "type": "invalid_request_error"
+    },
+    "http_status": 400,
+    "local_error_type": "HTTPError"
+  },
+  "cancel_trigger": "cleanup_after_stream_end_or_timeout",
+  "cancel_usage_gate_passed": false,
+  "create_http_status": 200,
+  "elapsed_seconds": 14.412,
+  "endpoint_hostname": "api.openai.com",
+  "events_seen": [
+    "response.created",
+    "response.in_progress",
+    "response.failed"
+  ],
+  "in_progress_seen": true,
+  "model": "gpt-5.5",
+  "model_requests_attempted": 1,
+  "operation": "cancel",
+  "output_text_delta_seen": false,
+  "post_cancel_observations": [
+    {
+      "elapsed_seconds": 6.691,
+      "error": {
+        "code": "credit_balance_exhausted",
+        "type": null
+      },
+      "http_status": 200,
+      "model": "gpt-5.5-2026-04-23",
+      "response_id": "resp_007123270208bbd0006a9d37fb89b087d2a47171e7bc072318",
+      "status": "failed",
+      "usage": null
+    },
+    {
+      "elapsed_seconds": 8.985,
+      "error": {
+        "code": "credit_balance_exhausted",
+        "type": null
+      },
+      "http_status": 200,
+      "model": "gpt-5.5-2026-04-23",
+      "response_id": "resp_007123270208bbd0006a9d37fb89b087d2a47171e7bc072318",
+      "status": "failed",
+      "usage": null
+    },
+    {
+      "elapsed_seconds": 14.412,
+      "error": {
+        "code": "credit_balance_exhausted",
+        "type": null
+      },
+      "http_status": 200,
+      "model": "gpt-5.5-2026-04-23",
+      "response_id": "resp_007123270208bbd0006a9d37fb89b087d2a47171e7bc072318",
+      "status": "failed",
+      "usage": null
+    }
+  ],
+  "request": {
+    "background": true,
+    "input": "List the integers from 1 to 1000, one per line. Do not use tools.",
+    "max_output_tokens": 2048,
+    "model": "gpt-5.5",
+    "reasoning": {
+      "effort": "xhigh"
+    },
+    "stream": true
+  },
+  "response_id": "resp_007123270208bbd0006a9d37fb89b087d2a47171e7bc072318",
+  "schema_version": 1,
+  "terminal_before_cancel": {
+    "error": {
+      "code": "credit_balance_exhausted",
+      "type": null
+    },
+    "model": "gpt-5.5-2026-04-23",
+    "response_id": "resp_007123270208bbd0006a9d37fb89b087d2a47171e7bc072318",
+    "status": "failed",
+    "usage": null
+  }
+}

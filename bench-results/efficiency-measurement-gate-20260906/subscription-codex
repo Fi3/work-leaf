@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Existing ChatGPT login only. No alternate endpoint or API-key fallback is admitted.
+unset OPENAI_API_KEY CODEX_API_KEY OPENAI_BASE_URL OPENAI_API_BASE CODEX_BASE_URL CODEX_ACCESS_TOKEN
+exec /usr/bin/codex \
+  -c 'forced_login_method="chatgpt"' \
+  -c 'model_provider="openai"' \
+  -c 'model="gpt-5.5"' \
+  -c 'model_reasoning_effort="xhigh"' \
+  "$@"
