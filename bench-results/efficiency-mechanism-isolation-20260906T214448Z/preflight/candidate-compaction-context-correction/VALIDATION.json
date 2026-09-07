@@ -1,0 +1,72 @@
+{
+  "schema": "work-leaf-compaction-context-validation-v1",
+  "checked_at": "2026-09-07T15:37:05Z",
+  "scope": "Separate offline eligibility derivative; no corrected workflow accounting, token values, provider operations or original-source/report mutations.",
+  "sources": {
+    "accounting_compaction_context.py": "513c8632803656d4f582a4ab714e35d9e0f95b56a4355b3b26c2927b07d2bfa3",
+    "test_compaction_context.py": "bbc93570c5b08e86b58a978022cc68347f70e76d187e295404eeae1c587cd94b",
+    "README.md": "780a632dd336cb0851eca43290fd0a8ae2f2222ef6ff3aa1217a3fefe2c124e9",
+    "ELIGIBILITY-INPUT.json": "87afef6df5a35cc0aa28cbd5e620c4f4f8aaea583780a65f5c4b6dc2a6191dd6",
+    "ELIGIBILITY-001.json": "5df3f136e57a3ac43320b47c58ba2e037fa07c5673cb7065acaae04234c24308"
+  },
+  "executed_derived_native_sha256": "24cfcd6d5de51a5ceaab6ef7299a24867223a4116a33c47cbc0e0ceae8504bce",
+  "tests": [
+    {
+      "command": "python3 -B -m unittest test_compaction_context -v",
+      "cwd": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction",
+      "exit_code": 0,
+      "passed": 22
+    },
+    {
+      "command": "python3 -B -m unittest test_accounting_untracked_reads test_audit_compaction -v",
+      "cwd": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/infrastructure/evidence/bench-results/efficiency-mechanism-isolation-20260906T214448Z",
+      "exit_code": 0,
+      "passed": 50,
+      "test_sha256": {
+        "test_accounting_untracked_reads.py": "93f958ae241b7c59d2dd531aa2fc87f70bee0d268f3c380758ab965177a9bdf7",
+        "test_audit_compaction.py": "34fecc2b5b60db5b5df79c3d4cf126d151c935fba4c7e1ced57c335aab6a0e80"
+      }
+    }
+  ],
+  "observed_red": [
+    "Initial test import failed with FileNotFoundError before derivative implementation.",
+    "Intervening event_msg agent_message, explicit public model/effort/cwd contradictions, changed native metadata, malformed text_elements and second response within compaction lifecycle were accepted by the initial implementation; dedicated RED regressions precede the guards.",
+    "Explicit expected digest null was accepted; RED precedes sentinel/strict-digest guard.",
+    "Two native threads had no shared public index parameter; RED precedes one-index-per-workflow cache.",
+    "First actual001 eligibility preflight was rejected for original/forwarded RPC bytes differ; the exact existing observer thread/start experimentalRawEvents rewrite is source-proved before the separate RED-to-GREEN allowance. Turn/start remains exact."
+  ],
+  "actual_source_replay": {
+    "run_id": "candidate-screen-01-workflow-001",
+    "exit_code": 0,
+    "status": "eligible",
+    "errors": [],
+    "proofs": 1,
+    "native_sources_retained": 8,
+    "source_hashes_rechecked": 25,
+    "original_native_diagnostics_retained": 9,
+    "physical_native_order": [
+      276,
+      277,
+      284,
+      285
+    ],
+    "public_accepted_compaction_response_completion_user_order": [
+      43734,
+      43737,
+      44094,
+      44097,
+      44099
+    ],
+    "whole_workflow_audit_run_invoked": false,
+    "token_values_exported": false
+  },
+  "original_accounting_preserved": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/CANDIDATE-COMMON-ACCOUNTING-ORIGINAL.json",
+    "sha256": "620098aaab33af7ef8bc8df32a347c677b9c617542d33ff6e8ce953fe6feb4bb"
+  },
+  "runtime_source_modified": false,
+  "committed_tests_modified": false,
+  "provider_calls": 0,
+  "real_agent_verification": "Not applicable: this provider-free postcapture checker changes no agent-facing workflow. Historical exact captured response/context linkage is independently replayed instead.",
+  "complexity": "Shared public index is O(C); native scans and nonoverlapping qualifying spans are linear in native bytes/events. Dependency compilation/hashing is O(T*D) for T native threads and fixed source bytes D. No U*C repeated capture indexing or source-row insertion/reordering."
+}
