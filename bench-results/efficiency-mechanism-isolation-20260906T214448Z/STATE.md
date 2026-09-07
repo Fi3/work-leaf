@@ -2,14 +2,22 @@
 
 ## Active continuation plan
 
-The user approves one fresh C15 diagnostic003 after harness-only cap/success-check
-correction and requires work through its completed result review. [Scope](preflight/c15-real-diagnostic-003/SCOPE.md)
-retains all former outcomes, the eight-call/time bounds and unchanged normal WL.
-Test-first guard and actual CommandChat handoff regressions pass; the private
-crate has 18 passing tests and independent review. Source cut `a84d5c8` and a fresh
-executable are frozen with 212 matching pins; final preadmission review is active.
-Unchanged-runtime repository gates pass 534 tests with clean fmt/Clippy.
-No provider workflow has launched for003.
+C15 diagnostic003 has a complete successful real subscription workflow:
+private behavioral RED → identical tests plus implementation → ordinary shared
+patch/ACK → normal GREEN → author DONE → resolved review. Its sole command runs
+22:05:57.550833–22:06:52.605792 UTC on 2026-09-07, 55.055 seconds, exit 0, six calls/two
+roles. All 215 admission endpoints and 258 root witness sources match. Private
+semantics and independent closure checks pass. [Result](preflight/c15-real-diagnostic-003/RESULT.md).
+
+The correction is confined to the private diagnostic harness at `a84d5c8`; normal
+WL is unchanged. Required runtime gates pass 534 tests; private-crate gates pass 18,
+both with clean fmt/Clippy. Actual003 supplies real-agent verification. Original
+analyze/extract run once each with exits 2/0, retaining one interrupted-turn usage
+gap and eight exact observer-ELF marker flags. No token effect is estimated.
+All previous failures and partial outcomes remain saved. Zero providers are
+running; no control, Direct workflow, old benchmark rerun or automatic replacement
+is authorized by the one-diagnostic scope. Broader causal direction/percentage
+attribution remains separate unfinished work, not disguised as workflow readiness.
 
 C15 diagnostic001's sole attempt is CLOSED FAILED: supervised command exit 101,
 19:42:55.818266–19:42:55.833120 UTC, before any model call or private execution.
