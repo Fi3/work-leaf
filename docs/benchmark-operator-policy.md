@@ -63,3 +63,13 @@ causal continuation behavior from incomplete token-accounting totals. Allocation
 the phase requires its own frozen manifest, exact prompt-delivery audit and future-only verified
 own-workflow trust-transition policy. The original screen's no-candidate decision, configuration
 flag and unsuccessful diagnostics remain retained and are not replacement observations.
+
+`bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROTOCOL-UNTRACKED-READ-INLINE.md`
+specifies the prospective v3 read-representation phase: twelve fresh WL workflows, six per arm,
+in four mixed waves of three. Its factor replaces only successfully bundled, currently untracked
+project snapshots with their exact full-inline representation. Both arms retain ordinary bundle
+creation and symmetric candidate evidence. Default builds and all non-target mechanisms remain
+ordinary. A frozen phase manifest, real subscription delivery checks, strict future-only response
+identity accounting and complete terminal outcomes are required before its whole-workflow raw-token
+test. Earlier null phases remain separate; no favorable endpoint replacement or adaptive extension
+is permitted.
