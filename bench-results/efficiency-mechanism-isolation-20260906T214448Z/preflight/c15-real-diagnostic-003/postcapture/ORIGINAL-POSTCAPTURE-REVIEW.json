@@ -1,0 +1,158 @@
+{
+  "schema": "work-leaf-original-postcapture-review-v1",
+  "run_id": "private-test-first-diagnostic-003",
+  "scope_sha256": "e2b4a2b7eb4d3c1ced7399f0ae8503fb331750af4230f65899b2c14e8a94a4f4",
+  "original_terminal_sha256": "9173cbf5835e3492adc58138522054ac451e68e2c01a3f2e4fcbf2bb36953410",
+  "command_executions": [
+    {
+      "argv": [
+        "/usr/bin/timeout",
+        "--kill-after=5s",
+        "180s",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/infrastructure/bin/bench-observer",
+        "analyze",
+        "--config",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/observation/observer-config.json"
+      ],
+      "attempt_sha256": "f59d2921dce95812165a5df39b215b89caa486f4a0a8826f68354fd1c32c0ece",
+      "command": "ANALYZE",
+      "duration_seconds": 0.17891807801788673,
+      "error": null,
+      "finished_at": "2026-09-07T22:09:16.918110+00:00",
+      "launch_status": "completed",
+      "launcher_exit_code": 2,
+      "retry_authorized": false,
+      "schema": "work-leaf-once-only-postcapture-execution-v1",
+      "scope_sha256": "e2b4a2b7eb4d3c1ced7399f0ae8503fb331750af4230f65899b2c14e8a94a4f4",
+      "source_endpoint_count": 248,
+      "source_endpoint_errors": [],
+      "started_at": "2026-09-07T22:09:16.739193+00:00",
+      "stderr": {
+        "bytes": 0,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/postcapture/OBSERVER-ANALYZE-ORIGINAL.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 6020,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/postcapture/OBSERVER-ANALYZE-ORIGINAL.json",
+        "sha256": "135c616cba117dc8ae1d5575fee36b35043429b04aa3b5334d5fd2e360bf21bc"
+      }
+    },
+    {
+      "argv": [
+        "/usr/bin/timeout",
+        "--kill-after=5s",
+        "180s",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/infrastructure/bin/bench-observer",
+        "extract-rollouts",
+        "--config",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/observation/observer-config.json",
+        "--sessions-root",
+        "/home/user/.codex/sessions"
+      ],
+      "attempt_sha256": "0eab36a5ca4012c18ca51b0069e9b1688b69b66f47d12375124b37c93171ff86",
+      "command": "EXTRACT",
+      "duration_seconds": 0.09506433096248657,
+      "error": null,
+      "finished_at": "2026-09-07T22:10:15.913924+00:00",
+      "launch_status": "completed",
+      "launcher_exit_code": 0,
+      "prerequisite": {
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/observation/mechanism-summary.json",
+        "sha256": "135c616cba117dc8ae1d5575fee36b35043429b04aa3b5334d5fd2e360bf21bc"
+      },
+      "retry_authorized": false,
+      "schema": "work-leaf-once-only-postcapture-execution-v1",
+      "scope_sha256": "e2b4a2b7eb4d3c1ced7399f0ae8503fb331750af4230f65899b2c14e8a94a4f4",
+      "source_endpoint_count": 249,
+      "source_endpoint_errors": [],
+      "started_at": "2026-09-07T22:10:15.818857+00:00",
+      "stderr": {
+        "bytes": 0,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/postcapture/OBSERVER-EXTRACT-ORIGINAL.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 155,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/postcapture/OBSERVER-EXTRACT-ORIGINAL.json",
+        "sha256": "73bc892aa052545fab211cee00e143f13ec35aec3ef6d6bfbfdbddc9bd4520e2"
+      }
+    }
+  ],
+  "original_extraction": {
+    "observed_threads": 2,
+    "matched_threads": 2,
+    "session_only_threads": [],
+    "missing_threads": [],
+    "unobserved_cwd_threads": [],
+    "errors": []
+  },
+  "reports": {
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/observation/process-invocations.jsonl": {
+      "sha256": "2441b292083460e0e5e33d0b0e7c3b062204be617219789946566f7a4c5974aa",
+      "bytes": 3101
+    },
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/observation/mechanism-summary.json": {
+      "sha256": "135c616cba117dc8ae1d5575fee36b35043429b04aa3b5334d5fd2e360bf21bc",
+      "bytes": 6020
+    },
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/observation/counterfactuals.jsonl": {
+      "sha256": "4ae896290df2dbc56ea994aef62282983930066c7c51a02f03d06fa4a8e9e20c",
+      "bytes": 553
+    },
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/observation/capture-audit.txt": {
+      "sha256": "319117574ee6e87c5754aaf29b43699bf9aa4fa04ce1852b4d4f7e55627c04ac",
+      "bytes": 730
+    },
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/observation/rollout-metadata.jsonl": {
+      "sha256": "3000fbe1eae4fb49c308de545ee709647d3a799fd6b2893bbaa8f72fc577b2e0",
+      "bytes": 1022
+    },
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/observation/rollout-audit.json": {
+      "sha256": "73bc892aa052545fab211cee00e143f13ec35aec3ef6d6bfbfdbddc9bd4520e2",
+      "bytes": 155
+    },
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/postcapture/OBSERVER-ANALYZE-ORIGINAL-EXECUTION.json": {
+      "sha256": "af9cb73e8a5919bd12cac56bc1fee0e51aee80715194032f67fea67cf424de88",
+      "bytes": 1616
+    },
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/postcapture/OBSERVER-EXTRACT-ORIGINAL-EXECUTION.json": {
+      "sha256": "3910e95673bf3350867246f5724f42298004438c2a557306593feddfa61fdfe0",
+      "bytes": 1958
+    }
+  },
+  "proxy_binary_identities": [
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/observation/proxy-bin/codex",
+      "sha256": "238bdc610a28edd328d91046f9674dbe59ad2f2d7520fedf681c1ae95a56e386",
+      "bytes": 3196456
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/observation/proxy-bin/sh",
+      "sha256": "238bdc610a28edd328d91046f9674dbe59ad2f2d7520fedf681c1ae95a56e386",
+      "bytes": 3196456
+    }
+  ],
+  "all_pinned_endpoints_match": true,
+  "source_endpoint_count": 248,
+  "summary_unchanged_after_extraction": true,
+  "analyzer_flags": [
+    "interrupted provider turn has no complete usage: count=1",
+    "secret marker bearer-token found in proxy-bin/codex",
+    "secret marker OPENAI_API_KEY found in proxy-bin/codex",
+    "secret marker ANTHROPIC_API_KEY found in proxy-bin/codex",
+    "secret marker refresh_token found in proxy-bin/codex",
+    "secret marker bearer-token found in proxy-bin/sh",
+    "secret marker OPENAI_API_KEY found in proxy-bin/sh",
+    "secret marker ANTHROPIC_API_KEY found in proxy-bin/sh",
+    "secret marker refresh_token found in proxy-bin/sh"
+  ],
+  "limits": [
+    "Exactly one analyze and one prerequisite-satisfied extract; no reanalysis after extraction.",
+    "Original capture_complete=false and every usage/marker flag remain unchanged.",
+    "The eight proxy-marker hits have exact whole-file frozen ELF identity; this explains those file locations only and is not a waiver.",
+    "The separate interrupted-turn usage flag is not a binary marker, provider-crash conclusion, zero-usage observation, or complete-accounting result.",
+    "Two matched native rollout threads and extraction exit0 do not certify all input/private-test/semantic/quality gates.",
+    "No token totals/private reasoning displayed; no provider/private executor/accounting/retry call. Root and independent reviewers own native/public/semantic witness."
+  ]
+}
