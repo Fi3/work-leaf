@@ -2,6 +2,23 @@
 
 ## Active continuation plan
 
+C15 diagnostic001's sole attempt is CLOSED FAILED: supervised command exit 101,
+19:42:55.818266–19:42:55.833120 UTC, before any model call or private execution.
+All 167 admitted source pins match at its endpoint. The new bundle namespace
+validator appends a trailing slash when an existing parent produces an empty
+suffix, then falsely rejects its exact path spelling. Independent reproduction
+confirms the host defect. The initial project and empty private root remain;
+ordinary ContextBundleStore unwind removes its empty bundle parent. No trace,
+app-server/invocation journal, native thread or HARNESS-RESULT is generated.
+Original terminal/stdout/stderr and compiled source/binary are preserved.
+
+The bench-only regression fix and independent review are closed. Final gates pass
+534 tests with zero failures, including actual CommandChat startup with pre-created
+empty/populated ordinary bundle parents. The user explicitly approves one corrected
+C15 diagnostic002; fresh inputs are under preparation. Diagnostic001 is not rerun
+or replaced. Original analyzer/extractor attempts are terminal with exits 2/0;
+their zero-invocation witness is being finalized. No provider workflow is running.
+
 The user's [C15/C21 approval](AUTHORITY-C15-C21-20260907T1806Z.md) authorizes an
 explicitly qualified private-test-first workflow and one additional separately
 recorded reviewer diagnostic002. C15 runtime/bridge implementation is active.
@@ -23,8 +40,9 @@ pass 50 tests. Independent source review passes 33 private tests and closes the
 launch/cancellation/controller/UI findings. The final-byte confined local
 workflow retains private RED, ordinary shared patch/ACK and same-check GREEN.
 No real provider result is implied by that synthetic transport fixture.
-The natural real diagnostic has a frozen binary and 159 matching final input
-pins; one bounded subscription attempt awaits its final preadmission review.
+The natural real diagnostic's frozen binary and preadmission review qualified
+its selected inputs but missed the existing-directory runtime initialization bug
+documented above. Automatic/source checks are not a real-agent success claim.
 
 C15 private bridge qualification is closed: 21 automatic tests pass independently,
 and one frozen-project Cargo execution exits 0 with closed private children, no
@@ -35,9 +53,10 @@ Live metadata uses natural test paths
 and purpose; the host records exact after-images instead of asking the model to
 compute offsets or repeat test bodies. This avoids artificial measurement
 bookkeeping and preserves ambiguous co-located test/production changes. The
-[natural real-agent fixture](preflight/c15-real-diagnostic/SCOPE-PROPOSED.md) is
-under preparation, with nine passing provider-free guard tests and a compiled
-ignored real harness, but no real admission. Cross-thread/deferred author policy
+[natural real-agent fixture](preflight/c15-real-diagnostic/SCOPE-PROPOSED.md) has
+nine passing provider-free guard tests and an admitted zero-provider startup failure;
+those checks missed the existing-directory case. A separately approved corrected
+diagnostic002 preserves its natural task and bounds. Cross-thread/deferred author policy
 injection and provisional cancellation reject before unauthorized private work;
 their reproduced regression evidence is retained in the runtime qualification.
 The prior unanswered-choice checkpoints below retain their historical cutoff.
