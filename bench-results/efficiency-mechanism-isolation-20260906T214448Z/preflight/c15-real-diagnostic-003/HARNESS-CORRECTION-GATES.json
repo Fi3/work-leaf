@@ -1,0 +1,134 @@
+{
+  "schema": "work-leaf-c15-diagnostic-harness-qualification-v1",
+  "scope": "Private003 harness only. No WL runtime edit, provider or admitted diagnostic execution by implementation task.",
+  "source_sha256": {
+    "Cargo.toml": "974ccf2dc6b9df6968ec32c9773d1fd5c020178739c3f89e047bf3be96700aaf",
+    "Cargo.lock": "f702c77dee349e5ffdf48f8da8bd719bcc7cb48b2e4df93391f89695c1230279",
+    "guards.rs": "92263d07347251f50b53fcd17c0d58bab0855062ab9acf8537a610c8d0f245f7",
+    "harness.rs": "651a984518102c3af76aff09d93955d9c44c57c189f5a0aecf0bfdb25ba358ba",
+    "guard_tests.rs": "0735f66c0100b1090a251d69902ad9fe36b391093f53fa695770826f4953f011",
+    "completion_tests.rs": "4a86008589f8f9fce73caa540f18a42bc46fcbe8c8671a5f2d49651373528754",
+    "runtime_tests.rs": "dafabac998e4976c2e94c9d86e1a00d6459807ea90f0423b59955a9009d2e23c"
+  },
+  "red": {
+    "missing_author_gate": {
+      "chunk_id": "d9631b",
+      "wall_time_seconds": 0.145741163,
+      "exit_code": 101,
+      "original_token_count": 433,
+      "output": "   Compiling c15-real-diagnostic-guards v0.0.0 (/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.24s\n     Running completion_tests.rs (bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/target/debug/deps/completion_contract-147fbedf7213cb2f)\n\nrunning 3 tests\ntest owned_executed_check_then_real_done_qualifies ... ok\ntest missing_failed_stale_spoofed_or_wrong_owner_completion_rejects ... FAILED\ntest saved_002_exit_zero_is_not_a_completed_author_chain ... FAILED\n\nfailures:\n\n---- missing_failed_stale_spoofed_or_wrong_owner_completion_rejects stdout ----\n\nthread 'missing_failed_stale_spoofed_or_wrong_owner_completion_rejects' (82) panicked at completion_tests.rs:48:59:\nvariant 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n---- saved_002_exit_zero_is_not_a_completed_author_chain stdout ----\n\nthread 'saved_002_exit_zero_is_not_a_completed_author_chain' (84) panicked at completion_tests.rs:59:5:\nassertion failed: author_completion(\"user-1\", \"cargo test --offline --locked\",\n        &rows(&base.join(\"prompt-events.jsonl\")),\n        &rows(&capture.join(\"client-to-server.raw\")),\n        &rows(&capture.join(\"client-to-server.forwarded.raw\")),\n        &rows(&capture.join(\"server-to-client.raw\"))).is_err()\n\n\nfailures:\n    missing_failed_stale_spoofed_or_wrong_owner_completion_rejects\n    saved_002_exit_zero_is_not_a_completed_author_chain\n\ntest result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\nerror: test failed, to rerun pass `--test completion_contract`\n"
+    },
+    "capture_publication": {
+      "chunk_id": "6169a6",
+      "wall_time_seconds": 0.298648948,
+      "exit_code": 101,
+      "original_token_count": 337,
+      "output": "   Compiling c15-real-diagnostic-guards v0.0.0 (/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.40s\n     Running completion_tests.rs (bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/target/debug/deps/completion_contract-147fbedf7213cb2f)\n\nrunning 5 tests\ntest capture_publication_can_settle_without_another_provider_call ... FAILED\ntest owned_executed_check_then_real_done_qualifies ... ok\ntest actual_nonzero_status_and_later_ack_invalidate_prior_green ... ok\ntest missing_failed_stale_spoofed_or_wrong_owner_completion_rejects ... ok\ntest saved_002_exit_zero_is_not_a_completed_author_chain ... ok\n\nfailures:\n\n---- capture_publication_can_settle_without_another_provider_call stdout ----\n\nthread 'capture_publication_can_settle_without_another_provider_call' (155) panicked at completion_tests.rs:40:5:\nassertion failed: result.is_ok()\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    capture_publication_can_settle_without_another_provider_call\n\ntest result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\nerror: test failed, to rerun pass `--test completion_contract`\n"
+    },
+    "multiple_public_messages": {
+      "chunk_id": "60d450",
+      "wall_time_seconds": 0.146089054,
+      "exit_code": 101,
+      "original_token_count": 282,
+      "output": "   Compiling c15-real-diagnostic-guards v0.0.0 (/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.25s\n     Running completion_tests.rs (bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/target/debug/deps/completion_contract-147fbedf7213cb2f)\n\nrunning 1 test\ntest preceding_commentary_item_does_not_hide_the_final_done_item ... FAILED\n\nfailures:\n\n---- preceding_commentary_item_does_not_hide_the_final_done_item stdout ----\n\nthread 'preceding_commentary_item_does_not_hide_the_final_done_item' (84) panicked at completion_tests.rs:39:5:\nassertion failed: author_completion(\"author\", \"check-current\", &t, &c, &f, &s).is_ok()\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    preceding_commentary_item_does_not_hide_the_final_done_item\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `--test completion_contract`\n"
+    },
+    "indented_done": {
+      "chunk_id": "bba091",
+      "wall_time_seconds": 0.164229527,
+      "exit_code": 101,
+      "original_token_count": 284,
+      "output": "   Compiling c15-real-diagnostic-guards v0.0.0 (/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.27s\n     Running completion_tests.rs (bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/target/debug/deps/completion_contract-147fbedf7213cb2f)\n\nrunning 1 test\ntest indented_code_marker_and_timed_out_zero_status_do_not_qualify ... FAILED\n\nfailures:\n\n---- indented_code_marker_and_timed_out_zero_status_do_not_qualify stdout ----\n\nthread 'indented_code_marker_and_timed_out_zero_status_do_not_qualify' (92) panicked at completion_tests.rs:75:5:\nassertion failed: author_completion(\"author\", \"check-current\", &t, &c, &f, &s).is_err()\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    indented_code_marker_and_timed_out_zero_status_do_not_qualify\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `--test completion_contract`\n"
+    },
+    "timed_out_zero_status": {
+      "chunk_id": "7a2713",
+      "wall_time_seconds": 0.137536504,
+      "exit_code": 101,
+      "original_token_count": 261,
+      "output": "   Compiling c15-real-diagnostic-guards v0.0.0 (/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.24s\n     Running completion_tests.rs (bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/target/debug/deps/completion_contract-147fbedf7213cb2f)\n\nrunning 1 test\ntest timed_out_zero_status_does_not_qualify ... FAILED\n\nfailures:\n\n---- timed_out_zero_status_does_not_qualify stdout ----\n\nthread 'timed_out_zero_status_does_not_qualify' (84) panicked at completion_tests.rs:84:5:\nassertion failed: author_completion(\"author\", \"check-current\", &t, &c, &c, &s).is_err()\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    timed_out_zero_status_does_not_qualify\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `--test completion_contract`\n"
+    }
+  },
+  "development_failures_retained": {
+    "fixture_macro_syntax": {
+      "chunk_id": "611c7a",
+      "wall_time_seconds": 0.000014247,
+      "exit_code": 101,
+      "original_token_count": 189,
+      "output": "   Compiling serde_derive v1.0.228\n   Compiling rustyline v18.0.0\n   Compiling work-leaf v0.1.3 (/home/user/src/work-leaf)\n   Compiling c15-real-diagnostic-guards v0.0.0 (/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003)\nerror: no rules expected `[`\n  --> completion_tests.rs:19:104\n   |\n19 | ...jection\",\"patch-applied\",\"command-result\"][i],\"sequence\":trace.len(),\"agent_id\":\"author\",\"owned_role\":if i==0 {json!(\"author\")} e...\n   |                                              ^ no rules expected this token in macro call\n   |\n   = note: while trying to match end of macro\n\nerror: could not compile `c15-real-diagnostic-guards` (test \"completion_contract\") due to 1 previous error\n"
+    },
+    "collapsed_if_clippy": {
+      "chunk_id": "13a2f2",
+      "wall_time_seconds": 0.068049344,
+      "exit_code": 101,
+      "original_token_count": 285,
+      "output": "    Checking c15-real-diagnostic-guards v0.0.0 (/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003)\nerror: this `if` statement can be collapsed\n  --> guards.rs:32:9\n   |\n32 | /         if let Ok(value) = inspect() {\n33 | |             if std::time::Instant::now() < deadline {\n34 | |                 return Ok(value);\n35 | |             }\n36 | |         }\n   | |_________^\n   |\n   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#collapsible_if\n   = note: `-D clippy::collapsible-if` implied by `-D warnings`\n   = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`\nhelp: collapse nested if block\n   |\n32 ~         if let Ok(value) = inspect()\n33 ~             && std::time::Instant::now() < deadline {\n34 |                 return Ok(value);\n35 ~             }\n   |\n\nerror: could not compile `c15-real-diagnostic-guards` (lib) due to 1 previous error\nwarning: build failed, waiting for other jobs to finish...\nerror: could not compile `c15-real-diagnostic-guards` (lib test) due to 1 previous error\n"
+    }
+  },
+  "gates": {
+    "fmt": {
+      "command": "cargo fmt --manifest-path /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/Cargo.toml",
+      "result": {
+        "chunk_id": "994f79",
+        "wall_time_seconds": 0.00000475,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    "clippy": {
+      "command": "cargo clippy --offline --locked --manifest-path /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/Cargo.toml --all-targets --all-features -- -D warnings",
+      "result": {
+        "chunk_id": "205f27",
+        "wall_time_seconds": 0.146653875,
+        "exit_code": 0,
+        "original_token_count": 61,
+        "output": "    Checking c15-real-diagnostic-guards v0.0.0 (/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.24s\n"
+      }
+    },
+    "all_targets": {
+      "command": "cargo test --offline --locked --manifest-path /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/Cargo.toml --all-targets --all-features",
+      "result": {
+        "chunk_id": "2c9c19",
+        "wall_time_seconds": 0.625979591,
+        "exit_code": 0,
+        "original_token_count": 817,
+        "output": "   Compiling c15-real-diagnostic-guards v0.0.0 (/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.49s\n     Running unittests guards.rs (bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/target/debug/deps/c15_real_diagnostic_guards-98122da1b51657c3)\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running completion_tests.rs (bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/target/debug/deps/completion_contract-147fbedf7213cb2f)\n\nrunning 8 tests\ntest indented_code_marker_does_not_qualify ... ok\ntest owned_executed_check_then_real_done_qualifies ... ok\ntest preceding_commentary_item_does_not_hide_the_final_done_item ... ok\ntest timed_out_zero_status_does_not_qualify ... ok\ntest actual_nonzero_status_and_later_ack_invalidate_prior_green ... ok\ntest missing_failed_stale_spoofed_or_wrong_owner_completion_rejects ... ok\ntest saved_002_exit_zero_is_not_a_completed_author_chain ... ok\ntest capture_publication_can_settle_without_another_provider_call ... ok\n\ntest result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s\n\n     Running guard_tests.rs (bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/target/debug/deps/guard_contract-08934178937cc910)\n\nrunning 9 tests\ntest actual_controller_phase_owns_roles_without_name_inference ... ok\ntest duplicates_unlaunched_sends_and_early_review_do_not_spend_slots ... ok\ntest hard_eight_call_ceiling_is_not_filled_automatically ... ok\ntest exact_subscription_capture_and_private_activation_are_required ... ok\ntest natural_request_supplies_initial_source_without_a_test_or_measurement_recipe ... ok\ntest review_findings_keep_the_ordinary_known_author_fix_route ... ok\ntest wrong_factor_project_model_or_capture_identity_is_rejected ... ok\ntest unaccepted_duplicate_or_third_thread_is_not_a_settled_workflow ... ok\ntest terminal_cut_requires_exact_forwarded_requests_and_each_latest_turn_closed ... ok\n\ntest result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running harness.rs (bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/target/debug/deps/real_private_preview-8e6ddafc07b7111c)\n\nrunning 1 test\ntest real_subscription_private_test_first ... ignored, requires one frozen subscription admission; max eight outer calls and 240-second cancellation watchdog\n\ntest result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running runtime_tests.rs (bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/target/debug/deps/runtime_contract-b6f8353e2024cdcc)\n\nrunning 2 tests\ntest runtime_sequence_child ... ignored, synthetic subprocess only; parent invokes this with an owned fixture\ntest actual_chat_reaches_ordinary_check_and_done_after_private_feedback_and_patch ... ok\n\ntest result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.22s\n\n"
+      },
+      "counts": {
+        "passed": 18,
+        "failed": 0,
+        "ignored": 2,
+        "targets": 5
+      }
+    }
+  },
+  "runtime_control_flow": {
+    "evidence_owner": "/root/study_harness",
+    "red_tool_chunk": "925dc7",
+    "red_fixture": "/tmp/c15-diagnostic-sequence-100-1788817629544023443",
+    "green_tool_chunk": "81b87f",
+    "targeted_clippy_tool_chunk": "1978c7",
+    "qualification": "Actual public adapter and CommandChat, actual ordinary Git patch/shell check/parsed Done event; embedded synthetic app-server and private bridge results, not real provider or confined private test evidence. Source owner supplied these prior execution IDs; final complete suite above independently reruns the same automatic target.",
+    "counts": {
+      "passed": 1,
+      "ignored": 1
+    }
+  },
+  "limits": {
+    "outer_calls": 8,
+    "watchdog_seconds": 240,
+    "outer_timeout_seconds": 300,
+    "outer_kill_grace_seconds": 5,
+    "private_command_seconds": 30,
+    "private_operation_seconds": 180,
+    "capture_readiness_seconds": 15,
+    "readiness_poll_milliseconds": 25
+  },
+  "unchanged": [
+    "natural fixture request and initial source",
+    "model-facing policy",
+    "Work Leaf runtime/public API",
+    "private bridge/helpers/configuration contract",
+    "provider/grace/forwarding",
+    "original001/002 inputs and outcomes"
+  ]
+}

@@ -14,6 +14,8 @@ The fixture must not impose its former two-round author directive limit. Its exi
 
 The author must receive an actual successful ordinary post-patch focused check result and emit the real top-level completion directive before the harness starts review. A generated but unexecuted command, prose assertion, forged/quoted marker, private-test result or clean review cannot substitute for those events. Tests reproduce002's false positive and exercise the actual CommandChat handoff path before the corrected implementation qualifies.
 
+Capture publication can lag a directive interruption. The harness may poll its local evidence for at most 15 seconds within the remaining 240-second watchdog budget before review. This sends no provider message and changes neither the observer's 1000-ms grace nor forwarding/interruption behavior; an incomplete or invalid chain still fails the gate.
+
 The natural request and test bodies are not modified to force a particular outcome. Closed-source semantic review distinguishes genuine behavior-specific private RED, natural first GREEN and setup/compile/environment failures. Same-test retention is verified against exact held and accepted source. The full target remains private test feedback → ordinary shared patch/ACK → executed focused validation → author completion → resolved ordinary review.
 
 ## Execution and retention
