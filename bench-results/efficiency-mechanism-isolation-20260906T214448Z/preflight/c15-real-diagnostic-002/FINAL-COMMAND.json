@@ -1,0 +1,37 @@
+{
+  "schema": "work-leaf-private-diagnostic-command-v1",
+  "run_id": "private-test-first-diagnostic-002",
+  "condition": "private-test-first",
+  "observer_condition": "work-leaf",
+  "cwd": "/home/user/src/work-leaf",
+  "artifact_root": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-002",
+  "argv": [
+    "/usr/bin/timeout",
+    "--kill-after=5s",
+    "300s",
+    "/tmp/c15-real-runtime-002.DlZ5tz/private-test-first-diagnostic",
+    "--ignored",
+    "--exact",
+    "real_subscription_private_test_first",
+    "--nocapture"
+  ],
+  "environment_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-002/ENVIRONMENT-PROPOSED.json",
+  "source_inventory_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-002/FINAL-SOURCES.json",
+  "launcher": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic/bounded_launch.py",
+    "python_path": "/usr/bin/python3.14",
+    "expected_invocation": "/usr/bin/python3.14 -I -B <launcher-path> <create-new-admission-path> <exact-admission-sha256>"
+  },
+  "limits": {
+    "attempts": 1,
+    "outer_calls": 8,
+    "intended_real_roles": 2,
+    "private_command_seconds": 30,
+    "private_operation_seconds": 180,
+    "harness_cancellation_seconds": 240,
+    "external_timeout_seconds": 300,
+    "external_kill_grace_seconds": 5
+  },
+  "scope": "One user-approved corrected diagnostic002, natural task and unchanged limits; no benchmark rerun, control, Direct, C21 or automatic retry.",
+  "admitted": false
+}
