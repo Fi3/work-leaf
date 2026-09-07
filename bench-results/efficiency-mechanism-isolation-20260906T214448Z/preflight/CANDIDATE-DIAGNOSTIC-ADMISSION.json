@@ -1,0 +1,340 @@
+{
+  "schema": "work-leaf-candidate-diagnostic-admission-v4",
+  "admitted_at": "2026-09-07 11:55:05 UTC",
+  "provider_generation_started_at_admission": false,
+  "authority": "PLAN-CANDIDATE-INVENTORY.md continuous Stage B implementation; PROTOCOL-CANDIDATE-SCREEN.md declares exactly three bounded modified-only real verification scenarios",
+  "maximum_scenarios": 3,
+  "replacements_allowed": false,
+  "benchmark_observations": 0,
+  "route": "existing stored ChatGPT subscription via forced-login subscription-codex; no API keys/credits or credential copying",
+  "model": "gpt-5.5",
+  "effort": "xhigh",
+  "cli_version": "codex-cli 0.153.4",
+  "source_baseline": "70d759a plus hash-bound uncommitted private v4 implementation; a3fcb17 commits evidence/protocol only",
+  "automated_gates": {
+    "cargo_fmt": "pass",
+    "clippy_all_targets_all_features_deny_warnings": "pass",
+    "cargo_test_all_targets_all_features": "pass",
+    "release_binaries": "pass"
+  },
+  "independent_review": "bench_feature closed prelaunch review; C16 end marker, one-to-one actual public delivery, no native tool actions, both-thread terminal settling verified; postcapture native/accounting audit remains required",
+  "source_files": [
+    {
+      "sha256": "a9e6065a450d05bf299202a2d6f44dd2dae33a3324e8c70e9f91d36a22b242fd",
+      "path": "src/agent.rs"
+    },
+    {
+      "sha256": "cae5903d6b34271613fe2ef3a8033eeda3c294a602f2b4b9206b3649881babb0",
+      "path": "src/agent_runtime.rs"
+    },
+    {
+      "sha256": "e327d28fb05ceaa8f9c9465a78fc61069eddb56faa767b4909f29f83684d8b94",
+      "path": "src/bench_candidate_experiment.rs"
+    },
+    {
+      "sha256": "8c9db45eda3a10acabe441259e901617d44bf3d92f800231099ba84036de9a89",
+      "path": "src/bench_experiment.rs"
+    },
+    {
+      "sha256": "8e095c7a9f65bee8182b7803d116e22fa298935b9268a99508bff8dabeeb6c7e",
+      "path": "src/bench_read_experiment_tests.rs"
+    },
+    {
+      "sha256": "3cae37e39efb8fae286965b3aa92b24335298d3ad610031f769a11a613093a7a",
+      "path": "src/bin/work-leaf-orchestrator.rs"
+    },
+    {
+      "sha256": "4f7ae55b21e786b2590723a76b278a99cc586b021a4a7277c53b7a4b2a3b7215",
+      "path": "src/bin/work-leaf.rs"
+    },
+    {
+      "sha256": "ba67ff00c43231791f42ffa964c94162e415b2e4b4ee4c71ac1c29ac3d81057f",
+      "path": "src/chat_title.rs"
+    },
+    {
+      "sha256": "c5047a3815b438149a096e927b8b7fb218aff0f708fea44f1b096eea3ff3b22b",
+      "path": "src/claude.rs"
+    },
+    {
+      "sha256": "e68988f004ac9a61d25c0565b41dd46a371ebcf62a2415c0aabc4d6d83a96763",
+      "path": "src/cli.rs"
+    },
+    {
+      "sha256": "334eb3008f3b0a8db0d98bed2d3191f5cbf37052fb342dcf26a91ccd4ee502d8",
+      "path": "src/codex.rs"
+    },
+    {
+      "sha256": "3cadad246d8818e1766e08e4dd3103035923aaf720593e0e0c2fae448e08818d",
+      "path": "src/http_controller.rs"
+    },
+    {
+      "sha256": "f156aec8d0bc0071f2bde859fbd9cf29c9e6a9134c4ec5191b65f89f3041296f",
+      "path": "src/instructions.rs"
+    },
+    {
+      "sha256": "ee1f20cb7d80ceca4903138a67e34de469ad0b7ce70fe79f3f776c5d170389c0",
+      "path": "src/lib.rs"
+    },
+    {
+      "sha256": "b3a4b6e2df477d18f2a76215266b6263c24304f1a9a0971339fb1849a9c04ee6",
+      "path": "src/linearize.rs"
+    },
+    {
+      "sha256": "0590b3409c5f8ad9cd44b0320d24b153d4485a26a8c065a877f8742f0b029697",
+      "path": "src/locks.rs"
+    },
+    {
+      "sha256": "027c35a9eaf24e99335001e68f7d0612a262831af80f8677874525db95e9332b",
+      "path": "src/orchestrator.rs"
+    },
+    {
+      "sha256": "aa9a0df515aa7977a8b52b7dfd6151d53ee424adb7f7d5f5a83d0ba339aa5fda",
+      "path": "src/patch.rs"
+    },
+    {
+      "sha256": "12d70548086d053583e1fc2fc6b4f191dd262cf61b45637a1ee5d04931c919ee",
+      "path": "src/review.rs"
+    },
+    {
+      "sha256": "67ffaf621d642fa1836582328c21ea4d86487e9b4ad67d7cb5f2bb578f074a47",
+      "path": "src/terminal_app.rs"
+    },
+    {
+      "sha256": "d8d78641792dfa7508a93b70534889c28ebb23e2d3092cda28b22955a213a4a0",
+      "path": "src/ui.rs"
+    },
+    {
+      "sha256": "99ba200164a20c3e0db003c23c8657700c367a6d5977b19fe495507b16817f5e",
+      "path": "src/ui_harness.rs"
+    },
+    {
+      "sha256": "f93f2fe2b7481cc1689e5f0aa4ed295e8736af035555fbf84197024ffc80de17",
+      "path": "src/workspace.rs"
+    }
+  ],
+  "fixed_files": [
+    {
+      "sha256": "09d25465a66dfd04f1c4deddc573e485e886843baf1d7c7a785cae3f2f7b8e72",
+      "path": "Cargo.toml"
+    },
+    {
+      "sha256": "ac888331fcf8c9318919759af57116c40e73895406bb646e267fb8927110f707",
+      "path": "Cargo.lock"
+    },
+    {
+      "sha256": "1c56c54987aada7c92f2824bd4830476541c8821479cfe61eff531a965167ab6",
+      "path": "tests/bench_candidate_subscription_smoke.rs"
+    },
+    {
+      "sha256": "741f72932f0e1fe41c70784c320f0311305399e342e02c24ef389b6c38465d5c",
+      "path": "target/debug/deps/bench_candidate_subscription_smoke-ed974329a8e1327c"
+    },
+    {
+      "sha256": "de9b0ad1047c46eb5240895e4b009578e6126b373ec7b83f28f3859dbfadf53b",
+      "path": "target/release/work-leaf"
+    },
+    {
+      "sha256": "28ae0c65caba2c1b20cd4d57cdbbf1007639e5acbf6ab094434053b9d80f89fc",
+      "path": "target/release/work-leaf-orchestrator"
+    }
+  ],
+  "observer_wrapper_configuration_files": [
+    {
+      "sha256": "238bdc610a28edd328d91046f9674dbe59ad2f2d7520fedf681c1ae95a56e386",
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/infrastructure/bin/bench-observer"
+    },
+    {
+      "sha256": "0977db361b4477e2bf68ea08c05571a4a35fb1e5c958cc9a953f2cc738de7078",
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-measurement-gate-20260906/subscription-codex"
+    },
+    {
+      "sha256": "7bf8d3cfb6f224e63e007eea6b0e9ffe63f6e37d5a16919c479261f06ee4966c",
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-repeat-01/observation/observer-config.json"
+    },
+    {
+      "sha256": "df6552e68a72ff13ecf29ae18dc34b52e94eae077e377b3af0116a41505bdac1",
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-repeat-01/experiment.json"
+    },
+    {
+      "sha256": "3a8f515b53154413772adf30484894d79dd9fed581d9768e4ac3e527ae2a6cf3",
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-format-01/observation/observer-config.json"
+    },
+    {
+      "sha256": "e07d8a62d4dc7a294a9e8fe69f94eb44866bbbf12494049f38001fc923a450ae",
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-format-01/experiment.json"
+    },
+    {
+      "sha256": "48aa7c26e8929cda5233e6f956df0e5f420393655dba662b5b4da5714cb89124",
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-followup-01/observation/observer-config.json"
+    },
+    {
+      "sha256": "f4ca7b511f1ad1e057d2868261539f655076a211a78d2f1fec5e14174f13b892",
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-followup-01/experiment.json"
+    }
+  ],
+  "scenarios": [
+    {
+      "run_id": "candidate-v4-repeat-01",
+      "condition": "requested-repeat-full",
+      "project": "/tmp/work-leaf-candidate-repeat.mPitZm",
+      "maximum_turns": 3,
+      "threads": 1,
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-repeat-01",
+      "observer_config": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-repeat-01/observation/observer-config.json",
+      "primary_marker": "05898dd0c9ae835f99191283255be88367877c2238b7f4c492ce84ea2b5f77ce",
+      "command": [
+        "timeout",
+        "--kill-after=5s",
+        "130s",
+        "env",
+        "-u",
+        "OPENAI_API_KEY",
+        "-u",
+        "CODEX_API_KEY",
+        "-u",
+        "OPENAI_BASE_URL",
+        "-u",
+        "OPENAI_API_BASE",
+        "-u",
+        "CODEX_BASE_URL",
+        "-u",
+        "CODEX_ACCESS_TOKEN",
+        "-u",
+        "WORK_LEAF_CODEX_TRACE",
+        "-u",
+        "WORK_LEAF_OBSERVER_PARENT_INVOCATION",
+        "WORK_LEAF_REAL_BENCH_CANDIDATE_SMOKE=1",
+        "WORK_LEAF_REAL_OBSERVER_PROJECT_DIR=/tmp/work-leaf-candidate-repeat.mPitZm",
+        "WORK_LEAF_REAL_OBSERVER_CODEX_PROXY=/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-repeat-01/observation/proxy-bin/codex",
+        "WORK_LEAF_REAL_OBSERVER_BIN=/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/infrastructure/bin/bench-observer",
+        "WORK_LEAF_OBSERVER_CONFIG=/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-repeat-01/observation/observer-config.json",
+        "WORK_LEAF_OBSERVER_PRIMARY_MARKER=05898dd0c9ae835f99191283255be88367877c2238b7f4c492ce84ea2b5f77ce",
+        "WORK_LEAF_OBSERVER_RAW_RESPONSE_USAGE=1",
+        "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS=1000",
+        "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME=forward",
+        "WORK_LEAF_OBSERVER_PROJECT_LAYER_INVENTORY=1",
+        "WORK_LEAF_BENCH_EXPERIMENT=1",
+        "WORK_LEAF_BENCH_EXPERIMENT_MANIFEST=/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-repeat-01/experiment.json",
+        "WORK_LEAF_BENCH_RUN_ID=candidate-v4-repeat-01",
+        "/home/user/src/work-leaf/target/debug/deps/bench_candidate_subscription_smoke-ed974329a8e1327c",
+        "--exact",
+        "real_subscription_candidate_handoffs",
+        "--ignored",
+        "--nocapture"
+      ],
+      "watchdog_seconds": 118,
+      "teardown_receipt_maximum_seconds": 15,
+      "outer_timeout_seconds": 130,
+      "outer_kill_grace_seconds": 5
+    },
+    {
+      "run_id": "candidate-v4-format-01",
+      "condition": "unified-diff-preferred",
+      "project": "/tmp/work-leaf-candidate-format.DBKyCU",
+      "maximum_turns": 2,
+      "threads": 1,
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-format-01",
+      "observer_config": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-format-01/observation/observer-config.json",
+      "primary_marker": "f4cdc055a6de547e56612fe7ebc645286c083fdd1112e1c74f67651d1f69229b",
+      "command": [
+        "timeout",
+        "--kill-after=5s",
+        "130s",
+        "env",
+        "-u",
+        "OPENAI_API_KEY",
+        "-u",
+        "CODEX_API_KEY",
+        "-u",
+        "OPENAI_BASE_URL",
+        "-u",
+        "OPENAI_API_BASE",
+        "-u",
+        "CODEX_BASE_URL",
+        "-u",
+        "CODEX_ACCESS_TOKEN",
+        "-u",
+        "WORK_LEAF_CODEX_TRACE",
+        "-u",
+        "WORK_LEAF_OBSERVER_PARENT_INVOCATION",
+        "WORK_LEAF_REAL_BENCH_CANDIDATE_SMOKE=1",
+        "WORK_LEAF_REAL_OBSERVER_PROJECT_DIR=/tmp/work-leaf-candidate-format.DBKyCU",
+        "WORK_LEAF_REAL_OBSERVER_CODEX_PROXY=/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-format-01/observation/proxy-bin/codex",
+        "WORK_LEAF_REAL_OBSERVER_BIN=/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/infrastructure/bin/bench-observer",
+        "WORK_LEAF_OBSERVER_CONFIG=/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-format-01/observation/observer-config.json",
+        "WORK_LEAF_OBSERVER_PRIMARY_MARKER=f4cdc055a6de547e56612fe7ebc645286c083fdd1112e1c74f67651d1f69229b",
+        "WORK_LEAF_OBSERVER_RAW_RESPONSE_USAGE=1",
+        "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS=1000",
+        "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME=forward",
+        "WORK_LEAF_OBSERVER_PROJECT_LAYER_INVENTORY=1",
+        "WORK_LEAF_BENCH_EXPERIMENT=1",
+        "WORK_LEAF_BENCH_EXPERIMENT_MANIFEST=/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-format-01/experiment.json",
+        "WORK_LEAF_BENCH_RUN_ID=candidate-v4-format-01",
+        "/home/user/src/work-leaf/target/debug/deps/bench_candidate_subscription_smoke-ed974329a8e1327c",
+        "--exact",
+        "real_subscription_candidate_handoffs",
+        "--ignored",
+        "--nocapture"
+      ],
+      "watchdog_seconds": 118,
+      "teardown_receipt_maximum_seconds": 15,
+      "outer_timeout_seconds": 130,
+      "outer_kill_grace_seconds": 5
+    },
+    {
+      "run_id": "candidate-v4-followup-01",
+      "condition": "review-fix-request-resupply",
+      "project": "/tmp/work-leaf-candidate-followup.uBdfKO",
+      "maximum_turns": 6,
+      "threads": 2,
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-followup-01",
+      "observer_config": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-followup-01/observation/observer-config.json",
+      "primary_marker": "e794a903e0b4a4f7493ec6e6bd9dd5cf76554601e0800e1a7ec39c0503b07ba3",
+      "command": [
+        "timeout",
+        "--kill-after=5s",
+        "130s",
+        "env",
+        "-u",
+        "OPENAI_API_KEY",
+        "-u",
+        "CODEX_API_KEY",
+        "-u",
+        "OPENAI_BASE_URL",
+        "-u",
+        "OPENAI_API_BASE",
+        "-u",
+        "CODEX_BASE_URL",
+        "-u",
+        "CODEX_ACCESS_TOKEN",
+        "-u",
+        "WORK_LEAF_CODEX_TRACE",
+        "-u",
+        "WORK_LEAF_OBSERVER_PARENT_INVOCATION",
+        "WORK_LEAF_REAL_BENCH_CANDIDATE_SMOKE=1",
+        "WORK_LEAF_REAL_OBSERVER_PROJECT_DIR=/tmp/work-leaf-candidate-followup.uBdfKO",
+        "WORK_LEAF_REAL_OBSERVER_CODEX_PROXY=/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-followup-01/observation/proxy-bin/codex",
+        "WORK_LEAF_REAL_OBSERVER_BIN=/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/infrastructure/bin/bench-observer",
+        "WORK_LEAF_OBSERVER_CONFIG=/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-followup-01/observation/observer-config.json",
+        "WORK_LEAF_OBSERVER_PRIMARY_MARKER=e794a903e0b4a4f7493ec6e6bd9dd5cf76554601e0800e1a7ec39c0503b07ba3",
+        "WORK_LEAF_OBSERVER_RAW_RESPONSE_USAGE=1",
+        "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_MS=1000",
+        "WORK_LEAF_OBSERVER_PROVIDER_USAGE_GRACE_OUTPUT_RESUME=forward",
+        "WORK_LEAF_OBSERVER_PROJECT_LAYER_INVENTORY=1",
+        "WORK_LEAF_BENCH_EXPERIMENT=1",
+        "WORK_LEAF_BENCH_EXPERIMENT_MANIFEST=/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-v4-followup-01/experiment.json",
+        "WORK_LEAF_BENCH_RUN_ID=candidate-v4-followup-01",
+        "/home/user/src/work-leaf/target/debug/deps/bench_candidate_subscription_smoke-ed974329a8e1327c",
+        "--exact",
+        "real_subscription_candidate_handoffs",
+        "--ignored",
+        "--nocapture"
+      ],
+      "watchdog_seconds": 118,
+      "teardown_receipt_maximum_seconds": 15,
+      "outer_timeout_seconds": 130,
+      "outer_kill_grace_seconds": 5
+    }
+  ],
+  "interpretation": "Scripted diagnostic replies verify actual renderer/provider/orchestrator delivery and completion. They are not natural behavior ablations, baseline observations, or net token-saving claims."
+}
