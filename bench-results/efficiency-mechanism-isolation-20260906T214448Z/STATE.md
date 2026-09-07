@@ -30,9 +30,15 @@ versus postimplementation-check sequences without assigning a token share.
 [Prior interruption/package evidence](EVIDENCE-PRIOR-PROTOCOL-AND-INTERRUPTION.md)
 distinguishes completed model responses from natural outer-turn completion and retains
 all archived interventions. The private [C21 exact-evidence design](DESIGN-REVIEW-EVIDENCE-ON-DEMAND.md)
-is in test-first implementation, separately from the active frozen runtime. Its native
-read-only artifact preserves the same held context and ordinary read machinery; no C21
-generation is admitted.
+has a test-first private implementation, separately from the active frozen runtime. Its
+native read-only artifact preserves the same held context and ordinary read machinery.
+The private runtime is committed at `4589ffc`; required root Rust/default checks and
+both actual build commands pass. Independent runtime/fixture/primitive/collector review
+passes, with 36 offline checks. Exact real-agent verification remains pending.
+[The prospective C21 protocol](PROTOCOL-REVIEW-EVIDENCE-NATIVE.md) admits no generation;
+its separate diagnostic admission follows all-three current outcomes and postcapture audits.
+`preflight/review-evidence-native-diagnostic-001/PREPARED.json` records the isolated
+source/binary copies and empty fixture checkout, explicitly not admitted or started.
 The historical endpoint exposure pass is also saved separately in
 [EVIDENCE-H-CONTEXT.md](EVIDENCE-H-CONTEXT.md),
 [EVIDENCE-H-LIFECYCLE.md](EVIDENCE-H-LIFECYCLE.md) and
