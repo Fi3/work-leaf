@@ -2,6 +2,22 @@
 
 ## Active continuation plan
 
+The user's [C15/C21 approval](AUTHORITY-C15-C21-20260907T1806Z.md) authorizes an
+explicitly qualified private-test-first workflow and one additional separately
+recorded reviewer diagnostic002. C15 implementation and immutable-source C21
+preparation are active; no provider admission has yet launched under this approval.
+The prior unanswered-choice checkpoints below retain their historical cutoff.
+All six [read-item scope](RETAINED-READ-ITEM-RECHARGE-SCOPE.revision-01.json) calls
+closed exactly once at 18:05 UTC: five exact observed-attribution results and
+R003's retained unsupported-output-item flag. The complete
+[saved read-item report](EVIDENCE-RETAINED-READ-ITEM-RECHARGE.md) and
+[independent review](EVIDENCE-RETAINED-READ-ITEM-RECHARGE-REVIEW.md) pass all 510
+targets, 607 response identities and 6,949 item/response charge joins. Of 506 observed
+items, 497 recur; per-item input charges are constant across recorded appearances,
+while cached portions can differ. Four unobserved items and one mixed-unknown item
+remain. These are source-bound mechanism observations, not matched intervention
+percentages; no extraction or whole-workflow audit is repeated for review.
+
 Read [PLAN-CANDIDATE-INVENTORY.md](PLAN-CANDIDATE-INVENTORY.md) first after a restart. The user's
 approved order is comprehensive source-grounded candidate inventory, identification of actual
 saving mechanisms, then contribution percentages. The first broad source pass is recorded in
