@@ -127,11 +127,15 @@ fn validate_bundle_separation(root: &Path) -> io::Result<()> {
         .ancestors()
         .find(|path| path.exists())
         .ok_or_else(|| invalid("ordinary bundle parent has no existing ancestor"))?;
-    let resolved = ancestor.canonicalize()?.join(
-        parent
-            .strip_prefix(ancestor)
-            .map_err(|_| invalid("bundle parent prefix differs"))?,
-    );
+    let suffix = parent
+        .strip_prefix(ancestor)
+        .map_err(|_| invalid("bundle parent prefix differs"))?;
+    let mut resolved = ancestor.canonicalize()?;
+    // Joining an empty suffix appends a separator even when the parent already
+    // exists. Preserve its canonical bytes for the alias check below.
+    if !suffix.as_os_str().is_empty() {
+        resolved.push(suffix);
+    }
     if resolved.as_os_str() != parent.as_os_str() || !disjoint(root, &resolved) {
         return Err(invalid(
             "private evidence root overlaps or aliases the ordinary bundle namespace",
@@ -497,3 +501,7 @@ fn validate_result_identity(
 #[cfg(all(test, target_os = "linux"))]
 #[path = "bench_private_test_first_bridge_tests.rs"]
 mod tests;
+
+#[cfg(all(test, target_os = "linux"))]
+#[path = "bench_private_bundle_path_tests.rs"]
+mod bundle_path_tests;
