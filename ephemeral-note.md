@@ -1,12 +1,16 @@
 # Provisional investigation ledger
 
-Last checked: **2026-09-07 19:30 Europe/Rome (17:30 UTC)**.
+Last checked: **2026-09-07 19:40 Europe/Rome (17:40 UTC)**.
 
 Scope: the entire mechanism investigation, with all **30 frozen benchmark identities** (3 initial screen + 12 work-unit + 12 parked read-factor + 3 candidate screen), **20 admitted diagnostic identities** (16 earlier + 3 candidate-v4 + 1 C21), and the elapsed-time breakdown. The three modified candidate benchmarks were admitted concurrently at 14:28:55 Europe/Rome and are all terminal at 16:29:25: two successes and one original timeout. The earlier two-run pilot and accepted historical twelve-run cohort are listed separately below. Diagnostics are never added to the benchmark count. C21's single diagnostic closed at 17:22:46 Rome with exit 101 and a failed scripted workflow; no complete C21 benchmark is admitted. No provider workflow is currently running.
 
 ## Active plan and preserved experiments
 
 ### Active execution — candidate evidence pass
+
+19:40 Rome checkpoint: C17's complete source-bound report is saved: all 252 Direct author Git inspections precede their current turn's host commit; 53 actual WL ACKs supply no diff/stat/check or whole-worktree status. Independent review is active. This rejects a simple duplicate-postcommit-information explanation, not all effects of publication cadence. The six-run read-item recharge adapter is being developed test-first; no actual extraction is admitted before its source, coverage and fixed scope pass review.
+
+C15's live-selection helper has 14 independently passing tests and clean private Cargo gates. Its actual frozen-project qualification captures the declared instruction overlay and selected accepted tree under a real shared-table lock; a cooperating writer commits after release, while private materialization retains the earlier selected tree. Root is checking its 37 source and 14 artifact pins. Timeout receipts and explicit postcreation size/provenance limits are covered; this is not runtime integration, overlay installation or same-path execution. Ordinary WL is unchanged and no provider workflow is running.
 
 19:30 Rome checkpoint: independent H semantic review passes all 40 failure-episode groups, covering 97 full accepted test/production/removal patches, 49 failure outputs and 56 later-check outputs. It preserves the distinction between new regressions, revised/removed tests, fixture repairs and source-state-unproven reruns. Together with root's complete population/identity checks, this closes the historical remaining-validation evidence task without assigning token shares.
 
