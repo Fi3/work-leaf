@@ -1,0 +1,30 @@
+{
+  "schema": "work-leaf-diagnostic-native-preexecution-metadata-v1",
+  "recorded_at": "2026-09-07T18:41:03.148845+00:00",
+  "euid": 1000,
+  "egid": 1000,
+  "paths": [
+    {
+      "path": "/tmp/codex-bwrap-synthetic-mount-targets-1000",
+      "kind": "directory",
+      "mode": "0o755",
+      "uid": 1000,
+      "gid": 1000,
+      "size": 60,
+      "mtime_ns": 1788806463054893300,
+      "ctime_ns": 1788806463054893300
+    },
+    {
+      "path": "/tmp/codex-bwrap-synthetic-mount-targets-1000/lock",
+      "kind": "regular",
+      "mode": "0o644",
+      "uid": 1000,
+      "gid": 1000,
+      "size": 0,
+      "mtime_ns": 1788687186132159700,
+      "ctime_ns": 1788687186132159700
+    }
+  ],
+  "scope": "read-only stat in the current parent environment after002 closure, not the exited native child mount namespace; no lock opened for writing, chmod, doctor, provider retry or environment repair",
+  "interpretation": "Host ownership/modes do not prove writable visibility in the failed child namespace. The recorded native pre-execution read-only mount-registry error remains a distinct unqualified native-access condition."
+}

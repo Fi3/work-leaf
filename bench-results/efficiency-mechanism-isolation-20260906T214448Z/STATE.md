@@ -9,8 +9,20 @@ Diagnostic002's sole launch is closed: exit 101 after 26.80 reported seconds,
 one actual author turn emits the reviewer CHECK instead of the initial edit.
 The ordered guard rejects it before any shared patch or reviewer launch.
 All 156 frozen pins and global configuration match; the final accepted turn settles.
-Original observer/collector postcapture is active. No retry or complete C21 benchmark
-is admitted, and the original diagnostic001 failure remains.
+Original observer/collector postcapture is closed with exits 2/0/1. The
+[native/public witness](preflight/review-evidence-native-diagnostic-002/postcapture/POSTCAPTURE-REVIEW.md)
+and root review also verify an unplanned native empty-path read request whose
+tool output fails before shell execution on a read-only synthetic-mount registry
+lock. No public tool event represents that native pair. No retry or complete C21
+benchmark is admitted, and the original diagnostic001 failure remains. A separate
+question about one scripted-author/real-reviewer diagnostic awaits the user.
+
+C15 bridge/core integration remains active. Live metadata uses natural test paths
+and purpose; the host records exact after-images instead of asking the model to
+compute offsets or repeat test bodies. This avoids artificial measurement
+bookkeeping and preserves ambiguous co-located test/production changes. The
+[natural real-agent fixture](preflight/c15-real-diagnostic/SCOPE-PROPOSED.md) is
+under preparation, with six passing provider-free guard tests but no real admission.
 The prior unanswered-choice checkpoints below retain their historical cutoff.
 All six [read-item scope](RETAINED-READ-ITEM-RECHARGE-SCOPE.revision-01.json) calls
 closed exactly once at 18:05 UTC: five exact observed-attribution results and

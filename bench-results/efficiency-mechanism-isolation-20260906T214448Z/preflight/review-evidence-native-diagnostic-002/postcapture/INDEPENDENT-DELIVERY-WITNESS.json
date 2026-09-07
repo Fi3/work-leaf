@@ -1,0 +1,219 @@
+{
+  "schema": "work-leaf-review-diagnostic002-independent-witness-v1",
+  "run_id": "review-evidence-native-diagnostic-002",
+  "witness_provider_calls": 0,
+  "provider_work_started_by_this_review": false,
+  "original_scenario_exit": 101,
+  "original_collector_errors": [
+    "terminal run/condition differs"
+  ],
+  "terminal_qualification": "Original observed-closed-time schema retained; no terminal projection or repeated collector call. Pure frame comparator only, not full derived collector availability.",
+  "admission_pin_count": 156,
+  "all_admission_endpoints_match": true,
+  "thread_starts": [
+    {
+      "client_line": 3,
+      "reply_line": 3,
+      "thread_id": "01a07d23-0c8e-75f1-bff2-2f740c5a379f",
+      "native_path": "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T20-30-44-01a07d23-0c8e-75f1-bff2-2f740c5a379f.jsonl"
+    }
+  ],
+  "accepted_inputs": [
+    {
+      "client_line": 4,
+      "forwarded_line": 4,
+      "reply_line": 6,
+      "rpc_id": "3",
+      "thread_id": "01a07d23-0c8e-75f1-bff2-2f740c5a379f",
+      "turn_id": "01a07d23-0cfb-7b80-92d0-1367ae0efa7c",
+      "public_user_line": 11,
+      "public_user_item_id": "01a07d23-1574-78c1-8882-b2bf6d35fba9",
+      "input_sha256": "c51fec564100bf4f97fd974229c132b09fb7296617e5bba6f4a83a16c93572b3",
+      "input_bytes": 6759,
+      "native_user_line": 7,
+      "native_user_item_id": "msg_01a07d23-1573-79f3-a7cf-b47131684d39"
+    }
+  ],
+  "native_sources": [
+    {
+      "thread_id": "01a07d23-0c8e-75f1-bff2-2f740c5a379f",
+      "path": "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T20-30-44-01a07d23-0c8e-75f1-bff2-2f740c5a379f.jsonl",
+      "sha256": "878f4420281374f2f3aff1b036c243ff61fe249395914419bc47d8fc3fdd190c",
+      "session_meta_line": 1
+    }
+  ],
+  "native_turn_contexts": [
+    {
+      "line": 6,
+      "thread_id": "01a07d23-0c8e-75f1-bff2-2f740c5a379f",
+      "turn_id": "01a07d23-0cfb-7b80-92d0-1367ae0efa7c",
+      "model": "gpt-5.5",
+      "effort": "xhigh",
+      "cwd": "/tmp/work-leaf-c21-diagnostic-002-project.uSf5NZ",
+      "approval_policy": "never",
+      "sandbox_policy": {
+        "type": "read-only"
+      }
+    }
+  ],
+  "non_user_text_native_inputs": [
+    {
+      "line": 3,
+      "id": "msg_01a07d23-1563-7c12-a950-52fd2259ed53",
+      "role": "developer",
+      "thread_id": "01a07d23-0c8e-75f1-bff2-2f740c5a379f",
+      "turn_id": "01a07d23-0cfb-7b80-92d0-1367ae0efa7c",
+      "content_item_kinds": [
+        "host_skills.instructions",
+        "permissions.instructions",
+        "apps.instructions",
+        "plugins.usage_instructions"
+      ]
+    },
+    {
+      "line": 4,
+      "id": "msg_01a07d23-1563-7c12-a950-530f3281e9ed",
+      "role": "user",
+      "thread_id": "01a07d23-0c8e-75f1-bff2-2f740c5a379f",
+      "turn_id": "01a07d23-0cfb-7b80-92d0-1367ae0efa7c",
+      "content_item_kinds": [
+        "plugins.recommendations",
+        "environments.environment_context"
+      ]
+    },
+    {
+      "line": 21,
+      "id": "msg_01a07d23-6dbf-7303-abb8-f962bb374e46",
+      "role": "user",
+      "thread_id": "01a07d23-0c8e-75f1-bff2-2f740c5a379f",
+      "turn_id": "01a07d23-0cfb-7b80-92d0-1367ae0efa7c",
+      "content_item_kinds": [
+        "generic.turn_aborted"
+      ]
+    }
+  ],
+  "policy_delivery": {
+    "trace_line": 2,
+    "agent_id": "user-review-evidence",
+    "input_sha256": "c51fec564100bf4f97fd974229c132b09fb7296617e5bba6f4a83a16c93572b3",
+    "changed": false,
+    "feature_occurrences": 1
+  },
+  "public_messages": [
+    {
+      "native_line": 18,
+      "item_id": "msg_0219b09f095e1306016a9f02ec8ff087d2840aedea5245acae",
+      "thread_id": "01a07d23-0c8e-75f1-bff2-2f740c5a379f",
+      "turn_id": "01a07d23-0cfb-7b80-92d0-1367ae0efa7c",
+      "text": "@work-leaf locks run fixture.rs -- sh ./check-fixture.sh",
+      "public_line": 35
+    }
+  ],
+  "native_tools": [
+    {
+      "native_line": 11,
+      "item_id": "fc_0219b09f095e1306016a9f02e257e487d2b967f8f8082ed4a7",
+      "thread_id": "01a07d23-0c8e-75f1-bff2-2f740c5a379f",
+      "turn_id": "01a07d23-0cfb-7b80-92d0-1367ae0efa7c",
+      "kind": "function_call",
+      "call_id": "call_dzI8VKtFVCGEVNkyvB0AykbG",
+      "name": "exec_command",
+      "arguments": {
+        "cmd": "cat -- ''",
+        "login": false,
+        "max_output_tokens": 20000
+      },
+      "arguments_sha256": "e92cacaaf142b641e6787b9b51c9fca76d17ed7fa01f62dfb1ffac0e1891ab12"
+    },
+    {
+      "native_line": 13,
+      "item_id": "fco_01a07d23-4608-7722-bd29-827c8550a70e",
+      "thread_id": "01a07d23-0c8e-75f1-bff2-2f740c5a379f",
+      "turn_id": "01a07d23-0cfb-7b80-92d0-1367ae0efa7c",
+      "kind": "function_call_output",
+      "call_id": "call_dzI8VKtFVCGEVNkyvB0AykbG",
+      "output_sha256": "e76b688123b591c6b25f1b4319c810b8be2609ae36b36014ef24b8b5c73ac491",
+      "reported_exit_code": 101,
+      "preexecution_failure": "synthetic bubblewrap mount registry lock was read-only"
+    }
+  ],
+  "native_tools_absent_from_public_action_inventory": true,
+  "frame_proof": {
+    "frame_count": 5,
+    "changed_frame_lines": [
+      1,
+      3
+    ],
+    "original_rows_sha256": "6f6f052cd58fb9d7da92bca2246447328d4112854727ef274a04d9301b2d7a28",
+    "forwarded_rows_sha256": "928a64cd5488f609fb3b0c371dc09a1126e58e74edc59faf744c29aae3e45fb7",
+    "original_raw_sha256": "17f3f4a0047d4e73f0e7ffb8694cd4924c181e041e0cd92e1ed3480f20374045",
+    "forwarded_raw_sha256": "4c5168bf00ce93833d3046877c8e7f34dc2616b3c72941830084c54715cbceea"
+  },
+  "terminal_chain": {
+    "interrupt_client_line": 5,
+    "interrupt_forwarded_line": 5,
+    "interrupt_reply_line": 39,
+    "turn_completed_server_line": 41,
+    "status": "interrupted"
+  },
+  "project_inventory": {
+    "snapshot_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/project-layer-inventory/00000505904207091279-14.json",
+    "snapshot_sha256": "f8d48badb1d3cd881da04c42a339ef9adaacfbf4c67ce054e6f8d46d9999cb0d",
+    "all_boundaries": 1,
+    "valid": true,
+    "inventory_sha256": "200c71aafd18cfb31cabff92b4272d9ed1faec8ca811a581fcc6d01505caa353",
+    "completed_monotonic_ns": "505904207084155",
+    "child_started_monotonic_ns": 505904211829845,
+    "scope": "project .codex subtree at recorded boundary; not continuous immutability or complete effective settings"
+  },
+  "actual_chain": {
+    "author_turns": 1,
+    "author_edit_groups": 0,
+    "patch_ACKs": 0,
+    "reviewer_threads": 0,
+    "issued_archives": 0,
+    "locked_command_captures": 0,
+    "command_result_handoffs": 0,
+    "clean_review_verdicts": 0,
+    "fixture_VALUE": 0,
+    "git_status_clean": true,
+    "git_log": [
+      "766cdd974d681197ef0046cc1da78b163a2ea24e ADD diagnostic fixture for bounded archive verification"
+    ]
+  },
+  "source_sha256": {
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/postcapture/REVIEW-EVIDENCE-SOURCE-INPUT.json": "7362508a34e2746a9cec0ddd768a6d15055304c7e61cbbfe7d98f6213ce4d885",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/ADMISSION.json": "7b32c62d11ba4f5656f6455aedf36c4d5c6fbe94e040ed447433424f30d17264",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/TERMINAL.json": "d099049420973e23c0e616b92fdffc3c5ec056f58f9c1b63f545480b2a6509b4",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/observer-config.json": "ce516efb7bd77e17da4bc3fac51efc0a88eb5e48c0ca207f13bb463b4605e625",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-001/postcapture/observer-frame-correction/audit_observer_frames.py": "ccfb4cc3fe2a24c6496f4a749e6c95f147d6b5fefa7fd4e91dedc6f40be1961f",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-001/infrastructure/evidence/bench-results/efficiency-mechanism-isolation-20260906T214448Z/audit_review_evidence_sources.py": "d3fd8c80746bf4bce565cb5f0a2e2eab29681b3aa40f89196cf95ebf344ed9ee",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-001/infrastructure/evidence/bench-results/efficiency-mechanism-isolation-20260906T214448Z/audit_review_evidence.py": "34a34276e2f3914b35c72521a303c2cb41ec54c646299cda2b7a9c600146a257",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/app-server/00000505904194804965-14/client-to-server.raw": "17f3f4a0047d4e73f0e7ffb8694cd4924c181e041e0cd92e1ed3480f20374045",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/app-server/00000505904194804965-14/client-to-server.forwarded.raw": "4c5168bf00ce93833d3046877c8e7f34dc2616b3c72941830084c54715cbceea",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/app-server/00000505904194804965-14/server-to-client.raw": "fa93e77ac48d2be8e56025f6ae46e72f10d225a5305d20773c72bc1199722546",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/invocations/00000505904194804965-14/start.json": "7206f2eb3356b7494e14003ca1a208183b13f70cc2640b1dff5be35fba4c4196",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/invocations/00000505904194804965-14/end.json": "bd77519cc3e36e04ea3bd8f520f9a73c39d675900f20399ac358e9c3976f4826",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/app-server/00000505904194804965-14/raw-response-usage.json": "5fe78a48e4e2e4847e7de54400e6a88a55c533b33bb68f882593947acb90ea89",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/app-server/00000505904194804965-14/raw-response-rewrites.jsonl": "21b13d7ef7c5e380b40c8b4659e22bbc0785602be113b9739623fbf27c2fa369",
+    "/home/user/src/work-leaf/bench-results/efficiency-measurement-gate-20260906/subscription-codex": "0977db361b4477e2bf68ea08c05571a4a35fb1e5c958cc9a953f2cc738de7078",
+    "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T20-30-44-01a07d23-0c8e-75f1-bff2-2f740c5a379f.jsonl": "878f4420281374f2f3aff1b036c243ff61fe249395914419bc47d8fc3fdd190c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/rollout-metadata.jsonl": "702aac0176685b5cd6231600f323ef70699b9bf62ed0a4484a6fcdd66f758f7d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/prompt-events.jsonl": "72656ba694bcd1466e504ebca1748d64cadb60ffcd90e313a6c062848a660b7c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/INSTRUCTIONS.json": "48b8122c64903b19ca1b031ff573cbce58ebf2ac5c6430ee301a9041117c1897",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/process-invocations.jsonl": "55a53b24bf1ce245c119184fe3c762c907e87eff99e8349ddc061c7b0ff29725",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/project-layer-inventory/pre-spawn-baseline.json": "f8d48badb1d3cd881da04c42a339ef9adaacfbf4c67ce054e6f8d46d9999cb0d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/project-layer-inventory/manifest.jsonl": "f8d48badb1d3cd881da04c42a339ef9adaacfbf4c67ce054e6f8d46d9999cb0d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/project-layer-inventory/00000505904207091279-14.json": "f8d48badb1d3cd881da04c42a339ef9adaacfbf4c67ce054e6f8d46d9999cb0d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/observation/invocations/00000505904194804965-14/child.json": "2dda21a3eeefc5ee51c4775a2378fe7448eff4c210a034d9ad633c8164049ffc",
+    "/tmp/work-leaf-c21-diagnostic-002-project.uSf5NZ/fixture.rs": "98671e9ac4c58472def313cb83eedc998610e382abab87cc0d36d1a2a024964f",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/postcapture/REVIEW-EVIDENCE-SOURCE-AUDIT.json": "c0480de9575301e017a71daaf51caf061db061021178d93bfccdea7d35583125"
+  },
+  "limitations": [
+    "No C21 review/archive delivery was reached",
+    "Native cat empty-path request failed before execution; no file-open claim",
+    "Original executable-marker observer errors and collector terminal-contract error retained",
+    "No private reasoning bodies or token totals exported",
+    "Recorded project boundary does not prove continuous config immutability"
+  ]
+}
