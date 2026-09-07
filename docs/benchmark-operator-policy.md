@@ -18,6 +18,21 @@ API-key authentication, API credits, provider switching, and credential copying 
 continuation paths. The study protocol governs its model, effort, validation, interruption policy,
 measurement assumptions, outcome retention, and stop condition.
 
+## Current mechanism-investigation authority
+
+The token-mechanism investigation reuses the existing normal-WL baseline. Additional normal-WL
+control workflows or Direct sequential workflows require fresh explicit user authorization. The
+user's 2026-09-07 instruction prohibits further controls; an optional fresh randomized design is
+not a prerequisite for investigating a benchmark-only factor against the saved baseline.
+
+Compare modified WL with the existing baseline after checking source, configuration and accounting
+compatibility from retained evidence. Keep non-target behavior unchanged. Further repetitions concern
+the modified version when supported by the investigation, not automatic baseline replenishment.
+
+A later user stop overrides future admissions from an earlier schedule. Preserve the original
+manifest, completed and failed outcomes, and unlaunched identities; do not rewrite them as a completed
+comparison. The live investigation ledger is `../ephemeral-note.md`.
+
 ## Recorded user authority
 
 The source conversation is `01a05746-e2dc-7e62-a7fb-a276ef17bbb4`. Its locally retained history is:
@@ -65,7 +80,7 @@ own-workflow trust-transition policy. The original screen's no-candidate decisio
 flag and unsuccessful diagnostics remain retained and are not replacement observations.
 
 `bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROTOCOL-UNTRACKED-READ-INLINE.md`
-specifies the prospective v3 read-representation phase: twelve fresh WL workflows, six per arm,
+records the original v3 read-representation schedule: twelve fresh WL workflows, six per arm,
 in four mixed waves of three. Its factor replaces only successfully bundled, currently untracked
 project snapshots with their exact full-inline representation. Both arms retain ordinary bundle
 creation and symmetric candidate evidence. Default builds and all non-target mechanisms remain
@@ -73,3 +88,7 @@ ordinary. A frozen phase manifest, real subscription delivery checks, strict fut
 identity accounting and complete terminal outcomes are required before its whole-workflow raw-token
 test. Earlier null phases remain separate; no favorable endpoint replacement or adaptive extension
 is permitted.
+
+The original v3 schedule is retained as evidence, not authority to launch further controls after the
+user's stop. Its first six identities were launched; remaining admissions are held. The operator
+record is `bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/OPERATOR-CONTROL-STOP.json`.

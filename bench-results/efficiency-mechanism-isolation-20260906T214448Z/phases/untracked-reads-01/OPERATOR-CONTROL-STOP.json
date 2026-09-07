@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "user_instruction": "stop doing control workflow we already have tons and tons of them!!!!!!! this is a waste of TIME!",
+  "reason": "User explicitly withdraws further control-workflow execution; use existing baseline for mechanism investigation.",
+  "at": "2026-09-07T09:12:28.118072+00:00",
+  "action": "SIGSTOP supervisor only; no signal sent to active workflow groups",
+  "supervisor_pid": 182861,
+  "before": "State:\tS (sleeping)",
+  "after": "State:\tT (stopped)",
+  "active_workflow_children": [
+    {
+      "pid": 284414,
+      "pgid": 284414,
+      "stdout": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/logs/untracked-reads-01-workflow-006.log"
+    },
+    {
+      "pid": 284435,
+      "pgid": 284435,
+      "stdout": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/logs/untracked-reads-01-workflow-005.log"
+    }
+  ],
+  "manifest_sha256": "706c0b13d62376b3ea10c4604bb63957c271a1a7224d39b27db20fa24e2da263",
+  "future_admissions_blocked": true,
+  "completed_control_ids": [
+    "untracked-reads-01-workflow-001",
+    "untracked-reads-01-workflow-002",
+    "untracked-reads-01-workflow-004"
+  ],
+  "unlaunched_control_ids": [
+    "untracked-reads-01-workflow-007",
+    "untracked-reads-01-workflow-010",
+    "untracked-reads-01-workflow-012"
+  ],
+  "active_treatment_ids": [
+    "untracked-reads-01-workflow-005",
+    "untracked-reads-01-workflow-006"
+  ],
+  "other_unlaunched_treatment_ids": [
+    "untracked-reads-01-workflow-008",
+    "untracked-reads-01-workflow-009",
+    "untracked-reads-01-workflow-011"
+  ],
+  "source_schedule_and_admission_unchanged": true,
+  "signals_sent_to_active_workflow_groups": [],
+  "interim_token_contrasts_or_cost_rankings_inspected": false,
+  "planned_confirmation_status": "withdrawn before completion by user instruction; incomplete batch cannot support the frozen 12-workflow randomized test",
+  "next_step": "Drain the two active treatment workflows, then terminate future supervisor admissions while retaining terminal and unlaunched identities; perform no further control workflows.",
+  "config_monitor_note": "Supervisor-only SIGSTOP also pauses its config journal. Retain the actual journal gap; do not claim continuous configuration monitoring during operator hold."
+}

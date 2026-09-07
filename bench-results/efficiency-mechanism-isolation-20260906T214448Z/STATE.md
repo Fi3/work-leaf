@@ -1,8 +1,11 @@
 # Study state
 
 The original screen and the twelve-workflow work-unit phase are complete. The exact-mechanism
-investigation remains active. The twelve-workflow untracked-read phase is admitted and its
-three-workflow supervisor is running; no interim condition contrast is permitted.
+investigation remains active and reuses the existing normal-WL baseline. Further control workflows
+are prohibited by the user's 2026-09-07 instruction. The original twelve-identity untracked-read
+schedule is partially executed: its first six identities were launched, and later admissions are
+blocked. The supervisor alone is suspended while admitted treatment children finish; current
+process status and every run are recorded in `../../ephemeral-note.md`.
 The user accepts the historical approximately 50% raw-token endpoint reduction and assumes no
 quality reduction for this investigation. The current task is its causal explanation, not another
 Direct-versus-WL replication.
