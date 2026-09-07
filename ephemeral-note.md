@@ -1,12 +1,16 @@
 # Provisional investigation ledger
 
-Last checked: **2026-09-07 19:50 Europe/Rome (17:50 UTC)**.
+Last checked: **2026-09-07 20:02 Europe/Rome (18:02 UTC)**.
 
 Scope: the entire mechanism investigation, with all **30 frozen benchmark identities** (3 initial screen + 12 work-unit + 12 parked read-factor + 3 candidate screen), **20 admitted diagnostic identities** (16 earlier + 3 candidate-v4 + 1 C21), and the elapsed-time breakdown. The three modified candidate benchmarks were admitted concurrently at 14:28:55 Europe/Rome and are all terminal at 16:29:25: two successes and one original timeout. The earlier two-run pilot and accepted historical twelve-run cohort are listed separately below. Diagnostics are never added to the benchmark count. C21's single diagnostic closed at 17:22:46 Rome with exit 101 and a failed scripted workflow; no complete C21 benchmark is admitted. No provider workflow is currently running.
 
 ## Active plan and preserved experiments
 
 ### Active execution — candidate evidence pass
+
+20:02 Rome checkpoint: the fixed six-row read-item extraction scope is frozen at `b262d5bff186a80739dfcd90c73617d7d8ec2f7a002e92c2b3ab182773967224`. Root and independent review pass all 26 tests and 356 source pins. Independent review also matches all 607 qualified native response identities/counters, 42 threads and 510 target items: 34 eligible bundle manifests, 42 eligible inline inputs, 10 other read deliveries and 424 candidate retrieval outputs. All result/attempt paths are absent. Root alone owns the upcoming once-only saved-data extractions; no actual extraction has run at this checkpoint and no model generation is involved.
+
+The 38-ID closure audit is complete as a disposition inventory, not a causal result: 21 named checks closed, 12 coupled mechanisms and five specific missing-evidence items. The subsequent finite C23 check closes the proposed W no-edit search: all 36 FINDINGS intervals contain accepted work, while all 16 no-ACK intervals are already-clean detours. Root independently matches the complete 52-fix table, same-author boundaries and 48 frozen ACK classifications. This does not exclude evidence-only handling inside a mixed code-changing cycle or another cohort. C15's qualified test-first scope and C21's extra diagnostic remain unanswered user choices.
 
 19:50 Rome checkpoint: C17 independent review is closed: 252 exact Git call/output pairs, 336 accepted-patch anchors, 39 native/host commit boundaries and 53 typed-public ACK joins pass. A separate native check matches all 53 full ACK texts to explicit-turn native messages; 166 original and 24 supplemental source endpoints match. The evidence-only validator's bounded O(G×P) scan is explicitly flagged. A finite C23 saved-chain check is active to distinguish genuine evidence-only finding resolution from already-clean parser detours.
 
