@@ -31,13 +31,22 @@ accounting report is [CANDIDATE-COMMON-ACCOUNTING-ORIGINAL.json](CANDIDATE-COMMO
 001 remains UNKNOWN at a compaction-before-turn-context boundary; the other eight rows
 validate, with failed 002 and baseline 010 retained. All 1,582 returned response IDs,
 158 returned sources and 105 frozen inputs pass their distinct endpoint checks. A separate
-test-first offline context-link correction is under independent review; originals remain
-unchanged. [The closed mechanism census](EVIDENCE-CANDIDATE-SCREEN-MECHANISMS.md) binds
+test-first offline context-link correction and its same-nine replay are complete in
+[the separate supplement](EVIDENCE-CANDIDATE-ACCOUNTING-SUPPLEMENT.md). All eight validated
+rows remain identical; 001's exact compaction-context proof passes but its subsequent
+cumulative-scope rejection remains UNKNOWN. Source-level diagnosis of repeated stale
+post-compaction notifications is active; originals remain unchanged.
+[The closed mechanism census](EVIDENCE-CANDIDATE-SCREEN-MECHANISMS.md) binds
 actual changed delivery and downstream public/native actions for all three. The complete
 [candidate dispositions](CANDIDATE-DISPOSITIONS.md) cover all 38 candidates and seven
 exclusions. [Historical test timing](EVIDENCE-H-TEST-TIMING.md) and its
 [independent review](EVIDENCE-H-TEST-TIMING-REVIEW.md) establish the actual executed-RED
 versus postimplementation-check sequences without assigning a token share.
+[Historical validation cadence](EVIDENCE-H-VALIDATION-CADENCE.md) and its
+[independent review](EVIDENCE-H-VALIDATION-CADENCE-REVIEW.md) distinguish initial RED,
+fixture repairs, partial-implementation repairs and source-unproven successful repeats.
+The complete 501 leading-Cargo calls are classified by phase and subcommand; the
+post-first-GREEN semantic classification remains incomplete.
 [Prior interruption/package evidence](EVIDENCE-PRIOR-PROTOCOL-AND-INTERRUPTION.md)
 distinguishes completed model responses from natural outer-turn completion and retains
 all archived interventions. The private [C21 exact-evidence design](DESIGN-REVIEW-EVIDENCE-ON-DEMAND.md)
@@ -51,8 +60,11 @@ has one separately frozen diagnostic admission after all-three current outcomes 
 and prerequisite identities. Its original `TERMINAL.json` records exit 101 after 68.36s:
 the actual reviewer reads the archive, then emits `NO_FINDINGS` without requesting the
 fixture's required focused check. The scripted workflow fails; final accepted threads
-settle and global configuration is unchanged. A source-bound native retrieval audit is
-active. This is not green complete-workflow verification, and no retry, replacement or
+settle and global configuration is unchanged. The independent source-bound native witness
+and separately reviewed observer-frame derivative verify complete 6,221-byte retrieval
+at `preflight/review-evidence-native-diagnostic-001/postcapture/`; the original whole-frame
+collector and observer failures remain. This is not green complete-workflow verification,
+and no retry, replacement or
 complete C21 benchmark is admitted. The original preparation and failed output remain.
 The historical endpoint exposure pass is also saved separately in
 [EVIDENCE-H-CONTEXT.md](EVIDENCE-H-CONTEXT.md),
@@ -71,8 +83,11 @@ Its original output must remain; the separately source-bound derivative in
 review, 5 new plus 15 unchanged tests, all three closed diagnostic replays and required
 repository checks passing. This is an
 offline checker correction, not a provider rerun or change to any admitted model input.
-Existing large-read treatment runs and their stopped-analysis scope are parked intact; their
-whole-workflow comparison is deferred. Older narrow-priority notes and fixed mixed schedules are
+Existing large-read treatment runs and their stopped-analysis scope remain intact.
+[The retained-read evidence plan](PLAN-RETAINED-READ-EVIDENCE.md) reopens source, delivery
+and actual retrieval classification for all six saved R runs within broad Stage B;
+whole-workflow costs require a separate common scope first. No regeneration or original
+flag waiver is authorized. Older narrow-priority notes and fixed mixed schedules are
 historical records, not the next-action plan. Saving evidence or completing a substep is not a
 stopping condition; continuous execution and live-note updates are required until the plan is complete.
 
