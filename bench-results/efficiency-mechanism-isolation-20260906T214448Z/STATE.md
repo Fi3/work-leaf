@@ -17,20 +17,29 @@ lock. No public tool event represents that native pair. No retry or complete C21
 benchmark is admitted, and the original diagnostic001 failure remains. A separate
 question about one scripted-author/real-reviewer diagnostic awaits the user.
 
+C15 runtime source is committed at `39d2d1c`. Final required gates pass with 529
+tests, zero failures and 20 ignores across 44 targets; default library checks
+pass 50 tests. Independent source review passes 33 private tests and closes the
+launch/cancellation/controller/UI findings. The final-byte confined local
+workflow retains private RED, ordinary shared patch/ACK and same-check GREEN.
+No real provider result is implied by that synthetic transport fixture.
+The natural real diagnostic has a frozen binary and 159 matching final input
+pins; one bounded subscription attempt awaits its final preadmission review.
+
 C15 private bridge qualification is closed: 21 automatic tests pass independently,
 and one frozen-project Cargo execution exits 0 with closed private children, no
 shared promotion and all 65 source endpoints matching. The initial GREEN is
 execution feasibility only. [Root bridge review](preflight/c15-runtime-bridge/ROOT-REVIEW.md)
-retains the separate runtime/provider gates. Rust integration remains active.
+retains the separate runtime/provider gates.
 Live metadata uses natural test paths
 and purpose; the host records exact after-images instead of asking the model to
 compute offsets or repeat test bodies. This avoids artificial measurement
 bookkeeping and preserves ambiguous co-located test/production changes. The
 [natural real-agent fixture](preflight/c15-real-diagnostic/SCOPE-PROPOSED.md) is
 under preparation, with nine passing provider-free guard tests and a compiled
-ignored real harness, but no real admission. Independent runtime review requires
-cross-thread/deferred author policy injection to reject before provider work;
-the implementing agent is reproducing and addressing that boundary.
+ignored real harness, but no real admission. Cross-thread/deferred author policy
+injection and provisional cancellation reject before unauthorized private work;
+their reproduced regression evidence is retained in the runtime qualification.
 The prior unanswered-choice checkpoints below retain their historical cutoff.
 All six [read-item scope](RETAINED-READ-ITEM-RECHARGE-SCOPE.revision-01.json) calls
 closed exactly once at 18:05 UTC: five exact observed-attribution results and

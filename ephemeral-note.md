@@ -1,12 +1,16 @@
 # Provisional investigation ledger
 
-Last checked: **2026-09-07 21:17 Europe/Rome (19:17 UTC)**.
+Last checked: **2026-09-07 21:37 Europe/Rome (19:37 UTC)**.
 
 Scope: the entire mechanism investigation, with all **30 frozen benchmark identities** (3 initial screen + 12 work-unit + 12 parked read-factor + 3 candidate screen), **21 admitted diagnostic identities** (16 earlier + 3 candidate-v4 + 2 C21), and the elapsed-time breakdown. The three modified candidate benchmarks were admitted concurrently at 14:28:55 Europe/Rome and are all terminal at 16:29:25: two successes and one original timeout. The earlier two-run pilot and accepted historical twelve-run cohort are listed separately below. Diagnostics are never added to the benchmark count. Both C21 diagnostics remain failed: 001 omits the focused check after reading the archive; 002's author emits the reviewer CHECK instead of the initial edit. No complete C21 benchmark is admitted. Zero provider workflows are running.
 
 ## Active plan and preserved experiments
 
 ### Active execution — candidate evidence pass
+
+21:37 Rome checkpoint: C15 runtime is committed at `39d2d1c`; complete final gates pass (529 tests, zero failures, 20 ignored across 44 targets; default library 50 pass; fmt/clippy clean). Independent final source review passes 33 private tests, including cross-thread/deferred injection, provisional shutdown, controller title/dependency revisions and actual UiHarness rendering. The final-byte confined local workflow passes private RED → normal shared patch/ACK → same-check GREEN; it is not a provider run. Natural fixture/preparation is committed at `1d7a418`, and its exact single-attempt recorder at `22a3828`.
+
+The real diagnostic binary is frozen at SHA `ffa981f8…`; 159 final source/config/executable pins match, the fresh project is clean, preview/bundle roots are empty and no previous attempt/capture exists. Its final command is one subscription attempt, max eight outer calls, 240-second cancellation watch and 300-second external bound. Independent preadmission review is active. No real C15 attempt has launched yet. Actual native/private-test semantics remain a postcapture gate, not inferred from automatic checks. C21 reviewer-only permission remains unanswered; no extra C21 attempt is running.
 
 21:17 Rome checkpoint: the private bridge and closed root review are committed at `33713a7`. Root independently passes its 21 automatic tests (11.601 s) and verifies all six saved project artifacts plus 65 source pins without repeating that project execution. The natural real-agent harness compiles with nine passing automatic guards and clean fmt/clippy; independent harness review is closed. Its dependency lock uses exact root versions, and the fresh four-file project, stored-subscription/native executable chain, observer identity and empty disjoint roots pass root checks. Rust integration has an actual provider-free private RED → ordinary shared patch/ACK → normal GREEN path, but final cancellation/owned-launch review and full gates remain active. No real C15 attempt is admitted yet; zero providers are running. [Fixture review](bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic/HARNESS-INDEPENDENT-REVIEW.md).
 
