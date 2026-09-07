@@ -1,6 +1,6 @@
 # Provisional investigation ledger
 
-Last checked: **2026-09-07 14:30:21 Europe/Rome (12:30:21 UTC)**.
+Last checked: **2026-09-07 15:01:33 Europe/Rome (13:01:33 UTC)**.
 
 Scope: the entire mechanism investigation, with all **30 frozen benchmark identities** (3 initial screen + 12 work-unit + 12 parked read-factor + 3 candidate screen), **19 admitted diagnostic identities** (16 earlier + 3 candidate-v4), and the elapsed-time breakdown. The three modified candidate benchmarks were admitted at 14:28:55 Europe/Rome and are running concurrently. The earlier two-run pilot and accepted historical twelve-run cohort are listed separately below. Diagnostics are never added to the benchmark count.
 
@@ -12,9 +12,9 @@ The user requires continued execution until the plan is complete and continuous 
 
 | Workstream | Active work | Output / next concrete result |
 | --- | --- | --- |
-| Context / historical endpoint | Audit actual source/read mechanisms in the six accepted historical WL workflows. | H raw sources exist and are pinned; no P/W exposure result is automatically transferred to H. |
-| Behavior / clean-review replay | Finish independent replay of the 16 observed clean-marker detours. | All 52 W fix requests checked; 16 genuine clean-only cases and 32 exact downstream responses verified. |
-| Lifecycle / historical endpoint | Review complete; audit actual lifecycle, instruction and continuation exposure in H. | All final helper reviews closed; three actual closed-diagnostic CLI audits PASS. |
+| Context / historical endpoint | H-only audit complete; inspect concrete command/action differences next. | 98 read handoffs, 84 exact bundle snapshots, 13 repeat deliveries; none of 58 mediated command results activates compaction. |
+| Behavior / clean-review replay | Replay complete; historical action census in progress. | All 52 W fix requests checked; 16 genuine clean-only cases and 32 exact downstream responses verified. |
+| Lifecycle / historical endpoint | H-only audit complete; source-bound findings under independent review. | 355 WL and 90 Direct exact input joins; 9 historical clean-marker detours; 48 duplicated WL instruction deliveries. |
 | Root integration | Monitor three complete candidate workflows while continuing broad saved-evidence analysis. | Screen admitted at 14:28:55; 105 frozen identities verify; 50 tests PASS on frozen copies. |
 
 Current benchmark workflows: **3 running, 0/3 candidate workflows terminal**. All three private experimental boundaries are implemented and independently verified. Existing 21 terminal workflows and all diagnostic outcomes remain below. No new control, Direct workflow or replacement is admitted.
@@ -68,9 +68,9 @@ Separate runtime root: `/tmp/work-leaf-candidate-screen.WgKBtD`.
 
 | Workflow | Condition | Driver-log start (Rome) | Current outcome |
 | --- | --- | --- | --- |
-| candidate-screen-01-workflow-001 | requested-repeat-full | 14:28:55 | running, separate daemon/checkouts; author generation active |
-| candidate-screen-01-workflow-002 | unified-diff-preferred | 14:28:55 | running, separate daemon/checkouts; author generation active |
-| candidate-screen-01-workflow-003 | review-fix-request-resupply | 14:28:55 | running, separate daemon/checkouts; author generation active |
+| candidate-screen-01-workflow-001 | requested-repeat-full | 14:28:55 | running; all feature reviews complete, linearizer active |
+| candidate-screen-01-workflow-002 | unified-diff-preferred | 14:28:55 | running; feature 2 at decision, reviewer 3 and author 1 active |
+| candidate-screen-01-workflow-003 | review-fix-request-resupply | 14:28:55 | running; features 2 and 3 at decision, author/reviewer 1 fix work |
 
 Three top-level drivers each launched their three feature agents at 14:28:56. Global
 configuration is unchanged at each admission and the first active poll. The one-wave schedule
@@ -78,7 +78,17 @@ has no controls, Direct observations, replacement or automatic extra batch. Ever
 unexposed factor and measurement flag is retained. After all three outcomes, continue the broad
 mechanism analysis under the active plan; this screen is not the whole investigation.
 
+14:41 Rome evidence checkpoint: all three candidate workflows remain active with no terminal receipts. The historical six-WL/six-Direct audit independently verifies the actual context and lifecycle exposures instead of borrowing exposure counts from later studies. A native-tool census of all 90 source-pinned historical sessions finds no asynchronous polling tool calls in either version; polling suppression is therefore not an exposed explanation for this cohort. Historical command-content classification is in progress. The unchanged accounting helper has also replayed all 12 saved work-unit observations: every source validation passes, 11 have finite bounds, and workflow 003 retains its unbounded unsupported tail. That old work-unit policy experiment does not establish a directional total-token effect; it does not alter the accepted historical WL-versus-sequential saving.
+
 ### Candidate v4 real verification
+
+15:01 Rome checkpoint: workflow 001 has reached linearization; 002 and 003 continue author/review work. **No terminal outcome yet.** The offline title correction is committed separately as `4f4507e`, with 5 new and 15 unchanged tests, independent review, all three closed diagnostic replays and required repository checks passing. Original auditor and failed receipts remain intact. H action counts/role memberships and all 213 source hashes have independently reproduced; a lexical-parser limitation is explicitly a successful Python heredoc, not a failed command. Root independently verified all 12 common-W rows, all 230 sources and exact contrast arithmetic. Further source-only designs and prior-study audits remain active; no new observation has been admitted.
+
+14:52 Rome progress: **3 active, 0/3 terminal**. All three original driver and daemon process groups are alive; configuration remains unchanged. Workflow 001 has all three reviewers launched, workflow 002 continues author work after its feature-2 decision, and workflow 003 is in author/reviewer fix work. The unchanged frozen time limits govern them; there is no restart or replacement.
+
+Historical action census saved in `EVIDENCE-H-ACTIONS.md` and `EVIDENCE-H-NATIVE-ACTIONS.json`: 90 exact native sessions, 5,210 native exec/output joins and all 58 mediated command deliveries. Direct authors have 501 leading-cargo native calls; WL authors have 58 mediated check handoffs, including failures and retries. Actual Direct examples are repeated focused checks, not repeated full all-target validation. Reviewers also differ substantially in native repository inspection. These are observed work paths to explain, not invented response counts or causal percentages. All 213 source endpoints rehash correctly. The next design checks cover complete validation guidance and equivalent on-demand reviewer evidence; neither is an admitted benchmark yet.
+
+Postcapture-checker issue found during the historical audit: a full benchmark's first title input is a policy-wrapped launch, followed by raw title requests. The frozen delivery helper incorrectly requires even that first input to start with the raw title prefix. All three actual active captures confirm the legitimate wrapped shape. Generation and frozen inputs are unaffected. The original audit result will be retained; a separate test-first, source-bound offline correction is being prepared in `preflight/candidate-title-audit-correction/`. No benchmark or diagnostic is being rerun for this checker error.
 
 Final delivery checkpoint: all three provider-free replays PASS against the same closed real captures using the strict occurrence-aware checker (`f04b2eeac0128871ee0dd351ff36eb821bfc0128d1512b8f7dea2318e7bfc4f7`). Independent review is closed; 8 automatic checker tests pass, including truncated closed-frame rejection. All 11 native user inputs match exact captured thread/turn IDs and full text. This validates real delivery, not missing token usage. The original followup exit 101 remains a failed original verifier receipt, followed by the separately identified successful offline audit.
 

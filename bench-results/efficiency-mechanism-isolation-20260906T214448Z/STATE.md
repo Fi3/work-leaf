@@ -21,6 +21,23 @@ under `phases/candidate-screen-01/PHASE-MANIFEST.json` (SHA-256
 `935a32719e0c91e2afb8fc101788db44bb955a3d85993d2c28327cc44325acb1`).
 All 105 frozen inputs verify; live progress and every outcome belong in the root note.
 No new control or Direct run is authorized.
+The historical endpoint exposure pass is also saved separately in
+[EVIDENCE-H-CONTEXT.md](EVIDENCE-H-CONTEXT.md),
+[EVIDENCE-H-LIFECYCLE.md](EVIDENCE-H-LIFECYCLE.md) and
+[EVIDENCE-H-ACTIONS.md](EVIDENCE-H-ACTIONS.md). These use H itself rather than transferring
+later-cohort nonexposure. The complete clean-marker replay is in
+[EVIDENCE-CLEAN-MARKER-REPLAY.md](EVIDENCE-CLEAN-MARKER-REPLAY.md), and old candidate
+nulls/confounds are retained in [EVIDENCE-PRIOR-CANDIDATE-SCREENS.md](EVIDENCE-PRIOR-CANDIDATE-SCREENS.md).
+The separate [common W accounting scope](COMMON-W-ACCOUNTING-SCOPE.json) and
+[direction report](EVIDENCE-W-TOKEN-DIRECTION.md) retain all twelve saved outcomes:
+eleven finite bounds, one unsupported unbounded tail, no established total-token direction
+and no reinterpretation of the original mediator result.
+The frozen candidate delivery helper has a verified first-title-policy false rejection.
+Its original output must remain; the separately source-bound derivative in
+`preflight/candidate-title-audit-correction/` is committed at `4f4507e` with independent
+review, 5 new plus 15 unchanged tests, all three closed diagnostic replays and required
+repository checks passing. This is an
+offline checker correction, not a provider rerun or change to any admitted model input.
 Existing large-read treatment runs and their stopped-analysis scope are parked intact; their
 whole-workflow comparison is deferred. Older narrow-priority notes and fixed mixed schedules are
 historical records, not the next-action plan. Saving evidence or completing a substep is not a
