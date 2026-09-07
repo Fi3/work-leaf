@@ -1,0 +1,37 @@
+{
+  "phase": "candidate-screen-01",
+  "phase_kind": "screening",
+  "randomization": {
+    "block_condition_counts": {
+      "candidate-screen-01-block-01": {
+        "requested-repeat-full": 1,
+        "review-fix-request-resupply": 1,
+        "unified-diff-preferred": 1
+      }
+    },
+    "method": "fixed one workflow per candidate; only launch order randomized; saved baseline reused",
+    "mixed_waves": true,
+    "scheme": "within_block",
+    "unit": "workflow"
+  },
+  "runs": [
+    {
+      "block_id": "candidate-screen-01-block-01",
+      "condition": "requested-repeat-full",
+      "run_id": "candidate-screen-01-workflow-001",
+      "wave": 1
+    },
+    {
+      "block_id": "candidate-screen-01-block-01",
+      "condition": "unified-diff-preferred",
+      "run_id": "candidate-screen-01-workflow-002",
+      "wave": 1
+    },
+    {
+      "block_id": "candidate-screen-01-block-01",
+      "condition": "review-fix-request-resupply",
+      "run_id": "candidate-screen-01-workflow-003",
+      "wave": 1
+    }
+  ]
+}
