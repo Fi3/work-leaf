@@ -87,7 +87,29 @@ Existing large-read treatment runs and their stopped-analysis scope remain intac
 [The retained-read evidence plan](PLAN-RETAINED-READ-EVIDENCE.md) reopens source, delivery
 and actual retrieval classification for all six saved R runs within broad Stage B;
 whole-workflow costs require a separate common scope first. No regeneration or original
-flag waiver is authorized. Older narrow-priority notes and fixed mixed schedules are
+flag waiver is authorized. Its [source/retrieval evidence](EVIDENCE-RETAINED-READ-MECHANISMS.md)
+and [root review](EVIDENCE-RETAINED-READ-REVIEW.md) pass for all six saved rows.
+The separately declared [common-twelve accounting](EVIDENCE-RETAINED-READ-ACCOUNTING.md)
+is closed at commit `d5979de`: 1,771 unique response IDs, all six existing W results
+canonically unchanged, and original R005/R006 controller failures retained as UNKNOWN.
+The original report-source membership error and separately qualified consumed-field
+identity remain explicit; no original gate is retrospectively passed.
+The separate [provider-ledger supplement](EVIDENCE-RETAINED-READ-PROVIDER-LEDGER.md)
+has all twelve calls closed exactly once and [independent result review](EVIDENCE-RETAINED-READ-PROVIDER-LEDGER-REVIEW.md)
+passing: 576 source pins, 1,771 exact native response/counter joins and ten unchanged
+originally valid measurements. Its conditional modified-minus-existing-reference raw
+interval is `[-33230158/3, -3780158/3]`; it does not demonstrate the proposed positive
+net increase from inline reads. Original R005/R006 UNKNOWN, phase/configuration flags,
+source exceptions and failed workflows remain. No historical contribution is inferred.
+The standalone [C15 private executor](preflight/c15-private-executor/CLOSEOUT.md),
+committed at `dc00a1c`, has independent review and 11 actual local execution tests.
+The private accepted-Git/proposal materializer is committed at `97c7ca1`, with twelve
+independent tests and private Cargo gates passing. The actual frozen project also passes
+all 28 existing UI-harness tests offline with explicit immutable instruction overlay
+and public-only dependency inputs; its seven adapter tests and independent review pass.
+Live overlay/index census and later runtime/provider qualification remain active
+prerequisites, not admitted causal observations.
+Older narrow-priority notes and fixed mixed schedules are
 historical records, not the next-action plan. Saving evidence or completing a substep is not a
 stopping condition; continuous execution and live-note updates are required until the plan is complete.
 
