@@ -1,0 +1,84 @@
+{
+  "checked_at": "2026-09-07T07:07:52.053170+00:00",
+  "command": [
+    "/home/user/src/work-leaf/bench-results/efficiency-measurement-gate-20260906/subscription-codex",
+    "--disable",
+    "apps",
+    "--cd",
+    "/home/user/src/work-leaf",
+    "--sandbox",
+    "read-only",
+    "--ask-for-approval",
+    "never",
+    "app-server"
+  ],
+  "error": null,
+  "excluded_fields": "account identity, credentials, credit balances, reset-credit records, and notification payloads are not exported",
+  "generation_requests": 0,
+  "global_config_sha256_after": "e8aae9df8fdb7c91c473410aca9ed290d802f92f7e85d9cd030a91ffae09c3d8",
+  "global_config_sha256_before": "e8aae9df8fdb7c91c473410aca9ed290d802f92f7e85d9cd030a91ffae09c3d8",
+  "notification_methods": [
+    "remoteControl/status/changed"
+  ],
+  "official_reference": "https://learn.chatgpt.com/docs/app-server",
+  "process_exit_code": 0,
+  "rateLimits": {
+    "limitId": "codex",
+    "primary": {
+      "resetsAt": 1788767629,
+      "usedPercent": 95,
+      "windowDurationMins": 10080
+    },
+    "rateLimitReachedType": null,
+    "secondary": null
+  },
+  "rateLimitsByLimitId": {
+    "codex": {
+      "limitId": "codex",
+      "primary": {
+        "resetsAt": 1788767629,
+        "usedPercent": 95,
+        "windowDurationMins": 10080
+      },
+      "rateLimitReachedType": null,
+      "secondary": null
+    },
+    "codex_bengalfox": {
+      "limitId": "codex_bengalfox",
+      "primary": {
+        "resetsAt": 1788782871,
+        "usedPercent": 0,
+        "windowDurationMins": 300
+      },
+      "rateLimitReachedType": null,
+      "secondary": {
+        "resetsAt": 1789369671,
+        "usedPercent": 0,
+        "windowDurationMins": 10080
+      }
+    }
+  },
+  "requests": [
+    {
+      "id": 0,
+      "method": "initialize",
+      "params": {
+        "clientInfo": {
+          "name": "work_leaf_quota_check",
+          "version": "1.0"
+        }
+      }
+    },
+    {
+      "method": "initialized",
+      "params": {}
+    },
+    {
+      "id": 6,
+      "method": "account/rateLimits/read"
+    }
+  ],
+  "schema": "work-leaf-subscription-quota-read-v1",
+  "stderr_bytes_captured": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

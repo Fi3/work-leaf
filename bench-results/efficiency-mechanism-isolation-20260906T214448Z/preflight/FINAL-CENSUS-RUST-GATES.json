@@ -1,0 +1,480 @@
+{
+  "schema": "work-leaf-final-census-rust-gates-v1",
+  "completed_at": "2026-09-07 07:01:01 UTC",
+  "workspace": "/home/user/src/work-leaf",
+  "head_at_endpoint": "e47003f019da49c1abe9c4acb511ab7b09070981",
+  "commands": [
+    {
+      "command": "cargo fmt",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "command": "cargo clippy --all-targets --all-features -- -D warnings",
+      "exit_code": 0,
+      "diagnostics": [],
+      "output": "Finished dev profile in 0.05s"
+    },
+    {
+      "command": "cargo test --all-targets --all-features",
+      "exit_code": 0,
+      "session_id": 95170,
+      "target_count": 37,
+      "totals": {
+        "passed": 449,
+        "failed": 0,
+        "ignored": 8,
+        "measured": 0,
+        "filtered_out": 0
+      }
+    },
+    {
+      "command": "git diff --exit-code -- Cargo.toml Cargo.lock src tests examples",
+      "exit_code": 0,
+      "output": ""
+    }
+  ],
+  "targets": [
+    {
+      "target": "unittests src/lib.rs",
+      "status": "ok",
+      "passed": 56,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.04
+    },
+    {
+      "target": "unittests src/bin/work-leaf.rs",
+      "status": "ok",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0
+    },
+    {
+      "target": "unittests src/bin/work-leaf-orchestrator.rs",
+      "status": "ok",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0
+    },
+    {
+      "target": "tests/agent_core.rs",
+      "status": "ok",
+      "passed": 19,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 1.02
+    },
+    {
+      "target": "tests/agent_provider_interface.rs",
+      "status": "ok",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0
+    },
+    {
+      "target": "tests/bench_dashboard.rs",
+      "status": "ok",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.08
+    },
+    {
+      "target": "tests/bench_experiment_subscription_smoke.rs",
+      "status": "ok",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 1,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0
+    },
+    {
+      "target": "tests/bench_experiments.rs",
+      "status": "ok",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 1,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.09
+    },
+    {
+      "target": "tests/bench_read_inline.rs",
+      "status": "ok",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 1,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.22
+    },
+    {
+      "target": "tests/bench_read_inline_subscription_smoke.rs",
+      "status": "ok",
+      "passed": 8,
+      "failed": 0,
+      "ignored": 1,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "tests/bench_work_unit.rs",
+      "status": "ok",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 1,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 2.03
+    },
+    {
+      "target": "tests/bench_work_unit_subscription_smoke.rs",
+      "status": "ok",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 2,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.05
+    },
+    {
+      "target": "tests/benchmark_candidates.rs",
+      "status": "ok",
+      "passed": 18,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 1.57
+    },
+    {
+      "target": "tests/benchmark_measurement_ownership.rs",
+      "status": "ok",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0
+    },
+    {
+      "target": "tests/benchmark_validation.rs",
+      "status": "ok",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.01
+    },
+    {
+      "target": "tests/benchmark_workflows.rs",
+      "status": "ok",
+      "passed": 19,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "tests/build_target.rs",
+      "status": "ok",
+      "passed": 11,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.04
+    },
+    {
+      "target": "tests/claude.rs",
+      "status": "ok",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.06
+    },
+    {
+      "target": "tests/cli.rs",
+      "status": "ok",
+      "passed": 34,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.19
+    },
+    {
+      "target": "tests/file_locking.rs",
+      "status": "ok",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.1
+    },
+    {
+      "target": "tests/http_orchestrator.rs",
+      "status": "ok",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.16
+    },
+    {
+      "target": "tests/linearize.rs",
+      "status": "ok",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0
+    },
+    {
+      "target": "tests/observer_subscription_smoke.rs",
+      "status": "ok",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 1,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0
+    },
+    {
+      "target": "tests/orchestrator_flow.rs",
+      "status": "ok",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "tests/orchestrator_protocol.rs",
+      "status": "ok",
+      "passed": 38,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.23
+    },
+    {
+      "target": "tests/patching.rs",
+      "status": "ok",
+      "passed": 12,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "tests/reviews.rs",
+      "status": "ok",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "tests/single_binary.rs",
+      "status": "ok",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.02
+    },
+    {
+      "target": "tests/start_script.rs",
+      "status": "ok",
+      "passed": 18,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 5.32
+    },
+    {
+      "target": "tests/temp_cleanup.rs",
+      "status": "ok",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0
+    },
+    {
+      "target": "tests/terminal_app.rs",
+      "status": "ok",
+      "passed": 40,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 2.09
+    },
+    {
+      "target": "tests/terminal_pty.rs",
+      "status": "ok",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 7.22
+    },
+    {
+      "target": "tests/terminal_ui.rs",
+      "status": "ok",
+      "passed": 18,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.05
+    },
+    {
+      "target": "tests/ui_harness.rs",
+      "status": "ok",
+      "passed": 51,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.07
+    },
+    {
+      "target": "tests/web_ui_static.rs",
+      "status": "ok",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0
+    },
+    {
+      "target": "tests/workspace.rs",
+      "status": "ok",
+      "passed": 48,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.55
+    },
+    {
+      "target": "unittests examples/ui_harness.rs",
+      "status": "ok",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0
+    }
+  ],
+  "source_sha256": {
+    "examples/ui_harness.rs": "0d5e8eba303213a7d13e6fc951839ade72fcabc3d712f35879759609c407e4fc",
+    "src/agent.rs": "a6bd797e780b1751026c141cfff508c036ea45af7f37b085336f8a34c8a85838",
+    "src/agent_runtime.rs": "cae5903d6b34271613fe2ef3a8033eeda3c294a602f2b4b9206b3649881babb0",
+    "src/bench_experiment.rs": "951c0a96795582c51473aaba59b1fc2b51ffe2a440414174221b3111441e40ad",
+    "src/bench_read_experiment_tests.rs": "8e095c7a9f65bee8182b7803d116e22fa298935b9268a99508bff8dabeeb6c7e",
+    "src/bin/work-leaf-orchestrator.rs": "3cae37e39efb8fae286965b3aa92b24335298d3ad610031f769a11a613093a7a",
+    "src/bin/work-leaf.rs": "4f7ae55b21e786b2590723a76b278a99cc586b021a4a7277c53b7a4b2a3b7215",
+    "src/chat_title.rs": "ba67ff00c43231791f42ffa964c94162e415b2e4b4ee4c71ac1c29ac3d81057f",
+    "src/claude.rs": "c5047a3815b438149a096e927b8b7fb218aff0f708fea44f1b096eea3ff3b22b",
+    "src/cli.rs": "70d5107a5b022f4dba118e8567a5c2f54330a51319f5d97d84299380e6246c0d",
+    "src/codex.rs": "334eb3008f3b0a8db0d98bed2d3191f5cbf37052fb342dcf26a91ccd4ee502d8",
+    "src/http_controller.rs": "3cadad246d8818e1766e08e4dd3103035923aaf720593e0e0c2fae448e08818d",
+    "src/instructions.rs": "f156aec8d0bc0071f2bde859fbd9cf29c9e6a9134c4ec5191b65f89f3041296f",
+    "src/lib.rs": "ee1f20cb7d80ceca4903138a67e34de469ad0b7ce70fe79f3f776c5d170389c0",
+    "src/linearize.rs": "b3a4b6e2df477d18f2a76215266b6263c24304f1a9a0971339fb1849a9c04ee6",
+    "src/locks.rs": "0590b3409c5f8ad9cd44b0320d24b153d4485a26a8c065a877f8742f0b029697",
+    "src/orchestrator.rs": "71610cc88fef911fddd2099a1237166df51f8f31a9528268085e7f65477f792b",
+    "src/patch.rs": "aa9a0df515aa7977a8b52b7dfd6151d53ee424adb7f7d5f5a83d0ba339aa5fda",
+    "src/review.rs": "12d70548086d053583e1fc2fc6b4f191dd262cf61b45637a1ee5d04931c919ee",
+    "src/terminal_app.rs": "67ffaf621d642fa1836582328c21ea4d86487e9b4ad67d7cb5f2bb578f074a47",
+    "src/ui.rs": "d8d78641792dfa7508a93b70534889c28ebb23e2d3092cda28b22955a213a4a0",
+    "src/ui_harness.rs": "99ba200164a20c3e0db003c23c8657700c367a6d5977b19fe495507b16817f5e",
+    "src/workspace.rs": "f93f2fe2b7481cc1689e5f0aa4ed295e8736af035555fbf84197024ffc80de17",
+    "tests/agent_core.rs": "90ff10a9a09a7735dab7c9e2a9619723bb9bcf67575bf59d85c1f628eb970c9b",
+    "tests/agent_provider_interface.rs": "1bd35763f1a47e4f28de2707abf4e681690e2687ffa2c9f99fe9fe950a01b9f1",
+    "tests/bench_dashboard.rs": "171cfeb09741299f9cad1119801eb776fefecd32ce27d28166d3a7e5a1905311",
+    "tests/bench_experiment_subscription_smoke.rs": "3ed00491a4ecd575a40ade530145c0a92b79a458d56f8a45839554c809b6e9ec",
+    "tests/bench_experiments.rs": "127f0d47b911d7a9d6f70ad9455fcf9b02ab6622b76494af2fc5efb2db09e58a",
+    "tests/bench_read_inline.rs": "e225f5a673458572278bd84e011c83ab678890baeccd64e7a7ec95084fbcdf78",
+    "tests/bench_read_inline_subscription_smoke.rs": "8f80942005f3dc305cb29f8cef8ab8efe7b3e9604491f3fe5159f8e8557428ed",
+    "tests/bench_work_unit.rs": "e217e73ca6019aecff5c69ddbff3f78c59e682bc4692b07ac42bf145329ef565",
+    "tests/bench_work_unit_subscription_smoke.rs": "bc96d020be0dc36b9b6a5a4f86796dd8f3fdcbaf95a82642b29ec947eeae0113",
+    "tests/benchmark_candidates.rs": "d15eb13f46fcc3d5232fe960df374c56202ec3554b7824b889c4c550a8637a10",
+    "tests/benchmark_measurement_ownership.rs": "ba66a7beb18011cc734d56c05b2ed471a27dc39e64dc597399ec7fb6be59f9f9",
+    "tests/benchmark_validation.rs": "6c33ed8f254e99666b93d8dfe1a879cb31d8037121c8db3587263a286976e66a",
+    "tests/benchmark_workflows.rs": "ea7585b709c6c926f4beb21c96135d9ee941521ae4fee469b5f2bebf184686d2",
+    "tests/build_target.rs": "1b26315f373b81b1a1e45260e38a7ede4268f4d7f0da20210caa1cdc7f8d281d",
+    "tests/claude.rs": "4c4dc9d2423922a56345c17bbfdadfd90aa88c52b5a0116e0c6cb5df068812a5",
+    "tests/cli.rs": "c102f13a2ad987da34bfc9ea592f715b416ca01b4a8f8798c0e072f9753f4dc3",
+    "tests/file_locking.rs": "e2ae85604155650738cb86a0abf55aec5b85586566a7e3041d7d2055effcbc90",
+    "tests/http_orchestrator.rs": "1d49e7924bba48b7861090c2607b981bc274b1a1af09f0584ad3c952d95cff7c",
+    "tests/linearize.rs": "f4cf18df6209712606c0bba79239826295e9fca60e982529b5995fe27f1780e7",
+    "tests/observer_subscription_smoke.rs": "e19763602a5351102202a30c7ce9a1b940884dcd5e3fd2192cd416bc14887ecf",
+    "tests/orchestrator_flow.rs": "fcb9f8dd7c06093a2b9f7aad9a70cbf480d2fdc524389e22117cd494c51dc995",
+    "tests/orchestrator_protocol.rs": "5058c394778e94074f04c3a12ef1cf404e5759ea0adcb5106a42570eaee1d46a",
+    "tests/patching.rs": "b752f670bfe6f19965c90d3bce8a7abc74c9c30c69bb4a8dec970cba34e98ace",
+    "tests/reviews.rs": "38b27fef05d7c35ab4cffaaa7f64ce7c2e8cb3b65c83028d261dcad2d6f6b18e",
+    "tests/single_binary.rs": "05efaf0b861bb381cd6b7f6d718464494edb4924b4533ccf8677d0aca0944eb4",
+    "tests/start_script.rs": "a3aee0e53ac34c71aacf9394aa60a1eed9bca977ee4c07a8149079314af563bd",
+    "tests/support/fake_codex.rs": "306d2266d8db971e15abfd5734aab2de975a3b1899e3138a756ccde166e06e5d",
+    "tests/support/mod.rs": "41cd5e7c1f2c1ce8e8a154300bee6a46ced253b8ea5805a790adcdf44ab29e4f",
+    "tests/temp_cleanup.rs": "377ed06e270fc267e247fa96590d086c3b9496a3efcd2f3d10289e758e6b4008",
+    "tests/terminal_app.rs": "8cfd9dd2b15eb08095d17d16006c242d7e757dc1297e82b49ffdbbbdd370fb97",
+    "tests/terminal_pty.rs": "5386c1e4302f772fa2e69e3b8a3cbce0d1a46d8a0352d73d0d48ac3015efbea6",
+    "tests/terminal_ui.rs": "8135b5a3cbebdd1ab63ccc55d94aaf66e9503369ab9504b0cc34bdac06ea4094",
+    "tests/ui_harness.rs": "ea61c8c4e84edbc806111b0f662981c6e9d3780535669e51eb870a0dc388e005",
+    "tests/web_ui_static.rs": "542f8b2f8dbd24f448f364b70769ec1de97a08666ed8954342e36df2cdf9e822",
+    "tests/workspace.rs": "748d7aa34189f6568c7c951358d1ebcf55d23fbb8c883b8daf6f10215bc2cbb4",
+    "Cargo.toml": "09d25465a66dfd04f1c4deddc573e485e886843baf1d7c7a785cae3f2f7b8e72",
+    "Cargo.lock": "ac888331fcf8c9318919759af57116c40e73895406bb646e267fb8927110f707"
+  },
+  "source_file_count": 60,
+  "real_smoke_binary_sha256": {
+    "target/debug/deps/bench_read_inline_subscription_smoke-dd4acd1a51f6ca92": "89942613cf9065225e39b3ac73e1812fa6e9108db2e6266fb6fbbedb7ebe42d0"
+  },
+  "provider_calls": 0,
+  "benchmark_launches": 0,
+  "source_changes": [],
+  "real_agent_verification": "No new real-agent run in this gate. Previously completed corrected real read-inline diagnostics remain covered by READ-INLINE-PRIMARY-DIAGNOSTIC-REVIEW.json; source and smoke binary hashes are unchanged.",
+  "ignored_scope": "Eight top-level ignored cases remain ignored: five opt-in real subscription scenarios and three subprocess fixture children. Automatic parent tests exercise subprocess fixture children."
+}

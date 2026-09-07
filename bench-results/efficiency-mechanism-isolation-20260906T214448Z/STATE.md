@@ -47,9 +47,17 @@ Source/exposure audits identify ordinary bundle-based source delivery as a disti
 mechanism. The private v3 `untracked-read-inline` factor selects exact full-inline text only for
 successfully bundled, currently untracked snapshots. `PROTOCOL-UNTRACKED-READ-INLINE.md` specifies
 twelve fresh WL observations, a whole-workflow raw-token primary and the remaining alpha 0.025.
-No allocation is drawn and no v3 benchmark observation is admitted. Automatic runtime/helper
-tests and independent source reviews pass. Correctly marked real subscription diagnostics pass
-in both arms; the complete census helper and final source/binary freeze remain admission gates.
+`phases/untracked-reads-01` contains its one-time twelve-workflow allocation and prepared manifest;
+no v3 benchmark observation is admitted. The manifest binds 114 files and four mixed waves of three,
+with runtime root `/tmp/work-leaf-untracked-reads.jUcFKF`. Its SHA-256 is
+`706c0b13d62376b3ea10c4604bb63957c271a1a7224d39b27db20fa24e2da263`.
+Automatic runtime/helper tests and independent source reviews pass. Correctly marked real
+subscription diagnostics pass in both arms. The census helper is committed at `e47003f` and its
+actual closed-capture replay links four read/native input identities and six response records.
+Independent prepared-source review passes; all 265 supplemental Python checks pass on exact
+frozen source bytes. `PREADMISSION-REVIEW.md` preserves the original read-only archive discovery's
+18 test-packaging errors and the separately pinned test-only materialization. The 114 frozen files,
+allocation and runtime settings remain unchanged. The subscription reset/recheck is the remaining gate.
 
 The first two v3 real-read diagnostics retain their failed teardown/recording outcomes. Both
 completed three read handoffs, but the operator omitted the primary observer marker, leaving raw
@@ -59,10 +67,12 @@ The two separately admitted corrected cases complete their three handoffs, retai
 captures and three exact native/raw response identities each, and preserve the unchanged repeated
 read. Their original failed predecessors remain separate and unchanged.
 
-The corrected diagnostics report weekly subscription usage at 90%, with reset timestamp
-1788767629 (2026-09-07 07:53:49 UTC, 09:53:49 Europe/Rome). Benchmark admission waits for that
-reset to reduce quota-truncation risk. No API-credit route, replacement observation or new quota
-purchase is authorized. This is a pre-admission resource wait, not an admitted benchmark failure.
+`phases/untracked-reads-01/QUOTA-PREWAIT.json` retains the 07:07:52 UTC read-only subscription
+status: weekly usage 95%, reset timestamp 1788767629 (2026-09-07 07:53:49 UTC,
+09:53:49 Europe/Rome), no generation request and unchanged global configuration. Benchmark
+admission waits for that reset and a fresh resource check to reduce quota-truncation risk.
+No API-credit route, replacement observation or new quota purchase is authorized. This is a
+pre-admission resource wait, not an admitted benchmark failure.
 
 The future-only accounting adapter passes independent ordinary and compaction source replays.
 It requires explicit response identities and unchanged strict arithmetic, retains original ledgers
