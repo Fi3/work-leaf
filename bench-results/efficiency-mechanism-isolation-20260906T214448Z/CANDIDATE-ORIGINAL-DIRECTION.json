@@ -1,0 +1,95 @@
+{
+  "schema": "work-leaf-candidate-original-direction-v1",
+  "recorded_at": "2026-09-07T15:27:23.180244+00:00",
+  "source": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/CANDIDATE-COMMON-ACCOUNTING-ORIGINAL.json",
+    "sha256": "620098aaab33af7ef8bc8df32a347c677b9c617542d33ff6e8ce953fe6feb4bb"
+  },
+  "scope": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/CANDIDATE-COMMON-ACCOUNTING-SCOPE.json",
+    "sha256": "e060a08f3c3c79a4fcd43647f91132f05431ab2a3fd1fe544d6de7afd26bd6ee"
+  },
+  "retained_control_ids": [
+    "work-units-01-workflow-002",
+    "work-units-01-workflow-004",
+    "work-units-01-workflow-006",
+    "work-units-01-workflow-009",
+    "work-units-01-workflow-010",
+    "work-units-01-workflow-012"
+  ],
+  "retained_control_mean_raw_token_bounds": {
+    "lower": {
+      "numerator": 44585599,
+      "denominator": 3
+    },
+    "upper": {
+      "numerator": 57543599,
+      "denominator": 3
+    }
+  },
+  "rows": [
+    {
+      "run_id": "candidate-screen-01-workflow-001",
+      "condition": "requested-repeat-full",
+      "original_workflow_exit": 0,
+      "accounting_status": "unknown",
+      "raw_token_bounds": null,
+      "modified_minus_retained_control_mean": null,
+      "direction": "unknown: original helper rejected compaction-context boundary"
+    },
+    {
+      "run_id": "candidate-screen-01-workflow-002",
+      "condition": "unified-diff-preferred",
+      "original_workflow_exit": 1,
+      "accounting_status": "validated",
+      "raw_token_bounds": {
+        "lower": 16900661,
+        "upper": 18078661
+      },
+      "modified_minus_retained_control_mean": {
+        "lower": {
+          "numerator": -6841616,
+          "denominator": 3
+        },
+        "upper": {
+          "numerator": 9650384,
+          "denominator": 3
+        }
+      },
+      "direction": "not established: interval includes zero"
+    },
+    {
+      "run_id": "candidate-screen-01-workflow-003",
+      "condition": "review-fix-request-resupply",
+      "original_workflow_exit": 0,
+      "accounting_status": "validated",
+      "raw_token_bounds": {
+        "lower": 18396617,
+        "upper": 23108617
+      },
+      "modified_minus_retained_control_mean": {
+        "lower": {
+          "numerator": -2353748,
+          "denominator": 3
+        },
+        "upper": {
+          "numerator": 24740252,
+          "denominator": 3
+        }
+      },
+      "direction": "not established: interval includes zero"
+    }
+  ],
+  "interpretation": "All three exposed candidates and all six historical controls retained, including failed candidate002 and control010. This is the fixed descriptive comparison of actual recorded workflow outcomes, not equal completion work, a randomized or sampling-confidence interval, a confirmation, or historical-gap attribution. Bounds remain conditional on the source accounting rule and visibility. Unknown is not zero; original001 rejection and all original flags remain. No midpoint, success/quality filter, p-value, percentage, replacement or provider generation. A failed truncated workflow does not supply invented future costs.",
+  "mechanism_sources": [
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/EVIDENCE-CANDIDATE-SCREEN-MECHANISMS.md",
+      "sha256": "af66ca6cf8d4921161f0ac39bf982ab6c8fd16ef059e0ad3fb7b7a0821d72c51"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/EVIDENCE-CANDIDATE-SCREEN-MECHANISMS.json",
+      "sha256": "866278546978764303c5945f973444d63c7f1c7478b8c0bfa73851d76e29ab99"
+    }
+  ],
+  "independent_mechanism_review": "candidate_controls independently checked54sourcehashes,30nativecalloutputpairs,27publicmessages andcomplete10patchsubmissioninventory; no findings at the pinned source cutoff."
+}

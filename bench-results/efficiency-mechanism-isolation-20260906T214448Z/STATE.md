@@ -21,8 +21,19 @@ under `phases/candidate-screen-01/PHASE-MANIFEST.json` (SHA-256
 `935a32719e0c91e2afb8fc101788db44bb955a3d85993d2c28327cc44325acb1`).
 All 105 frozen inputs verify; live progress and every outcome belong in the root note.
 No new control or Direct run is authorized.
-Candidate workflows 001 and 003 retain successful terminal receipts; 002 remains active.
-Costs and final delivery audits remain gated on all-three closure. The complete
+Candidate workflows are all terminal at 2026-09-07T14:29:25.670740+00:00: 001/003
+retain successful exit-0 receipts; 002 retains exit 1 and its original 7200-second
+feature/review timeout. Immediate final-global trust replay passes 728 snapshots and
+25 sources; 105 frozen inputs verify, with no unexplained drift, pending attestation
+or frozen-input error. The legacy behavioral flag remains retained. Exact delivery and
+native/project inventories are retained for all three. The original common nine-row
+accounting report is [CANDIDATE-COMMON-ACCOUNTING-ORIGINAL.json](CANDIDATE-COMMON-ACCOUNTING-ORIGINAL.json):
+001 remains UNKNOWN at a compaction-before-turn-context boundary; the other eight rows
+validate, with failed 002 and baseline 010 retained. All 1,582 returned response IDs,
+158 returned sources and 105 frozen inputs pass their distinct endpoint checks. A separate
+test-first offline context-link correction is under independent review; originals remain
+unchanged. [The closed mechanism census](EVIDENCE-CANDIDATE-SCREEN-MECHANISMS.md) binds
+actual changed delivery and downstream public/native actions for all three. The complete
 [candidate dispositions](CANDIDATE-DISPOSITIONS.md) cover all 38 candidates and seven
 exclusions. [Historical test timing](EVIDENCE-H-TEST-TIMING.md) and its
 [independent review](EVIDENCE-H-TEST-TIMING-REVIEW.md) establish the actual executed-RED
@@ -34,11 +45,15 @@ has a test-first private implementation, separately from the active frozen runti
 native read-only artifact preserves the same held context and ordinary read machinery.
 The private runtime is committed at `4589ffc`; required root Rust/default checks and
 both actual build commands pass. Independent runtime/fixture/primitive/collector review
-passes, with 36 offline checks. Exact real-agent verification remains pending.
-[The prospective C21 protocol](PROTOCOL-REVIEW-EVIDENCE-NATIVE.md) admits no generation;
-its separate diagnostic admission follows all-three current outcomes and postcapture audits.
-`preflight/review-evidence-native-diagnostic-001/PREPARED.json` records the isolated
-source/binary copies and empty fixture checkout, explicitly not admitted or started.
+passes, with 36 offline checks. [The C21 protocol](PROTOCOL-REVIEW-EVIDENCE-NATIVE.md)
+has one separately frozen diagnostic admission after all-three current outcomes and audits.
+`preflight/review-evidence-native-diagnostic-001/ADMISSION.json` pins 83 source/executable
+and prerequisite identities. Its original `TERMINAL.json` records exit 101 after 68.36s:
+the actual reviewer reads the archive, then emits `NO_FINDINGS` without requesting the
+fixture's required focused check. The scripted workflow fails; final accepted threads
+settle and global configuration is unchanged. A source-bound native retrieval audit is
+active. This is not green complete-workflow verification, and no retry, replacement or
+complete C21 benchmark is admitted. The original preparation and failed output remain.
 The historical endpoint exposure pass is also saved separately in
 [EVIDENCE-H-CONTEXT.md](EVIDENCE-H-CONTEXT.md),
 [EVIDENCE-H-LIFECYCLE.md](EVIDENCE-H-LIFECYCLE.md) and
