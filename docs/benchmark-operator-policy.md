@@ -25,6 +25,13 @@ control workflows or Direct sequential workflows require fresh explicit user aut
 user's 2026-09-07 instruction prohibits further controls; an optional fresh randomized design is
 not a prerequisite for investigating a benchmark-only factor against the saved baseline.
 
+The active order is comprehensive candidate inventory, identification of actual saving mechanisms,
+then percentage attribution. Existing read-factor runs are preserved for later analysis; they are
+not the next percentage report. The durable continuation authority is
+`bench-results/efficiency-mechanism-isolation-20260906T214448Z/PLAN-CANDIDATE-INVENTORY.md`.
+The inventory-only stage admits no provider generation. Earlier phase protocols and stopped-analysis
+scopes remain historical records, not authority to bypass this ordering.
+
 Compare modified WL with the existing baseline after checking source, configuration and accounting
 compatibility from retained evidence. Keep non-target behavior unchanged. Further repetitions concern
 the modified version when supported by the investigation, not automatic baseline replenishment.

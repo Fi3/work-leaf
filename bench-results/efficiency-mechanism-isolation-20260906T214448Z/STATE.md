@@ -1,11 +1,27 @@
 # Study state
 
+## Active continuation plan
+
+Read [PLAN-CANDIDATE-INVENTORY.md](PLAN-CANDIDATE-INVENTORY.md) first after a restart. The user's
+approved order is comprehensive source-grounded candidate inventory, identification of actual
+saving mechanisms, then contribution percentages. The first broad source pass is recorded in
+[CANDIDATE-MAP.md](CANDIDATE-MAP.md): 38 candidate boundaries/families, named subfactors, evidence
+states, shared-factor exclusions and interactions. These are not 38 proven or independent savings.
+The next activity is evidence-status verification across the map, not a percentage calculation.
+Existing large-read treatment runs and their stopped-analysis scope are parked intact;
+their whole-workflow comparison is deferred. No new provider generation belongs to this stage,
+and no new controls or Direct runs are authorized. Older narrow-priority notes and fixed mixed
+schedules are historical records, not the next-action plan.
+
+## Retained execution state
+
 The original screen and the twelve-workflow work-unit phase are complete. The exact-mechanism
 investigation remains active and reuses the existing normal-WL baseline. Further control workflows
 are prohibited by the user's 2026-09-07 instruction. The original twelve-identity untracked-read
 schedule is partially executed: its first six identities were launched, and later admissions are
-blocked. The supervisor alone is suspended while admitted treatment children finish; current
-process status and every run are recorded in `../../ephemeral-note.md`.
+blocked. The supervisor is closed at 2026-09-07T09:38:34.791512+00:00 after admitted treatment
+children finished naturally; all six later identities remain unlaunched. Current analysis status
+and every run are recorded in `../../ephemeral-note.md`.
 The user accepts the historical approximately 50% raw-token endpoint reduction and assumes no
 quality reduction for this investigation. The current task is its causal explanation, not another
 Direct-versus-WL replication.
@@ -45,7 +61,7 @@ quality filtering. Workflow 010 remains a workflow failure despite its three pas
 The source-selected workflow 011 test-first episode contains eight matched completed responses
 charging retained input and request fields; that descriptive accounting is not a causal share.
 
-## Further investigation
+## Preserved read-factor investigation
 
 Source/exposure audits identify ordinary bundle-based source delivery as a distinct testable
 mechanism. The private v3 `untracked-read-inline` factor selects exact full-inline text only for

@@ -1,41 +1,49 @@
 # Provisional investigation ledger
 
-Last checked: **2026-09-07 11:20:54 Europe/Rome (09:20:54 UTC)**.
+Last checked: **2026-09-07 12:20:02 Europe/Rome (10:20:02 UTC)**.
 
 Scope: the entire overnight mechanism investigation, with all **27 declared benchmark identities** (3 screen + 12 work-unit + 12 read-factor), all **16 diagnostic attempts**, and the elapsed-time breakdown. The earlier two-run pilot and accepted historical twelve-run cohort are listed separately below. The live count is investigation-wide; the smaller current-batch count is explicitly labeled.
 
-## Goal and current experiment
+## Active plan and preserved experiments
 
-**User instruction, 11:12 Rome: no more control workflows.** The supervisor alone is verified suspended at 11:12:28, preventing every further admission. Active treatments 005 and 006 continue in their own process groups and were not signaled. Controls 007, 010 and 012 will not run. Unlaunched treatments 008, 009 and 011 are held, not silently launched under the superseded mixed schedule. Existing baseline runs will be reused; the interrupted batch is not a completed twelve-run randomized comparison. [Operator stop receipt](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/OPERATOR-CONTROL-STOP.json).
+**Current order: comprehensive candidate inventory → identify actual saving mechanisms → quantify contributions.** The durable resume plan is [PLAN-CANDIDATE-INVENTORY.md](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PLAN-CANDIDATE-INVENTORY.md). Existing large-read modified runs are parked intact; their full-workflow token comparison and percentage analysis are deferred. The current work is a broad read-only source/evidence inventory, with separate parallel audits of context delivery, behavior/policy, and lifecycle/coordination. No benchmark or provider diagnostic is being launched for this inventory. Older read-first next steps and the stopped descriptive scope are not the active continuation plan.
+
+The first broad source pass is in [CANDIDATE-MAP.md](bench-results/efficiency-mechanism-isolation-20260906T214448Z/CANDIDATE-MAP.md): **38 candidate boundaries/families**, with distinct subfactors, source/call-chain evidence, current test/exposure status, safe isolation limits, shared-factor exclusions and interactions. These are not 38 positive or independent effects. Three parallel source audits and three partitioned map reviews are complete. Review corrections preserve successful-bundle-write versus threshold eligibility, and interrupt request/early return versus actual generation completion. The next pass verifies evidence status across the map, not just large reads.
+
+The modified reports and prompt traces for 003, 005 and 006 exist and were hashed without inspecting their cost contrasts. Their artifacts and all other run outcomes remain in place. Commit `6463ead` preserves the stopped-phase result, drain receipt, separate hold-time trust proof and parked descriptive scope. For this documentation checkpoint, `cargo fmt`, all-target/all-feature clippy with `-D warnings`, and all-target/all-feature tests passed; 113 local Markdown references and the complete C01–C38 ID sequence passed validation. No runtime or agent-facing behavior is modified and no real-agent generation was run; explicitly gated subscription tests remain ignored. No benchmark or test process remains running.
+
+**User instruction: no more control workflows.** The supervisor was suspended at 11:12:28 Rome, preventing further admissions while treatments 005 and 006 finished naturally with exit 0. After both driver process groups drained, the supervisor finalized at **11:38:34 Rome**. All six remaining identities are recorded as unlaunched; controls 007, 010 and 012 are canceled, and treatments 008, 009 and 011 are held. No new run is active or queued for automatic launch. Existing baseline runs will be reused. [Stop receipt](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/OPERATOR-CONTROL-STOP.json), [safe drain/finalization](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/OPERATOR-DRAIN-FINALIZATION.json).
 
 Explain the exact mechanism behind WL's token savings. The historical 45.38%–51.62% reduction is accepted for this investigation, under the user's assumption of no quality reduction; this phase does not rerun Direct sequential.
 
-The current benchmark-only factor replaces eligible bundled, untracked source-read responses with their full inline contents. Both arms preserve the normal bundle creation and all non-target behavior. Ordinary WL remains unchanged. Generation uses the existing ChatGPT subscription, not API-key authentication or API credits.
+The parked benchmark-only factor replaces eligible bundled, untracked source-read responses with their full inline contents. Both arms preserve the normal bundle creation and all non-target behavior. Ordinary WL remains unchanged. Generation uses the existing ChatGPT subscription, not API-key authentication or API credits.
 
 “Arm” means one version under comparison: six complete benchmarks with normal WL read delivery (control), and six with the benchmark-only inline-read treatment. Each benchmark is the entire three-feature workflow, including review, fixes, linearization and final checks; it is not one feature agent. Neither version is Direct sequential. Waves contain three complete benchmarks and mix the versions.
 
 The six-per-version allocation above is the superseded design, not the user's continuing requirement. There is no implementation reason requiring a fresh baseline. The additional controls were the agent's optional experimental-design choice; they are prohibited by the user's latest instruction. Continuing work compares modified WL with the existing WL baseline, verifies compatibility from saved artifacts, and investigates the exact mechanism without new control runs.
 
+Baseline compatibility audit: existing work-unit controls **002, 004, 006, 009, 010 and 012** match the current task base/list, actual subscription provider/model/effort, observer binary and raw/grace settings, five drivers, runner, trust classifier and ordinary model-visible prompts. The v3 starting global configuration exactly equals that prior phase's final snapshot; no between-phase configuration change is evidenced. Keep failed control 010. Runtime binaries differ because of the benchmark-only read factor and symmetric tracing; that tracing is host-side work, not an extra model message. Apply the same accounting scope to both groups and retain the historical provenance. No evidenced incompatibility requires new controls. Sources: both [old](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/PHASE-MANIFEST.json) and [current](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/PHASE-MANIFEST.json) manifests, the [old configuration history](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/config-history.json), and [runtime baseline verification](bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/V3-RUNTIME-VALIDATION.md).
+
 ## Live state — whole investigation
 
-- Whole mechanism investigation: **19 workflows with terminal receipts** = 3 initial screen + 12 work-unit + 4 current read-factor workflows. Current active: **1**; current scheduled but not launched: **6**.
-- Driver exited, awaiting supervisor receipt: 006 (raw wait status 0).
+- Whole mechanism investigation: **21 workflows with terminal receipts** = 3 initial screen + 12 work-unit + 6 current read-factor workflows. Current active: **0**; current scheduled but not launched: **6**.
+- Driver exited, awaiting supervisor receipt: none.
 - These are terminal outcomes, not all successes. Diagnostics and earlier historical/pilot runs are listed separately below; they are not added to the benchmark count.
 
 ### Current read-factor batch
 
 - Fixed allocation: 12 workflows — six normal-delivery controls and six inline-read treatments — in four waves of three concurrent complete benchmarks, each with its own checkout and artifacts.
-- Original admission: 2026-09-07 07:55:36 UTC. Supervisor is SUSPENDED by user-directed control cancellation. No further workflow can launch; active treatment children continue.
-- Completed: **4/12**. Workflow 001: success (exit 0, recorded_workflow_success); Workflow 002: failure (exit 1, recorded_workflow_failure); Workflow 003: failure (exit 1, recorded_workflow_failure); Workflow 004: failure (exit 1, recorded_workflow_failure). All outcomes are retained, with no replacement.
+- Original admission: 2026-09-07 07:55:36 UTC. Stopped-phase result is published at 11:38:34 Rome; no benchmark process is running.
+- Completed: **6/12**. Workflow 001: success (exit 0, recorded_workflow_success); Workflow 002: failure (exit 1, recorded_workflow_failure); Workflow 003: failure (exit 1, recorded_workflow_failure); Workflow 004: failure (exit 1, recorded_workflow_failure); Workflow 005: success (exit 0, infrastructure_or_measurement_integrity_failure); Workflow 006: success (exit 0, infrastructure_or_measurement_integrity_failure). All outcomes are retained, with no replacement.
 - Workflows 002, 003 and 004 failed at the frozen 300-second idle limit.
-- Running: **wave 2**. Workflow 005 — [11:19:49] elapsed=2449s busy=true review-user-1:WaitingForReply:-:lines=6:title=review (Rome timestamps).
-- Future controls 007, 010 and 012: CANCELED by user. Future treatments 008, 009 and 011: HELD while current treatments finish; the original mixed-wave continuation is disabled.
-- Last configuration snapshot: 2026-09-07T09:12:18.576940+00:00; verified_own_workflow_trust_transition. The supervisor hold pauses this journal; do not treat its old admission flag as permission to launch or claim continuous monitoring during the hold.
+- Running: No workflow log remains open without a terminal receipt.
+- Future controls 007, 010 and 012: CANCELED by user. Unlaunched treatments 008, 009 and 011: HELD; no automatic continuation.
+- Final configuration snapshot: 2026-09-07T09:38:34.428811+00:00; unexplained_config_drift. The original verifier retains FileNotFoundError after checkout cleanup and the real operator-hold polling gap. A separately saved live proof verifies the own-workflow 005 trust entry; it does not overwrite the original flag.
 - No identification/authentication error was found in the inspected live logs; none has blocked this batch.
 
 ### Every current-batch workflow
 
-All times below are on 2026-09-07, Europe/Rome (UTC+02:00). A running row uses its first workflow-log timestamp until the terminal receipt supplies exact launcher times.
+All times below are on 2026-09-07, Europe/Rome (UTC+02:00). Finish means supervisor receipt time; for drained005/006 it is harvest time, not actual exit time. 006 was already exited at11:15:07;005 published its report at11:38:01.
 
 | Run | Wave | Condition | Start | Finish | Outcome | Evidence |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -43,8 +51,8 @@ All times below are on 2026-09-07, Europe/Rome (UTC+02:00). A running row uses i
 | 002 | 1 | control | 09:55:36 | 10:25:37 | failure | [receipt](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/logs/untracked-reads-01-workflow-002.exit.json) |
 | 003 | 1 | untracked-read-inline | 09:55:36 | 10:31:25 | failure | [receipt](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/logs/untracked-reads-01-workflow-003.exit.json) |
 | 004 | 2 | control | 10:39:00 | 11:04:41 | failure | [receipt](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/logs/untracked-reads-01-workflow-004.exit.json) |
-| 005 | 2 | untracked-read-inline | 10:39:01 | — | running | [live log](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/logs/untracked-reads-01-workflow-005.log) |
-| 006 | 2 | untracked-read-inline | 10:39:01 | — | driver exited; receipt pending | [live log](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/logs/untracked-reads-01-workflow-006.log) |
+| 005 | 2 | untracked-read-inline | 10:39:00 | 11:38:32 | workflow pass; measurement flag | [receipt](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/logs/untracked-reads-01-workflow-005.exit.json) |
+| 006 | 2 | untracked-read-inline | 10:39:00 | 11:38:32 | workflow pass; measurement flag | [receipt](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/untracked-reads-01/logs/untracked-reads-01-workflow-006.exit.json) |
 | 007 | 3 | control | — | — | canceled — not launched | frozen schedule |
 | 008 | 3 | untracked-read-inline | — | — | held — not launched | frozen schedule |
 | 009 | 3 | untracked-read-inline | — | — | held — not launched | frozen schedule |
@@ -99,7 +107,7 @@ This reconstructs wall-clock periods from run receipts, retained reviews and com
 | 07:28–09:13 | Source-exposure audits; implement the benchmark-only bundled-read versus inline-read factor; future-only accounting and complete read-census helpers; release build, real diagnostics and required tests/reviews. Final prepared-source test review is at 09:12:55. |
 | 09:08–09:55 | Subscription-capacity gate: 95% weekly usage at 09:07:52, reset scheduled 09:53:49, 0% verified 09:54:43, batch admitted 09:55:36. This interval overlaps the end of preparation; it must not be added twice. |
 | 09:55–10:39 | Current read-factor wave 1 ran; one success and two retained idle-limit failures. |
-| From 10:39 | Current read-factor wave 2 and subsequent fixed waves; live status and all twelve rows are above. |
+| 10:39–11:38 | Read-factor wave 2; supervisor admission stopped at 11:12, active treatments finished naturally, and all subsequent waves remained unlaunched. |
 
 Some overhead came from operator/test-setup errors, not useful benchmark generation: failed diagnostic setups and their qualified follow-ups, including my omission of the primary observer marker in the first two read diagnostics; and 18 direct-discovery test-packaging errors, followed by the separately verified exact-byte test materialization. These are retained, not hidden or counted as successful benchmark workflows. The investigation is not complete merely because its infrastructure is checked.
 
@@ -172,16 +180,16 @@ Authorities: [historical report](bench-results/efficiency-exact-normal-work-leaf
 
 ## Evidence already established
 
-The corrected subscription diagnostics verified exact delivered inputs and response-level accounting: the bundled-read input item was charged 116 input tokens per subsequent response, versus 8,514 for the full-inline item in that diagnostic. This demonstrates retained-input charging, not the net effect or the causal share of the historical savings. Whole-workflow confirmation is still running.
+The corrected subscription diagnostics verified exact delivered inputs and response-level accounting: the bundled-read input item was charged 116 input tokens per subsequent response, versus 8,514 for the full-inline item in that diagnostic. This demonstrates retained-input charging, not the net effect or the causal share of the historical savings. Generation is closed; the retained full-workflow read-factor analysis is parked under the candidate-first plan.
 
 The implementation and frozen study inputs are committed. Required Rust checks passed (449 tests passed, eight ignored); the frozen-source study/gate test materialization passed 265 tests. Diagnostic failures and the original test-packaging failure remain recorded alongside their qualified follow-up results.
 
 ## Next steps
 
-1. Let active treatments 005 and 006 reach their bounded outcomes; keep future control admissions blocked. Preserve every completed, failed and unlaunched original identity.
-2. Finalize the stopped supervisor safely after those active children exit. Retain the operator-induced configuration-monitoring gap and incomplete schedule; do not run or claim the complete twelve-workflow randomized primary.
-3. Use the existing WL baseline and retained treatment evidence to investigate the mechanism. Keep exact source/response accounting, missing measurements and scope limits explicit; any partial-phase analysis is labeled separately from the frozen primary.
-4. Inspect actual bundle retrievals and exact input-to-response charges, then report the mechanism and supported effect without launching additional control workflows.
+1. Retain the closed six-workflow outcome set, six unlaunched identities, original flags and the operator-induced configuration-monitoring gap. Do not restart the stopped supervisor or launch controls.
+2. Use the comprehensive candidate map's first source pass to verify per-candidate evidence status across context, policy/work selection, workflow/provider lifecycle and accounting boundaries. Retain exact sources, WL/Direct differences, exclusions, isolated test boundaries and interactions; resolve remaining cohort-exposure questions. Do not treat the old short list as exhaustive.
+3. Identify which mapped mechanisms actually reduce raw usage using saved evidence and, where necessary, separately recorded benchmark-only variants against the existing WL baseline. No new controls or Direct runs; preserve non-target behavior and all outcomes.
+4. Quantify contributions only after mechanism identification, including interactions and the distinction between a marginal WL ablation effect and a share of the historical Direct–WL gap. Keep the parked read runs for this later work.
 
 ## Evidence locations
 
