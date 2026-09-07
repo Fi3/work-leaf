@@ -36,12 +36,15 @@ snapshot body intervals/hashes, successful bundle path, eligibility and selected
 plus exact capture, typed RPC, accepted thread/turn and reply locators. Rejected and prepared-but-unsent
 boundaries are present and are not accepted exposure.
 
-An accepted selected string joins a native public user-message item only when the same verified
-thread has exactly one distinct item identity with exactly those bytes. Hash indexing is followed by
-byte equality. Ambiguous identical-text identities remain an explicit candidate list, not a
-chronological guess. A preceding `turn_context` is not assumed to own a later user message. The
-accepted turn's completed responses join directly by explicit thread/turn IDs, independently of
-whether that user-item identity resolves.
+An accepted selected string joins a native public user-message item by exact verified thread,
+explicit accepted turn and byte-equal text when native turn metadata exists. Both direct `turn_id`
+and `internal_chat_message_metadata_passthrough.turn_id` are supported and must agree when both
+exist. A conflicting explicit turn is not a candidate. Without a matching explicit-turn item, a
+unique same-thread byte-equal item lacking explicit turn metadata may be a fallback; multiple such
+identities remain ambiguous. One native item cannot serve distinct accepted inputs. Hash indexing
+is followed by byte equality. A preceding `turn_context` is never assumed to own a later user
+message. The accepted turn's completed responses join directly by explicit thread/turn IDs,
+independently of whether that user-item identity resolves.
 
 All completed response IDs and their native/raw locators remain in a single response table. It
 includes top-level per-item input/cached/cache-write charges, separately counted request fields,
