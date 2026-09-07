@@ -116,14 +116,27 @@ The private accepted-Git/proposal materializer is committed at `97c7ca1`, with t
 independent tests and private Cargo gates passing. The actual frozen project also passes
 all 28 existing UI-harness tests offline with explicit immutable instruction overlay
 and public-only dependency inputs; its seven adapter tests and independent review pass.
-Live overlay/index census and later runtime/provider qualification remain active
-prerequisites, not admitted causal observations.
+The live overlay/index census and immutable accepted-source selection are committed
+at `1fd7a3e`, with 14 independent tests, clean private Cargo gates and
+[independent actual-project review](preflight/c15-live-selection/INDEPENDENT-REVIEW.md).
+The 51 pinned source/artifact endpoints bind a 47-file selected tree, a real
+shared-table cooperating writer and the unchanged 48-file later live endpoint.
+Overlay installation, original-live same-path execution and runtime/provider
+qualification remain separate prerequisites, not admitted causal observations.
 The [current candidate checkpoint](CANDIDATE-STATUS-20260907T1722Z.md) distinguishes
 closed directional checks from C15/C21 scope questions and active C17 receipt-information
 inspection. The private-test-first workflow needs the user's scope choice because private
 transport/build-state costs are not pure test timing. No C15 runtime or provider run is
-admitted. Source-only read-item recharge analysis can use the retained qualified response
-ledgers without repeating whole-workflow accounting or generating baselines.
+admitted. The [C17 source census](EVIDENCE-H-GIT-RECEIPT-FACTS.md) closes its factual
+check: 252 Direct author Git inspections precede their current-cycle host commit,
+and 53 ordinary WL ACKs do not supply diff/stat/check or whole-worktree facts.
+The [independent review](EVIDENCE-H-GIT-RECEIPT-FACTS-REVIEW.md) passes those joins,
+336 accepted-patch anchors and separate explicit-turn native joins for all 53
+ACKs. It flags the evidence validator's bounded O(G×P) scan; runtime complexity
+is unchanged. Publication/work-unit/access-route coupling remains.
+The source-only read-item recharge adapter has 15 independently passing tests.
+Its fixed six-row extraction scope is under preparation against already-qualified
+response ledgers, without repeating whole-workflow accounting or generating baselines.
 Older narrow-priority notes and fixed mixed schedules are
 historical records, not the next-action plan. Saving evidence or completing a substep is not a
 stopping condition; continuous execution and live-note updates are required until the plan is complete.

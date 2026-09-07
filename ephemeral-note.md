@@ -1,12 +1,18 @@
 # Provisional investigation ledger
 
-Last checked: **2026-09-07 19:40 Europe/Rome (17:40 UTC)**.
+Last checked: **2026-09-07 19:50 Europe/Rome (17:50 UTC)**.
 
 Scope: the entire mechanism investigation, with all **30 frozen benchmark identities** (3 initial screen + 12 work-unit + 12 parked read-factor + 3 candidate screen), **20 admitted diagnostic identities** (16 earlier + 3 candidate-v4 + 1 C21), and the elapsed-time breakdown. The three modified candidate benchmarks were admitted concurrently at 14:28:55 Europe/Rome and are all terminal at 16:29:25: two successes and one original timeout. The earlier two-run pilot and accepted historical twelve-run cohort are listed separately below. Diagnostics are never added to the benchmark count. C21's single diagnostic closed at 17:22:46 Rome with exit 101 and a failed scripted workflow; no complete C21 benchmark is admitted. No provider workflow is currently running.
 
 ## Active plan and preserved experiments
 
 ### Active execution — candidate evidence pass
+
+19:50 Rome checkpoint: C17 independent review is closed: 252 exact Git call/output pairs, 336 accepted-patch anchors, 39 native/host commit boundaries and 53 typed-public ACK joins pass. A separate native check matches all 53 full ACK texts to explicit-turn native messages; 166 original and 24 supplemental source endpoints match. The evidence-only validator's bounded O(G×P) scan is explicitly flagged. A finite C23 saved-chain check is active to distinguish genuine evidence-only finding resolution from already-clean parser detours.
+
+The read adapter and driver have 21 independently passing tests. Source-only preparation matches all 510 target items (86 read messages plus 424 candidate outputs); no actual charge extraction has run. Root is closing the driver's publication-readiness gate before freezing the final six-row scope. C15/C21 choices remain unanswered, ordinary WL is unchanged and provider workflows remain at zero.
+
+19:44 Rome checkpoint: live-selection source, tests, qualification and independent review are committed at `1fd7a3e`. Root's read-only actual-evidence verification passes all 51 pins, exact installer-overlay bytes, selected bundle HEAD, 47 accepted/private files and the 48-file later live endpoint. The read-item recharge adapter's 15 tests independently pass in 0.005 seconds; its fixed input/driver scope remains under preparation and no actual extraction has run. C17 independent review and a full 38-ID Stage-B closure/gap audit are active. These are checkpoints, not completion of the causal explanation.
 
 19:40 Rome checkpoint: C17's complete source-bound report is saved: all 252 Direct author Git inspections precede their current turn's host commit; 53 actual WL ACKs supply no diff/stat/check or whole-worktree status. Independent review is active. This rejects a simple duplicate-postcommit-information explanation, not all effects of publication cadence. The six-run read-item recharge adapter is being developed test-first; no actual extraction is admitted before its source, coverage and fixed scope pass review.
 
@@ -54,12 +60,12 @@ The user requires continued execution until the plan is complete and continuous 
 
 Candidate-count answer: **38 source/traces-reviewed candidates, plus seven shared/non-causal exclusions; not 38 experimentally confirmed causes. One individual candidate has positive whole-workflow directional evidence: C25's saved bounded continued-response intervention.** This is the recorded treatment's sample direction, not its independent share of the historical gap. C01 proves smaller local delivery, but its closed qualified retained-run comparison does not demonstrate positive whole-workflow savings. C02's original UNKNOWN remains preserved; separate qualification supplies a measured lower endpoint with unsupported upper tails, not a demonstrated direction. C16/C24 also have no demonstrated net direction. The connected orchestration-package result is not counted as another isolated candidate. The full causal explanation and contribution stage remain incomplete.
 
-Remaining active priorities: **five candidate IDs in four workstreams**—C01/C06 read deferral/retrieval, C02 requested repeats, C21 reviewer evidence and C15 test-first/combined-work timing. This is the active-work count, not a claim that every other possibility has been conclusively excluded. There is no plan for 37 automatic further benchmarks.
+Current work: **C01/C06 saved read-item recharge, C17 independent evidence review, and the full 38-ID completion/gap audit**. C15's experimental scope and C21's additional diagnostic await user choices. C02 accounting and H validation-purpose reviews are closed; their earlier activity remains in the chronological checkpoints. No candidate count is a claim that all broader coupled mechanisms have been experimentally excluded, and there is no plan for 37 automatic further benchmarks.
 
 | Workstream | Active work | Output / next concrete result |
 | --- | --- | --- |
-| Context / retained read experiment | Source/delivery/retrieval and both fixed common-twelve accounting passes are closed and independently reviewed. | Larger inline inputs do not demonstrate a net increase in the retained conditional comparison. Preserve originals/flags; no further read generation is admitted. |
-| Behavior / validation cadence | Complete H post-GREEN classification is saved; mechanical review passes. C15 executor, materialization and actual-project feasibility are committed. | Semantic review and live-overlay/owned-snapshot qualification are active; runtime enrollment and non-target execution differences remain explicit prerequisites. |
+| Context / retained read experiment | Source/delivery/retrieval and both fixed common-twelve accounting passes are closed and independently reviewed. The bounded item-recharge adapter passes 15 tests; fixed extraction scope is under preparation. | Explain observed read/tool-output first and later response charges without another whole-workflow audit. Preserve originals/flags; no further read generation is admitted. |
+| Behavior / validation cadence | Complete H classification and both mechanical/semantic reviews are closed. C15 executor, materialization, actual-project feasibility and live selection are committed and reviewed. C17 independent review is active. | Preserve actual regression work and partial receipt facts; do not label all Direct checks redundant. C15 runtime enrollment and non-target execution differences remain explicit prerequisites and its scope choice is open. |
 | Lifecycle / C21 | Exact native archive witness retained; separate observer-frame comparator developed test-first. | Actual full 6,221-byte read verified; original scripted and collector failures remain. Revised diagnostic awaits authority and is not admitted. |
 | Accounting / integration | Both corrected-nine scopes and separate pure provenance closure are closed and independently reviewed. | Eight unaffected results match; C001 retains an unbounded tail interval and original publication defect. No further accounting replay is admitted. |
 
