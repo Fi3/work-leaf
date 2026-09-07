@@ -1,0 +1,106 @@
+{
+  "schema": "work-leaf-compaction-carry-implementation-validation-v1",
+  "scope": "Synthetic and provider-free implementation checks only; no saved-workflow reconciliation or numerical replay of this sibling.",
+  "source": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/accounting_compaction_carry.py",
+    "sha256": "47d28ef42c3243344cb28d6db680a531b04255cdc310653e45fc3ee81b8418a1"
+  },
+  "tests": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/test_compaction_carry.py",
+    "sha256": "efffcc4c03bb1b3d738bc83500dc4ca1c4ffdf9bf3b6e180ed6900286ca144b5"
+  },
+  "documentation": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/CARRY-README.md",
+    "sha256": "54cc84ed31ca4f494255b099b95d43cfc3a247b1c6820587fe60906b66adfeb2"
+  },
+  "context_dependency": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/accounting_compaction_context.py",
+    "sha256": "513c8632803656d4f582a4ab714e35d9e0f95b56a4355b3b26c2927b07d2bfa3"
+  },
+  "executed_derived_reconciliation_sha256": "d09e1c051ae4305c8db911728f6e73252f54dcf66f9cac8021a52df41cd443d3",
+  "test_first_history": [
+    {
+      "command": "python3 -B -m unittest discover -s /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction -p test_compaction_carry.py -v",
+      "exit_code": 1,
+      "result": "Initial RED: missing accounting_compaction_carry.py before implementation."
+    },
+    {
+      "result": "First eight pure feature tests GREEN; original frozen function explicitly rejects the repeated notification in the positive fixture."
+    },
+    {
+      "exit_code": 1,
+      "result": "Wrapper RED: missing instrument_original and audit_run. A separate new-fixture missing turn-start event was corrected without changing any committed test."
+    },
+    {
+      "result": "Twenty pure/wrapper tests GREEN after implementation."
+    },
+    {
+      "exit_code": 1,
+      "result": "Review-driven RED: unsupported same-thread/unowned lifecycle accepted, partial capture scope claimed, and executed-row/source mismatch accepted."
+    },
+    {
+      "result": "Twenty-six new tests GREEN with lifecycle invalidation, partial/unavailable scope, and exact client/server/grace source binding."
+    }
+  ],
+  "final_automatic_checks": [
+    {
+      "command": "python3 -B -m unittest discover -s /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction -p test_compaction_carry.py -v",
+      "exit_code": 0,
+      "passed": 26
+    },
+    {
+      "command": "Exact-compile frozen test_accounting_untracked_reads.py; replace only its in-memory M.reconcile_stream with derive_reconcile(M); run that suite plus discover(D, pattern='test_compaction_*.py').",
+      "exit_code": 0,
+      "passed": 80,
+      "composition": {
+        "new_carry": 26,
+        "unchanged_context": 22,
+        "unchanged_accounting": 32
+      },
+      "frozen_test_sha256": "93f958ae241b7c59d2dd531aa2fc87f70bee0d268f3c380758ab965177a9bdf7"
+    },
+    {
+      "command": "python3 -B -m unittest discover -s /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/infrastructure/evidence/bench-results/efficiency-mechanism-isolation-20260906T214448Z -p test_audit_compaction.py",
+      "exit_code": 0,
+      "passed": 18,
+      "frozen_test_sha256": "34fecc2b5b60db5b5df79c3d4cf126d151c935fba4c7e1ced57c335aab6a0e80"
+    },
+    {
+      "command": "cargo fmt -- --check",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo fmt",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo clippy --all-targets --all-features -- -D warnings",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test --all-targets --all-features",
+      "exit_code": 0,
+      "real_provider_tests": "Not selected; ignored provider diagnostics remain ignored. Output was tool-truncated, so no exact Rust test-count claim is derived from the truncated text."
+    }
+  ],
+  "total_python_tests": 98,
+  "durable_checks": {
+    "five_interrupted_tails_response_count_upper_null": true,
+    "unchanged_strict_accounting_upper_endpoints_null": true,
+    "one_named_compaction_not_double_charged": true,
+    "valid_original_pure_results_identical": true,
+    "original_input_frames_unchanged": true,
+    "original_helpers_and_committed_tests_unchanged": true,
+    "derived_warning_physical_lines_preserved": true,
+    "original_inner_errors_separately_retained": true,
+    "partial_capture_census_does_not_claim_full_scope": true
+  },
+  "independent_review": "Pending at this implementation receipt; source and tests offered to a separate reviewer.",
+  "complexity": "Added capture-local carry state O(E+T); two constant reconciliation passes for old/new diagnostics and linear byte hashing. Native inventory hash once per workflow. Identity sorting O(T log T + C log C). No introduced O(E²) history scan; predecessor O(T*D) dependency compilation remains documented.",
+  "architecture_and_docs": "Private offline analysis only. No Rust/public API/observer/runtime/provider behavior changes; current architecture remains applicable. CARRY-README.md owns the new analysis interface and restrictions.",
+  "real_agent_verification": "Not applicable: no real-agent workflow is affected; no provider is invoked by this helper or these new tests.",
+  "saved_workflow_sibling_audit_run_calls": 0,
+  "provider_calls": 0,
+  "new_numerical_scope_admitted": false,
+  "original_reports_unchanged": true
+}

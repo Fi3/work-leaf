@@ -1,0 +1,79 @@
+{
+  "schema": "work-leaf-carry-publication-validation-v1",
+  "recorded_at": "2026-09-07 16:47:28 UTC",
+  "source": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/accounting_carry_publication.py",
+    "sha256": "17e084aae626ebc356113cdd87b7187be498149224b0c7a61b95af33abcc5262"
+  },
+  "tests": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/test_carry_publication.py",
+    "sha256": "2c0c9a813b12feab58737ecab3d4bc80e13d4223d34629dec0ee32735e928e3c"
+  },
+  "documentation": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/PUBLICATION-README.md",
+    "sha256": "987b1e99982c13574cf529c717b90b396fd814286ed3b69ea54e7b7d5b5abc14"
+  },
+  "predecessor": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/accounting_compaction_carry.py",
+    "sha256": "47d28ef42c3243344cb28d6db680a531b04255cdc310653e45fc3ee81b8418a1"
+  },
+  "defect": "An auxiliary context-proof load displaces the primary diagnostic state; observed in candidate001 only. Every frozen result remains untouched.",
+  "red": {
+    "command": "python3 -B /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/test_carry_publication.py (initial M=BASE frozen predecessor binding)",
+    "exit_code": 1,
+    "tests": 3,
+    "failures": 2,
+    "errors": 1,
+    "result": "FEF\n======================================================================\nERROR: test_partial_census_failure_stays_retained_with_auxiliary_loads (__main__.PublicationTests.test_partial_census_failure_stays_retained_with_auxiliary_loads)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/test_carry_publication.py\", line 82, in test_partial_census_failure_stays_retained_with_auxiliary_loads\n    self.assertEqual(diagnostic['status'], 'unavailable_partial_capture_census')\n                     ~~~~~~~~~~^^^^^^^^^^\nTypeError: 'NoneType' object is not subscriptable\n\n======================================================================\nFAIL: test_auxiliary_loads_before_and_after_primary_preserve_actual_diagnostics (__main__.PublicationTests.test_auxiliary_loads_before_and_after_primary_preserve_actual_diagnostics)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/test_carry_publication.py\", line 62, in test_auxiliary_loads_before_and_after_primary_preserve_actual_diagnostics\n    self.assertEqual(len(diagnostic['capture_diagnostics']), 1)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 0 != 1\n\n======================================================================\nFAIL: test_two_actually_used_modules_fail_closed (__main__.PublicationTests.test_two_actually_used_modules_fail_closed)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/test_carry_publication.py\", line 73, in test_two_actually_used_modules_fail_closed\n    self.assertEqual(result['status'], 'unknown')\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'validated' != 'unknown'\n- validated\n+ unknown\n\n\n----------------------------------------------------------------------\nRan 3 tests in 0.241s\n\nFAILED (failures=2, errors=1)\n"
+  },
+  "green": [
+    {
+      "command": "python3 -B -m unittest discover -s /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction -p 'test_*compaction*.py'",
+      "exit_code": 0,
+      "passed": 48,
+      "scope": "Unchanged 26 carry +22 context fixtures"
+    },
+    {
+      "command": "python3 -B /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/test_carry_publication.py",
+      "exit_code": 0,
+      "passed": 8
+    },
+    {
+      "command": "cargo fmt -- --check",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo fmt",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo clippy --all-targets --all-features -- -D warnings",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test --all-targets --all-features",
+      "exit_code": 0,
+      "limitation": "Output partly tool-truncated; no exact Rust test-count claim. Ignored real-provider tests not selected."
+    }
+  ],
+  "behavioral_scope": "Publication ownership only. No reconciliation/native/cumulative/STRICT arithmetic or tail predicate differs. Three exact singleton source seams, pinned predecessor bytes.",
+  "result_identity": "No-aux full synthetic result equals predecessor after only new publication provenance and own source-map entry removal.",
+  "failure_retention": "Partial capture failure, unlaunched unknown, ambiguous multiple used modules and all unsupported gap fields remain retained; no zero-fill.",
+  "independent_review": "Root read full helper/tests, ran all8 synthetic tests independently and reported no blocker.",
+  "real_agent_verification": "Not applicable: no agent-facing workflow is affected; offline publication only, no providers invoked.",
+  "actual_saved_workflow_audit_run_calls_of_publication_sibling": 0,
+  "separate_pure_closure": {
+    "scope": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/CARRY-PROVENANCE-SCOPE.json",
+    "scope_sha256": "2b3a8f035ad81f7b16f5a024793f1b7ae978bbf9e0fb82b8897057ff75fd3722",
+    "result": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/CARRY-PROVENANCE-CLOSURE.json",
+    "result_sha256": "41daf0a158d6162e0470e11ca81df672c5f1ae9aed93d9054234a37f73abbd7f",
+    "audit_run_calls": 0,
+    "strict_accounting_calls": 0,
+    "whole_workflow_aggregate_or_bounds_computed": false,
+    "all_saved_warning_gap_ledger_response_identities_match": true,
+    "five_unbounded_tails_preserved": true
+  },
+  "original_receipts_helpers_tests_unchanged": true,
+  "complexity": "O(L) owner selection; O(L*D) retained dependency state. No per-event pairwise scan or introduced O(E²).",
+  "architecture": "Private offline sibling only. No Rust/public API/runtime/provider/observer/configuration changes. Dedicated PUBLICATION-README owns interface; frozen predecessor docs/reports retained."
+}
