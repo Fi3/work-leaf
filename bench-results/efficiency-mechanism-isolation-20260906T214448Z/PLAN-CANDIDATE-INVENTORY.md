@@ -7,6 +7,11 @@ resuming after a chat interruption or context compaction. The working order is
 **comprehensive candidate inventory → identify actual saving mechanisms → quantify contributions**.
 Large-read delivery is one candidate, not the privileged explanation or the next percentage report.
 
+Execution is continuous until the plan is completed, as explicitly required by the user. A saved
+plan, source inventory, evidence note, commit or completed substep is a checkpoint, not a stopping
+condition. Keep `../../ephemeral-note.md` current throughout execution. Report genuine new-authority
+blockers honestly; do not use documentation completion as a reason to stop doing the investigation.
+
 The historical 45.38%–51.62% raw-token reduction is accepted as the endpoint for this investigation,
 under the user's working assumption of no quality reduction. The task is its causal explanation,
 not another Direct-versus-WL replication or quality inclusion gate. Retain quality records,

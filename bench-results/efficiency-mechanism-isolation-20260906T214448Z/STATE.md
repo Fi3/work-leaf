@@ -7,11 +7,17 @@ approved order is comprehensive source-grounded candidate inventory, identificat
 saving mechanisms, then contribution percentages. The first broad source pass is recorded in
 [CANDIDATE-MAP.md](CANDIDATE-MAP.md): 38 candidate boundaries/families, named subfactors, evidence
 states, shared-factor exclusions and interactions. These are not 38 proven or independent savings.
-The next activity is evidence-status verification across the map, not a percentage calculation.
-Existing large-read treatment runs and their stopped-analysis scope are parked intact;
-their whole-workflow comparison is deferred. No new provider generation belongs to this stage,
-and no new controls or Direct runs are authorized. Older narrow-priority notes and fixed mixed
-schedules are historical records, not the next-action plan.
+The saved evidence pass is complete in [EVIDENCE-CONTEXT.md](EVIDENCE-CONTEXT.md),
+[EVIDENCE-BEHAVIOR.md](EVIDENCE-BEHAVIOR.md) and [EVIDENCE-LIFECYCLE.md](EVIDENCE-LIFECYCLE.md).
+Stage B implements the three exercised boundaries in
+[PROTOCOL-CANDIDATE-SCREEN.md](PROTOCOL-CANDIDATE-SCREEN.md): requested-repeat full text,
+unified-diff preference and original-task resupply on actual author review-fix followups.
+Test-first implementation, source review and bounded real-subscription verification precede its
+separately frozen three-modified-workflow admission. No new control or Direct run is authorized.
+Existing large-read treatment runs and their stopped-analysis scope are parked intact; their
+whole-workflow comparison is deferred. Older narrow-priority notes and fixed mixed schedules are
+historical records, not the next-action plan. Saving evidence or completing a substep is not a
+stopping condition; continuous execution and live-note updates are required until the plan is complete.
 
 ## Retained execution state
 
