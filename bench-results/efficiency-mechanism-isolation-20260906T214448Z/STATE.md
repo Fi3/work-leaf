@@ -17,12 +17,20 @@ lock. No public tool event represents that native pair. No retry or complete C21
 benchmark is admitted, and the original diagnostic001 failure remains. A separate
 question about one scripted-author/real-reviewer diagnostic awaits the user.
 
-C15 bridge/core integration remains active. Live metadata uses natural test paths
+C15 private bridge qualification is closed: 21 automatic tests pass independently,
+and one frozen-project Cargo execution exits 0 with closed private children, no
+shared promotion and all 65 source endpoints matching. The initial GREEN is
+execution feasibility only. [Root bridge review](preflight/c15-runtime-bridge/ROOT-REVIEW.md)
+retains the separate runtime/provider gates. Rust integration remains active.
+Live metadata uses natural test paths
 and purpose; the host records exact after-images instead of asking the model to
 compute offsets or repeat test bodies. This avoids artificial measurement
 bookkeeping and preserves ambiguous co-located test/production changes. The
 [natural real-agent fixture](preflight/c15-real-diagnostic/SCOPE-PROPOSED.md) is
-under preparation, with six passing provider-free guard tests but no real admission.
+under preparation, with nine passing provider-free guard tests and a compiled
+ignored real harness, but no real admission. Independent runtime review requires
+cross-thread/deferred author policy injection to reject before provider work;
+the implementing agent is reproducing and addressing that boundary.
 The prior unanswered-choice checkpoints below retain their historical cutoff.
 All six [read-item scope](RETAINED-READ-ITEM-RECHARGE-SCOPE.revision-01.json) calls
 closed exactly once at 18:05 UTC: five exact observed-attribution results and
