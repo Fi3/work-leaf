@@ -55,3 +55,11 @@ while preserving default Work Leaf behavior, subscription authentication, and no
 Each phase's `PHASE-MANIFEST.json` is its admission authority. Screening observations are not
 confirmation evidence, failed observations remain retained, and the completed pilot's records are
 not rewritten to cover the later study.
+
+`bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROTOCOL-WORK-UNITS.md` specifies a
+distinct v2 work-unit-policy phase with twelve fresh WL workflows in four mixed waves of three.
+Its automatic delivered-handoff outcome and fixed-sequence substantive-work test distinguish
+causal continuation behavior from incomplete token-accounting totals. Allocation is not admission;
+the phase requires its own frozen manifest, exact prompt-delivery audit and future-only verified
+own-workflow trust-transition policy. The original screen's no-candidate decision, configuration
+flag and unsuccessful diagnostics remain retained and are not replacement observations.
