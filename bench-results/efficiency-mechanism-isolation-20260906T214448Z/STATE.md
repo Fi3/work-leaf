@@ -43,10 +43,30 @@ charging retained input and request fields; that descriptive accounting is not a
 
 ## Further investigation
 
-Source-only exposure and isolation audits cover file-read representation and command-output
-compaction. No condition is selected by these notes, no new allocation is drawn, and no new
-provider observation is admitted. A distinct factor requires its own exact treatment surface,
-fixed schedule, source/binary freeze, measurement rules, and prospective multiplicity allocation.
+Source/exposure audits identify ordinary bundle-based source delivery as a distinct testable
+mechanism. The private v3 `untracked-read-inline` factor selects exact full-inline text only for
+successfully bundled, currently untracked snapshots. `PROTOCOL-UNTRACKED-READ-INLINE.md` specifies
+twelve fresh WL observations, a whole-workflow raw-token primary and the remaining alpha 0.025.
+No allocation is drawn and no v3 benchmark observation is admitted. Automatic runtime/helper
+tests and independent source reviews pass. Correctly marked real subscription diagnostics pass
+in both arms; the complete census helper and final source/binary freeze remain admission gates.
+
+The first two v3 real-read diagnostics retain their failed teardown/recording outcomes. Both
+completed three read handoffs, but the operator omitted the primary observer marker, leaving raw
+usage/grace capture inactive. They are not benchmark observations or green real-agent verification.
+The smoke prelaunch guard rejects missing/incompatible recording settings before provider launch.
+The two separately admitted corrected cases complete their three handoffs, retain complete observer
+captures and three exact native/raw response identities each, and preserve the unchanged repeated
+read. Their original failed predecessors remain separate and unchanged.
+
+The corrected diagnostics report weekly subscription usage at 90%, with reset timestamp
+1788767629 (2026-09-07 07:53:49 UTC, 09:53:49 Europe/Rome). Benchmark admission waits for that
+reset to reduce quota-truncation risk. No API-credit route, replacement observation or new quota
+purchase is authorized. This is a pre-admission resource wait, not an admitted benchmark failure.
+
+The future-only accounting adapter passes independent ordinary and compaction source replays.
+It requires explicit response identities and unchanged strict arithmetic, retains original ledgers
+and grace decisions, and keeps unsupported tails unbounded. No old report is rewritten or retotalled.
 
 Any runtime intervention remains private to nondefault benchmark builds. Default Work Leaf,
 non-target prompts, validation, read tracking, bundle allocation, commands, permissions, provider

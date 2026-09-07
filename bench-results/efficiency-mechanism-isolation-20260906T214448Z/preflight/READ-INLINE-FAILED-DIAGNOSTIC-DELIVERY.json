@@ -1,0 +1,310 @@
+{
+  "schema": "read-inline-failed-diagnostic-delivery-replay-v1",
+  "study_observations": false,
+  "provider_calls_by_reviewer": 0,
+  "runs": [
+    {
+      "diagnostic": "read-inline-control",
+      "classification": "failed diagnostic retained; excluded from study",
+      "ownership_witness": "Single typed thread/start success, all turn/start thread IDs, exact renderer-owned Agent-ID footer; not a complete observer/native provenance substitute.",
+      "thread_start_client_line": 3,
+      "thread_start_reply_line": 3,
+      "delivery": {
+        "status": "available",
+        "errors": [],
+        "exposures": [
+          {
+            "sequence": 1,
+            "trace_line": 2,
+            "site": "policy-injection",
+            "agent_id": "user-read-smoke",
+            "status": "delivered",
+            "errors": [],
+            "selected_sha256": "63cd94cfe8ba68018d96af04308354fcada1e3f48fcf637db9e671af4d8df896",
+            "eligible": false,
+            "capture": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-control/observation/app-server/00000461281626217853-74285",
+            "client_line": 4,
+            "reply_line": 6,
+            "rpc_id": "3",
+            "thread_id": "01a07a7a-23e9-7ba0-9217-e161cfc39f40",
+            "turn_id": "01a07a7a-2477-7e21-9e85-3a2329f7079d"
+          },
+          {
+            "sequence": 2,
+            "trace_line": 3,
+            "site": "file-read",
+            "agent_id": "user-read-smoke",
+            "status": "delivered",
+            "errors": [],
+            "snapshot_evidence": [
+              {
+                "path": "fixture.txt",
+                "class": "untracked",
+                "bytes": 26890,
+                "fnv64_label": "fnv64:a5379aa1a20f62f9; bytes:26890",
+                "sha256": "83520a6a845145a5a87ed1fa8eca0d880be80242257f4a04e3c50fd5788f9f18",
+                "inline_body_start": 41,
+                "inline_body_end": 26931
+              }
+            ],
+            "baseline_sha256": "f7f20622717967733f89c5dbf553eb464fd12a2a08dbef28b902a4f5d55bef90",
+            "inline_candidate_sha256": "20a79be1d79a9118db7c820d7307aaf00aaaeaeb3931b68bef6a8a167a763110",
+            "selected_sha256": "f7f20622717967733f89c5dbf553eb464fd12a2a08dbef28b902a4f5d55bef90",
+            "eligible": true,
+            "selected_candidate": "baseline",
+            "component": {
+              "baseline_end": 422,
+              "baseline_start": 0,
+              "inline_end": 26931,
+              "inline_start": 0
+            },
+            "bundle": {
+              "path": "/tmp/work-leaf-context-bundles/orchestrator-74262-0/bundle-0.md",
+              "threshold_eligible": true,
+              "write_succeeded": true
+            },
+            "selected_bytes": 422,
+            "candidate_byte_delta": 26509,
+            "capture": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-control/observation/app-server/00000461281626217853-74285",
+            "client_line": 6,
+            "reply_line": 27,
+            "rpc_id": "5",
+            "thread_id": "01a07a7a-23e9-7ba0-9217-e161cfc39f40",
+            "turn_id": "01a07a7a-3e05-77b1-9ba7-b1b3417edd75"
+          },
+          {
+            "sequence": 3,
+            "trace_line": 4,
+            "site": "file-read",
+            "agent_id": "user-read-smoke",
+            "status": "delivered",
+            "errors": [],
+            "snapshot_evidence": [],
+            "baseline_sha256": "4aacf692aa378820c8e5cbc1c2e7fb2d6dd1296a654737e8fef555d5c982ab85",
+            "inline_candidate_sha256": "4aacf692aa378820c8e5cbc1c2e7fb2d6dd1296a654737e8fef555d5c982ab85",
+            "selected_sha256": "4aacf692aa378820c8e5cbc1c2e7fb2d6dd1296a654737e8fef555d5c982ab85",
+            "eligible": false,
+            "selected_candidate": "baseline",
+            "component": {
+              "baseline_end": 20,
+              "baseline_start": 0,
+              "inline_end": 20,
+              "inline_start": 0
+            },
+            "bundle": {
+              "path": null,
+              "threshold_eligible": false,
+              "write_succeeded": false
+            },
+            "selected_bytes": 258,
+            "candidate_byte_delta": 0,
+            "capture": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-control/observation/app-server/00000461281626217853-74285",
+            "client_line": 8,
+            "reply_line": 47,
+            "rpc_id": "7",
+            "thread_id": "01a07a7a-23e9-7ba0-9217-e161cfc39f40",
+            "turn_id": "01a07a7a-496a-7bb2-a64e-69e82b7c1b7e"
+          }
+        ],
+        "delivered_eligible_reads": 1,
+        "delivered_read_count": 2,
+        "recognized_requests": 3,
+        "matched_requests": 3,
+        "accepted_provider_turns": 3,
+        "native_input_join": "Separate exact thread/item evidence required; accepted turn alone is not native item identity."
+      },
+      "completed_turns": [
+        {
+          "server_line": 26,
+          "thread_id": "01a07a7a-23e9-7ba0-9217-e161cfc39f40",
+          "turn_id": "01a07a7a-2477-7e21-9e85-3a2329f7079d",
+          "status": "interrupted"
+        },
+        {
+          "server_line": 46,
+          "thread_id": "01a07a7a-23e9-7ba0-9217-e161cfc39f40",
+          "turn_id": "01a07a7a-3e05-77b1-9ba7-b1b3417edd75",
+          "status": "interrupted"
+        },
+        {
+          "server_line": 62,
+          "thread_id": "01a07a7a-23e9-7ba0-9217-e161cfc39f40",
+          "turn_id": "01a07a7a-496a-7bb2-a64e-69e82b7c1b7e",
+          "status": "interrupted"
+        }
+      ],
+      "item_types": {
+        "userMessage": 3,
+        "reasoning": 1,
+        "agentMessage": 3
+      },
+      "primary": false,
+      "raw_response_usage": null,
+      "provider_usage_grace_ms": 0,
+      "raw_completed_response_records": 0,
+      "invocation_end_present": false,
+      "forwarded_capture_present": false,
+      "whole_accounting_readiness": false,
+      "source_sha256": {
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-control/prompt-events.jsonl": "653ff984cd901d148aaddeb7b06feb2cfb4fe17dc53d682dfaf1397b29c7cce2",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-control/experiment.json": "7adb54d5d6f81d9b95202544f0d2f67e513418bb5b6e17badb19a7f0b3eb126c",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-control/smoke-output.log": "d0ec24e3137e173ec29dbb4051b1bfc1cb60047bcdac078adcb48c135c6359d4",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-control/observation/invocations/00000461281626217853-74285/start.json": "852f5493beac370ae9b5f250808a7003f62d553291301dd1fd25e848c7641a5c",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-control/observation/app-server/00000461281626217853-74285/client-to-server.raw": "facc0908a071788c7b512d3d642e4bbe591122f8a54e05375b8ee015cb59c1e3",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-control/observation/app-server/00000461281626217853-74285/server-to-client.raw": "c391931c1c47a345558d7217ea1815e3ac9f43e44dfc26927dc5e42d6d63030e",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/analyze_untracked_reads.py": "30a58a9312e2f9c641643698f53e0592c392fa8ed5fa3c0d01d9cc61ff427c3e"
+      }
+    },
+    {
+      "diagnostic": "read-inline-untracked-read-inline",
+      "classification": "failed diagnostic retained; excluded from study",
+      "ownership_witness": "Single typed thread/start success, all turn/start thread IDs, exact renderer-owned Agent-ID footer; not a complete observer/native provenance substitute.",
+      "thread_start_client_line": 3,
+      "thread_start_reply_line": 3,
+      "delivery": {
+        "status": "available",
+        "errors": [],
+        "exposures": [
+          {
+            "sequence": 1,
+            "trace_line": 2,
+            "site": "policy-injection",
+            "agent_id": "user-read-smoke",
+            "status": "delivered",
+            "errors": [],
+            "selected_sha256": "63cd94cfe8ba68018d96af04308354fcada1e3f48fcf637db9e671af4d8df896",
+            "eligible": false,
+            "capture": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-untracked-read-inline/observation/app-server/00000461281625912714-74284",
+            "client_line": 4,
+            "reply_line": 6,
+            "rpc_id": "3",
+            "thread_id": "01a07a7a-23fa-78b3-89ba-283877e3bf93",
+            "turn_id": "01a07a7a-2489-7d43-84c4-8f6506cc63c7"
+          },
+          {
+            "sequence": 2,
+            "trace_line": 3,
+            "site": "file-read",
+            "agent_id": "user-read-smoke",
+            "status": "delivered",
+            "errors": [],
+            "snapshot_evidence": [
+              {
+                "path": "fixture.txt",
+                "class": "untracked",
+                "bytes": 26890,
+                "fnv64_label": "fnv64:a5379aa1a20f62f9; bytes:26890",
+                "sha256": "83520a6a845145a5a87ed1fa8eca0d880be80242257f4a04e3c50fd5788f9f18",
+                "inline_body_start": 41,
+                "inline_body_end": 26931
+              }
+            ],
+            "baseline_sha256": "76d74378122dbfa3726c3e837775a642053dca70a9b863ebf808d1b6bfcf9bb2",
+            "inline_candidate_sha256": "20a79be1d79a9118db7c820d7307aaf00aaaeaeb3931b68bef6a8a167a763110",
+            "selected_sha256": "20a79be1d79a9118db7c820d7307aaf00aaaeaeb3931b68bef6a8a167a763110",
+            "eligible": true,
+            "selected_candidate": "inline",
+            "component": {
+              "baseline_end": 422,
+              "baseline_start": 0,
+              "inline_end": 26931,
+              "inline_start": 0
+            },
+            "bundle": {
+              "path": "/tmp/work-leaf-context-bundles/orchestrator-74263-0/bundle-0.md",
+              "threshold_eligible": true,
+              "write_succeeded": true
+            },
+            "selected_bytes": 26931,
+            "candidate_byte_delta": 26509,
+            "capture": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-untracked-read-inline/observation/app-server/00000461281625912714-74284",
+            "client_line": 6,
+            "reply_line": 25,
+            "rpc_id": "5",
+            "thread_id": "01a07a7a-23fa-78b3-89ba-283877e3bf93",
+            "turn_id": "01a07a7a-3b16-7d13-adda-b9c15f4300a7"
+          },
+          {
+            "sequence": 3,
+            "trace_line": 4,
+            "site": "file-read",
+            "agent_id": "user-read-smoke",
+            "status": "delivered",
+            "errors": [],
+            "snapshot_evidence": [],
+            "baseline_sha256": "4aacf692aa378820c8e5cbc1c2e7fb2d6dd1296a654737e8fef555d5c982ab85",
+            "inline_candidate_sha256": "4aacf692aa378820c8e5cbc1c2e7fb2d6dd1296a654737e8fef555d5c982ab85",
+            "selected_sha256": "4aacf692aa378820c8e5cbc1c2e7fb2d6dd1296a654737e8fef555d5c982ab85",
+            "eligible": false,
+            "selected_candidate": "baseline",
+            "component": {
+              "baseline_end": 20,
+              "baseline_start": 0,
+              "inline_end": 20,
+              "inline_start": 0
+            },
+            "bundle": {
+              "path": null,
+              "threshold_eligible": false,
+              "write_succeeded": false
+            },
+            "selected_bytes": 258,
+            "candidate_byte_delta": 0,
+            "capture": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-untracked-read-inline/observation/app-server/00000461281625912714-74284",
+            "client_line": 8,
+            "reply_line": 45,
+            "rpc_id": "7",
+            "thread_id": "01a07a7a-23fa-78b3-89ba-283877e3bf93",
+            "turn_id": "01a07a7a-42e2-7f62-90f8-5b53e7a9c3aa"
+          }
+        ],
+        "delivered_eligible_reads": 1,
+        "delivered_read_count": 2,
+        "recognized_requests": 3,
+        "matched_requests": 3,
+        "accepted_provider_turns": 3,
+        "native_input_join": "Separate exact thread/item evidence required; accepted turn alone is not native item identity."
+      },
+      "completed_turns": [
+        {
+          "server_line": 24,
+          "thread_id": "01a07a7a-23fa-78b3-89ba-283877e3bf93",
+          "turn_id": "01a07a7a-2489-7d43-84c4-8f6506cc63c7",
+          "status": "interrupted"
+        },
+        {
+          "server_line": 44,
+          "thread_id": "01a07a7a-23fa-78b3-89ba-283877e3bf93",
+          "turn_id": "01a07a7a-3b16-7d13-adda-b9c15f4300a7",
+          "status": "interrupted"
+        },
+        {
+          "server_line": 60,
+          "thread_id": "01a07a7a-23fa-78b3-89ba-283877e3bf93",
+          "turn_id": "01a07a7a-42e2-7f62-90f8-5b53e7a9c3aa",
+          "status": "interrupted"
+        }
+      ],
+      "item_types": {
+        "userMessage": 3,
+        "agentMessage": 3
+      },
+      "primary": false,
+      "raw_response_usage": null,
+      "provider_usage_grace_ms": 0,
+      "raw_completed_response_records": 0,
+      "invocation_end_present": false,
+      "forwarded_capture_present": false,
+      "whole_accounting_readiness": false,
+      "source_sha256": {
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-untracked-read-inline/prompt-events.jsonl": "4838cc6269c5f99334e1b889a07fcaba7698d0b08b1f89868a2a02790905d828",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-untracked-read-inline/experiment.json": "c2c5795bc38e1b3fea2fd073b7d8fca707d41b6c84a08c9ffb548e86671b9423",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-untracked-read-inline/smoke-output.log": "a8e12f846470157974a3671548d553aaf89e7c98157b1f9d921d4e45e7ecc151",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-untracked-read-inline/observation/invocations/00000461281625912714-74284/start.json": "dc3058dd9edf9a3479b25db1a16a22549fea2b7a5989aa4d82b41750e6d049a1",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-untracked-read-inline/observation/app-server/00000461281625912714-74284/client-to-server.raw": "419c811e38229e04b293459ede7ef0aa7284f6a0879c312f508078a1b4e682cb",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-untracked-read-inline/observation/app-server/00000461281625912714-74284/server-to-client.raw": "da126016c81c94e6ca464ab7660b8ae18e0155fde56487ccedd25897187b5db6",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/analyze_untracked_reads.py": "30a58a9312e2f9c641643698f53e0592c392fa8ed5fa3c0d01d9cc61ff427c3e"
+      }
+    }
+  ]
+}

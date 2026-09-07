@@ -1,0 +1,41 @@
+{
+  "schema": "work-leaf-v3-real-read-diagnostic-admission-v1",
+  "created_at": "2026-09-07 06:06:59 UTC",
+  "status": "admitted-diagnostic-only",
+  "excluded_from_benchmark_observations": true,
+  "case_count": 2,
+  "turns_per_case": 3,
+  "max_seconds_per_case": 120,
+  "authentication": "existing ChatGPT subscription only",
+  "runtime_factor_sources": {
+    "src/orchestrator.rs": "71610cc88fef911fddd2099a1237166df51f8f31a9528268085e7f65477f792b",
+    "src/bench_experiment.rs": "951c0a96795582c51473aaba59b1fc2b51ffe2a440414174221b3111441e40ad"
+  },
+  "smoke_source_sha256": "8dc73505572a482c5f497fa3dcb9f16dc1f6b1338271568d40d1e7121f3d8c88",
+  "smoke_binary": "/home/user/src/work-leaf/target/debug/deps/bench_read_inline_subscription_smoke-dd4acd1a51f6ca92",
+  "smoke_binary_sha256": "b420ebbff52b2221ce1c4e8ca980271b7b584e33a1d719d3c866b84b799942a8",
+  "observer_sha256": "238bdc610a28edd328d91046f9674dbe59ad2f2d7520fedf681c1ae95a56e386",
+  "wrapper_sha256": "0977db361b4477e2bf68ea08c05571a4a35fb1e5c958cc9a953f2cc738de7078",
+  "global_config_pre_sha256": "e8aae9df8fdb7c91c473410aca9ed290d802f92f7e85d9cd030a91ffae09c3d8",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh",
+  "raw_response_usage": true,
+  "grace_ms": 1000,
+  "output_resume": "forward",
+  "cases": [
+    {
+      "condition": "control",
+      "run_id": "read-inline-control-diagnostic",
+      "project": "/tmp/work-leaf-read-inline-smoke.8k0rQh/control",
+      "evidence_dir": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-control",
+      "experiment_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-control/experiment.json"
+    },
+    {
+      "condition": "untracked-read-inline",
+      "run_id": "read-inline-untracked-read-inline-diagnostic",
+      "project": "/tmp/work-leaf-read-inline-smoke.8k0rQh/untracked-read-inline",
+      "evidence_dir": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-untracked-read-inline",
+      "experiment_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/read-inline-untracked-read-inline/experiment.json"
+    }
+  ]
+}

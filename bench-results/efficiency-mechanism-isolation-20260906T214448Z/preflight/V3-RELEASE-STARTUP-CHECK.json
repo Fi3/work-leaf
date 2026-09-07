@@ -1,0 +1,205 @@
+{
+  "admission": false,
+  "binary_sha256": {
+    "/tmp/work-leaf-untracked-read-build.vSVNzx/target/release/work-leaf": "469491dd93cb7a42a4e32d76d577d1eab4fe4da135f86e2242084c2cc9f45a09",
+    "/tmp/work-leaf-untracked-read-build.vSVNzx/target/release/work-leaf-orchestrator": "7f2707efb4c4630e61fc57bfc0555f404f0d3aa9f6c16235e304c37a1b415b9e"
+  },
+  "case_count": 13,
+  "case_results": [
+    {
+      "args": [
+        "--version"
+      ],
+      "binary": "work-leaf",
+      "case": "work-leaf-version",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stderr": "",
+      "stdout": "work-leaf 0.1.3\n"
+    },
+    {
+      "args": [
+        "--daemon"
+      ],
+      "binary": "work-leaf",
+      "case": "work-leaf-invalid-marker",
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "stderr": "benchmark experiment: benchmark experiment: WORK_LEAF_BENCH_EXPERIMENT=1 is required\n",
+      "stdout": ""
+    },
+    {
+      "args": [
+        "--daemon"
+      ],
+      "binary": "work-leaf",
+      "case": "work-leaf-missing-manifest",
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "stderr": "benchmark experiment: benchmark experiment: manifest path is required\n",
+      "stdout": ""
+    },
+    {
+      "args": [
+        "--daemon"
+      ],
+      "binary": "work-leaf",
+      "case": "work-leaf-invalid-schema",
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "stderr": "benchmark experiment: benchmark experiment: unsupported manifest schema\n",
+      "stdout": ""
+    },
+    {
+      "args": [
+        "--daemon"
+      ],
+      "binary": "work-leaf",
+      "case": "work-leaf-wrong-version-condition",
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "stderr": "benchmark experiment: benchmark experiment: unsupported condition\n",
+      "stdout": ""
+    },
+    {
+      "args": [
+        "--version"
+      ],
+      "binary": "work-leaf-orchestrator",
+      "case": "work-leaf-orchestrator-version",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stderr": "",
+      "stdout": "work-leaf-orchestrator 0.1.3\n"
+    },
+    {
+      "args": [],
+      "binary": "work-leaf-orchestrator",
+      "case": "work-leaf-orchestrator-invalid-marker",
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "stderr": "benchmark experiment: benchmark experiment: WORK_LEAF_BENCH_EXPERIMENT=1 is required\n",
+      "stdout": ""
+    },
+    {
+      "args": [],
+      "binary": "work-leaf-orchestrator",
+      "case": "work-leaf-orchestrator-missing-manifest",
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "stderr": "benchmark experiment: benchmark experiment: manifest path is required\n",
+      "stdout": ""
+    },
+    {
+      "args": [],
+      "binary": "work-leaf-orchestrator",
+      "case": "work-leaf-orchestrator-invalid-schema",
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "stderr": "benchmark experiment: benchmark experiment: unsupported manifest schema\n",
+      "stdout": ""
+    },
+    {
+      "args": [],
+      "binary": "work-leaf-orchestrator",
+      "case": "work-leaf-orchestrator-wrong-version-condition",
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "stderr": "benchmark experiment: benchmark experiment: unsupported condition\n",
+      "stdout": ""
+    },
+    {
+      "args": [
+        "--listen",
+        "127.0.0.1:not-a-port"
+      ],
+      "binary": "work-leaf-orchestrator",
+      "case": "orchestrator-disabled-activation-only",
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "stderr": "invalid port value\n",
+      "stdout": ""
+    },
+    {
+      "args": [
+        "--listen",
+        "127.0.0.1:not-a-port"
+      ],
+      "binary": "work-leaf-orchestrator",
+      "case": "orchestrator-control-activation-only",
+      "events": [
+        {
+          "condition": "control",
+          "event": "activation",
+          "process_id": 107483,
+          "run_id": "release-startup-control",
+          "schema": "work-leaf-bench-experiment-v3"
+        }
+      ],
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "stderr": "invalid port value\n",
+      "stdout": ""
+    },
+    {
+      "args": [
+        "--listen",
+        "127.0.0.1:not-a-port"
+      ],
+      "binary": "work-leaf-orchestrator",
+      "case": "orchestrator-inline-activation-only",
+      "events": [
+        {
+          "condition": "untracked-read-inline",
+          "event": "activation",
+          "process_id": 107485,
+          "run_id": "release-startup-inline",
+          "schema": "work-leaf-bench-experiment-v3"
+        }
+      ],
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "stderr": "invalid port value\n",
+      "stdout": ""
+    }
+  ],
+  "environment": "Inherited environment with only task activation/routing keys cleared and PATH set to an absent provider-executable directory; no auth/config variables changed.",
+  "event_sha256": {
+    "/tmp/work-leaf-v3-release-startup.J8aFxr/control-events.jsonl": "5ac9b64424dbeaa81dbb12d11eeaa1ec1bf59c31ee232e8bbe7037cc51be5ab0",
+    "/tmp/work-leaf-v3-release-startup.J8aFxr/inline-events.jsonl": "f8a1f11c5b6a196ba340cf2968f8dd3defce533a81c0f0b690c6cd356cd11d4d"
+  },
+  "generation": false,
+  "manifest_sha256": {
+    "/tmp/work-leaf-v3-release-startup.J8aFxr/control.json": "7eb094dd7bd51a26d6309b2824fcd397d59ef1256000147991d39f1e114fa3ef",
+    "/tmp/work-leaf-v3-release-startup.J8aFxr/inline.json": "add03da7b692c961caa04f2f902ad58fde3d599efb9af09e7055b9de935e714e",
+    "/tmp/work-leaf-v3-release-startup.J8aFxr/invalid-schema.json": "ca7eedb82d807b551d740332b760bf440bb3edaf7573633e24b6f985ca01335a",
+    "/tmp/work-leaf-v3-release-startup.J8aFxr/wrong-version-condition.json": "ade381cf4f8f175480a923b430eded131d8ed1418eae69a77ab60f5da37352af"
+  },
+  "provider_calls": 0,
+  "recorded_at": "2026-09-07T06:22:10.689995+00:00",
+  "schema": "work-leaf-v3-release-startup-check-v1",
+  "status": "pass",
+  "working_directory": "/tmp/work-leaf-v3-release-startup.J8aFxr",
+  "source_call_chain": [
+    "src/bin/work-leaf.rs -> cli::run_cli_from_env -> run_daemon_cli -> selected_agent_backend -> bench_experiment::initialize before backend construction/listen",
+    "src/bin/work-leaf-orchestrator.rs -> http_controller::run_orchestrator_from_env -> run_orchestrator -> selected_agent_backend -> bench_experiment::initialize -> HttpControllerServer::bind",
+    "CodexBackend::new -> CodexAppServer::new initializes process Mutex(None); provider startup is deferred to ensure_started in request operations, which these checks do not call."
+  ],
+  "scope": "Provider-free release CLI/startup/manifest guard checks only. A deliberately invalid numeric-loopback port ends each valid activation case before any listener or request loop. This is not a real-agent behavioral verification and imposes no additional exact-release provider-check gate.",
+  "limits": [
+    "Version exits before benchmark activation by design; guard checks use actual launch/daemon entry points.",
+    "Control and treatment checks exercise activation and safe startup failure, not read representation or prompt delivery.",
+    "The owner's real configured-backend delivery checks use the same pinned runtime source. Earlier build-note pending text describes its recording cutoff, not an added requirement for another provider call."
+  ],
+  "source_sha256": {
+    "src/bench_experiment.rs": "951c0a96795582c51473aaba59b1fc2b51ffe2a440414174221b3111441e40ad",
+    "src/cli.rs": "70d5107a5b022f4dba118e8567a5c2f54330a51319f5d97d84299380e6246c0d",
+    "src/codex.rs": "334eb3008f3b0a8db0d98bed2d3191f5cbf37052fb342dcf26a91ccd4ee502d8",
+    "src/http_controller.rs": "3cadad246d8818e1766e08e4dd3103035923aaf720593e0e0c2fae448e08818d",
+    "src/orchestrator.rs": "71610cc88fef911fddd2099a1237166df51f8f31a9528268085e7f65477f792b"
+  },
+  "build_attestation": {
+    "path": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/BUILD-ATTESTATION-UNTRACKED-READS.json",
+    "sha256": "6a8174d9dfe9cefa17bd986ebbc0c825b9d5546bf18030bb9fc50982fbf66064"
+  }
+}
