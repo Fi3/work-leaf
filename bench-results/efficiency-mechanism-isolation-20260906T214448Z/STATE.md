@@ -4,8 +4,13 @@
 
 The user's [C15/C21 approval](AUTHORITY-C15-C21-20260907T1806Z.md) authorizes an
 explicitly qualified private-test-first workflow and one additional separately
-recorded reviewer diagnostic002. C15 implementation and immutable-source C21
-preparation are active; no provider admission has yet launched under this approval.
+recorded reviewer diagnostic002. C15 runtime/bridge implementation is active.
+Diagnostic002's sole launch is closed: exit 101 after 26.80 reported seconds,
+one actual author turn emits the reviewer CHECK instead of the initial edit.
+The ordered guard rejects it before any shared patch or reviewer launch.
+All 156 frozen pins and global configuration match; the final accepted turn settles.
+Original observer/collector postcapture is active. No retry or complete C21 benchmark
+is admitted, and the original diagnostic001 failure remains.
 The prior unanswered-choice checkpoints below retain their historical cutoff.
 All six [read-item scope](RETAINED-READ-ITEM-RECHARGE-SCOPE.revision-01.json) calls
 closed exactly once at 18:05 UTC: five exact observed-attribution results and

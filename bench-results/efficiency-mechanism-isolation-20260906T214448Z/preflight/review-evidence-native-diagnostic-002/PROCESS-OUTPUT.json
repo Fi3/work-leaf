@@ -1,0 +1,20 @@
+{
+  "schema": "work-leaf-diagnostic-process-output-v1",
+  "run_id": "review-evidence-native-diagnostic-002",
+  "chunks": [
+    {
+      "chunk_id": "ea5cff",
+      "wall_time_seconds": 1.000623413,
+      "session_id": 19470,
+      "original_token_count": 4,
+      "output": "\nrunning 1 test\n"
+    },
+    {
+      "chunk_id": "41945d",
+      "wall_time_seconds": 0.000005937,
+      "exit_code": 101,
+      "original_token_count": 186,
+      "output": "WORK_LEAF_REVIEW_EVIDENCE_SCENARIO_RETURNED success=false; postcapture checks follow and cannot replace this outcome\nWORK_LEAF_REVIEW_EVIDENCE_TERMINAL_SETTLED value=true\n\nthread 'real_subscription_review_evidence_handoffs' (4) panicked at tests/bench_review_evidence_diagnostic002.rs:873:10:\ndiagnostic workflow failed: Io(Custom { kind: Other, error: \"review-evidence diagnostic rejected an unplanned setting, identity, or action\" })\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\ntest real_subscription_review_evidence_handoffs ... FAILED\n\nfailures:\n\nfailures:\n    real_subscription_review_evidence_handoffs\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 26.80s\n\n"
+    }
+  ]
+}

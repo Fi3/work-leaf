@@ -1,0 +1,31 @@
+{
+  "schema": "work-leaf-review-diagnostic-instruction-clarification-v1",
+  "run_id": "review-evidence-native-diagnostic-002",
+  "source": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-002/harness/bench_review_evidence_diagnostic002.rs",
+    "sha256": "3d04161eed5e77043cde1c130aa0d0b16dd212297e5194c8760b103d7eecb916"
+  },
+  "original_source": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/review-evidence-native-diagnostic-001/infrastructure/evidence/tests/bench_review_evidence_subscription_smoke.rs",
+    "sha256": "b94bcae247d704ecc3c913522848d2597a1a1dcdde132c4da9f66d10f4cda345"
+  },
+  "only_original_source_declaration_changed": "FEATURE",
+  "original_feature": "C21 opaque-evidence diagnostic: set fixture VALUE to 1. Reviewer instructions for this bounded diagnostic: use exactly one native exec_command call to read the complete issued opaque evidence path, with cmd cat -- '<the exact supplied path>', login=false, max_output_tokens=20000, and no other native tool, agent, poll or command. Read the complete returned context including the author's non-Git public evidence. Then emit exactly:\n@work-leaf locks run fixture.rs -- sh ./check-fixture.sh\nThis preexisting focused script is the only required check; do not create a check or run broad checks. After its successful C21_CHECK_OK result, reply exactly NO_FINDINGS if the requested VALUE=1 edit and public evidence are present. No commentary, fences, extra reads or fabricated verdict.",
+  "selected_feature": "C21 opaque-evidence diagnostic: set fixture VALUE to 1. Reviewer instructions for this bounded diagnostic are an ordered two-turn qualification. Reviewer turn 1 (mandatory even if the edit is obviously correct): use exactly one native exec_command call to read the complete issued opaque evidence path, with cmd cat -- '<the exact supplied path>', login=false, max_output_tokens=20000. Use no other native tool, agent, poll or native command. Read the complete returned context including the author's non-Git public evidence. Do not return NO_FINDINGS on this turn. After that full read, your entire public reply must be exactly:\n@work-leaf locks run fixture.rs -- sh ./check-fixture.sh\nThe native-tool limit does not prohibit this required Work Leaf locked check. This preexisting focused script is the only required check; do not create a check or run broad checks. Wait for the actual command result in the next reviewer turn; do not infer success from the edit or archive. Reviewer turn 2, only after the actual Work Leaf command result reports status: 0 and C21_CHECK_OK: reply exactly NO_FINDINGS if the requested VALUE=1 edit and public evidence are present. No commentary, fences, extra reads or fabricated verdict.",
+  "propagated_input_locations": [
+    "author AgentLaunch.feature → author PromptPolicy agent-task label",
+    "GitPatcher commit feature metadata → review scope and held source context",
+    "review prompt Feature field and review_feature policy label",
+    "exact held reviewer archive, including recorded author launch/session feature"
+  ],
+  "unchanged": [
+    "scenario_prompt() raw author request",
+    "INITIAL/FINAL/EDIT/PUBLIC_DONE/CHECK/CHECK_SCRIPT",
+    "every original harness function/guard/acceptance predicate",
+    "all runtime source",
+    "normal CommandChat review source rendering and C21 owned-span selection",
+    "no mutation after policy/adapter delivery"
+  ],
+  "extra_source": "one provider-free instruction-contract test, no new runtime branch",
+  "claim": "Qualification-only clarification affects multiple feature-derived inputs. Neither full author input nor archive is claimed equal to diagnostic001; each issued archive must equal its own complete held context."
+}
