@@ -1,0 +1,506 @@
+{
+  "base_commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+  "model": "gpt-5.5",
+  "phase": "work-units-01",
+  "phase_kind": "confirmation",
+  "phase_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/PHASE-MANIFEST.json",
+  "phase_manifest_sha256": "5282364e43839e8932abfcec440d07b87467e6e7024f99f66b236e662cbdf950",
+  "randomization": {
+    "actual_population_index_by_block_one_based": {
+      "work-units-01-block-01": 5,
+      "work-units-01-block-02": 2
+    },
+    "actual_variant_slots_by_block": {
+      "work-units-01-block-01": [
+        1,
+        3,
+        5
+      ],
+      "work-units-01-block-02": [
+        1,
+        2,
+        5
+      ]
+    },
+    "allocation_slots": [
+      {
+        "block_allocation_slot": 1,
+        "block_id": "work-units-01-block-01",
+        "condition": "buildable-work-unit-incremental",
+        "run_id": "work-units-01-workflow-001",
+        "wave": 1,
+        "wave_allocation_slot": 1
+      },
+      {
+        "block_allocation_slot": 2,
+        "block_id": "work-units-01-block-01",
+        "condition": "control",
+        "run_id": "work-units-01-workflow-002",
+        "wave": 1,
+        "wave_allocation_slot": 2
+      },
+      {
+        "block_allocation_slot": 3,
+        "block_id": "work-units-01-block-01",
+        "condition": "buildable-work-unit-incremental",
+        "run_id": "work-units-01-workflow-003",
+        "wave": 1,
+        "wave_allocation_slot": 3
+      },
+      {
+        "block_allocation_slot": 4,
+        "block_id": "work-units-01-block-01",
+        "condition": "control",
+        "run_id": "work-units-01-workflow-004",
+        "wave": 2,
+        "wave_allocation_slot": 1
+      },
+      {
+        "block_allocation_slot": 5,
+        "block_id": "work-units-01-block-01",
+        "condition": "buildable-work-unit-incremental",
+        "run_id": "work-units-01-workflow-005",
+        "wave": 2,
+        "wave_allocation_slot": 2
+      },
+      {
+        "block_allocation_slot": 6,
+        "block_id": "work-units-01-block-01",
+        "condition": "control",
+        "run_id": "work-units-01-workflow-006",
+        "wave": 2,
+        "wave_allocation_slot": 3
+      },
+      {
+        "block_allocation_slot": 1,
+        "block_id": "work-units-01-block-02",
+        "condition": "buildable-work-unit-incremental",
+        "run_id": "work-units-01-workflow-007",
+        "wave": 3,
+        "wave_allocation_slot": 1
+      },
+      {
+        "block_allocation_slot": 2,
+        "block_id": "work-units-01-block-02",
+        "condition": "buildable-work-unit-incremental",
+        "run_id": "work-units-01-workflow-008",
+        "wave": 3,
+        "wave_allocation_slot": 2
+      },
+      {
+        "block_allocation_slot": 3,
+        "block_id": "work-units-01-block-02",
+        "condition": "control",
+        "run_id": "work-units-01-workflow-009",
+        "wave": 3,
+        "wave_allocation_slot": 3
+      },
+      {
+        "block_allocation_slot": 4,
+        "block_id": "work-units-01-block-02",
+        "condition": "control",
+        "run_id": "work-units-01-workflow-010",
+        "wave": 4,
+        "wave_allocation_slot": 1
+      },
+      {
+        "block_allocation_slot": 5,
+        "block_id": "work-units-01-block-02",
+        "condition": "buildable-work-unit-incremental",
+        "run_id": "work-units-01-workflow-011",
+        "wave": 4,
+        "wave_allocation_slot": 2
+      },
+      {
+        "block_allocation_slot": 6,
+        "block_id": "work-units-01-block-02",
+        "condition": "control",
+        "run_id": "work-units-01-workflow-012",
+        "wave": 4,
+        "wave_allocation_slot": 3
+      }
+    ],
+    "block_condition_counts": {
+      "work-units-01-block-01": {
+        "buildable-work-unit-incremental": 3,
+        "control": 3
+      },
+      "work-units-01-block-02": {
+        "buildable-work-unit-incremental": 3,
+        "control": 3
+      }
+    },
+    "block_count": 2,
+    "candidate_selection": "new prospective work-unit hypothesis; no screen winner",
+    "control_count": 6,
+    "independent_blocks": true,
+    "joint_allocation_probability": "1/324",
+    "joint_population_size": 324,
+    "launch_order_method": "system-random-shuffle-within-declared-wave",
+    "method": "independent uniform random.SystemRandom.choice over the full eighteen-allocation population per block",
+    "mixed_waves": true,
+    "per_block_allocation_probability": "1/18",
+    "per_block_population": [
+      [
+        1,
+        2,
+        4
+      ],
+      [
+        1,
+        2,
+        5
+      ],
+      [
+        1,
+        2,
+        6
+      ],
+      [
+        1,
+        3,
+        4
+      ],
+      [
+        1,
+        3,
+        5
+      ],
+      [
+        1,
+        3,
+        6
+      ],
+      [
+        1,
+        4,
+        5
+      ],
+      [
+        1,
+        4,
+        6
+      ],
+      [
+        1,
+        5,
+        6
+      ],
+      [
+        2,
+        3,
+        4
+      ],
+      [
+        2,
+        3,
+        5
+      ],
+      [
+        2,
+        3,
+        6
+      ],
+      [
+        2,
+        4,
+        5
+      ],
+      [
+        2,
+        4,
+        6
+      ],
+      [
+        2,
+        5,
+        6
+      ],
+      [
+        3,
+        4,
+        5
+      ],
+      [
+        3,
+        4,
+        6
+      ],
+      [
+        3,
+        5,
+        6
+      ]
+    ],
+    "per_block_population_sha256": "5d0be674f21411f0d44baf87d5009e54fb3d071266c57f66f1e0b9a2091ca0d9",
+    "per_block_population_size": 18,
+    "scheme": "within_block",
+    "selected_variant": "buildable-work-unit-incremental",
+    "slot_semantics": "allocation positions; runner freezes a separate execution-order shuffle within each wave",
+    "slots_per_block": 6,
+    "unit": "workflow",
+    "variant_count": 6,
+    "workflow_count": 12,
+    "workflows_per_wave": 3
+  },
+  "reasoning_effort": "xhigh",
+  "runs": [
+    {
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-001/work-units-01-workflow-001-three-feature-bench-artifacts",
+      "block_id": "work-units-01-block-01",
+      "completion_config_snapshot": 245,
+      "condition": "buildable-work-unit-incremental",
+      "experiment_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/experiments/work-units-01-workflow-001.json",
+      "finished_at": "2026-09-07T01:15:11.151885+00:00",
+      "id": "work-units-01-workflow-001",
+      "launch_status": "completed",
+      "launcher_exit_code": 0,
+      "outcome_classification": "recorded_workflow_success",
+      "phase": "work-units-01",
+      "pid": 3536549,
+      "prelaunch_config_snapshot": 1,
+      "prompt_trace": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/prompt-events/work-units-01-workflow-001.jsonl",
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-001/work-units-01-workflow-001-three-feature-bench-artifacts/report.json",
+      "run_id": "work-units-01-workflow-001",
+      "started_at": "2026-09-07T00:34:42.639204+00:00",
+      "wave": 1,
+      "workflow": "work-leaf-concurrent"
+    },
+    {
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-002/work-units-01-workflow-002-three-feature-bench-artifacts",
+      "block_id": "work-units-01-block-01",
+      "completion_config_snapshot": 345,
+      "condition": "control",
+      "experiment_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/experiments/work-units-01-workflow-002.json",
+      "finished_at": "2026-09-07T01:31:44.044869+00:00",
+      "id": "work-units-01-workflow-002",
+      "launch_status": "completed",
+      "launcher_exit_code": 0,
+      "outcome_classification": "recorded_workflow_success",
+      "phase": "work-units-01",
+      "pid": 3536562,
+      "prelaunch_config_snapshot": 2,
+      "prompt_trace": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/prompt-events/work-units-01-workflow-002.jsonl",
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-002/work-units-01-workflow-002-three-feature-bench-artifacts/report.json",
+      "run_id": "work-units-01-workflow-002",
+      "started_at": "2026-09-07T00:34:42.645913+00:00",
+      "wave": 1,
+      "workflow": "work-leaf-concurrent"
+    },
+    {
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-003/work-units-01-workflow-003-three-feature-bench-artifacts",
+      "block_id": "work-units-01-block-01",
+      "completion_config_snapshot": 495,
+      "condition": "buildable-work-unit-incremental",
+      "experiment_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/experiments/work-units-01-workflow-003.json",
+      "finished_at": "2026-09-07T01:56:38.077968+00:00",
+      "id": "work-units-01-workflow-003",
+      "launch_status": "completed",
+      "launcher_exit_code": 0,
+      "outcome_classification": "recorded_workflow_success",
+      "phase": "work-units-01",
+      "pid": 3536543,
+      "prelaunch_config_snapshot": 0,
+      "prompt_trace": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/prompt-events/work-units-01-workflow-003.jsonl",
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-003/work-units-01-workflow-003-three-feature-bench-artifacts/report.json",
+      "run_id": "work-units-01-workflow-003",
+      "started_at": "2026-09-07T00:34:42.632272+00:00",
+      "wave": 1,
+      "workflow": "work-leaf-concurrent"
+    },
+    {
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-004/work-units-01-workflow-004-three-feature-bench-artifacts",
+      "block_id": "work-units-01-block-01",
+      "completion_config_snapshot": 767,
+      "condition": "control",
+      "experiment_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/experiments/work-units-01-workflow-004.json",
+      "finished_at": "2026-09-07T02:41:02.382116+00:00",
+      "id": "work-units-01-workflow-004",
+      "launch_status": "completed",
+      "launcher_exit_code": 0,
+      "outcome_classification": "recorded_workflow_success",
+      "phase": "work-units-01",
+      "pid": 3719007,
+      "prelaunch_config_snapshot": 498,
+      "prompt_trace": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/prompt-events/work-units-01-workflow-004.jsonl",
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-004/work-units-01-workflow-004-three-feature-bench-artifacts/report.json",
+      "run_id": "work-units-01-workflow-004",
+      "started_at": "2026-09-07T01:56:38.282924+00:00",
+      "wave": 2,
+      "workflow": "work-leaf-concurrent"
+    },
+    {
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-005/work-units-01-workflow-005-three-feature-bench-artifacts",
+      "block_id": "work-units-01-block-01",
+      "completion_config_snapshot": 714,
+      "condition": "buildable-work-unit-incremental",
+      "experiment_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/experiments/work-units-01-workflow-005.json",
+      "finished_at": "2026-09-07T02:32:37.581934+00:00",
+      "id": "work-units-01-workflow-005",
+      "launch_status": "completed",
+      "launcher_exit_code": 0,
+      "outcome_classification": "recorded_workflow_success",
+      "phase": "work-units-01",
+      "pid": 3718993,
+      "prelaunch_config_snapshot": 497,
+      "prompt_trace": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/prompt-events/work-units-01-workflow-005.jsonl",
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-005/work-units-01-workflow-005-three-feature-bench-artifacts/report.json",
+      "run_id": "work-units-01-workflow-005",
+      "started_at": "2026-09-07T01:56:38.274882+00:00",
+      "wave": 2,
+      "workflow": "work-leaf-concurrent"
+    },
+    {
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-006/work-units-01-workflow-006-three-feature-bench-artifacts",
+      "block_id": "work-units-01-block-01",
+      "completion_config_snapshot": 716,
+      "condition": "control",
+      "experiment_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/experiments/work-units-01-workflow-006.json",
+      "finished_at": "2026-09-07T02:32:47.122222+00:00",
+      "id": "work-units-01-workflow-006",
+      "launch_status": "completed",
+      "launcher_exit_code": 0,
+      "outcome_classification": "recorded_workflow_success",
+      "phase": "work-units-01",
+      "pid": 3718988,
+      "prelaunch_config_snapshot": 496,
+      "prompt_trace": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/prompt-events/work-units-01-workflow-006.jsonl",
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-006/work-units-01-workflow-006-three-feature-bench-artifacts/report.json",
+      "run_id": "work-units-01-workflow-006",
+      "started_at": "2026-09-07T01:56:38.267031+00:00",
+      "wave": 2,
+      "workflow": "work-leaf-concurrent"
+    },
+    {
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-007/work-units-01-workflow-007-three-feature-bench-artifacts",
+      "block_id": "work-units-01-block-02",
+      "completion_config_snapshot": 1009,
+      "condition": "buildable-work-unit-incremental",
+      "experiment_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/experiments/work-units-01-workflow-007.json",
+      "finished_at": "2026-09-07T03:20:55.003565+00:00",
+      "id": "work-units-01-workflow-007",
+      "launch_status": "completed",
+      "launcher_exit_code": 0,
+      "outcome_classification": "recorded_workflow_success",
+      "phase": "work-units-01",
+      "pid": 3843899,
+      "prelaunch_config_snapshot": 768,
+      "prompt_trace": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/prompt-events/work-units-01-workflow-007.jsonl",
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-007/work-units-01-workflow-007-three-feature-bench-artifacts/report.json",
+      "run_id": "work-units-01-workflow-007",
+      "started_at": "2026-09-07T02:41:02.583058+00:00",
+      "wave": 3,
+      "workflow": "work-leaf-concurrent"
+    },
+    {
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-008/work-units-01-workflow-008-three-feature-bench-artifacts",
+      "block_id": "work-units-01-block-02",
+      "completion_config_snapshot": 1075,
+      "condition": "buildable-work-unit-incremental",
+      "experiment_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/experiments/work-units-01-workflow-008.json",
+      "finished_at": "2026-09-07T03:31:46.734979+00:00",
+      "id": "work-units-01-workflow-008",
+      "launch_status": "completed",
+      "launcher_exit_code": 0,
+      "outcome_classification": "recorded_workflow_success",
+      "phase": "work-units-01",
+      "pid": 3843922,
+      "prelaunch_config_snapshot": 770,
+      "prompt_trace": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/prompt-events/work-units-01-workflow-008.jsonl",
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-008/work-units-01-workflow-008-three-feature-bench-artifacts/report.json",
+      "run_id": "work-units-01-workflow-008",
+      "started_at": "2026-09-07T02:41:02.599769+00:00",
+      "wave": 3,
+      "workflow": "work-leaf-concurrent"
+    },
+    {
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-009/work-units-01-workflow-009-three-feature-bench-artifacts",
+      "block_id": "work-units-01-block-02",
+      "completion_config_snapshot": 1097,
+      "condition": "control",
+      "experiment_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/experiments/work-units-01-workflow-009.json",
+      "finished_at": "2026-09-07T03:35:17.261891+00:00",
+      "id": "work-units-01-workflow-009",
+      "launch_status": "completed",
+      "launcher_exit_code": 0,
+      "outcome_classification": "recorded_workflow_success",
+      "phase": "work-units-01",
+      "pid": 3843905,
+      "prelaunch_config_snapshot": 769,
+      "prompt_trace": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/prompt-events/work-units-01-workflow-009.jsonl",
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-009/work-units-01-workflow-009-three-feature-bench-artifacts/report.json",
+      "run_id": "work-units-01-workflow-009",
+      "started_at": "2026-09-07T02:41:02.590909+00:00",
+      "wave": 3,
+      "workflow": "work-leaf-concurrent"
+    },
+    {
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-010/work-units-01-workflow-010-three-feature-bench-artifacts",
+      "block_id": "work-units-01-block-02",
+      "completion_config_snapshot": 1322,
+      "condition": "control",
+      "experiment_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/experiments/work-units-01-workflow-010.json",
+      "finished_at": "2026-09-07T04:12:08.170280+00:00",
+      "id": "work-units-01-workflow-010",
+      "launch_status": "completed",
+      "launcher_exit_code": 1,
+      "outcome_classification": "recorded_workflow_failure",
+      "phase": "work-units-01",
+      "pid": 4004614,
+      "prelaunch_config_snapshot": 1099,
+      "prompt_trace": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/prompt-events/work-units-01-workflow-010.jsonl",
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-010/work-units-01-workflow-010-three-feature-bench-artifacts/report.json",
+      "run_id": "work-units-01-workflow-010",
+      "started_at": "2026-09-07T03:35:17.463755+00:00",
+      "wave": 4,
+      "workflow": "work-leaf-concurrent"
+    },
+    {
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-011/work-units-01-workflow-011-three-feature-bench-artifacts",
+      "block_id": "work-units-01-block-02",
+      "completion_config_snapshot": 1364,
+      "condition": "buildable-work-unit-incremental",
+      "experiment_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/experiments/work-units-01-workflow-011.json",
+      "finished_at": "2026-09-07T04:18:49.477353+00:00",
+      "id": "work-units-01-workflow-011",
+      "launch_status": "completed",
+      "launcher_exit_code": 0,
+      "outcome_classification": "recorded_workflow_success",
+      "phase": "work-units-01",
+      "pid": 4004629,
+      "prelaunch_config_snapshot": 1100,
+      "prompt_trace": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/prompt-events/work-units-01-workflow-011.jsonl",
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-011/work-units-01-workflow-011-three-feature-bench-artifacts/report.json",
+      "run_id": "work-units-01-workflow-011",
+      "started_at": "2026-09-07T03:35:17.475494+00:00",
+      "wave": 4,
+      "workflow": "work-leaf-concurrent"
+    },
+    {
+      "artifact": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-012/work-units-01-workflow-012-three-feature-bench-artifacts",
+      "block_id": "work-units-01-block-02",
+      "completion_config_snapshot": 1324,
+      "condition": "control",
+      "experiment_manifest": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/experiments/work-units-01-workflow-012.json",
+      "finished_at": "2026-09-07T04:12:17.451958+00:00",
+      "id": "work-units-01-workflow-012",
+      "launch_status": "completed",
+      "launcher_exit_code": 0,
+      "outcome_classification": "recorded_workflow_success",
+      "phase": "work-units-01",
+      "pid": 4004607,
+      "prelaunch_config_snapshot": 1098,
+      "prompt_trace": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/prompt-events/work-units-01-workflow-012.jsonl",
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/runs/work-units-01-workflow-012/work-units-01-workflow-012-three-feature-bench-artifacts/report.json",
+      "run_id": "work-units-01-workflow-012",
+      "started_at": "2026-09-07T03:35:17.454696+00:00",
+      "wave": 4,
+      "workflow": "work-leaf-concurrent"
+    }
+  ],
+  "schema_version": 1,
+  "source_commit": "3c907f7266b63efa1558213f3e49587e999b899d",
+  "source_repo": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/infrastructure/driver-source",
+  "study": "efficiency-mechanism-isolation-20260906T214448Z",
+  "task_list_sha256": "45bee25a4b929182d36612fc5a159597e7770f25dba9c95760713a401d45598a"
+}
