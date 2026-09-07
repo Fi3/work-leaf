@@ -1,0 +1,20 @@
+[package]
+name = "c15-real-diagnostic-guards"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lib]
+path = "guards.rs"
+
+[[test]]
+name = "guard_contract"
+path = "guard_tests.rs"
+
+[[test]]
+name = "real_private_preview"
+path = "harness.rs"
+
+[dependencies]
+serde_json = "1.0"
+work-leaf = { path = "../../../..", features = ["bench-experiments"] }
