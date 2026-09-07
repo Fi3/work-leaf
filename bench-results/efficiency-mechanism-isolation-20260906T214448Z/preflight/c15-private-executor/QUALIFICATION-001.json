@@ -1,0 +1,1173 @@
+{
+  "schema": "work-leaf-c15-executor-qualification-v1",
+  "scope": "provider-free generic executor fixtures; no Work Leaf protocol, current workload or source equivalence claim",
+  "passed": true,
+  "tests_run": 11,
+  "failures": 0,
+  "errors": 0,
+  "log": "test_absolute_symlink_and_child_writes_blocked (test_executor.ExecutorTests.test_absolute_symlink_and_child_writes_blocked) ... ok\ntest_cancellation_closes_child (test_executor.ExecutorTests.test_cancellation_closes_child) ... ok\ntest_existing_hardlink_and_special_file_reject_before_spawn (test_executor.ExecutorTests.test_existing_hardlink_and_special_file_reject_before_spawn) ... ok\ntest_mount_descriptors_are_not_inherited (test_executor.ExecutorTests.test_mount_descriptors_are_not_inherited) ... ok\ntest_network_and_new_user_namespace_not_available (test_executor.ExecutorTests.test_network_and_new_user_namespace_not_available) ... ok\ntest_normal_exit_does_not_leave_detached_child (test_executor.ExecutorTests.test_normal_exit_does_not_leave_detached_child) ... ok\ntest_offline_cargo_same_test_red_green_and_readonly_cache (test_executor.ExecutorTests.test_offline_cargo_same_test_red_green_and_readonly_cache) ... ok\ntest_output_bound_is_explicit_not_silent_success (test_executor.ExecutorTests.test_output_bound_is_explicit_not_silent_success) ... ok\ntest_pin_alias_and_overlap_fail_before_spawn (test_executor.ExecutorTests.test_pin_alias_and_overlap_fail_before_spawn) ... ok\ntest_private_writes_same_path_and_empty_environment (test_executor.ExecutorTests.test_private_writes_same_path_and_empty_environment) ... ok\ntest_timeout_kills_detached_child_and_closes_pipes (test_executor.ExecutorTests.test_timeout_kills_detached_child_and_closes_pipes) ... ok\n\n----------------------------------------------------------------------\nRan 11 tests in 1.487s\n\nOK\n",
+  "source_sha256": {
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-private-executor/executor.py": "16e3238e1bd647c9d4780db97c554ddf9579226c913995e2e18873bf7fcb24ae",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-private-executor/test_executor.py": "7972e12652552252a29d1f87ca840b3fe17f484d424ec97c0ecdcdcad621f1f9"
+  },
+  "executables": [
+    {
+      "path": "/usr/bin/bwrap",
+      "sha256": "eabbccb0f7f755b96d30834026a9b5d941c606400d097d87c1ff16622edaf68c"
+    },
+    {
+      "path": "/usr/bin/python3.14",
+      "sha256": "e9db67955243120e49352dc87977cdfb96a1dc130b58cfac7a0ab5f4f74731af"
+    },
+    {
+      "path": "/home/user/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+      "sha256": "841072d1d92f9e841d9ba5b0814182a0adf064acf4527cd120967b7bc49dcb66"
+    },
+    {
+      "path": "/home/user/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc",
+      "sha256": "bff349e72704ff70bc08a234a3847338e797065bbedde5e556808bc87b7bf7c6"
+    }
+  ],
+  "system": {
+    "platform": "Linux-7.1.8-1-cachyos-x86_64-with-glibc2.44",
+    "bwrap_version": "bubblewrap 0.11.2",
+    "rustc_version": "rustc 1.95.0 (59807616e 2026-04-14)",
+    "cargo_version": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)"
+  },
+  "executions": [
+    {
+      "test": "test_executor.ExecutorTests.test_absolute_symlink_and_child_writes_blocked",
+      "result": {
+        "schema": "work-leaf-private-preview-executor-qualification-v1",
+        "exit_code": 0,
+        "timed_out": false,
+        "cancelled": false,
+        "stop_reason": null,
+        "closed": true,
+        "elapsed_seconds": 0.06057554797735065,
+        "stdout": "{\"blocked\": [\"/audit/shared/sentinel\", \"/audit/retained/sentinel\", \"/audit/config/sentinel\", \"link\", \"/usr/c15-forbidden\", \"/dev/c15-forbidden\"], \"child_exit\": 1}\n",
+        "stderr": "",
+        "stdout_sha256": "067c14636ea8700a8b93965c4fc8620702c0996aa0e77cb2367c20baff33e2ea",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "captured_bytes": 163,
+        "argv": [
+          "/usr/bin/python3",
+          "-c",
+          "import pathlib,subprocess,json\ntargets=['/audit/shared/sentinel','/audit/retained/sentinel','/audit/config/sentinel','link','/usr/c15-forbidden','/dev/c15-forbidden']\nblocked=[]\nfor target in targets:\n    try: pathlib.Path(target).write_text('CORRUPTED')\n    except OSError: blocked.append(target)\nchild=subprocess.run(['/usr/bin/python3','-c',\"import pathlib; pathlib.Path('/audit/shared/sentinel').write_text('CHILD')\"],capture_output=True)\nprint(json.dumps({'blocked':blocked,'child_exit':child.returncode}))\n"
+        ],
+        "cwd": "/tmp/c15-executor-4eafj60w/shared",
+        "initial_owned_entries": 1,
+        "bwrap_sha256": "eabbccb0f7f755b96d30834026a9b5d941c606400d097d87c1ff16622edaf68c",
+        "mounts": [
+          {
+            "source": "/usr",
+            "target": "/usr",
+            "writable": false,
+            "device": 31,
+            "inode": 269
+          },
+          {
+            "source": "/usr/bin",
+            "target": "/bin",
+            "writable": false,
+            "device": 31,
+            "inode": 361
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib64",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/tmp/c15-executor-4eafj60w/shared",
+            "target": "/audit/shared",
+            "writable": false,
+            "device": 56,
+            "inode": 1627677
+          },
+          {
+            "source": "/tmp/c15-executor-4eafj60w/retained",
+            "target": "/audit/retained",
+            "writable": false,
+            "device": 56,
+            "inode": 1627678
+          },
+          {
+            "source": "/tmp/c15-executor-4eafj60w/config",
+            "target": "/audit/config",
+            "writable": false,
+            "device": 56,
+            "inode": 1627679
+          },
+          {
+            "source": "/tmp/c15-executor-4eafj60w/build",
+            "target": "/build",
+            "writable": true,
+            "device": 56,
+            "inode": 1627675
+          },
+          {
+            "source": "/tmp/c15-executor-4eafj60w/scratch",
+            "target": "/tmp",
+            "writable": true,
+            "device": 56,
+            "inode": 1627676
+          },
+          {
+            "source": "/tmp/c15-executor-4eafj60w/source",
+            "target": "/tmp/c15-executor-4eafj60w/shared",
+            "writable": true,
+            "device": 56,
+            "inode": 1627674
+          }
+        ],
+        "scope": "closed sandbox pipes/process; no test-purpose, source-equivalence or provider claim"
+      }
+    },
+    {
+      "test": "test_executor.ExecutorTests.test_cancellation_closes_child",
+      "result": {
+        "schema": "work-leaf-private-preview-executor-qualification-v1",
+        "exit_code": -9,
+        "timed_out": false,
+        "cancelled": true,
+        "stop_reason": "cancelled",
+        "closed": true,
+        "elapsed_seconds": 0.5037130109849386,
+        "stdout": "",
+        "stderr": "",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "captured_bytes": 0,
+        "argv": [
+          "/usr/bin/python3",
+          "-c",
+          "import subprocess,time; subprocess.Popen([\"/usr/bin/python3\",\"-c\",\"import time; time.sleep(60)\",\"C15_CANCEL_2b537a6ac16e405aad38ef6a77cb603b\"],start_new_session=True); time.sleep(60)"
+        ],
+        "cwd": "/tmp/c15-executor-4gwfg4cr/shared",
+        "initial_owned_entries": 0,
+        "bwrap_sha256": "eabbccb0f7f755b96d30834026a9b5d941c606400d097d87c1ff16622edaf68c",
+        "mounts": [
+          {
+            "source": "/usr",
+            "target": "/usr",
+            "writable": false,
+            "device": 31,
+            "inode": 269
+          },
+          {
+            "source": "/usr/bin",
+            "target": "/bin",
+            "writable": false,
+            "device": 31,
+            "inode": 361
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib64",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/tmp/c15-executor-4gwfg4cr/shared",
+            "target": "/audit/shared",
+            "writable": false,
+            "device": 56,
+            "inode": 1627691
+          },
+          {
+            "source": "/tmp/c15-executor-4gwfg4cr/retained",
+            "target": "/audit/retained",
+            "writable": false,
+            "device": 56,
+            "inode": 1627692
+          },
+          {
+            "source": "/tmp/c15-executor-4gwfg4cr/config",
+            "target": "/audit/config",
+            "writable": false,
+            "device": 56,
+            "inode": 1627693
+          },
+          {
+            "source": "/tmp/c15-executor-4gwfg4cr/build",
+            "target": "/build",
+            "writable": true,
+            "device": 56,
+            "inode": 1627689
+          },
+          {
+            "source": "/tmp/c15-executor-4gwfg4cr/scratch",
+            "target": "/tmp",
+            "writable": true,
+            "device": 56,
+            "inode": 1627690
+          },
+          {
+            "source": "/tmp/c15-executor-4gwfg4cr/source",
+            "target": "/tmp/c15-executor-4gwfg4cr/shared",
+            "writable": true,
+            "device": 56,
+            "inode": 1627688
+          }
+        ],
+        "scope": "closed sandbox pipes/process; no test-purpose, source-equivalence or provider claim"
+      }
+    },
+    {
+      "test": "test_executor.ExecutorTests.test_mount_descriptors_are_not_inherited",
+      "result": {
+        "schema": "work-leaf-private-preview-executor-qualification-v1",
+        "exit_code": 0,
+        "timed_out": false,
+        "cancelled": false,
+        "stop_reason": null,
+        "closed": true,
+        "elapsed_seconds": 0.025496369984466583,
+        "stdout": "[]\n",
+        "stderr": "",
+        "stdout_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "captured_bytes": 3,
+        "argv": [
+          "/usr/bin/python3",
+          "-c",
+          "import os,json\nlinks=[]\nfor fd in os.listdir('/proc/self/fd'):\n    if int(fd)>2:\n        try: links.append(os.readlink('/proc/self/fd/'+fd))\n        except FileNotFoundError: pass\nprint(json.dumps(links))\n"
+        ],
+        "cwd": "/tmp/c15-executor-_mluw78z/shared",
+        "initial_owned_entries": 0,
+        "bwrap_sha256": "eabbccb0f7f755b96d30834026a9b5d941c606400d097d87c1ff16622edaf68c",
+        "mounts": [
+          {
+            "source": "/usr",
+            "target": "/usr",
+            "writable": false,
+            "device": 31,
+            "inode": 269
+          },
+          {
+            "source": "/usr/bin",
+            "target": "/bin",
+            "writable": false,
+            "device": 31,
+            "inode": 361
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib64",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/tmp/c15-executor-_mluw78z/shared",
+            "target": "/audit/shared",
+            "writable": false,
+            "device": 56,
+            "inode": 1627715
+          },
+          {
+            "source": "/tmp/c15-executor-_mluw78z/retained",
+            "target": "/audit/retained",
+            "writable": false,
+            "device": 56,
+            "inode": 1627716
+          },
+          {
+            "source": "/tmp/c15-executor-_mluw78z/config",
+            "target": "/audit/config",
+            "writable": false,
+            "device": 56,
+            "inode": 1627717
+          },
+          {
+            "source": "/tmp/c15-executor-_mluw78z/build",
+            "target": "/build",
+            "writable": true,
+            "device": 56,
+            "inode": 1627713
+          },
+          {
+            "source": "/tmp/c15-executor-_mluw78z/scratch",
+            "target": "/tmp",
+            "writable": true,
+            "device": 56,
+            "inode": 1627714
+          },
+          {
+            "source": "/tmp/c15-executor-_mluw78z/source",
+            "target": "/tmp/c15-executor-_mluw78z/shared",
+            "writable": true,
+            "device": 56,
+            "inode": 1627712
+          }
+        ],
+        "scope": "closed sandbox pipes/process; no test-purpose, source-equivalence or provider claim"
+      }
+    },
+    {
+      "test": "test_executor.ExecutorTests.test_network_and_new_user_namespace_not_available",
+      "result": {
+        "schema": "work-leaf-private-preview-executor-qualification-v1",
+        "exit_code": 0,
+        "timed_out": false,
+        "cancelled": false,
+        "stop_reason": null,
+        "closed": true,
+        "elapsed_seconds": 0.03708455100422725,
+        "stdout": "{\"connected\": false, \"nested_namespace_exit\": 1}\n",
+        "stderr": "",
+        "stdout_sha256": "f652d1375377f16d7db1b979098efdd7b0a450d031e2063b7407def0282cb492",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "captured_bytes": 49,
+        "argv": [
+          "/usr/bin/python3",
+          "-c",
+          "import socket,subprocess,json\ns=socket.socket(); s.settimeout(.2)\ntry: s.connect(('192.0.2.1',9)); connected=True\nexcept OSError: connected=False\nr=subprocess.run(['/usr/bin/unshare','--user','--map-root-user','/usr/bin/true'],capture_output=True)\nprint(json.dumps({'connected':connected,'nested_namespace_exit':r.returncode}))\n"
+        ],
+        "cwd": "/tmp/c15-executor-sguth0mr/shared",
+        "initial_owned_entries": 0,
+        "bwrap_sha256": "eabbccb0f7f755b96d30834026a9b5d941c606400d097d87c1ff16622edaf68c",
+        "mounts": [
+          {
+            "source": "/usr",
+            "target": "/usr",
+            "writable": false,
+            "device": 31,
+            "inode": 269
+          },
+          {
+            "source": "/usr/bin",
+            "target": "/bin",
+            "writable": false,
+            "device": 31,
+            "inode": 361
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib64",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/tmp/c15-executor-sguth0mr/shared",
+            "target": "/audit/shared",
+            "writable": false,
+            "device": 56,
+            "inode": 1627728
+          },
+          {
+            "source": "/tmp/c15-executor-sguth0mr/retained",
+            "target": "/audit/retained",
+            "writable": false,
+            "device": 56,
+            "inode": 1627729
+          },
+          {
+            "source": "/tmp/c15-executor-sguth0mr/config",
+            "target": "/audit/config",
+            "writable": false,
+            "device": 56,
+            "inode": 1627730
+          },
+          {
+            "source": "/tmp/c15-executor-sguth0mr/build",
+            "target": "/build",
+            "writable": true,
+            "device": 56,
+            "inode": 1627726
+          },
+          {
+            "source": "/tmp/c15-executor-sguth0mr/scratch",
+            "target": "/tmp",
+            "writable": true,
+            "device": 56,
+            "inode": 1627727
+          },
+          {
+            "source": "/tmp/c15-executor-sguth0mr/source",
+            "target": "/tmp/c15-executor-sguth0mr/shared",
+            "writable": true,
+            "device": 56,
+            "inode": 1627725
+          }
+        ],
+        "scope": "closed sandbox pipes/process; no test-purpose, source-equivalence or provider claim"
+      }
+    },
+    {
+      "test": "test_executor.ExecutorTests.test_normal_exit_does_not_leave_detached_child",
+      "result": {
+        "schema": "work-leaf-private-preview-executor-qualification-v1",
+        "exit_code": 0,
+        "timed_out": false,
+        "cancelled": false,
+        "stop_reason": null,
+        "closed": true,
+        "elapsed_seconds": 0.03454132500337437,
+        "stdout": "",
+        "stderr": "",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "captured_bytes": 0,
+        "argv": [
+          "/usr/bin/python3",
+          "-c",
+          "import subprocess; subprocess.Popen([\"/usr/bin/python3\",\"-c\",\"import time; time.sleep(60)\",\"C15_RETURN_6f764a5072b14d0b848d4b7f00b01e31\"],start_new_session=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)"
+        ],
+        "cwd": "/tmp/c15-executor-55uswz2s/shared",
+        "initial_owned_entries": 0,
+        "bwrap_sha256": "eabbccb0f7f755b96d30834026a9b5d941c606400d097d87c1ff16622edaf68c",
+        "mounts": [
+          {
+            "source": "/usr",
+            "target": "/usr",
+            "writable": false,
+            "device": 31,
+            "inode": 269
+          },
+          {
+            "source": "/usr/bin",
+            "target": "/bin",
+            "writable": false,
+            "device": 31,
+            "inode": 361
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib64",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/tmp/c15-executor-55uswz2s/shared",
+            "target": "/audit/shared",
+            "writable": false,
+            "device": 56,
+            "inode": 1627741
+          },
+          {
+            "source": "/tmp/c15-executor-55uswz2s/retained",
+            "target": "/audit/retained",
+            "writable": false,
+            "device": 56,
+            "inode": 1627742
+          },
+          {
+            "source": "/tmp/c15-executor-55uswz2s/config",
+            "target": "/audit/config",
+            "writable": false,
+            "device": 56,
+            "inode": 1627743
+          },
+          {
+            "source": "/tmp/c15-executor-55uswz2s/build",
+            "target": "/build",
+            "writable": true,
+            "device": 56,
+            "inode": 1627739
+          },
+          {
+            "source": "/tmp/c15-executor-55uswz2s/scratch",
+            "target": "/tmp",
+            "writable": true,
+            "device": 56,
+            "inode": 1627740
+          },
+          {
+            "source": "/tmp/c15-executor-55uswz2s/source",
+            "target": "/tmp/c15-executor-55uswz2s/shared",
+            "writable": true,
+            "device": 56,
+            "inode": 1627738
+          }
+        ],
+        "scope": "closed sandbox pipes/process; no test-purpose, source-equivalence or provider claim"
+      }
+    },
+    {
+      "test": "test_executor.ExecutorTests.test_offline_cargo_same_test_red_green_and_readonly_cache",
+      "result": {
+        "schema": "work-leaf-private-preview-executor-qualification-v1",
+        "exit_code": 101,
+        "timed_out": false,
+        "cancelled": false,
+        "stop_reason": null,
+        "closed": true,
+        "elapsed_seconds": 0.12455393699929118,
+        "stdout": "\nrunning 1 test\ntest tests::required_behavior ... FAILED\n\nfailures:\n\n---- tests::required_behavior stdout ----\n\nthread 'tests::required_behavior' (61) panicked at src/lib.rs:2:59:\nassertion `left == right` failed\n  left: 1\n right: 2\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    tests::required_behavior\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+        "stderr": "   Compiling preview-fixture v0.0.0 (/tmp/c15-executor-vr9ozs9p/shared)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s\n     Running unittests src/lib.rs (/build/debug/deps/preview_fixture-b5f4c41c0f0bd690)\nerror: test failed, to rerun pass `--lib`\n",
+        "stdout_sha256": "ac513ae66b1b400838cc7eb418c33a0a942eba1a006ae53936095c80de074b1f",
+        "stderr_sha256": "93a1fa9691700fb8aae73a7bfac0c994804a37931a4e5d4f3e617b1062c5a466",
+        "captured_bytes": 726,
+        "argv": [
+          "/usr/bin/env",
+          "RUSTC=/toolchain/bin/rustc",
+          "/toolchain/bin/cargo",
+          "test",
+          "--offline",
+          "--lib",
+          "required_behavior",
+          "--",
+          "--exact",
+          "tests::required_behavior"
+        ],
+        "cwd": "/tmp/c15-executor-vr9ozs9p/shared",
+        "initial_owned_entries": 3,
+        "bwrap_sha256": "eabbccb0f7f755b96d30834026a9b5d941c606400d097d87c1ff16622edaf68c",
+        "mounts": [
+          {
+            "source": "/usr",
+            "target": "/usr",
+            "writable": false,
+            "device": 31,
+            "inode": 269
+          },
+          {
+            "source": "/usr/bin",
+            "target": "/bin",
+            "writable": false,
+            "device": 31,
+            "inode": 361
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib64",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/shared",
+            "target": "/audit/shared",
+            "writable": false,
+            "device": 56,
+            "inode": 1627754
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/retained",
+            "target": "/audit/retained",
+            "writable": false,
+            "device": 56,
+            "inode": 1627755
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/config",
+            "target": "/audit/config",
+            "writable": false,
+            "device": 56,
+            "inode": 1627756
+          },
+          {
+            "source": "/home/user/.rustup/toolchains/stable-x86_64-unknown-linux-gnu",
+            "target": "/toolchain",
+            "writable": false,
+            "device": 55,
+            "inode": 72448
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/cache",
+            "target": "/cache",
+            "writable": false,
+            "device": 56,
+            "inode": 1627760
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/build",
+            "target": "/build",
+            "writable": true,
+            "device": 56,
+            "inode": 1627752
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/scratch",
+            "target": "/tmp",
+            "writable": true,
+            "device": 56,
+            "inode": 1627753
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/source",
+            "target": "/tmp/c15-executor-vr9ozs9p/shared",
+            "writable": true,
+            "device": 56,
+            "inode": 1627751
+          }
+        ],
+        "scope": "closed sandbox pipes/process; no test-purpose, source-equivalence or provider claim"
+      }
+    },
+    {
+      "test": "test_executor.ExecutorTests.test_offline_cargo_same_test_red_green_and_readonly_cache",
+      "result": {
+        "schema": "work-leaf-private-preview-executor-qualification-v1",
+        "exit_code": 0,
+        "timed_out": false,
+        "cancelled": false,
+        "stop_reason": null,
+        "closed": true,
+        "elapsed_seconds": 0.07023553102044389,
+        "stdout": "\nrunning 1 test\ntest tests::required_behavior ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+        "stderr": "   Compiling preview-fixture v0.0.0 (/tmp/c15-executor-vr9ozs9p/shared)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s\n     Running unittests src/lib.rs (/build/debug/deps/preview_fixture-b5f4c41c0f0bd690)\n",
+        "stdout_sha256": "5ac9a1d3cd5e25baacf39eca32a15486e2be3927743e94723e68c74a9d970f8a",
+        "stderr_sha256": "1bc15c236d37e0ca755944a0b24fb8cb264ad2fb4632fb8693194be01af85059",
+        "captured_bytes": 381,
+        "argv": [
+          "/usr/bin/env",
+          "RUSTC=/toolchain/bin/rustc",
+          "/toolchain/bin/cargo",
+          "test",
+          "--offline",
+          "--lib",
+          "required_behavior",
+          "--",
+          "--exact",
+          "tests::required_behavior"
+        ],
+        "cwd": "/tmp/c15-executor-vr9ozs9p/shared",
+        "initial_owned_entries": 54,
+        "bwrap_sha256": "eabbccb0f7f755b96d30834026a9b5d941c606400d097d87c1ff16622edaf68c",
+        "mounts": [
+          {
+            "source": "/usr",
+            "target": "/usr",
+            "writable": false,
+            "device": 31,
+            "inode": 269
+          },
+          {
+            "source": "/usr/bin",
+            "target": "/bin",
+            "writable": false,
+            "device": 31,
+            "inode": 361
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib64",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/shared",
+            "target": "/audit/shared",
+            "writable": false,
+            "device": 56,
+            "inode": 1627754
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/retained",
+            "target": "/audit/retained",
+            "writable": false,
+            "device": 56,
+            "inode": 1627755
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/config",
+            "target": "/audit/config",
+            "writable": false,
+            "device": 56,
+            "inode": 1627756
+          },
+          {
+            "source": "/home/user/.rustup/toolchains/stable-x86_64-unknown-linux-gnu",
+            "target": "/toolchain",
+            "writable": false,
+            "device": 55,
+            "inode": 72448
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/cache",
+            "target": "/cache",
+            "writable": false,
+            "device": 56,
+            "inode": 1627760
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/build",
+            "target": "/build",
+            "writable": true,
+            "device": 56,
+            "inode": 1627752
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/scratch",
+            "target": "/tmp",
+            "writable": true,
+            "device": 56,
+            "inode": 1627753
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/source",
+            "target": "/tmp/c15-executor-vr9ozs9p/shared",
+            "writable": true,
+            "device": 56,
+            "inode": 1627751
+          }
+        ],
+        "scope": "closed sandbox pipes/process; no test-purpose, source-equivalence or provider claim"
+      }
+    },
+    {
+      "test": "test_executor.ExecutorTests.test_offline_cargo_same_test_red_green_and_readonly_cache",
+      "result": {
+        "schema": "work-leaf-private-preview-executor-qualification-v1",
+        "exit_code": 0,
+        "timed_out": false,
+        "cancelled": false,
+        "stop_reason": null,
+        "closed": true,
+        "elapsed_seconds": 0.024243755033239722,
+        "stdout": "{\"before\": \"PUBLIC-CACHE-FIXTURE\", \"blocked\": true}\n",
+        "stderr": "",
+        "stdout_sha256": "a2c5d1828ee8b21007b63a08ee0080a9b3109fe889acfb08f0818d0f72d8e92c",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "captured_bytes": 52,
+        "argv": [
+          "/usr/bin/python3",
+          "-c",
+          "import pathlib,json\nbefore=pathlib.Path('/cache/public-marker').read_text()\ntry: pathlib.Path('/cache/public-marker').write_text('BAD'); blocked=False\nexcept OSError: blocked=True\nprint(json.dumps({'before':before,'blocked':blocked}))\n"
+        ],
+        "cwd": "/tmp/c15-executor-vr9ozs9p/shared",
+        "initial_owned_entries": 81,
+        "bwrap_sha256": "eabbccb0f7f755b96d30834026a9b5d941c606400d097d87c1ff16622edaf68c",
+        "mounts": [
+          {
+            "source": "/usr",
+            "target": "/usr",
+            "writable": false,
+            "device": 31,
+            "inode": 269
+          },
+          {
+            "source": "/usr/bin",
+            "target": "/bin",
+            "writable": false,
+            "device": 31,
+            "inode": 361
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib64",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/shared",
+            "target": "/audit/shared",
+            "writable": false,
+            "device": 56,
+            "inode": 1627754
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/retained",
+            "target": "/audit/retained",
+            "writable": false,
+            "device": 56,
+            "inode": 1627755
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/config",
+            "target": "/audit/config",
+            "writable": false,
+            "device": 56,
+            "inode": 1627756
+          },
+          {
+            "source": "/home/user/.rustup/toolchains/stable-x86_64-unknown-linux-gnu",
+            "target": "/toolchain",
+            "writable": false,
+            "device": 55,
+            "inode": 72448
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/cache",
+            "target": "/cache",
+            "writable": false,
+            "device": 56,
+            "inode": 1627760
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/build",
+            "target": "/build",
+            "writable": true,
+            "device": 56,
+            "inode": 1627752
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/scratch",
+            "target": "/tmp",
+            "writable": true,
+            "device": 56,
+            "inode": 1627753
+          },
+          {
+            "source": "/tmp/c15-executor-vr9ozs9p/source",
+            "target": "/tmp/c15-executor-vr9ozs9p/shared",
+            "writable": true,
+            "device": 56,
+            "inode": 1627751
+          }
+        ],
+        "scope": "closed sandbox pipes/process; no test-purpose, source-equivalence or provider claim"
+      }
+    },
+    {
+      "test": "test_executor.ExecutorTests.test_output_bound_is_explicit_not_silent_success",
+      "result": {
+        "schema": "work-leaf-private-preview-executor-qualification-v1",
+        "exit_code": -9,
+        "timed_out": false,
+        "cancelled": false,
+        "stop_reason": "output_limit",
+        "closed": true,
+        "elapsed_seconds": 0.015357900003436953,
+        "stdout": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "stderr": "",
+        "stdout_sha256": "a2e659dacb4691e887ac0139f8893d04764ee197d70fb73d3190d56113d18e3e",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "captured_bytes": 4096,
+        "argv": [
+          "/usr/bin/python3",
+          "-c",
+          "import sys; sys.stdout.write(\"x\"*2000000)"
+        ],
+        "cwd": "/tmp/c15-executor-3dfltcy1/shared",
+        "initial_owned_entries": 0,
+        "bwrap_sha256": "eabbccb0f7f755b96d30834026a9b5d941c606400d097d87c1ff16622edaf68c",
+        "mounts": [
+          {
+            "source": "/usr",
+            "target": "/usr",
+            "writable": false,
+            "device": 31,
+            "inode": 269
+          },
+          {
+            "source": "/usr/bin",
+            "target": "/bin",
+            "writable": false,
+            "device": 31,
+            "inode": 361
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib64",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/tmp/c15-executor-3dfltcy1/shared",
+            "target": "/audit/shared",
+            "writable": false,
+            "device": 56,
+            "inode": 1627863
+          },
+          {
+            "source": "/tmp/c15-executor-3dfltcy1/retained",
+            "target": "/audit/retained",
+            "writable": false,
+            "device": 56,
+            "inode": 1627864
+          },
+          {
+            "source": "/tmp/c15-executor-3dfltcy1/config",
+            "target": "/audit/config",
+            "writable": false,
+            "device": 56,
+            "inode": 1627865
+          },
+          {
+            "source": "/tmp/c15-executor-3dfltcy1/build",
+            "target": "/build",
+            "writable": true,
+            "device": 56,
+            "inode": 1627861
+          },
+          {
+            "source": "/tmp/c15-executor-3dfltcy1/scratch",
+            "target": "/tmp",
+            "writable": true,
+            "device": 56,
+            "inode": 1627862
+          },
+          {
+            "source": "/tmp/c15-executor-3dfltcy1/source",
+            "target": "/tmp/c15-executor-3dfltcy1/shared",
+            "writable": true,
+            "device": 56,
+            "inode": 1627860
+          }
+        ],
+        "scope": "closed sandbox pipes/process; no test-purpose, source-equivalence or provider claim"
+      }
+    },
+    {
+      "test": "test_executor.ExecutorTests.test_private_writes_same_path_and_empty_environment",
+      "result": {
+        "schema": "work-leaf-private-preview-executor-qualification-v1",
+        "exit_code": 0,
+        "timed_out": false,
+        "cancelled": false,
+        "stop_reason": null,
+        "closed": true,
+        "elapsed_seconds": 0.026690808008424938,
+        "stdout": "{\"cwd\": \"/tmp/c15-executor-pvq5edwq/shared\", \"leak\": false, \"home\": \"/tmp/home\", \"real_auth\": false}\n",
+        "stderr": "",
+        "stdout_sha256": "3d0f0154e81eeb376327b40e27ad67b279e015631d652aca721bda45d12a4fc8",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "captured_bytes": 101,
+        "argv": [
+          "/usr/bin/python3",
+          "-c",
+          "import os,pathlib,json; pathlib.Path(\"own\").write_text(\"source\"); pathlib.Path(\"/build/own\").write_text(\"build\"); pathlib.Path(\"/tmp/own\").write_text(\"scratch\"); print(json.dumps({\"cwd\":os.getcwd(),\"leak\":\"C15_SECRET_SURROGATE\" in os.environ,\"home\":os.environ[\"HOME\"],\"real_auth\":pathlib.Path(\"/home/user/.codex/auth.json\").exists()}))"
+        ],
+        "cwd": "/tmp/c15-executor-pvq5edwq/shared",
+        "initial_owned_entries": 0,
+        "bwrap_sha256": "eabbccb0f7f755b96d30834026a9b5d941c606400d097d87c1ff16622edaf68c",
+        "mounts": [
+          {
+            "source": "/usr",
+            "target": "/usr",
+            "writable": false,
+            "device": 31,
+            "inode": 269
+          },
+          {
+            "source": "/usr/bin",
+            "target": "/bin",
+            "writable": false,
+            "device": 31,
+            "inode": 361
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib64",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/tmp/c15-executor-pvq5edwq/shared",
+            "target": "/audit/shared",
+            "writable": false,
+            "device": 56,
+            "inode": 1627900
+          },
+          {
+            "source": "/tmp/c15-executor-pvq5edwq/retained",
+            "target": "/audit/retained",
+            "writable": false,
+            "device": 56,
+            "inode": 1627901
+          },
+          {
+            "source": "/tmp/c15-executor-pvq5edwq/config",
+            "target": "/audit/config",
+            "writable": false,
+            "device": 56,
+            "inode": 1627902
+          },
+          {
+            "source": "/tmp/c15-executor-pvq5edwq/build",
+            "target": "/build",
+            "writable": true,
+            "device": 56,
+            "inode": 1627898
+          },
+          {
+            "source": "/tmp/c15-executor-pvq5edwq/scratch",
+            "target": "/tmp",
+            "writable": true,
+            "device": 56,
+            "inode": 1627899
+          },
+          {
+            "source": "/tmp/c15-executor-pvq5edwq/source",
+            "target": "/tmp/c15-executor-pvq5edwq/shared",
+            "writable": true,
+            "device": 56,
+            "inode": 1627897
+          }
+        ],
+        "scope": "closed sandbox pipes/process; no test-purpose, source-equivalence or provider claim"
+      }
+    },
+    {
+      "test": "test_executor.ExecutorTests.test_timeout_kills_detached_child_and_closes_pipes",
+      "result": {
+        "schema": "work-leaf-private-preview-executor-qualification-v1",
+        "exit_code": -9,
+        "timed_out": true,
+        "cancelled": false,
+        "stop_reason": "timeout",
+        "closed": true,
+        "elapsed_seconds": 0.5042223670170642,
+        "stdout": "",
+        "stderr": "",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "captured_bytes": 0,
+        "argv": [
+          "/usr/bin/python3",
+          "-c",
+          "import subprocess,time; subprocess.Popen([\"/usr/bin/python3\",\"-c\",\"import time; time.sleep(60)\",\"C15_CHILD_5e6f371126a04f9bba0594b351622002\"],start_new_session=True); time.sleep(60)"
+        ],
+        "cwd": "/tmp/c15-executor-xh4ovpri/shared",
+        "initial_owned_entries": 0,
+        "bwrap_sha256": "eabbccb0f7f755b96d30834026a9b5d941c606400d097d87c1ff16622edaf68c",
+        "mounts": [
+          {
+            "source": "/usr",
+            "target": "/usr",
+            "writable": false,
+            "device": 31,
+            "inode": 269
+          },
+          {
+            "source": "/usr/bin",
+            "target": "/bin",
+            "writable": false,
+            "device": 31,
+            "inode": 361
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/usr/lib",
+            "target": "/lib64",
+            "writable": false,
+            "device": 31,
+            "inode": 363
+          },
+          {
+            "source": "/tmp/c15-executor-xh4ovpri/shared",
+            "target": "/audit/shared",
+            "writable": false,
+            "device": 56,
+            "inode": 1627916
+          },
+          {
+            "source": "/tmp/c15-executor-xh4ovpri/retained",
+            "target": "/audit/retained",
+            "writable": false,
+            "device": 56,
+            "inode": 1627917
+          },
+          {
+            "source": "/tmp/c15-executor-xh4ovpri/config",
+            "target": "/audit/config",
+            "writable": false,
+            "device": 56,
+            "inode": 1627918
+          },
+          {
+            "source": "/tmp/c15-executor-xh4ovpri/build",
+            "target": "/build",
+            "writable": true,
+            "device": 56,
+            "inode": 1627914
+          },
+          {
+            "source": "/tmp/c15-executor-xh4ovpri/scratch",
+            "target": "/tmp",
+            "writable": true,
+            "device": 56,
+            "inode": 1627915
+          },
+          {
+            "source": "/tmp/c15-executor-xh4ovpri/source",
+            "target": "/tmp/c15-executor-xh4ovpri/shared",
+            "writable": true,
+            "device": 56,
+            "inode": 1627913
+          }
+        ],
+        "scope": "closed sandbox pipes/process; no test-purpose, source-equivalence or provider claim"
+      }
+    }
+  ]
+}
