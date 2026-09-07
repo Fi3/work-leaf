@@ -34,8 +34,12 @@ validate, with failed 002 and baseline 010 retained. All 1,582 returned response
 test-first offline context-link correction and its same-nine replay are complete in
 [the separate supplement](EVIDENCE-CANDIDATE-ACCOUNTING-SUPPLEMENT.md). All eight validated
 rows remain identical; 001's exact compaction-context proof passes but its subsequent
-cumulative-scope rejection remains UNKNOWN. Source-level diagnosis of repeated stale
-post-compaction notifications is active; originals remain unchanged.
+cumulative-scope rejection remains UNKNOWN in that original correction. The separate
+[carry review](EVIDENCE-CANDIDATE-CARRY-REVIEW.md) closes exact source diagnosis and
+the same-nine carry qualification: eight unaffected results remain identical, while
+001 retains a measured lower endpoint and five unsupported unbounded tails. The
+original diagnostic-publication defect remains alongside a separately verified pure
+provenance closure. Original reports are unchanged; no further replay is admitted.
 [The closed mechanism census](EVIDENCE-CANDIDATE-SCREEN-MECHANISMS.md) binds
 actual changed delivery and downstream public/native actions for all three. The complete
 [candidate dispositions](CANDIDATE-DISPOSITIONS.md) cover all 38 candidates and seven
@@ -45,8 +49,13 @@ versus postimplementation-check sequences without assigning a token share.
 [Historical validation cadence](EVIDENCE-H-VALIDATION-CADENCE.md) and its
 [independent review](EVIDENCE-H-VALIDATION-CADENCE-REVIEW.md) distinguish initial RED,
 fixture repairs, partial-implementation repairs and source-unproven successful repeats.
-The complete 501 leading-Cargo calls are classified by phase and subcommand; the
-post-first-GREEN semantic classification remains incomplete.
+The complete 501 leading-Cargo calls are classified by phase and subcommand.
+[Post-GREEN activity](EVIDENCE-H-POSTGREEN-ACTIVITY.md) has complete remainder coverage,
+[mechanical review](EVIDENCE-H-POSTGREEN-MECHANICAL-REVIEW.md) and
+[independent semantic review](EVIDENCE-H-POSTGREEN-SEMANTIC-REVIEW.md): the exact test-call
+partition is 92 initial-window, four earlier baseline, 192 post-GREEN initial and
+132 later-fix commands. The 40 failure episodes distinguish regression coverage,
+production/fixture repair and failure/recheck cases without labeling passing checks waste.
 [Prior interruption/package evidence](EVIDENCE-PRIOR-PROTOCOL-AND-INTERRUPTION.md)
 distinguishes completed model responses from natural outer-turn completion and retains
 all archived interventions. The private [C21 exact-evidence design](DESIGN-REVIEW-EVIDENCE-ON-DEMAND.md)
@@ -109,6 +118,12 @@ all 28 existing UI-harness tests offline with explicit immutable instruction ove
 and public-only dependency inputs; its seven adapter tests and independent review pass.
 Live overlay/index census and later runtime/provider qualification remain active
 prerequisites, not admitted causal observations.
+The [current candidate checkpoint](CANDIDATE-STATUS-20260907T1722Z.md) distinguishes
+closed directional checks from C15/C21 scope questions and active C17 receipt-information
+inspection. The private-test-first workflow needs the user's scope choice because private
+transport/build-state costs are not pure test timing. No C15 runtime or provider run is
+admitted. Source-only read-item recharge analysis can use the retained qualified response
+ledgers without repeating whole-workflow accounting or generating baselines.
 Older narrow-priority notes and fixed mixed schedules are
 historical records, not the next-action plan. Saving evidence or completing a substep is not a
 stopping condition; continuous execution and live-note updates are required until the plan is complete.
