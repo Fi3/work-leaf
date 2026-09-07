@@ -1,12 +1,16 @@
 # Provisional investigation ledger
 
-Last checked: **2026-09-07 23:42 Europe/Rome (21:42 UTC)**.
+Last checked: **2026-09-08 00:00 Europe/Rome (2026-09-07 22:00 UTC)**.
 
 Scope: the entire mechanism investigation, with all **30 frozen benchmark identities** (3 initial screen + 12 work-unit + 12 parked read-factor + 3 candidate screen), **23 admitted diagnostic identities** (16 earlier + 3 candidate-v4 + 2 C21 + 2 C15), and the elapsed-time breakdown. The three modified candidate benchmarks were admitted concurrently at 14:28:55 Europe/Rome and are all terminal at 16:29:25: two successes and one original timeout. The earlier two-run pilot and accepted historical twelve-run cohort are listed separately below. Diagnostics are never added to the benchmark count. Both C21 diagnostics remain failed; no complete C21 benchmark is admitted. Zero provider workflows are running. C15 diagnostic001 remains a zero-provider startup failure; corrected002 closes with exit 0 but only partial workflow qualification: real private RED and test-preserving shared patch, missing ordinary check/DONE because of its harness cap.
 
 ## Active plan and preserved experiments
 
 ### Active execution — candidate evidence pass
+
+00:00 Rome checkpoint: diagnostic003's harness correction and tests are committed at `a84d5c8`. Private-crate gates pass 18 tests, zero failures, two ignored; independent review repeats the same result. The saved002 false success is rejected, and the actual CommandChat regression executes preview → shared patch → normal check → DONE after removing only the fixture cap. The frozen executable is `c1df8e1b…`, independent mode0555/nlink1. All212 source/config/executable pins match; the fresh initial project and empty namespaces match. Final preadmission review is active. Zero providers have launched for003; the original23 admitted diagnostic outcomes remain intact. No WL runtime change or old-run replacement occurs.
+
+23:51 Rome checkpoint: the new actual CommandChat/v6 regression reproduces002's cap defect before correction (tool925dc7): preview feedback and shared patch succeed, but the normal test command is skipped. The new capture guard's initial RED also reproduces the old unconditional success (1 pass/2 failures); its first GREEN passes the saved002 rejection and completion cases. The factory's two-round setting is removed, and the harness checks the author chain before review. Additional cases cover delayed local capture readiness, stale checks, wrong-role/quoted DONE and benign multi-message replies. Full003 fixture gates and independent review are in progress. Only the diagnostic crate changes; no provider is running. Preparation is committed at89909bd; original23 diagnostic outcomes remain intact.
 
 23:42 Rome checkpoint: unchanged-runtime repository gates pass: 534 tests, zero failures, 22 ignored across 44 targets; fmt and Clippy clean. The first tool chunk truncated individual test names, but every target summary is retained in003/ROOT-GATES.json. All 188 original002 immutable inputs still match. New003 project has the exact original four-file tree and empty private/ordinary namespaces. The fixture owner is implementing a typed capture guard and bounded readiness wait before review; a separate new automatic test drives the actual CommandChat/v6 handoff using the same fixture settings. Only003 diagnostic files are being edited. No provider has launched.
 

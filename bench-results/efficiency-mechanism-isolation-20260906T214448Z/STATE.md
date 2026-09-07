@@ -5,9 +5,11 @@
 The user approves one fresh C15 diagnostic003 after harness-only cap/success-check
 correction and requires work through its completed result review. [Scope](preflight/c15-real-diagnostic-003/SCOPE.md)
 retains all former outcomes, the eight-call/time bounds and unchanged normal WL.
-Test-first guard and actual CommandChat handoff regressions are in progress;
-fresh project/config preparation is ready. Unchanged-runtime repository gates
-pass 534 tests with clean fmt/Clippy. No provider workflow has launched for003.
+Test-first guard and actual CommandChat handoff regressions pass; the private
+crate has 18 passing tests and independent review. Source cut `a84d5c8` and a fresh
+executable are frozen with 212 matching pins; final preadmission review is active.
+Unchanged-runtime repository gates pass 534 tests with clean fmt/Clippy.
+No provider workflow has launched for003.
 
 C15 diagnostic001's sole attempt is CLOSED FAILED: supervised command exit 101,
 19:42:55.818266–19:42:55.833120 UTC, before any model call or private execution.
