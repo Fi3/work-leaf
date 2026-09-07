@@ -1,12 +1,16 @@
 # Provisional investigation ledger
 
-Last checked: **2026-09-07 22:20 Europe/Rome (20:20 UTC)**.
+Last checked: **2026-09-07 23:42 Europe/Rome (21:42 UTC)**.
 
 Scope: the entire mechanism investigation, with all **30 frozen benchmark identities** (3 initial screen + 12 work-unit + 12 parked read-factor + 3 candidate screen), **23 admitted diagnostic identities** (16 earlier + 3 candidate-v4 + 2 C21 + 2 C15), and the elapsed-time breakdown. The three modified candidate benchmarks were admitted concurrently at 14:28:55 Europe/Rome and are all terminal at 16:29:25: two successes and one original timeout. The earlier two-run pilot and accepted historical twelve-run cohort are listed separately below. Diagnostics are never added to the benchmark count. Both C21 diagnostics remain failed; no complete C21 benchmark is admitted. Zero provider workflows are running. C15 diagnostic001 remains a zero-provider startup failure; corrected002 closes with exit 0 but only partial workflow qualification: real private RED and test-preserving shared patch, missing ordinary check/DONE because of its harness cap.
 
 ## Active plan and preserved experiments
 
 ### Active execution — candidate evidence pass
+
+23:42 Rome checkpoint: unchanged-runtime repository gates pass: 534 tests, zero failures, 22 ignored across 44 targets; fmt and Clippy clean. The first tool chunk truncated individual test names, but every target summary is retained in003/ROOT-GATES.json. All 188 original002 immutable inputs still match. New003 project has the exact original four-file tree and empty private/ordinary namespaces. The fixture owner is implementing a typed capture guard and bounded readiness wait before review; a separate new automatic test drives the actual CommandChat/v6 handoff using the same fixture settings. Only003 diagnostic files are being edited. No provider has launched.
+
+23:36 Rome checkpoint: the user approves the harness-only cap/success-check correction and one fresh bounded diagnostic003, requiring a completed result review before stopping. The next private fixture restores ordinary author processing and must reject success without an actually executed post-patch check and author DONE before review. New tests are being written first; independent review and separate fresh project/config preparation run in parallel. No WL runtime source change, old benchmark rerun, control or Direct run is planned. No provider is running yet. The interval after002's closure was an approval wait, not unreported benchmark execution. [Frozen continuation scope](bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic-003/SCOPE.md).
 
 22:20 Rome checkpoint: corrected C15 diagnostic002 is CLOSED, sole command 20:10:36.414477–20:11:37.374540 UTC, 60.9601 s, exit 0, five calls/two real subscription roles, all 188 immutable endpoints matching. Startup succeeds. The real agent writes three held tests; two pass and the intended above-limit assertion fails (actual 12, expected 5) against the unchanged implementation. The failure reaches the same author, which submits one ordinary combined patch with identical tests and receives the normal ACK. The reviewer reads source and returns NO_FINDINGS.
 
