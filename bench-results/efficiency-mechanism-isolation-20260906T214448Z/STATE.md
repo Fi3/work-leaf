@@ -12,8 +12,15 @@ The saved evidence pass is complete in [EVIDENCE-CONTEXT.md](EVIDENCE-CONTEXT.md
 Stage B implements the three exercised boundaries in
 [PROTOCOL-CANDIDATE-SCREEN.md](PROTOCOL-CANDIDATE-SCREEN.md): requested-repeat full text,
 unified-diff preference and original-task resupply on actual author review-fix followups.
-Test-first implementation, source review and bounded real-subscription verification precede its
-separately frozen three-modified-workflow admission. No new control or Direct run is authorized.
+The private runtime is committed at `75f9979`, its bounded real-subscription verification at
+`208cff9`, and the exact-three runner/delivery helper at `665abd4`. Required repository gates,
+independent reviews and all three closed real-capture delivery audits pass; the original third
+diagnostic verifier failure and missing token usage remain separately retained. The candidate
+screen is admitted at 2026-09-07T12:28:55.640060+00:00 with three modified workflows concurrently
+under `phases/candidate-screen-01/PHASE-MANIFEST.json` (SHA-256
+`935a32719e0c91e2afb8fc101788db44bb955a3d85993d2c28327cc44325acb1`).
+All 105 frozen inputs verify; live progress and every outcome belong in the root note.
+No new control or Direct run is authorized.
 Existing large-read treatment runs and their stopped-analysis scope are parked intact; their
 whole-workflow comparison is deferred. Older narrow-priority notes and fixed mixed schedules are
 historical records, not the next-action plan. Saving evidence or completing a substep is not a

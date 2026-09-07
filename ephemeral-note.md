@@ -1,8 +1,8 @@
 # Provisional investigation ledger
 
-Last checked: **2026-09-07 13:47:45 Europe/Rome (11:47:45 UTC)**.
+Last checked: **2026-09-07 14:30:21 Europe/Rome (12:30:21 UTC)**.
 
-Scope: the entire overnight mechanism investigation, with all **27 declared benchmark identities** (3 screen + 12 work-unit + 12 read-factor), all **16 diagnostic attempts**, and the elapsed-time breakdown. The earlier two-run pilot and accepted historical twelve-run cohort are listed separately below. The live count is investigation-wide; the smaller current-batch count is explicitly labeled.
+Scope: the entire mechanism investigation, with all **30 frozen benchmark identities** (3 initial screen + 12 work-unit + 12 parked read-factor + 3 candidate screen), **19 admitted diagnostic identities** (16 earlier + 3 candidate-v4), and the elapsed-time breakdown. The three modified candidate benchmarks were admitted at 14:28:55 Europe/Rome and are running concurrently. The earlier two-run pilot and accepted historical twelve-run cohort are listed separately below. Diagnostics are never added to the benchmark count.
 
 ## Active plan and preserved experiments
 
@@ -12,12 +12,12 @@ The user requires continued execution until the plan is complete and continuous 
 
 | Workstream | Active work | Output / next concrete result |
 | --- | --- | --- |
-| Context / independent review | Saved evidence and repeated-read implementation complete; independently review policy/adapter/runner and real-smoke boundaries. | `EVIDENCE-CONTEXT.md`, new repeated-read tests; review found the C16 terminator cue omission before launch. |
-| Behavior / real diagnostics | Saved action-chain evidence and private policy implementation complete; finalize one shared bounded real-subscription harness for all three variants. | `EVIDENCE-BEHAVIOR.md`, new policy/smoke tests; no real diagnostic launched yet. |
-| Lifecycle / retained baseline | Private exact-request owner registry and review-fix hook complete; verify all six saved controls and common accounting/configuration scope. | `EVIDENCE-LIFECYCLE.md`, new follow-up tests, `PREFLIGHT-CANDIDATE-BASELINE.md` in preparation. |
-| Root integration | Required gates, isolated range/schema checks, protocol/runner, independent review fixes and preparation of three diagnostic admissions. | Exact-three no-control runner tests pass; no provider admission yet. |
+| Context / historical endpoint | Audit actual source/read mechanisms in the six accepted historical WL workflows. | H raw sources exist and are pinned; no P/W exposure result is automatically transferred to H. |
+| Behavior / clean-review replay | Finish independent replay of the 16 observed clean-marker detours. | All 52 W fix requests checked; 16 genuine clean-only cases and 32 exact downstream responses verified. |
+| Lifecycle / historical endpoint | Review complete; audit actual lifecycle, instruction and continuation exposure in H. | All final helper reviews closed; three actual closed-diagnostic CLI audits PASS. |
+| Root integration | Monitor three complete candidate workflows while continuing broad saved-evidence analysis. | Screen admitted at 14:28:55; 105 frozen identities verify; 50 tests PASS on frozen copies. |
 
-Current benchmark workflows: **0 running**. The three saved-evidence passes are complete and their agents are implementing/testing private experimental boundaries. Existing 21 terminal workflows and all diagnostic outcomes remain below. No new experimental implementation is marked ready or admitted yet.
+Current benchmark workflows: **3 running, 0/3 candidate workflows terminal**. All three private experimental boundaries are implemented and independently verified. Existing 21 terminal workflows and all diagnostic outcomes remain below. No new control, Direct workflow or replacement is admitted.
 
 Evidence checkpoint: the behavior pass found a concrete clean-review overhead path. In work-unit workflow 001, commentary before `NO_FINDINGS` is rejected by WL's first-nonempty-line classifier, producing an author `done` response and another reviewer response. Direct's saved classifier scans for the first explicit marker instead. The agent is checking all runs and matching exact response identities, separating genuine/ambiguous findings from clean-marker cases. This is a possible negative offset, not a claimed saving; normal WL is unchanged.
 
@@ -57,9 +57,54 @@ Baseline compatibility audit: existing work-unit controls **002, 004, 006, 009, 
 
 ## Live state — whole investigation
 
-- Whole mechanism investigation: **21 workflows with terminal receipts** = 3 initial screen + 12 work-unit + 6 current read-factor workflows. Current active: **0**; current scheduled but not launched: **6**.
+### Active candidate screen — 3 modified workflows concurrently
+
+Admission: **2026-09-07 14:28:55 Europe/Rome** (12:28:55.640060 UTC).
+Phase: `phases/candidate-screen-01`; manifest SHA-256
+`935a32719e0c91e2afb8fc101788db44bb955a3d85993d2c28327cc44325acb1`.
+All 105 frozen identities verify. Runtime commit `75f9979`, real-verification checkpoint
+`208cff9`, runner/delivery-audit checkpoint `665abd4`. Supervisor PID 660584 remains active.
+Separate runtime root: `/tmp/work-leaf-candidate-screen.WgKBtD`.
+
+| Workflow | Condition | Driver-log start (Rome) | Current outcome |
+| --- | --- | --- | --- |
+| candidate-screen-01-workflow-001 | requested-repeat-full | 14:28:55 | running, separate daemon/checkouts; author generation active |
+| candidate-screen-01-workflow-002 | unified-diff-preferred | 14:28:55 | running, separate daemon/checkouts; author generation active |
+| candidate-screen-01-workflow-003 | review-fix-request-resupply | 14:28:55 | running, separate daemon/checkouts; author generation active |
+
+Three top-level drivers each launched their three feature agents at 14:28:56. Global
+configuration is unchanged at each admission and the first active poll. The one-wave schedule
+has no controls, Direct observations, replacement or automatic extra batch. Every failure,
+unexposed factor and measurement flag is retained. After all three outcomes, continue the broad
+mechanism analysis under the active plan; this screen is not the whole investigation.
+
+### Candidate v4 real verification
+
+Final delivery checkpoint: all three provider-free replays PASS against the same closed real captures using the strict occurrence-aware checker (`f04b2eeac0128871ee0dd351ff36eb821bfc0128d1512b8f7dea2318e7bfc4f7`). Independent review is closed; 8 automatic checker tests pass, including truncated closed-frame rejection. All 11 native user inputs match exact captured thread/turn IDs and full text. This validates real delivery, not missing token usage. The original followup exit 101 remains a failed original verifier receipt, followed by the separately identified successful offline audit.
+
+Runtime checkpoint: commit `75f9979` preserves only the private v4 runtime, its four new identity/behavior test targets and architecture description. The user configuration/ignore edits are excluded. Required fmt/clippy/all-target/all-feature tests passed, and the release build is reverified at that committed source. `preflight/BUILD-ATTESTATION-CANDIDATE-V4.json` binds all source inputs and both binaries. Commit `208cff9` preserves the bounded real harness, retained-baseline/source reviews, exact diagnostic admission and closed-capture/native verification. There are still zero newly launched full benchmarks.
+
+Screen preparation checkpoint: the non-generative subscription status read at 12:13:53 UTC reports 19% of the weekly quota used and no rate-limit condition; global configuration is unchanged. Disk and memory headroom are available. The remaining prelaunch work is the small delivery-analysis helper: independent review caught valid title-thread/copy-of-policy shapes that must not be mistaken for missing delivery, a resupply counter and per-agent ordering validation issue, plus one repeated-hash complexity issue. These are offline analysis checks, not WL runtime changes or extra diagnostics. In parallel, the clean-review-marker branch is being replayed from existing saved responses to complete another mapped mechanism's evidence.
+
+Admission: **2026-09-07 13:55:05 Europe/Rome**. Required format/clippy/all-target/all-feature tests and release build pass for the hash-bound sources; independent prelaunch review is closed. The evidence/protocol checkpoint is committed as `a3fcb17`; runtime code remains under real verification. [Fixed diagnostic admission](bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/CANDIDATE-DIAGNOSTIC-ADMISSION.json) records exact executable, source/configuration hashes, commands and bounds. No API credentials are used or copied. These are scripted real-provider delivery checks, not natural workflow observations or savings estimates.
+
+| Diagnostic | Condition | Bound | State |
+| --- | --- | --- | --- |
+| candidate-v4-repeat-01 | Requested-repeat full-current text | 3 calls, 1 thread; 118-second watchdog | PASS, exit 0, 16.99 s |
+| candidate-v4-format-01 | Preferred valid unified diff with end marker | 2 calls, 1 thread; 118-second watchdog | PASS, exit 0, 10.12 s |
+| candidate-v4-followup-01 | Original request on actual reviewer-fix handoff | 6 calls, 2 threads; 118-second watchdog | retained verifier failure, exit 101, 25.99 s; actual six-call workflow and final file passed preceding checks |
+
+All three diagnostic processes are terminal; none is running or being replaced. The followup verifier incorrectly demanded globally unique text for two legitimately identical patch acknowledgements; exact typed public delivery, six calls, two reviewed rounds and corrected VALUE=2 had already passed. A RED-first occurrence-identity regression and provider-free closed-capture replay are in progress. The original failed receipt and original harness hash remain immutable; no new provider call is required merely to correct that postcapture checker. Native rollout/model/accounting checks are being completed for all three. One extraction invocation omitted its required sessions-root option and failed before extraction; the explicit-root command is the subsequent read-only analysis, not another diagnostic attempt. All earlier diagnostic attempts and all benchmark outcomes remain below. No new full benchmark workflow is running yet.
+
+- Whole mechanism investigation: **21 workflows with terminal receipts** = 3 initial screen + 12 work-unit + 6 parked read-factor workflows. Current active: **3 candidate workflows**; earlier read-phase identities not launched: **6**, all held/canceled, not queued.
 - Driver exited, awaiting supervisor receipt: none.
 - These are terminal outcomes, not all successes. Diagnostics and earlier historical/pilot runs are listed separately below; they are not added to the benchmark count.
+
+Postcapture audit checkpoint: the root mistakenly archived each tiny diagnostic project directory as if it were a context-bundle directory. Those copied fixture files are preserved recoverably in each diagnostic's `operator-invalid-project-archive/`; original analyses and `OPERATOR-ARCHIVE-ERROR.json` retain the error. Raw provider/native captures and model input are unchanged. Separate corrected-scope analyses exclude those non-bundle copies. The repeat scenario's genuine temporary bundle is no longer available for archival; the delivered repeat body and held snapshot digest are captured. No diagnostic is repeated for this archive error.
+
+Native identity checkpoint: the format and followup analyses label an actual captured author thread as missing from process capture because their thread inventory is derived from usage-bearing rows. Exact captured thread/start IDs and native session IDs/cwd match: format has two author turns, followup has four author turns plus two reviewer turns. The authors' native token-count events have null usage, not zero usage. All captured contexts use the declared model/effort/sandbox; there are no hidden extra author threads. The unchanged grace policy resumed forwarding after output in 0–1 ms rather than waiting the full possible second. Delivery can be verified from closed turn/item identities; exact full token measurement cannot be claimed from these missing usage records. Original flags remain preserved.
+
+Delivery-analysis checkpoint: the helper and tests are stable at `ab9570bb0e87674fa738aa0dc6e51702ef7ac6ab97b17092d1f546a60b3889e1` / `c5ae757165a23603fe1186cc76365444cbbce042e387b93f9b812e20ce348454`. All three real diagnostic captures pass its full source-bound CLI, with input manifests and create-new outputs saved under each diagnostic's `DELIVERY-AUDIT-INPUT.json` and `DELIVERY-AUDIT.json`. Repeated ACK occurrences, copied reviewer metadata, title turns and linearizer identity remain correctly distinguished. The checker is not a token estimator or another model run.
 
 ### Current read-factor batch
 

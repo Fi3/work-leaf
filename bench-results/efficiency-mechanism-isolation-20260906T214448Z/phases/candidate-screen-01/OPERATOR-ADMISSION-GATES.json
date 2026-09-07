@@ -1,0 +1,57 @@
+{
+  "schema": "work-leaf-candidate-prelaunch-gates-v1",
+  "recorded_at": "2026-09-07 12:28:55 UTC",
+  "phase": "candidate-screen-01",
+  "manifest_sha256": "935a32719e0c91e2afb8fc101788db44bb955a3d85993d2c28327cc44325acb1",
+  "schedule_sha256": "a6c61c417cbc69ecce896436a310948d6a97089eecdfcbfa6517245f3f3aeb36",
+  "verified_frozen_files": 105,
+  "workflow_count": 3,
+  "normal_wl_controls": 0,
+  "direct_workflows": 0,
+  "maximum_concurrent_workflows": 3,
+  "replacements_allowed": false,
+  "runtime_commit": "75f9979a04896755e4fe73e0c2489c9634a16d08",
+  "runtime_build_attestation": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/BUILD-ATTESTATION-CANDIDATE-V4.json",
+  "runtime_gates": {
+    "cargo_fmt": "pass",
+    "cargo_clippy_all_targets_all_features_deny_warnings": "pass",
+    "cargo_test_all_targets_all_features": "pass",
+    "release_build": "pass"
+  },
+  "analysis_gates": {
+    "frozen_runner_delivery_accounting_tests": 50,
+    "unchanged_dependency_and_new_delivery_tests": 70,
+    "independent_review": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/PREFLIGHT-CANDIDATE-DELIVERY-REVIEW.md",
+    "independent_review_sha256": "953bc4fc89cc74af24c3a6c09f368bafd47c8718548e91eac6ccd3034f30b4a5",
+    "qualification": "The offline request-footer validator has an explicitly reviewed O(F*P) re-encoding cost, bounded by captured source limits; no runtime or token effect."
+  },
+  "real_verification": {
+    "admitted_diagnostics": 3,
+    "new_provider_retries": 0,
+    "original_process_exits": {
+      "repeat": 0,
+      "format": 0,
+      "followup": 101
+    },
+    "final_closed_capture_delivery_replays": "all pass",
+    "native_user_input_matches": 11,
+    "qualification": "Original C24 checker failure and all missing-usage/archive/extraction flags retained. Exact source-bound real delivery is verified; diagnostic whole-token totals are not claimed complete.",
+    "review": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/CANDIDATE-REAL-DIAGNOSTIC-REVIEW.md"
+  },
+  "baseline": {
+    "run_ids": [
+      "work-units-01-workflow-002",
+      "work-units-01-workflow-004",
+      "work-units-01-workflow-006",
+      "work-units-01-workflow-009",
+      "work-units-01-workflow-010",
+      "work-units-01-workflow-012"
+    ],
+    "retain_failed_010": true,
+    "review": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/PREFLIGHT-CANDIDATE-BASELINE.md",
+    "accounting": "Unchanged frozen identity helper in a separately named common scope; no old report rewrite."
+  },
+  "global_config_sha256": "2487e9d4652b2e52fe3e8862ce4526db592facc4e9eee7b2013a7de210e5df10",
+  "subscription_resource_check": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/CANDIDATE-RESOURCE-CHECK.json",
+  "purpose": "Prelaunch engineering/resource receipt; RUN-ONCE/admission.json records actual admission. Exactly three modified observations; all terminal outcomes are retained before subsequent decisions."
+}
