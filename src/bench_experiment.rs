@@ -17,10 +17,14 @@ const SCHEMA_V2: &str = "work-leaf-bench-experiment-v2";
 const SCHEMA_V3: &str = "work-leaf-bench-experiment-v3";
 const SCHEMA_V4: &str = "work-leaf-bench-experiment-v4";
 const SCHEMA_V5: &str = "work-leaf-bench-experiment-v5";
+const SCHEMA_V6: &str = "work-leaf-bench-experiment-v6";
 
 #[path = "bench_review_evidence.rs"]
 mod review_evidence;
 pub(crate) use review_evidence::forward_review_context;
+
+#[path = "bench_private_test_first.rs"]
+pub(crate) mod private_test_first;
 
 #[cfg(test)]
 #[path = "bench_review_evidence_tests.rs"]
@@ -90,10 +94,10 @@ fn load() -> io::Result<Option<Experiment>> {
         return Err(invalid("manifest must be an absolute regular-file path"));
     }
     let bytes = fs::read(&path)?;
-    let (manifest, review_root) = review_evidence::parse_manifest(&bytes)?;
+    let (manifest, review_root, private_preview) = private_test_first::parse_manifest(&bytes)?;
     if !matches!(
         manifest.schema.as_str(),
-        SCHEMA | SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4 | SCHEMA_V5
+        SCHEMA | SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4 | SCHEMA_V5 | SCHEMA_V6
     ) {
         return Err(invalid("unsupported manifest schema"));
     }
@@ -127,6 +131,7 @@ fn load() -> io::Result<Option<Experiment>> {
             manifest.condition.as_str(),
             "review-evidence-native" | "review-evidence-inline"
         ),
+        SCHEMA_V6 => manifest.condition == "private-test-first",
         _ => false,
     };
     if !permitted {
@@ -137,6 +142,9 @@ fn load() -> io::Result<Option<Experiment>> {
     }
     if let Some(root) = review_root.as_ref() {
         review_evidence::initialize_store(root)?;
+    }
+    if let Some(descriptor) = private_preview.as_ref() {
+        private_test_first::initialize_bridge(descriptor.clone())?;
     }
     let mut file = OpenOptions::new()
         .write(true)
@@ -149,6 +157,9 @@ fn load() -> io::Result<Option<Experiment>> {
     });
     if let Some(root) = review_root {
         activation["review_evidence_root"] = json!(root);
+    }
+    if let Some(descriptor) = private_preview {
+        activation["private_preview"] = json!(descriptor);
     }
     serde_json::to_writer(&mut file, &activation).map_err(invalid)?;
     file.write_all(b"\n").map_err(invalid)?;
@@ -182,7 +193,7 @@ pub(crate) fn forward_continuation(
     };
     if matches!(
         experiment.manifest.schema.as_str(),
-        SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4 | SCHEMA_V5
+        SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4 | SCHEMA_V5 | SCHEMA_V6
     ) {
         let mut spans = match site {
             "patch-applied" => vec![PromptSpan::new("patch-applied-validation", cue)],

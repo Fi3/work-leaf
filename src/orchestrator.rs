@@ -68,6 +68,8 @@ where
                 patch_ownership: &self.patch_ownership,
                 command_policy: &self.command_policy,
                 locked_command_timeout: self.locked_command_timeout,
+                #[cfg(feature = "bench-experiments")]
+                private_preview: None,
             },
             agent_id,
             feature,
@@ -247,6 +249,8 @@ pub(crate) struct DirectiveServices<'a> {
     pub patch_ownership: &'a PatchOwnershipTracker,
     pub command_policy: &'a CommandWritePolicy,
     pub locked_command_timeout: Duration,
+    #[cfg(feature = "bench-experiments")]
+    pub private_preview: Option<&'a crate::bench_experiment::private_test_first::Registry>,
 }
 
 impl ContextBundleStore {
@@ -663,6 +667,9 @@ pub(crate) fn send_agent_streaming_interruptible<B>(
 where
     B: AgentBackend,
 {
+    #[cfg(feature = "bench-experiments")]
+    let _private_resume = crate::bench_experiment::private_test_first::resume_scope(agent_id)
+        .map_err(AgentError::Io)?;
     let mut detector = DirectiveStreamInterruptDetector::default();
     let mut sink = |event| stream(agent_id, event);
     let mut should_interrupt = |event: &AgentStreamEvent| detector.observe(event);
@@ -696,6 +703,13 @@ where
     #[cfg(feature = "bench-experiments")]
     crate::bench_experiment::initialize().map_err(AgentError::Io)?;
     let mut run = DirectiveRun::default();
+    #[cfg(feature = "bench-experiments")]
+    if crate::bench_experiment::private_test_first::active().map_err(AgentError::Io)?
+        && let Some(proposal) = crate::bench_experiment::private_test_first::parse_preview(text)
+            .map_err(AgentError::Io)?
+    {
+        return run_private_test_preview(backend, services, agent_id, &proposal, stream);
+    }
     let directives = match parse_agent_directives(text) {
         Ok(directives) => directives,
         Err(OrchestratorError::Usage(message)) if needs_protocol_correction(text) => {
@@ -787,6 +801,10 @@ where
                 services.command_changes.clear_agent(agent_id);
             }
             AgentDirective::Patch { reason, diff } => {
+                #[cfg(feature = "bench-experiments")]
+                if reject_unprepared_private_apply(backend, services, agent_id, stream, &mut run)? {
+                    return Ok(run);
+                }
                 let patcher =
                     GitPatcher::new(services.locks.root().to_path_buf(), services.locks.clone());
                 let request =
@@ -859,6 +877,10 @@ where
                 }
             }
             AgentDirective::Edit { reason, body } => {
+                #[cfg(feature = "bench-experiments")]
+                if reject_unprepared_private_apply(backend, services, agent_id, stream, &mut run)? {
+                    return Ok(run);
+                }
                 let patcher =
                     GitPatcher::new(services.locks.root().to_path_buf(), services.locks.clone());
                 let request =
@@ -1171,6 +1193,174 @@ fn split_repeated_file_reads(
         }
     }
     (exact, changed, unchanged)
+}
+
+#[cfg(feature = "bench-experiments")]
+fn reject_unprepared_private_apply<B: AgentBackend>(
+    backend: &mut B,
+    services: DirectiveServices<'_>,
+    agent_id: &AgentId,
+    stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+    run: &mut DirectiveRun,
+) -> Result<bool, OrchestratorError> {
+    use crate::bench_experiment::private_test_first as private;
+    if !private::active().map_err(AgentError::Io)? {
+        return Ok(false);
+    }
+    let Some(registry) = services.private_preview else {
+        return Ok(false);
+    };
+    if registry.may_apply(agent_id).map_err(AgentError::Io)? {
+        return Ok(false);
+    }
+    let prompt = "work-leaf private test preview required\nNo shared patch was applied. Submit your test-only `@work-leaf test-preview` proposal and receive its actual result before the ordinary combined tests-and-implementation patch. A private result is not an applied ACK. If preparation is unsupported, report the concrete blocker; do not publish a known-red shared tree.";
+    private::record(
+        "private-apply-blocked",
+        agent_id,
+        serde_json::json!({"forwarded_prompt":prompt,"shared_applied":false}),
+    )
+    .map_err(AgentError::Io)?;
+    let reply = send_agent_streaming_interruptible(backend, agent_id, prompt, stream)?;
+    run.follow_up_replies
+        .push(follow_up(agent_id.clone(), reply));
+    Ok(true)
+}
+
+#[cfg(feature = "bench-experiments")]
+fn run_private_test_preview<B: AgentBackend>(
+    backend: &mut B,
+    services: DirectiveServices<'_>,
+    agent_id: &AgentId,
+    proposal: &crate::bench_experiment::private_test_first::Proposal,
+    stream: &mut dyn FnMut(&AgentId, AgentStreamEvent),
+) -> Result<DirectiveRun, OrchestratorError> {
+    use crate::bench_experiment::private_test_first as private;
+    let registry = services.private_preview.ok_or_else(|| {
+        OrchestratorError::Usage("private preview requires its owning command chat".into())
+    })?;
+    if registry.owner(agent_id).map_err(AgentError::Io)?.is_none() {
+        return Err(OrchestratorError::Usage(
+            "private preview is restricted to an explicitly prepared author launch".into(),
+        ));
+    }
+    // Use the ordinary normalization, ownership and failure-masking predicates.
+    // No shared command locks, dirty-file capture or command-result event is used.
+    let locks = proposal
+        .lock_paths
+        .iter()
+        .map(PathBuf::from)
+        .collect::<Vec<_>>();
+    let locked_paths = normalize_paths(services.locks, &locks)?;
+    let inferred = normalize_paths(
+        services.locks,
+        &services
+            .command_policy
+            .classify(proposal.command.split_whitespace())
+            .paths,
+    )?;
+    let blocked =
+        services
+            .patch_ownership
+            .other_agent_test_locks(agent_id, &locked_paths, &inferred);
+    if !blocked.is_empty() {
+        return Err(OrchestratorError::Usage(
+            render_other_agent_test_command_prompt(&blocked),
+        ));
+    }
+    if let Some(diagnostic) = masked_command_diagnostic(&proposal.command) {
+        return Err(OrchestratorError::Usage(render_command_rejected(
+            &proposal.command,
+            &locked_paths,
+            &diagnostic,
+        )));
+    }
+    let (token, prompt, replay) = match registry
+        .reserve(agent_id, proposal)
+        .map_err(AgentError::Io)?
+    {
+        private::Reservation::Replay(token, prompt) => (token, prompt, true),
+        private::Reservation::New(token) => {
+            private::record("private-preview-proposal", agent_id,
+                serde_json::json!({"launch_generation":token.generation,"proposal":proposal,"shared_applied":false}))
+                .map_err(AgentError::Io)?;
+            stream(
+                agent_id,
+                AgentStreamEvent::Status(format!(
+                    "running private test preview {} (no shared apply)",
+                    proposal.id
+                )),
+            );
+            let result = private::execute_preview(
+                services.locks,
+                &private::run_id().map_err(AgentError::Io)?,
+                &token,
+                proposal,
+            )
+            .map_err(AgentError::Io)?;
+            if result.get("closed").and_then(serde_json::Value::as_bool) != Some(true) {
+                return Err(OrchestratorError::Usage(
+                    "private process closure is uncertain; artifacts retained, no result delivered"
+                        .into(),
+                ));
+            }
+            let status = result
+                .get("exit_code")
+                .and_then(serde_json::Value::as_i64)
+                .map(|code| code.to_string())
+                .unwrap_or_else(|| "unavailable".into());
+            let stdout = result
+                .get("stdout")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| {
+                    OrchestratorError::Usage("private result stdout is not text".into())
+                })?;
+            let stderr = result
+                .get("stderr")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| {
+                    OrchestratorError::Usage("private result stderr is not text".into())
+                })?;
+            let qualified =
+                result.get("status").and_then(serde_json::Value::as_str) == Some("completed");
+            let prompt = format!(
+                "work-leaf private test preview result\nproposal: {}\nshared-applied: false\ncommand: {}\nstatus: {status}\npreview-state: {}\nstop-reason: {}\nstdout:\n{}\nstderr:\n{}\nThis is private feedback, not an applied ACK or proof of shared-tree success. Preserve the requested tests and report any test revision explicitly. {}",
+                proposal.id,
+                proposal.command,
+                result["status"],
+                result["stop_reason"],
+                render_command_output(stdout),
+                render_command_output(stderr),
+                if qualified {
+                    "Submit the ordinary combined tests-and-implementation patch when ready; its normal ACK, focused validation and review remain authoritative."
+                } else {
+                    "Preparation was unsupported or incomplete. Report the concrete blocker or submit an explicit new test-proposal revision; no shared patch is authorized by this result."
+                }
+            );
+            registry
+                .executed(&token, prompt.clone(), qualified)
+                .map_err(AgentError::Io)?;
+            private::record("private-preview-result", agent_id, serde_json::json!({"launch_generation":token.generation,
+                "proposal_id":proposal.id,"result":result,"forwarded_prompt":prompt,"qualifies_ordering":qualified}))
+                .map_err(AgentError::Io)?;
+            (token, prompt, false)
+        }
+    };
+    private::record(
+        "private-preview-delivery-attempt",
+        agent_id,
+        serde_json::json!({"launch_generation":token.generation,
+        "proposal_id":token.proposal_id,"replay":replay,"forwarded_prompt":prompt}),
+    )
+    .map_err(AgentError::Io)?;
+    token.ensure_not_cancelled().map_err(AgentError::Io)?;
+    let reply = send_agent_streaming_interruptible(backend, agent_id, &prompt, stream)?;
+    private::record("private-preview-delivered", agent_id, serde_json::json!({"launch_generation":token.generation,
+        "proposal_id":token.proposal_id,"runtime_send_returned":true,"typed_native_join_claimed":false})).map_err(AgentError::Io)?;
+    registry.delivered(&token).map_err(AgentError::Io)?;
+    let mut run = DirectiveRun::default();
+    run.follow_up_replies
+        .push(follow_up(agent_id.clone(), reply));
+    Ok(run)
 }
 
 fn run_command_for_agent<B>(
@@ -1842,6 +2032,12 @@ fn parse_agent_directives(text: &str) -> Result<Vec<AgentDirective>, Orchestrato
 }
 
 fn should_interrupt_after_streamed_directive(text: &str) -> bool {
+    #[cfg(feature = "bench-experiments")]
+    if crate::bench_experiment::private_test_first::active().unwrap_or(false)
+        && crate::bench_experiment::private_test_first::preview_terminal(text)
+    {
+        return true;
+    }
     let mut in_patch = false;
     for line in text.lines() {
         let Some(body) = directive_body(line) else {

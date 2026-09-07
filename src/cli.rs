@@ -543,6 +543,8 @@ pub struct CommandChat<B> {
     system_agents: SystemAgentRegistry,
     #[cfg(feature = "bench-experiments")]
     bench_launch_requests: Arc<Mutex<BTreeMap<AgentId, AgentLaunch>>>,
+    #[cfg(feature = "bench-experiments")]
+    bench_private: crate::bench_experiment::private_test_first::Registry,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -672,6 +674,8 @@ where
             system_agents: self.system_agents.clone(),
             #[cfg(feature = "bench-experiments")]
             bench_launch_requests: Arc::clone(&self.bench_launch_requests),
+            #[cfg(feature = "bench-experiments")]
+            bench_private: self.bench_private.clone(),
         }
     }
 }
@@ -704,6 +708,8 @@ where
             system_agents: SystemAgentRegistry::default(),
             #[cfg(feature = "bench-experiments")]
             bench_launch_requests: Arc::default(),
+            #[cfg(feature = "bench-experiments")]
+            bench_private: Default::default(),
         }
     }
 
@@ -735,6 +741,8 @@ where
     }
 
     pub fn shutdown_agents(&mut self) {
+        #[cfg(feature = "bench-experiments")]
+        self.bench_private.cancel_all();
         if let Some(backend) = self.backend.as_mut() {
             backend.shutdown();
         } else {
@@ -772,6 +780,13 @@ where
     }
 
     pub(crate) fn interrupt_agent(&mut self, agent_id: &AgentId) -> Result<(), CliError> {
+        #[cfg(feature = "bench-experiments")]
+        {
+            self.bench_private.cancel(agent_id)?;
+            // A pending ticket is canceled; a provisional provider launch keeps
+            // its scoped lifetime until the existing backend interrupt returns.
+            let _ = self.bench_private.cancel_prepared(agent_id);
+        }
         self.backend
             .as_mut()
             .expect("command chat backend is present")
@@ -946,6 +961,13 @@ where
 
     pub fn prepare_agent_launch(&mut self, args: &[String]) -> Result<AgentLaunch, CliError> {
         let launch = build_user_agent_launch(self.next_user_agent, args, &self.agent_profile)?;
+        #[cfg(feature = "bench-experiments")]
+        if crate::bench_experiment::private_test_first::active()? {
+            self.bench_private.prepare(
+                &launch,
+                crate::bench_experiment::private_test_first::Role::Author,
+            )?;
+        }
         self.next_user_agent += 1;
         Ok(launch)
     }
@@ -957,12 +979,40 @@ where
         }
 
         let agent_id = self.next_linearizer_id()?;
-        Ok(Some(AgentLaunch::new(
+        let launch = AgentLaunch::new(
             agent_id,
             self.agent_profile.kind.clone(),
             "linearize reviewed patches",
             LinearizePlanner::<B>::interactive_prompt(&commits),
-        )))
+        );
+        #[cfg(feature = "bench-experiments")]
+        if crate::bench_experiment::private_test_first::active()? {
+            self.bench_private.prepare(
+                &launch,
+                crate::bench_experiment::private_test_first::Role::Other,
+            )?;
+        }
+        Ok(Some(launch))
+    }
+
+    #[cfg(feature = "bench-experiments")]
+    pub(crate) fn bench_revise_prepared(
+        &self,
+        old: &AgentLaunch,
+        new: &AgentLaunch,
+    ) -> io::Result<()> {
+        if !crate::bench_experiment::private_test_first::active()? {
+            return Ok(());
+        }
+        match self.bench_private.revise(old, new) {
+            Ok(()) => Ok(()),
+            Err(error) => {
+                // No later launch may use an unowned mutation after a failed
+                // internal revision; the original failure is reported by the caller.
+                let _ = self.bench_private.cancel_prepared(&old.id);
+                Err(error)
+            }
+        }
     }
 
     pub fn launch_prepared_agent_streaming(
@@ -982,6 +1032,12 @@ where
         let agent_id = launch.id.clone();
         let feature = launch.feature.clone();
         #[cfg(feature = "bench-experiments")]
+        let private_launch = if crate::bench_experiment::private_test_first::active()? {
+            Some(self.bench_private.begin(&launch)?)
+        } else {
+            None
+        };
+        #[cfg(feature = "bench-experiments")]
         let bench_launch = crate::bench_experiment::candidates_active()?.then(|| launch.clone());
         self.remember_agent_review_baseline(&agent_id);
         self.reserve_prepared_agent_id(&agent_id);
@@ -993,6 +1049,10 @@ where
             launch_agent_streaming_interruptible(backend, launch, &mut *stream)
         }
         .map_err(CliError::Agent)?;
+        #[cfg(feature = "bench-experiments")]
+        if let Some(guard) = private_launch {
+            guard.commit()?;
+        }
         #[cfg(feature = "bench-experiments")]
         if let Some(launch) = bench_launch {
             // Worker clones share the owner record; a failed launch never replaces it.
@@ -1148,6 +1208,8 @@ where
                         patch_ownership: &self.patch_ownership,
                         command_policy: &self.command_policy,
                         locked_command_timeout: self.locked_command_timeout,
+                        #[cfg(feature = "bench-experiments")]
+                        private_preview: Some(&self.bench_private),
                     },
                     &current.agent_id,
                     &current_feature,

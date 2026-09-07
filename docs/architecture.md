@@ -214,8 +214,10 @@ runs `cargo fmt -- --check`, `cargo clippy --all-targets --all-features -- -D wa
 comparison is concurrent Work Leaf against direct sequential Codex with the same tasks, model,
 reasoning level, stage responsibilities, time allowances, final verification, and quality scorer.
 
-The nondefault `bench-experiments` Cargo feature provides private, provider-neutral prompt
-interventions for separately admitted mechanism studies. Default builds exclude
+The nondefault `bench-experiments` Cargo feature provides private, provider-neutral
+interventions for separately admitted mechanism studies. Versions 1–5 change prompt
+representation; version 6 owns an explicitly admitted private test-feedback workflow.
+Default builds exclude
 `src/bench_experiment.rs` and its activation hooks. Feature-enabled builds remain inactive unless
 `WORK_LEAF_BENCH_EXPERIMENT=1`, `WORK_LEAF_BENCH_EXPERIMENT_MANIFEST`, and a matching
 `WORK_LEAF_BENCH_RUN_ID` identify a valid run. Initialization validates the manifest before agent
@@ -223,7 +225,7 @@ launch and exclusively creates its evidence file; invalid or reused activation f
 `src/orchestrator.rs` supplies renderer-owned instruction spans at patch-acknowledgment and
 command-result continuation boundaries. The private adapter either preserves the original prompt
 or transforms only the condition's declared span, then records both strings without adding agent
-messages. Control and variants use identical logging and retain normal command execution,
+messages. Prompt controls and variants use identical logging and retain normal command execution,
 ownership, provider, and interruption paths. These conditions are benchmark interventions, not
 normal Work Leaf settings or a public extension API. Study protocols and immutable per-phase
 manifests define permitted variants, scheduling, source identities, and causal interpretation.
@@ -314,6 +316,84 @@ ordinary. Supplemental evidence must join accepted inputs, native reviewer/call/
 and returned bytes before claiming retrieval. Payload construction is linear in held bytes;
 validating a missing bundle-root suffix performs repeated ancestor path resolution, with
 O(D²) worst-case filesystem path work in its path depth D, independent of conversation size.
+
+Version 6 admits only `private-test-first`, with an explicit `private_preview` descriptor
+pinning the canonical project, separate empty evidence root, Python executable, bridge
+source and bridge configuration. `src/bench_private_test_first.rs` and its private bridge
+module are compiled only with `bench-experiments`. No public provider, controller, patch,
+or command interface exposes preview execution. Older schemas neither initialize the
+bridge nor accept its descriptor. Ordinary builds have no Python preview dependency.
+
+`CommandChat::prepare_agent_launch` owns author enrollment; prepared linearizer launches
+are explicitly non-author. The registry is shared across worker clones, uses process-unique
+launch generations and exact prepared values, and consumes a provisional ticket around
+the actual provider launch. Controller title and pending-dependency prompt changes revise
+that same ticket before launch. Failed launch rolls back its ticket without replacing a
+prior successful owner. Author policy injection requires the exact synchronous ticket;
+cross-thread, repeated, deferred and missing-session reinjection fail before policy delivery.
+Explicit author identities remain known after rollback so deferred work cannot become an
+unowned ordinary launch. Reviewer, title and other non-author launches retain baseline
+policy; no role is inferred from names or copied prompt contents.
+
+An enrolled author submits one standalone `@work-leaf test-preview` envelope with a
+typed metadata line, an ordinary exact-edit or unified-diff body, and explicit end marker.
+Metadata declares purpose, normalized test paths, proposal/revision identity, and the exact
+focused command and command-write paths. It contains no model-computed byte offsets or
+duplicate test text. Only an actual delivered, closed test-execution result opens the first
+shared-apply gate. A preparation failure does not qualify; actual nonzero results remain
+factual feedback, not a host semantic RED verdict. A private implementation/GREEN operation
+exists only in separately qualified offline bridge tests, never in the live protocol.
+
+`src/orchestrator.rs` uses the existing path normalization, other-agent test ownership and
+failure-masking predicates before reserving a preview. The exact-source Python bootstrap
+calls only the pinned bridge's `validate`, `capture` or `test` operations with a cleared
+environment. Source selection runs synchronously inside the caller's existing shared
+`FileLockTable::with_read_locks(["."])` closure. Wait and held time are recorded separately.
+That lock excludes cooperating patch/index mutation, not every command or external writer;
+the retained live census proves sampled endpoints rather than whole-tree atomicity.
+Immutable accepted Git objects and explicitly declared effective overlays are selected
+once, then cloning, overlay installation, private application, execution and delivery occur
+after releasing the lock. Existing shared files, HEAD, index flags and later normal patches
+remain authoritative. Snapshot metadata distinguishes the owned accepted clone from the
+verified original live path used as the confined execution view.
+
+The separately qualified bridge reuses the existing exact Git patch semantics and a
+Linux namespace executor. Only owned private source/build/scratch trees are writable;
+explicit public toolchain/cache inputs are read-only. It copies no provider credentials,
+global configuration, broad user home or complete Cargo home. Unsupported source, overlays,
+dependencies, path aliases or evidence publication fail closed, without unconfined fallback.
+The host retains held proposal bytes and full declared-path afterimages with mode, length
+and SHA-256. These are file identities, not proof of test-only purpose or unchanged semantic
+assertions in a co-located production/test file. Same-test and revision claims require
+separate source mapping; unresolved cases remain unresolved.
+
+Private feedback is a distinct raw continuation in the existing author session, using the
+ordinary output compactor and preserving the exact command. Host generation IDs, receipt
+paths and receipt hashes stay in evidence rather than model-facing feedback. It is not a shared ACK or a
+normal locked-command result. It does not clear read snapshots, allocate ordinary bundles,
+record shared ownership, promote files or commit to the live repository. Proposal identities
+are single execution: byte-identical replay can resend recorded feedback, never rerun a
+command; changed bytes require an explicit new proposal/revision. Generation-bound tokens
+reject stale results. Stop/shutdown cancellation covers prepared and provisional launches,
+committed authors before their first reservation, and executing previews; shutdown also
+rejects new preparations in that registry. Cancelled results cannot authorize
+a subsequent continuation or shared apply. An executing or undelivered preview prevents
+relaunch. A cancelled preview without delivered feedback leaves that owner blocked; it has
+no automatic resend, rerun, cleanup, or relaunch recovery. Outer supervision reaps its direct
+child on errors or watchdog expiry but retains
+`closed: false` when nested closure is uncertain. No uncertain tree is deleted. A later
+ordinary combined patch, normal ACK, focused check and review remain the sole shared path.
+
+Version 6 records owned policy candidates, complete proposals, bridge/source references,
+factual private results and delivery attempts. Runtime send success is not a typed native
+identity proof; postcapture checks establish actual thread/turn/input membership. Extra
+feedback, fresh private builds and the declared environment are part of this intervention,
+not a pure timing-only effect or a production sandbox guarantee. Keyed registry operations
+are logarithmic; retained-body operations are linear per proposal. The accumulated directive
+detector can rescan growing text after each completed agent message, O(K×B) and worst-case
+quadratic across fragments. The eight-MiB envelope bound is not a detector-memory bound.
+Existing bounded O(M²) mount checks and O(D²) ancestor-path resolution remain explicit.
+Git history, sampled census and per-proposal source hashing are additional execution costs.
 
 Both benchmark drivers use `bench-agent-profile-common` to create a run-local Codex wrapper. The
 wrapper pins the requested model and reasoning effort directly on every allowed Codex invocation

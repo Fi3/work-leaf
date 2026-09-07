@@ -20,6 +20,10 @@ use crate::cli::{
 };
 use crate::review::{AgentCommit, GitHistory, ReviewResult};
 
+#[cfg(all(test, feature = "bench-experiments", target_os = "linux"))]
+#[path = "bench_private_test_first_controller_tests.rs"]
+pub(crate) mod private_test_first_tests;
+
 const FEATURE_DONE_QUESTION: &str = "work-leaf: is this feature done? [yes/no]";
 const FEATURE_CLOSED_MESSAGE: &str = "work-leaf: feature marked closed";
 const FEATURE_OPEN_MESSAGE: &str = "work-leaf: feature remains open";
@@ -294,7 +298,7 @@ where
         if let Some(title) = &first_chat_title {
             self.apply_agent_title(agent_id, title.clone());
         }
-        if !is_agent_slash_command && self.set_pending_dependent_launch_prompt(agent_id, message) {
+        if !is_agent_slash_command && self.set_pending_dependent_launch_prompt(agent_id, message)? {
             self.append_agent_line(agent_id, format!("user: {message}"));
             return Ok(());
         }
@@ -823,16 +827,29 @@ where
         );
     }
 
-    fn set_pending_dependent_launch_prompt(&mut self, agent_id: &AgentId, prompt: &str) -> bool {
+    fn set_pending_dependent_launch_prompt(
+        &mut self,
+        agent_id: &AgentId,
+        prompt: &str,
+    ) -> Result<bool, CliError> {
         let Some(pending) = self.pending_dependent_launches.get_mut(agent_id) else {
-            return false;
+            return Ok(false);
         };
         if !pending.prompt_pending {
-            return false;
+            return Ok(false);
+        }
+        #[cfg(feature = "bench-experiments")]
+        {
+            let mut revised = pending.launch.clone();
+            revised.prompt = prompt.to_string();
+            self.chat
+                .as_ref()
+                .expect("command chat is present")
+                .bench_revise_prepared(&pending.launch, &revised)?;
         }
         pending.launch.prompt = prompt.to_string();
         pending.prompt_pending = false;
-        true
+        Ok(true)
     }
 
     fn defer_send_until_dependency(
@@ -1440,13 +1457,48 @@ where
     }
 
     fn apply_agent_title(&mut self, agent_id: &AgentId, title: String) {
+        #[cfg(feature = "bench-experiments")]
+        let mut private_revision_errors = Vec::new();
         for launch in &mut self.pending_launches {
             if &launch.id == agent_id {
+                #[cfg(feature = "bench-experiments")]
+                {
+                    let mut revised = launch.clone();
+                    revised.feature = title.clone();
+                    if let Err(error) = self
+                        .chat
+                        .as_ref()
+                        .expect("command chat is present")
+                        .bench_revise_prepared(launch, &revised)
+                    {
+                        private_revision_errors.push(error.to_string());
+                    }
+                }
                 launch.feature = title.clone();
             }
         }
         if let Some(pending) = self.pending_dependent_launches.get_mut(agent_id) {
+            #[cfg(feature = "bench-experiments")]
+            {
+                let mut revised = pending.launch.clone();
+                revised.feature = title.clone();
+                if let Err(error) = self
+                    .chat
+                    .as_ref()
+                    .expect("command chat is present")
+                    .bench_revise_prepared(&pending.launch, &revised)
+                {
+                    private_revision_errors.push(error.to_string());
+                }
+            }
             pending.launch.feature = title.clone();
+        }
+        #[cfg(feature = "bench-experiments")]
+        for error in private_revision_errors {
+            self.append_agent_line(
+                agent_id,
+                format!("work-leaf: private preparation rejected: {error}"),
+            );
         }
         if let Some(session) = self.sessions.get_mut(agent_id) {
             session.title = title.clone();

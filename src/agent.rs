@@ -404,6 +404,16 @@ impl PromptPolicy {
         let rendered = self.render(agent_id, feature, prompt);
         #[cfg(feature = "bench-experiments")]
         {
+            if crate::bench_experiment::private_test_first::active().map_err(AgentError::Io)? {
+                return crate::bench_experiment::private_test_first::forward_policy(
+                    agent_id,
+                    feature,
+                    prompt,
+                    rendered.text,
+                    rendered.spans,
+                )
+                .map_err(AgentError::Io);
+            }
             let original =
                 crate::bench_experiment::forward_policy(agent_id, rendered.text, rendered.spans)
                     .map_err(AgentError::Io)?;

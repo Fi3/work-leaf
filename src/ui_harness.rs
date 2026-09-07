@@ -2,6 +2,10 @@ use crate::{
     AgentId, AgentListEntry, PaneFocus, TerminalUi, UiKey, UiMode, chat_title::ChatTitleAgent,
 };
 
+#[cfg(all(test, feature = "bench-experiments", target_os = "linux"))]
+#[path = "bench_private_test_first_ui_tests.rs"]
+pub(crate) mod private_test_first_tests;
+
 #[derive(Debug)]
 pub struct UiHarness {
     ui: TerminalUi,
