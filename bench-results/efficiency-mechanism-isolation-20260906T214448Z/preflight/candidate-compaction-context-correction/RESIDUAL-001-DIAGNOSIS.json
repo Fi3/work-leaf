@@ -1,0 +1,755 @@
+{
+  "schema": "work-leaf-candidate-residual-compaction-metadata-diagnosis-v1",
+  "recorded_at": "2026-09-07T15:58:35.566641+00:00",
+  "run_id": "candidate-screen-01-workflow-001",
+  "scope": "Source-bound diagnosis only. The frozen corrected-nine result stays unknown; no audit_run, replacement total, helper change, provider call or admission.",
+  "diagnosis": "An identical nonadditive last value is re-emitted after the explicit compaction boundary, while cumulative usage remains identical. reconcile_stream rejects the repetition at original helper line322; audit_run later reports its empty derived thread ledger as a thread-scope mismatch. Actual observer/native/raw thread memberships are present.",
+  "exact_inner_diagnostic": {
+    "recorded_at": "2026-09-07T15:58:35.566641+00:00",
+    "run_id": "candidate-screen-01-workflow-001",
+    "functions_called": [
+      "collect",
+      "corrected_ledger (source-bound previously proved native prefix only)",
+      "reconcile_stream"
+    ],
+    "audit_run_called": false,
+    "whole_workflow_total_or_bounds_computed": false,
+    "capture_results": [
+      {
+        "capture": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000484198115543375-567",
+        "errors": [
+          "nonadditive last lacks unchanged explicit compaction boundary"
+        ],
+        "thread_ledger_ids": [],
+        "raw_response_identity_count": 204,
+        "omitted_compaction_ids": [
+          "resp_007f4ca9a120523b016a9eb21b0ffc87d2ac22c56740dd793e"
+        ],
+        "warning_lines": [
+          44095
+        ]
+      }
+    ],
+    "inner_exception_trace": [
+      {
+        "python_line": 322,
+        "exception_type": "ValueError",
+        "error": "nonadditive last lacks unchanged explicit compaction boundary",
+        "server_line": 44130,
+        "thread_id": "01a07bd7-f780-7140-8e7f-b240f3657013",
+        "turn_id": "01a07be7-aff2-76c0-b96a-c8efb8976cf5",
+        "nonadditive": true,
+        "newly_omitted_response_id": null,
+        "current_total_equals_prior": true,
+        "current_total_equals_expected": true,
+        "thread_ledger_count_before_error": 0
+      }
+    ],
+    "immutable_result_sources": {
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/accounting_compaction_context.py": "513c8632803656d4f582a4ab714e35d9e0f95b56a4355b3b26c2927b07d2bfa3",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/postcapture/candidate-screen-01-workflow-001/COMMON-ACCOUNTING-COMPACTION-SUPPLEMENT.json": "3977474cc35da56075d49cf4e90843376528d3483f8e590acad858616d5fd1b2",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/CANDIDATE-COMMON-ACCOUNTING-SUPPLEMENT.json": "3a33ee3f414f1b87967221cdbf4be84ac5773413dd68c971eef5d5bdedb8d595",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/ELIGIBILITY-001.json": "5df3f136e57a3ac43320b47c58ba2e037fa07c5673cb7065acaae04234c24308"
+    },
+    "source_sha256": {
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/infrastructure/evidence/bench-results/efficiency-mechanism-isolation-20260906T214448Z/accounting_untracked_reads.py": "c365aa86ed956292f628d31ea79603196750744e5ecaec7e18ef1224b2a8d56a",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/candidate-compaction-context-correction/accounting_compaction_context.py": "513c8632803656d4f582a4ab714e35d9e0f95b56a4355b3b26c2927b07d2bfa3",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/infrastructure/evidence/bench-results/efficiency-measurement-gate-20260906/batch_analysis.py": "dacbfc8416467312c8a447ac1cd846da3e1f78da96f3733ee16c3dad1781d7c3",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/infrastructure/evidence/bench-results/efficiency-mechanism-isolation-20260906T214448Z/analyze.py": "2bb28891a2e158d51cf577bcf7c1fc2781065e38dc5ec4c6c30f7d4c146f2f78",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/infrastructure/evidence/bench-results/efficiency-mechanism-isolation-20260906T214448Z/audit_compaction.py": "dd5127f937ec1cc4d41a443ba7640fca93e82484f345ac8c56aeef5325d68153",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000484198115543375-567/start.json": "9d1fec20ff0d3a4ffa39e5c85e9bb0b8edc69a9b0bc7c801ccbd75cd865d0f49",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000484198115543375-567/end.json": "4ff7f226e906bcaae8afad914d18ae5ac154def8f1db78f32ac303d74d2cb10a",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000484198115543375-567/raw-response-usage.json": "5fe78a48e4e2e4847e7de54400e6a88a55c533b33bb68f882593947acb90ea89",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000484198115543375-567/raw-response-rewrites.jsonl": "a84ddfaaf48f37247b09d0cd0f5ca7a5b538a950511593fefd86c416d972073a",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000484198115543375-567/client-to-server.forwarded.raw": "6cc0e24d9d30023c5325b83eb9df53149f9561f149a82795c0cfafe008feec65",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000484198115543375-567/provider-usage-grace.jsonl": "9e06872995e7b718decb9125c78c904d4567a0bc1442b8a728c1523d563a874f",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000484198115543375-567/client-to-server.raw": "c5b272ae5df8e6741c2f18df424c169f8b7bdebcc01d74c12818e6061d006a75",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000484198115543375-567/server-to-client.raw": "eb6b79e39758e05f3bc06ad3de58ae14408e5d8c5bff2c18938d9cef641a9c92",
+      "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/rollout-metadata.jsonl": "b5a8cc14c747b7a3fda0c4fdea9cefafd09dfa43cf4ca0ed7bf3b90a0bec88b5",
+      "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T14-28-56-01a07bd7-d15c-73c1-9bed-c9aee86c92f3.jsonl": "673f0a0f516dd3e24acbc84ef1d3e8cce4af2375c86ac93f557d8e2a9f4a649c",
+      "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T14-29-01-01a07bd7-e3b2-7302-a102-fd128646a305.jsonl": "60994b8e078342256b0466981c1e478cf17db792d49ffd2701d7dbde7d37a1d7",
+      "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T14-29-06-01a07bd7-f780-7140-8e7f-b240f3657013.jsonl": "722f2338566148bc21aae916d237f4f23b143e342ebea14c4da4fbbea45af6fc",
+      "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T14-34-09-01a07bdc-9875-7650-a8a2-b2225aa4310f.jsonl": "fb0b114a3281b518048be48ff9608d09f7c7ec12638e8ed32acdb6082e1a67c0",
+      "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T14-34-09-01a07bdc-9893-77c3-9d2c-a2a0893a9072.jsonl": "bf934675bbb846e6272d2606464dea0f1b009e3999d1bdd0c6fa03e94abfa912",
+      "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T14-42-05-01a07be3-d9b8-7460-a422-f196ba1e42e0.jsonl": "7ecb6d7b06322de0479d0309fc7d2ea238f0860a4a895d46f8a20beb5b211e52",
+      "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T14-49-31-01a07bea-a83f-7641-9240-ea108196aef1.jsonl": "aab5cdb4cd807392705b55744bb20f9561f1bc6d728db1c68dec348a3f8e9a2e",
+      "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T14-58-49-01a07bf3-2bf8-7642-8735-aa52ffa33c49.jsonl": "38f5e86d477c1fcb33f759f4ac744fdde559c1528c57d4a7227722d91491e8f4"
+    },
+    "all_sources_endpoint_unchanged": true
+  },
+  "repeated_notification_witnesses": [
+    {
+      "server_line": 44095,
+      "thread_id": "01a07bd7-f780-7140-8e7f-b240f3657013",
+      "turn_id": "01a07be7-aff2-76c0-b96a-c8efb8976cf5",
+      "accepted_turn": {
+        "original_client_line": 65,
+        "rpc_id": "64",
+        "rpc_id_type": "str",
+        "reply_line": 43734
+      },
+      "last": {
+        "totalTokens": 77959,
+        "inputTokens": 0,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 0,
+        "reasoningOutputTokens": 0
+      },
+      "last_sha256": "f016206dfd317c8374510a45a3ee64a45cfcf096d8cda249bc12fa9107fb30ff",
+      "cumulative_sha256": "6ba723f1baa4675fee77d0aab7cfca8eee92e95982420a9fe911bbc90d6c4322",
+      "same_cumulative_as_previous_notification": true,
+      "previous_cumulative_line": 43729,
+      "raw_response_lines_since_previous_cumulative": [
+        44094
+      ]
+    },
+    {
+      "server_line": 44130,
+      "thread_id": "01a07bd7-f780-7140-8e7f-b240f3657013",
+      "turn_id": "01a07be7-aff2-76c0-b96a-c8efb8976cf5",
+      "accepted_turn": {
+        "original_client_line": 65,
+        "rpc_id": "64",
+        "rpc_id_type": "str",
+        "reply_line": 43734
+      },
+      "last": {
+        "totalTokens": 77959,
+        "inputTokens": 0,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 0,
+        "reasoningOutputTokens": 0
+      },
+      "last_sha256": "f016206dfd317c8374510a45a3ee64a45cfcf096d8cda249bc12fa9107fb30ff",
+      "cumulative_sha256": "6ba723f1baa4675fee77d0aab7cfca8eee92e95982420a9fe911bbc90d6c4322",
+      "same_cumulative_as_previous_notification": true,
+      "previous_cumulative_line": 44095,
+      "raw_response_lines_since_previous_cumulative": []
+    },
+    {
+      "server_line": 44327,
+      "thread_id": "01a07bd7-f780-7140-8e7f-b240f3657013",
+      "turn_id": "01a07be9-7c05-7990-b6c4-243d0a9b1b53",
+      "accepted_turn": {
+        "original_client_line": 70,
+        "rpc_id": "69",
+        "rpc_id_type": "str",
+        "reply_line": 44135
+      },
+      "last": {
+        "totalTokens": 77959,
+        "inputTokens": 0,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 0,
+        "reasoningOutputTokens": 0
+      },
+      "last_sha256": "f016206dfd317c8374510a45a3ee64a45cfcf096d8cda249bc12fa9107fb30ff",
+      "cumulative_sha256": "6ba723f1baa4675fee77d0aab7cfca8eee92e95982420a9fe911bbc90d6c4322",
+      "same_cumulative_as_previous_notification": true,
+      "previous_cumulative_line": 44130,
+      "raw_response_lines_since_previous_cumulative": []
+    },
+    {
+      "server_line": 44367,
+      "thread_id": "01a07bd7-f780-7140-8e7f-b240f3657013",
+      "turn_id": "01a07be9-bf91-74b1-a2b2-a170208d2d7a",
+      "accepted_turn": {
+        "original_client_line": 72,
+        "rpc_id": "71",
+        "rpc_id_type": "str",
+        "reply_line": 44332
+      },
+      "last": {
+        "totalTokens": 77959,
+        "inputTokens": 0,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 0,
+        "reasoningOutputTokens": 0
+      },
+      "last_sha256": "f016206dfd317c8374510a45a3ee64a45cfcf096d8cda249bc12fa9107fb30ff",
+      "cumulative_sha256": "6ba723f1baa4675fee77d0aab7cfca8eee92e95982420a9fe911bbc90d6c4322",
+      "same_cumulative_as_previous_notification": true,
+      "previous_cumulative_line": 44327,
+      "raw_response_lines_since_previous_cumulative": []
+    },
+    {
+      "server_line": 44489,
+      "thread_id": "01a07bd7-f780-7140-8e7f-b240f3657013",
+      "turn_id": "01a07be9-e65f-7bd3-b928-77b7cede05eb",
+      "accepted_turn": {
+        "original_client_line": 74,
+        "rpc_id": "73",
+        "rpc_id_type": "str",
+        "reply_line": 44372
+      },
+      "last": {
+        "totalTokens": 77959,
+        "inputTokens": 0,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 0,
+        "reasoningOutputTokens": 0
+      },
+      "last_sha256": "f016206dfd317c8374510a45a3ee64a45cfcf096d8cda249bc12fa9107fb30ff",
+      "cumulative_sha256": "6ba723f1baa4675fee77d0aab7cfca8eee92e95982420a9fe911bbc90d6c4322",
+      "same_cumulative_as_previous_notification": true,
+      "previous_cumulative_line": 44367,
+      "raw_response_lines_since_previous_cumulative": []
+    },
+    {
+      "server_line": 44579,
+      "thread_id": "01a07bd7-f780-7140-8e7f-b240f3657013",
+      "turn_id": "01a07bea-1b95-7883-a0ad-9c1789b17616",
+      "accepted_turn": {
+        "original_client_line": 76,
+        "rpc_id": "75",
+        "rpc_id_type": "str",
+        "reply_line": 44494
+      },
+      "last": {
+        "totalTokens": 77959,
+        "inputTokens": 0,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 0,
+        "reasoningOutputTokens": 0
+      },
+      "last_sha256": "f016206dfd317c8374510a45a3ee64a45cfcf096d8cda249bc12fa9107fb30ff",
+      "cumulative_sha256": "6ba723f1baa4675fee77d0aab7cfca8eee92e95982420a9fe911bbc90d6c4322",
+      "same_cumulative_as_previous_notification": true,
+      "previous_cumulative_line": 44489,
+      "raw_response_lines_since_previous_cumulative": []
+    }
+  ],
+  "interrupted_tails": [
+    {
+      "turn_id": "01a07be7-aff2-76c0-b96a-c8efb8976cf5",
+      "interrupt_client_line": 69,
+      "interrupt_rpc_id": "68",
+      "identical_forwarded_line": 69,
+      "grace_line": 27,
+      "grace": {
+        "thread_id": "01a07bd7-f780-7140-8e7f-b240f3657013",
+        "turn_id": "01a07be7-aff2-76c0-b96a-c8efb8976cf5",
+        "configured_grace_ms": 1000,
+        "output_resume_policy": "forward",
+        "waited_ms": 1,
+        "outcome": "forwarded-after-output-resumed"
+      },
+      "public_output_item_lines": [
+        {
+          "line": 44100,
+          "method": "item/started",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb2827a1c87d2906a8808acbe914b"
+        },
+        {
+          "line": 44101,
+          "method": "item/completed",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb2827a1c87d2906a8808acbe914b"
+        },
+        {
+          "line": 44102,
+          "method": "item/started",
+          "item_type": "agentMessage",
+          "item_id": "msg_007f4ca9a120523b016a9eb28bd09887d28315e610f562d0f2"
+        },
+        {
+          "line": 44128,
+          "method": "item/completed",
+          "item_type": "agentMessage",
+          "item_id": "msg_007f4ca9a120523b016a9eb28bd09887d28315e610f562d0f2"
+        },
+        {
+          "line": 44129,
+          "method": "item/started",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb28c5df487d29706fd4eb28274e9"
+        }
+      ],
+      "raw_response_lines": [
+        44094
+      ],
+      "terminal_server_line": 44134,
+      "terminal_status": "interrupted",
+      "ordinary_generation_response_usage_present": false
+    },
+    {
+      "turn_id": "01a07be9-7c05-7990-b6c4-243d0a9b1b53",
+      "interrupt_client_line": 71,
+      "interrupt_rpc_id": "70",
+      "identical_forwarded_line": 71,
+      "grace_line": 28,
+      "grace": {
+        "thread_id": "01a07bd7-f780-7140-8e7f-b240f3657013",
+        "turn_id": "01a07be9-7c05-7990-b6c4-243d0a9b1b53",
+        "configured_grace_ms": 1000,
+        "output_resume_policy": "forward",
+        "waited_ms": 21,
+        "outcome": "forwarded-after-output-resumed"
+      },
+      "public_output_item_lines": [
+        {
+          "line": 44140,
+          "method": "item/started",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb292945087d2aa9a4830fa450fd8"
+        },
+        {
+          "line": 44141,
+          "method": "item/completed",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb292945087d2aa9a4830fa450fd8"
+        },
+        {
+          "line": 44142,
+          "method": "item/started",
+          "item_type": "agentMessage",
+          "item_id": "msg_007f4ca9a120523b016a9eb29bf48887d2a268d00a66796720"
+        },
+        {
+          "line": 44325,
+          "method": "item/completed",
+          "item_type": "agentMessage",
+          "item_id": "msg_007f4ca9a120523b016a9eb29bf48887d2a268d00a66796720"
+        },
+        {
+          "line": 44326,
+          "method": "item/started",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb29f94cc87d2b2daad0f02afcf7c"
+        }
+      ],
+      "raw_response_lines": [],
+      "terminal_server_line": 44331,
+      "terminal_status": "interrupted",
+      "ordinary_generation_response_usage_present": false
+    },
+    {
+      "turn_id": "01a07be9-bf91-74b1-a2b2-a170208d2d7a",
+      "interrupt_client_line": 73,
+      "interrupt_rpc_id": "72",
+      "identical_forwarded_line": 73,
+      "grace_line": 29,
+      "grace": {
+        "thread_id": "01a07bd7-f780-7140-8e7f-b240f3657013",
+        "turn_id": "01a07be9-bf91-74b1-a2b2-a170208d2d7a",
+        "configured_grace_ms": 1000,
+        "output_resume_policy": "forward",
+        "waited_ms": 1,
+        "outcome": "forwarded-after-output-resumed"
+      },
+      "public_output_item_lines": [
+        {
+          "line": 44337,
+          "method": "item/started",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb2a1e11c87d2a1b1f06ee664e169"
+        },
+        {
+          "line": 44338,
+          "method": "item/completed",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb2a1e11c87d2a1b1f06ee664e169"
+        },
+        {
+          "line": 44339,
+          "method": "item/started",
+          "item_type": "agentMessage",
+          "item_id": "msg_007f4ca9a120523b016a9eb2a7354087d289b92f796077a61d"
+        },
+        {
+          "line": 44365,
+          "method": "item/completed",
+          "item_type": "agentMessage",
+          "item_id": "msg_007f4ca9a120523b016a9eb2a7354087d289b92f796077a61d"
+        },
+        {
+          "line": 44366,
+          "method": "item/started",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb2a7c47487d292f52dab9a645bea"
+        }
+      ],
+      "raw_response_lines": [],
+      "terminal_server_line": 44371,
+      "terminal_status": "interrupted",
+      "ordinary_generation_response_usage_present": false
+    },
+    {
+      "turn_id": "01a07be9-e65f-7bd3-b928-77b7cede05eb",
+      "interrupt_client_line": 75,
+      "interrupt_rpc_id": "74",
+      "identical_forwarded_line": 75,
+      "grace_line": 30,
+      "grace": {
+        "thread_id": "01a07bd7-f780-7140-8e7f-b240f3657013",
+        "turn_id": "01a07be9-e65f-7bd3-b928-77b7cede05eb",
+        "configured_grace_ms": 1000,
+        "output_resume_policy": "forward",
+        "waited_ms": 0,
+        "outcome": "forwarded-after-output-resumed"
+      },
+      "public_output_item_lines": [
+        {
+          "line": 44377,
+          "method": "item/started",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb2abc40487d2b0d4046b62bb4908"
+        },
+        {
+          "line": 44378,
+          "method": "item/completed",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb2abc40487d2b0d4046b62bb4908"
+        },
+        {
+          "line": 44379,
+          "method": "item/started",
+          "item_type": "agentMessage",
+          "item_id": "msg_007f4ca9a120523b016a9eb2b51cd087d2951663c6b9569d4f"
+        },
+        {
+          "line": 44487,
+          "method": "item/completed",
+          "item_type": "agentMessage",
+          "item_id": "msg_007f4ca9a120523b016a9eb2b51cd087d2951663c6b9569d4f"
+        },
+        {
+          "line": 44488,
+          "method": "item/started",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb2b7093887d2a1374daf5ba9fb33"
+        }
+      ],
+      "raw_response_lines": [],
+      "terminal_server_line": 44493,
+      "terminal_status": "interrupted",
+      "ordinary_generation_response_usage_present": false
+    },
+    {
+      "turn_id": "01a07bea-1b95-7883-a0ad-9c1789b17616",
+      "interrupt_client_line": 77,
+      "interrupt_rpc_id": "76",
+      "identical_forwarded_line": 77,
+      "grace_line": 31,
+      "grace": {
+        "thread_id": "01a07bd7-f780-7140-8e7f-b240f3657013",
+        "turn_id": "01a07bea-1b95-7883-a0ad-9c1789b17616",
+        "configured_grace_ms": 1000,
+        "output_resume_policy": "forward",
+        "waited_ms": 2,
+        "outcome": "forwarded-after-output-resumed"
+      },
+      "public_output_item_lines": [
+        {
+          "line": 44563,
+          "method": "item/started",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb2b9659087d2b901431c5b2ad01a"
+        },
+        {
+          "line": 44564,
+          "method": "item/completed",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb2b9659087d2b901431c5b2ad01a"
+        },
+        {
+          "line": 44565,
+          "method": "item/started",
+          "item_type": "agentMessage",
+          "item_id": "msg_007f4ca9a120523b016a9eb2bbf3d487d2846cdefc469c2bee"
+        },
+        {
+          "line": 44577,
+          "method": "item/completed",
+          "item_type": "agentMessage",
+          "item_id": "msg_007f4ca9a120523b016a9eb2bbf3d487d2846cdefc469c2bee"
+        },
+        {
+          "line": 44578,
+          "method": "item/started",
+          "item_type": "reasoning",
+          "item_id": "rs_007f4ca9a120523b016a9eb2bc42dc87d2add28a4eb2e6bf9b"
+        }
+      ],
+      "raw_response_lines": [],
+      "terminal_server_line": 44583,
+      "terminal_status": "interrupted",
+      "ordinary_generation_response_usage_present": false
+    }
+  ],
+  "native_public_metadata": [
+    {
+      "line": 276,
+      "record_type": "token_usage_record",
+      "payload_type": null,
+      "timestamp": "2026-09-07T12:47:58.383Z"
+    },
+    {
+      "line": 277,
+      "record_type": "compacted",
+      "payload_type": null,
+      "timestamp": "2026-09-07T12:47:58.392Z"
+    },
+    {
+      "line": 279,
+      "record_type": "event_msg",
+      "payload_type": "token_count",
+      "timestamp": "2026-09-07T12:47:58.404Z"
+    },
+    {
+      "line": 284,
+      "record_type": "turn_context",
+      "payload_type": null,
+      "timestamp": "2026-09-07T12:47:58.415Z",
+      "turn_id": "01a07be7-aff2-76c0-b96a-c8efb8976cf5",
+      "model": "gpt-5.5",
+      "effort": "xhigh"
+    },
+    {
+      "line": 285,
+      "record_type": "response_item",
+      "payload_type": "message",
+      "timestamp": "2026-09-07T12:47:58.433Z",
+      "role": "user",
+      "item_id": "msg_01a07be9-3de1-79e0-bcd0-260b257cfa12",
+      "turn_id": null
+    },
+    {
+      "line": 290,
+      "record_type": "response_item",
+      "payload_type": "message",
+      "timestamp": "2026-09-07T12:48:12.385Z",
+      "role": "assistant",
+      "item_id": "msg_007f4ca9a120523b016a9eb28bd09887d28315e610f562d0f2",
+      "turn_id": null
+    },
+    {
+      "line": 291,
+      "record_type": "event_msg",
+      "payload_type": "token_count",
+      "timestamp": "2026-09-07T12:48:12.387Z"
+    },
+    {
+      "line": 293,
+      "record_type": "event_msg",
+      "payload_type": "turn_aborted",
+      "timestamp": "2026-09-07T12:48:12.392Z"
+    },
+    {
+      "line": 296,
+      "record_type": "turn_context",
+      "payload_type": null,
+      "timestamp": "2026-09-07T12:48:14.354Z",
+      "turn_id": "01a07be9-7c05-7990-b6c4-243d0a9b1b53",
+      "model": "gpt-5.5",
+      "effort": "xhigh"
+    },
+    {
+      "line": 302,
+      "record_type": "response_item",
+      "payload_type": "message",
+      "timestamp": "2026-09-07T12:48:31.610Z",
+      "role": "assistant",
+      "item_id": "msg_007f4ca9a120523b016a9eb29bf48887d2a268d00a66796720",
+      "turn_id": null
+    },
+    {
+      "line": 303,
+      "record_type": "event_msg",
+      "payload_type": "token_count",
+      "timestamp": "2026-09-07T12:48:31.633Z"
+    },
+    {
+      "line": 305,
+      "record_type": "event_msg",
+      "payload_type": "turn_aborted",
+      "timestamp": "2026-09-07T12:48:31.637Z"
+    },
+    {
+      "line": 308,
+      "record_type": "turn_context",
+      "payload_type": null,
+      "timestamp": "2026-09-07T12:48:31.657Z",
+      "turn_id": "01a07be9-bf91-74b1-a2b2-a170208d2d7a",
+      "model": "gpt-5.5",
+      "effort": "xhigh"
+    },
+    {
+      "line": 314,
+      "record_type": "response_item",
+      "payload_type": "message",
+      "timestamp": "2026-09-07T12:48:39.790Z",
+      "role": "assistant",
+      "item_id": "msg_007f4ca9a120523b016a9eb2a7354087d289b92f796077a61d",
+      "turn_id": null
+    },
+    {
+      "line": 315,
+      "record_type": "event_msg",
+      "payload_type": "token_count",
+      "timestamp": "2026-09-07T12:48:39.792Z"
+    },
+    {
+      "line": 317,
+      "record_type": "event_msg",
+      "payload_type": "turn_aborted",
+      "timestamp": "2026-09-07T12:48:39.807Z"
+    },
+    {
+      "line": 320,
+      "record_type": "turn_context",
+      "payload_type": null,
+      "timestamp": "2026-09-07T12:48:41.580Z",
+      "turn_id": "01a07be9-e65f-7bd3-b928-77b7cede05eb",
+      "model": "gpt-5.5",
+      "effort": "xhigh"
+    },
+    {
+      "line": 326,
+      "record_type": "response_item",
+      "payload_type": "message",
+      "timestamp": "2026-09-07T12:48:55.187Z",
+      "role": "assistant",
+      "item_id": "msg_007f4ca9a120523b016a9eb2b51cd087d2951663c6b9569d4f",
+      "turn_id": null
+    },
+    {
+      "line": 327,
+      "record_type": "event_msg",
+      "payload_type": "token_count",
+      "timestamp": "2026-09-07T12:48:55.189Z"
+    },
+    {
+      "line": 329,
+      "record_type": "event_msg",
+      "payload_type": "turn_aborted",
+      "timestamp": "2026-09-07T12:48:55.195Z"
+    },
+    {
+      "line": 332,
+      "record_type": "turn_context",
+      "payload_type": null,
+      "timestamp": "2026-09-07T12:48:55.217Z",
+      "turn_id": "01a07bea-1b95-7883-a0ad-9c1789b17616",
+      "model": "gpt-5.5",
+      "effort": "xhigh"
+    },
+    {
+      "line": 338,
+      "record_type": "response_item",
+      "payload_type": "message",
+      "timestamp": "2026-09-07T12:49:00.282Z",
+      "role": "assistant",
+      "item_id": "msg_007f4ca9a120523b016a9eb2bbf3d487d2846cdefc469c2bee",
+      "turn_id": null
+    },
+    {
+      "line": 339,
+      "record_type": "event_msg",
+      "payload_type": "token_count",
+      "timestamp": "2026-09-07T12:49:00.285Z"
+    },
+    {
+      "line": 341,
+      "record_type": "event_msg",
+      "payload_type": "turn_aborted",
+      "timestamp": "2026-09-07T12:49:00.291Z"
+    },
+    {
+      "line": 344,
+      "record_type": "turn_context",
+      "payload_type": null,
+      "timestamp": "2026-09-07T12:49:00.311Z",
+      "turn_id": "01a07bea-2f81-7402-b5ee-b5da46f091cd",
+      "model": "gpt-5.5",
+      "effort": "xhigh"
+    },
+    {
+      "line": 351,
+      "record_type": "token_usage_record",
+      "payload_type": null,
+      "timestamp": "2026-09-07T12:49:14.077Z"
+    },
+    {
+      "line": 352,
+      "record_type": "event_msg",
+      "payload_type": "token_count",
+      "timestamp": "2026-09-07T12:49:14.079Z"
+    }
+  ],
+  "read_only_source_sha256": {
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000484198115543375-567/server-to-client.raw": "eb6b79e39758e05f3bc06ad3de58ae14408e5d8c5bff2c18938d9cef641a9c92",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000484198115543375-567/client-to-server.raw": "c5b272ae5df8e6741c2f18df424c169f8b7bdebcc01d74c12818e6061d006a75",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000484198115543375-567/client-to-server.forwarded.raw": "6cc0e24d9d30023c5325b83eb9df53149f9561f149a82795c0cfafe008feec65",
+    "/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T14-29-06-01a07bd7-f780-7140-8e7f-b240f3657013.jsonl": "722f2338566148bc21aae916d237f4f23b143e342ebea14c4da4fbbea45af6fc",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/analysis.json": "0c069df7940dcfc90705a33db8fc13c13a7ac2b1aa89742aef22e7a4f4a7db94",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/candidate-screen-01/runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts/observation/rollout-metadata.jsonl": "b5a8cc14c747b7a3fda0c4fdea9cefafd09dfa43cf4ca0ed7bf3b90a0bec88b5"
+  },
+  "non_causal_conclusions": {
+    "repeated_metadata_creates_new_measured_usage": false,
+    "unmeasured_generation_is_zero": false,
+    "missing_usage_recovered": false,
+    "whole_workflow_completeness_proved": false,
+    "cumulative_arithmetic_difference_at_first_rejection": false,
+    "provider_context_estimate_semantics_claimed": false
+  },
+  "original_invariant_chain": [
+    {
+      "source": "accounting_untracked_reads.py",
+      "symbol": "reconcile_stream",
+      "lines": [
+        307,
+        317,
+        318,
+        319
+      ],
+      "meaning": "Each cumulative notification starts with newly_omitted=None; only a new exact named compaction omission assigns that variable."
+    },
+    {
+      "source": "accounting_untracked_reads.py",
+      "symbol": "reconcile_stream",
+      "lines": [
+        320,
+        321,
+        322
+      ],
+      "meaning": "Nonadditive last currently requires newly_omitted and unchanged cumulative at this same event; same-value carry-forward is outside the implemented rule."
+    },
+    {
+      "source": "accounting_untracked_reads.py",
+      "symbol": "reconcile_stream",
+      "lines": [
+        339,
+        340,
+        344,
+        362,
+        363
+      ],
+      "meaning": "The repetition raises before the final per-thread ledger loop; the exception is returned in inv.errors with an empty thread_ledger."
+    },
+    {
+      "source": "accounting_untracked_reads.py",
+      "symbol": "audit_run",
+      "lines": [
+        470,
+        472,
+        489,
+        491,
+        492
+      ],
+      "meaning": "inv.errors enters combined.errors, but the empty-ledger thread-set check raises its generic error before combined diagnostics reach final result accounting."
+    }
+  ],
+  "interpretation_limit": "The initial repetition is a checker scope restriction, not an observed cumulative difference or missing thread. This does not establish all later accounting checks pass. Public output item boundaries and native aborts establish five interrupted continuations with no matching ordinary raw/native response-usage record; no new upper bound or completed-response inference is supplied.",
+  "reproduction": {
+    "source_inventory_python": "import json,hashlib,collections\nfrom pathlib import Path\nS=Path('/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z')\nP=S/'phases/candidate-screen-01'\nA=P/'runs/candidate-screen-01-workflow-001/candidate-screen-01-workflow-001-three-feature-bench-artifacts'\napp=A/'observation/app-server/00000484198115543375-567'\nnative=Path('/home/user/.codex/sessions/2026/09/07/rollout-2026-09-07T14-29-06-01a07bd7-f780-7140-8e7f-b240f3657013.jsonl')\nsha=lambda b:hashlib.sha256(b).hexdigest()\ncanon=lambda v:json.dumps(v,sort_keys=True,separators=(',',':')).encode()\ntid='01a07bd7-f780-7140-8e7f-b240f3657013'\nrows=[json.loads(x) if x.strip() else {} for x in (app/'server-to-client.raw').read_bytes().splitlines()]\nclients=[json.loads(x) if x.strip() else {} for x in (app/'client-to-server.raw').read_bytes().splitlines()]\nreqs={}\nfor n,v in enumerate(clients,1):\n q=v.get('params') or {}\n if v.get('method')=='turn/start' and q.get('threadId')==tid:\n  reqs[(type(v['id']).__name__,v['id'])]=(n,v)\naccepted={}\nfor n,v in enumerate(rows,1):\n key=(type(v.get('id')).__name__,v.get('id'))\n if 'method' not in v and key in reqs and 'result' in v:\n  turn=v['result']['turn']['id'];accepted[turn]={'original_client_line':reqs[key][0],'rpc_id':v['id'],'rpc_id_type':key[0],'reply_line':n}\nprevious=None;pending=[];records=[];same_thread=[]\nfor n,v in enumerate(rows,1):\n q=v.get('params') or {}\n if q.get('threadId')!=tid:continue\n method=v.get('method');item=q.get('item') or {}\n if 43700<=n<=45000:\n  projected={'line':n,'method':method,'turn_id':q.get('turnId')}\n  if item:projected.update(item_id=item.get('id'),item_type=item.get('type'))\n  if method=='rawResponse/completed':projected.update(response_id=q['responseId'])\n  if method in ('turn/started','turn/completed','rawResponse/completed','thread/tokenUsage/updated','item/started','item/completed'):same_thread.append(projected)\n if method=='thread/tokenUsage/updated':\n  last=q['tokenUsage']['last'];total=q['tokenUsage']['total']\n  if last['totalTokens']!=last['inputTokens']+last['outputTokens']:\n   records.append({'server_line':n,'thread_id':tid,'turn_id':q['turnId'],'accepted_turn':accepted[q['turnId']],'last':last,'last_sha256':sha(canon(last)),'cumulative_sha256':sha(canon(total)),'same_cumulative_as_previous_notification':previous is not None and total==previous['total'],'previous_cumulative_line':previous['line'] if previous else None,'raw_response_lines_since_previous_cumulative':[k for k in pending]})\n  previous={'line':n,'total':total};pending=[]\n if method=='rawResponse/completed':pending.append(n)\nnative_events=[]\nfor n,line in enumerate(native.read_bytes().splitlines(),1):\n if not line.strip():continue\n v=json.loads(line);q=v.get('payload') or {}\n if 270<=n<=360:\n  e={'line':n,'record_type':v.get('type'),'payload_type':q.get('type'),'timestamp':v.get('timestamp')}\n  if v.get('type')=='turn_context':e.update(turn_id=q.get('turn_id'),model=q.get('model'),effort=q.get('effort'))\n  if v.get('type')=='event_msg' and q.get('type')=='token_usage':e['keys']=list(q)\n  if v.get('type')=='response_item':e.update(role=q.get('role'),item_id=q.get('id'),turn_id=q.get('turn_id'))\n  native_events.append(e)\nprint(json.dumps({'repeated_notifications':records,'same_thread_public_boundaries':same_thread,'native_public_metadata':native_events,'source_sha256':{str(p):sha(p.read_bytes()) for p in [app/'server-to-client.raw',app/'client-to-server.raw',app/'client-to-server.forwarded.raw',native,A/'observation/analysis.json',A/'observation/rollout-metadata.jsonl']}},separators=(',',':')))\n",
+    "pure_inner_error_python": "import json,hashlib,types,sys,datetime\nfrom pathlib import Path\nS=Path('/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z')\nD=S/'preflight/candidate-compaction-context-correction'\nP=S/'phases/candidate-screen-01'\nsha=lambda b:hashlib.sha256(b).hexdigest()\ncanon=lambda v:json.dumps(v,sort_keys=True,separators=(',',':')).encode()\nhelper=D/'accounting_compaction_context.py'\nassert sha(helper.read_bytes())=='513c8632803656d4f582a4ab714e35d9e0f95b56a4355b3b26c2927b07d2bfa3'\nm=types.ModuleType('exact_inner_source_diagnostic');m.__file__=str(helper);sys.modules[m.__name__]=m\nexec(compile(helper.read_bytes(),str(helper),'exec'),m.__dict__)\nscope=json.loads((S/'CANDIDATE-COMMON-ACCOUNTING-SUPPLEMENT-SCOPE.json').read_bytes())\nfrozen=json.loads(Path(scope['helper_identity_manifest']['path']).read_bytes())\nentry=next(r for r in json.loads(Path(scope['candidate_score_manifest']['path']).read_bytes())['runs'] if r['run_id']=='candidate-screen-01-workflow-001')\nsupplement=P/'postcapture'/entry['run_id']/'COMMON-ACCOUNTING-COMPACTION-SUPPLEMENT.json'\nconsolidation=S/'CANDIDATE-COMMON-ACCOUNTING-SUPPLEMENT.json'\nbefore={str(p):sha(p.read_bytes()) for p in [helper,supplement,consolidation,D/'ELIGIBILITY-001.json']}\nold=m.load_original();sources=m.Sources()\ncaptures,natives=m.collect(entry,frozen,Path(scope['sessions_root']),old,sources)\nelig=json.loads((D/'ELIGIBILITY-001.json').read_bytes())\nnative={'records':{},'compactions':{}}\nfor path,rows,metadata in natives:\n proofs=[p for p in elig['proofs'] if p['source']==path]\n ledger=m.corrected_ledger(old,rows,metadata,frozen['model'],frozen['reasoning_effort'],path,proofs)\n for kind in native:\n  assert not (native[kind].keys()&ledger[kind].keys())\n  native[kind].update(ledger[kind])\nexceptions=[]\ndef trace(frame,event,arg):\n if frame.f_code is old.reconcile_stream.__code__ and event=='exception':\n  loc=frame.f_locals\n  exceptions.append({'python_line':frame.f_lineno,'exception_type':type(arg[1]).__name__,'error':str(arg[1]),'server_line':loc.get('sequence',-1)+1,'thread_id':loc.get('thread'),'turn_id':loc.get('turn'),'nonadditive':loc.get('nonadditive'),'newly_omitted_response_id':loc.get('newly_omitted'),'current_total_equals_prior':loc.get('total')==loc.get('prior'),'current_total_equals_expected':loc.get('total')==loc.get('expected'),'thread_ledger_count_before_error':len(loc['result']['thread_ledger'])})\n return trace\nresults=[]\nfor capture in captures:\n app=Path(capture['path']);grace=sources.rows(app/'provider-usage-grace.jsonl')\n sys.settrace(trace)\n try: inv=old.reconcile_stream(capture['clients'],capture['servers'],grace,native)\n finally:sys.settrace(None)\n results.append({'capture':str(app),'errors':inv['errors'],'thread_ledger_ids':sorted(inv['thread_ledger']),'raw_response_identity_count':len(inv['raw_responses']),'omitted_compaction_ids':inv['omitted_compaction_ids'],'warning_lines':[w['server_line'] for w in inv['warnings']]})\nsources.finish()\nfor p,h in before.items():assert sha(Path(p).read_bytes())==h,p\nprint(json.dumps({'recorded_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'run_id':entry['run_id'],'functions_called':['collect','corrected_ledger (source-bound previously proved native prefix only)','reconcile_stream'],'audit_run_called':False,'whole_workflow_total_or_bounds_computed':False,'capture_results':results,'inner_exception_trace':exceptions,'immutable_result_sources':before,'source_sha256':sources.hashes,'all_sources_endpoint_unchanged':True},separators=(',',':')))\n"
+  }
+}
