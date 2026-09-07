@@ -21,6 +21,18 @@ under `phases/candidate-screen-01/PHASE-MANIFEST.json` (SHA-256
 `935a32719e0c91e2afb8fc101788db44bb955a3d85993d2c28327cc44325acb1`).
 All 105 frozen inputs verify; live progress and every outcome belong in the root note.
 No new control or Direct run is authorized.
+Candidate workflows 001 and 003 retain successful terminal receipts; 002 remains active.
+Costs and final delivery audits remain gated on all-three closure. The complete
+[candidate dispositions](CANDIDATE-DISPOSITIONS.md) cover all 38 candidates and seven
+exclusions. [Historical test timing](EVIDENCE-H-TEST-TIMING.md) and its
+[independent review](EVIDENCE-H-TEST-TIMING-REVIEW.md) establish the actual executed-RED
+versus postimplementation-check sequences without assigning a token share.
+[Prior interruption/package evidence](EVIDENCE-PRIOR-PROTOCOL-AND-INTERRUPTION.md)
+distinguishes completed model responses from natural outer-turn completion and retains
+all archived interventions. The private [C21 exact-evidence design](DESIGN-REVIEW-EVIDENCE-ON-DEMAND.md)
+is in test-first implementation, separately from the active frozen runtime. Its native
+read-only artifact preserves the same held context and ordinary read machinery; no C21
+generation is admitted.
 The historical endpoint exposure pass is also saved separately in
 [EVIDENCE-H-CONTEXT.md](EVIDENCE-H-CONTEXT.md),
 [EVIDENCE-H-LIFECYCLE.md](EVIDENCE-H-LIFECYCLE.md) and
