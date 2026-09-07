@@ -289,6 +289,32 @@ their ordinary behavior. No public API or provider-specific integration is part 
 Candidate construction and range validation are linear in held prompt bytes and component count;
 the private launch registry uses logarithmic keyed lookup.
 
+Version 5 manifests select `review-evidence-native` or the identity-test condition
+`review-evidence-inline`, with an explicit canonical `review_evidence_root`. The private
+`src/bench_review_evidence.rs` adapter archives the exact held source-context interpolation
+from `CommandChat::review_commit_streaming_with_ids`. Native delivery replaces only that
+owned UTF-8 span with a truthful read-only reference; inline delivery preserves the full
+ordinary prompt. Both select from the same recorded candidates and publish the same
+opaque archive. Older schemas reject the new manifest field and allocate no review archive.
+
+The archive uses an independent sequence and retained create-new payload/typed-identity
+files outside the project and ordinary context-bundle namespace. Publication verifies exact
+bytes through its held descriptor and fails delivery on storage or evidence errors. Unix
+payloads are sealed read-only; canonical path and inode checks are bounded safeguards, not
+containment against hostile concurrent filesystem mutation. Runtime identity uses a labeled
+FNV64 checksum; separately pinned offline evidence requires SHA-256 and exact held/archive
+byte equality. Earlier references remain readable after later reviews and normal teardown.
+
+Opaque review context is available only through the explicitly permitted native read-only
+path. It is not registered with the project read parser, snapshot tracker, ordinary bundle
+counter/archive or observer bundle classifier. Ordinary mixed project/opaque mediated requests
+retain their normal project result and unavailable-path error. Review scope, verdict rules,
+author fixes, rechecks, session reuse, provider settings and all non-target prompts remain
+ordinary. Supplemental evidence must join accepted inputs, native reviewer/call/output identities
+and returned bytes before claiming retrieval. Payload construction is linear in held bytes;
+validating a missing bundle-root suffix performs repeated ancestor path resolution, with
+O(D²) worst-case filesystem path work in its path depth D, independent of conversation size.
+
 Both benchmark drivers use `bench-agent-profile-common` to create a run-local Codex wrapper. The
 wrapper pins the requested model and reasoning effort directly on every allowed Codex invocation
 without reading or changing the user's global Codex configuration. Each temporary benchmark

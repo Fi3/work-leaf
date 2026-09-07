@@ -16,6 +16,15 @@ const SCHEMA: &str = "work-leaf-bench-experiment-v1";
 const SCHEMA_V2: &str = "work-leaf-bench-experiment-v2";
 const SCHEMA_V3: &str = "work-leaf-bench-experiment-v3";
 const SCHEMA_V4: &str = "work-leaf-bench-experiment-v4";
+const SCHEMA_V5: &str = "work-leaf-bench-experiment-v5";
+
+#[path = "bench_review_evidence.rs"]
+mod review_evidence;
+pub(crate) use review_evidence::forward_review_context;
+
+#[cfg(test)]
+#[path = "bench_review_evidence_tests.rs"]
+mod review_evidence_tests;
 
 #[path = "bench_candidate_experiment.rs"]
 mod candidate;
@@ -80,10 +89,11 @@ fn load() -> io::Result<Option<Experiment>> {
     if !path.is_absolute() || !fs::symlink_metadata(&path)?.file_type().is_file() {
         return Err(invalid("manifest must be an absolute regular-file path"));
     }
-    let manifest: Manifest = serde_json::from_slice(&fs::read(&path)?).map_err(invalid)?;
+    let bytes = fs::read(&path)?;
+    let (manifest, review_root) = review_evidence::parse_manifest(&bytes)?;
     if !matches!(
         manifest.schema.as_str(),
-        SCHEMA | SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4
+        SCHEMA | SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4 | SCHEMA_V5
     ) {
         return Err(invalid("unsupported manifest schema"));
     }
@@ -113,6 +123,10 @@ fn load() -> io::Result<Option<Experiment>> {
             manifest.condition.as_str(),
             "requested-repeat-full" | "unified-diff-preferred" | "review-fix-request-resupply"
         ),
+        SCHEMA_V5 => matches!(
+            manifest.condition.as_str(),
+            "review-evidence-native" | "review-evidence-inline"
+        ),
         _ => false,
     };
     if !permitted {
@@ -121,19 +135,22 @@ fn load() -> io::Result<Option<Experiment>> {
     if !manifest.evidence_path.is_absolute() {
         return Err(invalid("evidence_path must be absolute"));
     }
+    if let Some(root) = review_root.as_ref() {
+        review_evidence::initialize_store(root)?;
+    }
     let mut file = OpenOptions::new()
         .write(true)
         .create_new(true)
         .open(&manifest.evidence_path)
         .map_err(invalid)?;
-    serde_json::to_writer(
-        &mut file,
-        &json!({
-            "event": "activation", "schema": manifest.schema, "run_id": manifest.run_id,
-            "condition": manifest.condition, "process_id": std::process::id()
-        }),
-    )
-    .map_err(invalid)?;
+    let mut activation = json!({
+        "event": "activation", "schema": manifest.schema, "run_id": manifest.run_id,
+        "condition": manifest.condition, "process_id": std::process::id()
+    });
+    if let Some(root) = review_root {
+        activation["review_evidence_root"] = json!(root);
+    }
+    serde_json::to_writer(&mut file, &activation).map_err(invalid)?;
     file.write_all(b"\n").map_err(invalid)?;
     file.flush().map_err(invalid)?;
     Ok(Some(Experiment {
@@ -165,7 +182,7 @@ pub(crate) fn forward_continuation(
     };
     if matches!(
         experiment.manifest.schema.as_str(),
-        SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4
+        SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4 | SCHEMA_V5
     ) {
         let mut spans = match site {
             "patch-applied" => vec![PromptSpan::new("patch-applied-validation", cue)],
@@ -229,7 +246,10 @@ pub(crate) fn forward_policy(
 ) -> io::Result<String> {
     match active()? {
         Some(experiment)
-            if matches!(experiment.manifest.schema.as_str(), SCHEMA_V2 | SCHEMA_V3) =>
+            if matches!(
+                experiment.manifest.schema.as_str(),
+                SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V5
+            ) =>
         {
             forward_v2(experiment, "policy-injection", agent_id, original, spans)
         }

@@ -1255,15 +1255,26 @@ where
         };
 
         let review_feature = format!("review {}", commit.feature);
-        let review_prompt = format!(
-            "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\n\nSource context from Work Leaf commits, logs, and chat history:\n{}\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.\n\nFor agent-facing changes, missing required real-agent verification is a finding unless the source context includes the exact real-agent scenario and visible result, or the exact pre-agent blocker. If you report missing verification, state the precise evidence that would resolve it. When the patch agent responds with verification evidence or a blocker rather than code, evaluate that evidence instead of requiring another patch.",
-            commit.agent_id,
-            commit.hash,
-            commit.feature,
-            commit.reason,
-            commit.context,
-            source_context
+        let mut review_prompt = format!(
+            "Review the full patch scope for Agent-ID {}.\nLatest commit: {}\nFeature: {}\nReason: {}\nReview scope:\n{}\n\nSource context from Work Leaf commits, logs, and chat history:\n",
+            commit.agent_id, commit.hash, commit.feature, commit.reason, commit.context
         );
+        #[cfg(feature = "bench-experiments")]
+        let context_start = review_prompt.len();
+        review_prompt.push_str(&source_context);
+        #[cfg(feature = "bench-experiments")]
+        let context_end = review_prompt.len();
+        review_prompt.push_str("\n\nReview every commit listed in the review scope and reply with NO_FINDINGS if there are no findings. Otherwise reply with FINDINGS followed by the issues.\n\nDocumentation and plain-text updates are deferred to the linearize agent. Do not treat missing docs, README, changelog, markdown, txt, or other prose-only updates as findings against this patch agent; review the code and behavior that the patch agent changed.\n\nFor agent-facing changes, missing required real-agent verification is a finding unless the source context includes the exact real-agent scenario and visible result, or the exact pre-agent blocker. If you report missing verification, state the precise evidence that would resolve it. When the patch agent responds with verification evidence or a blocker rather than code, evaluate that evidence instead of requiring another patch.");
+        #[cfg(feature = "bench-experiments")]
+        let review_prompt = crate::bench_experiment::forward_review_context(
+            &self.project_dir,
+            &commit.agent_id,
+            &reviewer_id,
+            &commit.hash,
+            review_prompt,
+            context_start..context_end,
+        )
+        .map_err(CliError::Io)?;
         let mut review_text = if reuse_reviewer {
             {
                 let backend = self
