@@ -15,9 +15,17 @@ Original terminal/stdout/stderr and compiled source/binary are preserved.
 The bench-only regression fix and independent review are closed. Final gates pass
 534 tests with zero failures, including actual CommandChat startup with pre-created
 empty/populated ordinary bundle parents. The user explicitly approves one corrected
-C15 diagnostic002; fresh inputs are under preparation. Diagnostic001 is not rerun
-or replaced. Original analyzer/extractor attempts are terminal with exits 2/0;
-their zero-invocation witness is being finalized. No provider workflow is running.
+C15 diagnostic002; its sole command closes 20:10:36.414477–20:11:37.374540 UTC,
+60.9601 seconds, exit 0, five calls/two roles and all 188 immutable pins matching.
+Real startup, behavioral private RED feedback and a test-preserving shared patch
+are verified. Full qualification is incomplete: the fixture's two-round setting
+also caps author processing, leaving its ordinary test directive unexecuted and
+author DONE absent. Normal WL does not have that two-round default. Native/public
+joins, semantic review and independent closure checks retain that exact gap.
+Original analyzer/extractor close once with exits 2/0, one incomplete-usage flag
+and eight pinned-binary marker flags. See [qualified result](preflight/c15-real-diagnostic-002/RESULT.md).
+Diagnostic001 is not rerun or replaced; its zero-invocation witness is complete.
+No provider workflow is active. Another real diagnostic requires separate approval.
 
 The user's [C15/C21 approval](AUTHORITY-C15-C21-20260907T1806Z.md) authorizes an
 explicitly qualified private-test-first workflow and one additional separately
