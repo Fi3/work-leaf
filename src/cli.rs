@@ -541,6 +541,8 @@ pub struct CommandChat<B> {
     locked_command_timeout: Duration,
     next_user_agent: usize,
     system_agents: SystemAgentRegistry,
+    #[cfg(feature = "bench-experiments")]
+    bench_launch_requests: Arc<Mutex<BTreeMap<AgentId, AgentLaunch>>>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -668,6 +670,8 @@ where
             locked_command_timeout: self.locked_command_timeout,
             next_user_agent: self.next_user_agent,
             system_agents: self.system_agents.clone(),
+            #[cfg(feature = "bench-experiments")]
+            bench_launch_requests: Arc::clone(&self.bench_launch_requests),
         }
     }
 }
@@ -698,6 +702,8 @@ where
             locked_command_timeout: Duration::from_secs(5 * 60),
             next_user_agent: 1,
             system_agents: SystemAgentRegistry::default(),
+            #[cfg(feature = "bench-experiments")]
+            bench_launch_requests: Arc::default(),
         }
     }
 
@@ -975,6 +981,8 @@ where
     ) -> Result<CommandChatResult, CliError> {
         let agent_id = launch.id.clone();
         let feature = launch.feature.clone();
+        #[cfg(feature = "bench-experiments")]
+        let bench_launch = crate::bench_experiment::candidates_active()?.then(|| launch.clone());
         self.remember_agent_review_baseline(&agent_id);
         self.reserve_prepared_agent_id(&agent_id);
         let session = {
@@ -985,6 +993,16 @@ where
             launch_agent_streaming_interruptible(backend, launch, &mut *stream)
         }
         .map_err(CliError::Agent)?;
+        #[cfg(feature = "bench-experiments")]
+        if let Some(launch) = bench_launch {
+            // Worker clones share the owner record; a failed launch never replaces it.
+            self.bench_launch_requests
+                .lock()
+                .map_err(|_| {
+                    io::Error::other("benchmark original launch request registry poisoned")
+                })?
+                .insert(agent_id.clone(), launch);
+        }
         let reply = session
             .messages
             .last()
@@ -997,6 +1015,46 @@ where
             feature,
             reply,
         })
+    }
+
+    #[cfg(feature = "bench-experiments")]
+    fn bench_review_fix_prompt(&self, agent_id: &AgentId, baseline: String) -> io::Result<String> {
+        if !crate::bench_experiment::candidates_active()? {
+            return Ok(baseline);
+        }
+        let launch = self
+            .bench_launch_requests
+            .lock()
+            .map_err(|_| io::Error::other("benchmark original launch request registry poisoned"))?
+            .get(agent_id)
+            .cloned()
+            .ok_or_else(|| io::Error::other("benchmark original launch request is unavailable"))?;
+        let insertion = baseline.len();
+        let mut candidate = baseline.clone();
+        candidate.push_str("\n\nOriginal feature request (unchanged from launch):\n");
+        let request_start = candidate.len();
+        candidate.push_str(&launch.prompt);
+        let request_end = candidate.len();
+        crate::bench_experiment::forward_candidate(
+            "review-fix-request",
+            agent_id,
+            baseline,
+            candidate,
+            vec![crate::bench_experiment::ReadComponent {
+                baseline_start: insertion,
+                baseline_end: insertion,
+                inline_start: insertion,
+                inline_end: request_end,
+            }],
+            serde_json::json!({
+                "original_request_source": "prepared-agent-launch.prompt",
+                "source_agent_id": launch.id.to_string(),
+                "source_feature": launch.feature,
+                "original_request_bytes": launch.prompt.len(),
+                "candidate_request_start": request_start,
+                "candidate_request_end": request_end,
+            }),
+        )
     }
 
     fn reserve_prepared_agent_id(&mut self, agent_id: &AgentId) {
@@ -1266,6 +1324,8 @@ where
                 "The reviewer found issues in your patch for commit {}.\n{}\n\nPlease fix the patch's code or test defects through the orchestrator patch flow. If a finding is about missing verification, missing explanation, or another non-code issue, resolve it by replying with the exact evidence, command result, real-agent scenario, or blocker; do not submit a cosmetic patch for non-code evidence. Do not modify documentation or plain-text files; documentation and prose updates are deferred to the linearize agent. Emit `@work-leaf done` when the findings are resolved.",
                 commit.hash, review_text
             );
+            #[cfg(feature = "bench-experiments")]
+            let fix_prompt = self.bench_review_fix_prompt(&commit.agent_id, fix_prompt)?;
             stream(
                 &commit.agent_id,
                 AgentStreamEvent::AgentMessage(format!("reviewer findings:\n{review_text}")),

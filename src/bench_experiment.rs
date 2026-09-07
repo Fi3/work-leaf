@@ -15,6 +15,11 @@ use crate::agent::AgentId;
 const SCHEMA: &str = "work-leaf-bench-experiment-v1";
 const SCHEMA_V2: &str = "work-leaf-bench-experiment-v2";
 const SCHEMA_V3: &str = "work-leaf-bench-experiment-v3";
+const SCHEMA_V4: &str = "work-leaf-bench-experiment-v4";
+
+#[path = "bench_candidate_experiment.rs"]
+mod candidate;
+pub(crate) use candidate::{candidates_active, forward_candidate, forward_candidate_policy};
 const ACK: &str = "run at most one focused validation step that is relevant to files you touched or checks you added.";
 const UNLIMITED: &str = "run the required focused validation steps that are relevant to files you touched or checks you added.";
 const GUIDANCE: &str = "\nnext: Reply with the next Work Leaf directive, such as `@work-leaf done`, `@work-leaf edit`, `@work-leaf read`, or another `@work-leaf locks run`. Keep any non-directive explanation brief.";
@@ -76,7 +81,10 @@ fn load() -> io::Result<Option<Experiment>> {
         return Err(invalid("manifest must be an absolute regular-file path"));
     }
     let manifest: Manifest = serde_json::from_slice(&fs::read(&path)?).map_err(invalid)?;
-    if !matches!(manifest.schema.as_str(), SCHEMA | SCHEMA_V2 | SCHEMA_V3) {
+    if !matches!(
+        manifest.schema.as_str(),
+        SCHEMA | SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4
+    ) {
         return Err(invalid("unsupported manifest schema"));
     }
     if manifest.run_id.is_empty()
@@ -100,6 +108,10 @@ fn load() -> io::Result<Option<Experiment>> {
         SCHEMA_V3 => matches!(
             manifest.condition.as_str(),
             "control" | "untracked-read-inline"
+        ),
+        SCHEMA_V4 => matches!(
+            manifest.condition.as_str(),
+            "requested-repeat-full" | "unified-diff-preferred" | "review-fix-request-resupply"
         ),
         _ => false,
     };
@@ -151,7 +163,10 @@ pub(crate) fn forward_continuation(
     let Some(experiment) = active()? else {
         return Ok(original);
     };
-    if matches!(experiment.manifest.schema.as_str(), SCHEMA_V2 | SCHEMA_V3) {
+    if matches!(
+        experiment.manifest.schema.as_str(),
+        SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4
+    ) {
         let mut spans = match site {
             "patch-applied" => vec![PromptSpan::new("patch-applied-validation", cue)],
             "command-result" => vec![PromptSpan::new("command-result-guidance", cue)],

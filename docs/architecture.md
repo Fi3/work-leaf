@@ -265,6 +265,30 @@ and command boundaries retain identity evidence and baseline text; version 1 and
 unchanged. Candidate construction and snapshot-class merging are linear in held bytes and snapshot
 count. The schemas remain private benchmark evidence formats, not public runtime configuration.
 
+Version 4 manifests admit three private single-factor conditions, without a control condition:
+`requested-repeat-full`, `unified-diff-preferred`, and `review-fix-request-resupply`. A separate
+candidate adapter validates ordered renderer-owned UTF-8 components, preserves intervening bytes,
+records both complete prompt candidates and their selected identity, and fails delivery on evidence
+errors. Existing version 1–3 schemas keep their text and evidence contracts. Candidate policy spans
+are collected separately from version 2 spans; public `PromptPolicy::inject` remains baseline.
+
+Requested-repeat delivery uses the current held changed/unchanged snapshots as full text and a
+truthful matching launch-policy contract. Ordinary untracked bundle creation, failed paths, explicit
+bundle prefixes, tracking/invalidation and automatic refresh remain independent. The ordinary
+renderer and diff construction run once. Unified-diff preference alters only coherent owned
+format-guidance spans; both patch formats, application, ownership and validation rules remain
+available and unchanged. These interventions are not general runtime settings.
+
+For original-request resupply, `CommandChat` owns a benchmark-feature-only shared launch registry
+across worker clones. It records exact prepared launches only under active version 4 after a
+successful provider launch; successful relaunch replaces that identity's record and failed launch
+preserves the prior record. At an actual author review-fix handoff, the private adapter can append
+one framed copy of the original request. Missing owned provenance fails closed instead of searching
+provider transcripts. All findings, review targets, other followups and provider sessions retain
+their ordinary behavior. No public API or provider-specific integration is part of these seams.
+Candidate construction and range validation are linear in held prompt bytes and component count;
+the private launch registry uses logarithmic keyed lookup.
+
 Both benchmark drivers use `bench-agent-profile-common` to create a run-local Codex wrapper. The
 wrapper pins the requested model and reasoning effort directly on every allowed Codex invocation
 without reading or changing the user's global Codex configuration. Each temporary benchmark

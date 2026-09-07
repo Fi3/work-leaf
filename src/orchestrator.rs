@@ -1008,6 +1008,8 @@ where
 {
     #[cfg(feature = "bench-experiments")]
     let capture_read = crate::bench_experiment::reads_active().map_err(AgentError::Io)?;
+    #[cfg(feature = "bench-experiments")]
+    let capture_repeat = crate::bench_experiment::candidates_active().map_err(AgentError::Io)?;
     let response = read_requested_files(services.locks, services.context_bundles, paths)?;
     let (exact_snapshots, changed_snapshots, unchanged_snapshots) =
         split_repeated_file_reads(services.file_reads, agent_id, &response.snapshots, force);
@@ -1034,9 +1036,13 @@ where
         },
         #[cfg(feature = "bench-experiments")]
         capture_read,
+        #[cfg(feature = "bench-experiments")]
+        capture_repeat,
     );
     #[cfg(feature = "bench-experiments")]
     let mut experiment = project.experiment;
+    #[cfg(feature = "bench-experiments")]
+    let mut repeat_experiment = project.repeat_experiment;
     let prompt = if response.context_bundle_snapshots.is_empty() {
         project.text
     } else {
@@ -1052,12 +1058,20 @@ where
                 experiment.evidence.prepend(prompt.len());
                 experiment.inline_candidate = format!("{prompt}{}", experiment.inline_candidate);
             }
+            #[cfg(feature = "bench-experiments")]
+            if let Some(experiment) = &mut repeat_experiment {
+                experiment.prepend(&prompt);
+            }
             prompt.push_str(&project.text);
         } else {
             #[cfg(feature = "bench-experiments")]
             if let Some(experiment) = &mut experiment {
                 experiment.evidence.component = None;
                 experiment.inline_candidate.clone_from(&prompt);
+            }
+            #[cfg(feature = "bench-experiments")]
+            if let Some(experiment) = &mut repeat_experiment {
+                experiment.candidate.clone_from(&prompt);
             }
         }
         prompt
@@ -1079,6 +1093,35 @@ where
             prompt,
             experiment.inline_candidate,
             experiment.evidence,
+        )
+        .map_err(AgentError::Io)?
+    } else {
+        prompt
+    };
+    #[cfg(feature = "bench-experiments")]
+    let prompt = if let Some(mut experiment) = repeat_experiment {
+        experiment.snapshots.extend(
+            response
+                .context_bundle_snapshots
+                .iter()
+                .map(|snapshot| bench_read_snapshot(snapshot, "explicit-bundle", None)),
+        );
+        let metadata = serde_json::json!({
+            "eligible": !experiment.components.is_empty(),
+            "requested_paths": paths.iter().map(|path| path.display().to_string()).collect::<Vec<_>>(),
+            "bundle": experiment.bundle,
+            "snapshots": experiment.snapshots,
+            "failures": response.failures.iter().map(|failure| crate::bench_experiment::ReadFailure {
+                path: failure.path.display().to_string(), diagnostic: failure.diagnostic.clone(),
+            }).collect::<Vec<_>>(),
+        });
+        crate::bench_experiment::forward_candidate(
+            "requested-repeat-read",
+            agent_id,
+            prompt,
+            experiment.candidate,
+            experiment.components,
+            metadata,
         )
         .map_err(AgentError::Io)?
     } else {
@@ -2100,6 +2143,8 @@ struct RenderedFileRead {
     text: String,
     #[cfg(feature = "bench-experiments")]
     experiment: Option<BenchFileRead>,
+    #[cfg(feature = "bench-experiments")]
+    repeat_experiment: Option<BenchRepeatRead>,
 }
 
 #[cfg(feature = "bench-experiments")]
@@ -2108,12 +2153,43 @@ struct BenchFileRead {
     evidence: crate::bench_experiment::ReadEvidence,
 }
 
+#[cfg(feature = "bench-experiments")]
+struct BenchRepeatRead {
+    candidate: String,
+    components: Vec<crate::bench_experiment::ReadComponent>,
+    snapshots: Vec<crate::bench_experiment::ReadSnapshot>,
+    bundle: crate::bench_experiment::ReadBundle,
+}
+
+#[cfg(feature = "bench-experiments")]
+impl BenchRepeatRead {
+    fn prepend(&mut self, prefix: &str) {
+        let bytes = prefix.len();
+        for component in &mut self.components {
+            component.baseline_start += bytes;
+            component.baseline_end += bytes;
+            component.inline_start += bytes;
+            component.inline_end += bytes;
+        }
+        for snapshot in &mut self.snapshots {
+            if let Some(start) = &mut snapshot.inline_body_start {
+                *start += bytes;
+            }
+            if let Some(end) = &mut snapshot.inline_body_end {
+                *end += bytes;
+            }
+        }
+        self.candidate = format!("{prefix}{}", self.candidate);
+    }
+}
+
 fn render_file_read_response(
     context_bundles: &ContextBundleStore,
     file_reads: &FileReadTracker,
     agent_id: &AgentId,
     groups: &FileReadGroups<'_>,
     #[cfg(feature = "bench-experiments")] capture_read: bool,
+    #[cfg(feature = "bench-experiments")] capture_repeat: bool,
 ) -> RenderedFileRead {
     let threshold_eligible = should_bundle_file_read_response(groups.exact);
     let bundled = if threshold_eligible {
@@ -2125,11 +2201,17 @@ fn render_file_read_response(
     let bundle_path = capture_read
         .then(|| bundled.as_ref().map(|(_, path)| path.clone()))
         .flatten();
+    #[cfg(feature = "bench-experiments")]
+    let repeat_bundle_path = capture_repeat
+        .then(|| bundled.as_ref().map(|(_, path)| path.clone()))
+        .flatten();
     let exact_text = bundled
         .map(|(text, _)| text)
         .unwrap_or_else(|| render_file_read_response_inline(groups.exact, &[]));
     #[cfg(feature = "bench-experiments")]
     let exact_end = exact_text.len();
+    #[cfg(feature = "bench-experiments")]
+    let mut repeat_end = 0;
     let text = render_file_read_response_with_repeats(
         exact_text,
         file_reads,
@@ -2137,6 +2219,8 @@ fn render_file_read_response(
         groups.changed,
         groups.unchanged,
         groups.failures,
+        #[cfg(feature = "bench-experiments")]
+        &mut repeat_end,
     );
     #[cfg(feature = "bench-experiments")]
     let experiment = capture_read.then(|| {
@@ -2183,10 +2267,77 @@ fn render_file_read_response(
             },
         }
     });
+    #[cfg(feature = "bench-experiments")]
+    let repeat_experiment = capture_repeat.then(|| {
+        bench_repeat_read_candidate(
+            &text,
+            exact_end..repeat_end,
+            groups,
+            crate::bench_experiment::ReadBundle {
+                threshold_eligible,
+                write_succeeded: repeat_bundle_path.is_some(),
+                path: repeat_bundle_path,
+            },
+        )
+    });
     RenderedFileRead {
         text,
         #[cfg(feature = "bench-experiments")]
         experiment,
+        #[cfg(feature = "bench-experiments")]
+        repeat_experiment,
+    }
+}
+
+#[cfg(feature = "bench-experiments")]
+fn bench_repeat_read_candidate(
+    baseline: &str,
+    repeat: std::ops::Range<usize>,
+    groups: &FileReadGroups<'_>,
+    bundle: crate::bench_experiment::ReadBundle,
+) -> BenchRepeatRead {
+    let mut candidate = baseline[..repeat.start].to_string();
+    let mut components = Vec::new();
+    let mut snapshots =
+        Vec::with_capacity(groups.exact.len() + groups.changed.len() + groups.unchanged.len());
+    snapshots.extend(
+        groups
+            .exact
+            .iter()
+            .map(|snapshot| bench_read_snapshot(snapshot, "untracked", None)),
+    );
+    if !groups.changed.is_empty() || !groups.unchanged.is_empty() {
+        candidate.push_str("\nRepeated file reads: current full text\n");
+        for (class, group) in [("changed", groups.changed), ("unchanged", groups.unchanged)] {
+            for snapshot in group {
+                candidate.push_str("\n--- ");
+                candidate.push_str(&snapshot.path.display().to_string());
+                candidate.push_str(" ---\n");
+                let start = candidate.len();
+                candidate.push_str(&snapshot.text);
+                snapshots.push(bench_read_snapshot(
+                    snapshot,
+                    class,
+                    Some(start..candidate.len()),
+                ));
+                if !snapshot.text.ends_with('\n') {
+                    candidate.push('\n');
+                }
+            }
+        }
+        components.push(crate::bench_experiment::ReadComponent {
+            baseline_start: repeat.start,
+            baseline_end: repeat.end,
+            inline_start: repeat.start,
+            inline_end: candidate.len(),
+        });
+    }
+    candidate.push_str(&baseline[repeat.end..]);
+    BenchRepeatRead {
+        candidate,
+        components,
+        snapshots,
+        bundle,
     }
 }
 
@@ -2240,6 +2391,7 @@ fn render_file_read_response_with_repeats(
     changed_snapshots: &[crate::locks::FileSnapshot],
     unchanged_snapshots: &[crate::locks::FileSnapshot],
     failures: &[FileReadFailure],
+    #[cfg(feature = "bench-experiments")] repeat_end: &mut usize,
 ) -> String {
     let mut text = exact_text;
     if !changed_snapshots.is_empty() {
@@ -2263,6 +2415,10 @@ fn render_file_read_response_with_repeats(
             text.push_str(&content_digest(&snapshot.text));
             text.push_str(")\n");
         }
+    }
+    #[cfg(feature = "bench-experiments")]
+    {
+        *repeat_end = text.len();
     }
     if !failures.is_empty() {
         text.push_str("\nUnavailable file text\n");

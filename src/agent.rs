@@ -207,6 +207,8 @@ pub struct PromptPolicy {
     preamble: String,
     #[cfg(feature = "bench-experiments")]
     preamble_span: crate::bench_experiment::PromptSpan,
+    #[cfg(feature = "bench-experiments")]
+    candidate_preamble_spans: Vec<crate::bench_experiment::PromptSpan>,
     project_instructions: Vec<ProjectInstructionFile>,
 }
 
@@ -214,6 +216,8 @@ struct PolicyText {
     text: String,
     #[cfg(feature = "bench-experiments")]
     spans: Vec<crate::bench_experiment::PromptSpan>,
+    #[cfg(feature = "bench-experiments")]
+    candidate_spans: Vec<crate::bench_experiment::PromptSpan>,
 }
 
 impl PolicyText {
@@ -222,6 +226,8 @@ impl PolicyText {
             text,
             #[cfg(feature = "bench-experiments")]
             spans: Vec::new(),
+            #[cfg(feature = "bench-experiments")]
+            candidate_spans: Vec::new(),
         }
     }
 
@@ -232,6 +238,13 @@ impl PolicyText {
             span.cue.end += self.text.len();
             span
         }));
+        #[cfg(feature = "bench-experiments")]
+        self.candidate_spans
+            .extend(other.candidate_spans.into_iter().map(|mut span| {
+                span.cue.start += self.text.len();
+                span.cue.end += self.text.len();
+                span
+            }));
         self.text.push_str(&other.text);
     }
 }
@@ -253,6 +266,11 @@ impl PromptPolicy {
 
     pub fn for_read_permission(read_permission: ReadPermission) -> Self {
         let mut lines = vec!["You are running under the work-leaf orchestrator."];
+        #[cfg(feature = "bench-experiments")]
+        let write_line = lines.len() + 2;
+        #[cfg(feature = "bench-experiments")]
+        let repeat_line =
+            (read_permission == ReadPermission::Orchestrator).then_some(lines.len() + 10);
         match read_permission {
             ReadPermission::Orchestrator => lines.extend([
                 "You are not allowed to read files directly; ask the orchestrator to provide file text.",
@@ -280,6 +298,10 @@ impl PromptPolicy {
                 "Emit every `@work-leaf ...` request as a top-level plain response line, without quotes, prose, or code fences, so the orchestrator can parse it.",
             ]),
         }
+        #[cfg(feature = "bench-experiments")]
+        let edit_request_line = lines.len();
+        #[cfg(feature = "bench-experiments")]
+        let edit_preference_line = lines.len() + 3;
         lines.extend([
             "Use `@work-leaf edit <reason>` followed by an apply-patch-style exact edit body and `@work-leaf end` to request a write.",
             "Structured edit bodies use `*** Begin Patch`, `*** Update File: path`, `@@` separators without line numbers, exact unchanged context lines prefixed with a space, old lines prefixed with `-`, new lines prefixed with `+`, and `*** End Patch`.",
@@ -294,6 +316,33 @@ impl PromptPolicy {
             "When a check fails in a test, fixture, UI path, or feature behavior owned by another patch agent, do not edit that other agent's tests or unrelated implementation. Report the exact blocker once and continue toward `@work-leaf done` after your own focused checks pass.",
         ]);
         let mut preamble = lines.join("\n");
+        #[cfg(feature = "bench-experiments")]
+        let mut candidate_preamble_spans = {
+            let mut offset = 0;
+            lines
+                .iter()
+                .enumerate()
+                .filter_map(|(index, line)| {
+                    let start = offset;
+                    offset += line.len() + 1;
+                    let id = if index == write_line {
+                        "policy-write-format"
+                    } else if Some(index) == repeat_line {
+                        "policy-requested-repeat-contract"
+                    } else if index == edit_request_line {
+                        "policy-edit-request"
+                    } else if index == edit_preference_line {
+                        "policy-edit-preference"
+                    } else {
+                        return None;
+                    };
+                    Some(crate::bench_experiment::PromptSpan::new(
+                        id,
+                        start..start + line.len(),
+                    ))
+                })
+                .collect::<Vec<_>>()
+        };
         preamble.push_str("\nKeep the shared worktree usable for the other patch agents: do not submit known-red, compile-breaking, or deliberately failing intermediate patches. ");
         #[cfg(feature = "bench-experiments")]
         let cue_start = preamble.len();
@@ -304,9 +353,17 @@ impl PromptPolicy {
             cue_start..preamble.len(),
         );
         preamble.push('\n');
+        preamble.push_str("Locked command runs are limited to five minutes; user authorization is required for longer lock-holding commands.\n");
+        #[cfg(feature = "bench-experiments")]
+        let manual_start = preamble.len();
+        preamble.push_str("Do not use command locks for manual feature edits; manual code, configuration, and test changes must still be submitted with the structured edit directive.");
+        #[cfg(feature = "bench-experiments")]
+        candidate_preamble_spans.push(crate::bench_experiment::PromptSpan::new(
+            "policy-manual-write-format",
+            manual_start..preamble.len(),
+        ));
+        preamble.push('\n');
         preamble.push_str(&[
-            "Locked command runs are limited to five minutes; user authorization is required for longer lock-holding commands.",
-            "Do not use command locks for manual feature edits; manual code, configuration, and test changes must still be submitted with the structured edit directive.",
             "Use `@work-leaf send <agent-id> <message>` to route context to another agent.",
             "You are responsible for following the project instructions, including running the repository's required checks before you submit a patch or report work done.",
             "Use `@work-leaf done` when no more orchestrator work is required.",
@@ -315,6 +372,8 @@ impl PromptPolicy {
             preamble,
             #[cfg(feature = "bench-experiments")]
             preamble_span,
+            #[cfg(feature = "bench-experiments")]
+            candidate_preamble_spans,
             project_instructions: Vec::new(),
         }
     }
@@ -344,8 +403,17 @@ impl PromptPolicy {
     ) -> Result<String, AgentError> {
         let rendered = self.render(agent_id, feature, prompt);
         #[cfg(feature = "bench-experiments")]
-        return crate::bench_experiment::forward_policy(agent_id, rendered.text, rendered.spans)
-            .map_err(AgentError::Io);
+        {
+            let original =
+                crate::bench_experiment::forward_policy(agent_id, rendered.text, rendered.spans)
+                    .map_err(AgentError::Io)?;
+            crate::bench_experiment::forward_candidate_policy(
+                agent_id,
+                original,
+                rendered.candidate_spans,
+            )
+            .map_err(AgentError::Io)
+        }
         #[cfg(not(feature = "bench-experiments"))]
         Ok(rendered.text)
     }
@@ -360,6 +428,9 @@ impl PromptPolicy {
         #[cfg(feature = "bench-experiments")]
         if !linearize_agent {
             rendered.spans.push(self.preamble_span.clone());
+            rendered
+                .candidate_spans
+                .extend(self.candidate_preamble_spans.iter().cloned());
         }
         if !self.project_instructions.is_empty() {
             rendered
@@ -390,17 +461,27 @@ impl PromptPolicy {
 }
 
 fn concurrent_work_leaf_interpretation(instruction_files: &[ProjectInstructionFile]) -> PolicyText {
-    let text = "Concurrent Work Leaf interpretation:\n\
+    let mut text = "Concurrent Work Leaf interpretation:\n\
 - preserve the repository-specific intent of the instructions below; use the repo's architecture, APIs, naming, style, and checks.\n\
 - Apply broad repository check requirements in a shared-worktree way. Prefer focused checks for files you touched, checks that existed before your patch, and checks you added yourself.\n\
 - Avoid write-producing broad formatters over the whole repository while other patch agents are active. Prefer check-only formatter commands or formatter commands scoped to files you touched.\n\
 - If a broad required check is blocked only by another patch agent's owned files or focused tests, do not take over that agent's work. Report the blocker once with the concrete failing file/test and stop retrying the same broad check.\n\
 - If a failing test or assertion belongs to another feature, do not rewrite that test or unrelated behavior to satisfy it. Treat it as an integration blocker unless your own patch clearly caused the failure.\n\
 - Do not repeatedly rerun the same broad check after it fails for the same external integration blocker. After your focused checks pass and any external blocker is reported, use `@work-leaf done` and leave cross-agent reconciliation to review or linearize.\n\
-- Treat compact file refreshes and repeated-read digests as authoritative. Use `@work-leaf read --force` only when the diff or digest response is insufficient for a specific patch."
+- "
         .to_string();
-
+    #[cfg(feature = "bench-experiments")]
+    let authority_start = text.len();
+    text.push_str("Treat compact file refreshes and repeated-read digests as authoritative.");
+    #[cfg(feature = "bench-experiments")]
+    let authority_span = crate::bench_experiment::PromptSpan::new(
+        "policy-repeat-authority",
+        authority_start..text.len(),
+    );
+    text.push_str(" Use `@work-leaf read --force` only when the diff or digest response is insufficient for a specific patch.");
     let mut rendered = PolicyText::new(text);
+    #[cfg(feature = "bench-experiments")]
+    rendered.candidate_spans.push(authority_span);
     for instructions in instruction_files {
         rendered.text.push_str("\n\n");
         rendered.append(concurrent_instruction_translation(instructions));
@@ -448,10 +529,21 @@ fn concurrent_instruction_translation(instructions: &ProjectInstructionFile) -> 
             "- Documentation rules remain mandatory. Patch agents do not edit docs or prose-only files; required docs updates are handled by the linearize agent after reviewed behavior is accepted.".to_string(),
         );
     }
+    #[cfg(feature = "bench-experiments")]
+    let mut commit_span = None;
     if topics.commits {
+        #[cfg(feature = "bench-experiments")]
+        let start = lines.iter().map(|line| line.len() + 1).sum::<usize>();
         lines.push(
             "- Commit-message rules remain mandatory. Patch agents express intent through the `@work-leaf edit <reason>` reason; final commit-message compliance is enforced through patch reason and final linearized commits.".to_string(),
         );
+        #[cfg(feature = "bench-experiments")]
+        {
+            commit_span = Some(crate::bench_experiment::PromptSpan::new(
+                "instruction-commit-format",
+                start..start + lines.last().expect("commit rule was appended").len(),
+            ));
+        }
     }
     if topics.reviews {
         lines.push(
@@ -468,6 +560,8 @@ fn concurrent_instruction_translation(instructions: &ProjectInstructionFile) -> 
         text: lines.join("\n"),
         #[cfg(feature = "bench-experiments")]
         spans: test_span.into_iter().collect(),
+        #[cfg(feature = "bench-experiments")]
+        candidate_spans: commit_span.into_iter().collect(),
     }
 }
 
