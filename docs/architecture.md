@@ -178,6 +178,31 @@ identity and observed validation activity but does not proxy, limit, block, or g
 Measurement failures are reported separately and cannot change whether the implementation workflow
 succeeded.
 
+`WORK_LEAF_OBSERVER_PROJECT_LAYER_INVENTORY=1` enables private, bounded project-layer evidence in
+the benchmark observer; an absent variable leaves the existing capture path unchanged and any
+other value is rejected. The primary app-server proxy records a durable inventory before spawning
+the provider child, and existing Git checkpoints record further snapshots. Provider arguments,
+inherited environment, prompts, byte streams, interruption handling, and response waits are not
+rewritten. Inventory metadata stays in `observation/project-layer-inventory`, outside agent streams.
+The opt-in requires a canonical cwd that is itself an ordinary Git project root, default project
+root discovery, and no configuration profile or indirect resource-reference settings. Consequently
+the eligible project layer is rooted at that cwd, not at an assumed parent directory. Unsupported
+root/profile/reference settings, nonempty hook configurations, symlinks, credential files, special
+files, unreadable files, and exceeded bounds produce retained invalid snapshots. User/system
+configuration is parsed only to validate that limited boundary and record hashes; this is not a
+general effective-settings resolver, and no configuration or credential contents are archived.
+
+The inventory includes ignored and untracked `.codex` files, directory and permission metadata,
+content hashes, symlink-state evidence without following links, and absent standard layers. Its
+limits are 512 entries, depth 16, 1 MiB per file, and 8 MiB of read bytes per snapshot. Work is
+O(B + F log F) for B bytes and F entries. Later snapshots compare against the pre-spawn project
+digest without treating global project-trust changes as project-file changes. These snapshots
+establish equality only at their recorded boundaries, not continuous filesystem immutability.
+The observer's offline analyzer uses the primary invocation's required-inventory marker and
+retained records to reject missing, malformed, mismatched, or invalid inventory evidence even if
+the driver merely logged a checkpoint failure. The study separately classifies global configuration
+transitions; the inventory does not clear a study's previously recorded drift flags.
+
 Agents retain their normal validation behavior. Work Leaf feature agents and reviewers use the
 orchestrator's normal prompts and command policy; its linearizer runs the repository-required checks
 and fixes failures. Direct feature sessions may run focused checks as needed, their reviewers may
@@ -202,6 +227,22 @@ messages. Control and variants use identical logging and retain normal command e
 ownership, provider, and interruption paths. These conditions are benchmark interventions, not
 normal Work Leaf settings or a public extension API. Study protocols and immutable per-phase
 manifests define permitted variants, scheduling, source identities, and causal interpretation.
+
+Version 2 experiment manifests enroll control or the complete buildable-work-unit policy. The
+shared `src/agent.rs::PromptPolicy` renderer identifies owned work-unit spans during construction;
+its public `inject` method remains infallible and renders baseline policy. The crate-private
+`inject_for_delivery` method applies benchmark-only transformations and propagates evidence errors
+through `AgentError::Io` before provider generation. Codex and Claude adapters use that method only
+at their existing launch and missing-session injection sites. Known-session followups remain raw,
+and linearizer policies have no work-unit treatment spans. Patch acknowledgments additionally expose
+the remaining-work/completion span while keeping focused-validation cardinality unchanged.
+
+Version 2 evidence records ordered, disjoint owned spans and both full prompt strings once per
+existing delivery boundary. Transformation is linear in original/replacement bytes and span count;
+copied user and repository text is never searched and replaced. Control has identical recording.
+Version 1 manifests retain their two original continuation sites and trace format without added
+policy-injection records. These private schemas are experiment admission/evidence formats, not
+public provider or prompt-policy APIs.
 
 Both benchmark drivers use `bench-agent-profile-common` to create a run-local Codex wrapper. The
 wrapper pins the requested model and reasoning effort directly on every allowed Codex invocation

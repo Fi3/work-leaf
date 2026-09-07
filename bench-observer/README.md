@@ -66,6 +66,20 @@ it does not repair the implementation or replace the agents' own validation.
 status, diffs, commit graph, and reflog at named boundaries. `archive-bundles` saves regular context
 bundle files with byte lengths and SHA-256 digests.
 
+`WORK_LEAF_OBSERVER_PROJECT_LAYER_INVENTORY=1` enables bounded, hash-only project-layer snapshots
+before the primary app-server child starts and at existing Git checkpoints. An absent setting keeps
+the original capture path; other values fail closed. The supported cwd is an ordinary canonical Git
+project root with default root discovery and no profile or indirect configuration-resource settings.
+The inventory includes ignored/untracked `.codex` files, modes, hashes and absent layers; unsupported
+roots, references, hooks, symlinks, credentials, unreadable files and exceeded limits are retained as
+invalid evidence. It never archives configuration contents or changes provider arguments, prompts,
+streams, interruption decisions or response waits. Limits are 512 visited/retained entries, depth 16,
+1 MiB per file and 8 MiB read per snapshot. Records live in `observation/project-layer-inventory`.
+The analyzer checks required publication, digest/identity, pre-child ordering and cross-snapshot
+equality independently of a driver's checkpoint exit handling. Snapshots do not prove continuous
+immutability or resolve all effective settings; global trust transitions require the study's own
+integrity policy. See [architecture](../docs/architecture.md) for the ownership and evidence boundary.
+
 `analyze` reads captured provider messages, command results, process lineage, checkpoints, and token
 snapshots. It reports separate token scopes for visible agent roles, the primary benchmark path, and
 the total workflow. Dashboard comparisons use the total-workflow scope only when capture completion,

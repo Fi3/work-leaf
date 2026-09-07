@@ -402,9 +402,9 @@ impl AgentBackend for ClaudeBackend {
         sink: &mut dyn FnMut(AgentStreamEvent),
     ) -> Result<AgentSession, AgentError> {
         let _operation_guard = self.acquire_agent_operation(&request.id);
-        let prompt = self
-            .policy
-            .inject(&request.id, &request.feature, &request.prompt);
+        let prompt =
+            self.policy
+                .inject_for_delivery(&request.id, &request.feature, &request.prompt)?;
         let output = self.run_turn_streaming(&request.id, &prompt, None, sink)?;
         Ok(self.record_launch_reply(request, output))
     }
@@ -416,9 +416,9 @@ impl AgentBackend for ClaudeBackend {
         should_interrupt: &mut dyn FnMut(&AgentStreamEvent) -> bool,
     ) -> Result<AgentSession, AgentError> {
         let _operation_guard = self.acquire_agent_operation(&request.id);
-        let prompt = self
-            .policy
-            .inject(&request.id, &request.feature, &request.prompt);
+        let prompt =
+            self.policy
+                .inject_for_delivery(&request.id, &request.feature, &request.prompt)?;
         let output = self.run_turn_streaming_interruptible(
             &request.id,
             &prompt,
@@ -455,7 +455,8 @@ impl AgentBackend for ClaudeBackend {
         let prompt = if has_session {
             prompt.to_string()
         } else {
-            self.policy.inject(agent_id, &feature, prompt)
+            self.policy
+                .inject_for_delivery(agent_id, &feature, prompt)?
         };
         let output =
             self.run_turn_streaming(agent_id, &prompt, claude_session_id.as_deref(), sink)?;
@@ -489,7 +490,8 @@ impl AgentBackend for ClaudeBackend {
         let prompt = if has_session {
             prompt.to_string()
         } else {
-            self.policy.inject(agent_id, &feature, prompt)
+            self.policy
+                .inject_for_delivery(agent_id, &feature, prompt)?
         };
         let output = self.run_turn_streaming_interruptible(
             agent_id,

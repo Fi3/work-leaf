@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
+mod project_inventory;
 mod raw_capture;
 mod response_usage;
 
@@ -417,6 +418,7 @@ pub fn run_captured_process(
     real_sha256: &str,
     args: &[OsString],
 ) -> ObserverResult<ProxyOutcome> {
+    let project_inventory_enabled = project_inventory::enabled()?;
     let done = Arc::new(AtomicBool::new(false));
     let mut signal_forwarder = SignalForwarder::install(done.clone())?;
     let invocation_id = invocation_id();
@@ -478,7 +480,10 @@ pub fn run_captured_process(
     create_private_directory(&capture_root)?;
     create_private_directory(&invocation_dir)?;
     create_private_directory(&capture_dir)?;
-    let start_metadata = raw_capture::start_metadata(&start, raw_response_usage)?;
+    let mut start_metadata = raw_capture::start_metadata(&start, raw_response_usage)?;
+    if project_inventory_enabled && primary && kind == CaptureKind::AppServer {
+        start_metadata["project_layer_inventory_required"] = json!(true);
+    }
     write_json_atomic(&invocation_dir.join("start.json"), &start_metadata)?;
 
     let stdin_path = match kind {
@@ -504,6 +509,16 @@ pub fn run_captured_process(
     } else {
         None
     };
+
+    if project_inventory_enabled && primary && kind == CaptureKind::AppServer {
+        project_inventory::capture(
+            config,
+            &start.cwd,
+            "pre-spawn",
+            Some(&invocation_id),
+            Some(args),
+        )?;
+    }
 
     let mut command = Command::new(real_executable);
     command
@@ -4364,6 +4379,7 @@ pub fn analyze(config: &CaptureConfig) -> ObserverResult<AnalysisSummary> {
 
     load_timeline_observations(config, &mut mechanisms, &mut errors)?;
     load_git_checkpoint_observations(config, &mut mechanisms, &mut errors)?;
+    project_inventory::audit(config, &inventory, &mut errors);
     if !observations.is_empty() {
         mechanisms.observe(EvidenceInput::ThreadTopology);
         mechanisms.observe(EvidenceInput::Usage);
@@ -6618,6 +6634,15 @@ pub fn capture_git_checkpoint(
     repository: &Path,
     label: &str,
 ) -> ObserverResult<()> {
+    if project_inventory::enabled()? {
+        project_inventory::capture(
+            config,
+            repository,
+            &format!("checkpoint:{label}"),
+            None,
+            None,
+        )?;
+    }
     let safe_label = safe_component(label);
     let root = config.root.join("git-checkpoints/files").join(&safe_label);
     fs::create_dir_all(&root)?;

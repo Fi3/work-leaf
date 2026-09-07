@@ -2388,13 +2388,21 @@ struct ContinuationPrompt {
     text: String,
     #[cfg(feature = "bench-experiments")]
     cue: std::ops::Range<usize>,
+    #[cfg(feature = "bench-experiments")]
+    remaining_work: Option<std::ops::Range<usize>>,
 }
 
 impl ContinuationPrompt {
     fn finish(self, _agent_id: &AgentId, _site: &str) -> Result<String, AgentError> {
         #[cfg(feature = "bench-experiments")]
-        return crate::bench_experiment::forward(_site, _agent_id, self.text, self.cue)
-            .map_err(AgentError::Io);
+        return crate::bench_experiment::forward_continuation(
+            _site,
+            _agent_id,
+            self.text,
+            self.cue,
+            self.remaining_work,
+        )
+        .map_err(AgentError::Io);
         #[cfg(not(feature = "bench-experiments"))]
         Ok(self.text)
     }
@@ -2436,6 +2444,8 @@ fn render_command_result(
         text,
         #[cfg(feature = "bench-experiments")]
         cue: cue_start..cue_end,
+        #[cfg(feature = "bench-experiments")]
+        remaining_work: None,
     }
 }
 
@@ -2677,11 +2687,17 @@ fn render_patch_applied_prompt(files: &[PathBuf]) -> ContinuationPrompt {
     );
     text.push_str("Do not run another patch agent's focused tests as local validation. If a broad check is blocked only by another patch agent's owned files or tests, report that exact blocker once.\n");
     text.push_str("If validation fails in another feature's test or behavior, do not edit that test or unrelated implementation unless your patch clearly caused the failure.\n");
+    #[cfg(feature = "bench-experiments")]
+    let remaining_start = text.len();
     text.push_str("After the focused validation passes, or after you report an external blocker, emit a top-level `@work-leaf done` so review can start. Send another edit only if validation found a concrete issue in your own patch.");
+    #[cfg(feature = "bench-experiments")]
+    let remaining_end = text.len();
     ContinuationPrompt {
         text,
         #[cfg(feature = "bench-experiments")]
         cue: cue_start..cue_end,
+        #[cfg(feature = "bench-experiments")]
+        remaining_work: Some(remaining_start..remaining_end),
     }
 }
 
