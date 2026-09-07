@@ -1,0 +1,352 @@
+{
+  "schema": "work-leaf-policy-identity-audit-v1",
+  "status": "pass",
+  "provider_calls": 0,
+  "reference_commit": "518673c0b54943cde34cd1bd8c1376a5d498d460",
+  "method": "Compile verbatim git HEAD src/agent.rs and src/instructions.rs as the independent old renderer beside each current Work Leaf library. Invoke both separately with identical paths, instruction bytes, read mode, IDs, feature, and user prompt; assert equality of entire UTF-8 prompt bytes before hashing.",
+  "reference_sources": [
+    {
+      "git_path": "src/agent.rs",
+      "sha256": "dd4464f94d887b30ad603f331743d18e69936d0f898c74383595c34f43d4cb74"
+    },
+    {
+      "git_path": "src/instructions.rs",
+      "sha256": "f156aec8d0bc0071f2bde859fbd9cf29c9e6a9134c4ec5191b65f89f3041296f"
+    }
+  ],
+  "current_sources": [
+    {
+      "path": "src/agent.rs",
+      "sha256": "a6bd797e780b1751026c141cfff508c036ea45af7f37b085336f8a34c8a85838"
+    },
+    {
+      "path": "src/instructions.rs",
+      "sha256": "f156aec8d0bc0071f2bde859fbd9cf29c9e6a9134c4ec5191b65f89f3041296f"
+    }
+  ],
+  "reference_harness": {
+    "path": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/work-unit-policy-identity/main.rs",
+    "sha256": "7ff806a817b05f883bf5d1139df34a2f91b9e7aae867ba09107caf74031fb04b",
+    "runtime_exports": "The reference module's unused agent-runtime reexports resolve to current runtime contracts; the old PromptPolicy renderer and instruction loader are verbatim independent git source and make no runtime/backend call."
+  },
+  "temporary_build_root": "/tmp/work-leaf-policy-identity-rnh6Eq",
+  "libraries": [
+    {
+      "features": [],
+      "path": "target/debug/deps/libwork_leaf-d1ab42a6343cebff.rlib",
+      "sha256": "5edf6e348d1fbc8e40055998912fe038c2cfa6b1e82e1590190252d5883e39a5",
+      "compile_exit": 0,
+      "comparison_exit": 0,
+      "cases": 36
+    },
+    {
+      "features": [
+        "bench-experiments",
+        "default"
+      ],
+      "path": "target/debug/deps/libwork_leaf-ecf01d54f0f0fc82.rlib",
+      "sha256": "b711abb9c560cd863e8dce1be90e66cfdf6a1d027d2dfef5aef82c7cecf7c7ae",
+      "compile_exit": 0,
+      "comparison_exit": 0,
+      "cases": 36
+    }
+  ],
+  "compiler": "rustc --edition 2024 -D warnings <main.rs> -L dependency=target/debug/deps --extern work_leaf=<library> --extern serde=target/debug/deps/libserde-58721621bd6c3421.rlib --extern serde_json=target/debug/deps/libserde_json-720480a3331d8d64.rlib -o <audit-executable>",
+  "reproduction": "Place exact reference commit src/agent.rs and src/instructions.rs alongside the retained main.rs in a dedicated temporary directory. Compile separately with each current library and invoke each audit executable with a distinct absent fixture-root argument. Each execution creates dedicated fixture directories, compares old/new full prompts, and emits the following identical case hashes. No generation, environment mutation, or policy injection hook is invoked.",
+  "equality_checks": 72,
+  "default_and_feature_reports_identical": true,
+  "cases": [
+    {
+      "agent_id": "patch-case",
+      "bytes": 5209,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "none",
+      "sha256": "569dfe3c79d439d512d53077390bbef374eedfbabfa0456e391f4438b9fa3af3"
+    },
+    {
+      "agent_id": "review-case",
+      "bytes": 5210,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "none",
+      "sha256": "e3d292070e6c7cf8ddd3462bcc29764b78b38bf2a2a885a4afac6b8db648fd9e"
+    },
+    {
+      "agent_id": "title-agent",
+      "bytes": 5210,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "none",
+      "sha256": "dbe6ebf54ccc8e4711d45aaae184301dd938b9af2acfcbdff55f9aa87dd90c1b"
+    },
+    {
+      "agent_id": "linearize",
+      "bytes": 1248,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "none",
+      "sha256": "dda2e84e39415897930e109e4740c5ce5a7b338fd233c41d5934cb3ca1ba85ed"
+    },
+    {
+      "agent_id": "linearize-case",
+      "bytes": 1253,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "none",
+      "sha256": "b606f44340cefbf533ca3f920d846b5f358fa8afb0e0f76082d97d7b3791e8e7"
+    },
+    {
+      "agent_id": "linearizer-case",
+      "bytes": 5214,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "none",
+      "sha256": "ac357e86b1da53974622402a37c73f1ac12706ad9c16cff4ca37fef52ae8f7c0"
+    },
+    {
+      "agent_id": "patch-case",
+      "bytes": 9397,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "two-test-files",
+      "sha256": "1211c1625a459ae35813b7fa33488addacb1721bb596e1da5f7a55f892022f13"
+    },
+    {
+      "agent_id": "review-case",
+      "bytes": 9398,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "two-test-files",
+      "sha256": "83d4e48272606642a0415c48803d17b389ffed34f18ab2e45ee473c37a033958"
+    },
+    {
+      "agent_id": "title-agent",
+      "bytes": 9398,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "two-test-files",
+      "sha256": "b95de0166c65a64573f7bacc70b7fdf28bd8ddc93f401ee131568e6ab51afc50"
+    },
+    {
+      "agent_id": "linearize",
+      "bytes": 1685,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "two-test-files",
+      "sha256": "64fe15ad25966d972447d56df16136bf6eb376b0a2107d336ea16b1ecdb81ffb"
+    },
+    {
+      "agent_id": "linearize-case",
+      "bytes": 1690,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "two-test-files",
+      "sha256": "5226ff8d022364665d8dc6564fdb7a68de239cf8127e173fcd2241c447f31893"
+    },
+    {
+      "agent_id": "linearizer-case",
+      "bytes": 9402,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "two-test-files",
+      "sha256": "f427284fc2cb1420bf6aa62d166db27a8b11e65c0515a0c994b0c2240a838c6e"
+    },
+    {
+      "agent_id": "patch-case",
+      "bytes": 7190,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "no-tests-file",
+      "sha256": "3d72c53d8bff0ab44b2145d393b52b75ad4dadab338ce4585b88b1b15e0d12bd"
+    },
+    {
+      "agent_id": "review-case",
+      "bytes": 7191,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "no-tests-file",
+      "sha256": "22e7ca002d139ea250a42b19c699ffe695e11e0068bba871405a6731bdefe853"
+    },
+    {
+      "agent_id": "title-agent",
+      "bytes": 7191,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "no-tests-file",
+      "sha256": "4117b3fd2ec078f5fbd5fcf79e3610ab0e2ae6c34542075bf097448f69803770"
+    },
+    {
+      "agent_id": "linearize",
+      "bytes": 1378,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "no-tests-file",
+      "sha256": "082c4457e0301ee0e657ee6a3e7a6382d8bee0d0ed98358d22c0381b72a497fe"
+    },
+    {
+      "agent_id": "linearize-case",
+      "bytes": 1383,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "no-tests-file",
+      "sha256": "574db7a168f01c665e79561c4510a2a513bbc64fc11e4a931f8af50417ff3890"
+    },
+    {
+      "agent_id": "linearizer-case",
+      "bytes": 7195,
+      "direct": false,
+      "entire_prompt_byte_identical": true,
+      "instructions": "no-tests-file",
+      "sha256": "d2a2afdd3eb3517c7a67ad5282e55f06f0e7475b66da508fa1bff6be1dcfa7b6"
+    },
+    {
+      "agent_id": "patch-case",
+      "bytes": 4436,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "none",
+      "sha256": "f0bc0b5bdc39e39f57d2b731cce2e2e51da7dbeb9ebadbcb76769e25636e0999"
+    },
+    {
+      "agent_id": "review-case",
+      "bytes": 4437,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "none",
+      "sha256": "8314dfce0498377bfff0f1b176477bcdb92733448594c045e59c458368d0b570"
+    },
+    {
+      "agent_id": "title-agent",
+      "bytes": 4437,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "none",
+      "sha256": "30608cf831a2bc3fc1b9ca4579d01007ecdee78ccf9dd9bce9f1f4d0d6205cdb"
+    },
+    {
+      "agent_id": "linearize",
+      "bytes": 1248,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "none",
+      "sha256": "dda2e84e39415897930e109e4740c5ce5a7b338fd233c41d5934cb3ca1ba85ed"
+    },
+    {
+      "agent_id": "linearize-case",
+      "bytes": 1253,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "none",
+      "sha256": "b606f44340cefbf533ca3f920d846b5f358fa8afb0e0f76082d97d7b3791e8e7"
+    },
+    {
+      "agent_id": "linearizer-case",
+      "bytes": 4441,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "none",
+      "sha256": "f233a1d6e101b62b6b216f44fa391287a1a5eb5450e6be0b031aacd0db119e47"
+    },
+    {
+      "agent_id": "patch-case",
+      "bytes": 8624,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "two-test-files",
+      "sha256": "514b950d1bfd397d631c1bd61f70d2661f66dce8b526d78427f6807aa698d9d7"
+    },
+    {
+      "agent_id": "review-case",
+      "bytes": 8625,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "two-test-files",
+      "sha256": "b9b88332df35bc150630c73273fabef36d6cf2b792b69988ecb57bc84b121d0c"
+    },
+    {
+      "agent_id": "title-agent",
+      "bytes": 8625,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "two-test-files",
+      "sha256": "cd596635b022881e228f8aed30186e6ee6ab0c8684f6ff41fa4fbfa3fa7070de"
+    },
+    {
+      "agent_id": "linearize",
+      "bytes": 1685,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "two-test-files",
+      "sha256": "64fe15ad25966d972447d56df16136bf6eb376b0a2107d336ea16b1ecdb81ffb"
+    },
+    {
+      "agent_id": "linearize-case",
+      "bytes": 1690,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "two-test-files",
+      "sha256": "5226ff8d022364665d8dc6564fdb7a68de239cf8127e173fcd2241c447f31893"
+    },
+    {
+      "agent_id": "linearizer-case",
+      "bytes": 8629,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "two-test-files",
+      "sha256": "16f05fe7336b418abece3ab5bb95df8a8c29f517d05018ef2c0315b96fb6e646"
+    },
+    {
+      "agent_id": "patch-case",
+      "bytes": 6417,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "no-tests-file",
+      "sha256": "6918025f380cbf0bb14ae40d1c822ac6adb5947101fa611011b2c3e09128f388"
+    },
+    {
+      "agent_id": "review-case",
+      "bytes": 6418,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "no-tests-file",
+      "sha256": "15a5e9fbc4ce81403fd78b02bd228d4ad8ca66e9fc6afafbcae10ff3ef3a1f6b"
+    },
+    {
+      "agent_id": "title-agent",
+      "bytes": 6418,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "no-tests-file",
+      "sha256": "c8f149be541673b234c08296c3aa64af2c27f0fec421983ed561c22eacda9063"
+    },
+    {
+      "agent_id": "linearize",
+      "bytes": 1378,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "no-tests-file",
+      "sha256": "082c4457e0301ee0e657ee6a3e7a6382d8bee0d0ed98358d22c0381b72a497fe"
+    },
+    {
+      "agent_id": "linearize-case",
+      "bytes": 1383,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "no-tests-file",
+      "sha256": "574db7a168f01c665e79561c4510a2a513bbc64fc11e4a931f8af50417ff3890"
+    },
+    {
+      "agent_id": "linearizer-case",
+      "bytes": 6422,
+      "direct": true,
+      "entire_prompt_byte_identical": true,
+      "instructions": "no-tests-file",
+      "sha256": "c25bca5c085a4b5e40cf55caef05d94a4b109bd2b673ffea724a1ef299061ac5"
+    }
+  ],
+  "limits": [
+    "This verifies full public baseline policy rendering, not provider behavior. New tests/bench_work_unit.rs independently compare actual fake-provider delivery against those baseline bytes and validate exact v2 spans.",
+    "Real configured-agent verification is owned by the main agent and is not claimed by this provider-free report."
+  ]
+}

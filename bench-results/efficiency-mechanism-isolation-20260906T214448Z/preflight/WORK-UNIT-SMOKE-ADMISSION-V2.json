@@ -1,0 +1,18 @@
+{
+  "schema": "work-leaf-diagnostic-admission-v2",
+  "purpose": "Verify v2 policy delivery, two actual edit/check increments, unchanged validation cardinality, raw resume, final interrupt settlement and opt-in pre-spawn inventory using the corrected five-round diagnostic cap.",
+  "excluded_from_benchmark_observations": true,
+  "provider_route": "existing ChatGPT subscription; no API authentication or credential copying",
+  "model": "gpt-5.5", "effort": "xhigh", "cli_version": "0.153.4",
+  "maximum_concurrent_diagnostics": 2, "expected_provider_turns_per_diagnostic": 5,
+  "watchdog_seconds": 300,
+  "observer_sha256": "87fad5858302ca0ae93e0fc9e23db42914c699d714a031fa958c1df8b6460191",
+  "test_binary_sha256": "5e9723be299a50083b2a56379cffe90476865d8718d8fc611ce8f6f55b783227",
+  "test_source_sha256": "964b3fa2f1e888d67b70b980bce801b9493a441be16c287ea711eda4414cd445",
+  "runs": [
+    {"run_id":"smoke-work-units-control-v2","condition":"control","project":"/tmp/work-leaf-work-unit-real.9HVORj/control-v2/repo","evidence":"preflight/work-units-control-v2"},
+    {"run_id":"smoke-work-units-incremental-v2","condition":"buildable-work-unit-incremental","project":"/tmp/work-leaf-work-unit-real.9HVORj/incremental-v2/repo","evidence":"preflight/work-units-incremental-v2"}
+  ],
+  "prior_failures": "WORK-UNIT-SMOKE-ADMISSION.json / FAILED-WORK-UNIT-SMOKE-01.md; both original attempts remain failed and retained.",
+  "interpretation": "Plumbing verification only. Explicit diagnostic step counts do not measure natural work-unit behavior or causal token savings."
+}
