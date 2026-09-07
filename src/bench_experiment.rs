@@ -7,13 +7,14 @@ use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::agent::AgentId;
 
 const SCHEMA: &str = "work-leaf-bench-experiment-v1";
 const SCHEMA_V2: &str = "work-leaf-bench-experiment-v2";
+const SCHEMA_V3: &str = "work-leaf-bench-experiment-v3";
 const ACK: &str = "run at most one focused validation step that is relevant to files you touched or checks you added.";
 const UNLIMITED: &str = "run the required focused validation steps that are relevant to files you touched or checks you added.";
 const GUIDANCE: &str = "\nnext: Reply with the next Work Leaf directive, such as `@work-leaf done`, `@work-leaf edit`, `@work-leaf read`, or another `@work-leaf locks run`. Keep any non-directive explanation brief.";
@@ -75,7 +76,7 @@ fn load() -> io::Result<Option<Experiment>> {
         return Err(invalid("manifest must be an absolute regular-file path"));
     }
     let manifest: Manifest = serde_json::from_slice(&fs::read(&path)?).map_err(invalid)?;
-    if !matches!(manifest.schema.as_str(), SCHEMA | SCHEMA_V2) {
+    if !matches!(manifest.schema.as_str(), SCHEMA | SCHEMA_V2 | SCHEMA_V3) {
         return Err(invalid("unsupported manifest schema"));
     }
     if manifest.run_id.is_empty()
@@ -95,6 +96,10 @@ fn load() -> io::Result<Option<Experiment>> {
         SCHEMA_V2 => matches!(
             manifest.condition.as_str(),
             "control" | "buildable-work-unit-incremental"
+        ),
+        SCHEMA_V3 => matches!(
+            manifest.condition.as_str(),
+            "control" | "untracked-read-inline"
         ),
         _ => false,
     };
@@ -146,7 +151,7 @@ pub(crate) fn forward_continuation(
     let Some(experiment) = active()? else {
         return Ok(original);
     };
-    if experiment.manifest.schema == SCHEMA_V2 {
+    if matches!(experiment.manifest.schema.as_str(), SCHEMA_V2 | SCHEMA_V3) {
         let mut spans = match site {
             "patch-applied" => vec![PromptSpan::new("patch-applied-validation", cue)],
             "command-result" => vec![PromptSpan::new("command-result-guidance", cue)],
@@ -208,7 +213,9 @@ pub(crate) fn forward_policy(
     spans: Vec<PromptSpan>,
 ) -> io::Result<String> {
     match active()? {
-        Some(experiment) if experiment.manifest.schema == SCHEMA_V2 => {
+        Some(experiment)
+            if matches!(experiment.manifest.schema.as_str(), SCHEMA_V2 | SCHEMA_V3) =>
+        {
             forward_v2(experiment, "policy-injection", agent_id, original, spans)
         }
         _ => Ok(original),
@@ -280,7 +287,7 @@ fn forward_v2(
     let mut evidence = experiment.evidence.lock().map_err(invalid)?;
     evidence.sequence += 1;
     let row = json!({
-        "event": "prompt", "schema": SCHEMA_V2, "sequence": evidence.sequence,
+        "event": "prompt", "schema": experiment.manifest.schema, "sequence": evidence.sequence,
         "run_id": experiment.manifest.run_id, "condition": experiment.manifest.condition,
         "process_id": std::process::id(), "unix_time_ns": timestamp,
         "site": site, "agent_id": agent_id.to_string(), "spans": spans,
@@ -294,6 +301,168 @@ fn forward_v2(
     evidence.file.flush().map_err(invalid)?;
     Ok(forwarded)
 }
+
+#[derive(Serialize)]
+pub(crate) struct ReadComponent {
+    pub(crate) baseline_start: usize,
+    pub(crate) baseline_end: usize,
+    pub(crate) inline_start: usize,
+    pub(crate) inline_end: usize,
+}
+
+#[derive(Serialize)]
+pub(crate) struct ReadSnapshot {
+    pub(crate) path: String,
+    pub(crate) class: &'static str,
+    pub(crate) bytes: usize,
+    pub(crate) digest: String,
+    pub(crate) inline_body_start: Option<usize>,
+    pub(crate) inline_body_end: Option<usize>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct ReadBundle {
+    pub(crate) threshold_eligible: bool,
+    pub(crate) write_succeeded: bool,
+    pub(crate) path: Option<PathBuf>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct ReadFailure {
+    pub(crate) path: String,
+    pub(crate) diagnostic: String,
+}
+
+pub(crate) struct ReadEvidence {
+    pub(crate) component: Option<ReadComponent>,
+    pub(crate) bundle: ReadBundle,
+    pub(crate) eligibility_reason: &'static str,
+    pub(crate) requested_paths: Vec<String>,
+    pub(crate) snapshots: Vec<ReadSnapshot>,
+    pub(crate) failures: Vec<ReadFailure>,
+}
+
+impl ReadEvidence {
+    pub(crate) fn prepend(&mut self, bytes: usize) {
+        if let Some(component) = &mut self.component {
+            component.baseline_start += bytes;
+            component.baseline_end += bytes;
+            component.inline_start += bytes;
+            component.inline_end += bytes;
+        }
+        for snapshot in &mut self.snapshots {
+            snapshot.inline_body_start = snapshot.inline_body_start.map(|start| start + bytes);
+            snapshot.inline_body_end = snapshot.inline_body_end.map(|end| end + bytes);
+        }
+    }
+}
+
+pub(crate) fn reads_active() -> io::Result<bool> {
+    Ok(active()?.is_some_and(|experiment| experiment.manifest.schema == SCHEMA_V3))
+}
+
+pub(crate) fn forward_read(
+    agent_id: &AgentId,
+    baseline: String,
+    inline: String,
+    record: ReadEvidence,
+) -> io::Result<String> {
+    let experiment = active()?.ok_or_else(|| invalid("read evidence requires active v3"))?;
+    if experiment.manifest.schema != SCHEMA_V3 {
+        return Err(invalid("read evidence requires active v3"));
+    }
+    forward_read_with(experiment, agent_id, baseline, inline, record)
+}
+
+fn forward_read_with(
+    experiment: &Experiment,
+    agent_id: &AgentId,
+    baseline: String,
+    inline: String,
+    record: ReadEvidence,
+) -> io::Result<String> {
+    let eligible = record.bundle.write_succeeded;
+    if let Some(component) = &record.component {
+        let baseline_span = component.baseline_start..component.baseline_end;
+        let inline_span = component.inline_start..component.inline_end;
+        if baseline.get(baseline_span.clone()).is_none()
+            || inline.get(inline_span.clone()).is_none()
+            || baseline_span.start != inline_span.start
+            || baseline[..baseline_span.start] != inline[..inline_span.start]
+            || baseline[baseline_span.end..] != inline[inline_span.end..]
+        {
+            return Err(invalid(
+                "read candidates differ outside the renderer-owned component",
+            ));
+        }
+    } else if eligible || baseline != inline {
+        return Err(invalid("absent read component must preserve identity"));
+    }
+    if (!eligible && baseline != inline)
+        || eligible != record.bundle.path.is_some()
+        || (eligible && !record.bundle.threshold_eligible)
+    {
+        return Err(invalid(
+            "read eligibility must follow successful ordinary bundle creation",
+        ));
+    }
+    let mut previous_body_end = 0;
+    for snapshot in &record.snapshots {
+        match (
+            snapshot.class,
+            snapshot.inline_body_start,
+            snapshot.inline_body_end,
+        ) {
+            ("untracked", Some(start), Some(end)) => {
+                let valid = record.component.as_ref().is_some_and(|component| {
+                    start >= component.inline_start && end <= component.inline_end
+                }) && start >= previous_body_end
+                    && inline
+                        .get(start..end)
+                        .is_some_and(|text| text.len() == snapshot.bytes);
+                if !valid {
+                    return Err(invalid("invalid renderer-owned snapshot body range"));
+                }
+                previous_body_end = end;
+            }
+            ("changed" | "unchanged" | "explicit-bundle", None, None) => {}
+            _ => return Err(invalid("invalid read snapshot class or body range")),
+        }
+    }
+    let choose_inline = eligible && experiment.manifest.condition == "untracked-read-inline";
+    let selected = if choose_inline { &inline } else { &baseline };
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(invalid)?
+        .as_nanos()
+        .to_string();
+    let mut evidence = experiment.evidence.lock().map_err(invalid)?;
+    evidence.sequence += 1;
+    let row = json!({
+        "event": "read-response", "schema": SCHEMA_V3, "sequence": evidence.sequence,
+        "run_id": experiment.manifest.run_id, "condition": experiment.manifest.condition,
+        "process_id": std::process::id(), "unix_time_ns": timestamp,
+        "site": "file-read", "agent_id": agent_id.to_string(),
+        "baseline_prompt": baseline, "inline_candidate_prompt": inline,
+        "baseline_bytes": baseline.len(), "inline_candidate_bytes": inline.len(),
+        "selected_candidate": if choose_inline { "inline" } else { "baseline" },
+        "selected_bytes": selected.len(), "changed": *selected != baseline,
+        "candidate_byte_delta": inline.len() as i64 - baseline.len() as i64,
+        "byte_delta": selected.len() as i64 - baseline.len() as i64,
+        "eligible": eligible, "eligibility_reason": record.eligibility_reason,
+        "component": record.component, "bundle": record.bundle,
+        "requested_paths": record.requested_paths, "snapshots": record.snapshots,
+        "failures": record.failures,
+    });
+    serde_json::to_writer(&mut evidence.file, &row).map_err(invalid)?;
+    evidence.file.write_all(b"\n").map_err(invalid)?;
+    evidence.file.flush().map_err(invalid)?;
+    Ok(if choose_inline { inline } else { baseline })
+}
+
+#[cfg(test)]
+#[path = "bench_read_experiment_tests.rs"]
+mod read_tests;
 
 #[cfg(test)]
 mod work_unit_tests {

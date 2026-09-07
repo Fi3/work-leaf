@@ -1006,6 +1006,8 @@ fn send_file_read_response<B>(
 where
     B: AgentBackend,
 {
+    #[cfg(feature = "bench-experiments")]
+    let capture_read = crate::bench_experiment::reads_active().map_err(AgentError::Io)?;
     let response = read_requested_files(services.locks, services.context_bundles, paths)?;
     let (exact_snapshots, changed_snapshots, unchanged_snapshots) =
         split_repeated_file_reads(services.file_reads, agent_id, &response.snapshots, force);
@@ -1020,17 +1022,23 @@ where
         .iter()
         .map(|failure| failure.path.clone())
         .collect::<Vec<_>>();
-    let project_prompt = render_file_read_response(
+    let project = render_file_read_response(
         services.context_bundles,
         services.file_reads,
         agent_id,
-        &exact_snapshots,
-        &changed_snapshots,
-        &unchanged_snapshots,
-        &response.failures,
+        &FileReadGroups {
+            exact: &exact_snapshots,
+            changed: &changed_snapshots,
+            unchanged: &unchanged_snapshots,
+            failures: &response.failures,
+        },
+        #[cfg(feature = "bench-experiments")]
+        capture_read,
     );
+    #[cfg(feature = "bench-experiments")]
+    let mut experiment = project.experiment;
     let prompt = if response.context_bundle_snapshots.is_empty() {
-        project_prompt
+        project.text
     } else {
         let mut prompt = render_file_read_response_inline(&response.context_bundle_snapshots, &[]);
         if !exact_snapshots.is_empty()
@@ -1039,8 +1047,41 @@ where
             || !response.failures.is_empty()
         {
             prompt.push('\n');
-            prompt.push_str(&project_prompt);
+            #[cfg(feature = "bench-experiments")]
+            if let Some(experiment) = &mut experiment {
+                experiment.evidence.prepend(prompt.len());
+                experiment.inline_candidate = format!("{prompt}{}", experiment.inline_candidate);
+            }
+            prompt.push_str(&project.text);
+        } else {
+            #[cfg(feature = "bench-experiments")]
+            if let Some(experiment) = &mut experiment {
+                experiment.evidence.component = None;
+                experiment.inline_candidate.clone_from(&prompt);
+            }
         }
+        prompt
+    };
+    #[cfg(feature = "bench-experiments")]
+    let prompt = if let Some(mut experiment) = experiment {
+        experiment.evidence.requested_paths = paths
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect();
+        experiment.evidence.snapshots.extend(
+            response
+                .context_bundle_snapshots
+                .iter()
+                .map(|snapshot| bench_read_snapshot(snapshot, "explicit-bundle", None)),
+        );
+        crate::bench_experiment::forward_read(
+            agent_id,
+            prompt,
+            experiment.inline_candidate,
+            experiment.evidence,
+        )
+        .map_err(AgentError::Io)?
+    } else {
         prompt
     };
     let reply = send_agent_streaming_interruptible(backend, agent_id, &prompt, stream)?;
@@ -2048,29 +2089,148 @@ const COMMAND_OUTPUT_LONG_LINE_CHARS: usize = 4_096;
 const COMMAND_OUTPUT_LONG_LINE_EDGE_CHARS: usize = 1_600;
 const COMMAND_OUTPUT_BLANK_RUN_INLINE: usize = 8;
 
+struct FileReadGroups<'a> {
+    exact: &'a [crate::locks::FileSnapshot],
+    changed: &'a [crate::locks::FileSnapshot],
+    unchanged: &'a [crate::locks::FileSnapshot],
+    failures: &'a [FileReadFailure],
+}
+
+struct RenderedFileRead {
+    text: String,
+    #[cfg(feature = "bench-experiments")]
+    experiment: Option<BenchFileRead>,
+}
+
+#[cfg(feature = "bench-experiments")]
+struct BenchFileRead {
+    inline_candidate: String,
+    evidence: crate::bench_experiment::ReadEvidence,
+}
+
 fn render_file_read_response(
     context_bundles: &ContextBundleStore,
     file_reads: &FileReadTracker,
     agent_id: &AgentId,
-    exact_snapshots: &[crate::locks::FileSnapshot],
-    changed_snapshots: &[crate::locks::FileSnapshot],
-    unchanged_snapshots: &[crate::locks::FileSnapshot],
-    failures: &[FileReadFailure],
-) -> String {
-    let exact_text = if should_bundle_file_read_response(exact_snapshots) {
-        render_bundled_file_read_response(context_bundles, exact_snapshots, &[])
-            .unwrap_or_else(|| render_file_read_response_inline(exact_snapshots, &[]))
+    groups: &FileReadGroups<'_>,
+    #[cfg(feature = "bench-experiments")] capture_read: bool,
+) -> RenderedFileRead {
+    let threshold_eligible = should_bundle_file_read_response(groups.exact);
+    let bundled = if threshold_eligible {
+        render_bundled_file_read_response(context_bundles, groups.exact, &[])
     } else {
-        render_file_read_response_inline(exact_snapshots, &[])
+        None
     };
-    render_file_read_response_with_repeats(
+    #[cfg(feature = "bench-experiments")]
+    let bundle_path = capture_read
+        .then(|| bundled.as_ref().map(|(_, path)| path.clone()))
+        .flatten();
+    let exact_text = bundled
+        .map(|(text, _)| text)
+        .unwrap_or_else(|| render_file_read_response_inline(groups.exact, &[]));
+    #[cfg(feature = "bench-experiments")]
+    let exact_end = exact_text.len();
+    let text = render_file_read_response_with_repeats(
         exact_text,
         file_reads,
         agent_id,
-        changed_snapshots,
-        unchanged_snapshots,
-        failures,
-    )
+        groups.changed,
+        groups.unchanged,
+        groups.failures,
+    );
+    #[cfg(feature = "bench-experiments")]
+    let experiment = capture_read.then(|| {
+        let mut bodies = Vec::with_capacity(groups.exact.len());
+        let mut inline_candidate =
+            render_file_read_response_inline_recorded(groups.exact, &[], Some(&mut bodies));
+        let inline_end = inline_candidate.len();
+        inline_candidate.push_str(&text[exact_end..]);
+        let eligible = bundle_path.is_some();
+        let eligibility_reason = if eligible {
+            "bundled-untracked"
+        } else if threshold_eligible {
+            "bundle-write-failed"
+        } else if groups.exact.is_empty() {
+            "no-untracked-project-snapshots"
+        } else {
+            "below-threshold"
+        };
+        BenchFileRead {
+            inline_candidate,
+            evidence: crate::bench_experiment::ReadEvidence {
+                component: Some(crate::bench_experiment::ReadComponent {
+                    baseline_start: 0,
+                    baseline_end: exact_end,
+                    inline_start: 0,
+                    inline_end,
+                }),
+                bundle: crate::bench_experiment::ReadBundle {
+                    threshold_eligible,
+                    write_succeeded: eligible,
+                    path: bundle_path,
+                },
+                eligibility_reason,
+                requested_paths: Vec::new(),
+                snapshots: bench_read_snapshots(groups, &bodies),
+                failures: groups
+                    .failures
+                    .iter()
+                    .map(|failure| crate::bench_experiment::ReadFailure {
+                        path: failure.path.display().to_string(),
+                        diagnostic: failure.diagnostic.clone(),
+                    })
+                    .collect(),
+            },
+        }
+    });
+    RenderedFileRead {
+        text,
+        #[cfg(feature = "bench-experiments")]
+        experiment,
+    }
+}
+
+#[cfg(feature = "bench-experiments")]
+fn bench_read_snapshot(
+    snapshot: &crate::locks::FileSnapshot,
+    class: &'static str,
+    body: Option<std::ops::Range<usize>>,
+) -> crate::bench_experiment::ReadSnapshot {
+    crate::bench_experiment::ReadSnapshot {
+        path: snapshot.path.display().to_string(),
+        class,
+        bytes: snapshot.text.len(),
+        digest: content_digest(&snapshot.text),
+        inline_body_start: body.as_ref().map(|body| body.start),
+        inline_body_end: body.map(|body| body.end),
+    }
+}
+
+#[cfg(feature = "bench-experiments")]
+fn bench_read_snapshots(
+    groups: &FileReadGroups<'_>,
+    bodies: &[std::ops::Range<usize>],
+) -> Vec<crate::bench_experiment::ReadSnapshot> {
+    // Three already path-ordered classes merge in linear time without rescanning snapshots.
+    let buckets = [groups.exact, groups.changed, groups.unchanged];
+    let classes = ["untracked", "changed", "unchanged"];
+    let mut cursors = [0; 3];
+    let mut snapshots = Vec::with_capacity(buckets.iter().map(|bucket| bucket.len()).sum());
+    while let Some((index, snapshot)) = buckets
+        .iter()
+        .enumerate()
+        .filter_map(|(index, bucket)| bucket.get(cursors[index]).map(|snapshot| (index, snapshot)))
+        .min_by(|left, right| left.1.path.cmp(&right.1.path))
+    {
+        let body = if index == 0 {
+            Some(bodies[cursors[index]].clone())
+        } else {
+            None
+        };
+        snapshots.push(bench_read_snapshot(snapshot, classes[index], body));
+        cursors[index] += 1;
+    }
+    snapshots
 }
 
 fn render_file_read_response_with_repeats(
@@ -2115,12 +2275,31 @@ fn render_file_read_response_inline(
     snapshots: &[crate::locks::FileSnapshot],
     failures: &[FileReadFailure],
 ) -> String {
+    render_file_read_response_inline_recorded(
+        snapshots,
+        failures,
+        #[cfg(feature = "bench-experiments")]
+        None,
+    )
+}
+
+fn render_file_read_response_inline_recorded(
+    snapshots: &[crate::locks::FileSnapshot],
+    failures: &[FileReadFailure],
+    #[cfg(feature = "bench-experiments")] mut bodies: Option<&mut Vec<std::ops::Range<usize>>>,
+) -> String {
     let mut text = String::from("work-leaf file text\n");
     for snapshot in snapshots {
         text.push_str("\n--- ");
         text.push_str(&snapshot.path.display().to_string());
         text.push_str(" ---\n");
+        #[cfg(feature = "bench-experiments")]
+        let body_start = text.len();
         text.push_str(&snapshot.text);
+        #[cfg(feature = "bench-experiments")]
+        if let Some(bodies) = &mut bodies {
+            bodies.push(body_start..text.len());
+        }
         if !snapshot.text.ends_with('\n') {
             text.push('\n');
         }
@@ -2187,7 +2366,7 @@ fn render_bundled_file_read_response(
     context_bundles: &ContextBundleStore,
     snapshots: &[crate::locks::FileSnapshot],
     failures: &[FileReadFailure],
-) -> Option<String> {
+) -> Option<(String, PathBuf)> {
     let bundle_path = context_bundles.write(snapshots)?;
     let mut text = String::from("work-leaf file text\n");
     text.push_str("Exact file text is in an orchestrator context bundle instead of this chat to keep the agent session compact.\n");
@@ -2207,7 +2386,7 @@ fn render_bundled_file_read_response(
         text.push_str("\nUnavailable file text\n");
         text.push_str(&render_file_read_failures(failures));
     }
-    Some(text)
+    Some((text, bundle_path))
 }
 
 const MAX_AUTOMATIC_REFRESH_DIFF_BYTES: usize = 48 * 1024;

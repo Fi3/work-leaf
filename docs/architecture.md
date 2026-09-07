@@ -244,6 +244,27 @@ Version 1 manifests retain their two original continuation sites and trace forma
 policy-injection records. These private schemas are experiment admission/evidence formats, not
 public provider or prompt-policy APIs.
 
+Version 3 experiment manifests enroll control or `untracked-read-inline`. The private read hook
+operates only on the currently untracked project-snapshot component of an ordinary mediated read.
+Baseline rendering, including its normal bundle allocation/write attempt, runs once in both arms.
+A successful threshold-triggered bundle write makes that component eligible for replacement by
+the existing full-inline formatter over the same held snapshots. Bundle-write failures, small
+reads, tracked changed/unchanged responses, explicit bundle-file reads, and automatic conflict
+refreshes retain their normal behavior. Snapshot clearing after authored edits retains its ordinary
+meaning, so an untracked snapshot is not necessarily a first-ever read. No additional filesystem
+read, diff render, bundle allocation, agent turn, timing policy, or tool restriction is introduced.
+
+Each active version 3 read boundary records both complete candidate strings symmetrically, its
+selected identity, actual bundle eligibility, ordered snapshot metadata, and renderer-owned UTF-8
+component/body ranges before sending. Explicit bundle prefixes and repeated-read/failure suffixes
+are preserved exactly. Body ranges identify held untracked text without parsing source contents
+for markers; existing FNV64 digests are metadata, while cryptographic evidence hashes belong to
+offline analysis. Recording failures prevent delivery, and oversized provider-request failures
+remain outcomes rather than causing silent clipping or fallback. Non-read policy, acknowledgement,
+and command boundaries retain identity evidence and baseline text; version 1 and 2 contracts are
+unchanged. Candidate construction and snapshot-class merging are linear in held bytes and snapshot
+count. The schemas remain private benchmark evidence formats, not public runtime configuration.
+
 Both benchmark drivers use `bench-agent-profile-common` to create a run-local Codex wrapper. The
 wrapper pins the requested model and reasoning effort directly on every allowed Codex invocation
 without reading or changing the user's global Codex configuration. Each temporary benchmark
