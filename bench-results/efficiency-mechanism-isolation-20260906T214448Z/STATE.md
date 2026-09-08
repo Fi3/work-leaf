@@ -2,22 +2,24 @@
 
 ## Active continuation plan
 
-C08's three natural modified-only workflows are admitted concurrently on
-2026-09-08 at11:47:33.067905UTC under the sole supervisor session45354.
-Workflow001 publishes its failed report at12:31:40UTC:2,646reported seconds,
-original300-second idle limit, three patch-producing/done authors but only two
-resolved review decisions. No replacement is admitted. Workflow003 publishes its
-passed report at12:42:40UTC: review, linearization and final repository checks pass.
-Workflow002 finishes its author reviews and enters linearization at13:04:54UTC;
-the plan is accepted at13:07:02UTC. The complete phase receipt and exact individual
-process exits follow all-three closure.
+C08's three natural modified-only workflows are closed, following concurrent
+admission on2026-09-08 at11:47:33.067905UTC. The sole supervisor45354 exits1 at
+13:19:37.890832UTC; all three runs are terminal, with no frozen-input errors,
+unexplained configuration drift, pending trust transition or supervisor timeout.
+Workflow001 exits1 at12:31:40.322525UTC:2,646reported seconds, original300-second
+idle limit, three patch-producing/done authors but only two resolved reviews;
+the original infrastructure-or-measurement-integrity classification remains.
+Workflow002 exits0 at13:19:37.641350UTC;003 exits0 at12:42:41.247309UTC. Both pass
+review, linearization and final repository checks. No replacement is admitted.
 Manifest`cfdfd134…` binds175inputs and the existing three-row schedule. Its
 unadmitted172-input predecessor and prelaunch scorer-fixture finding remain
 preserved; only the three declared scorer fixtures close that preparation gap
 before the run-once claim. All three startup traces select the v7 condition.
-No new control, Direct or replacement is admitted. Unrelated build/provider work
-is held; original timeouts and subscription/grace behavior remain. No accounting
-or effect analysis has run for this active wave.
+No new control, Direct or replacement is admitted. The all-wave build/test hold
+is released; source-wrapper and C15 staged regression work can proceed. No provider
+workflow is running, and separately asked C15/C21 generation choices remain open.
+Natural source/delivery/repair qualification and the fixed three-new-row accounting
+scope remain incomplete; no token effect is claimed for this closed wave.
 
 The configuration checksum transition first recorded at12:28:38.408172UTC is
 classified by the frozen policy as a verified own-workflow trust transition for
