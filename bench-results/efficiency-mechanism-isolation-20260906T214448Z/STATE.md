@@ -7,7 +7,14 @@ that step before final handoff. [Current continuation](STAGE-B-RESUMPTION-202609
 covers C15 effect-screen preparation, C21's separately asked qualification choice,
 and remaining coupled work-selection/review/integration checks. Diagnostic003 is
 a completed prerequisite, not completion of mechanism identification. No new
-provider workflow is admitted at this checkpoint.
+provider has launched at this checkpoint. The separately frozen `test-first-01`
+manifest `00ff0668…` contains exactly three modified-only workflows and187 inputs;
+its final prelaunch endpoint review precedes the sole execution. Current-global
+compatibility is established by the [exact tooltip qualification](preflight/test-first-screen/CONFIG-TOOLTIP-QUALIFICATION.md),
+without editing configuration or weakening the original drift monitor. C08's
+automatic-refresh representation implementation proceeds in a separate worktree;
+review-fix sequencing remains a separately defined candidate, not an effect of
+the initial-author screen by assumption.
 
 C15 diagnostic003 has a complete successful real subscription workflow:
 private behavioral RED → identical tests plus implementation → ordinary shared
