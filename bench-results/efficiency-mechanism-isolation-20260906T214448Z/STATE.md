@@ -32,8 +32,14 @@ independent delivery/launch-owner witnesses in
 The unchanged pure compaction-context eligibility helper supplies one successful
 003 proof (`5326c71f…`), with24 source endpoints stable and no accounting call.
 Original UNKNOWN results, missing usage, null bounds and ordinary trace errors
-remain intact. The11 refresh-to-repair chains and a narrowly scoped recorded-
-response lower-bound design remain active. No primary token direction is claimed
+remain intact. The [eleven-refresh semantic pass](phases/automatic-refresh-01/postcapture/REFRESH-RECOVERY-SEMANTIC-REVIEW.md)
+is closed:8 distinct accepted repair chains,25 edit submissions,17 rejections,
+6 mediated reads and8 exact captured first-check outputs (6pass/2fail).
+Eight failures depend on changed held snapshots; two old blocks already fail
+against their prior state, and one rejection has duplicate file headers.
+Root verifies all188 source endpoints and11 prior body/temporal relations.
+The [recorded-response lower-bound qualification](phases/automatic-refresh-01/postcapture/LOWER-BOUND-PREPARATION.md)
+is in test-first preparation; no actual aggregation has run. No primary token direction is claimed
 for this closed wave and original accounting/source calls are not repeated.
 
 C15's completed-message runtime and matching observer are preserved separately

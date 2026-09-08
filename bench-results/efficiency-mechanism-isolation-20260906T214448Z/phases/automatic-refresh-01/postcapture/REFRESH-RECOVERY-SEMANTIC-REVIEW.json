@@ -1,0 +1,2981 @@
+{
+  "schema": "work-leaf-c08-finite-refresh-semantic-review-v1",
+  "recorded_at": "2026-09-08 14:54:44 UTC",
+  "scope": "All eleven eligible automatic-refresh rows in exactly the three closed automatic-refresh-01 workflows; eight deduplicated initial-rejection-through-ACK windows and first subsequent checks.",
+  "witness_provider_calls": 0,
+  "helper_or_accounting_replays": 0,
+  "review_execution": "Direct source/native-public inspection and finite in-memory byte comparisons only; no command, test, Git patcher or native tool was executed by this review.",
+  "summary": {
+    "eligible_rows": 11,
+    "distinct_ack_chains": 8,
+    "held_change_dependent_old_blocks": 8,
+    "already_absent_old_blocks": 2,
+    "duplicate_file_header_failures": 1,
+    "unique_public_native_edit_submissions": 25,
+    "accepted_edits": 8,
+    "rejected_edit_submissions_in_windows": 17,
+    "additional_nonrefresh_rejections": 6,
+    "mediated_read_inputs_inside_windows": 6,
+    "native_calls_inside_windows": 7,
+    "exact_archive_range_reads": 6,
+    "base64_only_call": 1,
+    "first_post_ack_checks": 8,
+    "first_check_exit_zero": 6,
+    "first_check_exit_101": 2
+  },
+  "qualifications": [
+    "A bundle pointer plus archived matching snapshot proves held-state provenance and issued context, not that the agent fully opened it. Only the six explicitly joined native range outputs are claimed as archive-content reads.",
+    "Other-owner ACK witnesses identify typed accepted inputs in the source window and the exact file in their ACK file list. They are not a reconstructed one-commit attribution of every changed byte.",
+    "The old-block comparisons evaluate only the actual rejected target-file hunks through the reported first failing hunk, not a whole-workflow counterfactual or a complete validation of every file in a rejected edit.",
+    "All original workflow outcomes, observer/extractor/accounting failures and the corrected join's two ordinary-row ambiguity errors per run remain unchanged.",
+    "Actual later acceptance does not establish unchanged requested tests, complete feature quality, immediate resolution, or net token savings."
+  ],
+  "cases": [
+    {
+      "id": "001:T4",
+      "run": 1,
+      "trace_line": 4,
+      "agent": "user-3",
+      "path": "src/ui_harness.rs",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-728b-7321-9ec4-20378c189cb8.jsonl",
+      "refresh_input_index": 17,
+      "refresh_native_line": 189,
+      "diagnostic": "structured edit hunk 5 for src/ui_harness.rs failed: old block was not found in current file text",
+      "classification": "failed-old-block-matches-prior-not-current-after-preceding-hunks",
+      "semantic_note": "Exact old block depended on the prior UiHarness chat-message path; held current text includes the other author's slash-command routing refactor.",
+      "held_snapshot": {
+        "body_bytes": 21380,
+        "body_start": 70616,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-457-0/bundle-2.md",
+        "prior_delivery": {
+          "capture_id": "00000568115683071173-564",
+          "capture_index": 0,
+          "input_bytes": 847,
+          "input_sha256": "9711fbccdaecc2246dbd6da5420488d1cb32fbc582bf9b5ae769472ba5b11e1f",
+          "native_item_id": "msg_01a080d8-a211-7a13-882c-1a0827a200c0",
+          "native_line": 20,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-728b-7321-9ec4-20378c189cb8.jsonl",
+          "public_item_id": "01a080d8-a212-7720-a039-e0a114dee54b",
+          "public_line": 199,
+          "reply_line": 195,
+          "request_line": 14,
+          "rpc_id": "13",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-728b-7321-9ec4-20378c189cb8",
+          "turn_id": "01a080d8-a1e7-77e3-868f-c12f42f595a8"
+        },
+        "sha256": "47c45205409ef5994b70a09cecd91bc95b61cd37e5d5034fcf5444b96ae87b94",
+        "source_bundle_path": "/tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-001/work-leaf-3feature-bench.NmArN0/context-bundles/orchestrator-457-0/bundle-2.md",
+        "delivery_kind": "issued-native-readable-bundle-with-held-snapshot",
+        "previous_digest": "fnv64:770bd2bb00b376ed; bytes:21380",
+        "current_digest": "fnv64:b6f0cc6bc9c23698; bytes:21903",
+        "previous_body_sha256": "61c49822634b358a9f5004473abd07b7182cd918e61e2d332639af1da3046c4a",
+        "current_body_sha256": "085ab4d665b7a776bfabf0f2d4b0466792fe915352c533b7a95772b063bff9ee"
+      },
+      "old_block_prefix_comparison": {
+        "current_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 150,
+            "old_sha256": "6c41a9dc26c03a62de8504454bff66aa2cffb7cd8b0865be87f0fefb71eb8050"
+          },
+          {
+            "hunk": 2,
+            "matches": 1,
+            "old_bytes": 108,
+            "old_sha256": "a741c76b5584bf188231416083781c82f0f05e806787f73202db92717f9ea2bc"
+          },
+          {
+            "hunk": 3,
+            "matches": 1,
+            "old_bytes": 113,
+            "old_sha256": "bb3775eaa308963644eaecdf44755b74f25626b2565be30dbeba5ebeda7ac04c"
+          },
+          {
+            "hunk": 4,
+            "matches": 1,
+            "old_bytes": 284,
+            "old_sha256": "f052f5e8d971ac09f6a27ab375b8e3db4f1a7c75a0ab97e891894eb251c98b0e"
+          },
+          {
+            "hunk": 5,
+            "matches": 0,
+            "old_bytes": 470,
+            "old_sha256": "a1346dcd9b9ee41414d5f875b47fd8dd7f489eca7b1a13c179a55e6294510992"
+          }
+        ],
+        "failed_hunk": 5,
+        "file_sections": 1,
+        "previous_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 150,
+            "old_sha256": "6c41a9dc26c03a62de8504454bff66aa2cffb7cd8b0865be87f0fefb71eb8050"
+          },
+          {
+            "hunk": 2,
+            "matches": 1,
+            "old_bytes": 108,
+            "old_sha256": "a741c76b5584bf188231416083781c82f0f05e806787f73202db92717f9ea2bc"
+          },
+          {
+            "hunk": 3,
+            "matches": 1,
+            "old_bytes": 113,
+            "old_sha256": "bb3775eaa308963644eaecdf44755b74f25626b2565be30dbeba5ebeda7ac04c"
+          },
+          {
+            "hunk": 4,
+            "matches": 1,
+            "old_bytes": 284,
+            "old_sha256": "f052f5e8d971ac09f6a27ab375b8e3db4f1a7c75a0ab97e891894eb251c98b0e"
+          },
+          {
+            "hunk": 5,
+            "matches": 1,
+            "old_bytes": 470,
+            "old_sha256": "a1346dcd9b9ee41414d5f875b47fd8dd7f489eca7b1a13c179a55e6294510992"
+          }
+        ]
+      },
+      "other_owner_ack_witnesses": [
+        {
+          "trace_line": 2,
+          "agent": "user-2",
+          "input_index": 10,
+          "input": {
+            "capture_id": "00000568115683071173-564",
+            "capture_index": 0,
+            "input_bytes": 1022,
+            "input_sha256": "f1b03ac09bbd3ff5d86b85c5c556b3f21311ce243fc94074181e1d04276474ed",
+            "native_item_id": "msg_01a080dd-71bb-7720-90ef-0efdea45c7dc",
+            "native_line": 159,
+            "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-38-01a080d8-5eb6-7e53-a66e-6ffc3f8aef36.jsonl",
+            "public_item_id": "01a080dd-71bc-77d2-bc6f-9bd474f33510",
+            "public_line": 3685,
+            "reply_line": 3681,
+            "request_line": 24,
+            "rpc_id": "23",
+            "rpc_type": "str",
+            "status": "joined",
+            "thread_id": "01a080d8-5eb6-7e53-a66e-6ffc3f8aef36",
+            "turn_id": "01a080dd-7196-7930-bd27-45dd4f085d9f"
+          }
+        }
+      ],
+      "rejected_submission": {
+        "bytes": 20411,
+        "id": "msg_0b4283efbad619c1016a9ff792a89087d2b2da2ba8573bbd38",
+        "native_line": 181,
+        "sha256": "51c126de1f116c2b0af99a98cb82d18ca298f56d1b4f6cf74dad4c6eb7513ad3"
+      },
+      "chain_id": "001:user-3:ACK-N202"
+    },
+    {
+      "id": "001:T9",
+      "run": 1,
+      "trace_line": 9,
+      "agent": "user-1",
+      "path": "src/ui.rs",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf7-7e11-b988-06b106f25830.jsonl",
+      "refresh_input_index": 24,
+      "refresh_native_line": 193,
+      "diagnostic": "structured edit hunk 2 for src/ui.rs failed: old block was not found in current file text",
+      "classification": "old-block-absent-in-both-held-snapshots",
+      "semantic_note": "Old hunk 2 incorrectly placed status constants immediately after PendingKey, omitting the already-existing StatusNotice declaration. The old block is absent in both held snapshots; the concurrent change adds set_agent_hidden_state elsewhere.",
+      "held_snapshot": {
+        "body_bytes": 43323,
+        "body_start": 28992,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-457-0/bundle-0.md",
+        "prior_delivery": {
+          "capture_id": "00000568115683071173-564",
+          "capture_index": 0,
+          "input_bytes": 897,
+          "input_sha256": "3f7b805534106fef44f1fd7ebdf88202f273a2144f387f3617f96c67cb59630f",
+          "native_item_id": "msg_01a080d8-8989-7a03-b4ab-96a94ac42e94",
+          "native_line": 22,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf7-7e11-b988-06b106f25830.jsonl",
+          "public_item_id": "01a080d8-898a-7150-aad4-24fe3ec0d9d6",
+          "public_line": 85,
+          "reply_line": 81,
+          "request_line": 10,
+          "rpc_id": "9",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-4cf7-7e11-b988-06b106f25830",
+          "turn_id": "01a080d8-895a-78f0-b90a-e07baef0327b"
+        },
+        "sha256": "09c75ed221c3996f18bd27cf4a9325b3798dcabe444a7622774676eb9980c9c5",
+        "source_bundle_path": "/tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-001/work-leaf-3feature-bench.NmArN0/context-bundles/orchestrator-457-0/bundle-0.md",
+        "delivery_kind": "issued-native-readable-bundle-with-held-snapshot",
+        "previous_digest": "fnv64:9ee9f02c5bc43f7d; bytes:43323",
+        "current_digest": "fnv64:4ed6ac385f5f3e48; bytes:43723",
+        "previous_body_sha256": "dd8a8ab3a0ab6c0d5048149ca0035f22be11b81fce14f5b2b8965c3fa63ce48b",
+        "current_body_sha256": "b04b32649c3a53821e5a5c6b5e3f8cbb88cc47ccd50db5e550c4a5188b747fe8"
+      },
+      "old_block_prefix_comparison": {
+        "current_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 80,
+            "old_sha256": "e5231c28375ffaec8203769adaed92f4a0ea7a136bcb8a6c15c5c831589aaa87"
+          },
+          {
+            "hunk": 2,
+            "matches": 0,
+            "old_bytes": 302,
+            "old_sha256": "1d9417f37eb203aca7fb0551b5e78f33c6509fe813ee136c549a90519bcc101f"
+          }
+        ],
+        "failed_hunk": 2,
+        "file_sections": 1,
+        "previous_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 80,
+            "old_sha256": "e5231c28375ffaec8203769adaed92f4a0ea7a136bcb8a6c15c5c831589aaa87"
+          },
+          {
+            "hunk": 2,
+            "matches": 0,
+            "old_bytes": 302,
+            "old_sha256": "1d9417f37eb203aca7fb0551b5e78f33c6509fe813ee136c549a90519bcc101f"
+          }
+        ]
+      },
+      "other_owner_ack_witnesses": [
+        {
+          "trace_line": 5,
+          "agent": "user-3",
+          "input_index": 18,
+          "input": {
+            "capture_id": "00000568115683071173-564",
+            "capture_index": 0,
+            "input_bytes": 1071,
+            "input_sha256": "9b616159b1eb22476ebd22dff50d07d5eac89c37a4bb1d5e23897dcad7d4f121",
+            "native_item_id": "msg_01a080e3-9538-7cc1-a459-d2bf2d73b3fb",
+            "native_line": 202,
+            "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-728b-7321-9ec4-20378c189cb8.jsonl",
+            "public_item_id": "01a080e3-9539-7ab2-bee3-5ede51b1c3af",
+            "public_line": 14293,
+            "reply_line": 14289,
+            "request_line": 41,
+            "rpc_id": "40",
+            "rpc_type": "str",
+            "status": "joined",
+            "thread_id": "01a080d8-728b-7321-9ec4-20378c189cb8",
+            "turn_id": "01a080e3-9509-7601-82dd-05fb232ea192"
+          }
+        }
+      ],
+      "rejected_submission": {
+        "bytes": 35633,
+        "id": "msg_01d2e555c24b0190016a9ffab502c487d2a139c279f1f0b950",
+        "native_line": 185,
+        "sha256": "4d58073f924f16d6fbb5b4bc9d3647ad1797d4c25f0f041f1009a3555ae044cc"
+      },
+      "chain_id": "001:user-1:ACK-N218"
+    },
+    {
+      "id": "002:T4",
+      "run": 2,
+      "trace_line": 4,
+      "agent": "user-3",
+      "path": "src/ui_harness.rs",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+      "refresh_input_index": 17,
+      "refresh_native_line": 206,
+      "diagnostic": "structured edit hunk 1 for src/ui_harness.rs failed: old block was not found in current file text",
+      "classification": "failed-old-block-matches-prior-not-current-after-preceding-hunks",
+      "semantic_note": "Exact old block depended on the prior UiHarness prompt/chat routing; the current snapshot includes the other author's slash-command refactor.",
+      "held_snapshot": {
+        "body_bytes": 21380,
+        "body_start": 151145,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-2.md",
+        "prior_delivery": {
+          "capture_id": "00000568115683071173-565",
+          "capture_index": 0,
+          "input_bytes": 1025,
+          "input_sha256": "32d9d74ce7a1a75e5ec6c3382eb7f3e179770394b33f99fa39c967cb20f8a2fc",
+          "native_item_id": "msg_01a080d8-ac87-7ba3-81e8-09af33bdb6ba",
+          "native_line": 20,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+          "public_item_id": "01a080d8-ac88-7763-a76c-b0e7c00a46a4",
+          "public_line": 223,
+          "reply_line": 219,
+          "request_line": 14,
+          "rpc_id": "13",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-7296-7e10-a35c-30591a630bcd",
+          "turn_id": "01a080d8-ac5b-72d2-8094-14e340b596b6"
+        },
+        "sha256": "7a1124027e75a08a63ba6a1817ac38bdf6a10a81fc845e03acfcf6ed8118ee3c",
+        "source_bundle_path": "/tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-2.md",
+        "delivery_kind": "issued-native-readable-bundle-with-held-snapshot",
+        "previous_digest": "fnv64:770bd2bb00b376ed; bytes:21380",
+        "current_digest": "fnv64:22f75c311a43acfc; bytes:22027",
+        "previous_body_sha256": "61c49822634b358a9f5004473abd07b7182cd918e61e2d332639af1da3046c4a",
+        "current_body_sha256": "f95d0e693deec7cb1edde47253a1cb7517f9626dc8741ac913680c5de8079c99"
+      },
+      "old_block_prefix_comparison": {
+        "current_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 0,
+            "old_bytes": 429,
+            "old_sha256": "fab518732a8dc2ed268a5f18fa348ef25111aab873b1421dee8ec5eff021f08f"
+          }
+        ],
+        "failed_hunk": 1,
+        "file_sections": 1,
+        "previous_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 429,
+            "old_sha256": "fab518732a8dc2ed268a5f18fa348ef25111aab873b1421dee8ec5eff021f08f"
+          }
+        ]
+      },
+      "other_owner_ack_witnesses": [
+        {
+          "trace_line": 2,
+          "agent": "user-2",
+          "input_index": 10,
+          "input": {
+            "capture_id": "00000568115683071173-565",
+            "capture_index": 0,
+            "input_bytes": 999,
+            "input_sha256": "f72185670b143ffc1b5a5bc0e78a66fbb93c821bf23fe148a3541891cdd78b6f",
+            "native_item_id": "msg_01a080dc-fa75-7a42-967f-b1b5e292e991",
+            "native_line": 135,
+            "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-38-01a080d8-5ebf-7c00-aaf4-a769c95aac99.jsonl",
+            "public_item_id": "01a080dc-fa76-7e00-86bb-9f6a2c2aef94",
+            "public_line": 4122,
+            "reply_line": 4118,
+            "request_line": 24,
+            "rpc_id": "23",
+            "rpc_type": "str",
+            "status": "joined",
+            "thread_id": "01a080d8-5ebf-7c00-aaf4-a769c95aac99",
+            "turn_id": "01a080dc-fa4a-7683-aeb4-be979241cce5"
+          }
+        }
+      ],
+      "rejected_submission": {
+        "bytes": 13202,
+        "id": "msg_06beccc66bb496de016a9ff7b00b7087d286223386425cb750",
+        "native_line": 198,
+        "sha256": "7e942abc13f16d9f335f39622aa94f026a80326441e495f2d5f41826f16df2e5"
+      },
+      "chain_id": "002:user-3:ACK-N223"
+    },
+    {
+      "id": "002:T13",
+      "run": 2,
+      "trace_line": 13,
+      "agent": "user-1",
+      "path": "src/ui.rs",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf8-7f42-ba51-94ad296268a9.jsonl",
+      "refresh_input_index": 38,
+      "refresh_native_line": 244,
+      "diagnostic": "structured edit touches the same file more than once; combine hunks under one file header",
+      "classification": "duplicate-file-header-independent-of-held-change",
+      "semantic_note": "Two Update File headers name src/ui.rs. That parser rejection is independent of the concurrently changed src/ui.rs snapshot; the following attempts then encounter terminal_app changes.",
+      "held_snapshot": {
+        "body_bytes": 43323,
+        "body_start": 28428,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-0.md",
+        "prior_delivery": {
+          "capture_id": "00000568115683071173-565",
+          "capture_index": 0,
+          "input_bytes": 786,
+          "input_sha256": "b13a54eef3a3bb39021c6463f502fc95ec08819a442c0da2d2fe95478e5b5dfb",
+          "native_item_id": "msg_01a080d8-744e-7cf1-8fb7-19f003150b61",
+          "native_line": 21,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf8-7f42-ba51-94ad296268a9.jsonl",
+          "public_item_id": "01a080d8-744f-7bc1-a5c4-216488303f02",
+          "public_line": 70,
+          "reply_line": 66,
+          "request_line": 10,
+          "rpc_id": "9",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-4cf8-7f42-ba51-94ad296268a9",
+          "turn_id": "01a080d8-7419-7220-b9a5-62d42760c208"
+        },
+        "sha256": "740b7050b013136787a09e7a1a0462450cf3fde43cc53847fb7f8e3f6174697d",
+        "source_bundle_path": "/tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-0.md",
+        "delivery_kind": "issued-native-readable-bundle-with-held-snapshot",
+        "previous_digest": "fnv64:9ee9f02c5bc43f7d; bytes:43323",
+        "current_digest": "fnv64:46332dd969b4e92c; bytes:43697",
+        "previous_body_sha256": "dd8a8ab3a0ab6c0d5048149ca0035f22be11b81fce14f5b2b8965c3fa63ce48b",
+        "current_body_sha256": "0bc8d43489d66355e8488f0298ff997018a3913f01455937e64ac90aad836fc0"
+      },
+      "old_block_prefix_comparison": {
+        "file_sections": 2
+      },
+      "other_owner_ack_witnesses": [
+        {
+          "trace_line": 7,
+          "agent": "user-3",
+          "input_index": 27,
+          "input": {
+            "capture_id": "00000568115683071173-565",
+            "capture_index": 0,
+            "input_bytes": 1008,
+            "input_sha256": "5ea7e4f9995bfaf58a7044ee1524f6c46ecdc16d3be05c1aaf3a999d596e0a90",
+            "native_item_id": "msg_01a080ee-3a49-75d1-8d59-258ecfc449b2",
+            "native_line": 343,
+            "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+            "public_item_id": "01a080ee-3a49-75d1-8d59-25945f74cb2c",
+            "public_line": 16970,
+            "reply_line": 16966,
+            "request_line": 57,
+            "rpc_id": "56",
+            "rpc_type": "str",
+            "status": "joined",
+            "thread_id": "01a080d8-7296-7e10-a35c-30591a630bcd",
+            "turn_id": "01a080ee-3a24-79a0-b820-319a74369b07"
+          }
+        }
+      ],
+      "rejected_submission": {
+        "bytes": 42991,
+        "id": "msg_000a202b69c6638d016a9ffbccec1087d28c82a282b7e21b90",
+        "native_line": 237,
+        "sha256": "e001025a49b44ca2a4eec60e33d8dc175210479cc500faa599bec2956e4aced9"
+      },
+      "chain_id": "002:user-1:ACK-N324"
+    },
+    {
+      "id": "002:T19",
+      "run": 2,
+      "trace_line": 19,
+      "agent": "user-1",
+      "path": "src/terminal_app.rs",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf8-7f42-ba51-94ad296268a9.jsonl",
+      "refresh_input_index": 50,
+      "refresh_native_line": 280,
+      "diagnostic": "structured edit hunk 1 for src/terminal_app.rs failed: old block was not found in current file text",
+      "classification": "failed-old-block-matches-prior-not-current-after-preceding-hunks",
+      "semantic_note": "The prior requested-repeat diff selected terminal_app digest 5016a6b9a016d47f. The next snapshot removes session_awaits_feature_done from the import block that the rejected old hunk requires.",
+      "held_snapshot": {
+        "body_bytes": 48994,
+        "body_start": 250,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-11.md",
+        "prior_delivery": {
+          "capture_id": "00000568115683071173-565",
+          "capture_index": 0,
+          "input_bytes": 17750,
+          "input_sha256": "7e14078c63c7b8729664cdc9e1d931bdec1ed9d32367c7536ae245636fa9a55c",
+          "native_item_id": "msg_01a080f2-a181-7282-9ea5-b5e7bd2eb119",
+          "native_line": 256,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf8-7f42-ba51-94ad296268a9.jsonl",
+          "public_item_id": "01a080f2-a181-7282-9ea5-b5fe317859e7",
+          "public_line": 30982,
+          "reply_line": 30978,
+          "request_line": 80,
+          "rpc_id": "79",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-4cf8-7f42-ba51-94ad296268a9",
+          "turn_id": "01a080f2-a15f-7922-ad03-e1dc11dffded"
+        },
+        "sha256": "2a9edf3d29e3441f13f4c2c44fbf28291cf203908a1c3555e081c7a161da6094",
+        "source_bundle_path": "/tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-11.md",
+        "delivery_kind": "same-owner-requested-repeat-diff-exact-path-current-digest",
+        "previous_digest": "fnv64:5016a6b9a016d47f; bytes:48994",
+        "current_digest": "fnv64:e867899c4a22fc2e; bytes:51593",
+        "previous_body_sha256": "0701cd131dc4980d947fe9683dd2313029633addbc36d9ac83fde03ad71ee4fe",
+        "current_body_sha256": "468bf5066658540e9b22cf7c738d8cf5ea9569905c8827e4d2c293d8e17658a0"
+      },
+      "old_block_prefix_comparison": {
+        "current_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 0,
+            "old_bytes": 195,
+            "old_sha256": "283c7868bcbe2a18d1e58487450a9408b02287ec1b48f4bc1b58425856c83412"
+          }
+        ],
+        "failed_hunk": 1,
+        "file_sections": 1,
+        "previous_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 195,
+            "old_sha256": "283c7868bcbe2a18d1e58487450a9408b02287ec1b48f4bc1b58425856c83412"
+          }
+        ]
+      },
+      "other_owner_ack_witnesses": [
+        {
+          "trace_line": 14,
+          "agent": "user-3",
+          "input_index": 40,
+          "input": {
+            "capture_id": "00000568115683071173-565",
+            "capture_index": 0,
+            "input_bytes": 997,
+            "input_sha256": "dfee293186764e8dee99050f53e3f7be615cbd93b37118b3c8a5e5a763aace3c",
+            "native_item_id": "msg_01a080f3-0615-7b71-becc-a23a36a77697",
+            "native_line": 488,
+            "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+            "public_item_id": "01a080f3-0616-77e2-aaa8-5b99f2ef0529",
+            "public_line": 32417,
+            "reply_line": 32413,
+            "request_line": 82,
+            "rpc_id": "81",
+            "rpc_type": "str",
+            "status": "joined",
+            "thread_id": "01a080d8-7296-7e10-a35c-30591a630bcd",
+            "turn_id": "01a080f3-05ef-7b31-9731-f5ec8779627e"
+          }
+        },
+        {
+          "trace_line": 17,
+          "agent": "user-3",
+          "input_index": 46,
+          "input": {
+            "capture_id": "00000568115683071173-565",
+            "capture_index": 0,
+            "input_bytes": 959,
+            "input_sha256": "bbb390383717db81458494ae3d520a1445d1fe3629c03acec2165465202e83c7",
+            "native_item_id": "msg_01a080f6-eef9-7ce3-a059-fc05623d83df",
+            "native_line": 623,
+            "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+            "public_item_id": "01a080f6-eefa-7780-b6a8-26b69c0358cd",
+            "public_line": 44074,
+            "reply_line": 44070,
+            "request_line": 94,
+            "rpc_id": "93",
+            "rpc_type": "str",
+            "status": "joined",
+            "thread_id": "01a080d8-7296-7e10-a35c-30591a630bcd",
+            "turn_id": "01a080f6-eecc-74c3-b496-513a7df799d4"
+          }
+        }
+      ],
+      "rejected_submission": {
+        "bytes": 43951,
+        "id": "msg_000a202b69c6638d016a9ffdb6231887d28888d6886501762d",
+        "native_line": 273,
+        "sha256": "254c19bf571c31643d714dbf8391375da31701185a362049cc0142ebc47bbec4"
+      },
+      "chain_id": "002:user-1:ACK-N324"
+    },
+    {
+      "id": "002:T23",
+      "run": 2,
+      "trace_line": 23,
+      "agent": "user-1",
+      "path": "src/terminal_app.rs",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf8-7f42-ba51-94ad296268a9.jsonl",
+      "refresh_input_index": 57,
+      "refresh_native_line": 308,
+      "diagnostic": "structured edit hunk 4 for src/terminal_app.rs failed: old block was not found in current file text",
+      "classification": "failed-old-block-matches-prior-not-current-after-preceding-hunks",
+      "semantic_note": "A second terminal_app refresh follows another accepted change to cached-session visibility/update handling; the failed hunk matches the preceding full refresh, not the later current text.",
+      "held_snapshot": {
+        "body_bytes": 51593,
+        "body_start": 250,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-15.md",
+        "prior_delivery": {
+          "capture_id": "00000568115683071173-565",
+          "capture_index": 0,
+          "input_bytes": 52715,
+          "input_sha256": "fc017db3a12ba617f08e5cc3fd4173e034d32cd2052e455611a5226c83695551",
+          "native_item_id": "msg_01a080f9-dd42-7ac2-9a80-339e0ac159e8",
+          "native_line": 280,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf8-7f42-ba51-94ad296268a9.jsonl",
+          "public_item_id": "01a080f9-dd43-7433-8284-c6ca517d9fb6",
+          "public_line": 55047,
+          "reply_line": 55043,
+          "request_line": 102,
+          "rpc_id": "101",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-4cf8-7f42-ba51-94ad296268a9",
+          "turn_id": "01a080f9-dd1a-71d1-9fc0-5a4d147bcf5f"
+        },
+        "sha256": "af387a4eb3563b9fd4152fb349694f6ad17c0359a819f16f69fcbbb12328eaaf",
+        "source_bundle_path": "/tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-15.md",
+        "delivery_kind": "same-owner-prior-automatic-full-refresh-exact-body",
+        "previous_digest": "fnv64:e867899c4a22fc2e; bytes:51593",
+        "current_digest": "fnv64:f5ee7f1492a21da5; bytes:53644",
+        "previous_body_sha256": "468bf5066658540e9b22cf7c738d8cf5ea9569905c8827e4d2c293d8e17658a0",
+        "current_body_sha256": "b0ae035faf383e8d30b59740007bb97c673640748543cf383e345fcdcc504090"
+      },
+      "old_block_prefix_comparison": {
+        "current_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 162,
+            "old_sha256": "d77c2277a106fd6599200c68ea3ac26164888cee99bb122953ed7ec4589d3c7e"
+          },
+          {
+            "hunk": 2,
+            "matches": 1,
+            "old_bytes": 385,
+            "old_sha256": "f7fe2d42754d6ec512fc984818466fa665858de5fe1c2cc7985dc3f0a12e4400"
+          },
+          {
+            "hunk": 3,
+            "matches": 1,
+            "old_bytes": 652,
+            "old_sha256": "8a897c9dbbbd56c535c2d11aa6d2c71078e5b1557369e8fc0b7742961c452fab"
+          },
+          {
+            "hunk": 4,
+            "matches": 0,
+            "old_bytes": 273,
+            "old_sha256": "099bccd6fb3f2fd3aa8af74b9ddd2db341558d6cbf2b01e7a4c8e0e7728d5dd6"
+          }
+        ],
+        "failed_hunk": 4,
+        "file_sections": 1,
+        "previous_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 162,
+            "old_sha256": "d77c2277a106fd6599200c68ea3ac26164888cee99bb122953ed7ec4589d3c7e"
+          },
+          {
+            "hunk": 2,
+            "matches": 1,
+            "old_bytes": 385,
+            "old_sha256": "f7fe2d42754d6ec512fc984818466fa665858de5fe1c2cc7985dc3f0a12e4400"
+          },
+          {
+            "hunk": 3,
+            "matches": 1,
+            "old_bytes": 652,
+            "old_sha256": "8a897c9dbbbd56c535c2d11aa6d2c71078e5b1557369e8fc0b7742961c452fab"
+          },
+          {
+            "hunk": 4,
+            "matches": 1,
+            "old_bytes": 273,
+            "old_sha256": "099bccd6fb3f2fd3aa8af74b9ddd2db341558d6cbf2b01e7a4c8e0e7728d5dd6"
+          }
+        ]
+      },
+      "other_owner_ack_witnesses": [
+        {
+          "trace_line": 20,
+          "agent": "user-3",
+          "input_index": 54,
+          "input": {
+            "capture_id": "00000568115683071173-565",
+            "capture_index": 0,
+            "input_bytes": 970,
+            "input_sha256": "77743c2d6e55e1bba9cc9128ae41a1e635d91c0a5755095f10dacb8d798a5825",
+            "native_item_id": "msg_01a080fe-4dff-7f01-b253-cd54c7b3d490",
+            "native_line": 744,
+            "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+            "public_item_id": "01a080fe-4e00-7680-be31-7e8bfa681953",
+            "public_line": 66139,
+            "reply_line": 66135,
+            "request_line": 109,
+            "rpc_id": "108",
+            "rpc_type": "str",
+            "status": "joined",
+            "thread_id": "01a080d8-7296-7e10-a35c-30591a630bcd",
+            "turn_id": "01a080fe-4ddb-7050-9988-e2f43860b35e"
+          }
+        }
+      ],
+      "rejected_submission": {
+        "bytes": 42104,
+        "id": "msg_000a202b69c6638d016a9ffee84f8087d286345930d206ef73",
+        "native_line": 301,
+        "sha256": "e784acb389a4a15da167342cb49fad8c19cd4359340ed87dbaad3ee5121b793a"
+      },
+      "chain_id": "002:user-1:ACK-N324"
+    },
+    {
+      "id": "002:T28",
+      "run": 2,
+      "trace_line": 28,
+      "agent": "user-3",
+      "path": "src/terminal_app.rs",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+      "refresh_input_index": 69,
+      "refresh_native_line": 868,
+      "diagnostic": "structured edit hunk 3 for src/terminal_app.rs failed: old block was not found in current file text",
+      "classification": "failed-old-block-matches-prior-not-current-after-preceding-hunks",
+      "semantic_note": "The held current terminal_app includes the visual-selection author's key-routing/right-content changes. Several further old-block failures and two mediated reads precede the later refresh and accepted repair.",
+      "held_snapshot": {
+        "body_bytes": 53644,
+        "body_start": 250,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-16.md",
+        "prior_delivery": {
+          "capture_id": "00000568115683071173-565",
+          "capture_index": 0,
+          "input_bytes": 677,
+          "input_sha256": "7fe8fe045cf2641ea34617c2a697186ad2073900d977e875f3996ebde8e03ab6",
+          "native_item_id": "msg_01a08101-9592-7d53-8438-fb6ec5c7db0b",
+          "native_line": 794,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+          "public_item_id": "01a08101-9594-7f20-b24b-b469b06d9965",
+          "public_line": 72871,
+          "reply_line": 72866,
+          "request_line": 120,
+          "rpc_id": "119",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-7296-7e10-a35c-30591a630bcd",
+          "turn_id": "01a08101-9566-7520-98b3-3a122af2193f"
+        },
+        "sha256": "923f5deaad1faa96600085d6775e78938107fc46e219f8fbcdb346a95f07783c",
+        "source_bundle_path": "/tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-16.md",
+        "delivery_kind": "issued-native-readable-bundle-with-held-snapshot",
+        "previous_digest": "fnv64:f5ee7f1492a21da5; bytes:53644",
+        "current_digest": "fnv64:54c5a112708c8a75; bytes:54140",
+        "previous_body_sha256": "b0ae035faf383e8d30b59740007bb97c673640748543cf383e345fcdcc504090",
+        "current_body_sha256": "6102ea271115bdf182de8632a2b3fa79ae289fec0a8f7c7b9646ab2ed2a1b5c1"
+      },
+      "old_block_prefix_comparison": {
+        "current_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 189,
+            "old_sha256": "06109d00d7bbf9f431f08bc7bd5d7e318a8d21b3ff5935165ab71bb5a62dbf53"
+          },
+          {
+            "hunk": 2,
+            "matches": 1,
+            "old_bytes": 174,
+            "old_sha256": "a16c2cde81288e8f8b0a5726e5d298bb4e47a38c9cb713987d935b8ba4528604"
+          },
+          {
+            "hunk": 3,
+            "matches": 0,
+            "old_bytes": 662,
+            "old_sha256": "579134fd8a5602c7fafc146c4bd97327002cf597f87bd2733326370a640e9fed"
+          }
+        ],
+        "failed_hunk": 3,
+        "file_sections": 1,
+        "previous_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 189,
+            "old_sha256": "06109d00d7bbf9f431f08bc7bd5d7e318a8d21b3ff5935165ab71bb5a62dbf53"
+          },
+          {
+            "hunk": 2,
+            "matches": 1,
+            "old_bytes": 174,
+            "old_sha256": "a16c2cde81288e8f8b0a5726e5d298bb4e47a38c9cb713987d935b8ba4528604"
+          },
+          {
+            "hunk": 3,
+            "matches": 1,
+            "old_bytes": 662,
+            "old_sha256": "579134fd8a5602c7fafc146c4bd97327002cf597f87bd2733326370a640e9fed"
+          }
+        ]
+      },
+      "other_owner_ack_witnesses": [
+        {
+          "trace_line": 24,
+          "agent": "user-1",
+          "input_index": 61,
+          "input": {
+            "capture_id": "00000568115683071173-565",
+            "capture_index": 0,
+            "input_bytes": 1033,
+            "input_sha256": "ce4d61fbfc93abf2d61b4ef37ea8b4fa143e226297943925b5c8900dbbdf6a35",
+            "native_item_id": "msg_01a08102-da40-7a91-ae53-44cd6666f2c1",
+            "native_line": 324,
+            "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf8-7f42-ba51-94ad296268a9.jsonl",
+            "public_item_id": "01a08102-da41-7250-86c5-6ea87d9284e2",
+            "public_line": 77607,
+            "reply_line": 77603,
+            "request_line": 122,
+            "rpc_id": "121",
+            "rpc_type": "str",
+            "status": "joined",
+            "thread_id": "01a080d8-4cf8-7f42-ba51-94ad296268a9",
+            "turn_id": "01a08102-da1d-7502-9df9-a554029c1f52"
+          }
+        }
+      ],
+      "rejected_submission": {
+        "bytes": 13743,
+        "id": "msg_06beccc66bb496de016aa00122704087d2a1e0d8f27dbddbd7",
+        "native_line": 860,
+        "sha256": "6d19b868beb8da4cb51e682fc51efb12ad1c64e7c9af42952f686eab66f776ed"
+      },
+      "chain_id": "002:user-3:ACK-N994"
+    },
+    {
+      "id": "002:T31",
+      "run": 2,
+      "trace_line": 31,
+      "agent": "user-3",
+      "path": "src/terminal_app.rs",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+      "refresh_input_index": 82,
+      "refresh_native_line": 981,
+      "diagnostic": "structured edit hunk 6 for src/terminal_app.rs failed: old block was not found in current file text",
+      "classification": "failed-old-block-matches-prior-not-current-after-preceding-hunks",
+      "semantic_note": "The later visual-selection change adds CHAT_PROMPT_COLUMNS and a right-cursor-column argument. The failed hunk matches the previous full refresh but not this snapshot.",
+      "held_snapshot": {
+        "body_bytes": 54140,
+        "body_start": 26621,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-18.md",
+        "prior_delivery": {
+          "capture_id": "00000568115683071173-565",
+          "capture_index": 0,
+          "input_bytes": 55262,
+          "input_sha256": "c348afa2e721a5308676307c27038213f35a43fd9e9300b6e6e47f6325e01f9c",
+          "native_item_id": "msg_01a08105-3a27-7b03-82a8-8cfe96e2e479",
+          "native_line": 868,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+          "public_item_id": "01a08105-3a29-7e70-81e6-c5a9db990e56",
+          "public_line": 81305,
+          "reply_line": 81301,
+          "request_line": 138,
+          "rpc_id": "137",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-7296-7e10-a35c-30591a630bcd",
+          "turn_id": "01a08105-39ff-7443-b483-aa4cfe438dcd"
+        },
+        "sha256": "20a6fadd6c2769c1b503447a54fafe5d13eefee1258dc2163def91f62890ef99",
+        "source_bundle_path": "/tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-18.md",
+        "delivery_kind": "same-owner-prior-automatic-full-refresh-exact-body",
+        "previous_digest": "fnv64:54c5a112708c8a75; bytes:54140",
+        "current_digest": "fnv64:68c21821be970fdc; bytes:54438",
+        "previous_body_sha256": "6102ea271115bdf182de8632a2b3fa79ae289fec0a8f7c7b9646ab2ed2a1b5c1",
+        "current_body_sha256": "4496aa6bb12132fe904e8405da9900982c5787e501e94d272d2a3ce568f3df2b"
+      },
+      "old_block_prefix_comparison": {
+        "current_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 17,
+            "old_sha256": "3bbce4e6d0a5a02dfe2fe23c41f12f88ee6c9b1848768aaf3ae29e58c450477d"
+          },
+          {
+            "hunk": 2,
+            "matches": 1,
+            "old_bytes": 189,
+            "old_sha256": "06109d00d7bbf9f431f08bc7bd5d7e318a8d21b3ff5935165ab71bb5a62dbf53"
+          },
+          {
+            "hunk": 3,
+            "matches": 1,
+            "old_bytes": 154,
+            "old_sha256": "ff939deb1926ce7c9d85e2a06e7c0cf9eab103d2f5999ce227bdfb5b862ce4ac"
+          },
+          {
+            "hunk": 4,
+            "matches": 1,
+            "old_bytes": 142,
+            "old_sha256": "0dcdd12c6b29685e9cc4c6dea73d6706f2bcef1ab606197b5e9437756a55a8c8"
+          },
+          {
+            "hunk": 5,
+            "matches": 1,
+            "old_bytes": 174,
+            "old_sha256": "a16c2cde81288e8f8b0a5726e5d298bb4e47a38c9cb713987d935b8ba4528604"
+          },
+          {
+            "hunk": 6,
+            "matches": 0,
+            "old_bytes": 721,
+            "old_sha256": "c4833c40a04d226db3617ed285a4ca03c51b7adad592103922850da4a75db1fb"
+          }
+        ],
+        "failed_hunk": 6,
+        "file_sections": 1,
+        "previous_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 17,
+            "old_sha256": "3bbce4e6d0a5a02dfe2fe23c41f12f88ee6c9b1848768aaf3ae29e58c450477d"
+          },
+          {
+            "hunk": 2,
+            "matches": 1,
+            "old_bytes": 189,
+            "old_sha256": "06109d00d7bbf9f431f08bc7bd5d7e318a8d21b3ff5935165ab71bb5a62dbf53"
+          },
+          {
+            "hunk": 3,
+            "matches": 1,
+            "old_bytes": 154,
+            "old_sha256": "ff939deb1926ce7c9d85e2a06e7c0cf9eab103d2f5999ce227bdfb5b862ce4ac"
+          },
+          {
+            "hunk": 4,
+            "matches": 1,
+            "old_bytes": 142,
+            "old_sha256": "0dcdd12c6b29685e9cc4c6dea73d6706f2bcef1ab606197b5e9437756a55a8c8"
+          },
+          {
+            "hunk": 5,
+            "matches": 1,
+            "old_bytes": 174,
+            "old_sha256": "a16c2cde81288e8f8b0a5726e5d298bb4e47a38c9cb713987d935b8ba4528604"
+          },
+          {
+            "hunk": 6,
+            "matches": 1,
+            "old_bytes": 721,
+            "old_sha256": "c4833c40a04d226db3617ed285a4ca03c51b7adad592103922850da4a75db1fb"
+          }
+        ]
+      },
+      "other_owner_ack_witnesses": [
+        {
+          "trace_line": 29,
+          "agent": "user-1",
+          "input_index": 80,
+          "input": {
+            "capture_id": "00000568115683071173-565",
+            "capture_index": 0,
+            "input_bytes": 1033,
+            "input_sha256": "ce4d61fbfc93abf2d61b4ef37ea8b4fa143e226297943925b5c8900dbbdf6a35",
+            "native_item_id": "msg_01a08110-c240-7e20-b973-02fbd16ef2d1",
+            "native_line": 532,
+            "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf8-7f42-ba51-94ad296268a9.jsonl",
+            "public_item_id": "01a08110-c241-7492-bb72-bcde04042f6a",
+            "public_line": 100925,
+            "reply_line": 100920,
+            "request_line": 159,
+            "rpc_id": "158",
+            "rpc_type": "str",
+            "status": "joined",
+            "thread_id": "01a080d8-4cf8-7f42-ba51-94ad296268a9",
+            "turn_id": "01a08110-c217-7571-a91e-dd7cf7fa32fa"
+          }
+        }
+      ],
+      "rejected_submission": {
+        "bytes": 16510,
+        "id": "msg_06beccc66bb496de016aa0041b017887d2b5703f3763ee0435",
+        "native_line": 973,
+        "sha256": "b47b16c5a40f5466f68b7d78877d309dadc66cbbdec9d53da7e68a816f1e25f6"
+      },
+      "chain_id": "002:user-3:ACK-N994"
+    },
+    {
+      "id": "003:T4",
+      "run": 3,
+      "trace_line": 4,
+      "agent": "user-3",
+      "path": "src/terminal_app.rs",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7297-7fe1-93b0-c344d213fd2c.jsonl",
+      "refresh_input_index": 18,
+      "refresh_native_line": 212,
+      "diagnostic": "structured edit hunk 2 for src/terminal_app.rs failed: old block was not found in current file text",
+      "classification": "failed-old-block-matches-prior-not-current-after-preceding-hunks",
+      "semantic_note": "The old import block predates the other author's is_agent_slash_command import/routing change.",
+      "held_snapshot": {
+        "body_bytes": 42898,
+        "body_start": 22883,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-456-0/bundle-5.md",
+        "prior_delivery": {
+          "capture_id": "00000568115683074735-566",
+          "capture_index": 0,
+          "input_bytes": 760,
+          "input_sha256": "72e68eb9abb33892fcf10887fe1e7251b52d9e448cfbdaa877c0160b9b43b0a1",
+          "native_item_id": "msg_01a080d9-fed4-7323-8ca7-c2abfbad0270",
+          "native_line": 92,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7297-7fe1-93b0-c344d213fd2c.jsonl",
+          "public_item_id": "01a080d9-fed5-79c0-8946-5e400148a9ca",
+          "public_line": 987,
+          "reply_line": 983,
+          "request_line": 20,
+          "rpc_id": "19",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-7297-7fe1-93b0-c344d213fd2c",
+          "turn_id": "01a080d9-fea6-7772-9e25-f0aad8c0edda"
+        },
+        "sha256": "4bef72fc7560accda0eaa40cfb5a7d6dc9e4424e788a7900be1886f3589b7e5e",
+        "source_bundle_path": "/tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-003/work-leaf-3feature-bench.VeNU4f/context-bundles/orchestrator-456-0/bundle-5.md",
+        "delivery_kind": "issued-native-readable-bundle-with-held-snapshot",
+        "previous_digest": "fnv64:25dc74bb7b8daeba; bytes:42898",
+        "current_digest": "fnv64:0ad4b91ca877941e; bytes:43136",
+        "previous_body_sha256": "2ce7c225c4092974ddc3a9f4f80589356c6ef7a68a7cb6e080c53b1d20c72222",
+        "current_body_sha256": "82db1d063f28517719e9f781f957c6d3d737a53a593e740fc4e6e2123c180ad6"
+      },
+      "old_block_prefix_comparison": {
+        "current_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 53,
+            "old_sha256": "951cb5ff857c92b9adb621fd041477134f005899b0832561713d52ec6d0bfd97"
+          },
+          {
+            "hunk": 2,
+            "matches": 0,
+            "old_bytes": 189,
+            "old_sha256": "06109d00d7bbf9f431f08bc7bd5d7e318a8d21b3ff5935165ab71bb5a62dbf53"
+          }
+        ],
+        "failed_hunk": 2,
+        "file_sections": 1,
+        "previous_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 53,
+            "old_sha256": "951cb5ff857c92b9adb621fd041477134f005899b0832561713d52ec6d0bfd97"
+          },
+          {
+            "hunk": 2,
+            "matches": 1,
+            "old_bytes": 189,
+            "old_sha256": "06109d00d7bbf9f431f08bc7bd5d7e318a8d21b3ff5935165ab71bb5a62dbf53"
+          }
+        ]
+      },
+      "other_owner_ack_witnesses": [
+        {
+          "trace_line": 2,
+          "agent": "user-2",
+          "input_index": 13,
+          "input": {
+            "capture_id": "00000568115683074735-566",
+            "capture_index": 0,
+            "input_bytes": 1021,
+            "input_sha256": "34afc2c71378f9ddd570c8d2b3b5e286fd38a84eea80655fb394103bd1bb8ac4",
+            "native_item_id": "msg_01a080e1-70a7-7071-8024-da3a134c691d",
+            "native_line": 211,
+            "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-38-01a080d8-5ec0-7373-9c13-dee713757c1c.jsonl",
+            "public_item_id": "01a080e1-70a8-7803-a0f2-ed556de0894a",
+            "public_line": 8683,
+            "reply_line": 8676,
+            "request_line": 30,
+            "rpc_id": "29",
+            "rpc_type": "str",
+            "status": "joined",
+            "thread_id": "01a080d8-5ec0-7373-9c13-dee713757c1c",
+            "turn_id": "01a080e1-7079-7c32-a61f-5c7cd29798a8"
+          }
+        }
+      ],
+      "rejected_submission": {
+        "bytes": 20461,
+        "id": "msg_0476b42dd55e23d4016a9ff81a2c0487d2af0afe24975be705",
+        "native_line": 204,
+        "sha256": "5f9e926ee64204d28210df816df46998d1654417bb76d9d2c19667ecceb8eb9f"
+      },
+      "chain_id": "003:user-3:ACK-N242"
+    },
+    {
+      "id": "003:T9",
+      "run": 3,
+      "trace_line": 9,
+      "agent": "user-1",
+      "path": "src/ui_harness.rs",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cea-7c63-aec7-41f55a6a3781.jsonl",
+      "refresh_input_index": 33,
+      "refresh_native_line": 192,
+      "diagnostic": "structured edit hunk 1 for src/ui_harness.rs failed: old block was not found in current file text",
+      "classification": "failed-old-block-matches-prior-not-current-after-preceding-hunks",
+      "semantic_note": "The current UiHarness includes the completion author's BTreeSet and feature-done imports/state; the rejected original import hunk matches only the prior snapshot.",
+      "held_snapshot": {
+        "body_bytes": 21380,
+        "body_start": 71869,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-456-0/bundle-0.md",
+        "prior_delivery": {
+          "capture_id": "00000568115683074735-566",
+          "capture_index": 0,
+          "input_bytes": 791,
+          "input_sha256": "2e3a22d6ab9c8608909f7b11dd2b568f5c1266f024562373fe87011719770ba6",
+          "native_item_id": "msg_01a080d8-70d4-7753-87d6-05b841efd421",
+          "native_line": 22,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cea-7c63-aec7-41f55a6a3781.jsonl",
+          "public_item_id": "01a080d8-70d5-7b42-8c2f-880d20a5cf4e",
+          "public_line": 68,
+          "reply_line": 64,
+          "request_line": 8,
+          "rpc_id": "7",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-4cea-7c63-aec7-41f55a6a3781",
+          "turn_id": "01a080d8-709e-7590-aeb5-1c40333336c8"
+        },
+        "sha256": "15cfaf8c8c4cf2251ccce78da81a19bfe45df66835a4998c6045cbe5d7515b57",
+        "source_bundle_path": "/tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-003/work-leaf-3feature-bench.VeNU4f/context-bundles/orchestrator-456-0/bundle-0.md",
+        "delivery_kind": "issued-native-readable-bundle-with-held-snapshot",
+        "previous_digest": "fnv64:770bd2bb00b376ed; bytes:21380",
+        "current_digest": "fnv64:ca2e8279091347ca; bytes:24100",
+        "previous_body_sha256": "61c49822634b358a9f5004473abd07b7182cd918e61e2d332639af1da3046c4a",
+        "current_body_sha256": "8822b742c3da00806baacf8c020138190e9c13997b8fbf5b80402af4e8b051ea"
+      },
+      "old_block_prefix_comparison": {
+        "current_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 0,
+            "old_bytes": 150,
+            "old_sha256": "6c41a9dc26c03a62de8504454bff66aa2cffb7cd8b0865be87f0fefb71eb8050"
+          }
+        ],
+        "failed_hunk": 1,
+        "file_sections": 1,
+        "previous_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 1,
+            "old_bytes": 150,
+            "old_sha256": "6c41a9dc26c03a62de8504454bff66aa2cffb7cd8b0865be87f0fefb71eb8050"
+          }
+        ]
+      },
+      "other_owner_ack_witnesses": [
+        {
+          "trace_line": 5,
+          "agent": "user-3",
+          "input_index": 21,
+          "input": {
+            "capture_id": "00000568115683074735-566",
+            "capture_index": 0,
+            "input_bytes": 1060,
+            "input_sha256": "72292d99567cf96abdf25b4160da8141e617f915bfe9b635f3e7b7f0ad9f0c45",
+            "native_item_id": "msg_01a080e7-f641-70e1-b46c-808e725f2e7a",
+            "native_line": 242,
+            "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7297-7fe1-93b0-c344d213fd2c.jsonl",
+            "public_item_id": "01a080e7-f642-7c11-a0b9-6ada1354a9c3",
+            "public_line": 28525,
+            "reply_line": 28521,
+            "request_line": 47,
+            "rpc_id": "46",
+            "rpc_type": "str",
+            "status": "joined",
+            "thread_id": "01a080d8-7297-7fe1-93b0-c344d213fd2c",
+            "turn_id": "01a080e7-f614-7bf1-8639-104011b7c9d0"
+          }
+        }
+      ],
+      "rejected_submission": {
+        "bytes": 41010,
+        "id": "msg_0c1f9ff2370f7d8a016a9ffb09586087d2998be37983e3a167",
+        "native_line": 184,
+        "sha256": "b6d28cab6deb45c5beff5fd84223ec77122b853c8f30a943664c832729d6a2eb"
+      },
+      "chain_id": "003:user-1:ACK-N222"
+    },
+    {
+      "id": "003:T14",
+      "run": 3,
+      "trace_line": 14,
+      "agent": "user-3",
+      "path": "src/terminal_app.rs",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7297-7fe1-93b0-c344d213fd2c.jsonl",
+      "refresh_input_index": 43,
+      "refresh_native_line": 482,
+      "diagnostic": "structured edit hunk 1 for src/terminal_app.rs failed: old block was not found in current file text",
+      "classification": "old-block-absent-in-both-held-snapshots",
+      "semantic_note": "The rejected old block assumes a duplicated let Some(agent_id) line; both snapshots contain only one. The accepted repair omits terminal_app entirely and changes workspace plus terminal_app tests; this is not a repaired concurrent terminal_app conflict.",
+      "held_snapshot": {
+        "body_bytes": 46483,
+        "body_start": 64323,
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-456-0/bundle-13.md",
+        "prior_delivery": {
+          "capture_id": "00000568115683074735-566",
+          "capture_index": 0,
+          "input_bytes": 616,
+          "input_sha256": "d71bc90da53e6034e62d34fb275863fd06be556aae15baa1534012e8995e4d53",
+          "native_item_id": "msg_01a080f0-d2f6-7fb0-8f18-c1ccff9945e3",
+          "native_line": 412,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7297-7fe1-93b0-c344d213fd2c.jsonl",
+          "public_item_id": "01a080f0-d2f7-7dd3-87b8-915b34cd8299",
+          "public_line": 51149,
+          "reply_line": 51145,
+          "request_line": 79,
+          "rpc_id": "78",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-7297-7fe1-93b0-c344d213fd2c",
+          "turn_id": "01a080f0-d2c6-7641-a2ac-69242c7a4e80"
+        },
+        "sha256": "2b7b2b0d3fe550c4ad2c9804ba4ec9d25b92b9d673d8677e1eacfa9c2359171e",
+        "source_bundle_path": "/tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-003/work-leaf-3feature-bench.VeNU4f/context-bundles/orchestrator-456-0/bundle-13.md",
+        "delivery_kind": "issued-native-readable-bundle-with-held-snapshot",
+        "previous_digest": "fnv64:ce02cf79bb325441; bytes:46483",
+        "current_digest": "fnv64:05f0fe7c3b412625; bytes:47624",
+        "previous_body_sha256": "dadb19507f0fc93602d76f0db6166545829f292dcc7a5519adec2431028e06c7",
+        "current_body_sha256": "7c3aefb1f0d708e9cfe96e51e185d2abcf411be293da1bcdf574c194f09405a2"
+      },
+      "old_block_prefix_comparison": {
+        "current_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 0,
+            "old_bytes": 284,
+            "old_sha256": "5ca07998a2a85e8309bb4e35b9b4c2ca7b1b773796790c283fb2e036838be28c"
+          }
+        ],
+        "failed_hunk": 1,
+        "file_sections": 1,
+        "previous_prefix_checks": [
+          {
+            "hunk": 1,
+            "matches": 0,
+            "old_bytes": 284,
+            "old_sha256": "5ca07998a2a85e8309bb4e35b9b4c2ca7b1b773796790c283fb2e036838be28c"
+          }
+        ]
+      },
+      "other_owner_ack_witnesses": [
+        {
+          "trace_line": 12,
+          "agent": "user-1",
+          "input_index": 39,
+          "input": {
+            "capture_id": "00000568115683074735-566",
+            "capture_index": 0,
+            "input_bytes": 1010,
+            "input_sha256": "67c10750fc2d1974fc8cce75e7d9fcf083479471e7e72808501b7181e409e6e0",
+            "native_item_id": "msg_01a080f3-a751-7751-916b-d1e34776d3bf",
+            "native_line": 222,
+            "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cea-7c63-aec7-41f55a6a3781.jsonl",
+            "public_item_id": "01a080f3-a752-7903-bb14-f38e1d8319ce",
+            "public_line": 61912,
+            "reply_line": 61908,
+            "request_line": 81,
+            "rpc_id": "80",
+            "rpc_type": "str",
+            "status": "joined",
+            "thread_id": "01a080d8-4cea-7c63-aec7-41f55a6a3781",
+            "turn_id": "01a080f3-a726-7690-ada6-aae7676767e1"
+          }
+        }
+      ],
+      "rejected_submission": {
+        "bytes": 6366,
+        "id": "msg_0476b42dd55e23d4016a9ffccccae087d2b92f5c9400810344",
+        "native_line": 474,
+        "sha256": "35e76fa2627cd5f3b2067bbadb1efbfcf587a48fad50f9054fe36da78d235fe9"
+      },
+      "chain_id": "003:user-3:ACK-N535"
+    }
+  ],
+  "chains": [
+    {
+      "id": "001:user-3:ACK-N202",
+      "case_ids": [
+        "001:T4"
+      ],
+      "run": 1,
+      "agent": "user-3",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-728b-7321-9ec4-20378c189cb8.jsonl",
+      "first_rejected_native_line": 181,
+      "accepted_repair": {
+        "bytes": 22296,
+        "id": "msg_0b4283efbad619c1016a9ff859fc3087d284b11ed84b88911a",
+        "native_line": 194,
+        "sha256": "891e8ddebe6c28b11703d64ce4077587d79f0b7fd59b6bc1424bc2c2e1fd647a",
+        "target_file_sections": 1
+      },
+      "ack": {
+        "capture_id": "00000568115683071173-564",
+        "capture_index": 0,
+        "input_bytes": 1071,
+        "input_sha256": "9b616159b1eb22476ebd22dff50d07d5eac89c37a4bb1d5e23897dcad7d4f121",
+        "native_item_id": "msg_01a080e3-9538-7cc1-a459-d2bf2d73b3fb",
+        "native_line": 202,
+        "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-728b-7321-9ec4-20378c189cb8.jsonl",
+        "public_item_id": "01a080e3-9539-7ab2-bee3-5ede51b1c3af",
+        "public_line": 14293,
+        "reply_line": 14289,
+        "request_line": 41,
+        "rpc_id": "40",
+        "rpc_type": "str",
+        "status": "joined",
+        "thread_id": "01a080d8-728b-7321-9ec4-20378c189cb8",
+        "turn_id": "01a080e3-9509-7601-82dd-05fb232ea192"
+      },
+      "ack_header": "work-leaf patch applied\nfiles: src/terminal_app.rs, src/ui.rs, src/ui_harness.rs, src/workspace.rs, tests/terminal_app.rs, tests/ui_harness.rs, tests/workspace.rs",
+      "intervening_accepted_inputs": [],
+      "public_native_submissions": [
+        {
+          "native_item_id": "msg_0b4283efbad619c1016a9ff792a89087d2b2da2ba8573bbd38",
+          "native_line": 181,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_0b4283efbad619c1016a9ff792a89087d2b2da2ba8573bbd38",
+              "line": 8925
+            }
+          ],
+          "text_bytes": 20411,
+          "text_sha256": "51c126de1f116c2b0af99a98cb82d18ca298f56d1b4f6cf74dad4c6eb7513ad3",
+          "turn_id": "01a080da-f686-71a2-ac1a-62bb8652e102"
+        },
+        {
+          "native_item_id": "msg_0b4283efbad619c1016a9ff859fc3087d284b11ed84b88911a",
+          "native_line": 194,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_0b4283efbad619c1016a9ff859fc3087d284b11ed84b88911a",
+              "line": 14282
+            }
+          ],
+          "text_bytes": 22296,
+          "text_sha256": "891e8ddebe6c28b11703d64ce4077587d79f0b7fd59b6bc1424bc2c2e1fd647a",
+          "turn_id": "01a080e0-5433-7653-8c2b-23445fa728aa"
+        }
+      ],
+      "first_post_ack_command": {
+        "command": "cargo test completion --all-targets --all-features",
+        "exact_command_status_output_matches": [
+          {
+            "child": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000568870776201373-32746/child.json",
+              "sha256": "aecf0d452abc101eae6c774c393e07396192ba8e288680ddafa82ff5f1c7739b"
+            },
+            "end": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000568870776201373-32746/end.json",
+              "sha256": "057d2fd0ae7fe97f125ad1ab01fca94b4b9b3e294bad619cbc112cbfabf8e266"
+            },
+            "end_signal": null,
+            "end_unix_ns": 1788868811971549700,
+            "exit": 101,
+            "invocation_id": "00000568870776201373-32746",
+            "start": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000568870776201373-32746/start.json",
+              "sha256": "7531fe59ff915c3e01413ffdeb27392d84e4dc97a58b1113a92a9916503da6d1"
+            },
+            "start_unix_ns": 1788868808830285800,
+            "stderr": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/locked-commands/00000568870776201373-32746/stderr.raw",
+              "sha256": "a4d241e2ed648eedcef204bede606687a2b7724bfdd706eef2beaab7c71d85ac"
+            },
+            "stderr_bytes": 1835,
+            "stdout": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/locked-commands/00000568870776201373-32746/stdout.raw",
+              "sha256": "fb1801d608b321ea181f7dabc58c5d94bd07abb1aa2b020819082feb089053aa"
+            },
+            "stdout_bytes": 2633
+          }
+        ],
+        "input": {
+          "capture_id": "00000568115683071173-564",
+          "capture_index": 0,
+          "input_bytes": 4803,
+          "input_sha256": "0917558d3bdc593a485789fbee068eee8abef3a4b8049005e52034842fe7fd89",
+          "native_item_id": "msg_01a080e3-dcfc-7002-8167-56b4608c1915",
+          "native_line": 215,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-728b-7321-9ec4-20378c189cb8.jsonl",
+          "public_item_id": "01a080e3-dcfd-7702-81e3-395537430305",
+          "public_line": 14329,
+          "reply_line": 14325,
+          "request_line": 43,
+          "rpc_id": "42",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-728b-7321-9ec4-20378c189cb8",
+          "turn_id": "01a080e3-dcd9-75b0-af56-93c9046869a0"
+        },
+        "output_compaction_marker": false,
+        "refresh_trace": 4,
+        "run": 1
+      },
+      "native_calls": []
+    },
+    {
+      "id": "001:user-1:ACK-N218",
+      "case_ids": [
+        "001:T9"
+      ],
+      "run": 1,
+      "agent": "user-1",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf7-7e11-b988-06b106f25830.jsonl",
+      "first_rejected_native_line": 185,
+      "accepted_repair": {
+        "bytes": 33709,
+        "id": "msg_01d2e555c24b0190016a9ffc3f62d487d29d65404379ecc5a6",
+        "native_line": 210,
+        "sha256": "c005d0e4fb641df4ad220648e9da29b02d8f138347f695e7462b5bd73088dddd",
+        "target_file_sections": 1
+      },
+      "ack": {
+        "capture_id": "00000568115683071173-564",
+        "capture_index": 0,
+        "input_bytes": 1010,
+        "input_sha256": "67c10750fc2d1974fc8cce75e7d9fcf083479471e7e72808501b7181e409e6e0",
+        "native_item_id": "msg_01a080f3-8dfa-78c1-8ddc-bad2b636cbe2",
+        "native_line": 218,
+        "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf7-7e11-b988-06b106f25830.jsonl",
+        "public_item_id": "01a080f3-8dfb-78b1-b3d6-34cdc429aec9",
+        "public_line": 31192,
+        "reply_line": 31188,
+        "request_line": 55,
+        "rpc_id": "54",
+        "rpc_type": "str",
+        "status": "joined",
+        "thread_id": "01a080d8-4cf7-7e11-b988-06b106f25830",
+        "turn_id": "01a080f3-8dd6-7dd1-9f3a-1166a3d7b06d"
+      },
+      "ack_header": "work-leaf patch applied\nfiles: src/terminal_app.rs, src/ui.rs, src/ui_harness.rs, tests/ui_harness.rs",
+      "intervening_accepted_inputs": [],
+      "public_native_submissions": [
+        {
+          "native_item_id": "msg_01d2e555c24b0190016a9ffab502c487d2a139c279f1f0b950",
+          "native_line": 185,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_01d2e555c24b0190016a9ffab502c487d2a139c279f1f0b950",
+              "line": 23082
+            }
+          ],
+          "text_bytes": 35633,
+          "text_sha256": "4d58073f924f16d6fbb5b4bc9d3647ad1797d4c25f0f041f1009a3555ae044cc",
+          "turn_id": "01a080df-23f3-7172-b00c-9229cdd68f70"
+        },
+        {
+          "native_item_id": "msg_01d2e555c24b0190016a9ffc3f62d487d29d65404379ecc5a6",
+          "native_line": 210,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_01d2e555c24b0190016a9ffc3f62d487d29d65404379ecc5a6",
+              "line": 31181
+            }
+          ],
+          "text_bytes": 33709,
+          "text_sha256": "c005d0e4fb641df4ad220648e9da29b02d8f138347f695e7462b5bd73088dddd",
+          "turn_id": "01a080ed-aa71-77d3-9271-54a71c1ee8d8"
+        }
+      ],
+      "first_post_ack_command": {
+        "command": "cargo test --test ui_harness",
+        "exact_command_status_output_matches": [
+          {
+            "child": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000569907317664847-67711/child.json",
+              "sha256": "be333f46df031bc000b1b736067ec3be98a9a4ef2dd01212369dd350b81bd8d4"
+            },
+            "end": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000569907317664847-67711/end.json",
+              "sha256": "66b1842194b54a1f62e04ff4aa4a1a9687b0779aa469247ee62d76ad706d504c"
+            },
+            "end_signal": null,
+            "end_unix_ns": 1788869846997130200,
+            "exit": 0,
+            "invocation_id": "00000569907317664847-67711",
+            "start": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000569907317664847-67711/start.json",
+              "sha256": "bda6fb9a6bc17aaf2d07b47c6018defe10d0bd57af696e27d1045feae7733a9b"
+            },
+            "start_unix_ns": 1788869845371735000,
+            "stderr": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/locked-commands/00000569907317664847-67711/stderr.raw",
+              "sha256": "d54e1b13a4245e33b69dd3040232292aea2090a59806cbe1a3475b65e9631b03"
+            },
+            "stderr_bytes": 288,
+            "stdout": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/locked-commands/00000569907317664847-67711/stdout.raw",
+              "sha256": "55f98e745311f6600d977ac67976d5edbbcbac371be47ffb10280352d0f9bbb5"
+            },
+            "stdout_bytes": 2549
+          }
+        ],
+        "input": {
+          "capture_id": "00000568115683071173-564",
+          "capture_index": 0,
+          "input_bytes": 3136,
+          "input_sha256": "01262a619c80a6918d6d5ce74a2ccba717495cb445040c5ddb9bbdc2c370a182",
+          "native_item_id": "msg_01a080f3-a80c-7363-af32-fd2086e0935d",
+          "native_line": 231,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf7-7e11-b988-06b106f25830.jsonl",
+          "public_item_id": "01a080f3-a80d-7592-9bed-e22722bc6501",
+          "public_line": 31252,
+          "reply_line": 31248,
+          "request_line": 57,
+          "rpc_id": "56",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-4cf7-7e11-b988-06b106f25830",
+          "turn_id": "01a080f3-a7ed-74a3-97f7-bef932045fe4"
+        },
+        "output_compaction_marker": false,
+        "refresh_trace": 9,
+        "run": 1
+      },
+      "native_calls": [
+        {
+          "arguments": {
+            "cmd": "printf '> \n u' | base64 && printf '>u\n  ' | base64",
+            "max_output_tokens": 2000,
+            "workdir": "/tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-001/work-leaf-3feature-bench.NmArN0/repo"
+          },
+          "call_id": "call_Ij9YLkSjz3zDEEtcbyNp3QJE",
+          "call_line": 201,
+          "name": "exec_command",
+          "outputs": [
+            {
+              "bytes": 120,
+              "excerpt": "Chunk ID: 2017df\nWall time: 0.0000 seconds\nProcess exited with code 0\nOriginal token count: 5\nOutput:\nPiAKIHU=\nPnUKICA=\n",
+              "line": 204,
+              "sha256": "46b39319cef4c7bdf6412a55a4cb4da2768fce4afef59bfdd90f08db749a9b50",
+              "status_prefix": "Chunk ID: 2017df\nWall time: 0.0000 seconds\nProcess exited with code 0\nOriginal token count: 5"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "002:user-3:ACK-N223",
+      "case_ids": [
+        "002:T4"
+      ],
+      "run": 2,
+      "agent": "user-3",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+      "first_rejected_native_line": 198,
+      "accepted_repair": {
+        "bytes": 13067,
+        "id": "msg_06beccc66bb496de016a9ff82f772c87d2a009a358de54ba5f",
+        "native_line": 215,
+        "sha256": "bead6cd4681303889a50b3d1c9cef4df43ea27ff31bad9eb42b661a02825082a",
+        "target_file_sections": 1
+      },
+      "ack": {
+        "capture_id": "00000568115683071173-565",
+        "capture_index": 0,
+        "input_bytes": 1037,
+        "input_sha256": "502e2f4fb872df87f622d243d9feade75f0a9be6b98af8edf727503ad85d141d",
+        "native_item_id": "msg_01a080e2-5a17-73e0-bb93-4397ca8925ff",
+        "native_line": 223,
+        "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+        "public_item_id": "01a080e2-5a17-73e0-bb93-43a270c2906c",
+        "public_line": 11183,
+        "reply_line": 11179,
+        "request_line": 40,
+        "rpc_id": "39",
+        "rpc_type": "str",
+        "status": "joined",
+        "thread_id": "01a080d8-7296-7e10-a35c-30591a630bcd",
+        "turn_id": "01a080e2-59ec-7901-9324-5594535e9b94"
+      },
+      "ack_header": "work-leaf patch applied\nfiles: src/terminal_app.rs, src/ui_harness.rs, src/workspace.rs, tests/ui_harness.rs, tests/workspace.rs",
+      "intervening_accepted_inputs": [],
+      "public_native_submissions": [
+        {
+          "native_item_id": "msg_06beccc66bb496de016a9ff7b00b7087d286223386425cb750",
+          "native_line": 198,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_06beccc66bb496de016a9ff7b00b7087d286223386425cb750",
+              "line": 7951
+            }
+          ],
+          "text_bytes": 13202,
+          "text_sha256": "7e942abc13f16d9f335f39622aa94f026a80326441e495f2d5f41826f16df2e5",
+          "turn_id": "01a080d9-d2bf-7543-aaa4-dbe93cc02859"
+        },
+        {
+          "native_item_id": "msg_06beccc66bb496de016a9ff82f772c87d2a009a358de54ba5f",
+          "native_line": 215,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_06beccc66bb496de016a9ff82f772c87d2a009a358de54ba5f",
+              "line": 11172
+            }
+          ],
+          "text_bytes": 13067,
+          "text_sha256": "bead6cd4681303889a50b3d1c9cef4df43ea27ff31bad9eb42b661a02825082a",
+          "turn_id": "01a080e0-65b1-7fe0-8705-c8fa48486d31"
+        }
+      ],
+      "first_post_ack_command": {
+        "command": "cargo test feature_done",
+        "exact_command_status_output_matches": [
+          {
+            "child": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000568789387430129-28607/child.json",
+              "sha256": "0d8e56fa9178bb0eae409ac12961bf9fa90472f2cfabcbd7a473a6ad722e2118"
+            },
+            "end": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000568789387430129-28607/end.json",
+              "sha256": "5bb4a01fe30fc77617fcf8f87378ba704cc65e76e0557c72a6ea7369f6c46fa1"
+            },
+            "end_signal": null,
+            "end_unix_ns": 1788868729886971000,
+            "exit": 0,
+            "invocation_id": "00000568789387430129-28607",
+            "start": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000568789387430129-28607/start.json",
+              "sha256": "9bfd690d5c3326c41e4e86d79a25ec6ab8344509320088412cf6bf1e247ec10d"
+            },
+            "start_unix_ns": 1788868727441513500,
+            "stderr": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000568789387430129-28607/stderr.raw",
+              "sha256": "8f4d1ec28a1bc48f08184b1626dcf89cbe23195cbb494945d7decd1050e8657d"
+            },
+            "stderr_bytes": 1860,
+            "stdout": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000568789387430129-28607/stdout.raw",
+              "sha256": "61515a847e6fc3369bee6438dd984dcc30590504ed67a80534a60f69b8ace853"
+            },
+            "stdout_bytes": 2246
+          }
+        ],
+        "input": {
+          "capture_id": "00000568115683071173-565",
+          "capture_index": 0,
+          "input_bytes": 4400,
+          "input_sha256": "d9deb756ca9371cd100669629ba596c1e5590eb170997aea68d09969fe82eb40",
+          "native_item_id": "msg_01a080e2-9c5e-7ed1-bf3f-833aa73d6e59",
+          "native_line": 236,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+          "public_item_id": "01a080e2-9c5e-7ed1-bf3f-834b91699332",
+          "public_line": 11210,
+          "reply_line": 11206,
+          "request_line": 42,
+          "rpc_id": "41",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-7296-7e10-a35c-30591a630bcd",
+          "turn_id": "01a080e2-9c39-72b2-ac2d-292ade5ddade"
+        },
+        "output_compaction_marker": false,
+        "refresh_trace": 4,
+        "run": 2
+      },
+      "native_calls": []
+    },
+    {
+      "id": "002:user-1:ACK-N324",
+      "case_ids": [
+        "002:T13",
+        "002:T19",
+        "002:T23"
+      ],
+      "run": 2,
+      "agent": "user-1",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf8-7f42-ba51-94ad296268a9.jsonl",
+      "first_rejected_native_line": 237,
+      "accepted_repair": {
+        "bytes": 42301,
+        "id": "msg_000a202b69c6638d016aa000049b2087d2ae2a161c2cf87fab",
+        "native_line": 317,
+        "sha256": "19e0eae2d2366c5f1f330d9ebb05ff9b7b41d81b026cc569b3bfc17a35659308",
+        "target_file_sections": 1
+      },
+      "ack": {
+        "capture_id": "00000568115683071173-565",
+        "capture_index": 0,
+        "input_bytes": 1033,
+        "input_sha256": "ce4d61fbfc93abf2d61b4ef37ea8b4fa143e226297943925b5c8900dbbdf6a35",
+        "native_item_id": "msg_01a08102-da40-7a91-ae53-44cd6666f2c1",
+        "native_line": 324,
+        "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf8-7f42-ba51-94ad296268a9.jsonl",
+        "public_item_id": "01a08102-da41-7250-86c5-6ea87d9284e2",
+        "public_line": 77607,
+        "reply_line": 77603,
+        "request_line": 122,
+        "rpc_id": "121",
+        "rpc_type": "str",
+        "status": "joined",
+        "thread_id": "01a080d8-4cf8-7f42-ba51-94ad296268a9",
+        "turn_id": "01a08102-da1d-7502-9df9-a554029c1f52"
+      },
+      "ack_header": "work-leaf patch applied\nfiles: src/terminal_app.rs, src/ui.rs, src/ui_harness.rs, tests/terminal_app.rs, tests/ui_harness.rs",
+      "intervening_accepted_inputs": [
+        {
+          "head": "work-leaf file text",
+          "input_index": 39,
+          "native_line": 256,
+          "request_line": 80
+        },
+        {
+          "head": "The orchestrator could not apply your edit.",
+          "input_index": 45,
+          "native_line": 268,
+          "request_line": 92
+        },
+        {
+          "head": "The orchestrator could not apply your edit.",
+          "input_index": 50,
+          "native_line": 280,
+          "request_line": 102
+        },
+        {
+          "head": "work-leaf file text",
+          "input_index": 51,
+          "native_line": 296,
+          "request_line": 104
+        },
+        {
+          "head": "The orchestrator could not apply your edit.",
+          "input_index": 57,
+          "native_line": 308,
+          "request_line": 115
+        }
+      ],
+      "public_native_submissions": [
+        {
+          "native_item_id": "msg_000a202b69c6638d016a9ffbccec1087d28c82a282b7e21b90",
+          "native_line": 237,
+          "phase": "commentary",
+          "public_matches": [
+            {
+              "item_id": "msg_000a202b69c6638d016a9ffbccec1087d28c82a282b7e21b90",
+              "line": 30320
+            }
+          ],
+          "text_bytes": 42991,
+          "text_sha256": "e001025a49b44ca2a4eec60e33d8dc175210479cc500faa599bec2956e4aced9",
+          "turn_id": "01a080da-ca5e-7ec2-a836-28c5dacf447d"
+        },
+        {
+          "native_item_id": "msg_000a202b69c6638d016a9ffce143d487d28f5428d32cf330ff",
+          "native_line": 261,
+          "phase": "commentary",
+          "public_matches": [
+            {
+              "item_id": "msg_000a202b69c6638d016a9ffce143d487d28f5428d32cf330ff",
+              "line": 43439
+            }
+          ],
+          "text_bytes": 44296,
+          "text_sha256": "4fee7aeafe9ae64dee9846882d2162b84b5b53db51a533ada17b296b6d2de217",
+          "turn_id": "01a080f2-a15f-7922-ad03-e1dc11dffded"
+        },
+        {
+          "native_item_id": "msg_000a202b69c6638d016a9ffdb6231887d28888d6886501762d",
+          "native_line": 273,
+          "phase": "commentary",
+          "public_matches": [
+            {
+              "item_id": "msg_000a202b69c6638d016a9ffdb6231887d28888d6886501762d",
+              "line": 55036
+            }
+          ],
+          "text_bytes": 43951,
+          "text_sha256": "254c19bf571c31643d714dbf8391375da31701185a362049cc0142ebc47bbec4",
+          "turn_id": "01a080f6-c1dd-7440-8bf1-5ad1c42c6d41"
+        },
+        {
+          "native_item_id": "msg_000a202b69c6638d016a9ffee84f8087d286345930d206ef73",
+          "native_line": 301,
+          "phase": "commentary",
+          "public_matches": [
+            {
+              "item_id": "msg_000a202b69c6638d016a9ffee84f8087d286345930d206ef73",
+              "line": 66938
+            }
+          ],
+          "text_bytes": 42104,
+          "text_sha256": "e784acb389a4a15da167342cb49fad8c19cd4359340ed87dbaad3ee5121b793a",
+          "turn_id": "01a080fa-2a1b-70d3-bea4-54e57bc8a16a"
+        },
+        {
+          "native_item_id": "msg_000a202b69c6638d016aa000049b2087d2ae2a161c2cf87fab",
+          "native_line": 317,
+          "phase": "commentary",
+          "public_matches": [
+            {
+              "item_id": "msg_000a202b69c6638d016aa000049b2087d2ae2a161c2cf87fab",
+              "line": 77596
+            }
+          ],
+          "text_bytes": 42301,
+          "text_sha256": "19e0eae2d2366c5f1f330d9ebb05ff9b7b41d81b026cc569b3bfc17a35659308",
+          "turn_id": "01a080fe-8064-7141-85fe-d88fb9844960"
+        }
+      ],
+      "first_post_ack_command": {
+        "command": "cargo test --test ui_harness --test terminal_app visual",
+        "exact_command_status_output_matches": [
+          {
+            "child": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000570918242455226-95870/child.json",
+              "sha256": "518f0a3af1f4d2d58d19bbbcb1f73c3d04793a560e8296499aa6bdf81b9c2f45"
+            },
+            "end": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000570918242455226-95870/end.json",
+              "sha256": "eb6a37045fd0e0cec721ac534746502c33d4077c8d0a9fdf6b02f2298d463f1c"
+            },
+            "end_signal": null,
+            "end_unix_ns": 1788870858592497700,
+            "exit": 101,
+            "invocation_id": "00000570918242455226-95870",
+            "start": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000570918242455226-95870/start.json",
+              "sha256": "37ff749ded2c8f76c0e2faa0f879dfaa31f3bb164f3d7b34257f9ef52071910e"
+            },
+            "start_unix_ns": 1788870856296549000,
+            "stderr": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000570918242455226-95870/stderr.raw",
+              "sha256": "99d58fc7794fcd720e14bd94e730f773352ffa64daddbf965b76e174a88489c9"
+            },
+            "stderr_bytes": 427,
+            "stdout": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000570918242455226-95870/stdout.raw",
+              "sha256": "a0a2646847380a5c597481ae048f579638b6ae1c01d06b3f96c8bd89fa423fe2"
+            },
+            "stdout_bytes": 848
+          }
+        ],
+        "input": {
+          "capture_id": "00000568115683071173-565",
+          "capture_index": 0,
+          "input_bytes": 2154,
+          "input_sha256": "d58d5cf1351722caa7cfcbbcb5529b536dbedaf31bbcebbc4fa1542eeb17a2fc",
+          "native_item_id": "msg_01a08103-179c-7c80-b1a0-d78ece6fabd2",
+          "native_line": 336,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf8-7f42-ba51-94ad296268a9.jsonl",
+          "public_item_id": "01a08103-179d-7412-97a3-45cc31473124",
+          "public_line": 77654,
+          "reply_line": 77650,
+          "request_line": 124,
+          "rpc_id": "123",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-4cf8-7f42-ba51-94ad296268a9",
+          "turn_id": "01a08103-177e-73c1-8ffb-03bc6dcb7041"
+        },
+        "output_compaction_marker": false,
+        "refresh_trace": 13,
+        "run": 2
+      },
+      "native_calls": []
+    },
+    {
+      "id": "002:user-3:ACK-N994",
+      "case_ids": [
+        "002:T28",
+        "002:T31"
+      ],
+      "run": 2,
+      "agent": "user-3",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+      "first_rejected_native_line": 860,
+      "accepted_repair": {
+        "bytes": 30055,
+        "id": "msg_06beccc66bb496de016aa004b09ffc87d28245689dc441dca7",
+        "native_line": 986,
+        "sha256": "9da34c29aaf91d6b0035c07d2a1fa007bd0abb8eccacf4ba2a7c527fe639e07c",
+        "target_file_sections": 1
+      },
+      "ack": {
+        "capture_id": "00000568115683071173-565",
+        "capture_index": 0,
+        "input_bytes": 1008,
+        "input_sha256": "5ea7e4f9995bfaf58a7044ee1524f6c46ecdc16d3be05c1aaf3a999d596e0a90",
+        "native_item_id": "msg_01a08114-2ec0-7c82-b5ce-fb91cebc551d",
+        "native_line": 994,
+        "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+        "public_item_id": "01a08114-2ec1-7361-ab73-e1d66f35a31b",
+        "public_line": 109412,
+        "reply_line": 109408,
+        "request_line": 176,
+        "rpc_id": "175",
+        "rpc_type": "str",
+        "status": "joined",
+        "thread_id": "01a080d8-7296-7e10-a35c-30591a630bcd",
+        "turn_id": "01a08114-2e9a-7ee2-85f1-53e02ef2f1f7"
+      },
+      "ack_header": "work-leaf patch applied\nfiles: src/terminal_app.rs, src/ui.rs, src/workspace.rs, tests/workspace.rs",
+      "intervening_accepted_inputs": [
+        {
+          "head": "The orchestrator could not apply your edit.",
+          "input_index": 71,
+          "native_line": 881,
+          "request_line": 142
+        },
+        {
+          "head": "work-leaf file text",
+          "input_index": 72,
+          "native_line": 894,
+          "request_line": 144
+        },
+        {
+          "head": "The orchestrator could not apply your edit.",
+          "input_index": 73,
+          "native_line": 907,
+          "request_line": 146
+        },
+        {
+          "head": "The orchestrator could not apply your edit.",
+          "input_index": 76,
+          "native_line": 920,
+          "request_line": 151
+        },
+        {
+          "head": "The orchestrator could not apply your edit.",
+          "input_index": 78,
+          "native_line": 951,
+          "request_line": 155
+        },
+        {
+          "head": "work-leaf file text",
+          "input_index": 79,
+          "native_line": 964,
+          "request_line": 157
+        },
+        {
+          "head": "The orchestrator could not apply your edit.",
+          "input_index": 82,
+          "native_line": 981,
+          "request_line": 163
+        }
+      ],
+      "public_native_submissions": [
+        {
+          "native_item_id": "msg_06beccc66bb496de016aa00122704087d2a1e0d8f27dbddbd7",
+          "native_line": 860,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_06beccc66bb496de016aa00122704087d2a1e0d8f27dbddbd7",
+              "line": 81294
+            }
+          ],
+          "text_bytes": 13743,
+          "text_sha256": "6d19b868beb8da4cb51e682fc51efb12ad1c64e7c9af42952f686eab66f776ed",
+          "turn_id": "01a08101-9566-7520-98b3-3a122af2193f"
+        },
+        {
+          "native_item_id": "msg_06beccc66bb496de016aa001bc08e087d2ba5ce9ef251844cd",
+          "native_line": 873,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_06beccc66bb496de016aa001bc08e087d2ba5ce9ef251844cd",
+              "line": 84821
+            }
+          ],
+          "text_bytes": 14534,
+          "text_sha256": "45d44aa7e5196895783d916cd1ba3d51dd48fc8dec5e3a7b75ca68380eee475f",
+          "turn_id": "01a08105-39ff-7443-b483-aa4cfe438dcd"
+        },
+        {
+          "native_item_id": "msg_06beccc66bb496de016aa0020eb24887d2b065a4425f9ee095",
+          "native_line": 899,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_06beccc66bb496de016aa0020eb24887d2b065a4425f9ee095",
+              "line": 87935
+            }
+          ],
+          "text_bytes": 14328,
+          "text_sha256": "1ff65303a67faa5842de2f92924aff27fc3378d68911afc17bfcb4b44c233497",
+          "turn_id": "01a08107-d44d-74d3-8da0-0a404fd00171"
+        },
+        {
+          "native_item_id": "msg_06beccc66bb496de016aa00300ca0487d2aa19843d7b4bd78d",
+          "native_line": 912,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_06beccc66bb496de016aa00300ca0487d2aa19843d7b4bd78d",
+              "line": 92205
+            }
+          ],
+          "text_bytes": 16342,
+          "text_sha256": "1bca42c69cb35ff6dc910ec4199355a2dd29423c2a6e476ff36d6872ad6bb654",
+          "turn_id": "01a08108-df48-7a21-a698-8554f206a480"
+        },
+        {
+          "native_item_id": "msg_06beccc66bb496de016aa00395280487d2a996dc928d2d9a41",
+          "native_line": 943,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_06beccc66bb496de016aa00395280487d2a996dc928d2d9a41",
+              "line": 95997
+            }
+          ],
+          "text_bytes": 16987,
+          "text_sha256": "aa5a4885e7aa032257a4c46da66fec0aea63f6fe5ab5dbcebf117cd8f4f2f8a7",
+          "turn_id": "01a0810c-857f-7fc2-9707-4a5b342f87aa"
+        },
+        {
+          "native_item_id": "msg_06beccc66bb496de016aa0041b017887d2b5703f3763ee0435",
+          "native_line": 973,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_06beccc66bb496de016aa0041b017887d2b5703f3763ee0435",
+              "line": 101947
+            }
+          ],
+          "text_bytes": 16510,
+          "text_sha256": "b47b16c5a40f5466f68b7d78877d309dadc66cbbdec9d53da7e68a816f1e25f6",
+          "turn_id": "01a0810f-3ad1-7801-8602-48df7b323fde"
+        },
+        {
+          "native_item_id": "msg_06beccc66bb496de016aa004b09ffc87d28245689dc441dca7",
+          "native_line": 986,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_06beccc66bb496de016aa004b09ffc87d28245689dc441dca7",
+              "line": 109401
+            }
+          ],
+          "text_bytes": 30055,
+          "text_sha256": "9da34c29aaf91d6b0035c07d2a1fa007bd0abb8eccacf4ba2a7c527fe639e07c",
+          "turn_id": "01a08111-08b9-7242-b036-e520f4217249"
+        }
+      ],
+      "first_post_ack_command": {
+        "command": "cargo test feature_done",
+        "exact_command_status_output_matches": [
+          {
+            "child": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000572047189444169-120196/child.json",
+              "sha256": "057c4ad3b03caf1491d16de89b8cb0761a7d33a1fe8ac8d01f2144ff89a270bf"
+            },
+            "end": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000572047189444169-120196/end.json",
+              "sha256": "3e7a441312ea31e9238fd01429743c0eb5a603102c8be47c287e16d97b72a3ff"
+            },
+            "end_signal": null,
+            "end_unix_ns": 1788871988666816300,
+            "exit": 0,
+            "invocation_id": "00000572047189444169-120196",
+            "start": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000572047189444169-120196/start.json",
+              "sha256": "7c36dbb44e8c59ef9bb966f26948ab8b455bb0395040464b46846f48cdaf37b7"
+            },
+            "start_unix_ns": 1788871985243512000,
+            "stderr": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000572047189444169-120196/stderr.raw",
+              "sha256": "628a3d9c38e9cd65d57938f5fd029f3e080c91a3a244341181d10ef2194bb8dc"
+            },
+            "stderr_bytes": 1860,
+            "stdout": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000572047189444169-120196/stdout.raw",
+              "sha256": "b7792257bf4edc66544abf34f479587e7172ec59e58f89d44bfe734d5df8246e"
+            },
+            "stdout_bytes": 2525
+          }
+        ],
+        "input": {
+          "capture_id": "00000568115683071173-565",
+          "capture_index": 0,
+          "input_bytes": 4679,
+          "input_sha256": "bc6696f3e923b085e9fe6a53610beae089f54ee0277ea1d16fd7162a74fb624b",
+          "native_item_id": "msg_01a08114-55f1-70c2-bd1b-4c27a26ad26c",
+          "native_line": 1005,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+          "public_item_id": "01a08114-55f2-7540-b81d-5f20480e8079",
+          "public_line": 109450,
+          "reply_line": 109446,
+          "request_line": 178,
+          "rpc_id": "177",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-7296-7e10-a35c-30591a630bcd",
+          "turn_id": "01a08114-55d4-7c40-9b4f-532260ee2986"
+        },
+        "output_compaction_marker": false,
+        "refresh_trace": 28,
+        "run": 2
+      },
+      "native_calls": [
+        {
+          "arguments": {
+            "cmd": "sed -n '1,30p' /tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-16.md\nsed -n '320,372p' /tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-16.md\nsed -n '672,850p' /tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-16.md",
+            "max_output_tokens": 30000,
+            "yield_time_ms": 1000
+          },
+          "call_id": "call_ATIg9sNACEDqZESe7vSXevwO",
+          "call_line": 926,
+          "name": "exec_command",
+          "outputs": [
+            {
+              "bytes": 8424,
+              "excerpt": "Chunk ID: b2e59e\nWall time: 0.0000 seconds\nProcess exited with code 0\nOriginal token count: 2080\nOutput:\n# Work Leaf Context Bundle\n\nThis file contains orchestrator-mediated read output. Use it as rea",
+              "line": 935,
+              "sha256": "dfe61a3cf07d588d0149e095a351195ad72ef4e97b616eae6659e6fda62a2436",
+              "status_prefix": "Chunk ID: b2e59e\nWall time: 0.0000 seconds\nProcess exited with code 0\nOriginal token count: 2080"
+            }
+          ]
+        },
+        {
+          "arguments": {
+            "cmd": "sed -n '1320,1560p' /tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-16.md",
+            "max_output_tokens": 30000,
+            "yield_time_ms": 1000
+          },
+          "call_id": "call_nWoE9crEsOJFkVvLpX0Su03p",
+          "call_line": 927,
+          "name": "exec_command",
+          "outputs": [
+            {
+              "bytes": 9503,
+              "excerpt": "Chunk ID: 0c5a6c\nWall time: 0.0000 seconds\nProcess exited with code 0\nOriginal token count: 2350\nOutput:\n        let mut app = TerminalAppCore::new(controller, 80, 24);\n        app.handle_bytes(b\":\");",
+              "line": 936,
+              "sha256": "c041dae6f797bd62532a651591ea5ac84d1e6da5578b22df0584f7969509ea90",
+              "status_prefix": "Chunk ID: 0c5a6c\nWall time: 0.0000 seconds\nProcess exited with code 0\nOriginal token count: 2350"
+            }
+          ]
+        },
+        {
+          "arguments": {
+            "cmd": "sed -n '3010,3278p' /tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-16.md\nsed -n '3368,3430p' /tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-16.md\nsed -n '3528,3560p' /tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-16.md\nsed -n '3828,3860p' /tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-16.md\nsed -n '3938,4010p' /tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-16.md",
+            "max_output_tokens": 35000,
+            "yield_time_ms": 1000
+          },
+          "call_id": "call_PGl6iaFym1FnidRrHJ6KmKqM",
+          "call_line": 928,
+          "name": "exec_command",
+          "outputs": [
+            {
+              "bytes": 15745,
+              "excerpt": "Chunk ID: 6c1692\nWall time: 0.0000 seconds\nProcess exited with code 0\nOriginal token count: 3910\nOutput:\n    CliError, CommandChat, CommandChatResult, command_chat_error_text, command_result_text,\n   ",
+              "line": 937,
+              "sha256": "fb10de3e1af4972d6a7dfbf0322b09ee9d1131503cf7e22d713f3c0cf8113d7d",
+              "status_prefix": "Chunk ID: 6c1692\nWall time: 0.0000 seconds\nProcess exited with code 0\nOriginal token count: 3910"
+            }
+          ]
+        },
+        {
+          "arguments": {
+            "cmd": "sed -n '4628,4684p' /tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-002/work-leaf-3feature-bench.rhugWC/context-bundles/orchestrator-460-0/bundle-16.md",
+            "max_output_tokens": 16000,
+            "yield_time_ms": 1000
+          },
+          "call_id": "call_VBR8ydXSiekBa3UOtioXv6nA",
+          "call_line": 929,
+          "name": "exec_command",
+          "outputs": [
+            {
+              "bytes": 1995,
+              "excerpt": "Chunk ID: 9efabf\nWall time: 0.0000 seconds\nProcess exited with code 0\nOriginal token count: 473\nOutput:\n            line.contains(\"user-1 reviewed by review-user-1: rounds=1 resolved=yes\")\n        })\n",
+              "line": 938,
+              "sha256": "24c73d538f8389d26d1aa4e330907609b6e9e832cbd702081ff93a9471ea980d",
+              "status_prefix": "Chunk ID: 9efabf\nWall time: 0.0000 seconds\nProcess exited with code 0\nOriginal token count: 473"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "003:user-3:ACK-N242",
+      "case_ids": [
+        "003:T4"
+      ],
+      "run": 3,
+      "agent": "user-3",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7297-7fe1-93b0-c344d213fd2c.jsonl",
+      "first_rejected_native_line": 204,
+      "accepted_repair": {
+        "bytes": 22143,
+        "id": "msg_0476b42dd55e23d4016a9ff98e216487d291ec9088f45f1294",
+        "native_line": 234,
+        "sha256": "706ca62fa2701dba960b7389d9615c9ad86c3b56a54ead7bbe6478e2b0d3f46c",
+        "target_file_sections": 1
+      },
+      "ack": {
+        "capture_id": "00000568115683074735-566",
+        "capture_index": 0,
+        "input_bytes": 1060,
+        "input_sha256": "72292d99567cf96abdf25b4160da8141e617f915bfe9b635f3e7b7f0ad9f0c45",
+        "native_item_id": "msg_01a080e7-f641-70e1-b46c-808e725f2e7a",
+        "native_line": 242,
+        "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7297-7fe1-93b0-c344d213fd2c.jsonl",
+        "public_item_id": "01a080e7-f642-7c11-a0b9-6ada1354a9c3",
+        "public_line": 28525,
+        "reply_line": 28521,
+        "request_line": 47,
+        "rpc_id": "46",
+        "rpc_type": "str",
+        "status": "joined",
+        "thread_id": "01a080d8-7297-7fe1-93b0-c344d213fd2c",
+        "turn_id": "01a080e7-f614-7bf1-8639-104011b7c9d0"
+      },
+      "ack_header": "work-leaf patch applied\nfiles: src/terminal_app.rs, src/ui_harness.rs, src/workspace.rs, tests/terminal_app.rs, tests/ui_harness.rs, tests/workspace.rs",
+      "intervening_accepted_inputs": [
+        {
+          "head": "work-leaf file text",
+          "input_index": 19,
+          "native_line": 225,
+          "request_line": 43
+        }
+      ],
+      "public_native_submissions": [
+        {
+          "native_item_id": "msg_0476b42dd55e23d4016a9ff81a2c0487d2af0afe24975be705",
+          "native_line": 204,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_0476b42dd55e23d4016a9ff81a2c0487d2af0afe24975be705",
+              "line": 12642
+            }
+          ],
+          "text_bytes": 20461,
+          "text_sha256": "5f9e926ee64204d28210df816df46998d1654417bb76d9d2c19667ecceb8eb9f",
+          "turn_id": "01a080dc-b071-78f1-b353-7e911a9c4516"
+        },
+        {
+          "native_item_id": "msg_0476b42dd55e23d4016a9ff98e216487d291ec9088f45f1294",
+          "native_line": 234,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_0476b42dd55e23d4016a9ff98e216487d291ec9088f45f1294",
+              "line": 28514
+            }
+          ],
+          "text_bytes": 22143,
+          "text_sha256": "706ca62fa2701dba960b7389d9615c9ad86c3b56a54ead7bbe6478e2b0d3f46c",
+          "turn_id": "01a080e2-b4e0-7ef2-89c8-361af3833afd"
+        }
+      ],
+      "first_post_ack_command": {
+        "command": "cargo test feature_done",
+        "exact_command_status_output_matches": [
+          {
+            "child": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000569160606928061-41291/child.json",
+              "sha256": "65aa1c5d2a4dc0dd4e14f49e698e4c645c10469f54154f38f993e116a23d4b99"
+            },
+            "end": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000569160606928061-41291/end.json",
+              "sha256": "8a5e96b513ee9e530addc9d9ded701c3d5d32730256d284c9cbc65b740418264"
+            },
+            "end_signal": null,
+            "end_unix_ns": 1788869102919321600,
+            "exit": 0,
+            "invocation_id": "00000569160606928061-41291",
+            "start": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000569160606928061-41291/start.json",
+              "sha256": "ce5c64f2b72cae5f06ae5084d3a9f3ff985f7efedf20fa2d5422e73c96c5d18a"
+            },
+            "start_unix_ns": 1788869098661025500,
+            "stderr": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000569160606928061-41291/stderr.raw",
+              "sha256": "85b767fdcd758420da3cf288ac7a2a1cc6c4afcdb93e6b18b454d5ecd1aed198"
+            },
+            "stderr_bytes": 1860,
+            "stdout": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000569160606928061-41291/stdout.raw",
+              "sha256": "5f7b407aaed716254cca41704963eb81d8a576acce28686e3afe96d3f1234278"
+            },
+            "stdout_bytes": 2333
+          }
+        ],
+        "input": {
+          "capture_id": "00000568115683074735-566",
+          "capture_index": 0,
+          "input_bytes": 4499,
+          "input_sha256": "68b87649cd4670c5dd8c1a13afb89a5f400d76afb71e90e50bdf77e6a5b5a6dd",
+          "native_item_id": "msg_01a080e8-4d86-7b90-8c84-80310129ffeb",
+          "native_line": 255,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7297-7fe1-93b0-c344d213fd2c.jsonl",
+          "public_item_id": "01a080e8-4d86-7b90-8c84-804a3c45c432",
+          "public_line": 28622,
+          "reply_line": 28617,
+          "request_line": 49,
+          "rpc_id": "48",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-7297-7fe1-93b0-c344d213fd2c",
+          "turn_id": "01a080e8-4d60-7c83-9e41-5bb963f7c1a0"
+        },
+        "output_compaction_marker": false,
+        "refresh_trace": 4,
+        "run": 3
+      },
+      "native_calls": []
+    },
+    {
+      "id": "003:user-1:ACK-N222",
+      "case_ids": [
+        "003:T9"
+      ],
+      "run": 3,
+      "agent": "user-1",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cea-7c63-aec7-41f55a6a3781.jsonl",
+      "first_rejected_native_line": 184,
+      "accepted_repair": {
+        "bytes": 41376,
+        "id": "msg_0c1f9ff2370f7d8a016a9ffc28508887d2a1a149fadfce901d",
+        "native_line": 214,
+        "sha256": "cc616341e6833c4e8cb07cc4bdbd9dfff3bede4058a491c2ade1e9c30a1fa9a4",
+        "target_file_sections": 1
+      },
+      "ack": {
+        "capture_id": "00000568115683074735-566",
+        "capture_index": 0,
+        "input_bytes": 1010,
+        "input_sha256": "67c10750fc2d1974fc8cce75e7d9fcf083479471e7e72808501b7181e409e6e0",
+        "native_item_id": "msg_01a080f3-a751-7751-916b-d1e34776d3bf",
+        "native_line": 222,
+        "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cea-7c63-aec7-41f55a6a3781.jsonl",
+        "public_item_id": "01a080f3-a752-7903-bb14-f38e1d8319ce",
+        "public_line": 61912,
+        "reply_line": 61908,
+        "request_line": 81,
+        "rpc_id": "80",
+        "rpc_type": "str",
+        "status": "joined",
+        "thread_id": "01a080d8-4cea-7c63-aec7-41f55a6a3781",
+        "turn_id": "01a080f3-a726-7690-ada6-aae7676767e1"
+      },
+      "ack_header": "work-leaf patch applied\nfiles: src/terminal_app.rs, src/ui.rs, src/ui_harness.rs, tests/ui_harness.rs",
+      "intervening_accepted_inputs": [
+        {
+          "head": "work-leaf file text",
+          "input_index": 34,
+          "native_line": 205,
+          "request_line": 71
+        }
+      ],
+      "public_native_submissions": [
+        {
+          "native_item_id": "msg_0c1f9ff2370f7d8a016a9ffb09586087d2998be37983e3a167",
+          "native_line": 184,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_0c1f9ff2370f7d8a016a9ffb09586087d2998be37983e3a167",
+              "line": 50674
+            }
+          ],
+          "text_bytes": 41010,
+          "text_sha256": "b6d28cab6deb45c5beff5fd84223ec77122b853c8f30a943664c832729d6a2eb",
+          "turn_id": "01a080ea-8be1-70c3-af67-dbe00569269c"
+        },
+        {
+          "native_item_id": "msg_0c1f9ff2370f7d8a016a9ffc28508887d2a1a149fadfce901d",
+          "native_line": 214,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_0c1f9ff2370f7d8a016a9ffc28508887d2a1a149fadfce901d",
+              "line": 61901
+            }
+          ],
+          "text_bytes": 41376,
+          "text_sha256": "cc616341e6833c4e8cb07cc4bdbd9dfff3bede4058a491c2ade1e9c30a1fa9a4",
+          "turn_id": "01a080ef-8d42-7021-8346-33a45afb8ed1"
+        }
+      ],
+      "first_post_ack_command": {
+        "command": "cargo test --test ui_harness visual -- --nocapture",
+        "exact_command_status_output_matches": [
+          {
+            "child": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000569914126387856-68287/child.json",
+              "sha256": "009e87df66abb0c928f7783d926d99382787bd24d1753216f8720f89a2e26b28"
+            },
+            "end": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000569914126387856-68287/end.json",
+              "sha256": "8116457db4e14d07aa552c11a88cf004a00d10872c663bc0f428604ad686f2a9"
+            },
+            "end_signal": null,
+            "end_unix_ns": 1788869853869596400,
+            "exit": 0,
+            "invocation_id": "00000569914126387856-68287",
+            "start": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000569914126387856-68287/start.json",
+              "sha256": "7506b53a77ad13d9313734f59fef4a724f973cf9e5867d0fe8009b2fd13f9ea6"
+            },
+            "start_unix_ns": 1788869852180439000,
+            "stderr": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000569914126387856-68287/stderr.raw",
+              "sha256": "3fdcf59795dedfa630514aabbeaacb1e19a72b38c7e12a047ad10c43fe5a495c"
+            },
+            "stderr_bytes": 288,
+            "stdout": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000569914126387856-68287/stdout.raw",
+              "sha256": "b79f7b0f9fdcad5af2723351320ba7add4739cad77cddd9e385038622375a167"
+            },
+            "stdout_bytes": 317
+          }
+        ],
+        "input": {
+          "capture_id": "00000568115683074735-566",
+          "capture_index": 0,
+          "input_bytes": 926,
+          "input_sha256": "79290155bdae0f45b274e8fbda08d181762462f8d688013bb05a484de32ceaa2",
+          "native_item_id": "msg_01a080f3-c2e1-7d13-98f8-07c2da415300",
+          "native_line": 233,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cea-7c63-aec7-41f55a6a3781.jsonl",
+          "public_item_id": "01a080f3-c2e2-79f2-bd6f-4538d38ae1d2",
+          "public_line": 62356,
+          "reply_line": 62352,
+          "request_line": 83,
+          "rpc_id": "82",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-4cea-7c63-aec7-41f55a6a3781",
+          "turn_id": "01a080f3-c2c3-7f62-9a4b-356713d54219"
+        },
+        "output_compaction_marker": false,
+        "refresh_trace": 9,
+        "run": 3
+      },
+      "native_calls": []
+    },
+    {
+      "id": "003:user-3:ACK-N535",
+      "case_ids": [
+        "003:T14"
+      ],
+      "run": 3,
+      "agent": "user-3",
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7297-7fe1-93b0-c344d213fd2c.jsonl",
+      "first_rejected_native_line": 474,
+      "accepted_repair": {
+        "bytes": 3696,
+        "id": "msg_0476b42dd55e23d4016a9ffd85317487d2ac07c5e038b70dda",
+        "native_line": 519,
+        "sha256": "98d6d209c05ec7951433df4df1fdc2dff85af488dddc2855a31fd286a8d34a5f",
+        "target_file_sections": 0
+      },
+      "ack": {
+        "capture_id": "00000568115683074735-566",
+        "capture_index": 0,
+        "input_bytes": 979,
+        "input_sha256": "1a294fa41e934bd5af25aa94f98e201a646bf5b65b731422561f916304edb6af",
+        "native_item_id": "msg_01a080f7-f2f7-79f2-baef-31e2cb7b14f1",
+        "native_line": 535,
+        "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7297-7fe1-93b0-c344d213fd2c.jsonl",
+        "public_item_id": "01a080f7-f2f7-79f2-baef-31f41676cf28",
+        "public_line": 66259,
+        "reply_line": 66118,
+        "request_line": 95,
+        "rpc_id": "94",
+        "rpc_type": "str",
+        "status": "joined",
+        "thread_id": "01a080d8-7297-7fe1-93b0-c344d213fd2c",
+        "turn_id": "01a080f6-8ab1-7393-80d8-fd919ee39544"
+      },
+      "ack_header": "work-leaf patch applied\nfiles: src/workspace.rs, tests/terminal_app.rs",
+      "intervening_accepted_inputs": [
+        {
+          "head": "The orchestrator could not apply your edit.",
+          "input_index": 45,
+          "native_line": 498,
+          "request_line": 93
+        }
+      ],
+      "public_native_submissions": [
+        {
+          "native_item_id": "msg_0476b42dd55e23d4016a9ffccccae087d2b92f5c9400810344",
+          "native_line": 474,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_0476b42dd55e23d4016a9ffccccae087d2b92f5c9400810344",
+              "line": 63029
+            }
+          ],
+          "text_bytes": 6366,
+          "text_sha256": "35e76fa2627cd5f3b2067bbadb1efbfcf587a48fad50f9054fe36da78d235fe9",
+          "turn_id": "01a080f0-d2c6-7641-a2ac-69242c7a4e80"
+        },
+        {
+          "native_item_id": "msg_0476b42dd55e23d4016a9ffcfddb2c87d28d9a95efad3b779f",
+          "native_line": 490,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_0476b42dd55e23d4016a9ffcfddb2c87d28d9a95efad3b779f",
+              "line": 64803
+            }
+          ],
+          "text_bytes": 6032,
+          "text_sha256": "4e531c15a8bdacadfc0dc96a6d4d55160f56c887d3f970185c2b2b82467fa0a1",
+          "turn_id": "01a080f3-ef6d-7a10-9dc8-207e252535db"
+        },
+        {
+          "native_item_id": "msg_0476b42dd55e23d4016a9ffd85317487d2ac07c5e038b70dda",
+          "native_line": 519,
+          "phase": "final_answer",
+          "public_matches": [
+            {
+              "item_id": "msg_0476b42dd55e23d4016a9ffd85317487d2ac07c5e038b70dda",
+              "line": 66111
+            }
+          ],
+          "text_bytes": 3696,
+          "text_sha256": "98d6d209c05ec7951433df4df1fdc2dff85af488dddc2855a31fd286a8d34a5f",
+          "turn_id": "01a080f4-a94d-7540-aa0d-1d571c515697"
+        }
+      ],
+      "first_post_ack_command": {
+        "command": "cargo test feature --lib --test terminal_app --test workspace --test ui_harness",
+        "exact_command_status_output_matches": [
+          {
+            "child": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000570205002216215-76176/child.json",
+              "sha256": "b43ea46fcb25717f8c091af7940e1124ef48aecbd29549689e1cfec2de6cb7ca"
+            },
+            "end": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000570205002216215-76176/end.json",
+              "sha256": "fd2360e85ab4b6b9352d436f95f087ed09589f868d219ca5308fe61c8b4ed22d"
+            },
+            "end_signal": null,
+            "end_unix_ns": 1788870145275318300,
+            "exit": 0,
+            "invocation_id": "00000570205002216215-76176",
+            "start": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000570205002216215-76176/start.json",
+              "sha256": "30cdfca13cf06a2290184f22c6a59f80153ecb1d2fbf3938fcddc6250ddaa292"
+            },
+            "start_unix_ns": 1788870143056271000,
+            "stderr": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000570205002216215-76176/stderr.raw",
+              "sha256": "979fa8ac632ec8b1b522f5fe464b1712fc767ea4bc87429e1f163c98482499a1"
+            },
+            "stderr_bytes": 533,
+            "stdout": {
+              "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000570205002216215-76176/stdout.raw",
+              "sha256": "dbc7e7ff95314e201bf1d248e93595ab5fe9944e13db68deb896fbc870dd732c"
+            },
+            "stdout_bytes": 917
+          }
+        ],
+        "input": {
+          "capture_id": "00000568115683074735-566",
+          "capture_index": 0,
+          "input_bytes": 1812,
+          "input_sha256": "e6f1c434c56b242320787078b41af7b9f737db2d9800bbd7c0270aeeea1fb311",
+          "native_item_id": "msg_01a080f8-352e-73f0-8dbb-feac1dab040a",
+          "native_line": 548,
+          "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7297-7fe1-93b0-c344d213fd2c.jsonl",
+          "public_item_id": "01a080f8-352f-7c03-a6b6-c1f83da594fc",
+          "public_line": 66301,
+          "reply_line": 66297,
+          "request_line": 97,
+          "rpc_id": "96",
+          "rpc_type": "str",
+          "status": "joined",
+          "thread_id": "01a080d8-7297-7fe1-93b0-c344d213fd2c",
+          "turn_id": "01a080f8-350d-7a03-a7c4-769717819468"
+        },
+        "output_compaction_marker": false,
+        "refresh_trace": 14,
+        "run": 3
+      },
+      "native_calls": [
+        {
+          "arguments": {
+            "cmd": "nl -ba /tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-003/work-leaf-3feature-bench.VeNU4f/context-bundles/orchestrator-456-0/bundle-12.md | sed -n '2388,2498p'",
+            "max_output_tokens": 20000,
+            "workdir": "/tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-003/work-leaf-3feature-bench.VeNU4f/repo",
+            "yield_time_ms": 10000
+          },
+          "call_id": "call_y9umQjSg9RtscX0RSrTymY0V",
+          "call_line": 504,
+          "name": "exec_command",
+          "outputs": [
+            {
+              "bytes": 4976,
+              "excerpt": "Chunk ID: aabf8a\nWall time: 0.0000 seconds\nProcess exited with code 0\nOriginal token count: 1218\nOutput:\n  2388\t    assert!(app.render_frame().contains(\"review-user-1\"));\n  2389\t    assert!(app.wait_f",
+              "line": 507,
+              "sha256": "6335517da6d7a0d8dc1fbf00567fcdf4889e55239f504adeb3330e8c901bc0b5",
+              "status_prefix": "Chunk ID: aabf8a\nWall time: 0.0000 seconds\nProcess exited with code 0\nOriginal token count: 1218"
+            }
+          ]
+        },
+        {
+          "arguments": {
+            "cmd": "nl -ba /tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-003/work-leaf-3feature-bench.VeNU4f/context-bundles/orchestrator-456-0/bundle-12.md | sed -n '2498,2548p'",
+            "max_output_tokens": 12000,
+            "workdir": "/tmp/c08-natural-screen.v3k8hU/automatic-refresh-01-workflow-003/work-leaf-3feature-bench.VeNU4f/repo",
+            "yield_time_ms": 10000
+          },
+          "call_id": "call_zcxhgLo75FpaYQIPKemuS80p",
+          "call_line": 511,
+          "name": "exec_command",
+          "outputs": [
+            {
+              "bytes": 2341,
+              "excerpt": "Chunk ID: 6e1723\nWall time: 0.0000 seconds\nProcess exited with code 0\nOriginal token count: 560\nOutput:\n  2498\t    assert!(patch_agent_row_ready(&app, &agent_id));\n  2499\t\n  2500\t    app.handle_bytes(",
+              "line": 514,
+              "sha256": "43da2e8a501a9caa7d928592428cabb3f136adc911138932c45b17ba5a6fff2d",
+              "status_prefix": "Chunk ID: 6e1723\nWall time: 0.0000 seconds\nProcess exited with code 0\nOriginal token count: 560"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "native_output_archive_witnesses": [
+    {
+      "run": 1,
+      "trace_line": 9,
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf7-7e11-b988-06b106f25830.jsonl",
+      "call_line": 201,
+      "output_line": 204,
+      "call_id": "call_Ij9YLkSjz3zDEEtcbyNp3QJE",
+      "kind": "literal-base64-computation-no-file-operand",
+      "exact_returned_literal": true
+    },
+    {
+      "run": 2,
+      "trace_line": 28,
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+      "call_line": 926,
+      "output_line": 935,
+      "call_id": "call_ATIg9sNACEDqZESe7vSXevwO",
+      "kind": "exact-archived-line-range-read",
+      "archive": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-16.md",
+      "archive_sha256": "923f5deaad1faa96600085d6775e78938107fc46e219f8fbcdb346a95f07783c",
+      "ranges": [
+        [
+          1,
+          30
+        ],
+        [
+          320,
+          372
+        ],
+        [
+          672,
+          850
+        ]
+      ],
+      "numbered": false,
+      "returned_bytes": 8319,
+      "returned_sha256": "c09e439f06fa6c128e307b7a29e74008c498ee1888a0b47e9fc5553ab0be6ac7"
+    },
+    {
+      "run": 2,
+      "trace_line": 28,
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+      "call_line": 927,
+      "output_line": 936,
+      "call_id": "call_nWoE9crEsOJFkVvLpX0Su03p",
+      "kind": "exact-archived-line-range-read",
+      "archive": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-16.md",
+      "archive_sha256": "923f5deaad1faa96600085d6775e78938107fc46e219f8fbcdb346a95f07783c",
+      "ranges": [
+        [
+          1320,
+          1560
+        ]
+      ],
+      "numbered": false,
+      "returned_bytes": 9398,
+      "returned_sha256": "13708a2c37834170458b61873f4cf7bb7fdda8b73bf3388bbb18864a64d7c9e1"
+    },
+    {
+      "run": 2,
+      "trace_line": 28,
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+      "call_line": 928,
+      "output_line": 937,
+      "call_id": "call_PGl6iaFym1FnidRrHJ6KmKqM",
+      "kind": "exact-archived-line-range-read",
+      "archive": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-16.md",
+      "archive_sha256": "923f5deaad1faa96600085d6775e78938107fc46e219f8fbcdb346a95f07783c",
+      "ranges": [
+        [
+          3010,
+          3278
+        ],
+        [
+          3368,
+          3430
+        ],
+        [
+          3528,
+          3560
+        ],
+        [
+          3828,
+          3860
+        ],
+        [
+          3938,
+          4010
+        ]
+      ],
+      "numbered": false,
+      "returned_bytes": 15640,
+      "returned_sha256": "b9e9a269e5aa9d1c996bc7d80c6cafd131ece330fd413de22ce35b16a5f3864d"
+    },
+    {
+      "run": 2,
+      "trace_line": 28,
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl",
+      "call_line": 929,
+      "output_line": 938,
+      "call_id": "call_VBR8ydXSiekBa3UOtioXv6nA",
+      "kind": "exact-archived-line-range-read",
+      "archive": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-16.md",
+      "archive_sha256": "923f5deaad1faa96600085d6775e78938107fc46e219f8fbcdb346a95f07783c",
+      "ranges": [
+        [
+          4628,
+          4684
+        ]
+      ],
+      "numbered": false,
+      "returned_bytes": 1891,
+      "returned_sha256": "d09fd8f1860cb16c3b5f1b244a25880b830dc13f1437da66ac84b60dc1d00c92"
+    },
+    {
+      "run": 3,
+      "trace_line": 14,
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7297-7fe1-93b0-c344d213fd2c.jsonl",
+      "call_line": 504,
+      "output_line": 507,
+      "call_id": "call_y9umQjSg9RtscX0RSrTymY0V",
+      "kind": "exact-archived-line-range-read",
+      "archive": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-456-0/bundle-12.md",
+      "archive_sha256": "63b1dc0e1f6f66a55ef6f430c011c5290d343873e611a33c010ba8aba87abe54",
+      "ranges": [
+        [
+          2388,
+          2498
+        ]
+      ],
+      "numbered": true,
+      "returned_bytes": 4871,
+      "returned_sha256": "cd28f373ef51a29a9e254132effc4aafc2cfa349da6a6a3f71a51e25d5a7ec29"
+    },
+    {
+      "run": 3,
+      "trace_line": 14,
+      "native_source": "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7297-7fe1-93b0-c344d213fd2c.jsonl",
+      "call_line": 511,
+      "output_line": 514,
+      "call_id": "call_zcxhgLo75FpaYQIPKemuS80p",
+      "kind": "exact-archived-line-range-read",
+      "archive": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-456-0/bundle-12.md",
+      "archive_sha256": "63b1dc0e1f6f66a55ef6f430c011c5290d343873e611a33c010ba8aba87abe54",
+      "ranges": [
+        [
+          2498,
+          2548
+        ]
+      ],
+      "numbered": true,
+      "returned_bytes": 2237,
+      "returned_sha256": "5a3a7b6cd8e9f8a630c9a1ef84d688441922566d9e9ffdbe3fd155aefa93c935"
+    }
+  ],
+  "inspection_receipts": [
+    "796b54",
+    "20dca8",
+    "d01fbe",
+    "400a94",
+    "9ab27c",
+    "1be8e9",
+    "bde733"
+  ],
+  "source_sha256": {
+    "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cea-7c63-aec7-41f55a6a3781.jsonl": "d04db493462bdf27a4ab3ee17fea55a5c0abebef34342e41f6e9825115f1178e",
+    "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf7-7e11-b988-06b106f25830.jsonl": "310cf7c0066159cd94bf9f063f4404cce1c69dd8eaba93439a3416985fa01463",
+    "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-34-01a080d8-4cf8-7f42-ba51-94ad296268a9.jsonl": "85affa81f1c31bd01774d87401ad6c6cd839cc8751ecf91be590e7a2239d2d98",
+    "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-728b-7321-9ec4-20378c189cb8.jsonl": "48a82a83bb85661ac96a9c47a52a3ab1745b8b87753ad71df32f81ab3b430792",
+    "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7296-7e10-a35c-30591a630bcd.jsonl": "9a5f16100a87b7e3791a837cac2479b05ff90cf0d44e84ddcc1683241bd314e2",
+    "/home/user/.codex/sessions/2026/09/08/rollout-2026-09-08T13-47-43-01a080d8-7297-7fe1-93b0-c344d213fd2c.jsonl": "c50fdac72aaaf558fe378e4a572b06910a6acc1b6c9a6fedddc100c09802b6b6",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/postcapture/automatic-refresh-01-workflow-001/SOURCE-INPUT-TYPED-END.json": "d83edfb3efb38e258592726acc6a201842f0b45847fdb3ed295d94841fb638a7",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/postcapture/automatic-refresh-01-workflow-001/SOURCE-RESULT-TYPED-END.json": "89e9d2dd854734776ccb58bcc3fd8ccae44ec544e62441a4a16412f61237e062",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/postcapture/automatic-refresh-01-workflow-002/SOURCE-INPUT-TYPED-END.json": "70fd78f81b62d7b0d17da2c65250ac0fc64d063b38d54667b76f87647de11e91",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/postcapture/automatic-refresh-01-workflow-002/SOURCE-RESULT-TYPED-END.json": "a3592c49156773ac1c7a37c6600701d6a391274ed9cfe1b12f63dc8cbcd40183",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/postcapture/automatic-refresh-01-workflow-003/SOURCE-INPUT-TYPED-END.json": "0faeee196aee8beda6ea20cf5c931d95453dc874f57aa92be6f29f75ff49c8c9",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/postcapture/automatic-refresh-01-workflow-003/SOURCE-RESULT-TYPED-END.json": "ef2a10568d46f00144955609301180e27a2ec0a1be5f6ceeea1ad9d44eeac052",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/prompt-events/automatic-refresh-01-workflow-001.jsonl": "c72db7aeaebb4b82cafe565521d6ea127f8ce399cc18eb61f82cdad22c1eeed9",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/prompt-events/automatic-refresh-01-workflow-002.jsonl": "2c13fd25c35ed9d002aee757f4e3518779d512b860ee3c9fdfe5e0304a93efad",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/prompt-events/automatic-refresh-01-workflow-003.jsonl": "c5b7965a5c22b19fbed8a2b48624f6894bf1c21533565f9e66a1feb2a44d2b58",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000568115683071173-564/client-to-server.raw": "46658e1f97c1e0faa0b703792106095aac285a3307afd88630a50ff0ef63ab3f",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-457-0/bundle-0.md": "09c75ed221c3996f18bd27cf4a9325b3798dcabe444a7622774676eb9980c9c5",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-457-0/bundle-2.md": "47c45205409ef5994b70a09cecd91bc95b61cd37e5d5034fcf5444b96ae87b94",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/context-bundles/manifest.jsonl": "6d10a282ff42f832b100aca7da24758625dbd0a6897585588cdd32590a822dfc",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/app-server/00000568115683071173-565/client-to-server.raw": "f72da370f71ecbffe36dd647c5898f48133f4d594ed8c09f0eb5080dcb5db531",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-0.md": "740b7050b013136787a09e7a1a0462450cf3fde43cc53847fb7f8e3f6174697d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-11.md": "2a9edf3d29e3441f13f4c2c44fbf28291cf203908a1c3555e081c7a161da6094",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-15.md": "af387a4eb3563b9fd4152fb349694f6ad17c0359a819f16f69fcbbb12328eaaf",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-16.md": "923f5deaad1faa96600085d6775e78938107fc46e219f8fbcdb346a95f07783c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-18.md": "20a6fadd6c2769c1b503447a54fafe5d13eefee1258dc2163def91f62890ef99",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-460-0/bundle-2.md": "7a1124027e75a08a63ba6a1817ac38bdf6a10a81fc845e03acfcf6ed8118ee3c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/context-bundles/manifest.jsonl": "062a4ba8285e18f549d296e16574f35985f5de0dce3b0e80202d397a248c578b",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/app-server/00000568115683074735-566/client-to-server.raw": "df92b39c1fb718436814f05afa0d938e12ab42c18535e5f4ac95d526f7408768",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-456-0/bundle-0.md": "15cfaf8c8c4cf2251ccce78da81a19bfe45df66835a4998c6045cbe5d7515b57",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-456-0/bundle-13.md": "2b7b2b0d3fe550c4ad2c9804ba4ec9d25b92b9d673d8677e1eacfa9c2359171e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-456-0/bundle-5.md": "4bef72fc7560accda0eaa40cfb5a7d6dc9e4424e788a7900be1886f3589b7e5e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/context-bundles/manifest.jsonl": "fb82119f56f59ea1d6ff0b9daa8ecb555a83d26157cf546777955f569a91200e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000568115683071173-564/server-to-client.raw": "54ba8ad16cbd62081edc805a97f891dfc6f0e9dbda422569cec5e5fce6165a87",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/app-server/00000568115683071173-565/server-to-client.raw": "9381938b85c0e9aec550cd70d98c9da672a7fefe75a4e050fac3895cc388733e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/app-server/00000568115683074735-566/server-to-client.raw": "a8a9d823054adb3c8d0b7a347559a7710d39730540799da3c609c93052e1d36f",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/infrastructure/evidence/src/patch.rs": "aa9a0df515aa7977a8b52b7dfd6151d53ee424adb7f7d5f5a83d0ba339aa5fda",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/infrastructure/evidence/src/orchestrator.rs": "e19e477a4d9eccbdf479c75589da35dda623a6236c7fdd6194748342841015fe",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/infrastructure/evidence/src/bench_automatic_refresh.rs": "dc09943eb17ed9d02bbed4d938908fe5dbbd4fe74aaa8ee8204844f9ae406ec2",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/postcapture/TRACE-OWNERSHIP-REVIEW.json": "822d8593ebaef5455dcce961f04aefc248d49f888f3c4328c4cc52e4e92e4150",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/postcapture/TRACE-OWNERSHIP-REVIEW.md": "ac9bc291b494dc750a0552178e7b8e9a860298163de6d70f69a0024f97877739",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/context-bundles/files/orchestrator-456-0/bundle-12.md": "63b1dc0e1f6f66a55ef6f430c011c5290d343873e611a33c010ba8aba87abe54",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000568115683071173-564/start.json": "87518abad36f00941acb17d78bbae61952a555c13866dff3cafea1848019e4a0",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000568467679930058-15724/start.json": "ca5de17992294036ff99fae82d5bff53054bdf536fe59b632db8c985f30acafb",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000568870776201373-32746/child.json": "aecf0d452abc101eae6c774c393e07396192ba8e288680ddafa82ff5f1c7739b",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000568870776201373-32746/end.json": "057d2fd0ae7fe97f125ad1ab01fca94b4b9b3e294bad619cbc112cbfabf8e266",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000568870776201373-32746/start.json": "7531fe59ff915c3e01413ffdeb27392d84e4dc97a58b1113a92a9916503da6d1",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000568898395291503-35435/start.json": "76ce60edc9f6c2c01da38a45de866f6a095aa204c0e38242ee974ff5854c88ac",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000569907317664847-67711/child.json": "be333f46df031bc000b1b736067ec3be98a9a4ef2dd01212369dd350b81bd8d4",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000569907317664847-67711/end.json": "66b1842194b54a1f62e04ff4aa4a1a9687b0779aa469247ee62d76ad706d504c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000569907317664847-67711/start.json": "bda6fb9a6bc17aaf2d07b47c6018defe10d0bd57af696e27d1045feae7733a9b",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000570395518805356-82355/child.json": "0d47bc14c84d18f334fa8188bf3ad8440bd1461ad8cd34462f702baf34faa9f1",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000570395518805356-82355/end.json": "673852fd00635a94c771708a6f989511d28b86b2f57afef639a6dc377334657d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000570395518805356-82355/start.json": "978e4e15921e2a32584d80b9239a74f19f6b8764fc4b49b5c40c7c2179c0e0f4",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000570411316168188-83143/child.json": "2214c434c697d5d7b089c45479bbc047fc23c3166dfbee72b1d4e0fddde8287c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000570411316168188-83143/end.json": "6161a7aa2295a7b8897ba6e2a0ea0757b9b8912a01018f1c974cba3ed92636c5",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/invocations/00000570411316168188-83143/start.json": "c43262eb682edd64bf3b0de58721722083a64c2e9d904d8cec4013e7e21d5572",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/locked-commands/00000568870776201373-32746/stderr.raw": "a4d241e2ed648eedcef204bede606687a2b7724bfdd706eef2beaab7c71d85ac",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/locked-commands/00000568870776201373-32746/stdout.raw": "fb1801d608b321ea181f7dabc58c5d94bd07abb1aa2b020819082feb089053aa",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/locked-commands/00000569907317664847-67711/stderr.raw": "d54e1b13a4245e33b69dd3040232292aea2090a59806cbe1a3475b65e9631b03",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/locked-commands/00000569907317664847-67711/stdout.raw": "55f98e745311f6600d977ac67976d5edbbcbac371be47ffb10280352d0f9bbb5",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/locked-commands/00000570395518805356-82355/stderr.raw": "6cf371a956ae71e99f10cc800c9ab062ffd5fa0383daaa8aaa1f7e4c14936766",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/locked-commands/00000570395518805356-82355/stdout.raw": "3dcd2abaf1328a126e230d2529e4c5b7a4b57011f0d92759a8808348b9e03695",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/locked-commands/00000570411316168188-83143/stderr.raw": "2d82a3d5f310b6d3104785cd55c837fe496c3b290ab8c413e173e40618bb68bf",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-001/automatic-refresh-01-workflow-001-three-feature-bench-artifacts/observation/locked-commands/00000570411316168188-83143/stdout.raw": "f5f7163ff6e38e50b98afb35a0d9f79f88088cf0975bfd895daa56bee081fbe1",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000568115683071173-565/start.json": "b5144d986d9e6b711db5da2385326802ac94ed67e95fffe0d897334c05b41cce",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000568437070588086-12280/start.json": "ce60b762293241fd095b60469d543cc3c44afc8b0021f3cb747442add8667663",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000568789387430129-28607/child.json": "0d8e56fa9178bb0eae409ac12961bf9fa90472f2cfabcbd7a473a6ad722e2118",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000568789387430129-28607/end.json": "5bb4a01fe30fc77617fcf8f87378ba704cc65e76e0557c72a6ea7369f6c46fa1",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000568789387430129-28607/start.json": "9bfd690d5c3326c41e4e86d79a25ec6ab8344509320088412cf6bf1e247ec10d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569558731625191-52328/start.json": "7b9e30dfc84f8cbb50bf69b5b8cc027ace9cc7056b3ae4a9ad14b9501c318746",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569585838423973-54856/child.json": "926e2435ae84ca9cc7477bbc50f7b687a3ff1166bd1bf9cb7c112e01bfbad962",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569585838423973-54856/end.json": "ad5de1be67f952cf482b4afe5dabae47e9f995bf75d6364bd0de279043cb2cdf",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569585838423973-54856/start.json": "5ccad8a7c99dd2dafeb818c3224f72173e1349b62ecb67e85d501b3ec2648884",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569600093157073-55823/child.json": "2cb01fdf840a9534761248632841db397c0b4b98c645c0f28a9719f4254e7478",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569600093157073-55823/end.json": "f66b2da37e6be6a6d50fa9fcdc7f83e8a6eb7f92f91e2dbc5e161723b0aa7c46",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569600093157073-55823/start.json": "93398a2a9593b028f539b5bf58c657ba810091adac82b93bf210ec2153898877",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569872207598761-64026/start.json": "49a0c0ffc77b331b26886e51b4ca9ecd1392bdc2258a71e90be84ca0940870b0",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569896784402711-64567/start.json": "0081ea8b85b51c79bf540ab22d6b2c04d03d428083c42b5aefdd29ff5f549955",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569899797571639-66727/start.json": "8d6ceb86021b4cc4135217617baf58af69094824e364cc4deafcea508a0cc7af",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569899810816033-66788/start.json": "0be657994bce6c9b7c3f1b6ee813ac819b7b3a7bbad4b3ef4ed58da4092199bc",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569900185429932-66966/start.json": "fbb2d6003c74fc433b4e26d0c2d88e95497521360f941ac3d86d5627cb10b86e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569900185591406-66967/start.json": "b367d4150072a8d08e1e094e83af56c51f5d2db6b3340aa73d011791f26d6a9a",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569900188345955-66982/start.json": "19d9b9d36ae923e511b46a4ec5f73884971ea8b6decad298781d4445ffb4fb5b",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569900192966948-67017/start.json": "ebd5a1daad5a3dd8246fdd72a6d6c16cd33102104cbd00fc19f48dfa95875ca3",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000569900194974682-67028/start.json": "ca37efdb3ae050407c142e61a83a90df44f9a542e1147c7c159b6d64660c52fe",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000570131653081795-74225/start.json": "e59dd2d81ebbd92f50de144c45063a18ce2d6506187c53a2bb585512e415bd48",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000570612366459986-88191/start.json": "de9bd66ca9d3b79a3f598dc0c50639a1246da9a464f8ed9c326e64f306d89370",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000570615513705607-88355/start.json": "1d6b9086aea35a0018c19dd3446b8f9a045a98a0b3194db1ac2b4efeb763537f",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000570918242455226-95870/child.json": "518f0a3af1f4d2d58d19bbbcb1f73c3d04793a560e8296499aa6bdf81b9c2f45",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000570918242455226-95870/end.json": "eb6a37045fd0e0cec721ac534746502c33d4077c8d0a9fdf6b02f2298d463f1c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000570918242455226-95870/start.json": "37ff749ded2c8f76c0e2faa0f879dfaa31f3bb164f3d7b34257f9ef52071910e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000570994853746356-97710/child.json": "256d940416755d6e502352ee1fc6c1d797ac4dd35d303b150884290a18dd1dea",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000570994853746356-97710/end.json": "9b73b484b9b5f7e8e31830aeb396766fc70153541552102ff7012eb7ae1d3d2e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000570994853746356-97710/start.json": "3a0a347c258738dce4f6a6104aa571038ebf4e314dc214271f8e8ea8432b2b90",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000571821490716163-117952/child.json": "0c79e1ed220353db4801f24282fa6264e02b5b7afc7993d9fe92699efe761b5e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000571821490716163-117952/end.json": "90497c496d66ef9eaab38c34d2945b079bf6fb7fcc60221e17a4d1d0bd2edf7b",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000571821490716163-117952/start.json": "af59ba858adeb971d3c1f48a8d0d55b580670a6c124e76c7dcf2e8aabce52995",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000571888639490755-118969/child.json": "50f27a2711dbe079ae110dbd0fe6c1ab02d4bd151d181cf91261bb1621fb77c3",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000571888639490755-118969/end.json": "31c0d33c3406f766c185cddfe060660c76610ba7be0c4fc5703081336f7da528",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000571888639490755-118969/start.json": "678e9a498ea2a8ab2f63d74eaa7c183fe9ccb713b5007f6f163ac987e5719b31",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000572047189444169-120196/child.json": "057c4ad3b03caf1491d16de89b8cb0761a7d33a1fe8ac8d01f2144ff89a270bf",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000572047189444169-120196/end.json": "3e7a441312ea31e9238fd01429743c0eb5a603102c8be47c287e16d97b72a3ff",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000572047189444169-120196/start.json": "7c36dbb44e8c59ef9bb966f26948ab8b455bb0395040464b46846f48cdaf37b7",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000572601065778986-126073/child.json": "5f9a0416b9b373c59761923de6fc73af89d52502cb51191fa1837fb4b86404ed",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000572601065778986-126073/end.json": "d08901771bb6712c6f050b9368a9ba0c99108561a133396b02b8c5e3174c60f4",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000572601065778986-126073/start.json": "2efc9621d4e851c530fc492373dbcb85f2ca931e0ad52abb0156bb45587e33e8",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000573493486096283-137708/start.json": "8685b9f34653a0ee36844e1e8723e9d9c186d928bee21bab6026d9cb2a25e8c5",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000573493499227977-137773/start.json": "8ee9bd7ba1c394400999c6a15307618f713beb243cd0be0009a4740c286cadef",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000573493874086781-137940/start.json": "ffb198eb900b100fbfb39710853e573fdc59a5c1d66b21ad88ac3da774a35aa2",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000573493876149145-137955/start.json": "140fe0317ba216f156ef880487b2a870f99a716fdb46b7643ec7a0aaeb973afa",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000573493876493466-137954/start.json": "f27b66c0f9170356c7b8f179e3760d0ca39c6498876214feb1392e9ede552415",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000573493881310400-137988/start.json": "c76b0b96218b35b0b0b2f30faa21458e8158d29a5921974a08d92de1dc7c544d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000573493881683216-137992/start.json": "50d721dd281d7e16f8655615031ee023321f1693e8080b6d611db2ec0b4538a0",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000573582014488290-140112/start.json": "36f981fb8495841eb99c7bba55b3f750e750c59f54dd143147622f3dba91400d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000573582027457317-140172/start.json": "1ce5e170a66fe37233f561703614b16f65b0a273e5b7896fd85cdced8f7269da",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000573582407657698-140352/start.json": "ccf198a3b175d7dbdf76c0ea5dfbdb57c9d7d9892d105ca4d54fc3857f52942c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000573582408012705-140358/start.json": "e73c59903d9852cee86119c3d66d2e49cd56dd7ddaacdd6a03efdaf081032354",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000573582408019829-140357/start.json": "b9bf5e0f62cb4494ce4dd501613f79726b8c81109d782a509e9663040cca402f",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000573582413476722-140398/start.json": "95d1d0445df90c3a5a94f9080bfc375ac5ce8da3dd23fe17b9ad5b8b533ca19f",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/invocations/00000573582413481472-140397/start.json": "986077f114b9aa2e2336254f14d2d4bfd4668c2a3983120cf810bd25a6a7858e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000568789387430129-28607/stderr.raw": "8f4d1ec28a1bc48f08184b1626dcf89cbe23195cbb494945d7decd1050e8657d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000568789387430129-28607/stdout.raw": "61515a847e6fc3369bee6438dd984dcc30590504ed67a80534a60f69b8ace853",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000569585838423973-54856/stderr.raw": "4aa95dcca04855fc161d8acc115d73e8e6ebce51659887a190e0e39475c00d73",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000569585838423973-54856/stdout.raw": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000569600093157073-55823/stderr.raw": "a63870acdfafa146e6f5a99ea133e31c59f51de66cf940c0df90299ee5efbc81",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000569600093157073-55823/stdout.raw": "38ad5b4feb5cafb442642057bbbc3325703e12448922ebdc6ed66e75862e18a3",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000570918242455226-95870/stderr.raw": "99d58fc7794fcd720e14bd94e730f773352ffa64daddbf965b76e174a88489c9",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000570918242455226-95870/stdout.raw": "a0a2646847380a5c597481ae048f579638b6ae1c01d06b3f96c8bd89fa423fe2",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000570994853746356-97710/stderr.raw": "f8511b4c8044bc89855cfc25782544837b3413808670408300d948b5efe39cfb",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000570994853746356-97710/stdout.raw": "4e091076416ef3eca0b446c90f81fc93556e139af8584985f09b0f2f3cb5f248",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000571821490716163-117952/stderr.raw": "d305c1f6512fefe6a6a543efeff701b51d051aadbe5d23b9437a11c278cb17ef",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000571821490716163-117952/stdout.raw": "957be60ab449c41ba54ffc7a27598826005f3e5d83b25cee8ae6b78bfdd27cef",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000571888639490755-118969/stderr.raw": "04fae1eb06110c9ed3d5d6a5990d5a13cc7987cdb6f2bb97eec4bd4daba6b722",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000571888639490755-118969/stdout.raw": "b76a0086cb427ebfb2699d9cb8c81dc311833710c1df1c49347700f6b2b539c4",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000572047189444169-120196/stderr.raw": "628a3d9c38e9cd65d57938f5fd029f3e080c91a3a244341181d10ef2194bb8dc",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000572047189444169-120196/stdout.raw": "b7792257bf4edc66544abf34f479587e7172ec59e58f89d44bfe734d5df8246e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000572601065778986-126073/stderr.raw": "1698cff52a1fcc111bc0fb9efa7fdf8a78c28bf3a9143e8318c3613e1722fb80",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-002/automatic-refresh-01-workflow-002-three-feature-bench-artifacts/observation/locked-commands/00000572601065778986-126073/stdout.raw": "b7792257bf4edc66544abf34f479587e7172ec59e58f89d44bfe734d5df8246e",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000568115683074735-566/start.json": "c9206cf0db221d3657b7392f39bd469b9d906243cca43bd269b73cfa1a05b3cc",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000568730790397301-24608/start.json": "ab86be334b86c55efd49e7ec82a927d1bc87cceef9026b54d31483ada725e65c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000569160606928061-41291/child.json": "65aa1c5d2a4dc0dd4e14f49e698e4c645c10469f54154f38f993e116a23d4b99",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000569160606928061-41291/end.json": "8a5e96b513ee9e530addc9d9ded701c3d5d32730256d284c9cbc65b740418264",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000569160606928061-41291/start.json": "ce5c64f2b72cae5f06ae5084d3a9f3ff985f7efedf20fa2d5422e73c96c5d18a",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000569599204832203-55410/start.json": "e5486a9c51fff3447f81294c476bd45e4ac959f981d46a5f33f6727acdf1fb31",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000569655761349797-59254/start.json": "8d020dd522d1106949b6e837fae2057ecd007f2479046bea3196a271876aa86d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000569914126387856-68287/child.json": "009e87df66abb0c928f7783d926d99382787bd24d1753216f8720f89a2e26b28",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000569914126387856-68287/end.json": "8116457db4e14d07aa552c11a88cf004a00d10872c663bc0f428604ad686f2a9",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000569914126387856-68287/start.json": "7506b53a77ad13d9313734f59fef4a724f973cf9e5867d0fe8009b2fd13f9ea6",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000570205002216215-76176/child.json": "b43ea46fcb25717f8c091af7940e1124ef48aecbd29549689e1cfec2de6cb7ca",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000570205002216215-76176/end.json": "fd2360e85ab4b6b9352d436f95f087ed09589f868d219ca5308fe61c8b4ed22d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000570205002216215-76176/start.json": "30cdfca13cf06a2290184f22c6a59f80153ecb1d2fbf3938fcddc6250ddaa292",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000570351048270697-80446/child.json": "2409afc1aa02dd617180211b477681e1503255e37f9679cc5e740b0fb3b97c75",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000570351048270697-80446/end.json": "03ad25c1df891e827994426d41ee7dd5316d19a253e0804ac4e05bb14eab7793",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000570351048270697-80446/start.json": "d49b0b75a47c71b8cda856321b8ad66c5454f279eb33c8c0107f478c2e2e6675",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000570486494300779-84955/child.json": "ec6f073b2e9d59d5c99b7a9778e1c09572c0779b33b81dcd28967646b648e321",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000570486494300779-84955/end.json": "0b1dd53c93d487c2c3d07ac765768ad7c798e61427cdfb3d6c784720942bc14b",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000570486494300779-84955/start.json": "a63b6f73a74148b93a9c8d31b4e33d70d731b23aa707b3bf389538343d417161",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571085382837724-101746/start.json": "8041472d9853620b18136ea3e2bf6ac166baa745daab4dd4740e6683572b8cc5",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571085400126147-101814/start.json": "7c0b874d7b54875b7e72eda75b7d0d093094005ed18351bbc20135a670364aff",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571085780612754-101989/start.json": "ab9724a5749302078115adffdeb20dc04b36038b530f0b73d1791a1fabcabb7f",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571085780978445-101999/start.json": "e40749ffd2b8674c1d4927f805b71578e2a9a1d40fdbd09e59b971b3f0f29368",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571085782431713-102004/start.json": "8f87d79b2bfdec6aeeac707af8e24285f8391799a7eea83dfa4dcfa31748854c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571085789865462-102052/start.json": "9a3e71af8a6434700475c952e95feccfcae48d33d82d960a19fa8b9ebc7bfd1d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571085792641393-102066/start.json": "4e0b3e3f79cdf31e44a5a4b114bb07053baa4c8eeb95e24dbc9b50309d90b69c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571341196674533-109446/start.json": "bd195ee0e677c145fd4fff4458c3194312ca4f0bc21176c26597bc77ce5a5b34",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571341210397465-109506/start.json": "e4f392f5f2a953b99f51a1c97aedabffb4196ce71eaa1a47f302e53c08f1bbe9",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571341589911688-109688/start.json": "f5084385e49bc15852bf23d3fbd1db5dbca8136877dc24596549578eed797a01",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571341590225138-109687/start.json": "fd4f8627e2f00f3edf35ff2f9196f5c4226739c14b0f951919251330f638d984",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571341590694126-109695/start.json": "a98d78996f5cbe305e3035719fe6ed3d4b2b3d5d8f7313a3c02afd73bca3e76d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571341596141505-109730/start.json": "132aa1efa2207f732e252507c930c2768d461c3796da51bee3014988d3eea121",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571341597876165-109744/start.json": "2130dd0d1be876ed6a35a06697e294e64021ab88f9ab0ce21c6c1a536c42e5fa",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571380554376932-111853/start.json": "c5e74bffda3a0c07d4db75d38351fee7c99d144b78ae5abb54aae4dbfee76424",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571380569162507-111918/start.json": "84bcb11e15acfadea9019e9d239df06ff881803bb96d5cbe799b84138f619745",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571380948487951-112091/start.json": "6a708b35d7785427909acb80213ccb769b6c1c85b1bd2e7b409864980fe29d0d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571380948876201-112097/start.json": "1d5781d4632f504ff41d7d41f6bf9272f47dd4c4a24ee240bfd6f507290809c8",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571380949874729-112099/start.json": "16bbd545ec0f5a4f2099cb2a0bf91e15214930307eb9385f03ec30d709c9d498",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571380954651278-112139/start.json": "9367381bbe98a041eaecc942af2c77d5e77f5c8f4be48a78b531f58ccd3262ba",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/invocations/00000571380956724322-112159/start.json": "297361d8b23122bb51e6ded0048f2e8dacadbe019a98b7ceac879d737183d293",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000569160606928061-41291/stderr.raw": "85b767fdcd758420da3cf288ac7a2a1cc6c4afcdb93e6b18b454d5ecd1aed198",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000569160606928061-41291/stdout.raw": "5f7b407aaed716254cca41704963eb81d8a576acce28686e3afe96d3f1234278",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000569914126387856-68287/stderr.raw": "3fdcf59795dedfa630514aabbeaacb1e19a72b38c7e12a047ad10c43fe5a495c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000569914126387856-68287/stdout.raw": "b79f7b0f9fdcad5af2723351320ba7add4739cad77cddd9e385038622375a167",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000570205002216215-76176/stderr.raw": "979fa8ac632ec8b1b522f5fe464b1712fc767ea4bc87429e1f163c98482499a1",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000570205002216215-76176/stdout.raw": "dbc7e7ff95314e201bf1d248e93595ab5fe9944e13db68deb896fbc870dd732c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000570351048270697-80446/stderr.raw": "3c3a77aac80283fbe8411a77a118660712026c178fc5e2634b37ef7dbcf1fb9f",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000570351048270697-80446/stdout.raw": "1992775d559143c7c04f1fd1807a4f5ad3f24cd47b71b310fcc4eed84c9a69f4",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000570486494300779-84955/stderr.raw": "a4017d463a972035c82abead4b34f0f5172692922d5533fe84e4329b36866af0",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/runs/automatic-refresh-01-workflow-003/automatic-refresh-01-workflow-003-three-feature-bench-artifacts/observation/locked-commands/00000570486494300779-84955/stdout.raw": "379a9eeb69d942ed52ee8dd170d06ea25c035ed4b6031ad6531062e6953facdf"
+  }
+}
