@@ -18,8 +18,14 @@ before the run-once claim. All three startup traces select the v7 condition.
 No new control, Direct or replacement is admitted. The all-wave build/test hold
 is released; source-wrapper and C15 staged regression work can proceed. No provider
 workflow is running, and separately asked C15/C21 generation choices remain open.
-Natural source/delivery/repair qualification and the fixed three-new-row accounting
-scope remain incomplete; no token effect is claimed for this closed wave.
+The original accounting pass is closed under scope`804e16e2…`:exactly3new calls,
+six saved baseline receipts, nine retained outcomes and zero caller integrity,
+identity, execution or publication errors.001 and003 retain originalUNKNOWN/
+ineligible results;002 has validated but unbounded accounting with raw lower
+28,508,497tokens. Missing or early-return maps are not zero usage. Natural
+source/delivery/repair qualification and separate investigation of the named
+native-prefix/membership gaps remain active; no primary token direction is
+claimed for this closed wave and the original accounting calls are not repeated.
 
 The configuration checksum transition first recorded at12:28:38.408172UTC is
 classified by the frozen policy as a verified own-workflow trust transition for
