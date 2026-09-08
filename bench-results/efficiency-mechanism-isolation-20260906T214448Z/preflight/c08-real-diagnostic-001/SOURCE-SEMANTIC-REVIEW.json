@@ -1,0 +1,396 @@
+{
+  "calls": [
+    {
+      "call": 1,
+      "input_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-001-INPUT.json",
+      "prompt": {
+        "bytes": 483,
+        "sha256": "8f4338315cbe6f692c70d85b47ecadd8ec65f7d995205612895674e23b2dd090"
+      },
+      "reply": {
+        "bytes": 26,
+        "sha256": "c061efef297a5fde1fe3033c14b1836ae28d1962ad0a8480014469d454adc2eb"
+      },
+      "result_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-001-RESULT.json"
+    },
+    {
+      "call": 2,
+      "input_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-002-INPUT.json",
+      "prompt": {
+        "bytes": 93,
+        "sha256": "827a2d483fa46c995167008475ddda73c9efbf2092b53c2306efbcfbeb9f57cd"
+      },
+      "reply": {
+        "bytes": 654,
+        "sha256": "c42a3675406f05a81d55425dee58a18a93c5bdfdcc429968951e21acfaa0d50e"
+      },
+      "result_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-002-RESULT.json"
+    },
+    {
+      "call": 3,
+      "input_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-003-INPUT.json",
+      "prompt": {
+        "bytes": 1146,
+        "sha256": "5f631a81f9d40769190c4f340f947c62efadd452cb3a596b306740a8f646000d"
+      },
+      "reply": {
+        "bytes": 658,
+        "sha256": "c512070fdc2af3be38be2962161a4baed7286540528b809b5174767fdcc5ac30"
+      },
+      "result_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-003-RESULT.json"
+    },
+    {
+      "call": 4,
+      "input_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-004-INPUT.json",
+      "prompt": {
+        "bytes": 950,
+        "sha256": "19098fcd741e77e195d5fb41235d0f4fb959f75f771b6cbc7d5bc781d041c603"
+      },
+      "reply": {
+        "bytes": 60,
+        "sha256": "18a15fea2c667933e9ca6be4233d47e82e0e15b7f63f7a535094cda836d1d087"
+      },
+      "result_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-004-RESULT.json"
+    },
+    {
+      "call": 5,
+      "input_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-005-INPUT.json",
+      "prompt": {
+        "bytes": 987,
+        "sha256": "eed085d45eb9dfd5910fc3fe98373a34112f694ded70f0144fa44c16f114b790"
+      },
+      "reply": {
+        "bytes": 15,
+        "sha256": "a04b73c77aeddb9325cf633b6a0d87a1394f613b3c02a3d249e46a4fd453ca3c"
+      },
+      "result_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-005-RESULT.json"
+    }
+  ],
+  "commits": [
+    {
+      "commit": "6d7fc01a063f4dcd88204d3125cf86bcded0fbd7",
+      "commit_object_content": {
+        "bytes": 335,
+        "sha256": "be109c655f7160c59b9ae088ff4db81968cb5a7dc3fb3df29ca2ec6af6336e58"
+      },
+      "message": "ADD: Keep fixture build output separate from accepted source\n",
+      "owner": null,
+      "src_lib_rs": {
+        "bytes": 53,
+        "sha256": "3ac2dd032ca7ff97b8478d60b885773702d89f14f46e15bd734da8a3a0a53fee",
+        "text": "pub fn capped(value: u8, _limit: u8) -> u8 { value }\n"
+      },
+      "stage": "initial",
+      "tree": "924af6fa5ef8041c155972d478d082e07a6a70e0"
+    },
+    {
+      "commit": "2ae8cb463298c2987beffbbd801805c65120b00b",
+      "commit_object_content": {
+        "bytes": 1143,
+        "sha256": "bafebbc55ed8c76a805ca729c733a919280319ad9a73c8bec08d9ccb2cf4844f"
+      },
+      "message": "UPDATE apply controlled equivalent snapshot stimulus patch from qualification-host-mutator\n\nAgent-ID: qualification-host-mutator\nFeature: controlled equivalent snapshot stimulus\nReason: preserve behavior while changing the held source text\nContext: The orchestrator applied this provisional patch for qualification-host-mutator while the agent was working on feature `controlled equivalent snapshot stimulus`. The agent stated the reason as `preserve behavior while changing the held source text`. The patch touched src/lib.rs and changed the working tree with 1 added line(s) and 1 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.\n",
+      "owner": "qualification-host-mutator",
+      "src_lib_rs": {
+        "bytes": 57,
+        "sha256": "5a09f7d799f659e7e2254457c6719f9afb7f77baeeaf07ac9d0bb47b59aa301a",
+        "text": "pub fn capped(value: u8, _limit: u8) -> u8 { value + 0 }\n"
+      },
+      "stage": "controlled_host_stimulus",
+      "tree": "2e24cf901df745d2960a874ca15c887ed3e66f69"
+    },
+    {
+      "commit": "79f162a249e7102d3cfe5666623ec58487232254",
+      "commit_object_content": {
+        "bytes": 1015,
+        "sha256": "a11f07768c77698eda974ba94d597d41f0f0003ad4c57e23ea500954432f3c60"
+      },
+      "message": "UPDATE apply user-agent patch from user-1\n\nAgent-ID: user-1\nFeature: user-agent\nReason: implement capped min behavior and add focused regression tests\nContext: The orchestrator applied this provisional patch for user-1 while the agent was working on feature `user-agent`. The agent stated the reason as `implement capped min behavior and add focused regression tests`. The patch touched src/lib.rs and changed the working tree with 23 added line(s) and 1 removed line(s). The orchestrator matched exact edit blocks against the current file text under the repository write locks, wrote the resulting files, staged exactly the touched files, and saved this provisional commit so review and linearization can reason about what changed and why.\n",
+      "owner": "user-1",
+      "src_lib_rs": {
+        "bytes": 423,
+        "sha256": "c3f5e41c809d637f6532f41cf0284d486b7074c77369652d9757557edf05812f",
+        "text": "pub fn capped(value: u8, limit: u8) -> u8 {\n    value.min(limit)\n}\n\n#[cfg(test)]\nmod tests {\n    use super::capped;\n\n    #[test]\n    fn returns_value_when_below_limit() {\n        assert_eq!(capped(3, 5), 3);\n    }\n\n    #[test]\n    fn returns_value_when_equal_to_limit() {\n        assert_eq!(capped(5, 5), 5);\n    }\n\n    #[test]\n    fn returns_limit_when_value_exceeds_limit() {\n        assert_eq!(capped(7, 5), 5);\n    }\n}\n"
+      },
+      "stage": "author_repair",
+      "tree": "3fae6f4d70e201df7c91605022a6c0b0816f92e5"
+    }
+  ],
+  "done": {
+    "final_git_status_porcelain": "",
+    "processed_done": true,
+    "reply": "@work-leaf done",
+    "reply_call": 5,
+    "transcript_terminal_line": "agent user-1 reported done"
+  },
+  "endpoint_review": {
+    "postlaunch_endpoint_errors": [],
+    "postlaunch_non_initial_endpoints_checked": 147,
+    "referenced_source_recheck_errors": [],
+    "source_freeze_sha256": "4194034619c417eadb0a3a8f387c85eef83f8cd0ab49a6cc1c169b8a6778a0d3",
+    "source_roles": {
+      "configuration": 1,
+      "immutable": 146,
+      "initial-project": 4
+    }
+  },
+  "genuine_rejection": {
+    "call": 3,
+    "cause": "The held old exact line is absent after the independently accepted host edit; the ordinary exact-block patcher rejects it before the automatic refresh.",
+    "diagnostic": "structured edit hunk 1 for src/lib.rs failed: old block was not found in current file text"
+  },
+  "limits": [
+    "This is a deliberately controlled stale-state recovery qualification, not a natural benchmark or a token-saving/causal estimate.",
+    "The saved command tests final source only; no execution of these tests against initial source or semantic RED result is claimed.",
+    "The actually delivered full current body is 57 bytes. The real fixture does not establish large-body behavior; automated coverage is separate.",
+    "Five wrapper calls are not a complete native response or usage accounting claim. Public/native accepted-input and response joins belong to the independent companion witness.",
+    "The implementing author of the private C08 runtime performs this source/semantic review; independent runtime review and final qualification remain separate gates.",
+    "Initial project files are authorized mutable task state, not immutable postlaunch endpoints. Git objects and their source text are retained here; endpoint checks are a finite observation, not continuous monitoring."
+  ],
+  "locked_check": {
+    "capture_dir": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/observation/locked-commands/00000566442363334693-657",
+    "directive_call": 4,
+    "end": {
+      "end_monotonic_ns": 566442522595965,
+      "end_unix_ns": 1788866380576597200,
+      "exit_code": 0,
+      "invocation_id": "00000566442363334693-657",
+      "stderr_sha256": "212635212795cec6703054641f75d35416b2e02b53eeb821f7feaafd57434b81",
+      "stdin_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "2b8ba44b7447caa3c42b241c38446313586f3e4578eeb4934ef0b0b19285502f",
+      "terminating_signal": null
+    },
+    "feedback_call": 5,
+    "invocation_id": "00000566442363334693-657",
+    "raw_outputs_present_in_exact_unchanged_command_feedback": true,
+    "start": {
+      "argv": [
+        {
+          "bytes_hex": "7368",
+          "display": "sh"
+        },
+        {
+          "bytes_hex": "2d63",
+          "display": "-c"
+        },
+        {
+          "bytes_hex": "74726170202774726170202d205445524d20494e543b206b696c6c202d5445524d203020323e2f6465762f6e756c6c27205445524d20494e543b2028636172676f2074657374202d2d6f66666c696e65202d2d6c6f636b656429202620776f726b5f6c6561665f6368696c643d24213b20776169742024776f726b5f6c6561665f6368696c64",
+          "display": "trap 'trap - TERM INT; kill -TERM 0 2>/dev/null' TERM INT; (cargo test --offline --locked) & work_leaf_child=$!; wait $work_leaf_child"
+        }
+      ],
+      "capture_kind": "locked-command",
+      "cwd": "/tmp/c08-real-qualification.kWTyzw/project",
+      "executable": "sh",
+      "invocation_id": "00000566442363334693-657",
+      "parent_invocation_id": null,
+      "parent_pid": 4,
+      "pid": 657,
+      "primary": false,
+      "process_group": 657,
+      "provider_usage_grace_ms": 0,
+      "provider_usage_grace_output_resume": "forward",
+      "real_executable": "/usr/bin/bash",
+      "real_executable_sha256": "07a2331ac400749cc7740fac9999e36cf104c743b612c307ef155fc5dca7fe2e",
+      "role": null,
+      "start_monotonic_ns": 566442363394059,
+      "start_unix_ns": 1788866380417395500
+    },
+    "stderr": {
+      "bytes": 300,
+      "sha256": "212635212795cec6703054641f75d35416b2e02b53eeb821f7feaafd57434b81"
+    },
+    "stderr_text": "   Compiling automatic_refresh_fixture v0.1.0 (/tmp/c08-real-qualification.kWTyzw/project)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.12s\n     Running unittests src/lib.rs (target/debug/deps/automatic_refresh_fixture-6adbb14d8cc0fd7a)\n   Doc-tests automatic_refresh_fixture\n",
+    "stdin": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 387,
+      "sha256": "2b8ba44b7447caa3c42b241c38446313586f3e4578eeb4934ef0b0b19285502f"
+    },
+    "stdout_text": "\nrunning 3 tests\ntest tests::returns_limit_when_value_exceeds_limit ... ok\ntest tests::returns_value_when_below_limit ... ok\ntest tests::returns_value_when_equal_to_limit ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n"
+  },
+  "mutation": {
+    "after_head": "2ae8cb463298c2987beffbbd801805c65120b00b",
+    "author_id": "user-1",
+    "before_head": "6d7fc01a063f4dcd88204d3125cf86bcded0fbd7",
+    "commit": "2ae8cb463298c2987beffbbd801805c65120b00b",
+    "delivery_call": 2,
+    "files": [
+      "src/lib.rs"
+    ],
+    "fixture_mutator_id": "qualification-host-mutator",
+    "patch_request": "*** Begin Patch\n*** Update File: src/lib.rs\n@@\n-pub fn capped(value: u8, _limit: u8) -> u8 { value }\n+pub fn capped(value: u8, _limit: u8) -> u8 { value + 0 }\n*** End Patch\n",
+    "source_after": "pub fn capped(value: u8, _limit: u8) -> u8 { value + 0 }\n",
+    "source_before": "pub fn capped(value: u8, _limit: u8) -> u8 { value }\n"
+  },
+  "refresh": {
+    "all_unowned_intervals_byte_identical": true,
+    "baseline": {
+      "bytes": 1284,
+      "sha256": "820d5bd40f10b766dd2c47f0cbf9e2a51a1861f440634103a53c1d4749ba7d29"
+    },
+    "candidate": {
+      "bytes": 1146,
+      "sha256": "5f631a81f9d40769190c4f340f947c62efadd452cb3a596b306740a8f646000d"
+    },
+    "candidate_exactly_delivered_call": 3,
+    "components": [
+      {
+        "baseline_end": 236,
+        "baseline_start": 167,
+        "body_end": null,
+        "body_start": null,
+        "candidate_end": 228,
+        "candidate_start": 167,
+        "id": "refresh-guidance",
+        "snapshot_index": null
+      },
+      {
+        "baseline_end": 921,
+        "baseline_start": 725,
+        "body_end": null,
+        "body_start": null,
+        "candidate_end": 902,
+        "candidate_start": 717,
+        "id": "refresh-intro",
+        "snapshot_index": null
+      },
+      {
+        "baseline_end": 1284,
+        "baseline_start": 1089,
+        "body_end": 1146,
+        "body_start": 1089,
+        "candidate_end": 1146,
+        "candidate_start": 1070,
+        "id": "current-full-text",
+        "snapshot_index": 0
+      }
+    ],
+    "current_body_exactly_equals_host_committed_source": true,
+    "eligible": true,
+    "metadata": {
+      "diagnostic": "structured edit hunk 1 for src/lib.rs failed: old block was not found in current file text",
+      "failures": [],
+      "files": [
+        "src/lib.rs"
+      ],
+      "kind": "edit",
+      "snapshots": [
+        {
+          "baseline_body_end": 1284,
+          "baseline_body_start": 1089,
+          "baseline_section_end": 1284,
+          "baseline_section_start": 921,
+          "bytes": 57,
+          "class": "changed",
+          "diff_bytes": 195,
+          "diff_disposition": "available",
+          "digest": "fnv64:8070e896f9693e29; bytes:57",
+          "path": "src/lib.rs",
+          "previous_bytes": 53,
+          "previous_digest": "fnv64:8fe0263473101ac6; bytes:53"
+        }
+      ]
+    },
+    "schema": "work-leaf-bench-experiment-v7",
+    "selected_candidate": "candidate",
+    "site": "automatic-edit-refresh",
+    "trace_line": 2
+  },
+  "repair": {
+    "ACK_call": 4,
+    "ACK_original_equals_forwarded": true,
+    "call": 3,
+    "only_submission_change_is_exact_old_line": true,
+    "patch_afterimage_equals_actual_author_commit": true,
+    "patch_preimage_equals_host_source": true,
+    "same_proposed_afterimage_and_tests_as_rejected_submission": true
+  },
+  "run_id": "automatic-refresh-diagnostic-001",
+  "schema": "work-leaf-c08-closed-source-semantic-review-v1",
+  "scope": {
+    "accounting_or_extraction_performed": false,
+    "closed_sources_only": true,
+    "commands_or_tests_reexecuted": 0,
+    "native_membership_review_owner": "candidate_controls; separately published public/native witness",
+    "provider_calls_performed": 0,
+    "runtime_author_not_independent_runtime_reviewer": true
+  },
+  "semantic_findings": [
+    "The initial implementation returns value irrespective of limit. The host value + 0 stimulus is semantically equivalent for u8 and does not implement the requested cap.",
+    "The author proposes value.min(limit) and three authored tests covering below, equal, and above limit before encountering the real stale-block rejection.",
+    "The repair changes only the exact old-line precondition from value to value + 0. Its complete replacement implementation and all three tests are identical to the rejected proposal, and match the actual author commit.",
+    "The one saved ordinary cargo test --offline --locked command exits 0 with three tests passing and no test failures, then the real author returns DONE and CommandChat processes it."
+  ],
+  "source_sha256": {
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/DESIGN-AUTOMATIC-REFRESH-REPRESENTATION.md": "7649ef1359126714e511a9b2b05b2641622a27620f230ee8613f6bc1a778bf20",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-automatic-refresh/diagnostic/guards.rs": "3bc5cbda8042aab4b70d92d6bc9cd04385180b657317c41d8d191fee46e62785",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-automatic-refresh/diagnostic/harness.rs": "1c3a210418d280b6ef993c1a9d4d18b02d866508d036c710c38497cf18c53f31",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/ADMISSION.json": "7ca23f52f0e6071a207f0ffa438f93c671495b54e29f28d9e08121d81e7f7c95",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-001-INPUT.json": "3859645d47732a60ea895fe10ab86d22a88bde598c42f8a2284d67c55029cf8f",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-001-RESULT.json": "9ee942beb5727de0c04dba1240671a0731afda1eee9357a9c13fe66961e36f32",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-002-INPUT.json": "aa97dfe8317881e63b7c7edb10edd47f2864007a5954ab2373b8937138b364b7",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-002-RESULT.json": "d686c00420b611dd077fc9d9f04c44acaf85a2e9fbbd2d1ebf9fcc71be907311",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-003-INPUT.json": "037a161d5711d595fbf950c37feee6abb6d969b1f58b6b0a7b7eabe0f6951cae",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-003-RESULT.json": "b88f24c7fdf859315e94dea088e62d559534d2508d1b690019e172fcb11fdab8",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-004-INPUT.json": "8cdf9bbd40ac4b8bdd55e912c27c44263e3bf1b38ea930aac1055d6baf4ec847",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-004-RESULT.json": "0f06fc07616870674ff09a0014f7a241f6ef667dc9bdd75f6d78e034cf75077d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-005-INPUT.json": "1966af3cf0980779f1fe13e4221a90b4f47b37e847251d1f9d7ed1cc3861eb76",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/CALL-005-RESULT.json": "ceb1f0cccf2e1c930914d8b66c707a58cadd829d7739479acac923b12c842cac",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/FINAL-SOURCES.json": "4194034619c417eadb0a3a8f387c85eef83f8cd0ab49a6cc1c169b8a6778a0d3",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/HARNESS-RESULT.json": "664790731900bff8f9c3d275e8f55a939e4ebc1b9f2196e2158d8a273caf6403",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/MUTATION-ACCEPTED.json": "81edb079ef166250770c60cc5733e80356a7bb88c11fe96013d60490c978f53b",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/MUTATION-ATTEMPT.json": "474ae4a720a23d68c21488722aac96265df4b7069e35b4a43e80e6f763d26e6a",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/PROCESS.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/PROCESS.stdout": "9021f72e9505633c2b072a8a24b15d051ec387d7bde20e057e5b32b70e0d7757",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/TERMINAL.json": "85cf80b1e33629cea7323500b02e0244587dfa9affc22a5584453c1a2dfdbaee",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/observation/invocations/00000566442363334693-657/end.json": "0cd79163681deeb7a38f9cd633de4e2f5dcff85779ecfee30a658ec624504b15",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/observation/invocations/00000566442363334693-657/start.json": "9876cb75e1b4ebe4babf9e2a3cc9cee6fbe5659c0a32bfc5ef93aaa945a3fb0f",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/observation/locked-commands/00000566442363334693-657/meta.json": "2f64bff508380a579ecc1a7b3177093e5a1651b6ffba7f52247b3b987c37bd43",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/observation/locked-commands/00000566442363334693-657/stderr.raw": "212635212795cec6703054641f75d35416b2e02b53eeb821f7feaafd57434b81",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/observation/locked-commands/00000566442363334693-657/stdin.raw": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/observation/locked-commands/00000566442363334693-657/stdout.raw": "2b8ba44b7447caa3c42b241c38446313586f3e4578eeb4934ef0b0b19285502f",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-real-diagnostic-001/prompt-events.jsonl": "3934c2c1e7b6ccdb1628f029dec8cb96df7cdeee83c820465c8ee82d62153ba5",
+    "/home/user/src/work-leaf/src/bench_automatic_refresh.rs": "dc09943eb17ed9d02bbed4d938908fe5dbbd4fe74aaa8ee8204844f9ae406ec2",
+    "/home/user/src/work-leaf/src/bench_experiment.rs": "cb7e1326d1f598a81df6f1544804c6b6285df185aee3021b15a01b6cdf7a3b28",
+    "/home/user/src/work-leaf/src/orchestrator.rs": "e19e477a4d9eccbdf479c75589da35dda623a6236c7fdd6194748342841015fe",
+    "/tmp/c08-real-qualification.kWTyzw/project/src/lib.rs": "c3f5e41c809d637f6532f41cf0284d486b7074c77369652d9757557edf05812f"
+  },
+  "terminal": {
+    "admission_sha256": "7ca23f52f0e6071a207f0ffa438f93c671495b54e29f28d9e08121d81e7f7c95",
+    "condition": "automatic-changed-refresh-full",
+    "duration_seconds": 35.95234672096558,
+    "finished_at": "2026-09-08T11:19:44.468217+00:00",
+    "id": "automatic-refresh-diagnostic-001",
+    "launch_status": "completed",
+    "launcher_exit_code": 0,
+    "observer_condition": "work-leaf",
+    "run_id": "automatic-refresh-diagnostic-001",
+    "schema": "work-leaf-single-diagnostic-terminal-v1",
+    "source_endpoint_errors": [],
+    "source_endpoints_match": true,
+    "started_at": "2026-09-08T11:19:08.515876+00:00",
+    "timestamp_scope": "supervised command, not provider turn"
+  },
+  "reviewed_source_chain": [
+    {
+      "path": "src/orchestrator.rs",
+      "symbol": "handle_agent_directives_streaming, AgentDirective::Edit conflict branch",
+      "line": 884,
+      "meaning": "GitPatcher::apply_edit produces the real conflict; patch_conflict_refresh_response obtains ordinary current snapshots; the renderer owns replacements; record_snapshots occurs before finish/evidence and provider send."
+    },
+    {
+      "path": "src/bench_automatic_refresh.rs",
+      "symbol": "Capture::candidate / forward_with",
+      "line": 44,
+      "meaning": "One ordered owned-span pass builds the candidate from the existing baseline and held body, then publishes trace before returning the provider-facing prompt."
+    },
+    {
+      "path": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c08-automatic-refresh/diagnostic/harness.rs",
+      "symbol": "BoundedBackend::before",
+      "line": 80,
+      "meaning": "Captures the entire genuine read delivery first, then exactly one semantically neutral GitPatcher edit under the distinct fixture-mutator identity, retaining source and commit evidence."
+    }
+  ]
+}
