@@ -2,6 +2,11 @@
 
 ## Active continuation plan
 
+The user's2026-09-08 priority decision is **finish C08 using collected data,
+then reassess C15/C21**. The38-entry inventory is not an instruction to spend
+equally on every possibility. Existing dispositions remain; no broader search
+or additional benchmark/diagnostic observation is admitted by this decision.
+
 C08's three natural modified-only workflows are closed, following concurrent
 admission on2026-09-08 at11:47:33.067905UTC. The sole supervisor45354 exits1 at
 13:19:37.890832UTC; all three runs are terminal, with no frozen-input errors,

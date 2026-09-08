@@ -7,6 +7,15 @@ resuming after a chat interruption or context compaction. The working order is
 **comprehensive candidate inventory → identify actual saving mechanisms → quantify contributions**.
 Large-read delivery is one candidate, not the privileged explanation or the next percentage report.
 
+The user's 2026-09-08 priority decision narrows active work to finishing C08
+from the already collected three-run evidence, then reassessing whether C15
+and C21 warrant further work. The38-entry inventory is not a queue of38
+equally promising experiments. Preserve all existing dispositions; do not
+expand the search to resolve low-value theoretical possibilities. This
+decision admits no additional benchmark or diagnostic observations. C25's
+supported direction remains separate, and C15/C21 retain their failed tests
+and unresolved effect status until the reassessment.
+
 Execution is continuous until the plan is completed, as explicitly required by the user. A saved
 plan, source inventory, evidence note, commit or completed substep is a checkpoint, not a stopping
 condition. Keep `../../ephemeral-note.md` current throughout execution. Report genuine new-authority
