@@ -2,16 +2,25 @@
 
 ## Active continuation plan
 
+Three natural C08 modified-only workflows are active concurrently from
+2026-09-08 at11:47:33.067905UTC under the sole supervisor session45354.
+Manifest`cfdfd134…` binds175inputs and the existing three-row schedule. Its
+unadmitted172-input predecessor and prelaunch scorer-fixture finding remain
+preserved; only the three declared scorer fixtures close that preparation gap
+before the run-once claim. All three startup traces select the v7 condition.
+No new control, Direct or replacement is admitted. Unrelated build/provider work
+is held; original timeouts and subscription/grace behavior remain. No accounting
+or effect analysis has run for this active wave.
+
 C08's first real qualification attempt closes2026-09-08 at11:19:44.468217UTC,
 35.952seconds, exit0: five calls, one real author, actual stale edit rejection,
 full-current response, repaired ACK, ordinary successful test and processed DONE.
 All admission endpoint hashes match. Public/native and semantic qualification
-remain separate closing witnesses; the original observer analyze/extract each
+pass, including the independent root full-byte/commit check; the original observer analyze/extract each
 run once with exits2/2, retaining five usage gaps and the usage-less-thread
 membership error. No token effect is estimated. The
 [three-modified-only prospective protocol](PROTOCOL-AUTOMATIC-REFRESH-SCREEN.md)
-and reviewed runner are saved, and release binaries are built; no natural C08
-workflow is admitted yet. No provider is running. The complete
+and reviewed runner bind the active natural wave described above. The complete
 [nine-author C15 census](phases/test-first-01/PHASE-EXPOSURE.md) identifies genuine
 same-turn commentary before all nine first preview messages, separate from the
 observer grace defect and source-capture rejection. Future corrections retain
@@ -24,7 +33,7 @@ and remaining coupled work-selection/review/integration checks. Diagnostic003 is
 a completed prerequisite, not completion of mechanism identification. All three
 modified-only C15 workflows ran concurrently under the sole supervisor launch
 at09:57:50UTC on2026-09-08 and are closed failures at10:31:56.131267UTC.
-No provider is running and no replacement is admitted. The frozen `test-first-01` manifest `00ff0668…`
+No C15 provider is running and no C15 replacement is admitted. The frozen `test-first-01` manifest `00ff0668…`
 contains187 inputs. Actual checkout binding and v6 activation pass for all three;
 [startup evidence](phases/test-first-01/STARTUP-CHECKPOINT.json) is separate from
 full workflow, terminal and effect qualification. Original failures include
@@ -38,7 +47,7 @@ effect conclusion. Future-only selector and observer qualification are separate
 from the immutable failed batch. Current-global
 compatibility is established by the [exact tooltip qualification](preflight/test-first-screen/CONFIG-TOOLTIP-QUALIFICATION.md),
 without editing configuration or weakening the original drift monitor. C08's
-automatic-refresh representation implementation proceeds in a separate worktree;
+automatic-refresh representation has a qualified implementation and active screen;
 review-fix sequencing remains a separately defined candidate, not an effect of
 the initial-author screen by assumption.
 
