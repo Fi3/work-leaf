@@ -18,6 +18,10 @@ const SCHEMA_V3: &str = "work-leaf-bench-experiment-v3";
 const SCHEMA_V4: &str = "work-leaf-bench-experiment-v4";
 const SCHEMA_V5: &str = "work-leaf-bench-experiment-v5";
 const SCHEMA_V6: &str = "work-leaf-bench-experiment-v6";
+const SCHEMA_V7: &str = "work-leaf-bench-experiment-v7";
+
+#[path = "bench_automatic_refresh.rs"]
+pub(crate) mod automatic_refresh;
 
 #[path = "bench_review_evidence.rs"]
 mod review_evidence;
@@ -97,7 +101,7 @@ fn load() -> io::Result<Option<Experiment>> {
     let (manifest, review_root, private_preview) = private_test_first::parse_manifest(&bytes)?;
     if !matches!(
         manifest.schema.as_str(),
-        SCHEMA | SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4 | SCHEMA_V5 | SCHEMA_V6
+        SCHEMA | SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4 | SCHEMA_V5 | SCHEMA_V6 | SCHEMA_V7
     ) {
         return Err(invalid("unsupported manifest schema"));
     }
@@ -132,6 +136,7 @@ fn load() -> io::Result<Option<Experiment>> {
             "review-evidence-native" | "review-evidence-inline"
         ),
         SCHEMA_V6 => manifest.condition == "private-test-first",
+        SCHEMA_V7 => manifest.condition == "automatic-changed-refresh-full",
         _ => false,
     };
     if !permitted {
@@ -193,7 +198,7 @@ pub(crate) fn forward_continuation(
     };
     if matches!(
         experiment.manifest.schema.as_str(),
-        SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4 | SCHEMA_V5 | SCHEMA_V6
+        SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4 | SCHEMA_V5 | SCHEMA_V6 | SCHEMA_V7
     ) {
         let mut spans = match site {
             "patch-applied" => vec![PromptSpan::new("patch-applied-validation", cue)],

@@ -215,7 +215,7 @@ comparison is concurrent Work Leaf against direct sequential Codex with the same
 reasoning level, stage responsibilities, time allowances, final verification, and quality scorer.
 
 The nondefault `bench-experiments` Cargo feature provides private, provider-neutral
-interventions for separately admitted mechanism studies. Versions 1–5 change prompt
+interventions for separately admitted mechanism studies. Versions 1–5 and 7 change prompt
 representation; version 6 owns an explicitly admitted private test-feedback workflow.
 Default builds exclude
 `src/bench_experiment.rs` and its activation hooks. Feature-enabled builds remain inactive unless
@@ -394,6 +394,32 @@ detector can rescan growing text after each completed agent message, O(K×B) and
 quadratic across fragments. The eight-MiB envelope bound is not a detector-memory bound.
 Existing bounded O(M²) mount checks and O(D²) ancestor-path resolution remain explicit.
 Git history, sampled census and per-proposal source hashing are additional execution costs.
+
+Version 7 admits only `automatic-changed-refresh-full`. It changes automatic patch/edit
+rejection recovery, not requested reads or launch policy. The ordinary renderer reads and
+compares snapshots and constructs each changed-file diff once. A nonempty diff within
+the existing 48-KiB automatic limit is replaced by the exact held current text, with no
+8-KiB tracked-text cutoff. Empty, unavailable and oversized diff results, unchanged
+snapshots, untracked text and its ordinary cap, and read failures keep their baseline
+sections. Already-applied, no-file and nonstale rejection branches remain independent.
+
+`src/orchestrator.rs` owns the replacement body ranges and two response-local coherence
+spans. Filenames, digests, changed status, diagnostics and format guidance remain intact;
+copied file text is never searched for control markers. The private
+`src/bench_automatic_refresh.rs` module constructs candidates from ordered UTF-8 ranges
+and records both complete prompts, selected identity, section/diff/body metadata and
+original failure identities. Runtime checksums remain FNV64; cryptographic source and
+delivery joins belong to the separately scoped offline evidence.
+
+Ordinary automatic snapshot advancement still occurs before the existing send attempt.
+Candidate selection and evidence publication occur after that advancement and fail
+delivery on errors without undoing it. No extra read, diff process, bundle allocation,
+model turn, timing/grace policy or public API participates. Earlier schemas collect no
+automatic-refresh candidate and preserve their evidence contracts. Added construction
+and serialization are linear in held prompt/body bytes and section count; oversized
+full-current provider requests remain failures, without clipping, bundling or fallback.
+Actual-agent recovery qualification and separately frozen admission are required before
+claiming a ready intervention or running a natural exposure study.
 
 Both benchmark drivers use `bench-agent-profile-common` to create a run-local Codex wrapper. The
 wrapper pins the requested model and reasoning effort directly on every allowed Codex invocation

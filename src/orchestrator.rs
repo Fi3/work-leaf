@@ -838,11 +838,14 @@ where
                                 &files,
                                 &diagnostic,
                                 &response,
-                            );
+                            )
+                            .map_err(AgentError::Io)?;
                             services
                                 .file_reads
                                 .record_snapshots(agent_id, &response.snapshots);
                             prompt
+                                .finish(agent_id, "patch", &files, &diagnostic)
+                                .map_err(AgentError::Io)?
                         } else {
                             render_nonstale_patch_conflict_prompt(&files, &diagnostic)
                         };
@@ -919,11 +922,14 @@ where
                                 &files,
                                 &diagnostic,
                                 &response,
-                            );
+                            )
+                            .map_err(AgentError::Io)?;
                             services
                                 .file_reads
                                 .record_snapshots(agent_id, &response.snapshots);
                             prompt
+                                .finish(agent_id, "edit", &files, &diagnostic)
+                                .map_err(AgentError::Io)?
                         } else {
                             render_nonstale_structured_edit_conflict_prompt(&files, &diagnostic)
                         };
@@ -2744,27 +2750,105 @@ fn render_bundled_file_read_response(
 const MAX_AUTOMATIC_REFRESH_DIFF_BYTES: usize = 48 * 1024;
 const MAX_AUTOMATIC_FULL_REFRESH_BYTES: usize = 8 * 1024;
 
+struct RefreshPrompt {
+    text: String,
+    #[cfg(feature = "bench-experiments")]
+    capture: Option<crate::bench_experiment::automatic_refresh::Capture>,
+}
+
+impl RefreshPrompt {
+    fn new(text: String) -> std::io::Result<Self> {
+        Ok(Self {
+            text,
+            #[cfg(feature = "bench-experiments")]
+            capture: crate::bench_experiment::automatic_refresh::Capture::start()?,
+        })
+    }
+
+    fn finish(
+        self,
+        agent_id: &AgentId,
+        kind: &str,
+        files: &[PathBuf],
+        diagnostic: &str,
+    ) -> std::io::Result<String> {
+        #[cfg(feature = "bench-experiments")]
+        if let Some(capture) = self.capture {
+            return capture.forward(
+                agent_id,
+                kind,
+                self.text,
+                serde_json::json!({"files":files,"diagnostic":diagnostic}),
+            );
+        }
+        #[cfg(not(feature = "bench-experiments"))]
+        let _ = (agent_id, kind, files, diagnostic);
+        Ok(self.text)
+    }
+}
+
 fn render_file_refresh_response(
+    prompt: &mut RefreshPrompt,
     agent_id: &AgentId,
     file_reads: &FileReadTracker,
     snapshots: &[crate::locks::FileSnapshot],
     failures: &[FileReadFailure],
-) -> String {
-    let mut text = String::from("work-leaf file refresh\n");
+) {
+    render_file_refresh_response_with_diff(
+        prompt,
+        agent_id,
+        file_reads,
+        snapshots,
+        failures,
+        render_snapshot_diff,
+    );
+}
+
+fn render_file_refresh_response_with_diff(
+    prompt: &mut RefreshPrompt,
+    agent_id: &AgentId,
+    file_reads: &FileReadTracker,
+    snapshots: &[crate::locks::FileSnapshot],
+    failures: &[FileReadFailure],
+    mut diff: impl FnMut(&Path, &str, &str) -> Option<String>,
+) {
+    let text = &mut prompt.text;
+    text.push_str("work-leaf file refresh\n");
+    #[cfg(feature = "bench-experiments")]
+    let intro_start = text.len();
     text.push_str(
         "This is a compact refresh, not a patch to submit. It shows changes from the last file text this agent received. Repeated full-text refreshes are intentionally avoided to keep the session compact.\n",
     );
+    #[cfg(feature = "bench-experiments")]
+    if let Some(capture) = &mut prompt.capture {
+        capture.replace("refresh-intro", intro_start..text.len(), "This is a file refresh, not a patch to submit. Sections marked current full text contain the complete current file; all other sections keep their stated snapshot or diagnostic meaning.\n".into(), None, None);
+    }
 
     for snapshot in snapshots {
+        #[cfg(feature = "bench-experiments")]
+        let section_start = text.len();
         text.push_str("\n--- ");
         text.push_str(&snapshot.path.display().to_string());
         text.push_str(" ---\n");
         text.push_str("current digest: ");
-        text.push_str(&content_digest(&snapshot.text));
+        let current_digest = content_digest(&snapshot.text);
+        text.push_str(&current_digest);
         text.push('\n');
-
-        let Some(previous) = file_reads.snapshot_for(agent_id, &snapshot.path) else {
-            render_untracked_refresh_snapshot(&mut text, snapshot);
+        let previous = file_reads.snapshot_for(agent_id, &snapshot.path);
+        #[cfg(feature = "bench-experiments")]
+        let mut metadata = prompt.capture.as_ref().map(|_| serde_json::json!({
+            "path":snapshot.path,"bytes":snapshot.text.len(),"digest":current_digest,
+            "previous_digest":previous.as_ref().map(|p|&p.digest),"previous_bytes":previous.as_ref().map(|p|p.text.len()),
+            "class":if previous.is_none(){"untracked"}else if previous.as_ref().is_some_and(|p|p.text==snapshot.text){"unchanged"}else{"changed"},
+            "diff_disposition":"not-applicable","diff_bytes":null,
+            "baseline_section_start":section_start,"baseline_body_start":null,"baseline_body_end":null}));
+        let Some(previous) = previous else {
+            render_untracked_refresh_snapshot(text, snapshot);
+            #[cfg(feature = "bench-experiments")]
+            if let (Some(capture), Some(mut metadata)) = (&mut prompt.capture, metadata) {
+                metadata["baseline_section_end"] = serde_json::json!(text.len());
+                capture.snapshots.push(metadata);
+            }
             continue;
         };
 
@@ -2774,18 +2858,59 @@ fn render_file_refresh_response(
 
         if previous.text == snapshot.text {
             text.push_str("status: unchanged since this agent's last snapshot\n");
+            #[cfg(feature = "bench-experiments")]
+            if let (Some(capture), Some(mut metadata)) = (&mut prompt.capture, metadata) {
+                metadata["baseline_section_end"] = serde_json::json!(text.len());
+                capture.snapshots.push(metadata);
+            }
             continue;
         }
 
-        match render_snapshot_diff(&snapshot.path, &previous.text, &snapshot.text) {
+        match diff(&snapshot.path, &previous.text, &snapshot.text) {
             Some(diff) if diff.len() <= MAX_AUTOMATIC_REFRESH_DIFF_BYTES => {
                 text.push_str("status: changed since this agent's last snapshot\n");
+                #[cfg(feature = "bench-experiments")]
+                let body_start = text.len();
                 text.push_str(&diff);
                 if !diff.ends_with('\n') {
                     text.push('\n');
                 }
+                #[cfg(feature = "bench-experiments")]
+                if let Some(capture) = &mut prompt.capture {
+                    if let Some(metadata) = &mut metadata {
+                        metadata["diff_disposition"] = serde_json::json!(if diff.is_empty() {
+                            "empty"
+                        } else {
+                            "available"
+                        });
+                        metadata["diff_bytes"] = serde_json::json!(diff.len());
+                        metadata["baseline_body_start"] = serde_json::json!(body_start);
+                        metadata["baseline_body_end"] = serde_json::json!(body_start + diff.len());
+                    }
+                    if !diff.is_empty() {
+                        let mut full = String::from("current full text:\n");
+                        let start = full.len();
+                        full.push_str(&snapshot.text);
+                        let end = full.len();
+                        if !snapshot.text.ends_with('\n') {
+                            full.push('\n');
+                        }
+                        capture.replace(
+                            "current-full-text",
+                            body_start..text.len(),
+                            full,
+                            Some(start..end),
+                            Some(capture.snapshots.len()),
+                        );
+                    }
+                }
             }
             Some(diff) => {
+                #[cfg(feature = "bench-experiments")]
+                if let Some(metadata) = &mut metadata {
+                    metadata["diff_disposition"] = serde_json::json!("omitted");
+                    metadata["diff_bytes"] = serde_json::json!(diff.len());
+                }
                 text.push_str("status: changed since this agent's last snapshot\n");
                 text.push_str("diff omitted: compact refresh would be ");
                 text.push_str(&diff.len().to_string());
@@ -2794,11 +2919,20 @@ fn render_file_refresh_response(
                 );
             }
             None => {
+                #[cfg(feature = "bench-experiments")]
+                if let Some(metadata) = &mut metadata {
+                    metadata["diff_disposition"] = serde_json::json!("unavailable");
+                }
                 text.push_str("status: changed since this agent's last snapshot\n");
                 text.push_str(
                     "diff unavailable. Request narrower related context or continue from the previous snapshot if this file is still needed.\n",
                 );
             }
+        }
+        #[cfg(feature = "bench-experiments")]
+        if let (Some(capture), Some(mut metadata)) = (&mut prompt.capture, metadata) {
+            metadata["baseline_section_end"] = serde_json::json!(text.len());
+            capture.snapshots.push(metadata);
         }
     }
 
@@ -2806,7 +2940,13 @@ fn render_file_refresh_response(
         text.push_str("\nUnavailable file text\n");
         text.push_str(&render_file_read_failures(failures));
     }
-    text
+    #[cfg(feature = "bench-experiments")]
+    if let Some(capture) = &mut prompt.capture {
+        capture.failures = failures
+            .iter()
+            .map(|f| serde_json::json!({"path":f.path,"diagnostic":f.diagnostic}))
+            .collect();
+    }
 }
 
 fn render_untracked_refresh_snapshot(text: &mut String, snapshot: &crate::locks::FileSnapshot) {
@@ -3148,15 +3288,21 @@ fn render_patch_conflict_prompt(
     files: &[PathBuf],
     diagnostic: &str,
     response: &FileReadResponse,
-) -> String {
-    let mut text = format!(
-        "The orchestrator could not apply your patch.\nFiles: {}\n\nGit diagnostic:\n{}\n\nRebase your patch against the compact file refresh below.\n{}",
+) -> std::io::Result<RefreshPrompt> {
+    let text = format!(
+        "The orchestrator could not apply your patch.\nFiles: {}\n\nGit diagnostic:\n{}\n\n",
         display_paths(files),
         diagnostic,
-        unified_diff_format_guidance()
     );
-    append_file_refresh_response(&mut text, agent_id, file_reads, response);
-    text
+    let mut prompt = RefreshPrompt::new(text)?;
+    append_refresh_guidance(
+        &mut prompt,
+        "Rebase your patch against the compact file refresh below.",
+        "Rebase your patch against the file refresh below.",
+    );
+    prompt.text.push_str(unified_diff_format_guidance());
+    append_file_refresh_response(&mut prompt, agent_id, file_reads, response);
+    Ok(prompt)
 }
 
 fn render_structured_edit_conflict_prompt(
@@ -3165,15 +3311,40 @@ fn render_structured_edit_conflict_prompt(
     files: &[PathBuf],
     diagnostic: &str,
     response: &FileReadResponse,
-) -> String {
-    let mut text = format!(
-        "The orchestrator could not apply your edit.\nFiles: {}\n\nDiagnostic:\n{}\n\nRebase your exact edit blocks against the compact file refresh below.\n{}",
+) -> std::io::Result<RefreshPrompt> {
+    let text = format!(
+        "The orchestrator could not apply your edit.\nFiles: {}\n\nDiagnostic:\n{}\n\n",
         display_paths(files),
         diagnostic,
-        structured_edit_format_guidance()
     );
-    append_file_refresh_response(&mut text, agent_id, file_reads, response);
-    text
+    let mut prompt = RefreshPrompt::new(text)?;
+    append_refresh_guidance(
+        &mut prompt,
+        "Rebase your exact edit blocks against the compact file refresh below.",
+        "Rebase your exact edit blocks against the file refresh below.",
+    );
+    prompt.text.push_str(structured_edit_format_guidance());
+    append_file_refresh_response(&mut prompt, agent_id, file_reads, response);
+    Ok(prompt)
+}
+
+fn append_refresh_guidance(prompt: &mut RefreshPrompt, baseline: &str, candidate: &str) {
+    #[cfg(feature = "bench-experiments")]
+    let start = prompt.text.len();
+    prompt.text.push_str(baseline);
+    #[cfg(feature = "bench-experiments")]
+    if let Some(capture) = &mut prompt.capture {
+        capture.replace(
+            "refresh-guidance",
+            start..prompt.text.len(),
+            candidate.into(),
+            None,
+            None,
+        );
+    }
+    #[cfg(not(feature = "bench-experiments"))]
+    let _ = candidate;
+    prompt.text.push('\n');
 }
 
 fn render_nonstale_patch_conflict_prompt(files: &[PathBuf], diagnostic: &str) -> String {
@@ -3268,18 +3439,19 @@ fn render_pending_command_changes_prompt(files: &[PathBuf], diff: &str) -> Strin
 }
 
 fn append_file_refresh_response(
-    text: &mut String,
+    prompt: &mut RefreshPrompt,
     agent_id: &AgentId,
     file_reads: &FileReadTracker,
     response: &FileReadResponse,
 ) {
-    text.push_str("\n\n");
-    text.push_str(&render_file_refresh_response(
+    prompt.text.push_str("\n\n");
+    render_file_refresh_response(
+        prompt,
         agent_id,
         file_reads,
         &response.snapshots,
         &response.failures,
-    ));
+    );
 }
 
 fn display_paths(paths: &[PathBuf]) -> String {
@@ -3365,6 +3537,10 @@ impl From<FileAccessError> for OrchestratorError {
         Self::FileAccess(error)
     }
 }
+
+#[cfg(all(test, feature = "bench-experiments"))]
+#[path = "orchestrator_automatic_refresh_tests.rs"]
+mod automatic_refresh_tests;
 
 #[cfg(test)]
 mod tests {
