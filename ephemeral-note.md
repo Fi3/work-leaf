@@ -1,12 +1,14 @@
 # Provisional investigation ledger
 
-Last checked: **2026-09-08 17:13 Europe/Rome (15:13 UTC)**.
+Last checked: **2026-09-08 17:29 Europe/Rome (15:29 UTC)**.
 
 Scope: the entire mechanism investigation, with all **36 frozen benchmark identities** (3 initial screen + 12 work-unit + 12 parked read-factor + 3 candidate screen + 3 private-test-first screen + 3 automatic-refresh screen), **25 admitted diagnostic identities** (16 earlier + 3 candidate-v4 + 2 C21 + 3 C15 + 1 C08), and the elapsed-time breakdown. The three modified candidate benchmarks were admitted concurrently at 14:28:55 Europe/Rome and are all terminal at 16:29:25: two successes and one original timeout. The earlier two-run pilot and accepted historical twelve-run cohort are listed separately below. Diagnostics are never added to the benchmark count. Both C21 diagnostics remain failed; no complete C21 benchmark is admitted. **All three automatic-refresh workflows are closed:001 failed,002/003 passed. All private-test-first workflows and the C08 diagnostic remain closed. No provider workflow is running.** C15 diagnostic003 has complete successful workflow, source and semantic qualification: private RED → unchanged tests/fix → ordinary GREEN → DONE → resolved review. Original001 failure and002 partial qualification remain preserved; token contribution is not estimated by this diagnostic.
 
 ## Active plan and preserved experiments
 
 ### Active execution — candidate evidence pass
+
+17:29 Rome checkpoint: **C08's lower-only calculation is frozen for its sole saved-data execution.** The helper and full temporary-file pipeline pass39 tests; independent review also passes39 (`1d24f6`), review`0fbd0980…`. Scope`3bc61704…` names all3 candidate runs and6 retained baselines. Root's read-only preflight`70a108` verifies902 exact source endpoints/544,574,617 bytes; no qualification or arithmetic has run in preflight. The separate11-full-refresh item adapter passes20 automatic tests, including root's independent run`2fef44`; its exact11 payload identities are saved in`REFRESH-ITEM-TARGETS.json` (`dcfd942e…`). Actual lower calculation and item attribution are next; no provider workflow or extra observation is admitted. The38-family inventory and complete36-benchmark/25-diagnostic history remain preserved. An independent evidence-only C15/C21 priority reassessment runs alongside this closure, without new implementation or generation.
 
 17:13 Rome checkpoint: **the user approves the narrowed priority: finish C08 from collected data, then reassess C15/C21.** The durable plan and study state record this order. The38-family inventory remains evidence, not an equally weighted investigation queue; no additional benchmark or diagnostic observation is admitted by this approval. Work is limited to C08's all3run lower-bound result and the same11-input retained-charge mechanism, plus their required synthetic/source reviews. The18-test item-adapter missing-module RED (`207daa`) is preserved before its pure implementation. No actual lower qualification or item extraction has run, and no provider workflow is active.
 
