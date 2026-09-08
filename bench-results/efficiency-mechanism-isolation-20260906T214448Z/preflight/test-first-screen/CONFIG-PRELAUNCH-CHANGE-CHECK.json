@@ -1,0 +1,139 @@
+{
+  "schema": "c15-screen-prelaunch-config-change-check-v1",
+  "status": "unresolved_substantive_or_unknown",
+  "scope": "Read-only finite exact-hash tests against saved W; no configuration contents, arbitrary setting values, credentials, provider work, config writes, or blanket exclusions.",
+  "source_sha256": {
+    "/home/user/.codex/config.toml": "d36b9caec082759492578037173fe3bca099aad63f8e2553314601d2506e366d",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/test-first-screen/CONFIG-RECONSTRUCTION.json": "f86dd26ee1383a08506d3aafde71f8419cd9f2406582df1a460682c3594d7e05",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/work-units-01/PHASE-MANIFEST.json": "5282364e43839e8932abfcec440d07b87467e6e7024f99f66b236e662cbdf950",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/runner_work_units.py": "2f019c297a2e436c54241ad0643d4f105db6ec8bc782b1cac456f3acde0bc98e"
+  },
+  "previous_receipt_raw_sha256": "21bcb4825009b9561fa200a806ccc7d68993cbd4e718342b257a594dfaf31908",
+  "saved_w": {
+    "parsed_sha256": "e91e44495343edc3d4ced57caa5bb296c01f0447688d27a1577f8d1243a3a389",
+    "behavioral_sha256": "78cd609bb3fb021622bfb6cf84afd8954c4169d18b7f2f8c4de6156ef0735512"
+  },
+  "current": {
+    "parsed_sha256": "8f76f6a7a4c381b35b0078a96a74946dfddac283c9a3a84849124d819162dcad",
+    "behavioral_sha256": "63c5037c8a1bc67a9dd0601483aa4d66b1b08dea9582fafb0aa3b26b3957b54a",
+    "safe_installed_enum_values": {
+      "model": "gpt-6-astra",
+      "model_reasoning_effort": "max"
+    },
+    "frozen_whitelist_summary": {},
+    "saved_frozen_whitelist_summary": {},
+    "top_level_key_names": [
+      "model",
+      "model_reasoning_effort",
+      "notice",
+      "projects",
+      "tui",
+      "personality"
+    ]
+  },
+  "exact_trust_reconstruction": {
+    "receipt_proof_count": 16,
+    "matched_exact_trust_values": 16,
+    "proof_source_files_rehashed": 4,
+    "remaining_project_entries": 293,
+    "remaining_all_exact_trusted": true,
+    "parsed_sha256": "d2bdf85406d1230af792c82fc6b955844a2a730d578fbdb369629d623f1b5648",
+    "behavioral_sha256": "01c0179864670ce14786118bd5aa3eca9f3252ff5ca8b88ff9c399d0a1f76886",
+    "parsed_matches": false,
+    "behavioral_matches": false
+  },
+  "finite_probes": [
+    {
+      "tool_receipt": "d5016f",
+      "operation": "Remove ONLY the exact16 proof-row keys after requiring each current value equals exactly {trust_level:trusted}; compare entire parsed/behavioral remainders.",
+      "result": "neither matches",
+      "before_after_raw_identity": true
+    },
+    {
+      "tool_receipt": "3af146",
+      "operation": "Report only frozen safe enums and top-level key names; count remaining exact-trusted projects.",
+      "result": "current/saved frozen whitelist summaries empty; no old arbitrary value inferred"
+    },
+    {
+      "tool_receipt": "b0d66c",
+      "operation": "Report current model/effort only when within explicit installed tool enum domain.",
+      "result": "gpt-6-astra/max; prior values unknown"
+    },
+    {
+      "tool_receipt": "fd71cd",
+      "operation": "After exact16 removal, delete each one of six top-level keys individually in memory and compare whole saved parsed hash.",
+      "candidate_count": 6,
+      "keys": [
+        "model",
+        "model_reasoning_effort",
+        "notice",
+        "projects",
+        "tui",
+        "personality"
+      ],
+      "matches": []
+    },
+    {
+      "tool_receipt": "23ee5f",
+      "operation": "Shallow max-depth2 configuration filename discovery under /home/user/.codex; no backup contents or credential files opened.",
+      "result": "Current global config plus old run-local config/observer/study filenames; no root global-backup filename identified. Run-local configs not treated as historical-global evidence."
+    },
+    {
+      "tool_receipt": "97736f",
+      "operation": "After exact16 removal, set only model/effort to explicit finite enum pairs in memory; compare whole saved parsed hash.",
+      "candidate_count": 30,
+      "matches": []
+    },
+    {
+      "tool_receipt": "ce06bf",
+      "operation": "Same30 finite enum pairs under the existing four-notice behavioral rule, separately delete each one of293 remaining exact-trusted project keys and compare whole parsed/behavioral hashes.",
+      "enum_candidates": 30,
+      "enum_behavior_matches": [],
+      "project_candidates": 293,
+      "project_parsed_or_behavior_matches": [],
+      "before_after_raw_identity": true
+    }
+  ],
+  "finite_enum_domain": {
+    "models": [
+      "gpt-6-astra",
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+      "gpt-5.5"
+    ],
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max",
+      "ultra"
+    ]
+  },
+  "notice_rule": [
+    "hide_full_access_warning",
+    "hide_gpt5_1_migration_prompt",
+    "hide_rate_limit_model_nudge",
+    "model_migrations"
+  ],
+  "interpretation": [
+    "Not proven formatting-only or known-notice-only.",
+    "Not proven only one top-level addition.",
+    "Not proven only model/effort changes within the exact finite domain, with or without known notice changes.",
+    "Not proven only one newly trusted project.",
+    "Pinned benchmark CLI model/effort do not prove that other changed configuration is irrelevant.",
+    "No arbitrary old value guessed, no unknown key ignored, no config contents copied."
+  ],
+  "operator_receipts_reported_by_parent": {
+    "prewrite_raw_hash_guard": "112c40",
+    "guard_outcome": "failed before phase/provider generation",
+    "subsequent_fixed_plan_only": "5ea050",
+    "phase_prepared": false,
+    "provider_admitted": false,
+    "note": "Parent-reported operator receipts, not independently executed here."
+  },
+  "current_config_unchanged_during_every_probe": true,
+  "original_reconstruction_receipt_preserved": true,
+  "future_admission_requires_resolution_or_explicitly_changed_comparison_scope": true
+}
