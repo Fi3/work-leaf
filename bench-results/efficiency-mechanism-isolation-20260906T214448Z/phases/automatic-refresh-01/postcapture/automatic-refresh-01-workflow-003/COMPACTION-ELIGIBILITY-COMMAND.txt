@@ -1,0 +1,98 @@
+/usr/bin/timeout --kill-after=5s 60s /usr/bin/python3.14 -B - <<'PY'
+import json, hashlib, types
+from pathlib import Path
+a = Path("/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/postcapture")
+p = a / "automatic-refresh-01-workflow-003/COMPACTION-ELIGIBILITY-INPUT.json"
+sha = lambda b: hashlib.sha256(b).hexdigest()
+canonical = lambda v: json.dumps(v, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode()
+def pairs(items):
+    out = {}
+    for k, v in items:
+        if k in out: raise ValueError("duplicate JSON key")
+        out[k] = v
+    return out
+def decode(raw):
+    return json.loads(raw, object_pairs_hook=pairs, parse_constant=lambda v: (_ for _ in ()).throw(ValueError("nonfinite JSON")))
+raw = p.read_bytes()
+assert sha(raw) == "9aa42c9a94520aa224328d26981af462042683dc164551c0cd91ebf649092a2a"
+v = decode(raw)
+assert v["execution_authorized"] is True and v["run_id"] == "automatic-refresh-01-workflow-003"
+refs = {}
+def gather(x):
+    if type(x) is dict:
+        if "path" in x and "sha256" in x:
+            assert x["path"] not in refs or refs[x["path"]] == x["sha256"]
+            refs[x["path"]] = x["sha256"]
+        for y in x.values(): gather(y)
+    elif type(x) is list:
+        for y in x: gather(y)
+gather(v)
+loaded = {}
+for path, expected in refs.items():
+    q = Path(path)
+    assert q.is_absolute() and q.resolve() == q and q.is_file() and not q.is_symlink()
+    assert q.stat().st_size <= 1073741824
+    body = q.read_bytes()
+    assert sha(body) == expected
+    loaded[path] = body
+result = decode(loaded[v["source_qualification"]["result"]["path"]])
+source_input = decode(loaded[v["source_qualification"]["input"]["path"]])
+assert result["run_id"] == v["run_id"] and result["status"] == "unverifiable"
+assert result["errors"] == v["source_qualification"]["allowed_original_global_errors"]
+base = {k:x for k,x in result.items() if k not in ("full_result_sha256","full_result_bytes","metadata_list_entries")}
+assert sha(canonical(base)) == result["full_result_sha256"] and len(canonical(base)) == result["full_result_bytes"]
+assert result["native_membership"]["errors"] == [] and result["project_inventory"]["errors"] == []
+assert len(result["invocation_streams"]) == len(source_input["invocation_metadata"])
+assert all(x["errors"] == [] for x in result["invocation_streams"])
+assert len(result["delivery"]["inputs"]) == 64 and all(x["status"] == "joined" for x in result["delivery"]["inputs"])
+bad = [x for x in result["delivery"]["trace"] if x["status"] != "joined"]
+assert len(bad) == 2 and all(x["eligible"] is False and x["status"] == "ambiguous" for x in bad)
+assert [x["physical_trace_line"] for x in bad] == [2,3]
+for ref in (v["source_qualification"]["input"],v["source_qualification"]["scope"],v["source_qualification"]["helper"]):
+    assert result["source_sha256"][ref["path"]] == ref["sha256"]
+assert source_input["helper_sha256"] == v["source_qualification"]["helper"]["sha256"]
+assert source_input["scope"] == v["source_qualification"]["scope"]
+cap = v["capture"]
+assert source_input["captures"] == [cap]
+for name, ref in cap.items():
+    if type(ref) is dict: assert result["source_sha256"][ref["path"]] == ref["sha256"]
+assert result["source_sha256"][v["native"]["path"]] == v["native"]["sha256"]
+proofs = result["frame_proofs"]
+assert len(proofs) == 1 and proofs[0]["capture_id"] == Path(cap["path"]).name and proofs[0]["turn_closure"]["errors"] == []
+frame = proofs[0]
+def records(ref):
+    body = loaded[ref["path"]]
+    assert not body or body.endswith(b"\n")
+    return [decode(line) if line.strip() else {} for line in body.splitlines()]
+clients, forwarded, servers = (records(cap[k]) for k in ("clients","forwarded","servers"))
+assert len(clients) == len(forwarded) == frame["frame_count"] == 126
+for name, values in (("original",clients),("forwarded",forwarded)):
+    raw_ref = cap["clients" if name == "original" else "forwarded"]
+    assert frame[name+"_raw_sha256"] == raw_ref["sha256"]
+    assert frame[name+"_rows_sha256"] == sha(canonical(values))
+meta_lines = loaded[v["metadata"]["path"]].splitlines()
+assert sha(meta_lines[v["metadata_line"]-1]) == v["metadata_row_sha256"]
+meta_rows = records(v["metadata"]); metadata = meta_rows[v["metadata_line"]-1]
+assert sum(x.get("thread_id") == v["expected_proof"]["thread_id"] for x in meta_rows) == 1
+assert metadata["thread_id"] == v["expected_proof"]["thread_id"] and metadata["cwd"] == v["cwd"]
+native = records(v["native"])
+assert (v["model"],v["effort"]) == ("gpt-5.5","xhigh")
+assert not Path(v["output_path"]).exists()
+assert Path(v["attempt_path"]).is_file()
+out = {"schema":"work-leaf-c08-compaction-eligibility-only-result-v1","run_id":v["run_id"],"input_sha256":sha(raw),"status":"unverifiable","errors":[],"proofs":[],"substantive_calls":0,"provider_calls":0,"accounting_calls":0,"source_sha256":refs,"retained_original_global_source_errors":result["errors"]}
+try:
+    module = types.ModuleType("c08_original_compaction_eligibility")
+    module.__file__ = v["helper"]["path"]
+    exec(compile(loaded[module.__file__], module.__file__, "exec"),module.__dict__)
+    out["substantive_calls"] = 1
+    found = module.prove_future_contexts(native, metadata, [{"path":cap["path"],"metadata_forwarding_verified":True,"clients":clients,"forwarded":forwarded,"servers":servers}],v["model"],v["effort"],v["native"]["path"],public_cache={})
+    out["proofs"] = found
+    assert len(found) == 1 and all(type(found[0].get(k)) is type(x) and found[0][k] == x for k,x in v["expected_proof"].items())
+except Exception as error:
+    out["errors"].append(type(error).__name__+": "+str(error))
+for path, expected in refs.items():
+    if sha(Path(path).read_bytes()) != expected: out["errors"].append("source endpoint changed: "+path)
+if not out["errors"]: out["status"] = "source-proof-established"
+out["qualification"] = "Exact pre-turn compaction context identity only. Original UNKNOWN, null bounds, five usage gaps and two ordinary trace ambiguities remain. No prefix accounting, usage summation, bound adjustment or complete-exposure claim."
+print(json.dumps(out,sort_keys=True,separators=(",",":")))
+PY
