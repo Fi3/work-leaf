@@ -6,9 +6,10 @@ C08's three natural modified-only workflows are admitted concurrently on
 2026-09-08 at11:47:33.067905UTC under the sole supervisor session45354.
 Workflow001 publishes its failed report at12:31:40UTC:2,646reported seconds,
 original300-second idle limit, three patch-producing/done authors but only two
-resolved review decisions. No replacement is admitted. Workflows002/003 remain
-active in review/fix and linearization, respectively; the complete phase receipt
-and exact individual process exits follow all-three closure.
+resolved review decisions. No replacement is admitted. Workflow003 publishes its
+passed report at12:42:40UTC: review, linearization and final repository checks pass.
+Workflow002 remains active in review/fix; the complete phase receipt and exact
+individual process exits follow all-three closure.
 Manifest`cfdfd134…` binds175inputs and the existing three-row schedule. Its
 unadmitted172-input predecessor and prelaunch scorer-fixture finding remain
 preserved; only the three declared scorer fixtures close that preparation gap
