@@ -1,0 +1,298 @@
+{
+  "schema": "c15-provisional-two-closed-private-semantics-v1",
+  "phase_root": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/test-first-01",
+  "cutoff": {
+    "population": "Exactly first closed preview of workflow001/user-2 and workflow003/user-2",
+    "other_operations_inspected": false,
+    "changing_shared_checkout_inspected": false,
+    "shared_final_test_equivalence_claimed": false,
+    "whole_workflow_outcome_claimed": false,
+    "token_direction_claimed": false,
+    "provider_executor_cargo_or_accounting_run": false
+  },
+  "verification": {
+    "operator_receipt": "353b81",
+    "status": "PASS",
+    "source_endpoints_before_after": 125,
+    "scope": "Only these two operations. Typed capture/test owner and proposal equality; test selection exact CAPTURE-RESULT hash; selected JSON/bundle hash; exact accepted commit/tree; held body equality; command-execution equality/argv/output hashes; all three exact declared afterimages and Git modes; recorded private file delta set equals declared test paths; all 47 retained post-command files per operation match bytes/modes/hashes; private-after and post-command census equal.",
+    "reader_claim_limits": "Existing 65 dependency pins per result are retained, not independently re-audited. No root-lock or all-live-tree atomicity proof is inferred.",
+    "additional_read_only_locators": [
+      "049d91 exact terminal_app diff",
+      "d1cce2 and 639391 accepted controller method",
+      "c5691f,8f3c88,13071b accepted terminal input/send chain",
+      "c346d4 exact ui_harness diff"
+    ],
+    "execution_scope": "Read-only JSON/file inspection and diff; no test, Git mutation, executor, provider, extractor or accounting invocation.",
+    "requirement_mapping_limit": "Test intent is mapped to the exact proposal test_purpose/reason. This cutoff does not inspect an original model launch/task prompt or establish complete feature-spec conformance."
+  },
+  "typed_locators": {
+    "proposal": "test-input.json#/proposal",
+    "owner": "test-input.json#/agent_id,/launch_generation,/proposal_id,/revision_of",
+    "selection": "test-input.json#/selection -> CAPTURE-RESULT.json#/selected -> capture/SELECTED.json and capture/accepted.bundle",
+    "private_files": "TEST-RESULT.json#/patch/files",
+    "exact_afterimages": "TEST-RESULT.json#/declared_test_afterimages",
+    "closure": "TEST-RESULT.json#/command_execution == TEST-EXECUTION.json",
+    "post_command": "TEST-RESULT.json#/post_command_source/files"
+  },
+  "rows": [
+    {
+      "run_id": "test-first-01-workflow-001",
+      "operation": "private-preview/test-first-01-workflow-001/preview-0000000000000001",
+      "owner": {
+        "agent_id": "user-2",
+        "launch_generation": 2,
+        "proposal_id": "slash-agent-command-test-3",
+        "revision_of": null
+      },
+      "proposal": {
+        "command": "cargo test slash_command --all-targets --all-features",
+        "format": "edit",
+        "lock_paths": [
+          "target"
+        ],
+        "reason": "ADD slash-prefixed agent command tests to require a non-whitespace command name before routing to the selected agent",
+        "test_paths": [
+          "tests/ui_harness.rs",
+          "src/terminal_app.rs"
+        ],
+        "test_purpose": "Prove command-mode slash input routes to the selected backend agent only when slash is immediately followed by a non-whitespace command name, and prove slash followed by whitespace does not submit an agent message."
+      },
+      "body_bytes": 4354,
+      "body_sha256": "41513e9b0124f9d5ba3853dc7e9786b403ed3cdd11167b698292807f9bd8aac9",
+      "selected": {
+        "commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+        "tree": "acb6583fbb0e25347f70ee44cbdacafd6df95e37",
+        "caller_lock_proved_by_python": false,
+        "live_atomicity_claimed": false
+      },
+      "files": {
+        "src/terminal_app.rs": {
+          "after": {
+            "bytes": 45472,
+            "mode": "100644",
+            "sha256": "95295e2ab3a0b117676276e5df06a550a39df64a6a02008e66182213b76b82d9"
+          },
+          "before": {
+            "bytes": 42898,
+            "mode": "100644",
+            "sha256": "2ce7c225c4092974ddc3a9f4f80589356c6ef7a68a7cb6e080c53b1d20c72222"
+          }
+        },
+        "tests/ui_harness.rs": {
+          "after": {
+            "bytes": 16655,
+            "mode": "100644",
+            "sha256": "535ecc370973d0d9580dcfeeb6875536f20e5da1f4a8f29df6edb69c711004c8"
+          },
+          "before": {
+            "bytes": 15937,
+            "mode": "100644",
+            "sha256": "6f62f1fb3555074d8a1c79e3d9446142d01835b941c4dd75822081326323494b"
+          }
+        }
+      },
+      "private_post_command_census_files": 47,
+      "closed_result": {
+        "status": "completed",
+        "closed": true,
+        "exit_code": 101,
+        "stop_reason": null,
+        "shared_accepted": false,
+        "promoted": false,
+        "qualification_only": false,
+        "source_endpoints_match": true,
+        "source_endpoint_errors": []
+      },
+      "execution": {
+        "argv": [
+          "/usr/bin/env",
+          "RUSTC=/toolchain/bin/rustc",
+          "PATH=/toolchain/bin:/usr/bin:/bin",
+          "/bin/sh",
+          "-c",
+          "cargo test slash_command --all-targets --all-features"
+        ],
+        "closed": true,
+        "exit_code": 101,
+        "timed_out": false,
+        "cancelled": false,
+        "stop_reason": null,
+        "elapsed_seconds": 8.692733488045633,
+        "stdout_sha256": "989d7b98625b6c4fbd71ac8d9e580530333765992d88cd8b2d629053cb0ed8a7",
+        "stderr_sha256": "25e9b5a14aa926686184bd39acaa80c9b3b986caecf5863e35039b1ab852ee41"
+      },
+      "test_only": true,
+      "shared_final_equivalence": "not inspected",
+      "dependency_pins_in_retained_result": 65,
+      "dependency_census_reverified": false,
+      "semantic_witness": {
+        "scope": "Terminal keystroke routing and UiHarness assertions",
+        "terminal_app_unchanged_prefix_bytes": 36072,
+        "terminal_app_unchanged_prefix_sha256": "b5116a614cb04b156f8770fc49027c7cb9d49a64d2be461edda3dc1f40950170",
+        "changes_after_prefix": "Only existing cfg(test) module; tests/ui_harness.rs changes are test definitions/assertions. Full diff inspected.",
+        "added_tests": [
+          "terminal_app::tests::slash_command_routes_selected_agent_prompt_to_backend_and_renders_reply",
+          "scripted_harness_slash_command_requires_non_whitespace_command_name"
+        ],
+        "strengthened_existing_test": "scripted_harness_slash_command_starts_agent_chat_command_from_chat_view",
+        "actual_failure": {
+          "path": "test/preview/repo/src/terminal_app.rs",
+          "line": 1413,
+          "kind": "assert_eq UiMode",
+          "observed": "Insert",
+          "expected": "Command",
+          "trigger": "Escape followed by / status and Enter"
+        },
+        "prior_assertions_reached": "Valid /status sends exactly once to user-1 and renders both input and backend response.",
+        "unreached_assertions": "Later send-count/no-malformed-message assertions; integration ui_harness test target stops behind failed library target.",
+        "actual_tests": {
+          "passed": 1,
+          "failed": 1,
+          "filtered": 12,
+          "target": "library"
+        }
+      }
+    },
+    {
+      "run_id": "test-first-01-workflow-003",
+      "operation": "private-preview/test-first-01-workflow-003/preview-0000000000000001",
+      "owner": {
+        "agent_id": "user-2",
+        "launch_generation": 2,
+        "proposal_id": "slash-agent-command-test-2",
+        "revision_of": null
+      },
+      "proposal": {
+        "command": "cargo test command_agent_slash_message_routes_to_selected_agent",
+        "format": "edit",
+        "lock_paths": [
+          "target"
+        ],
+        "reason": "ADD controller coverage for command-surface slash prompts so they route to the selected backend agent",
+        "test_paths": [
+          "src/workspace.rs"
+        ],
+        "test_purpose": "Reproduce that a command-agent prompt beginning with a slash command should be delivered to the selected user agent and render the backend reply in that session instead of using command-agent help."
+      },
+      "body_bytes": 2478,
+      "body_sha256": "e034e0c8738f607f0a7a0b749fb2c82c592205eaa6c35bf512d60658c2205785",
+      "selected": {
+        "commit": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+        "tree": "acb6583fbb0e25347f70ee44cbdacafd6df95e37",
+        "caller_lock_proved_by_python": false,
+        "live_atomicity_claimed": false
+      },
+      "files": {
+        "src/workspace.rs": {
+          "after": {
+            "bytes": 42308,
+            "mode": "100644",
+            "sha256": "dc5ec3dfacff4f7c3f5863d7e2d735944c6ca7d50773b2b5c37f08546323c0be"
+          },
+          "before": {
+            "bytes": 40263,
+            "mode": "100644",
+            "sha256": "d8c9a69e99f61f42a7f8d511c70ba1c20f73be4ee5cb4edba0dde0b04d57a2b1"
+          }
+        }
+      },
+      "private_post_command_census_files": 47,
+      "closed_result": {
+        "status": "completed",
+        "closed": true,
+        "exit_code": 101,
+        "stop_reason": null,
+        "shared_accepted": false,
+        "promoted": false,
+        "qualification_only": false,
+        "source_endpoints_match": true,
+        "source_endpoint_errors": []
+      },
+      "execution": {
+        "argv": [
+          "/usr/bin/env",
+          "RUSTC=/toolchain/bin/rustc",
+          "PATH=/toolchain/bin:/usr/bin:/bin",
+          "/bin/sh",
+          "-c",
+          "cargo test command_agent_slash_message_routes_to_selected_agent"
+        ],
+        "closed": true,
+        "exit_code": 101,
+        "timed_out": false,
+        "cancelled": false,
+        "stop_reason": null,
+        "elapsed_seconds": 10.693348547094502,
+        "stdout_sha256": "e2db147ed1caae7cd4ea7c3dcc0c30d576ef8e0e496088ffb8af832bc13b30ea",
+        "stderr_sha256": "06078baea7c40e4ae386c60833759c764e71f137e1f97b16d61e268b40a09002"
+      },
+      "test_only": true,
+      "shared_final_equivalence": "not inspected",
+      "dependency_pins_in_retained_result": 65,
+      "dependency_census_reverified": false,
+      "semantic_witness": {
+        "scope": "Direct command-agent controller method, not raw terminal keystrokes",
+        "inserted_cfg_test_module_byte_range": [
+          29538,
+          31583
+        ],
+        "inserted_bytes": 2045,
+        "removing_range_restores_every_before_byte": true,
+        "added_test": "workspace::tests::command_agent_slash_message_routes_to_selected_agent",
+        "actual_failure": {
+          "path": "test/preview/repo/src/workspace.rs",
+          "line": 867,
+          "kind": "wait_for_session_line assertion",
+          "expected": "backend response to /status in selected user session within one second",
+          "trigger": "controller.send_command_agent_message(\"/status\")"
+        },
+        "unreached_assertions": "Subsequent selected transcript input/reply assertions and absence-of-command-help assertion.",
+        "actual_tests": {
+          "passed": 0,
+          "failed": 1,
+          "filtered": 13,
+          "target": "library"
+        },
+        "source_boundary": "Accepted src/workspace.rs:158 routes through command_agent_response to command transcript/command execution, unlike selected-agent send_message."
+      }
+    }
+  ],
+  "source_pins": {
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/capture-input.json": "64b5abff8340b2229bfec0ba8023d91b0c392642386c12ba29358f0d025f7113",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/CAPTURE-ATTEMPT.json": "f46edafbae699222f116777aa1dc636e04a1ff52c892c40902179c4c0739c7cb",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/CAPTURE-RESULT.json": "e920ac47b4781897ca9d0b50f99c3488728f026357abf6d1c66a3b4d4e974cc1",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/capture-output.json": "541afe9218daf4c927358105376ba3d488a96210d2b6373d9e75cb55b6222730",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/capture-process.json": "d4d24e34875b28cef2a6fe155b4f0c1b9bde51f8df246ac94dee5cbaac0ba39c",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/test-input.json": "8dc5d785eca549b04a9e089ec3b0ec1c4b1b5ed34c7b1c169d74edfad235ae18",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/TEST-ATTEMPT.json": "798d725c2c906c52ddb38bd3d463a9b040c13aae15b5c942b1ed1b98cfcbf6dc",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/TEST-RESULT.json": "b4f158a5a9013cc5ddc2ad0a8c5d14facd31796ecf8e14a551a5c47c472f40e6",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/TEST-EXECUTION.json": "c5f98033012742756e8f4f2b91e0870218e7b5725382b38a69ac8dc639b516b4",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/test-output.json": "82bf8c5a03436a20f620853cb70dddcecd9fea41976ad3dc481483766bd51200",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/test-process.json": "c1c30e6440416364de5594c4075c9a41e9bc06a3ef887e84fcc928ad1bf0d6a3",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/root-lock.json": "fd9f02c431b390535be72e1c463929fca08313dde2bd75549d8a061b6dd40d35",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/capture/SELECTED.json": "b3cf4351fc3740f20922e23f14d1d1ab7e15afba5fa71ddd8204682598432627",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/capture/accepted.bundle": "ec1c907aa703d68e19b655c3389d5c6ad66398a4a314b945cb738c2a351cdc73",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/test/accepted/src/terminal_app.rs": "2ce7c225c4092974ddc3a9f4f80589356c6ef7a68a7cb6e080c53b1d20c72222",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/test/preview/repo/src/terminal_app.rs": "95295e2ab3a0b117676276e5df06a550a39df64a6a02008e66182213b76b82d9",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/test/accepted/tests/ui_harness.rs": "6f62f1fb3555074d8a1c79e3d9446142d01835b941c4dd75822081326323494b",
+    "private-preview/test-first-01-workflow-001/preview-0000000000000001/test/preview/repo/tests/ui_harness.rs": "535ecc370973d0d9580dcfeeb6875536f20e5da1f4a8f29df6edb69c711004c8",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/capture-input.json": "8de56eaa5c2112c212bc960d16fbb1e2e2d79dc5ec2c12cf84b62a04d434c95c",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/CAPTURE-ATTEMPT.json": "c21c6b2c87488c4421f43cce0cb76fed9f6c73d3de8cb88e50e353e38724b9e8",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/CAPTURE-RESULT.json": "05d03eb0085e411c08022a1d42b87a9cfa04dbcaf5f02a1d905632984e9faaeb",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/capture-output.json": "58c33159cbab8a154055ebab0027bb60b7323e6ab10b122268b558d4cba3230d",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/capture-process.json": "e092dda910e6afb88679ffa5d4d37902a4c34c1ca05eee24e8b1156ca26a51b9",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/test-input.json": "5ba66e0f6078ac4b0b7a2eac87049f3996f2ba5a42d8f4dc5263a11d75bce5a9",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/TEST-ATTEMPT.json": "0c36f6e69d98270ef356c23783ab727b041d18e7b9bd17616c78a5a1be700a3a",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/TEST-RESULT.json": "44829aa9a894ed71a2ad92cbeb210ddab91942bd396cb8877d6d7f57cb69dce3",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/TEST-EXECUTION.json": "edb64a80acf255c7ff825d19343cbbcc73e9b2738f8852422228672b19805958",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/test-output.json": "cc6c477aaac5812e8ec930529b4e20cc86adf61d1fe1c18805ea31b1018a2798",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/test-process.json": "3e87e1ea016dff7780011778e5ef20f43988770b6d172d0894969d9eb3445c09",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/root-lock.json": "4d876c089154a3168bf21bacefd3e08f35412e3f20cd56b6ee2f458bad1f0d68",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/capture/SELECTED.json": "43130e624c6687de215aa5ffd88a0151bb19368bad7368b275b3eb4eaf074fbc",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/capture/accepted.bundle": "ec1c907aa703d68e19b655c3389d5c6ad66398a4a314b945cb738c2a351cdc73",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/test/accepted/src/workspace.rs": "d8c9a69e99f61f42a7f8d511c70ba1c20f73be4ee5cb4edba0dde0b04d57a2b1",
+    "private-preview/test-first-01-workflow-003/preview-0000000000000001/test/preview/repo/src/workspace.rs": "dc5ec3dfacff4f7c3f5863d7e2d735944c6ca7d50773b2b5c37f08546323c0be"
+  },
+  "source_pins_before_after_match": true,
+  "directly_listed_source_pin_count": 34
+}

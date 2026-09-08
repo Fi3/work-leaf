@@ -4,14 +4,23 @@
 
 Stage B identification is active under the user's explicit requirement to finish
 that step before final handoff. [Current continuation](STAGE-B-RESUMPTION-20260908.md)
-covers the running C15 effect screen, C21's separately asked qualification choice,
+covers the closed C15 effect screen, C21's separately asked qualification choice,
 and remaining coupled work-selection/review/integration checks. Diagnostic003 is
 a completed prerequisite, not completion of mechanism identification. All three
-modified-only C15 workflows run concurrently under the sole supervisor launch
-at09:57:50UTC on2026-09-08. The frozen `test-first-01` manifest `00ff0668…`
+modified-only C15 workflows ran concurrently under the sole supervisor launch
+at09:57:50UTC on2026-09-08 and are closed failures at10:31:56.131267UTC.
+No provider is running and no replacement is admitted. The frozen `test-first-01` manifest `00ff0668…`
 contains187 inputs. Actual checkout binding and v6 activation pass for all three;
 [startup evidence](phases/test-first-01/STARTUP-CHECKPOINT.json) is separate from
-full workflow, terminal and effect qualification. Current-global
+full workflow, terminal and effect qualification. Original failures include
+insufficient patch-producing agents and idle termination. The finite source/event
+witness identifies skipped one-second usage grace at all five inspected preview
+interrupts because the observer lacks the v6 preview directive grammar. Each
+controller mismatch equals a captured carried notification repeating the prior
+turn's total and last-usage values, not newly charged-response evidence. Original
+flags remain. The non-target timing difference precludes a clean test-timing
+effect conclusion. Future-only selector and observer qualification are separate
+from the immutable failed batch. Current-global
 compatibility is established by the [exact tooltip qualification](preflight/test-first-screen/CONFIG-TOOLTIP-QUALIFICATION.md),
 without editing configuration or weakening the original drift monitor. C08's
 automatic-refresh representation implementation proceeds in a separate worktree;
@@ -31,7 +40,7 @@ both with clean fmt/Clippy. Actual003 supplies real-agent verification. Original
 analyze/extract run once each with exits 2/0, retaining one interrupted-turn usage
 gap and eight exact observer-ELF marker flags. No token effect is estimated.
 All previous failures and partial outcomes remain saved. The separate three-run
-screen is active; no control, Direct workflow, old benchmark rerun or automatic
+screen is closed failed; no control, Direct workflow, old benchmark rerun or automatic
 replacement is authorized by the one-diagnostic scope. Broader causal direction/percentage
 attribution remains separate unfinished work, not disguised as workflow readiness.
 

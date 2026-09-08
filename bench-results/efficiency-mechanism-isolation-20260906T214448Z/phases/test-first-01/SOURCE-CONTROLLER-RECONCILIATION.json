@@ -1,0 +1,813 @@
+{
+  "schema": "source-controller-reconciliation-five-closed-rows-v1",
+  "phase_root": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/test-first-01",
+  "scope": "Five explicitly flagged agent rows in three now-closed original captures. One exact event witness per mismatch; no accounting/helper replay, cost totals, native ledger census or cleared flags.",
+  "closed_runs": [
+    {
+      "run_id": "test-first-01-workflow-001",
+      "terminal_path": "logs/test-first-01-workflow-001.exit.json",
+      "finished_at": "2026-09-08T10:23:53.625782+00:00",
+      "launcher_exit_code": 1,
+      "original_errors": [
+        "controller usage for user-2 does not match replayed pre-interrupt usage",
+        "controller usage for user-3 does not match replayed pre-interrupt usage",
+        "interrupted provider turn has no complete usage: count=2"
+      ],
+      "original_capture_complete": false,
+      "original_interrupted_provider_turns": 2
+    },
+    {
+      "run_id": "test-first-01-workflow-002",
+      "terminal_path": "logs/test-first-01-workflow-002.exit.json",
+      "finished_at": "2026-09-08T10:21:35.534319+00:00",
+      "launcher_exit_code": 1,
+      "original_errors": [
+        "controller usage for user-3 does not match replayed pre-interrupt usage",
+        "interrupted provider turn has no complete usage: count=3"
+      ],
+      "original_capture_complete": false,
+      "original_interrupted_provider_turns": 3
+    },
+    {
+      "run_id": "test-first-01-workflow-003",
+      "terminal_path": "logs/test-first-01-workflow-003.exit.json",
+      "finished_at": "2026-09-08T10:31:55.834438+00:00",
+      "launcher_exit_code": 1,
+      "original_errors": [
+        "controller usage for user-2 does not match replayed pre-interrupt usage",
+        "controller usage for user-3 does not match replayed pre-interrupt usage",
+        "interrupted provider turn has no complete usage: count=2"
+      ],
+      "original_capture_complete": false,
+      "original_interrupted_provider_turns": 2
+    }
+  ],
+  "rows": [
+    {
+      "run_id": "test-first-01-workflow-001",
+      "agent_id": "user-2",
+      "thread_id": "01a08073-ef6c-7e41-acaf-486e73f5fe7a",
+      "turn_id": "01a0807c-f299-73f3-bec0-c1eecb6709dc",
+      "capture_relative_path": "runs/test-first-01-workflow-001/test-first-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000561533597926719-670",
+      "owner_policy_trace_line": 3,
+      "owned_initial_request": {
+        "line": 6,
+        "offset": 22086,
+        "bytes": 21498,
+        "sha256": "0e49bdc50395ca188cf47760ab573f1cb2ea84887987e656976f914d58085f2b"
+      },
+      "accepted_request": {
+        "line": 38,
+        "offset": 102610,
+        "bytes": 667,
+        "sha256": "dd80f2e92a84c7cab513ab4a37797568658b02f655f048e58e6a1cc8a425eb14"
+      },
+      "accepted_turn_response": {
+        "line": 15429,
+        "offset": 5786188,
+        "bytes": 200,
+        "sha256": "27f7be31ece455e455c2654c8c201ec7acd2fb86b1de9b8560bb01ea81855407"
+      },
+      "preview_message": {
+        "line": 16387,
+        "offset": 6043990,
+        "bytes": 5570,
+        "sha256": "e0310e3923f99f27ab67e7b149a489a28da0ab3bd45bf8dcfeebe03a72fc1a20",
+        "item_id": "msg_026b6adee03a35c6016a9fde80d20487d2bcb5576108010312",
+        "text_sha256": "46c2a0f64e06e45c50c9c9674c72867c4cfb8d0c20dd54cbdaf6677a703aba4d",
+        "text_bytes": 4972,
+        "proposal_id": "slash-agent-command-test-3",
+        "revision_of": null,
+        "body_sha256": "41513e9b0124f9d5ba3853dc7e9786b403ed3cdd11167b698292807f9bd8aac9",
+        "complete_standalone_typed_envelope": true,
+        "completed_agent_message_count": 1
+      },
+      "usage_notification": {
+        "line": 16388,
+        "offset": 6049560,
+        "bytes": 527,
+        "sha256": "e047e3d398255e0cc36eae509a2ef909d4f5f30d0a321e5c1d0a483cae5357c7",
+        "last_four_fields": {
+          "input_tokens": 94454,
+          "cached_input_tokens": 91520,
+          "output_tokens": 2535,
+          "reasoning_output_tokens": 116
+        },
+        "prior_same_thread_usage_line": 15423,
+        "cumulative_increase_contains_last": false,
+        "prior_turn_id": "01a08079-d6c8-7af2-b667-d25dc303fd6c",
+        "entire_last_and_total_equal_prior": true,
+        "new_response_charge_proved": false
+      },
+      "reported_controller_delta_exactly_equals_this_last": true,
+      "controller_state_locator": "final-state.json#/snapshot/sessions/2/token_usage",
+      "controller_row_matches_retained_state": true,
+      "interrupt_original": {
+        "line": 40,
+        "offset": 103424,
+        "bytes": 147,
+        "sha256": "9d5fe821eda17891715550cdbea7e43b66a297e0bb10085130962f999e154873",
+        "rpc_id": "39"
+      },
+      "interrupt_forwarded": {
+        "line": 40,
+        "offset": 103598,
+        "bytes": 147,
+        "sha256": "9d5fe821eda17891715550cdbea7e43b66a297e0bb10085130962f999e154873"
+      },
+      "interrupt_ack": {
+        "line": 16390,
+        "offset": 6050469,
+        "bytes": 24,
+        "sha256": "faed12c760f5ecb4cc19810ff791bfffe5efef70ee0e2cea760d5f0bd1bfdf59"
+      },
+      "turn_terminal": {
+        "line": 16392,
+        "offset": 6050642,
+        "bytes": 308,
+        "sha256": "31ffa801d0697668d8d7d7fe797c68af6f82cb6613ad62e857b59321f5cded06",
+        "status": "interrupted"
+      },
+      "chunk_time_order": {
+        "preview": {
+          "line": 13699,
+          "received_monotonic_ns": 562164241314810,
+          "chunk_sha256": "e0310e3923f99f27ab67e7b149a489a28da0ab3bd45bf8dcfeebe03a72fc1a20"
+        },
+        "host_interrupt": {
+          "line": 44,
+          "received_monotonic_ns": 562164241421668,
+          "chunk_sha256": "9d5fe821eda17891715550cdbea7e43b66a297e0bb10085130962f999e154873"
+        },
+        "usage": {
+          "line": 13700,
+          "received_monotonic_ns": 562164244134674,
+          "chunk_sha256": "e047e3d398255e0cc36eae509a2ef909d4f5f30d0a321e5c1d0a483cae5357c7"
+        }
+      },
+      "grace": {
+        "line": 14,
+        "offset": 2805,
+        "bytes": 201,
+        "sha256": "980d141a7829f10d06095a6e1a99508a39d2e1e12b0f8e796f0adf5a422fabb5",
+        "record": {
+          "thread_id": "01a08073-ef6c-7e41-acaf-486e73f5fe7a",
+          "turn_id": "01a0807c-f299-73f3-bec0-c1eecb6709dc",
+          "configured_grace_ms": 1000,
+          "output_resume_policy": "forward",
+          "waited_ms": 0,
+          "outcome": "not-eligible"
+        }
+      },
+      "next_same_thread_request": {
+        "original": {
+          "line": 41,
+          "offset": 103571,
+          "bytes": 2798,
+          "sha256": "1abfecf40aec4df8c772b2afaf438b4940437676f081d4e4c5cf0bb372288668"
+        },
+        "forwarded": {
+          "line": 41,
+          "offset": 103745,
+          "bytes": 2798,
+          "sha256": "1abfecf40aec4df8c772b2afaf438b4940437676f081d4e4c5cf0bb372288668"
+        },
+        "rpc_id": "40",
+        "input_text_sha256": "9625808551d077eb2941a419995285a8b33cb212a9e501bd131a6f2d8d4c4859",
+        "private_delivery_trace_lines": [
+          10
+        ]
+      },
+      "matching_private_proposal_trace_lines": [
+        8
+      ],
+      "retained_controller_errors": []
+    },
+    {
+      "run_id": "test-first-01-workflow-001",
+      "agent_id": "user-3",
+      "thread_id": "01a08074-0335-76c2-951d-0bd6c908e903",
+      "turn_id": "01a0807c-659a-7eb3-a638-5f3afe1830cf",
+      "capture_relative_path": "runs/test-first-01-workflow-001/test-first-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000561533597926719-670",
+      "owner_policy_trace_line": 4,
+      "owned_initial_request": {
+        "line": 8,
+        "offset": 43795,
+        "bytes": 21443,
+        "sha256": "d5c86adbda68f2a31df4971fc67ff56f73b8ea6008ba6dabc51238486950ee00"
+      },
+      "accepted_request": {
+        "line": 36,
+        "offset": 101796,
+        "bytes": 667,
+        "sha256": "622a82af36d42992413810c838ac00daba489f7d4f02bf8cee7feb7deada4515"
+      },
+      "accepted_turn_response": {
+        "line": 13730,
+        "offset": 5316470,
+        "bytes": 200,
+        "sha256": "f9bfca5080cd04e3cfd1d66303296191961216a6f4333303e41ec285d1267255"
+      },
+      "preview_message": {
+        "line": 16144,
+        "offset": 5969235,
+        "bytes": 8501,
+        "sha256": "be38e638ed900fa9caa796175ea71c9e26870b5edad2ee0314ae968bf0ced97c",
+        "item_id": "msg_0e18b44ff363e31b016a9fde5c632087d2a151c4768ce5746a",
+        "text_sha256": "1a89e4f6292be74ead9128b8a82e776596fc3aacfe4b64ad963290949fade6ec",
+        "text_bytes": 7738,
+        "proposal_id": "review-done-confirmation-tests-v3",
+        "revision_of": "review-done-confirmation-tests-v2",
+        "body_sha256": "2c07239e8e840a075c7994a4ce675d6be6d5c6f39f1eb01718665be5b4ccd110",
+        "complete_standalone_typed_envelope": true,
+        "completed_agent_message_count": 1
+      },
+      "usage_notification": {
+        "line": 16145,
+        "offset": 5977736,
+        "bytes": 530,
+        "sha256": "26f7b73f6c980e2c54d57bf35430ab3d9c1b59342bce0b403a0e8f8a22b4a085",
+        "last_four_fields": {
+          "input_tokens": 102359,
+          "cached_input_tokens": 99712,
+          "output_tokens": 10715,
+          "reasoning_output_tokens": 5785
+        },
+        "prior_same_thread_usage_line": 13725,
+        "cumulative_increase_contains_last": false,
+        "prior_turn_id": "01a08079-64fa-7260-9d01-a7c79a00f7ac",
+        "entire_last_and_total_equal_prior": true,
+        "new_response_charge_proved": false
+      },
+      "reported_controller_delta_exactly_equals_this_last": true,
+      "controller_state_locator": "final-state.json#/snapshot/sessions/3/token_usage",
+      "controller_row_matches_retained_state": true,
+      "interrupt_original": {
+        "line": 39,
+        "offset": 103277,
+        "bytes": 147,
+        "sha256": "028d8e7e093e2be62e67ab8fff636bf49945bfbca9c26c67c5e6b08b4474b22d",
+        "rpc_id": "38"
+      },
+      "interrupt_forwarded": {
+        "line": 39,
+        "offset": 103451,
+        "bytes": 147,
+        "sha256": "028d8e7e093e2be62e67ab8fff636bf49945bfbca9c26c67c5e6b08b4474b22d"
+      },
+      "interrupt_ack": {
+        "line": 16147,
+        "offset": 5978648,
+        "bytes": 24,
+        "sha256": "7d595235ac8ddadc59dacaa176fe8d5b9b51db2a779a219faee4eb94d4df9dcf"
+      },
+      "turn_terminal": {
+        "line": 16149,
+        "offset": 5978821,
+        "bytes": 308,
+        "sha256": "75f3c2e59e101b63b67552534d40153a065919f9066823d884479c79b46620b5",
+        "status": "interrupted"
+      },
+      "chunk_time_order": {
+        "preview": {
+          "line": 13458,
+          "received_monotonic_ns": 562142261083968,
+          "chunk_sha256": "be38e638ed900fa9caa796175ea71c9e26870b5edad2ee0314ae968bf0ced97c"
+        },
+        "host_interrupt": {
+          "line": 43,
+          "received_monotonic_ns": 562142261201512,
+          "chunk_sha256": "028d8e7e093e2be62e67ab8fff636bf49945bfbca9c26c67c5e6b08b4474b22d"
+        },
+        "usage": {
+          "line": 13459,
+          "received_monotonic_ns": 562142264061744,
+          "chunk_sha256": "26f7b73f6c980e2c54d57bf35430ab3d9c1b59342bce0b403a0e8f8a22b4a085"
+        }
+      },
+      "grace": {
+        "line": 13,
+        "offset": 2604,
+        "bytes": 201,
+        "sha256": "cc76e9bdaee60c91fb9dc81b02ca07979a1b9d80ed16fc79a94ac4d18d599884",
+        "record": {
+          "thread_id": "01a08074-0335-76c2-951d-0bd6c908e903",
+          "turn_id": "01a0807c-659a-7eb3-a638-5f3afe1830cf",
+          "configured_grace_ms": 1000,
+          "output_resume_policy": "forward",
+          "waited_ms": 0,
+          "outcome": "not-eligible"
+        }
+      },
+      "next_same_thread_request": null,
+      "matching_private_proposal_trace_lines": [],
+      "retained_controller_errors": [
+        {
+          "index": 74,
+          "text": "error: private test-first: revision must name a delivered proposal in this launch generation"
+        }
+      ]
+    },
+    {
+      "run_id": "test-first-01-workflow-002",
+      "agent_id": "user-3",
+      "thread_id": "01a08074-033f-7680-9c5b-e0c46b5ee9f8",
+      "turn_id": "01a08081-1a4a-7ac2-bef7-cbfeea8646f5",
+      "capture_relative_path": "runs/test-first-01-workflow-002/test-first-01-workflow-002-three-feature-bench-artifacts/observation/app-server/00000561533608242090-706",
+      "owner_policy_trace_line": 4,
+      "owned_initial_request": {
+        "line": 8,
+        "offset": 43795,
+        "bytes": 21443,
+        "sha256": "c10ff5c1cb92cc8950661d372d3152726333b842890932a825b3725ea1256cc8"
+      },
+      "accepted_request": {
+        "line": 39,
+        "offset": 103172,
+        "bytes": 667,
+        "sha256": "59f3be43304db1f427b12ad8a78c92be5b290859e2b350f6297ae08e89870c43"
+      },
+      "accepted_turn_response": {
+        "line": 12046,
+        "offset": 4861983,
+        "bytes": 200,
+        "sha256": "1848ec6e4d4bbe9e895cd1971cbfc715bd0693503bf0a42d74f488f631fa1553"
+      },
+      "preview_message": {
+        "line": 13839,
+        "offset": 5320204,
+        "bytes": 7514,
+        "sha256": "a407cfd26539236096bb472f162147579aa3c12d79b87f2b6fb491836bcfc2b1",
+        "item_id": "msg_0b2cd58f117c7bdd016a9fdf93dbdc87d283934b46fa752c9d",
+        "text_sha256": "c7c00d2f7d996d08155f07cec0c6a5eba8fef0bad458b080d0b03c6533dbdb2e",
+        "text_bytes": 6775,
+        "proposal_id": "feature-done-confirmation-v2",
+        "revision_of": null,
+        "body_sha256": "841c1bcf9363adfcc3dd3ce85522f04921dd977f23ac9c0102a6a18bd0810cfd",
+        "complete_standalone_typed_envelope": true,
+        "completed_agent_message_count": 1
+      },
+      "usage_notification": {
+        "line": 13840,
+        "offset": 5327718,
+        "bytes": 531,
+        "sha256": "aaed0d10acf27a34a2c57ef39a7436e6ce9e68cce70c03ba0638a3ddf8705c4c",
+        "last_four_fields": {
+          "input_tokens": 95699,
+          "cached_input_tokens": 93568,
+          "output_tokens": 20896,
+          "reasoning_output_tokens": 16445
+        },
+        "prior_same_thread_usage_line": 12041,
+        "cumulative_increase_contains_last": false,
+        "prior_turn_id": "01a0807b-4d6f-74f2-9eea-37b7b80e8b41",
+        "entire_last_and_total_equal_prior": true,
+        "new_response_charge_proved": false
+      },
+      "reported_controller_delta_exactly_equals_this_last": true,
+      "controller_state_locator": "final-state.json#/snapshot/sessions/3/token_usage",
+      "controller_row_matches_retained_state": true,
+      "interrupt_original": {
+        "line": 40,
+        "offset": 103839,
+        "bytes": 147,
+        "sha256": "855aed9afe5beefee21ae404f4eb69d5f1f1079f1fcbe050c9245e7d1fb243f5",
+        "rpc_id": "39"
+      },
+      "interrupt_forwarded": {
+        "line": 40,
+        "offset": 104013,
+        "bytes": 147,
+        "sha256": "855aed9afe5beefee21ae404f4eb69d5f1f1079f1fcbe050c9245e7d1fb243f5"
+      },
+      "interrupt_ack": {
+        "line": 13842,
+        "offset": 5328631,
+        "bytes": 24,
+        "sha256": "faed12c760f5ecb4cc19810ff791bfffe5efef70ee0e2cea760d5f0bd1bfdf59"
+      },
+      "turn_terminal": {
+        "line": 13844,
+        "offset": 5328804,
+        "bytes": 308,
+        "sha256": "4fd958ef4722f703bbdf516b3199c1c11abe1a805fa400e1298fad87f987109e",
+        "status": "interrupted"
+      },
+      "chunk_time_order": {
+        "preview": {
+          "line": 11554,
+          "received_monotonic_ns": 562448201954403,
+          "chunk_sha256": "a407cfd26539236096bb472f162147579aa3c12d79b87f2b6fb491836bcfc2b1"
+        },
+        "host_interrupt": {
+          "line": 44,
+          "received_monotonic_ns": 562448202165745,
+          "chunk_sha256": "855aed9afe5beefee21ae404f4eb69d5f1f1079f1fcbe050c9245e7d1fb243f5"
+        },
+        "usage": {
+          "line": 11555,
+          "received_monotonic_ns": 562448204668596,
+          "chunk_sha256": "aaed0d10acf27a34a2c57ef39a7436e6ce9e68cce70c03ba0638a3ddf8705c4c"
+        }
+      },
+      "grace": {
+        "line": 13,
+        "offset": 2604,
+        "bytes": 201,
+        "sha256": "7847c459a88ae0f702c952a680061c2e5914ceeec36429b68feab684bf1029f3",
+        "record": {
+          "thread_id": "01a08074-033f-7680-9c5b-e0c46b5ee9f8",
+          "turn_id": "01a08081-1a4a-7ac2-bef7-cbfeea8646f5",
+          "configured_grace_ms": 1000,
+          "output_resume_policy": "forward",
+          "waited_ms": 0,
+          "outcome": "not-eligible"
+        }
+      },
+      "next_same_thread_request": {
+        "original": {
+          "line": 41,
+          "offset": 103986,
+          "bytes": 2877,
+          "sha256": "94a9c5fa822f97124253e73342b5665246a258041ef90010ce5945598008ca19"
+        },
+        "forwarded": {
+          "line": 41,
+          "offset": 104160,
+          "bytes": 2877,
+          "sha256": "94a9c5fa822f97124253e73342b5665246a258041ef90010ce5945598008ca19"
+        },
+        "rpc_id": "40",
+        "input_text_sha256": "ec4bfb70b9b95f4d2680b53494ec74e2cee17c2e81c123dd4164abd66469057c",
+        "private_delivery_trace_lines": [
+          10
+        ]
+      },
+      "matching_private_proposal_trace_lines": [
+        8
+      ],
+      "retained_controller_errors": []
+    },
+    {
+      "run_id": "test-first-01-workflow-003",
+      "agent_id": "user-2",
+      "thread_id": "01a08073-ef6a-7c40-83f6-44ab4d4fe997",
+      "turn_id": "01a0807a-cdb9-7d01-8cbc-aa52da2365c5",
+      "capture_relative_path": "runs/test-first-01-workflow-003/test-first-01-workflow-003-three-feature-bench-artifacts/observation/app-server/00000561533597929093-668",
+      "owner_policy_trace_line": 3,
+      "owned_initial_request": {
+        "line": 6,
+        "offset": 22086,
+        "bytes": 21498,
+        "sha256": "e3e410616919dea3d90e93ffb170a4270ade642e287640d1d787bbac0459d109"
+      },
+      "accepted_request": {
+        "line": 28,
+        "offset": 76662,
+        "bytes": 667,
+        "sha256": "db5692cd27d7021e4741a3514db64a27bb2bffce317b7d3d8a8f118dad16f879"
+      },
+      "accepted_turn_response": {
+        "line": 5116,
+        "offset": 3066027,
+        "bytes": 200,
+        "sha256": "a95221afa664b0b6234bb731651bac3989bf2b29099ecd566c4e7938e1ce451f"
+      },
+      "preview_message": {
+        "line": 7781,
+        "offset": 3796533,
+        "bytes": 3557,
+        "sha256": "96e081961e2635897d36753d5fcaecca532c4255fa826584331dfd1d5c68d6d3",
+        "item_id": "msg_0185974eec52c4b3016a9fddf4de3c87d2b061a0b55532a074",
+        "text_sha256": "5c52f20289cc9e70ae93bbab42bcfde385c069ccd31ddb74f2fdb129bed7167d",
+        "text_bytes": 3049,
+        "proposal_id": "slash-agent-command-test-2",
+        "revision_of": null,
+        "body_sha256": "e034e0c8738f607f0a7a0b749fb2c82c592205eaa6c35bf512d60658c2205785",
+        "complete_standalone_typed_envelope": true,
+        "completed_agent_message_count": 1
+      },
+      "usage_notification": {
+        "line": 7782,
+        "offset": 3800090,
+        "bytes": 529,
+        "sha256": "19c856c55a2e7e35ea108dccd033746763983f001ea84b7a4c19131dff80462d",
+        "last_four_fields": {
+          "input_tokens": 118207,
+          "cached_input_tokens": 117120,
+          "output_tokens": 1696,
+          "reasoning_output_tokens": 516
+        },
+        "prior_same_thread_usage_line": 5111,
+        "cumulative_increase_contains_last": false,
+        "prior_turn_id": "01a0807a-4509-73f1-b99b-2171b87610cf",
+        "entire_last_and_total_equal_prior": true,
+        "new_response_charge_proved": false
+      },
+      "reported_controller_delta_exactly_equals_this_last": true,
+      "controller_state_locator": "final-state.json#/snapshot/sessions/2/token_usage",
+      "controller_row_matches_retained_state": true,
+      "interrupt_original": {
+        "line": 31,
+        "offset": 79858,
+        "bytes": 147,
+        "sha256": "eedef8a50f99b6e86d8e2a67088503fa858277e457c83e46cfd452df8b716eb6",
+        "rpc_id": "30"
+      },
+      "interrupt_forwarded": {
+        "line": 31,
+        "offset": 80003,
+        "bytes": 147,
+        "sha256": "eedef8a50f99b6e86d8e2a67088503fa858277e457c83e46cfd452df8b716eb6"
+      },
+      "interrupt_ack": {
+        "line": 7786,
+        "offset": 3801512,
+        "bytes": 24,
+        "sha256": "c254ca6b4bfa727a3c6b1c279e264d01733dbb50cad045263a54796caf6cf978"
+      },
+      "turn_terminal": {
+        "line": 7788,
+        "offset": 3801685,
+        "bytes": 308,
+        "sha256": "0a0cf5c54e9ecf616893a0e572b421dbb44b819e07ec7b8ab3f38fc4a29a1c93",
+        "status": "interrupted"
+      },
+      "chunk_time_order": {
+        "preview": {
+          "line": 6408,
+          "received_monotonic_ns": 562015486689362,
+          "chunk_sha256": "96e081961e2635897d36753d5fcaecca532c4255fa826584331dfd1d5c68d6d3"
+        },
+        "host_interrupt": {
+          "line": 34,
+          "received_monotonic_ns": 562015486777223,
+          "chunk_sha256": "eedef8a50f99b6e86d8e2a67088503fa858277e457c83e46cfd452df8b716eb6"
+        },
+        "usage": {
+          "line": 6409,
+          "received_monotonic_ns": 562015490011460,
+          "chunk_sha256": "19c856c55a2e7e35ea108dccd033746763983f001ea84b7a4c19131dff80462d"
+        }
+      },
+      "grace": {
+        "line": 10,
+        "offset": 1953,
+        "bytes": 201,
+        "sha256": "7812d4b0e37e33341af610a0f5bb4ff3e2f2b5eabc41e02c446f37d9ff8d2201",
+        "record": {
+          "thread_id": "01a08073-ef6a-7c40-83f6-44ab4d4fe997",
+          "turn_id": "01a0807a-cdb9-7d01-8cbc-aa52da2365c5",
+          "configured_grace_ms": 1000,
+          "output_resume_policy": "forward",
+          "waited_ms": 0,
+          "outcome": "not-eligible"
+        }
+      },
+      "next_same_thread_request": {
+        "original": {
+          "line": 33,
+          "offset": 80776,
+          "bytes": 2691,
+          "sha256": "b2ec93a0c0bdb10b8f5c65a3b0c8c54c6832e9c0c89c9ec46a74f734d8a7eab7"
+        },
+        "forwarded": {
+          "line": 33,
+          "offset": 80921,
+          "bytes": 2691,
+          "sha256": "b2ec93a0c0bdb10b8f5c65a3b0c8c54c6832e9c0c89c9ec46a74f734d8a7eab7"
+        },
+        "rpc_id": "32",
+        "input_text_sha256": "9db843e0133abe9368f8129697a5d489c6bcc3c3e3e3cb809f59cb5f84644cb9",
+        "private_delivery_trace_lines": [
+          8
+        ]
+      },
+      "matching_private_proposal_trace_lines": [
+        6
+      ],
+      "retained_controller_errors": []
+    },
+    {
+      "run_id": "test-first-01-workflow-003",
+      "agent_id": "user-3",
+      "thread_id": "01a08074-0331-74d2-a76f-0664b62beac7",
+      "turn_id": "01a08080-10f0-77b0-869f-aadf7ba322ff",
+      "capture_relative_path": "runs/test-first-01-workflow-003/test-first-01-workflow-003-three-feature-bench-artifacts/observation/app-server/00000561533597929093-668",
+      "owner_policy_trace_line": 4,
+      "owned_initial_request": {
+        "line": 8,
+        "offset": 43795,
+        "bytes": 21443,
+        "sha256": "a4e45948cca5aa184395a4c747f42256ae2aa3c4d128445b56068a0aa99e26d0"
+      },
+      "accepted_request": {
+        "line": 49,
+        "offset": 168648,
+        "bytes": 667,
+        "sha256": "2ce8e70f12caf71196ac4f9815a1ba31dcccd34f23be96ec5412da493da27767"
+      },
+      "accepted_turn_response": {
+        "line": 15470,
+        "offset": 6405180,
+        "bytes": 200,
+        "sha256": "343e18433ba9613ca4b7a4d037edad20bf3be76eab04f8ac3b98afd8c5fca8ce"
+      },
+      "preview_message": {
+        "line": 16934,
+        "offset": 6779717,
+        "bytes": 5910,
+        "sha256": "2fe213442d9101db7da21819122a8d6bc9a90e8538db678b4f99fc22bee1bcbe",
+        "item_id": "msg_05bafc6c71565e5c016a9fdf51e48c87d28812819b79a7953c",
+        "text_sha256": "0279cc20a65c05e7782759daac7abe19d38a2794a90655c12c92c6e674232651",
+        "text_bytes": 5256,
+        "proposal_id": "review-done-prompt-v1",
+        "revision_of": null,
+        "body_sha256": "e5df2a3ae4f8d7d4eb5f0d5a600910cceb9f8ad4255974a7559c40a5e5548a86",
+        "complete_standalone_typed_envelope": true,
+        "completed_agent_message_count": 1
+      },
+      "usage_notification": {
+        "line": 16935,
+        "offset": 6785627,
+        "bytes": 533,
+        "sha256": "1694165ddb24d062badac187b285397c5b4407ab174b1eed1e7bd8d1158068d1",
+        "last_four_fields": {
+          "input_tokens": 105343,
+          "cached_input_tokens": 103808,
+          "output_tokens": 16185,
+          "reasoning_output_tokens": 12293
+        },
+        "prior_same_thread_usage_line": 15465,
+        "cumulative_increase_contains_last": false,
+        "prior_turn_id": "01a0807b-90f4-7553-b29d-61839f84cfc1",
+        "entire_last_and_total_equal_prior": true,
+        "new_response_charge_proved": false
+      },
+      "reported_controller_delta_exactly_equals_this_last": true,
+      "controller_state_locator": "final-state.json#/snapshot/sessions/3/token_usage",
+      "controller_row_matches_retained_state": true,
+      "interrupt_original": {
+        "line": 50,
+        "offset": 169315,
+        "bytes": 147,
+        "sha256": "48acaa787fa6cc2bb8de70eaace5469ecf4d9846e643c2e8be8818365448ddd9",
+        "rpc_id": "49"
+      },
+      "interrupt_forwarded": {
+        "line": 50,
+        "offset": 169518,
+        "bytes": 147,
+        "sha256": "48acaa787fa6cc2bb8de70eaace5469ecf4d9846e643c2e8be8818365448ddd9"
+      },
+      "interrupt_ack": {
+        "line": 16937,
+        "offset": 6786542,
+        "bytes": 24,
+        "sha256": "808e03a05156de0bddb9760a23a2d3b9edabe3a4fd7f16be9d62e9743f116cb1"
+      },
+      "turn_terminal": {
+        "line": 16939,
+        "offset": 6786715,
+        "bytes": 308,
+        "sha256": "7d9692e3590170d6c5ade6e3e330036ad2b5efcb21c121bac67a79b92e5090c9",
+        "status": "interrupted"
+      },
+      "chunk_time_order": {
+        "preview": {
+          "line": 14624,
+          "received_monotonic_ns": 562372994779642,
+          "chunk_sha256": "2fe213442d9101db7da21819122a8d6bc9a90e8538db678b4f99fc22bee1bcbe"
+        },
+        "host_interrupt": {
+          "line": 57,
+          "received_monotonic_ns": 562372995164330,
+          "chunk_sha256": "48acaa787fa6cc2bb8de70eaace5469ecf4d9846e643c2e8be8818365448ddd9"
+        },
+        "usage": {
+          "line": 14625,
+          "received_monotonic_ns": 562373010218246,
+          "chunk_sha256": "1694165ddb24d062badac187b285397c5b4407ab174b1eed1e7bd8d1158068d1"
+        }
+      },
+      "grace": {
+        "line": 17,
+        "offset": 3456,
+        "bytes": 201,
+        "sha256": "03503f00ef9376120c9ebcdbc92d2628797ccb428ee3ba03e2a577bfd52524c3",
+        "record": {
+          "thread_id": "01a08074-0331-74d2-a76f-0664b62beac7",
+          "turn_id": "01a08080-10f0-77b0-869f-aadf7ba322ff",
+          "configured_grace_ms": 1000,
+          "output_resume_policy": "forward",
+          "waited_ms": 0,
+          "outcome": "not-eligible"
+        }
+      },
+      "next_same_thread_request": {
+        "original": {
+          "line": 51,
+          "offset": 169462,
+          "bytes": 949,
+          "sha256": "0c920498ee31f1531facba9ba38888d90e0d105b29108385c670f88db7366a90"
+        },
+        "forwarded": {
+          "line": 51,
+          "offset": 169665,
+          "bytes": 949,
+          "sha256": "0c920498ee31f1531facba9ba38888d90e0d105b29108385c670f88db7366a90"
+        },
+        "rpc_id": "50",
+        "input_text_sha256": "3ab359ddfac0da57e8a3e69250917d7235428518f388cd9764967fce3357a7ce",
+        "private_delivery_trace_lines": [
+          17
+        ]
+      },
+      "matching_private_proposal_trace_lines": [
+        15
+      ],
+      "retained_controller_errors": [
+        {
+          "index": 59,
+          "text": "error: private test-first: preview declaration contains unsupported identities, units or command"
+        }
+      ]
+    }
+  ],
+  "source_pins": {
+    "PHASE-MANIFEST.json": "00ff0668de698b75a5200d4145b9919a560d04ec082e505f4bac51e0488a417d",
+    "infrastructure/evidence/src/bench_private_test_first.rs": "1700f26d5ff99271ca12acbfa783ff0d5525d3720c9ba47ff088c1aaa9d40d2f",
+    "infrastructure/evidence/src/orchestrator.rs": "e0ef8167bd1f51cd99d56ae58835ba5d6951549c9dc9a2ccdabf9b2e568ff0f7",
+    "infrastructure/evidence/src/codex.rs": "334eb3008f3b0a8db0d98bed2d3191f5cbf37052fb342dcf26a91ccd4ee502d8",
+    "infrastructure/evidence/src/workspace.rs": "9b05ae5bdae5f334fdceca1b81d638eff230c68edf2d3009d1c2e3bdf9fe07cc",
+    "infrastructure/evidence/bench-observer/src/lib.rs": "188a1b4fd9913556c51024dcc0068be353813c44c688d6d22929da139f392b5f",
+    "infrastructure/evidence/bench-observer/src/raw_capture.rs": "a8397fa90fa8538cc74559c850401314bbb68726e0f1db03724133368c115a4a",
+    "infrastructure/bin/bench-observer": "238bdc610a28edd328d91046f9674dbe59ad2f2d7520fedf681c1ae95a56e386",
+    "launch-inputs/work-leaf-orchestrator-real": "6c5ccec1e20f5004211b56edc4ade335271054468d4ee6adab45cc92cab27d63",
+    "runs/test-first-01-workflow-001/test-first-01-workflow-001-three-feature-bench-artifacts/observation/analysis.json": "a9c8c7cf1535f72aabfdaebfac3437893c1ad81fdeaad15743237fe56b3a1f34",
+    "runs/test-first-01-workflow-001/test-first-01-workflow-001-three-feature-bench-artifacts/observation/controller-usage-reconciliation.json": "0574a88cd4b88e8ab3a41602623c5ba51468f467aa8c5529634a8a7c7eb443fc",
+    "runs/test-first-01-workflow-001/test-first-01-workflow-001-three-feature-bench-artifacts/observation/controller-usage.json": "7a482a1dd6e38b14018e290074bb878124cddd036eaf7a232351084161f92a55",
+    "runs/test-first-01-workflow-001/test-first-01-workflow-001-three-feature-bench-artifacts/final-state.json": "c4e38731eb4fd853c85a47d582a816e7258354f217feb32c55d94cad3e45a4d4",
+    "logs/test-first-01-workflow-001.exit.json": "a568cf596a514b8be8a851e3b59ee926d853d678470a348853b9d1fae711a651",
+    "prompt-events/test-first-01-workflow-001.jsonl": "a75306f9f78c87e36bb40ad7b19700a77a3a4dfc1fd5a853565a411fde665314",
+    "runs/test-first-01-workflow-001/test-first-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000561533597926719-670/server-to-client.raw": "a9b0b952da6e4e257b5b84e18eac288d3262fb4b0a883aae2a1307db1d9415e2",
+    "runs/test-first-01-workflow-001/test-first-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000561533597926719-670/client-to-server.raw": "6b08273ad9f42b39486e508be11f90ddadf4f2d44b20f966712e28c0d8e0c695",
+    "runs/test-first-01-workflow-001/test-first-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000561533597926719-670/client-to-server.forwarded.raw": "215536f5ba9855ab4022e05b93e4e53b0db35c0779bfdd0d32357b57aad91b4c",
+    "runs/test-first-01-workflow-001/test-first-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000561533597926719-670/provider-usage-grace.jsonl": "2f5e688d5b5fdc4df60bc252ea2d406300e91f64f968190a8e86c623c15034c1",
+    "runs/test-first-01-workflow-001/test-first-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000561533597926719-670/stdout-chunks.jsonl": "92e3aa60e72d9cccb7f6ebbda0fc54306a4b4f813aa9fa3440641df4216652b5",
+    "runs/test-first-01-workflow-001/test-first-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000561533597926719-670/stdin-chunks.jsonl": "e397fc80109b66be31d3f08f732f3a07ec6e52d91b499e8b3e06ad546a641e17",
+    "runs/test-first-01-workflow-001/test-first-01-workflow-001-three-feature-bench-artifacts/observation/app-server/00000561533597926719-670/meta.json": "55502a3ff871ebcc133a327d457bdafdc09123304dc4f79cd439f499c9e5f0ab",
+    "runs/test-first-01-workflow-002/test-first-01-workflow-002-three-feature-bench-artifacts/observation/analysis.json": "8080698c141ef1e1419e00af83b1d25871fd34298f3e4ce7e35f6be059959421",
+    "runs/test-first-01-workflow-002/test-first-01-workflow-002-three-feature-bench-artifacts/observation/controller-usage-reconciliation.json": "f8856261fc98d43e6c854bfacdc97f1693e81eec8c85bd59318b66b32c77f39b",
+    "runs/test-first-01-workflow-002/test-first-01-workflow-002-three-feature-bench-artifacts/observation/controller-usage.json": "3a991b106e5ae807770be2c11aef358d4c86787abbca4339c3a4c1a7da594b4c",
+    "runs/test-first-01-workflow-002/test-first-01-workflow-002-three-feature-bench-artifacts/final-state.json": "e99eba1f6543047e54795368788ca91d6d2d2bcf3642c1838f979de85872c513",
+    "logs/test-first-01-workflow-002.exit.json": "9da794ebc4f2c12eea98fd061edb1b9057f1e7314897acd761d773d10ae3730a",
+    "prompt-events/test-first-01-workflow-002.jsonl": "a8fab7ddb04c0c05a0a366cdd501b05a68dbc138a0003ad572c3b7702dca5bbd",
+    "runs/test-first-01-workflow-002/test-first-01-workflow-002-three-feature-bench-artifacts/observation/app-server/00000561533608242090-706/server-to-client.raw": "6b46b753bc8065e854f79f3c0d5f4248096bdd4b249990ef567eba467cd6defc",
+    "runs/test-first-01-workflow-002/test-first-01-workflow-002-three-feature-bench-artifacts/observation/app-server/00000561533608242090-706/client-to-server.raw": "c3ade1710640e8f5eb959ac513a62beee9cef9c9c16ad87e12776b80f1666e19",
+    "runs/test-first-01-workflow-002/test-first-01-workflow-002-three-feature-bench-artifacts/observation/app-server/00000561533608242090-706/client-to-server.forwarded.raw": "1828ddb5a719a6e80ec66c8b21e47145a8333c01bc7aa792a2126170810374e1",
+    "runs/test-first-01-workflow-002/test-first-01-workflow-002-three-feature-bench-artifacts/observation/app-server/00000561533608242090-706/provider-usage-grace.jsonl": "a723fa05504df1a3dd2d8637c1f4bb1cd130a4c4eeadeca2df2b5c4113d23efa",
+    "runs/test-first-01-workflow-002/test-first-01-workflow-002-three-feature-bench-artifacts/observation/app-server/00000561533608242090-706/stdout-chunks.jsonl": "34c773ebca9871b4868963159473bf9ed8ee4a0f082671714a7b95511c12b0b8",
+    "runs/test-first-01-workflow-002/test-first-01-workflow-002-three-feature-bench-artifacts/observation/app-server/00000561533608242090-706/stdin-chunks.jsonl": "a37a1666f19753fe00bfde6b2d1d854dad1f01dc52d98a5a5d773e1f4715e6cc",
+    "runs/test-first-01-workflow-002/test-first-01-workflow-002-three-feature-bench-artifacts/observation/app-server/00000561533608242090-706/meta.json": "060c7143c519582a0c1c559d66f17e286ed7966fb2a199c526187e7dbd7ebb0a",
+    "runs/test-first-01-workflow-003/test-first-01-workflow-003-three-feature-bench-artifacts/observation/analysis.json": "4160ee0ea95338ea7aafa5186aa820a38d0683413f94ea0b469db38322ef9fe0",
+    "runs/test-first-01-workflow-003/test-first-01-workflow-003-three-feature-bench-artifacts/observation/controller-usage-reconciliation.json": "4e94cbd9f9b7ccc525268a2a3f2b4360c02d19b75daea86815e3cb2a26d94e35",
+    "runs/test-first-01-workflow-003/test-first-01-workflow-003-three-feature-bench-artifacts/observation/controller-usage.json": "5e973fd8f25db6d7a083ac1e95d569913b0ce59ec292ea339cf53abbbaf17ad5",
+    "runs/test-first-01-workflow-003/test-first-01-workflow-003-three-feature-bench-artifacts/final-state.json": "cbddc2dcb4dc8b94c821fbcee08f5a5b68fd888179892ca99febdab0f9a68b26",
+    "logs/test-first-01-workflow-003.exit.json": "35f4c0443fb2e8026b07c2cd93dd53c2eef301fbc63d4cb1ae3f58c89670f14b",
+    "prompt-events/test-first-01-workflow-003.jsonl": "0445170b7b36cfc0651be68e6bf774b396e4ec9c08942fa64c58da00369ca81f",
+    "runs/test-first-01-workflow-003/test-first-01-workflow-003-three-feature-bench-artifacts/observation/app-server/00000561533597929093-668/server-to-client.raw": "cfa59f74ebee3ec8cd76a9deb45d60fd79fc6e3ae09c53e4631d9afba476390b",
+    "runs/test-first-01-workflow-003/test-first-01-workflow-003-three-feature-bench-artifacts/observation/app-server/00000561533597929093-668/client-to-server.raw": "10b365aae35de57c14129b0d88ed7f09bea3ac72459339a7e0f8f9ad5b6ad172",
+    "runs/test-first-01-workflow-003/test-first-01-workflow-003-three-feature-bench-artifacts/observation/app-server/00000561533597929093-668/client-to-server.forwarded.raw": "b2f6ca9f3eaa3d28c5ec774d8dc2dff33637b4abd081f458e2768a23b5a87e99",
+    "runs/test-first-01-workflow-003/test-first-01-workflow-003-three-feature-bench-artifacts/observation/app-server/00000561533597929093-668/provider-usage-grace.jsonl": "e6914a664a0d0c1dd8dfc8039f236ad8b2b0ee1219b558b84b80623d3046bc98",
+    "runs/test-first-01-workflow-003/test-first-01-workflow-003-three-feature-bench-artifacts/observation/app-server/00000561533597929093-668/stdout-chunks.jsonl": "0d6af0cb1c1614a04a1feb75bce34963b8f27f59dfd5d5950ed2ff648900e07c",
+    "runs/test-first-01-workflow-003/test-first-01-workflow-003-three-feature-bench-artifacts/observation/app-server/00000561533597929093-668/stdin-chunks.jsonl": "8f74b2c81676ca02159c3e0350c63a40c002727fb7ad18bb2eb12084937b3b8a",
+    "runs/test-first-01-workflow-003/test-first-01-workflow-003-three-feature-bench-artifacts/observation/app-server/00000561533597929093-668/meta.json": "b100e78f59cd8816c2829dbdfd0c7366e8f7846e67e3aeb96a40556481510ef3"
+  },
+  "source_pins_before_after_match": true,
+  "source_pin_count": 48,
+  "verification_receipts": {
+    "final_source_and_five_row_join": "e118a2",
+    "unchanged_total_witness": "768421",
+    "exact_last_and_total_carry": "5d92c0",
+    "initial_read_only_assertion_failure": "94a50d",
+    "superseded_projection": "7f492a"
+  },
+  "verification_qualification": "The initial checker incorrectly required cumulative freshness and failed. A superseded in-memory projection retained a literal true; it was not published. Final e118a2 records the actual false predicate for every row; 768421/5d92c0 prove exact zero cumulative increase and identical prior last. No source/capture/helper was modified.",
+  "predicate_uses": {
+    "source": "infrastructure/evidence/bench-observer/src/lib.rs",
+    "definition": 1910,
+    "live_grace_call": 793,
+    "offline_delivery_replay_call": 5364,
+    "test_references": [
+      8023,
+      8030,
+      8031,
+      8034
+    ],
+    "live_path": "run_captured_process 442/569 -> raw_capture::forward_frame 301 -> forward_app_server_client_frame 1159 -> ProviderUsageGrace::wait_before_interrupt 819; stdout observer 1199/1213 -> observe_server_value 792",
+    "offline_path": "analyze_app_server 5354/5364/5431/5467 -> reconcile_controller_usage 4524/4584",
+    "conclusion": "The omission affects live grace eligibility as well as offline replay. All five actual interrupts were not-eligible, waited_ms=0, despite configured 1000ms/forward. No prevented-generation counterfactual is established."
+  },
+  "disposition": "Original flags and outcomes remain unchanged. This witness explains display/controller reconciliation and documents a live non-target grace interaction; it neither clears interrupted-turn flags nor establishes raw/native provider-ledger completeness, causal token direction, or new charge identities."
+}
