@@ -1,12 +1,14 @@
 # Provisional investigation ledger
 
-Last checked: **2026-09-08 11:02 Europe/Rome (09:02 UTC)**.
+Last checked: **2026-09-08 11:10 Europe/Rome (09:10 UTC)**.
 
 Scope: the entire mechanism investigation, with all **30 frozen benchmark identities** (3 initial screen + 12 work-unit + 12 parked read-factor + 3 candidate screen), **24 admitted diagnostic identities** (16 earlier + 3 candidate-v4 + 2 C21 + 3 C15), and the elapsed-time breakdown. The three modified candidate benchmarks were admitted concurrently at 14:28:55 Europe/Rome and are all terminal at 16:29:25: two successes and one original timeout. The earlier two-run pilot and accepted historical twelve-run cohort are listed separately below. Diagnostics are never added to the benchmark count. Both C21 diagnostics remain failed; no complete C21 benchmark is admitted. Zero provider workflows are running. C15 diagnostic003 has complete successful workflow, source and semantic qualification: private RED → unchanged tests/fix → ordinary GREEN → DONE → resolved review. Original001 failure and002 partial qualification remain preserved; token contribution is not estimated by this diagnostic.
 
 ## Active plan and preserved experiments
 
 ### Active execution — candidate evidence pass
+
+11:10 Rome checkpoint: the unchanged C15 runtime release build and required gates are complete:534 passed,0failed,22ignored across44targets; format/Clippy clean. Source attestation includes47 inputs and both actual ELFs. Current global configuration reconstructs the entire saved W parsed remainder after only16 exact recorded native trust entries, with no write or unexplained difference. The [fixed three-run protocol](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROTOCOL-TEST-FIRST-SCREEN.md) and [preflight receipts](bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/test-first-screen/BASELINE-COMPATIBILITY.md) are saved; host-only launch binding/tests remain active. No provider has launched. Root's finite14 H changed-refresh check finds complete diffs in every case, no exercised size-cap omission; subsequent repair joins are active. Review-work and integration-relocation source checks continue independently. The C21 question remains pending. These are intermediate checkpoints, not completion.
 
 11:02 Rome checkpoint: Stage B continues. The C15 effect screen is fixed prospectively at three modified-only workflows, preserving the saved six-WL cohort's three-workflow load regime; no controls or Direct runs are added. Its host-only launch binding is in test-first development because the unchanged driver creates the actual checkout dynamically. Frozen templates and the eventual bound manifests remain distinct. No provider has launched. Separate finite saved-chain checks cover all21 Direct/17 genuine H WL review-fix cycles and all12 H integration execution turns. Both populations have findings on the same13 feature targets (six visual, five completion, two slash); the different repeat-cycle counts are not yet a causal/token claim. The separate C21 diagnostic question remains pending.
 
