@@ -1,0 +1,88 @@
+{
+  "schema": "work-leaf-c08-fixed-direction-result-v1",
+  "source": {
+    "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/automatic-refresh-01/postcapture/OBSERVED-LOWER-QUALIFICATION.json",
+    "sha256": "87a30269c80c55ba770d8a3a1ca7b56e3416a0de4cfed09216492f5bec137f3a"
+  },
+  "rule": "All three candidate recorded raw lower endpoints mean minus all six unchanged baseline raw upper endpoints mean; prospectively declared in LOWER-BOUND-PREPARATION.md",
+  "candidates": [
+    {
+      "run_id": "automatic-refresh-01-workflow-001",
+      "lower": 9118688,
+      "upper": null,
+      "response_count": 123
+    },
+    {
+      "run_id": "automatic-refresh-01-workflow-002",
+      "lower": 28508497,
+      "upper": null,
+      "response_count": 296
+    },
+    {
+      "run_id": "automatic-refresh-01-workflow-003",
+      "lower": 22866570,
+      "upper": null,
+      "response_count": 275
+    }
+  ],
+  "retained_baselines": [
+    {
+      "run_id": "work-units-01-workflow-002",
+      "lower": 12288138,
+      "upper": 18178138
+    },
+    {
+      "run_id": "work-units-01-workflow-004",
+      "lower": 15514170,
+      "upper": 21404170
+    },
+    {
+      "run_id": "work-units-01-workflow-006",
+      "lower": 13875604,
+      "upper": 15053604
+    },
+    {
+      "run_id": "work-units-01-workflow-009",
+      "lower": 16236327,
+      "upper": 19770327
+    },
+    {
+      "run_id": "work-units-01-workflow-010",
+      "lower": 15653269,
+      "upper": 19187269
+    },
+    {
+      "run_id": "work-units-01-workflow-012",
+      "lower": 15603690,
+      "upper": 21493690
+    }
+  ],
+  "candidate_mean_lower": {
+    "numerator": 20164585,
+    "denominator": 1,
+    "decimal_for_display": 20164585
+  },
+  "baseline_mean_upper": {
+    "numerator": 57543599,
+    "denominator": 3,
+    "decimal_for_display": 19181199.666666668
+  },
+  "modified_minus_baseline": {
+    "lower": {
+      "numerator": 2950156,
+      "denominator": 3,
+      "decimal_for_display": 983385.3333333334
+    },
+    "upper": null
+  },
+  "direction": "increased_raw_usage_supported_for_fixed_cohort",
+  "includes_failed_candidate_001_and_baseline_010": true,
+  "baseline_ledger_calls": 0,
+  "provider_calls": 0,
+  "limitations": [
+    "Conditional on retained baseline accounting assumptions, not hidden-provider-call completeness.",
+    "Recorded lower bounds do not recover missing candidate usage or original success.",
+    "Historical baseline reuse is not a fresh randomized comparison.",
+    "No percentage contribution or individual refresh-event price is estimated."
+  ]
+}

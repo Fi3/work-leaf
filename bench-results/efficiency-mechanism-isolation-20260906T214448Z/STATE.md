@@ -43,9 +43,18 @@ is closed:8 distinct accepted repair chains,25 edit submissions,17 rejections,
 Eight failures depend on changed held snapshots; two old blocks already fail
 against their prior state, and one rejection has duplicate file headers.
 Root verifies all188 source endpoints and11 prior body/temporal relations.
-The [recorded-response lower-bound qualification](phases/automatic-refresh-01/postcapture/LOWER-BOUND-PREPARATION.md)
-is in test-first preparation; no actual aggregation has run. No primary token direction is claimed
-for this closed wave and original accounting/source calls are not repeated.
+The [recorded-response lower-bound qualification](phases/automatic-refresh-01/postcapture/OBSERVED-LOWER-QUALIFICATION.json)
+is closed in one execution, result`87a30269…`, all3 candidates qualified with
+no new qualification errors. Their raw lower endpoints are9,118,688 /28,508,497 /
+22,866,570 tokens; every upper remains unknown. The prospectively specified
+[all-run contrast](phases/automatic-refresh-01/postcapture/OBSERVED-LOWER-DIRECTION.json)
+has lower endpoint **+983,385⅓ raw tokens/workflow**:candidate lower mean
+20,164,585 minus retained-baseline upper mean19,181,199⅔. Failed001 and W010
+remain included. This supports increased raw usage for the full-refresh cohort
+under retained accounting assumptions; it is not a causal percentage or fresh
+randomized comparison. Original accounting/source calls are not repeated.
+Exact attribution for the same11 whole refresh-input items remains in fixed
+execution preparation, with a20-test independently reviewed offline adapter.
 
 C15's completed-message runtime and matching observer are preserved separately
 at isolated commits`9d1b9b8a…` and`dd0fde72…`. Runtime gates pass586 tests;
