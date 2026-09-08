@@ -23,9 +23,28 @@ six saved baseline receipts, nine retained outcomes and zero caller integrity,
 identity, execution or publication errors.001 and003 retain originalUNKNOWN/
 ineligible results;002 has validated but unbounded accounting with raw lower
 28,508,497tokens. Missing or early-return maps are not zero usage. Natural
-source/delivery/repair qualification and separate investigation of the named
-native-prefix/membership gaps remain active; no primary token direction is
-claimed for this closed wave and the original accounting calls are not repeated.
+source audits are closed, including their preserved original failures. The
+separate typed-end qualification proves all75 invocation streams,438 complete
+raw frames,23 native threads and204 full delivered inputs. All11 eligible
+automatic refreshes join; the six ordinary user-2 trace ambiguities have exact
+independent delivery/launch-owner witnesses in
+[the finite trace review](phases/automatic-refresh-01/postcapture/TRACE-OWNERSHIP-REVIEW.md).
+The unchanged pure compaction-context eligibility helper supplies one successful
+003 proof (`5326c71f…`), with24 source endpoints stable and no accounting call.
+Original UNKNOWN results, missing usage, null bounds and ordinary trace errors
+remain intact. The11 refresh-to-repair chains and a narrowly scoped recorded-
+response lower-bound design remain active. No primary token direction is claimed
+for this closed wave and original accounting/source calls are not repeated.
+
+C15's completed-message runtime and matching observer are preserved separately
+at isolated commits`9d1b9b8a…` and`dd0fde72…`. Runtime gates pass586 tests;
+observer gates pass167 tests, with clean format/Clippy. Root focused observer
+verification`09469a` passes21 tests; independent review`59b67706…` passes the
+same focused scope. The observer requires a legacy-source checkout plus both
+canonical typed-source build inputs; a combined checkout/all-default build is
+not supported. Its opted-in live cumulative scan introduces potentially
+quadratic work. Exact combined real-agent qualification remains required and
+unadmitted; no root runtime merge or provider execution follows these gates.
 
 The configuration checksum transition first recorded at12:28:38.408172UTC is
 classified by the frozen policy as a verified own-workflow trust transition for
