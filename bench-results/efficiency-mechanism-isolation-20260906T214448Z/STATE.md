@@ -4,12 +4,14 @@
 
 Stage B identification is active under the user's explicit requirement to finish
 that step before final handoff. [Current continuation](STAGE-B-RESUMPTION-20260908.md)
-covers C15 effect-screen preparation, C21's separately asked qualification choice,
+covers the running C15 effect screen, C21's separately asked qualification choice,
 and remaining coupled work-selection/review/integration checks. Diagnostic003 is
-a completed prerequisite, not completion of mechanism identification. No new
-provider has launched at this checkpoint. The separately frozen `test-first-01`
-manifest `00ff0668…` contains exactly three modified-only workflows and187 inputs;
-its final prelaunch endpoint review precedes the sole execution. Current-global
+a completed prerequisite, not completion of mechanism identification. All three
+modified-only C15 workflows run concurrently under the sole supervisor launch
+at09:57:50UTC on2026-09-08. The frozen `test-first-01` manifest `00ff0668…`
+contains187 inputs. Actual checkout binding and v6 activation pass for all three;
+[startup evidence](phases/test-first-01/STARTUP-CHECKPOINT.json) is separate from
+full workflow, terminal and effect qualification. Current-global
 compatibility is established by the [exact tooltip qualification](preflight/test-first-screen/CONFIG-TOOLTIP-QUALIFICATION.md),
 without editing configuration or weakening the original drift monitor. C08's
 automatic-refresh representation implementation proceeds in a separate worktree;
@@ -28,9 +30,9 @@ WL is unchanged. Required runtime gates pass 534 tests; private-crate gates pass
 both with clean fmt/Clippy. Actual003 supplies real-agent verification. Original
 analyze/extract run once each with exits 2/0, retaining one interrupted-turn usage
 gap and eight exact observer-ELF marker flags. No token effect is estimated.
-All previous failures and partial outcomes remain saved. Zero providers are
-running; no control, Direct workflow, old benchmark rerun or automatic replacement
-is authorized by the one-diagnostic scope. Broader causal direction/percentage
+All previous failures and partial outcomes remain saved. The separate three-run
+screen is active; no control, Direct workflow, old benchmark rerun or automatic
+replacement is authorized by the one-diagnostic scope. Broader causal direction/percentage
 attribution remains separate unfinished work, not disguised as workflow readiness.
 
 C15 diagnostic001's sole attempt is CLOSED FAILED: supervised command exit 101,
