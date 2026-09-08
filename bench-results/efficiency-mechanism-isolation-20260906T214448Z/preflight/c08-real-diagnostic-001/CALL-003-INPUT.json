@@ -1,0 +1,6 @@
+{
+  "agent_id": "user-1",
+  "call": 3,
+  "launch": false,
+  "prompt": "The orchestrator could not apply your edit.\nFiles: src/lib.rs\n\nDiagnostic:\nstructured edit hunk 1 for src/lib.rs failed: old block was not found in current file text\n\nRebase your exact edit blocks against the file refresh below.\nResend the complete edit through `@work-leaf edit <reason>` followed by an apply-patch-style body and `@work-leaf end`. Use `*** Begin Patch`, one or more `*** Update File: path` sections, `@@` hunk separators without line numbers, exact unchanged context lines prefixed with a space, old lines prefixed with `-`, new lines prefixed with `+`, and `*** End Patch`. Include enough unchanged context for each old block to match exactly one place in the current file.\n\nwork-leaf file refresh\nThis is a file refresh, not a patch to submit. Sections marked current full text contain the complete current file; all other sections keep their stated snapshot or diagnostic meaning.\n\n--- src/lib.rs ---\ncurrent digest: fnv64:8070e896f9693e29; bytes:57\nprevious digest: fnv64:8fe0263473101ac6; bytes:53\nstatus: changed since this agent's last snapshot\ncurrent full text:\npub fn capped(value: u8, _limit: u8) -> u8 { value + 0 }\n"
+}

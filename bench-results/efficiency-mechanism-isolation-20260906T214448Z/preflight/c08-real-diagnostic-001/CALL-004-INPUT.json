@@ -1,0 +1,6 @@
+{
+  "agent_id": "user-1",
+  "call": 4,
+  "launch": false,
+  "prompt": "work-leaf patch applied\nfiles: src/lib.rs\nThe orchestrator has already saved this patch as a provisional git commit. Do not resend this patch, do not rebase this same diff, and do not restate the patch body.\nNext step: run at most one focused validation step that is relevant to files you touched or checks you added. Use `@work-leaf locks run <path>... -- <command>` when that command may write files.\nDo not run another patch agent's focused tests as local validation. If a broad check is blocked only by another patch agent's owned files or tests, report that exact blocker once.\nIf validation fails in another feature's test or behavior, do not edit that test or unrelated implementation unless your patch clearly caused the failure.\nAfter the focused validation passes, or after you report an external blocker, emit a top-level `@work-leaf done` so review can start. Send another edit only if validation found a concrete issue in your own patch."
+}

@@ -1,0 +1,14 @@
+{
+  "after_head": "2ae8cb463298c2987beffbbd801805c65120b00b",
+  "author_id": "user-1",
+  "before_head": "6d7fc01a063f4dcd88204d3125cf86bcded0fbd7",
+  "commit": "2ae8cb463298c2987beffbbd801805c65120b00b",
+  "delivery_call": 2,
+  "files": [
+    "src/lib.rs"
+  ],
+  "fixture_mutator_id": "qualification-host-mutator",
+  "patch_request": "*** Begin Patch\n*** Update File: src/lib.rs\n@@\n-pub fn capped(value: u8, _limit: u8) -> u8 { value }\n+pub fn capped(value: u8, _limit: u8) -> u8 { value + 0 }\n*** End Patch\n",
+  "source_after": "pub fn capped(value: u8, _limit: u8) -> u8 { value + 0 }\n",
+  "source_before": "pub fn capped(value: u8, _limit: u8) -> u8 { value }\n"
+}

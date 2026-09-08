@@ -1,0 +1,202 @@
+{
+  "schema_version": 2,
+  "run_id": "automatic-refresh-diagnostic-001",
+  "condition": "work-leaf",
+  "capture_complete": false,
+  "invocation_count": 2,
+  "complete_invocation_count": 2,
+  "passthrough_invocation_count": 0,
+  "interrupted_provider_turns": 5,
+  "threads": [],
+  "session_only_threads": [],
+  "model_strata": [],
+  "usage_scopes": {
+    "visible_role": {
+      "thread_count": 0,
+      "input_tokens": 0,
+      "cached_input_tokens": 0,
+      "uncached_input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_output_tokens": 0,
+      "raw_input_plus_output": 0,
+      "uncached_input_plus_output": 0
+    },
+    "primary_condition": {
+      "thread_count": 0,
+      "input_tokens": 0,
+      "cached_input_tokens": 0,
+      "uncached_input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_output_tokens": 0,
+      "raw_input_plus_output": 0,
+      "uncached_input_plus_output": 0
+    },
+    "total_workflow": {
+      "thread_count": 0,
+      "input_tokens": 0,
+      "cached_input_tokens": 0,
+      "uncached_input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_output_tokens": 0,
+      "raw_input_plus_output": 0,
+      "uncached_input_plus_output": 0
+    }
+  },
+  "controller_usage_reconciliation": [],
+  "mechanisms": {
+    "hypotheses": [
+      {
+        "id": "H1",
+        "observed": false,
+        "evidence_count": 0
+      },
+      {
+        "id": "H2",
+        "observed": false,
+        "evidence_count": 0
+      },
+      {
+        "id": "H3",
+        "observed": false,
+        "evidence_count": 0
+      },
+      {
+        "id": "H4",
+        "observed": true,
+        "evidence_count": 1
+      },
+      {
+        "id": "H5",
+        "observed": true,
+        "evidence_count": 4
+      },
+      {
+        "id": "H6",
+        "observed": false,
+        "evidence_count": 0
+      },
+      {
+        "id": "H7",
+        "observed": false,
+        "evidence_count": 0
+      },
+      {
+        "id": "H8",
+        "observed": true,
+        "evidence_count": 6
+      },
+      {
+        "id": "H9",
+        "observed": false,
+        "evidence_count": 0
+      },
+      {
+        "id": "H10",
+        "observed": true,
+        "evidence_count": 1
+      },
+      {
+        "id": "H11",
+        "observed": false,
+        "evidence_count": 0
+      },
+      {
+        "id": "H12",
+        "observed": false,
+        "evidence_count": 0
+      },
+      {
+        "id": "H13",
+        "observed": false,
+        "evidence_count": 0
+      },
+      {
+        "id": "H14",
+        "observed": false,
+        "evidence_count": 0
+      },
+      {
+        "id": "H15",
+        "observed": false,
+        "evidence_count": 0
+      },
+      {
+        "id": "H16",
+        "observed": true,
+        "evidence_count": 6
+      }
+    ],
+    "protocol_bytes": 9257,
+    "command_classes": {
+      "locked-command": 1
+    },
+    "command_count": 1,
+    "command_output_bytes": 687,
+    "command_duration_ns": 159201906,
+    "repeated_commands": 0,
+    "counterfactuals": [
+      {
+        "hypothesis": "H4",
+        "status": "verified",
+        "observed_prompt_bytes": 987,
+        "actual_component_bytes": 687,
+        "counterfactual_component_bytes": 687,
+        "avoided_bytes": 0,
+        "note": "paired rendered result with process-backed locked invocation 00000566442363334693-657; status=0; timed_out=false; timeout=None"
+      },
+      {
+        "hypothesis": "H8",
+        "status": "requires-ablation",
+        "observed_prompt_bytes": null,
+        "actual_component_bytes": null,
+        "counterfactual_component_bytes": null,
+        "avoided_bytes": null,
+        "note": "interrupted terminal directives are measured, but prevented generation is not observable"
+      }
+    ],
+    "bundles": [],
+    "terminal_directives": {
+      "observed": 1,
+      "interrupted": 1,
+      "naturally_completed": 0,
+      "failed": 0,
+      "unresolved": 0
+    },
+    "structured_edits": {
+      "submissions": 2,
+      "duplicate_submissions": 0,
+      "acknowledgements": 1,
+      "rejections": 1
+    },
+    "reviews": {
+      "prompts": 0,
+      "unique_targets": 0,
+      "duplicate_targets": 0,
+      "validated_targets": 0,
+      "unresolved_targets": 0
+    },
+    "validation": {
+      "validation_commands": 1,
+      "violations": []
+    },
+    "protocol_components": {
+      "command-result": 987,
+      "edit-acknowledgement": 950,
+      "file-read": 93,
+      "other-orchestration": 6540
+    },
+    "sequential_timeline_valid": false,
+    "errors": []
+  },
+  "errors": [
+    "interrupted provider turn has no complete usage: count=5",
+    "secret marker bearer-token found in proxy-bin/codex",
+    "secret marker OPENAI_API_KEY found in proxy-bin/codex",
+    "secret marker ANTHROPIC_API_KEY found in proxy-bin/codex",
+    "secret marker refresh_token found in proxy-bin/codex",
+    "secret marker bearer-token found in proxy-bin/sh",
+    "secret marker OPENAI_API_KEY found in proxy-bin/sh",
+    "secret marker ANTHROPIC_API_KEY found in proxy-bin/sh",
+    "secret marker refresh_token found in proxy-bin/sh"
+  ]
+}

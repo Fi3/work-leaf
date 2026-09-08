@@ -1,0 +1,49 @@
+{
+  "author_id": "user-1",
+  "closed_capture_error": null,
+  "closed_capture_turns": 5,
+  "condition": "work-leaf",
+  "controlled_mutation": {
+    "after_head": "2ae8cb463298c2987beffbbd801805c65120b00b",
+    "author_id": "user-1",
+    "before_head": "6d7fc01a063f4dcd88204d3125cf86bcded0fbd7",
+    "commit": "2ae8cb463298c2987beffbbd801805c65120b00b",
+    "delivery_call": 2,
+    "files": [
+      "src/lib.rs"
+    ],
+    "fixture_mutator_id": "qualification-host-mutator",
+    "patch_request": "*** Begin Patch\n*** Update File: src/lib.rs\n@@\n-pub fn capped(value: u8, _limit: u8) -> u8 { value }\n+pub fn capped(value: u8, _limit: u8) -> u8 { value + 0 }\n*** End Patch\n",
+    "source_after": "pub fn capped(value: u8, _limit: u8) -> u8 { value + 0 }\n",
+    "source_before": "pub fn capped(value: u8, _limit: u8) -> u8 { value }\n"
+  },
+  "duration_seconds": 35.920004343,
+  "local_chain": {
+    "author_id": "user-1",
+    "full_current_body_bytes": 57,
+    "native_join_claimed": false,
+    "read_call": 2,
+    "refresh_call": 3,
+    "repair_ack_call": 4,
+    "semantic_qualification_claimed": false,
+    "successful_check_call": 5
+  },
+  "local_chain_error": null,
+  "observer_stop": {
+    "exit_code": 0,
+    "stderr": "",
+    "stdout": "1\n"
+  },
+  "outer_calls": 5,
+  "processed_done": true,
+  "real_qualification": "pending independent source/public/native/semantic witness",
+  "real_roles": 1,
+  "run_id": "automatic-refresh-diagnostic-001",
+  "schema": "work-leaf-automatic-refresh-harness-v1",
+  "settled_before_stop": 5,
+  "token_effect_estimate": false,
+  "transcript": "@work-leaf read src/lib.rs\n\norchestrator:\nsent file text to user-1: src/lib.rs\n\nagent follow-up from user-1:\n@work-leaf edit implement capped min behavior and add focused regression tests\n*** Begin Patch\n*** Update File: src/lib.rs\n@@\n-pub fn capped(value: u8, _limit: u8) -> u8 { value }\n+pub fn capped(value: u8, limit: u8) -> u8 {\n+    value.min(limit)\n+}\n+\n+#[cfg(test)]\n+mod tests {\n+    use super::capped;\n+\n+    #[test]\n+    fn returns_value_when_below_limit() {\n+        assert_eq!(capped(3, 5), 3);\n+    }\n+\n+    #[test]\n+    fn returns_value_when_equal_to_limit() {\n+        assert_eq!(capped(5, 5), 5);\n+    }\n+\n+    #[test]\n+    fn returns_limit_when_value_exceeds_limit() {\n+        assert_eq!(capped(7, 5), 5);\n+    }\n+}\n*** End Patch\n@work-leaf end\n\norchestrator:\nsent patch diagnostics to user-1: src/lib.rs\n\nagent follow-up from user-1:\n@work-leaf edit implement capped min behavior and add focused regression tests\n*** Begin Patch\n*** Update File: src/lib.rs\n@@\n-pub fn capped(value: u8, _limit: u8) -> u8 { value + 0 }\n+pub fn capped(value: u8, limit: u8) -> u8 {\n+    value.min(limit)\n+}\n+\n+#[cfg(test)]\n+mod tests {\n+    use super::capped;\n+\n+    #[test]\n+    fn returns_value_when_below_limit() {\n+        assert_eq!(capped(3, 5), 3);\n+    }\n+\n+    #[test]\n+    fn returns_value_when_equal_to_limit() {\n+        assert_eq!(capped(5, 5), 5);\n+    }\n+\n+    #[test]\n+    fn returns_limit_when_value_exceeds_limit() {\n+        assert_eq!(capped(7, 5), 5);\n+    }\n+}\n*** End Patch\n@work-leaf end\n\norchestrator:\napplied patch from user-1: implement capped min behavior and add focused regression tests; commit=79f162a249e7102d3cfe5666623ec58487232254; files=src/lib.rs\n\nagent follow-up from user-1:\n@work-leaf locks run target -- cargo test --offline --locked\n\norchestrator:\nran command for user-1: status=0 paths=target command=cargo test --offline --locked\n\nagent follow-up from user-1:\n@work-leaf done\n\norchestrator:\nagent user-1 reported done",
+  "watchdog_fired": false,
+  "workflow_error": null,
+  "workflow_returned": true
+}

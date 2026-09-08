@@ -2,6 +2,21 @@
 
 ## Active continuation plan
 
+C08's first real qualification attempt closes2026-09-08 at11:19:44.468217UTC,
+35.952seconds, exit0: five calls, one real author, actual stale edit rejection,
+full-current response, repaired ACK, ordinary successful test and processed DONE.
+All admission endpoint hashes match. Public/native and semantic qualification
+remain separate closing witnesses; the original observer analyze/extract each
+run once with exits2/2, retaining five usage gaps and the usage-less-thread
+membership error. No token effect is estimated. The
+[three-modified-only prospective protocol](PROTOCOL-AUTOMATIC-REFRESH-SCREEN.md)
+and reviewed runner are saved, and release binaries are built; no natural C08
+workflow is admitted yet. No provider is running. The complete
+[nine-author C15 census](phases/test-first-01/PHASE-EXPOSURE.md) identifies genuine
+same-turn commentary before all nine first preview messages, separate from the
+observer grace defect and source-capture rejection. Future corrections retain
+the immutable failed batch and require their own qualification.
+
 Stage B identification is active under the user's explicit requirement to finish
 that step before final handoff. [Current continuation](STAGE-B-RESUMPTION-20260908.md)
 covers the closed C15 effect screen, C21's separately asked qualification choice,
