@@ -1,0 +1,47 @@
+# C21 mixed-source diagnostic fixture contract
+
+This is a source-only preparation contract under [DESIGN.md](DESIGN.md). It is not user approval, implementation qualification or provider admission. Diagnostic001/002, their failed results, their compiled runtime/source and the active C08 wave remain untouched. The new [guard_tests.rs](guard_tests.rs) is an unexecuted test draft; `guards.rs` and a private crate manifest do not yet exist. No RED or GREEN result is claimed. The initial missing-module RED must actually run after root releases the execution hold, before guard implementation.
+
+## Owned source and routing boundary
+
+Use the public `AgentBackend`/`AgentSession` seam and ordinary `CommandChat` against the separately pinned v5 runtime commit `4589ffc7fb96b31c0eb93483b8d122f981820c7d`, not the current root C08/C15 runtime or a modified002 checkout. No public API, observer, reviewer renderer, archive adapter or project parser changes are part of this fixture.
+
+`MixedBackend<B>` has exactly two explicitly registered identities: a scripted source author and the intended real reviewer. Names do not infer roles. The author launch never reaches `B`; it returns the exact existing VALUE 0→1 edit. The author send accepts only the actual ordinary patch-applied continuation after the accepted fixture commit, records that full continuation, and returns an explicitly scripted source note plus DONE. A third author call, routed review finding/fix, relaunch or unknown role is recorded as unsupported and refused before any real delegation. It cannot manufacture a repair or clean verdict.
+
+The author `AgentSession` must contain, in order: actual launch input, deterministic edit reply, complete actually received ACK, deterministic final source note/DONE. Both send input and reply must be appended, unlike the incomplete send-history example in `tests/bench_review_evidence.rs`. The note says the source is a deterministic fixture and that it performed no verification. No scripted event is labeled a real provider response or given a fabricated native thread.
+
+The fixed project data are the existing `fixture.rs` values (`pub const VALUE: u8 = 0;` → `pub const VALUE: u8 = 1;`) and the unchanged002 `check-fixture.sh`. The script checks that exact resulting line and prints its existing success marker. The harness does not pre-apply the final source or invent an ACK: `launch_prepared_agent_streaming` must drive ordinary parsing, GitPatcher and locks, and the retained actual commit must belong to the scripted author. Source/check-script/Git identities are verified before `handle_line("review")`.
+
+The feature/request gives natural reviewer obligations: inspect the complete referenced commit/chat evidence, review the requested change, execute the supplied focused check using ordinary Work Leaf locking, then give the honest ordinary verdict. That text also enters the scripted author's feature/session; the resulting source archive is not claimed byte-identical to001/002. No exact model answer, forced clean verdict, prescribed first/second real reply, post-adapter prompt edit or automatic correction is supplied.
+
+## Small private guard interface
+
+The new automatic test draft targets only these private-crate symbols:
+
+- `Budget::new(scripted_id, reviewer_id, real_limit)` with `real_limit` in1..=4 and distinct nonempty IDs; `admit(id, launch) -> Result<Route>` returns `Scripted` or `Real` before delegation; `scripted_calls()` and `real_calls()` remain separate. `begin_review()` requires the completed two-call scripted phase; the harness additionally verifies the actual accepted commit/session before invoking it. `cancel()` irreversibly closes all routes. Invalid routing does not consume a real slot.
+- `review_completion(reviewer, command, trace, original_client, forwarded_client, server) -> io::Result<Value>` is a bounded **public-input/check-feedback/verdict** predicate. It validates accepted typed RPC/turn/user identities, exact ordered prompt occurrences, the reviewer-owned unchanged successful non-timeout command-result handoff, and an ordinary final verdict without later operational actions. Host-only author ACK rows remain a separate inventory. The returned local receipt must explicitly set `native_archive_access_proven=false` and `locked_invocation_proven=false`; no local JSON flag stands in for their independent source joins.
+
+The draft covers separate2/4 budgets, unknown/relaunch/fix refusal, cancellation, missing-check clean replies, missing/duplicate/cross-thread/public-metadata identity errors, changed forwarded text, wrong/stale/nonzero/status0-timeout feedback, copied status markers, multiple benign message items, later operational action and incomplete publication. The synthetic fixtures are not real accepted capture evidence. They deliberately do not prescribe a global four-input sequence or count native actions as outer calls.
+
+Implementation should use one-pass identity indexes and ordered occurrence queues, not a per-message/per-archive rescan or repeated matching of the same prompt occurrence. Existing original request rewrite proof and native/retrieval primitives remain separately exact-pinned; the guard is not a replacement collector or accounting framework. Reusing their interfaces does not authorize executing them during the current hold.
+
+## Required actual-path automatic tests after the hold
+
+Before any provider admission, add and observe failing tests against an initial scaffold, then implement and pass:
+
+1. An instrumented fake inner backend proves **zero author delegations** and exact four-message author session history. The actual public `CommandChat::prepare_agent_launch`/launch path must perform the real Git edit/ACK/DONE; the normal constructor has no `with_max_review_rounds(1)` or `(2)` override. Both scripted and reviewer phases share that factory. A cap-negative regression must reproduce the truncated ordinary path rather than merely inspect a string.
+2. Actual `handle_line("review")` produces one renderer-held source snapshot and v5 archive containing that exact session and its non-Git scripted note. Adversarial copied markers in the note/archive cannot become a command, fake ACK, result or boundary. Archive publication/source failure blocks delivery; ordinary bundle state is separate.
+3. A fake reviewer exercises optional ordinary reads and the **real ordinary** locked script path before a normal resolved `CommandChatResult::ReviewComplete`. The receipt joins actual command metadata/raw outputs and the subsequent full delivery. Missing check, nonzero/timeout, a later action and a genuine finding/fix route cannot produce qualification. Simulated reviewer responses are labeled synthetic, not a real-agent verification.
+4. Cooperative cancellation/watchdog closes the delegated backend and refuses late/reopened sends. Closed public cuts require every actual accepted real turn and interrupt to settle; missing or late publication cannot be fixed by rerunning the scenario. Readiness polling stays within the same118-second deadline and at most15seconds, never extends it.
+
+These are remaining qualifications, not claims already established by the draft nine guard tests. No actual Git, shell, private executor, Cargo, provider or test command is run during the C08 wave.
+
+## Separately admitted real scenario and postcapture proof
+
+If explicit user approval arrives, root must freeze fresh sources, project, archive/bundle roots, v5 manifest, subscription-only executable/config/environment chain, watchdog and exact external argv. The expected route has two scripted replies and two real reviewer turns, but the real ceiling is four calls, one reviewer thread, counted before delegation. Native commands can occur inside a turn and cannot be limited by that outer budget; every native call/output is inventoried, with unsupported/out-of-scope access retained as failure rather than repaired permissions or an extra attempt. Native environment accessibility is unresolved until the actual declared attempt.
+
+Use the design's118-second workflow/settling watchdog, source-readiness polling inside that budget,130-second external timeout plus5-second kill grace, and unchanged1000-ms/forward observer grace. Preserve actual waited exit/timestamps, capture-stop outcomes and publication errors with create-new records. A returned harness or exit0 alone is insufficient.
+
+The final finite source witness must join: actual scripted source session/accepted commit → exact renderer span/archive/typed manifest → complete accepted original/forwarded/public/native reviewer inputs → same-reviewer native call/output complete archive retrieval including the non-Git note → actual ordinary locked script execution after retrieval → exact command-result handoff → final genuine resolved review without later operational action. Native retrieval is not inferred from a path mention, public tool absence, tool name, response count or model assertion. All missing/partial/ambiguous evidence and genuine findings remain retained.
+
+Original observer/collector commands, terminal shape and any separate derivative scope must be fixed before those once-only postcapture calls. The old scripts and failures remain intact; no fake native author is inserted to satisfy a previous fixed-count checker. This is mixed scripted-source/real-reviewer qualification, not full real-author end-to-end validation, reviewer-quality equivalence, a natural workflow comparison or a token-effect estimate.

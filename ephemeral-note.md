@@ -1,12 +1,14 @@
 # Provisional investigation ledger
 
-Last checked: **2026-09-08 13:56 Europe/Rome (11:56 UTC)**.
+Last checked: **2026-09-08 14:06 Europe/Rome (12:06 UTC)**.
 
 Scope: the entire mechanism investigation, with all **36 frozen benchmark identities** (3 initial screen + 12 work-unit + 12 parked read-factor + 3 candidate screen + 3 private-test-first screen + 3 automatic-refresh screen), **25 admitted diagnostic identities** (16 earlier + 3 candidate-v4 + 2 C21 + 3 C15 + 1 C08), and the elapsed-time breakdown. The three modified candidate benchmarks were admitted concurrently at 14:28:55 Europe/Rome and are all terminal at 16:29:25: two successes and one original timeout. The earlier two-run pilot and accepted historical twelve-run cohort are listed separately below. Diagnostics are never added to the benchmark count. Both C21 diagnostics remain failed; no complete C21 benchmark is admitted. **Three automatic-refresh workflows are running concurrently; all private-test-first workflows and the C08 diagnostic remain closed.** C15 diagnostic003 has complete successful workflow, source and semantic qualification: private RED → unchanged tests/fix → ordinary GREEN → DONE → resolved review. Original001 failure and002 partial qualification remain preserved; token contribution is not estimated by this diagnostic.
 
 ## Active plan and preserved experiments
 
 ### Active execution — candidate evidence pass
+
+14:06 Rome checkpoint: **0/3 C08 workflows terminal; all three remain active under the original supervisor45354.** The last observed statuses include reviewer activity in each workflow; no phase result exists. Global configuration remains byte-identical (`d36b9cae…`) with no pending trust transition. Root has read the complete future C15 boundary design, independent review and initial actual-adapter test draft; those tests are still unexecuted, with RED and implementation held until this wave closes. A source-only checklist for the C08 three-new-row accounting pass and six retained baseline receipts is in preparation; no live-effect analysis, extraction, accounting replay or extra generation occurs.
 
 13:48 Rome checkpoint: **all three natural C08 modified workflows are running concurrently**, admitted13:47:33.067905Rome under the sole supervisor session45354 (`96c411`). Manifest`cfdfd134…` binds175inputs; independent scorer-closure/freshness review passes and is committed at`701e42e`. All3 actual startup traces select exactv7 `automatic-changed-refresh-full`; no dynamic C15 binding or fixture mutation applies. Original stage/busy/idle limits7200/1800/300seconds, subscriptionGPT-5.5/xhigh and1s/resume-forward observer settings remain. No new control, Direct or replacement is launched. Unrelated Cargo/build/provider work is held; isolated future C15 source/test preparation continues. No accounting run or directional result exists yet for this active wave; Stage B continues after it.
 
@@ -546,4 +548,4 @@ The implementation and frozen study inputs are committed. Required Rust checks p
 - Runtime checkouts: `/tmp/work-leaf-untracked-reads.jUcFKF/`
 - Pre-stop admission commit: `4b594b7` (subscription-capacity and admission evidence).
 
-This is a provisional live status note, not a final result. All admitted generation is closed; separately declared saved-data contrasts and their limitations appear in the current checkpoints above. Earlier live-phase analysis restrictions remain in their historical records.
+This is a provisional live status note, not a final result. The active execution checkpoint at the top governs current generation; earlier closed phases, separately declared saved-data contrasts and their limitations remain recorded below it. Earlier live-phase analysis restrictions remain in their historical records.

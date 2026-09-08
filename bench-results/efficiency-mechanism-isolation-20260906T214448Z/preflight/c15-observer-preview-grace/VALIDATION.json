@@ -1,0 +1,161 @@
+{
+  "schema": "work-leaf-c15-observer-preview-grace-qualification-v1",
+  "status": "automated-isolated-qualification; real-agent-grace-chain-pending",
+  "worktree": "/tmp/c15-observer-preview.0Wb07l",
+  "base_commit": "15c6475dfd5a1b8eee420e329071920a3f9a8fc6",
+  "source_sha256": {
+    "bench-observer/build.rs": "201197313acd1871ef5d03741558ba6e9357ea2ee7b978b2d2ae05d4a86e5423",
+    "bench-observer/src/lib.rs": "f7fd561875edd57913cdeb97c815e1ef353e107c367da3970d08687aa6e68ca1",
+    "bench-observer/src/preview_grammar.rs": "21baa1916a528c965439f1eba6be8529eea0501ed223ca51e2c3bd7ed9e12ff0",
+    "bench-observer/src/preview_grammar_tests.rs": "88876af6e4f38a43a1112ce63224305bff63b0b3e0e6f2a194ad872e5633f5b3",
+    "bench-observer/Cargo.toml": "457eda21562d6570956643074020a6d116fb3a336e9ee1410e37cdcd37880e63",
+    "bench-observer/Cargo.lock": "0d1a8796ebe22f632b751365f03964b7559730a2f6dd1f57d152a1a487ab2776",
+    "bench-observer/README.md": "f21895360f7f03d59d6cc72d498ca2e16844145b73ad9c3193530c7483895abc",
+    "docs/architecture.md": "5aa887f1c513ee42592fbf50f6ac4208c083b46d145e181374997a5d1ab3ae1e",
+    "src/bench_private_test_first.rs": "1700f26d5ff99271ca12acbfa783ff0d5525d3720c9ba47ff088c1aaa9d40d2f",
+    "src/orchestrator.rs": "e0ef8167bd1f51cd99d56ae58835ba5d6951549c9dc9a2ccdabf9b2e568ff0f7",
+    "bench-observer/target/debug/bench-observer": "45190981db3806fb409f18d9a74cf891851089ede408ea330eacbabc4147306f"
+  },
+  "grammar_slice_sha256": "1583e71553475ab3cc93b47d4abe47dc8d54f4b060604b57bb9a11c887263548",
+  "root_observer_unchanged_sha256": "188a1b4fd9913556c51024dcc0068be353813c44c688d6d22929da139f392b5f",
+  "cargo_home": "/tmp/c15-observer-cargo.FIduFT",
+  "preliminary_failures": [
+    {
+      "tool": "90e428",
+      "kind": "missing cached public dependency; not behavioral RED"
+    },
+    {
+      "tool": "970981",
+      "kind": "default cache read-only; not behavioral RED"
+    },
+    {
+      "tool": "8941df",
+      "command": "CARGO_HOME=/tmp/c15-observer-cargo.FIduFT cargo test --offline --locked --manifest-path bench-observer/Cargo.toml --lib preview_grammar_tests -- --nocapture",
+      "exit_code": 101,
+      "passed": 1,
+      "failed": 1,
+      "assertion": "valid_v6_preview_is_grace_eligible_after_fresh_usage: NotEligible != ForwardedAfterExactUsage"
+    },
+    {
+      "tool": "f33b56",
+      "exit_code": 101,
+      "passed": 5,
+      "failed": 2,
+      "assertions": [
+        "exact 8MiB envelope shortened by live bookkeeping",
+        "legacy absent end metadata incorrectly required"
+      ]
+    },
+    {
+      "tool": "fd6e15",
+      "exit_code": 101,
+      "kind": "new synthetic test projection compile error: UsageObservation has no Serialize; fixed in test only"
+    },
+    {
+      "tool": "3bec34",
+      "exit_code": 101,
+      "passed": 14,
+      "failed": 1,
+      "assertion": "duplicate settings publication incorrectly succeeded"
+    },
+    {
+      "tool": "3a482a",
+      "exit_code": 101,
+      "kind": "introduced 8-argument private function clippy failure; moved capture flag into existing private context"
+    }
+  ],
+  "gates": {
+    "fmt": {
+      "tool": "2557f5",
+      "command": "CARGO_HOME=/tmp/c15-observer-cargo.FIduFT cargo fmt --manifest-path bench-observer/Cargo.toml",
+      "exit_code": 0,
+      "wall_time_seconds": 0.042577058
+    },
+    "clippy": {
+      "command": "CARGO_HOME=/tmp/c15-observer-cargo.FIduFT cargo clippy --offline --locked --manifest-path bench-observer/Cargo.toml --all-targets --all-features -- -D warnings",
+      "receipt": {
+        "chunk_id": "b63e67",
+        "wall_time_seconds": 0.900723197,
+        "exit_code": 0,
+        "original_token_count": 42,
+        "output": "    Checking work-leaf-bench-observer v0.1.0 (/tmp/c15-observer-preview.0Wb07l/bench-observer)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.96s\n"
+      }
+    },
+    "tests": {
+      "command": "CARGO_HOME=/tmp/c15-observer-cargo.FIduFT cargo test --offline --locked --manifest-path bench-observer/Cargo.toml --all-targets --all-features",
+      "receipts": [
+        {
+          "chunk_id": "85eb8c",
+          "wall_time_seconds": 1.000215301,
+          "session_id": 42740,
+          "original_token_count": 1944,
+          "output": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s\n     Running unittests src/lib.rs (bench-observer/target/debug/deps/work_leaf_bench_observer-0bee4e247b8d917e)\n\nrunning 51 tests\ntest preview_grammar_tests::activation_environment_child ... ignored, isolated environment-only child; automatic parent invokes it without any backend\ntest preview_grammar_tests::default_preview_remains_outside_legacy_grace ... ok\ntest preview_grammar_tests::complete_envelope_after_benign_commentary_matches_current_runtime_rejection ... ok\ntest preview_grammar_tests::manifest_grammar_enrollment_rejects_wrong_schema_condition_owner_and_shape ... ok\ntest preview_grammar_tests::metadata_publish_cannot_overwrite_an_existing_choice ... ok\ntest preview_grammar_tests::multiline_stream_accumulation_uses_runtime_two_newline_join ... ok\ntest preview_grammar_tests::uncaptured_default_does_not_require_new_closure_metadata ... ok\ntest project_inventory::budget_tests::failed_partial_reads_are_charged_and_remaining_budget_limits_reading ... ok\ntest raw_capture::tests::fragmented_frames_preserve_order_and_final_unterminated_bytes ... ok\ntest raw_capture::tests::initialize_handles_absent_or_null_capabilities ... ok\ntest raw_capture::tests::initialize_requests_only_completion_metadata_and_preserves_capabilities ... ok\ntest raw_capture::tests::malformed_capabilities_are_not_repaired_or_partially_rewritten ... ok\ntest raw_capture::tests::opt_in_accepts_only_explicit_boolean_digits ... ok\ntest preview_grammar_tests::strict_typed_preview_rejects_copied_malformed_and_mixed_text ... ok\ntest preview_grammar_tests::valid_v6_preview_is_grace_eligible_after_fresh_usage ... ok\ntest raw_capture::tests::forwarded_capture_and_rewrite_provenance_match_actual_bytes ... ok\ntest raw_capture::tests::existing_opt_in_is_byte_identical_and_not_duplicated ... ok\ntest raw_capture::tests::raw_completion_neither_releases_grace_nor_marks_output_resumed ... ok\ntest raw_capture::tests::rewritten_frames_keep_the_original_line_ending ... ok\ntest preview_grammar_tests::preview_uses_existing_resume_terminal_and_timeout_outcomes ... ok\ntest raw_capture::tests::raw_capture_uses_existing_grace_release_and_output_resume_policy ... ok\ntest raw_capture::tests::thread_start_changes_only_raw_event_flag ... ok\ntest raw_capture::tests::unrelated_requests_and_responses_remain_byte_identical ... ok\ntest response_usage::tests::client_callback_reply_cannot_shadow_its_outbound_request_id ... ok\ntest response_usage::tests::matching_completed_prefix_does_not_prove_interrupted_tail ... ok\ntest preview_grammar_tests::captured_enrollment_roundtrip_and_exact_source_identities ... ok\ntest response_usage::tests::missing_cumulative_or_unequal_totals_never_reconcile ... ok\ntest raw_capture::tests::provenance_accepts_valid_opt_in_and_legacy_grace_only_capture ... ok\ntest response_usage::tests::missing_usage_is_unknown_not_zero ... ok\ntest response_usage::tests::reconciles_unique_response_ids_without_adding_cumulative_usage ... ok\ntest response_usage::tests::regressed_cumulative_snapshot_cannot_manufacture_reconciliation ... ok\ntest response_usage::tests::requires_captured_turn_start_not_merely_notification_identity ... ok\ntest response_usage::tests::response_events_may_precede_the_turn_start_reply ... ok\ntest response_usage::tests::rejects_conflicting_response_identity_or_counters ... ok\ntest response_usage::tests::resume_and_fork_do_not_assume_a_zero_usage_baseline ... ok\ntest response_usage::tests::server_request_cannot_impersonate_a_turn_start_reply ... ok\ntest response_usage::tests::rpc_string_and_numeric_ids_do_not_identify_the_same_request ... ok\ntest tests::cumulative_increase_without_last_usage_does_not_prove_a_response ... ok\ntest response_usage::tests::rejects_missing_negative_and_inconsistent_exact_counters ... ok\ntest tests::streamed_directive_replay_waits_for_complete_edit_blocks ... ok\ntest raw_capture::tests::provenance_rejects_rehashed_model_facing_changes_or_wrong_settings ... ok\ntest raw_capture::tests::provenance_rejects_missing_partial_or_malformed_digest_metadata ... ok\ntest preview_grammar_tests::offline_replay_uses_saved_grammar_only_and_preserves_provider_observations ... ok\ntest preview_grammar_tests::saved_grammar_rejects_changed_or_missing_closed_sources ... ok\ntest raw_capture::tests::provenance_rejects_conflicting_or_removed_opt_in_marker ... ok\ntest raw_capture::tests::provenance_rejects_missing_or_tampered_opt_in_artifacts ... ok\ntest raw_capture::tests::provenance_rejects_rehashed_missing_extra_reordered_or_false_decisions ... ok\ntest preview_grammar_tests::ordinary_directives_keep_identical_freshness_and_resume_predicates ... ok\ntest preview_grammar_tests::complete_maximum_runtime_envelope_is_not_shortened_by_stream_bookkeeping ... ok\ntest preview_grammar_tests::activation_environment_is_explicit_and_cannot_override_saved_replay_choice ... ok\ntest preview_grammar_tests::local_pipe_interrupt_is_held_for_fresh_usage_not_carried_metadata ... ok\n\ntest result: ok. 50 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.06s\n\n     Running unittests src/main.rs (bench-observer/target/debug/deps/bench_observer-9ea465bec1ae0205)\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running unittests src/bin/bench-observer-fixture.rs (bench-observer/target/debug/deps/bench_observer_fixture-862c47bf1d589187)\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/analyzer.rs (bench-observer/target/debug/deps/analyzer-ed77454cc39d54f1)\n\nrunning 29 tests\ntest app_server_total_usage_and_malformed_frames_remain_distinct ... ok\ntest announced_bundle_snapshots_do_not_cross_thread_identity ... ok\ntest bundle_manifest_rows_are_not_treated_as_unchanged_read_rows ... ok\ntest announced_bundle_snapshots_resolve_unchanged_reads_for_the_same_thread ... ok\ntest bundle_reads_through_input_redirection_are_counted_as_consumed ... ok\ntest changed_full_current_delivery_establishes_the_next_digest_snapshot ... ok\ntest changed_read_parser_accepts_blank_separators_between_file_blocks ... ok\ntest changed_read_counterfactual_handles_files_without_trailing_newlines ... ok\ntest concurrent_timeline_accepts_additional_condition_metadata ... ok\ntest changed_read_parser_keeps_unified_diff_headers_inside_each_file_block ... ok\ntest invalid_and_ambiguous_mechanism_evidence_is_rejected_instead_of_priced ... ok\ntest descriptive_mechanism_rows_distinguish_outcomes_repeats_and_bundle_consumption ... ok\ntest protocol_text_embedded_in_review_history_is_not_current_thread_evidence ... ok\ntest omitted_refresh_provenance_is_not_reported_as_unknown_capture_loss ... ok\ntest locked_command_pairing_validates_status_and_timeout_metadata ... ok\ntest jsonl_index_ignores_provider_json_embedded_in_command_output ... ok\ntest review_only_turns_are_measured_without_patch_iteration_caps ... ok\ntest unchanged_full_resend_is_not_counted_as_digest_saving ... ok\ntest usage_scopes_keep_one_final_cumulative_snapshot_per_thread ... ok\ntest review_targets_must_resolve_to_exactly_one_captured_git_commit ... ok\ntest validation_activity_allows_a_turn_without_a_cargo_process ... ok\ntest validation_activity_allows_linearizer_checks ... ok\ntest mechanism_analyzer_exposes_evidence_for_every_registered_hypothesis ... ok\ntest validation_activity_spans_implementation_and_review_fix_turns ... ok\ntest validation_activity_records_multiple_processes_without_judging_the_workflow ... ok\ntest deterministic_mechanism_counterfactuals_are_verified_from_captured_evidence ... ok\ntest bundle_command_path_fanout_is_bounded ... ok\ntest command_results_and_bundle_reads_resolve_through_disjoint_index_buckets ... ok\n"
+        },
+        {
+          "chunk_id": "bf5f9c",
+          "wall_time_seconds": 0.000005937,
+          "exit_code": 0,
+          "original_token_count": 1414,
+          "output": "test bundle_archive_timeline_and_git_checkpoint_are_self_contained ... ok\n\ntest result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.25s\n\n     Running tests/project_inventory.rs (bench-observer/target/debug/deps/project_inventory-87ea91f86a9b3e04)\n\nrunning 22 tests\ntest configuration_home_symlink_is_not_silently_followed ... ok\ntest absent_project_codex_directory_is_an_explicit_valid_inventory ... ok\ntest inventory_includes_ignored_untracked_files_directories_and_absent_layers_without_contents ... ok\ntest credential_file_is_not_read_or_hashed ... ok\ntest layer_permission_changes_are_part_of_inventory_identity ... ok\ntest explicit_inventory_is_durable_before_child_and_preserves_stream_argv_and_environment ... ok\ntest nonprimary_invocation_is_not_misrepresented_as_required_primary_inventory ... ok\ntest absent_marker_does_not_inventory_or_validate_project_settings ... ok\ntest checkpoint_snapshots_retain_actual_changed_layers_and_failure_evidence ... ok\ntest nested_cwd_without_declared_project_root_is_rejected ... ok\ntest expected_configuration_file_cannot_be_a_directory ... ok\ntest failed_entry_limit_does_not_exceed_the_retained_record_bound ... ok\ntest oversized_file_retains_bounded_failure_before_spawn ... ok\ntest offline_analysis_derives_cross_snapshot_drift_instead_of_trusting_valid_flags ... ok\ntest offline_analysis_detects_deleted_required_inventory ... ok\ntest offline_analysis_rejects_inventory_entry_digest_tampering ... ok\ntest rejected_non_utf8_children_consume_the_enumeration_budget ... ok\ntest unrelated_project_names_are_not_interpreted_as_configuration_option_names ... ok\ntest symlink_layer_is_recorded_without_following_and_prevents_spawn ... ok\ntest retained_checkpoint_failure_invalidates_offline_analysis_without_activation_environment ... ok\ntest invalid_marker_fails_before_provider_spawn ... ok\ntest unsupported_global_and_project_configuration_is_rejected_without_values ... ok\n\ntest result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.93s\n\n     Running tests/proxy.rs (bench-observer/target/debug/deps/proxy-faf7c2cf6b8ac72d)\n\nrunning 45 tests\ntest app_server_usage_grace_still_forwards_resumed_output_by_default ... ok\ntest app_server_and_exec_proxies_preserve_nonzero_status_and_exact_argv_bytes ... ok\ntest app_server_proxy_forwards_termination_and_records_child_signal ... ok\ntest analyzer_rejects_secrets_in_raw_streams_and_hardens_artifact_permissions ... ok\ntest app_server_analysis_accepts_content_length_framing ... ok\ntest concurrent_locked_shell_timeouts_all_publish_completion_before_escalation ... ok\ntest app_server_session_snapshot_without_turn_is_not_generation_usage ... ok\ntest app_server_usage_resolves_thread_from_the_matching_turn_response ... ok\ntest app_server_usage_grace_can_wait_through_resumed_output_for_exact_usage ... ok\ntest analyzer_waits_for_inflight_process_completion_metadata ... ok\ntest analyzer_rejects_tampered_raw_capture ... ok\ntest app_server_proxy_forwards_and_captures_exact_bytes ... ok\ntest app_server_usage_grace_waits_for_exact_usage_before_forwarding_interrupt ... ok\ntest analyzer_rejects_missing_process_completion_metadata ... ok\ntest app_server_usage_grace_timeout_preserves_missing_usage_failure ... ok\ntest app_server_usage_grace_rejects_an_unchanged_cumulative_total ... ok\ntest initialization_records_cargo_identity_without_installing_a_cargo_proxy ... ok\ntest help_text_after_option_delimiter_remains_provider_capture ... ok\ntest exec_proxy_forwards_termination_and_records_child_signal ... ok\ntest controller_usage_reconciles_to_events_delivered_before_directive_interrupt ... ok\ntest locked_shell_proxy_finalizes_before_work_leaf_timeout_escalation ... ok\ntest locked_shell_proxy_forwards_termination_to_the_work_leaf_process_group ... ok\ntest locked_shell_proxy_preserves_binary_stdin_and_large_output ... ok\ntest locked_shell_proxy_matches_direct_execution_under_timeout ... ok\ntest codex_passthrough_records_informational_calls_and_rejects_unclassified_calls ... ok\ntest exec_turn_completion_resolves_terminal_directive_outcome ... ok\ntest locked_shell_proxy_preserves_streams_and_exit_status ... ok\ntest exec_command_completion_is_counted_once_after_started_event ... ok\ntest direct_launch_and_resume_sum_each_invocation_usage ... ok\ntest initialized_proxy_is_executable_and_analysis_builds_inventory ... ok\ntest later_cumulative_usage_without_an_unreported_increment_does_not_cover_interrupted_turn ... ok\ntest later_cumulative_thread_usage_covers_an_interrupted_turn_without_immediate_usage ... ok\ntest proxy_installs_termination_capture_before_slow_artifact_setup ... ok\ntest ordinary_ask_for_approval_argv_is_not_a_secret_marker ... ok\ntest unrecognized_shell_invocations_execute_without_capture ... ok\ntest end_to_end_usage_reconciliation_separates_visible_hidden_and_descendant_threads ... ok\ntest nested_locked_commands_remain_captured_without_becoming_h4_render_candidates ... ok\ntest raw_app_server_capture_drives_verified_mechanism_analysis ... ok\ntest rollout_extraction_uses_only_observed_thread_ids_and_allowlisted_fields ... ok\ntest strict_usage_rejects_interrupted_turn_without_terminal_provider_usage ... ok\ntest stop_app_server_finalizes_the_real_child_before_proxy_teardown ... ok\ntest unchanged_same_turn_usage_does_not_cover_interrupted_response ... ok\ntest rollout_recovers_captured_exec_thread_without_terminal_usage ... ok\ntest rollout_recovers_newer_usage_after_output_free_resume ... ok\ntest secret_scan_requires_a_token_boundary_before_sk_prefixes ... ok\n\ntest result: ok. 45 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.28s\n\n"
+        }
+      ],
+      "target_summaries": [
+        {
+          "passed": 50,
+          "failed": 0,
+          "ignored": 1
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 29,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 22,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 45,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "passed": 146,
+      "failed": 0,
+      "ignored": 1
+    },
+    "new_tests": {
+      "tool": "f7d121",
+      "passed": 16,
+      "failed": 0,
+      "ignored": 1
+    }
+  },
+  "performed": {
+    "provider_calls": 0,
+    "benchmark_runs": 0,
+    "private_executor_calls": 0,
+    "saved_capture_accounting_replays": 0,
+    "root_runtime_edits": 0,
+    "frozen_observer_edits": 0
+  },
+  "limitations": [
+    "Build/source and synthetic/local-pipe qualification only; no actual configured agent verification.",
+    "Exactly pinned current strict whole-turn parser; earlier commentary remains a runtime preview rejection.",
+    "Default-off future captured choice only; does not reclassify original C15 captures or clear flags.",
+    "Live and offline growing-text reparsing O(K*B), worst-case quadratic; 8MiB envelope cap is not total memory/work bound.",
+    "Activation metadata proves the selected grammar/run/manifest bytes, not independent experimental admission or full runtime manifest validity.",
+    "Synthetic offline replay checks controller boundary only, preserving complete observed cumulative rows and existing freshness arithmetic."
+  ]
+}
