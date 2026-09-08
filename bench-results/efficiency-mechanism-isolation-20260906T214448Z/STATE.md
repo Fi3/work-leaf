@@ -2,6 +2,13 @@
 
 ## Active continuation plan
 
+Stage B identification is active under the user's explicit requirement to finish
+that step before final handoff. [Current continuation](STAGE-B-RESUMPTION-20260908.md)
+covers C15 effect-screen preparation, C21's separately asked qualification choice,
+and remaining coupled work-selection/review/integration checks. Diagnostic003 is
+a completed prerequisite, not completion of mechanism identification. No new
+provider workflow is admitted at this checkpoint.
+
 C15 diagnostic003 has a complete successful real subscription workflow:
 private behavioral RED → identical tests plus implementation → ordinary shared
 patch/ACK → normal GREEN → author DONE → resolved review. Its sole command runs
