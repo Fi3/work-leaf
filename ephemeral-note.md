@@ -32,6 +32,16 @@ The final bounded decision screens find that three generic repetitions would tes
 recurrence but not close historical attribution, and no already-qualified WL joint
 inverse exists. No confirmation batch or replacement is admitted.
 
+**Verified checkpoint, 2026-09-13 00:57 UTC:** commit `af7bdf3` preserves the
+non-WL recipe/private host and runner, admission/qualification records, response
+ledger, independent audits, actual feature failure and 54/1 publication history.
+The checkpoint contains 63 files, mainly structured evidence; normal WL source,
+user configuration/ignore changes and the earlier raw artifact backlog are not
+part of that commit. Hash-bound evidence keeps its recorded trailing blank lines.
+All 18 progress checks pass and the private real-agent verification is the full
+completed pilot. No provider or verification process remains active. G03 remains
+unfinished; no quantified historical attributable percentage is claimed.
+
 **Terminal resource monitor:** 2026-09-13T00:25:56.673815+00:00; supervisor 79974 terminal; 31 completed public turns / 18,545,304 observed raw. Subsequent native/independent reconciliation matches exactly.
 **Admission, 2026-09-12 23:25:52 UTC:** root and independent checks pass. The sole
 global-hunk pilot launched around23:27:08UTC under supervisor79974, monitor cell562;
