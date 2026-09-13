@@ -1,0 +1,10 @@
+{
+  "command": "python3 - <<'PY'\nimport hashlib,json,re\nfrom pathlib import Path\ns=Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z')\na=s/'infrastructure/driver-source/bench-three-features-direct-common'\nb=s/'phases/standalone-global-hunk-pilot-01/infrastructure/drivers/bench-three-features-serialized-host-custody'\npattern=r\"^feature_[123]=.*$\"\nx=re.findall(pattern,a.read_text(),re.M);y=re.findall(pattern,b.read_text(),re.M)\nassert len(x)==len(y)==3 and x==y\nprint(json.dumps({'exact_three_tasks_equal':True,'source':str(a),'selected_driver':str(b),'source_assignment_lines_sha256':hashlib.sha256(('\\n'.join(x)+'\\n').encode()).hexdigest()}))\nPY",
+  "result": {
+    "chunk_id": "bf9663",
+    "wall_time_seconds": 0.000009498,
+    "exit_code": 0,
+    "original_token_count": 117,
+    "output": "{\"exact_three_tasks_equal\": true, \"source\": \"bench-results/efficiency-mechanism-isolation-20260906T214448Z/infrastructure/driver-source/bench-three-features-direct-common\", \"selected_driver\": \"bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/drivers/bench-three-features-serialized-host-custody\", \"source_assignment_lines_sha256\": \"e2650c57a982204616be2a2ba897dc9d1d029dc7af8885d192e94f36c99a61c7\"}\n"
+  }
+}

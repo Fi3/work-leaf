@@ -1,0 +1,19 @@
+{
+  "source": "MONITOR-LOOP.js before error-path correction",
+  "tests": [
+    {
+      "mode": "launch-receipt-failure",
+      "control_attempts": 0,
+      "expected": 1,
+      "pass": false,
+      "error": "Error: receipt unavailable"
+    },
+    {
+      "mode": "first-control-failure",
+      "control_attempts": 1,
+      "expected": 2,
+      "pass": false,
+      "error": "Error: EXIT"
+    }
+  ]
+}

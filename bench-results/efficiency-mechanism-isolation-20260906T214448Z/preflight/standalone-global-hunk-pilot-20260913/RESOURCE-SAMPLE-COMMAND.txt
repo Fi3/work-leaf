@@ -1,0 +1,32 @@
+python -c 'import json
+from pathlib import Path
+from datetime import datetime, timezone
+P=Path("/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01")
+m=json.loads((P/"PHASE-MANIFEST.json").read_text())
+rows=[]
+for r in m["schedule"]:
+    live=list(Path(r["runtime_dir"]).glob("work-leaf-3feature-sequential-bench.*/runs"))
+    if len(live)>1: raise ValueError("multiple live populations")
+    root=live[0] if live else Path(r["artifact"])/"runs"
+    files=sorted(set(root.glob("*.jsonl")) | set(root.glob("*.host/invocation-*/stdout.jsonl")))
+    raw=0; count=0; details=[]; partial=0
+    for p in files:
+        subtotal=0; n=0
+        data=p.read_bytes()
+        for i,line in enumerate(data.splitlines(keepends=True)):
+            try: event=json.loads(line)
+            except json.JSONDecodeError:
+                if not line.endswith(b"\n"): partial+=1; continue
+                raise
+            if event.get("type")!="turn.completed": continue
+            u=event["usage"]
+            value=u["input_tokens"]+u["output_tokens"]
+            if type(value) is not int or value<0: raise ValueError("invalid usage")
+            subtotal+=value; n+=1
+        raw+=subtotal; count+=n
+        if n: details.append({"file":str(p.relative_to(root)),"terminals":n,"reported_raw":subtotal})
+    terminal=P/"logs"/(r["run_id"]+".exit.json")
+    closure=json.loads(terminal.read_text()) if terminal.exists() else None
+    rows.append({"id":r["run_id"],"population":str(root),"files":len(files),"completed_public_turns":count,"reported_raw":raw,"partial_lines":partial,"terminal":closure,"details":details})
+print(json.dumps({"at_utc":datetime.now(timezone.utc).isoformat(),"source":"completed-public resource-only; not reconciled usage","threshold_per_run":25000000,"stop_wave":any(r["reported_raw"]>=25000000 for r in rows),"phase_terminal":(P/"PHASE-RESULT.json").exists(),"runs":rows},indent=2))
+'

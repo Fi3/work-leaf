@@ -1,0 +1,94 @@
+{
+  "frozen_scorer": {
+    "analysis_helper": {
+      "path": "bench-results/efficiency-measurement-gate-20260906/batch_analysis.py",
+      "sha256": "dacbfc8416467312c8a447ac1cd846da3e1f78da96f3733ee16c3dad1781d7c3"
+    },
+    "analysis_tests": {
+      "path": "bench-results/efficiency-measurement-gate-20260906/test_batch_analysis.py",
+      "sha256": "e149bde096af9c591a866c0ccbd060564e01d378c8b0e736a5fab30ec66e73b3"
+    },
+    "fixtures": [
+      {
+        "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_visual.rs",
+        "sha256": "5ce0782e37b8672e04d8016ca3fbec9caa12f6f9cfaf431cac847c1f6e6a26ca"
+      },
+      {
+        "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_status.rs",
+        "sha256": "5f5295c9dec6be20abb28827b68e84342110fb748aa0cc887d8b58ffa3c6e6b5"
+      },
+      {
+        "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/fixtures/quality_completion.rs",
+        "sha256": "4d6a19f4c6f515b9a97f184a056d08dc2882041d40d26dd82011180a949c5c87"
+      }
+    ],
+    "quality_scope": "Canonical saved-implementation feature checks only; independent of raw-token accounting admission.",
+    "schema_version": 1,
+    "scorer": {
+      "path": "bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/scorer/score.py",
+      "sha256": "c0a4e951e96d7da53a6d414a7677176183cae6e30d0bbfab92069d5082865162"
+    },
+    "stage_helper": {
+      "path": "bench-results/efficiency-mechanism-attribution-20260830T081131Z/analyze.py",
+      "sha256": "efa36c8c6d57ed8929ff32c19fcfc8a4469403cee014566c3d33db284710208e"
+    },
+    "stage_scope": "Recorded usage and cumulative usage advances by role; not an exhaustive model-call inventory."
+  },
+  "runs": [
+    {
+      "check_details": {
+        "completion": {
+          "duration_seconds": 0.445,
+          "exit_code": 101,
+          "log": "scorer/logs/standalone-global-hunk-pilot-001/completion.log",
+          "log_sha256": "68069fbeeb85892d47ce00b253c45891e9841cc7e0e3d6f3c6efbe4f0c385bcd",
+          "status": "fail"
+        },
+        "status": {
+          "duration_seconds": 0.243,
+          "exit_code": 0,
+          "log": "scorer/logs/standalone-global-hunk-pilot-001/status.log",
+          "log_sha256": "edd620713d3fff35f3b85043a28ca50835a34ff004bcf51072d69f833ab8d10f",
+          "status": "pass"
+        },
+        "visual": {
+          "duration_seconds": 6.176,
+          "exit_code": 0,
+          "log": "scorer/logs/standalone-global-hunk-pilot-001/visual.log",
+          "log_sha256": "c7d87395a4dc067d9020c203a1f3cc9af4e6970d28a218d5b14e43b7a3b4a66c",
+          "status": "pass"
+        }
+      },
+      "checks": {
+        "completion": "fail",
+        "status": "pass",
+        "visual": "pass"
+      },
+      "completed_features": 2,
+      "condition": "standalone-global-hunk-pilot",
+      "final_commit": "b66836d950de093529f63d24cbc6265e2bec517b",
+      "id": "standalone-global-hunk-pilot-001",
+      "materialization_notes": [],
+      "measurement": {
+        "analysis": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts/observation/analysis.json",
+        "analysis_sha256": "4fe8a8eb1c20b65f45ef398b80e6679fab9e8114eff7c901ac0b2324d2fad4c9",
+        "reasons": [],
+        "usable": true,
+        "usage": {
+          "cached_input_tokens": 17324672,
+          "input_tokens": 18379041,
+          "output_tokens": 166263,
+          "raw_input_plus_output": 18545304,
+          "reasoning_output_tokens": 74078,
+          "uncached_input_plus_output": 1220632,
+          "uncached_input_tokens": 1054369
+        }
+      },
+      "report": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts/report.json",
+      "report_sha256": "731dffb867fad0b7f0d6d587f29484ce03331e18821fed8d398d1b7abee35cfd",
+      "workflow": "direct-sequential-serialized-host-custody",
+      "workflow_result": "pass"
+    }
+  ],
+  "scope": "feature quality; separate from token measurement"
+}
