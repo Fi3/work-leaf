@@ -4,8 +4,18 @@ Live analysis counter: **DONE: 77 | TODO: 13 | TOTAL: 90** — [hypotesis.md](hy
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
 **Bug-fix counter: DONE: 5 | TODO: 0 | TOTAL: 5.** BUG005's eight regressions pass and exact saved-native replay detects the catalog timing mismatch. BUG003's command classification is fixed, but its pooled-profile verification did not prove historical boundary equality. BUG004 preserves the shared 364-second bookkeeping interval separately; limits remain unchanged.
-**Current activity, 2026-09-14T21:14:52+00:00:** P10's complete four-admission audit retains 43 recorded responses and 3,567,272 raw plus two unknown tails. P03/P04 are incomplete and fail corresponding resumed-catalog input qualification, despite exact startup/source endpoints. P05 retains public work but lacks a qualified net chain; P06–P08 lack faithful joint boundaries. P09 has no eligible arm, so its three full workflows remain unlaunched. Dependent attribution tasks stay in TODO; P15's conditional original-benchmark audit is not activated. No benchmark, repeat, resumed extension or full batch is running.
+**Current activity, 2026-09-14T21:30:22+00:00:** Research continues under the user's no-routine-pause instruction. Routine repair and necessary verification within the thirteen existing obligations are not another approval stop. The resumed-input blocker is next; no new model run has started. Prior costs, failed qualification and unfinished scientific conclusions remain unchanged.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-14T21:30:22+00:00 — user corrects the stop rule:** keep working within the remaining
+thirteen tasks, including fixes and necessary verification. Stop only for a
+verified causal answer or a genuinely new highly promising outside-plan cause
+grounded in facts previously unknown. Individual capped/unpromising attempts
+still stop; continue with useful in-scope work and prospectively bounded records.
+The earlier whole-research allocation hold and its additional-permission request
+do not govern this continuation. Main counts remain 77/13/90, bug counts 5/0/5;
+no old completion, admission or result is changed. The exact instruction is
+saved in AUTHORITY-NO-ROUTINE-PAUSE-20260914.md and the operating guides.
 
 **2026-09-14T21:21:43+00:00 — bounded execution hold:** the current admissible experiments and
 available analyses have reached their saved qualification blockers. No model

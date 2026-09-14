@@ -112,6 +112,22 @@ to the supervising investigation; preserve frozen measured-agent instructions an
 
 ## Current mechanism-investigation authority
 
+The latest stop rule is `AUTHORITY-NO-ROUTINE-PAUSE-20260914.md` in the mechanism
+study. Research continues through the thirteen remaining obligations, including
+routine debugging, setup repair and necessary verification, without another
+approval pause for those actions. Individual capped or unpromising attempts stop;
+the investigation proceeds to the next useful in-scope action. Further attempts
+require prospective bounded admissions and a concrete repaired setup or new
+discriminating distinction. Preserve every earlier allocation and outcome.
+
+The whole investigation stops for a verified causal answer, including an answer
+reached before every remaining check is necessary, or seeks user direction for a
+genuinely new highly promising outside-plan cause based on previously unknown
+facts. Main TODO cannot increase without approval. New scientific questions cannot
+be hidden as bug fixes. Ordinary controls, API credits, normal-WL changes and
+altered admitted evidence remain outside this authority. This rule governs earlier
+allocation-based pause language and the historical allowances described below.
+
 The user's conditional 2026-09-14 approval permits publication of the complete known
 remaining-work list, P01–P16, as 74 DONE / 16 TODO / 90 TOTAL. The study record
 `AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md` preserves the reply and its scope;
@@ -123,12 +139,15 @@ The exact user reply in `AUTHORITY-P01-EXTRA-AND-BUGFIX-20260914.md` approves
 `P01-BUDGET-EXCEPTION-20260914.json`: 30 extra local minutes and one conditional
 60-second/100k read-only subscription diagnostic after a distinct locally qualified repair.
 That additional diagnostic is consumed. P02's exact effective-factor/reference qualification
-precedes any feature admission; no further setup diagnostic is allocated.
+precedes any feature admission. Those original diagnostic allocations are consumed;
+necessary subsequent in-scope verification follows the latest stop rule and its
+own prospective admission rather than reusing an old identity or allowance.
 Previously unaccounted bug-fix-only tasks need no additional permission question under that
 same authority. Their separate append-only `BUG-FIX-CHECKLIST.json` counter is visible on
 line two of root `hypotesis.md`; record discovery before work and reproduction/verification
 evidence before completion. Existing repairs are not counted twice. This does not expand
-the fixed research checklist or permit extra scientific observations/budgets.
+the fixed research checklist or admit new scientific questions. The later
+no-routine-pause authority governs necessary verification and continuation.
 `test_progress_repairs.py` validates the exception and bug ledger alongside the three prior guards.
 `test_progress_publication_regression.py` rejects the former test defect that froze the actual
 publication at its initial count instead of accepting valid completed-task advances.
@@ -140,8 +159,9 @@ discovery date, exact new fact, why it was unknown at the freeze, related previo
 upstream decision/work pathway, plausible explanatory reach and smallest discriminating check.
 A favorable total, an unallocated residual or a renamed weak hypothesis is not a new discovery.
 A known omission is case (2), an initial-checklist error, not an unexpected issue. Reprioritizing
-existing in-scope work changes no count. Additional work, retries or larger budgets still need
-explicit approval before the counter or execution scope grows.
+existing in-scope work changes no count. New scientific scope and main-counter
+increases need approval; routine repairs and necessary bounded continuation within
+the listed tasks follow the latest whole-research stop rule.
 
 The token-mechanism investigation reuses the existing normal-WL baseline. Additional normal-WL
 control workflows or unmodified Direct sequential controls require fresh explicit user authorization. The

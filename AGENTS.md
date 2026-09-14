@@ -51,6 +51,19 @@ its study's frozen protocol. Preserve admitted runs and record all outcomes.
 
 ### Mandatory shallow screening before expensive experiments
 
+The current whole-research stop rule is
+`bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-NO-ROUTINE-PAUSE-20260914.md`.
+Keep working within the remaining thirteen obligations, including routine bug fixes,
+setup repair and necessary verification; do not ask again or stop the investigation
+merely because an individual attempt fails or consumes its allocation. Individual
+capped/unpromising attempts still stop, and each further useful in-scope attempt
+requires a prospective bounded record with all prior outcomes retained.
+Stop when the causal answer is verified, or seek direction for a genuinely new,
+highly promising cause outside the known plan, supported by newly discovered facts.
+This later instruction governs earlier allocation-based pause language below.
+It does not permit a main TODO increase, hidden scientific work, API credits,
+ordinary controls, altered admitted evidence or non-target changes.
+
 The first line of `hypotesis.md` uses the user-approved finite task ledger:
 `DONE + TODO = TOTAL = 90`. Its source is
 `bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-CHECKLIST.json`.
@@ -92,7 +105,8 @@ The user's `AUTHORITY-P01-EXTRA-AND-BUGFIX-20260914.md` permits previously unacc
 bug-fix-only tasks without another permission question. Record them before work in
 `BUG-FIX-CHECKLIST.json` and the separate BUG FIXES counter on line two of root `hypotesis.md`.
 Only verified fixes with reproduction and dated evidence advance that counter's DONE.
-Do not count known repairs twice or use this authority for extra research scope/provider usage.
+Do not count known repairs twice or use bug-fix authority to hide extra scientific scope.
+Necessary verification within existing tasks follows the later no-routine-pause authority.
 Run `test_progress_repairs.py` and `test_progress_publication_regression.py` with the three
 existing progress guards. BUG002's actual-publication assertion follows validated live counts,
 not the initial 74/16 snapshot; frozen scope, histories and evidence checks remain intact.
@@ -101,8 +115,9 @@ Known necessary work, routine repair, verification and already-described joint c
 the listed tasks. Unexpected issues and promising causes from previously unknown facts are legitimate
 discoveries: record the dated fact, why it was unknown, the decision/work mechanism, potential token
 impact, prior related results and next cheap discriminator. An omitted known requirement is case (2),
-not novelty. Neither discovery nor reprioritization permits an automatic TODO/budget increase or extra
-provider observation; new scope still requires explicit approval. Root `hypotesis.md` owns the full list.
+not novelty. Neither discovery nor reprioritization permits an automatic main TODO increase.
+New scientific scope still requires explicit approval; necessary bounded continuation of
+already-listed work follows the current stop rule. Root `hypotesis.md` owns the full list.
 
 The mechanism-research objective is to explain the historical ~50% result as fast as evidence
 permits, not to complete candidates in ID order. Maintain a live most-promising ranking near the

@@ -1,9 +1,9 @@
 # DONE: 77 | TODO: 13 | TOTAL: 90
 ## BUG FIXES — DONE: 5 | TODO: 0 | TOTAL: 5
 
-**Pending checks: 13 research obligations remain. Research is paused at the allocation/qualification boundary, not finished. P03/P04 need qualified resumed inputs; P06–P08 lack faithful joint-test boundaries. P10's audit is complete. No benchmark is running or eligible for escalation.**
+**Pending checks: 13 research obligations remain. Research is active under the user's no-routine-pause rule. Next is the existing resumed-input blocker for P03/P04, with repairs and necessary verification kept inside scope. No benchmark is currently running.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-14T21:14:52+00:00:** All four actual admissions are audited: 43 recorded responses, 3,567,272 raw plus two unknown stopped tails. The boundary-aware verifier rejects both new screens' resumed-input comparison; initial equality remains valid. Their actual test/publication/repair work is retained, not a clean cost effect. Joint setup and dependent attribution tasks remain unfinished; the original-benchmark-error branch is not activated.
+**Activity, 2026-09-14T21:30:22+00:00:** The user's stop rule is saved in AUTHORITY-NO-ROUTINE-PAUSE-20260914.md and the operator instructions. Routine repair, verification and bounded work within the remaining tasks continue without another permission pause. The last audited costs and failed resumed-input qualification remain unchanged; no new run or completion is claimed.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
@@ -34,14 +34,22 @@ The plan's original proposal wording is historical; the linked approval governs 
 
 ## Counter contract — complete known remaining work
 
+**Current stop rule:** continue routine fixes, setup and required verification within
+the existing thirteen obligations. An individual capped/failed attempt can stop
+without stopping the investigation. Stop for the verified causal answer, or seek
+approval for a genuinely new highly promising cause outside the known plan based
+on previously unknown facts. [Exact user instruction and limits](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-NO-ROUTINE-PAUSE-20260914.md).
+It governs earlier allocation-based pause language; all old records and counts remain intact.
+
 The separate [bug-fix ledger](bench-results/efficiency-mechanism-isolation-20260906T214448Z/BUG-FIX-CHECKLIST.json)
 records only previously unaccounted bug-fix tasks under the
 [standing user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-P01-EXTRA-AND-BUGFIX-20260914.md).
 Record each new defect before work and its reproduction, verification and dated result before
 DONE. Bug additions may increase only this separate counter; no second permission question
 is required. Existing research tasks, known repairs and this requested tracker administration
-are not counted twice. This authority does not admit new scientific experiments or extra
-provider usage. The immutable [P01 budget exception](bench-results/efficiency-mechanism-isolation-20260906T214448Z/P01-BUDGET-EXCEPTION-20260914.json)
+are not counted twice. New scientific questions are not hidden as repairs. Necessary
+verification/continuation follows the later stop rule and its own bounded admission.
+The immutable [P01 budget exception](bench-results/efficiency-mechanism-isolation-20260906T214448Z/P01-BUDGET-EXCEPTION-20260914.json)
 allows 5,400 total local seconds and one additional conditional diagnostic; it does not
 rewrite the original task contract or the failed input-001 record.
 
@@ -62,8 +70,9 @@ are byte-for-byte pinned. Old R01–R20 outcomes are not rewritten to fit the ne
   evidence and limits. Inconclusive is not zero effect. An unavailable required analysis stays unfinished.
 - Conditional discharge requires evidence of an absent/shared pathway, coverage by verified joint
   attribution, or the demonstrated benchmark-error alternative. Failed setup is not such evidence.
-- Preparation and provider ceilings stop spending; they do not manufacture task completion.
-  No hidden extra experiment, automatic replacement, scope substitution or budget extension.
+- Preparation and provider ceilings stop their admitted attempt; they do not manufacture
+  completion or require a whole-research pause. Necessary further in-scope work has its
+  own prospective bounds and retained record; no hidden experiment or scope substitution.
 - At zero, stop with the supported answer or report case (1) genuinely additional work and/or
   case (2) an incorrect initial checklist, giving exact proposed tasks/count and asking permission.
   The final acceptance item cannot close merely because attempts or budgets are exhausted.
@@ -103,10 +112,10 @@ parked candidate, but must identify the specific new fact; a new name or renewed
 An omitted known requirement is **case (2), a planning mistake**, and must be reported that way.
 P08 is one explicitly scoped residual-package check, not permission for an uncounted series of tests.
 
-Record genuinely new evidence and re-rank existing in-scope work immediately. These exceptions
-permit honest discovery, not automatic scientific scope: research additions or changed budgets
-still require an exact proposal and user approval. The separate bug-fix-only authority above
-allows previously unaccounted repairs without another question; it does not expand research TODO.
+Record genuinely new evidence and re-rank existing in-scope work immediately. New scientific
+questions and main TODO increases still need approval. Routine repair, verification and
+bounded continuation of existing work follow the current no-routine-pause authority.
+Previously unaccounted bug fixes use their separate counter; they do not expand research TODO.
 
 ## Live priority — retained mechanism signals and blocked follow-through
 
@@ -126,8 +135,9 @@ The [work-chain report](bench-results/efficiency-mechanism-isolation-20260906T21
 distinguishes observed publication/RED/repair work from causally identified excess.
 Each admitted author screen spent its full 900-second wall, not its 3M recorded-usage tripwire.
 Their incomplete results, unknown tails and failed qualification are preserved. P01's two
-diagnostic allocations and P03/P04's two episode allocations are consumed. The separate bug-fix
-authority does not admit replacement observations or an increased scientific budget.
+diagnostic allocations and P03/P04's two episode allocations are consumed and preserved.
+Necessary further in-scope work follows the later stop rule with separate prospective records;
+neither old outcomes nor the fixed scientific-task count are rewritten.
 
 ## Historical completed task records
 
