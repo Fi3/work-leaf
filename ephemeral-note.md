@@ -3,9 +3,72 @@
 Live analysis counter: **DONE: 80 | TODO: 10 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
-**Bug-fix counter: DONE: 7 | TODO: 0 | TOTAL: 7.** BUG007 passes fail-first/local checks and actual same-thread feedback-delivery verification. Original failed-host outcome and first response remain intact; the scientific observation is still running.
-**Current activity, 2026-09-14T22:56:55+00:00:** P03/P04/P05 close with exact results and three append-only checkpoints. B-only is valid but inconclusive; the completed A+B joint remains the actionable signal. P09's actual input diagnostic passes. No benchmark is running; full-workflow routing/remaining profile qualification is active, with no new scientific task.
+**Bug-fix counter: DONE: 7 | TODO: 0 | TOTAL: 7.** BUG007 passes fail-first/local checks and actual same-thread feedback-delivery verification. Original failed-host outcome and first response remain intact; the scientific observation is closed and inconclusive.
+**Current activity, 2026-09-14T23:54:00+00:00:** P09's full-route diagnostic passes at 68,203 raw; all 21 local tests and required Cargo checks pass. The three modified full workflows are prepared under a verified disarmed manifest; no benchmark is running. P13's historical-reach checkpoint is descriptive, not causal attribution.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-14T23:54:00+00:00 — real route passes; exact three-workflow manifest verifies:**
+The actual four-turn pipeline verifies real command feedback, same-author stage
+resume and direct resume at 68,203 raw/28.24 seconds, with exact developer
+messages and complete usage joins. All 21 local tests pass, including actual
+owned-process stopping. The three-row manifest is prepared and disarmed; all
+183 pinned file entries verify. Its dry-run setup accidentally used row001's
+future directories, but launched no observer or agent. The skipped/not-started
+report and empty runtime parent are preserved in dedicated preflight locations;
+all admitted row paths are absent again. No observed run or manifest was replaced.
+Runtime uses a new disk-backed benchmark directory instead of the 8GB-free tmpfs.
+No scientific counter changes; full net outcomes and historical transfer remain.
+
+**2026-09-14T23:45:09+00:00 — bounded actual full-route verification launched:**
+All local route/engine/monitor tests pass, including later review rounds, source
+population rejection and owned-process SIGINT/KILL escalation. Cargo fmt, strict
+all-feature Clippy and all-target/all-feature tests pass. One real diagnostic
+uses an isolated clean base checkout, the exact standard observer/profile and
+stored subscription login, actual read-only host command/result, a same-thread
+author-stage resume and direct resume. Bound: 120 seconds/150k recorded raw,
+five-second resource sampling. No feature benchmark or ordinary control runs.
+The main counter remains 80/10/90 and bug fixes 7/0/7; this verifies P09 setup.
+
+**2026-09-14T23:39:09+00:00 — private full adapter local qualification:**
+Twelve fail-first full-routing/source-inverse tests and three three-workflow
+engine/environment tests pass. The unchanged one-shot engine retains its outer
+90-minute wall, signal/reap/failure custody and exact three modified identities.
+Per-workflow 45M resource trips are being connected to its owned-process loop;
+no provider is running. Actual whole-wrapper/host-resume verification is still
+required. Normal WL, saved inputs, all prior outcomes and main counts are intact.
+
+**2026-09-14T23:29:00+00:00 — actual plugin-state seam qualified; full-stage adapter:**
+Reference N371 disables plugins_instructions; N385 restores it. Input006's two
+entry toggles never changed that state. Input008 disables the complete plugins
+feature in a private view and exactly reproduces full -> short-catalog-only ->
+plugin-usage-only inputs, with true/false/true world state and all usage joins.
+All three old failed/successful diagnostics remain separate; no thread is reused.
+P09's known full-stage adapter receives a bounded thirty-minute preparation
+scope and fail-first tests; no full observation is admitted by preparation.
+P13's saved 8.455M initial post-GREEN gap includes genuine remaining work and
+cannot be credited wholesale. Reuse that prior result instead of repeating its
+census; complete author/review/repair/integration offsets remain necessary.
+
+**2026-09-14T23:22:00+00:00 — second metadata gate fails; prioritize historical reach:**
+Input007's three marker turns finish in 25.99 seconds with 47,166 raw, complete
+source/prompt/usage joins and no missing tail. The private developer-instruction
+setting does not deliver the extra saved message on resume, despite its exact
+fresh preview. Preserve this failure and park the approach without a repeat.
+The historical post-GREEN semantic census already exists: substantial further
+test construction and real repair occur, so first GREEN is not task completion.
+P13's next bounded analysis reuses those classifications and saved accounting;
+it must not relabel every passing check as waste or rerun an old census. No new
+research task, control, provider generation or main-counter change is involved.
+
+**2026-09-14T23:04:15+00:00 — remaining P09 metadata gate rejects one approach:**
+input006 completes in 24.24 seconds at 47,169 raw, with all usage/prompt/source
+joins intact. Switching plugins off and back on while retaining the short
+catalog emits no developer update, not the reference's isolated 1,014-byte
+plugin-usage repetition at the third author's first review fix. Park that
+mechanism of input delivery; no repeat or full batch is admitted. This is a
+known setup boundary inside P09, not a new causal hypothesis or a reason to
+change the 80/10/90 research count. Subscription usage reports 51% of its weekly
+window used in the completed P03 native record; API credits remain absent.
 
 **2026-09-14T22:56:55+00:00 — three bounded deliverables complete; 80/10/90:**
 P03's native thread retains 3,088,197 raw / 27 responses / twelve completed

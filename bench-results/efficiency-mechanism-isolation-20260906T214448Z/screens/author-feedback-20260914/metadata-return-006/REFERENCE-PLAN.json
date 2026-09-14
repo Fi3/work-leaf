@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "states": [
+    "short",
+    "without_plugins",
+    "short"
+  ],
+  "tail": "hold_last",
+  "scope": "P09 metadata-only return: identical short catalog, plugin metadata removed then restored; compare saved isolated plugin usage update.",
+  "profiles": {
+    "full": {
+      "catalog_sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d",
+      "view": {
+        "uid": 1000,
+        "mounts": [
+          [
+            "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache",
+            "/home/user/.codex/plugins/cache"
+          ],
+          [
+            "/tmp/work-leaf-p01-cache-view.Xc6Oc6/config.toml",
+            "/home/user/.codex/config.toml"
+          ]
+        ]
+      }
+    },
+    "short": {
+      "catalog_sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0",
+      "view": {
+        "uid": 1000,
+        "mounts": [
+          [
+            "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache",
+            "/home/user/.codex/plugins/cache"
+          ],
+          [
+            "/tmp/work-leaf-p01-cache-view.Xc6Oc6/config-short-keep-plugins.toml",
+            "/home/user/.codex/config.toml"
+          ]
+        ]
+      }
+    },
+    "without_plugins": {
+      "catalog_sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0",
+      "view": {
+        "uid": 1000,
+        "mounts": [
+          [
+            "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache",
+            "/home/user/.codex/plugins/cache"
+          ],
+          [
+            "/tmp/work-leaf-p01-cache-view.Xc6Oc6/config-resume-short.toml",
+            "/home/user/.codex/config.toml"
+          ]
+        ]
+      }
+    }
+  },
+  "sources": {
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/private_catalog.py": "a06cb222718aa85b3fd8bc2ff740e2062e35b4345d294930e40120fe79b46c54",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P02/catalog_dispatch.py": "7598c58935869e8781c73a8b80b0d7d2e0bd92d2fdb0e41339fb9d96fe30a50c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/resume-input-003/catalog_schedule.py": "ca5421aa1833c50669c517d62bb002f8ed2f4df282480f29926075a61aa789da",
+    "/tmp/work-leaf-p01-cache-view.Xc6Oc6/config.toml": "156029126354d651f1e855a987456c630ee21b5a203f243ca18a6cba3ffdbd82",
+    "/tmp/work-leaf-p01-cache-view.Xc6Oc6/config-resume-short.toml": "9f56709b191ac99412961435fc18558d1dc364e3ef6ca20d55e214b747a463c6",
+    "/tmp/work-leaf-p01-cache-view.Xc6Oc6/config-short-keep-plugins.toml": "7e8fef831e32623c3b7f58873f3577b6b993278280075023299d84a9b4f8a38a"
+  }
+}

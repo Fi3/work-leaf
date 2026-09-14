@@ -1,0 +1,48 @@
+{
+  "command": "python3 - <<'PY'\nimport subprocess,os,json,hashlib,concurrent.futures\nfrom pathlib import Path\nD=Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914').resolve();F=D.parents[1]/'phases/standalone-global-hunk-pilot-01'\nview=json.loads((D/'P01/PRIVATE-VIEW.json').read_text());view['mounts'][1][0]='/tmp/work-leaf-p01-cache-view.Xc6Oc6/config-short-recorded-plugin-message.toml'\nbinary='/tmp/work-leaf-cli-01534.r6qIK3/cache/_npx/61b275e57bf5ae43/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex'\ncode='import os,sys,json;sys.path.insert(0,sys.argv[1]);import private_catalog as c;c.enter_view(json.loads(sys.argv[2]));os.execv(sys.argv[3],sys.argv[3:])'\noverrides='skills.config=[{path=\"/home/user/.codex/plugins/cache/openai-curated-remote/deep-research-work/0.1.15/skills/deep-research/SKILL.md\",enabled=false},{path=\"/home/user/.codex/plugins/cache/openai-curated-remote/plugin-management/0.1.0/skills/plugin-management/SKILL.md\",enabled=false}]'\ndef check(sandbox):\n argv=['unshare','--user','--map-current-user','--keep-caps','--mount','--propagation','private','python3','-c',code,str(D/'P01'),json.dumps(view),binary,'--cd','/tmp/wl-author-feedback-20260914.alMTHU/R13','--sandbox',sandbox,'--ask-for-approval','never','-c','forced_login_method=\"chatgpt\"','-c','model=\"gpt-5.5\"','-c','model_reasoning_effort=\"xhigh\"' ,'debug','prompt-input']\n env={k:v for k,v in os.environ.items() if k not in ('OPENAI_API_KEY','CODEX_API_KEY','OPENAI_BASE_URL','OPENAI_API_BASE','CODEX_BASE_URL','CODEX_ACCESS_TOKEN')};env['WORK_LEAF_P01_PARENT_MNT']=str(os.stat('/proc/self/ns/mnt').st_ino)\n p=subprocess.run(argv,capture_output=True,text=True,env=env,timeout=25)\n result={'sandbox':sandbox,'command':argv,'exit_code':p.returncode,'stderr':p.stderr[-1600:],'model_turns_requested':0}\n if p.returncode==0:\n  j=json.loads(p.stdout);dev=next(r for r in j if r.get('role')=='developer')\n  text=''.join(c.get('text','') for c in dev['content'])\n  expected='367d7754c959ca434b15869dcc7171a08a78dea56f5ef4ccedd5deffde4d54e7' if sandbox=='read-only' else '515c82ae88987eef70b2037f2d753dd3f0a5b675f2600fa84650e7f4d3cc4568'\n  content=list(dev['content']); idx=next(i for i,c in enumerate(content) if hashlib.sha256(c.get('text','').encode()).hexdigest()=='81d37acb6feff552b562f712b1e854339d90a0b19aa9f271047cca787f77a51a');content.pop(idx)\n  result['without_one_recorded_item_matches_reference']=hashlib.sha256(''.join(c.get('text','') for c in content).encode()).hexdigest()==expected\n  result.update(developer_sha256=hashlib.sha256(text.encode()).hexdigest(),expected_reference_sha256=expected,developer_matches_reference=hashlib.sha256(text.encode()).hexdigest()==expected, recorded_message_items=sum(1 for c in dev['content'] if hashlib.sha256(c.get('text','').encode()).hexdigest()=='81d37acb6feff552b562f712b1e854339d90a0b19aa9f271047cca787f77a51a'),developer_bytes=len(text.encode()),stdout_sha256=hashlib.sha256(p.stdout.encode()).hexdigest())\n return result\nwith concurrent.futures.ThreadPoolExecutor(2) as pool:out=list(pool.map(check,['read-only']))\nprint(json.dumps(out,indent=2))\nPY",
+  "result": [
+    {
+      "sandbox": "read-only",
+      "command": [
+        "unshare",
+        "--user",
+        "--map-current-user",
+        "--keep-caps",
+        "--mount",
+        "--propagation",
+        "private",
+        "python3",
+        "-c",
+        "import os,sys,json;sys.path.insert(0,sys.argv[1]);import private_catalog as c;c.enter_view(json.loads(sys.argv[2]));os.execv(sys.argv[3],sys.argv[3:])",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01",
+        "{\"uid\": 1000, \"mounts\": [[\"/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache\", \"/home/user/.codex/plugins/cache\"], [\"/tmp/work-leaf-p01-cache-view.Xc6Oc6/config-short-recorded-plugin-message.toml\", \"/home/user/.codex/config.toml\"]]}",
+        "/tmp/work-leaf-cli-01534.r6qIK3/cache/_npx/61b275e57bf5ae43/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex",
+        "--cd",
+        "/tmp/wl-author-feedback-20260914.alMTHU/R13",
+        "--sandbox",
+        "read-only",
+        "--ask-for-approval",
+        "never",
+        "-c",
+        "forced_login_method=\"chatgpt\"",
+        "-c",
+        "model=\"gpt-5.5\"",
+        "-c",
+        "model_reasoning_effort=\"xhigh\"",
+        "debug",
+        "prompt-input"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "model_turns_requested": 0,
+      "without_one_recorded_item_matches_reference": true,
+      "developer_sha256": "8282b7f4700e49d94567cff9283cbc74c21166bf4632f0f13df71d7b1d5e0f9d",
+      "expected_reference_sha256": "367d7754c959ca434b15869dcc7171a08a78dea56f5ef4ccedd5deffde4d54e7",
+      "developer_matches_reference": false,
+      "recorded_message_items": 2,
+      "developer_bytes": 8053,
+      "stdout_sha256": "a284ec4469b9745243de60fc5914b3437bb62c54132165c645f7508eeac34b70"
+    }
+  ],
+  "interpretation": "Expected local fresh preview contains ordinary short developer input plus exactly the recorded 1014-byte item; treatment profile is used only on the diagnostic's second/resumed turn."
+}

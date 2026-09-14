@@ -113,7 +113,7 @@ to the supervising investigation; preserve frozen measured-agent instructions an
 ## Current mechanism-investigation authority
 
 The latest stop rule is `AUTHORITY-NO-ROUTINE-PAUSE-20260914.md` in the mechanism
-study. Research continues through the thirteen remaining obligations, including
+study. Research continues through the approved remaining obligations, including
 routine debugging, setup repair and necessary verification, without another
 approval pause for those actions. Individual capped or unpromising attempts stop;
 the investigation proceeds to the next useful in-scope action. Further attempts

@@ -1,9 +1,9 @@
 # DONE: 80 | TODO: 10 | TOTAL: 90
 ## BUG FIXES — DONE: 7 | TODO: 0 | TOTAL: 7
 
-**Pending checks: 10 research obligations remain. Next: P09's full-workflow A+B routing/input qualification, then its eligible three-workflow confirmation. P03/P04/P05 are complete; B-only is inconclusive and parked. No benchmark is currently running.**
+**Pending checks: 10 research obligations remain. Current: P09's three modified full workflows are prepared and verified, awaiting the recorded generation admission. Its real wrapper/host-resume check passed. No benchmark is running.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-14T22:56:55+00:00:** P03 records 3,088,197 raw but reaches no check/GREEN before its tripwire, so it does not isolate B stopping. P04's complete qualified A+B author costs 2,205,658 versus 1,227,282; its extra post-GREEN work is traced, but no historical share is established. P09's actual short/full/short diagnostic passes exact input/usage joins at 50,863 raw. Complete-stage routing and remaining profile boundaries precede a full batch.
+**Activity, 2026-09-14T23:54:00+00:00:** the real pipeline diagnostic passes in 28.24 seconds at 68,203 raw with exact source/input/usage and unchanged files. All 21 adapter tests and required Cargo gates pass. P09's exact three-row disarmed manifest verifies; its non-generating dry-run report is preserved separately. Complete net author/review/repair/integration measurement is next. Historical attribution remains unestablished.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
@@ -35,7 +35,7 @@ The plan's original proposal wording is historical; the linked approval governs 
 ## Counter contract — complete known remaining work
 
 **Current stop rule:** continue routine fixes, setup and required verification within
-the existing thirteen obligations. An individual capped/failed attempt can stop
+the existing approved obligations. An individual capped/failed attempt can stop
 without stopping the investigation. Stop for the verified causal answer, or seek
 approval for a genuinely new highly promising cause outside the known plan based
 on previously unknown facts. [Exact user instruction and limits](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-NO-ROUTINE-PAUSE-20260914.md).
@@ -119,12 +119,12 @@ Previously unaccounted bug fixes use their separate counter; they do not expand 
 
 ## Live priority — qualified author contrasts, then broader joints
 
-Last maintained: **2026-09-14 22:56 UTC**. [The qualified comparison](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/QUALIFIED-COMPARISON.md) preserves P04's complete joint signal and P03's inconclusive fragmentation before any GREEN. P03/P04/P05 close as three distinct bounded deliverables, not three proven causal factors. Earlier confounded attempts remain separate. Full-workflow stage/input qualification precedes P09's batch.
+Last maintained: **2026-09-14 23:54 UTC**. [The qualified comparison](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/QUALIFIED-COMPARISON.md) preserves P04's complete joint signal and P03's inconclusive fragmentation before any GREEN. P03/P04/P05 close as three distinct bounded deliverables, not three proven causal factors. Earlier confounded attempts remain separate. P13 reuses the existing historical work-location result without claiming causal attribution. P09's stage/input and actual host-route qualification pass; its disarmed three-workflow batch verifies.
 The accepted historical gap and the user's no-quality-loss assumption remain premises.
 
 | Priority | Evidence and potential explanatory reach | Next cheap check / stop gate |
 | --- | --- | --- |
-| Strongest qualified actionable signal: A+B | P04 completes at 2,205,658 raw versus saved 1,227,282. Actual test-first/RED and post-GREEN extra validation/inspection are traced; post-GREEN difference is 693,895 of the 978,376 excess. | P03/P05 comparison is complete. P09's 50,863-raw actual stage-input diagnostic passes; qualify full-stage routing and remaining metadata boundary before its three-workflow batch. Preserve later offsets. |
+| Strongest qualified actionable signal: A+B | P04 completes at 2,205,658 raw versus saved 1,227,282. Actual test-first/RED and post-GREEN extra validation/inspection are traced; post-GREEN difference is 693,895 of the 978,376 excess. | P09's complete-plugin-state gate and actual observer/profile/host/fix/direct route pass. Admit its three modified full workflows with 90-minute/45M per-run ceilings, then measure complete-stage offsets. Input006/007 stay failed, not erased. |
 | B-only discriminator: parked after valid bounded check | P03 ends at 3,088,197 raw with four matcher rejections and seven accepted source-only fragments, before any check/GREEN. Actual B-off feedback is exposed, but post-result stopping is not. | No repeat selected and no independent B percentage. Use the qualified complete joint package for the next existing confirmation task. |
 | Strongest retained broader joint: C08 × C25 | Both constituent directions have positive net evidence from incompatible targets; they cannot be added. The first H003 refresh file is recoverable. | P06's complete runtime/native-prefix restoration remains unresolved. Reuse the precise blocker while the actionable pair runs; no null or automatic coverage exclusion. |
 | Whole author/refresh/residual joints: P07/P08 | Existing single-condition policies, private RED preview, standalone final custody and saved DTOs do not supply the declared faithful connected package. Later review/repair/integration paths are exercised, not absent. | Source-backed blockers are saved in P07-BLOCKER.md/P08-BLOCKER.md. No coverage exclusion or null result; no hidden multi-experiment bucket. |
