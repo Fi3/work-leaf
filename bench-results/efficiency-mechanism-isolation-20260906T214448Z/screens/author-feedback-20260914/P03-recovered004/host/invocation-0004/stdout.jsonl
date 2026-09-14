@@ -1,0 +1,4 @@
+{"type":"thread.started","thread_id":"01a0a1f2-54aa-7983-b2d5-c80b87ce2ab9"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"@standalone edit add vim visual selection core API and key handling\n*** Begin Patch\n*** Update File: src/ui.rs\n@@\n pub enum UiMode {\n     Command,\n     Insert,\n     Prompt,\n }\n+#[derive(Clone, Copy, Debug, Eq, PartialEq)]\n+pub enum UiVisualMode {\n+    Character,\n+    Line,\n+    Block,\n+}\n*** End Patch\n@standalone end"}}
+{"type":"turn.completed","usage":{"input_tokens":147604,"cached_input_tokens":136576,"cache_write_input_tokens":0,"output_tokens":3198,"reasoning_output_tokens":3106}}

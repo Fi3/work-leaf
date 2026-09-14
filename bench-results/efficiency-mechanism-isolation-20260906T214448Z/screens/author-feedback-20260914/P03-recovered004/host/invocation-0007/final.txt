@@ -1,0 +1,10 @@
+@standalone edit clear visual selection when selecting an agent
+*** Begin Patch
+*** Update File: src/ui.rs
+@@
+     pub fn select_agent(&mut self, agent_id: &AgentId) -> Result<(), String> {
+         if self.agents.iter().any(|agent| &agent.id == agent_id) {
++            self.visual_selection = None;
+             self.selected_agent = Some(agent_id.clone());
+*** End Patch
+@standalone end

@@ -1,0 +1,26 @@
+Host command completed.
+command: cargo test --test ui_harness scripted_harness_visual -- --nocapture && cargo test --test terminal_ui visual_ -- --nocapture
+status: 0
+stdout:
+
+running 2 tests
+test scripted_harness_visual_block_yanks_rectangular_right_pane_text ... ok
+test scripted_harness_visual_line_yanks_right_pane_text ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 28 filtered out; finished in 0.00s
+
+
+running 2 tests
+test visual_uppercase_y_yanks_selected_left_pane_lines ... ok
+test visual_character_mode_highlights_and_yanks_left_pane_text ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.00s
+
+
+stderr:
+   Compiling work-leaf v0.1.0 (/tmp/wl-author-qualified002-20260914.xUBuLn/P04)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.58s
+     Running tests/ui_harness.rs (target/debug/deps/ui_harness-d0c1af5448c0db63)
+   Compiling work-leaf v0.1.0 (/tmp/wl-author-qualified002-20260914.xUBuLn/P04)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.22s
+     Running tests/terminal_ui.rs (target/debug/deps/terminal_ui-7ac107a82542f722)

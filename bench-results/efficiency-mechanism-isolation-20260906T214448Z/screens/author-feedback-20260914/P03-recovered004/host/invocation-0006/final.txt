@@ -1,0 +1,45 @@
+@standalone edit route UI key handling through right-pane content and clear stale visual selections
+*** Begin Patch
+*** Update File: src/ui.rs
+@@
+     pub fn select_agent(&mut self, agent_id: &AgentId) -> Result<(), String> {
+         if self.agents.iter().any(|agent| &agent.id == agent_id) {
++            self.visual_selection = None;
+             self.selected_agent = Some(agent_id.clone());
+             self.windows[self.active_window] = UiWindow::chat(agent_id.clone());
+@@
+     pub fn select_command_interface(&mut self) {
++        self.visual_selection = None;
+         self.selected_agent = None;
+         self.windows[self.active_window] = UiWindow::command();
+@@
+     pub fn handle_key(&mut self, key: UiKey) -> Vec<UiAction> {
++        self.handle_key_with_right_content(key, "")
++    }
++    pub fn handle_key_with_right_content(
++        &mut self,
++        key: UiKey,
++        right_content: &str,
++    ) -> Vec<UiAction> {
+         let command_mode_text_key = self.command_mode_text_key_control_status(key);
+-        let actions = self.handle_key_inner(key);
++        let actions = self.handle_key_inner(key, right_content);
+         self.update_command_mode_typing_notice(command_mode_text_key);
+         actions
+     }
+-    fn handle_key_inner(&mut self, key: UiKey) -> Vec<UiAction> {
++    fn handle_key_inner(&mut self, key: UiKey, right_content: &str) -> Vec<UiAction> {
+         match key {
+             UiKey::MouseClick { column, row } => {
+                 self.pending = None;
++                self.visual_selection = None;
+                 return self.handle_mouse_click(column, row);
+             }
+@@
+             _ => {}
+         }
++        if self.visual_selection.is_some() {
++            return self.handle_visual_key(key, right_content);
++        }
+*** End Patch
+@standalone end

@@ -1,11 +1,39 @@
 # Provisional investigation ledger
 
-Live analysis counter: **DONE: 77 | TODO: 13 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
+Live analysis counter: **DONE: 80 | TODO: 10 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
 **Bug-fix counter: DONE: 7 | TODO: 0 | TOTAL: 7.** BUG007 passes fail-first/local checks and actual same-thread feedback-delivery verification. Original failed-host outcome and first response remain intact; the scientific observation is still running.
-**Current activity, 2026-09-14T22:36:32+00:00:** P03-recovered004 is running on the original native thread after acceptance/recovery fail-first tests. It consumes the original first response once and resumes actual host feedback; 900 additional wall seconds, 3M cumulative raw including 575,731 already spent. P04's qualified joint signal is saved; complete-stage confirmation qualification is the next parallel read-only work.
+**Current activity, 2026-09-14T22:56:55+00:00:** P03/P04/P05 close with exact results and three append-only checkpoints. B-only is valid but inconclusive; the completed A+B joint remains the actionable signal. P09's actual input diagnostic passes. No benchmark is running; full-workflow routing/remaining profile qualification is active, with no new scientific task.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-14T22:56:55+00:00 — three bounded deliverables complete; 80/10/90:**
+P03's native thread retains 3,088,197 raw / 27 responses / twelve completed
+turns. Four matcher rejections and seven source-only accepted fragments occur
+before any check/GREEN. Its 3M tripwire signals SIGINT to the exact supervisor;
+the twelfth response's completed usage is drained but its canceled-child final
+is not consumed. The host is incomplete; no B stopping effect is claimed.
+Original response and all prior costs remain. No B-only repetition is selected.
+P04's complete joint and P03 comparison close P04; the exact work/context-cost
+chain closes P05 at package-level resolution. This is not historical attribution.
+Each completion appends its full declaration independently: 78/12, 79/11, 80/10.
+All prior checkpoints remain byte-for-byte entries. The five counter guards
+remain mandatory. P09's separate 25.18-second, 50,863-raw diagnostic matches
+all three actual short/full/short input transitions and usage; no full batch
+is admitted until its full-stage routing and remaining metadata boundary qualify.
+
+**2026-09-14T22:47:55+00:00 — short-profile qualification, small real diagnostic:**
+P09's saved full workflow has different author/review/fix/integration catalog
+sequences. A no-generation preview identifies a simple setup distinction:
+disable the two individual skills, not entire plugins, to preserve fresh
+short-profile plugin-usage instructions. The two actual private-file previews
+match saved read-only and integration developer text exactly. No normal/global
+configuration changes. The existing tested scheduler and diagnostic driver
+run one short/full/short sequence, at most three turns, 60 seconds and 100k raw.
+Admission 7ce820e0218a8261f4680f3eb8ea3ba56dafa303ecedfe5f3616acf6dd525051
+retains all source pins. A mismatch parks this approach; no automatic diagnostic
+repeat or full-workflow admission. Main count is unchanged. P03 remains inside
+its own cap, with original response/charges intact; live totals are not results.
 
 **2026-09-14T22:39:53+00:00 — BUG007 actual boundary verified:**
 The first resumed turn belongs to the original native thread, receives the

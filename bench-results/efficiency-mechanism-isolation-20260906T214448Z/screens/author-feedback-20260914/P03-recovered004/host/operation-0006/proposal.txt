@@ -1,0 +1,7 @@
+*** Begin Patch
+*** Update File: src/ui.rs
+@@
+-    fn handle_key_inner(&mut self, key: UiKey) -> Vec<UiAction> {
++    fn handle_key_inner(&mut self, key: UiKey, right_content: &str) -> Vec<UiAction> {
+         match key {
+*** End Patch

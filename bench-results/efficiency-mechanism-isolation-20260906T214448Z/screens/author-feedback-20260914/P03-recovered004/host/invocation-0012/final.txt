@@ -1,0 +1,13 @@
+@standalone edit dispatch active visual selections before normal command keys
+*** Begin Patch
+*** Update File: src/ui.rs
+@@
+         }
+ 
++        if self.visual_selection.is_some() {
++            return self.handle_visual_key(key, right_content);
++        }
++
+         if let Some(pending) = self.pending.take() {
+*** End Patch
+@standalone end

@@ -1,17 +1,17 @@
-# DONE: 77 | TODO: 13 | TOTAL: 90
+# DONE: 80 | TODO: 10 | TOTAL: 90
 ## BUG FIXES — DONE: 7 | TODO: 0 | TOTAL: 7
 
-**Pending checks: 13 research obligations remain. P04-qualified002 has a qualified joint mechanism signal. P03-recovered004 is running on the original thread, reusing its completed first response after BUG007's locally verified acceptance repair.**
+**Pending checks: 10 research obligations remain. Next: P09's full-workflow A+B routing/input qualification, then its eligible three-workflow confirmation. P03/P04/P05 are complete; B-only is inconclusive and parked. No benchmark is currently running.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-14T22:36:32+00:00:** the same-thread P03 continuation launched with 900 additional wall seconds and a 3M cumulative recorded-raw tripwire including the original 575,731 raw. Eleven fail-first acceptance/recovery tests and Cargo format/Clippy/all-target tests pass; actual continuation verification is underway. No first response is regenerated. P04's 2,205,658 raw exceeds the saved author by 978,376; 70.92% of that screen excess lies after first GREEN, in further validation/inspection without an edit. This is not the historical explained share.
+**Activity, 2026-09-14T22:56:55+00:00:** P03 records 3,088,197 raw but reaches no check/GREEN before its tripwire, so it does not isolate B stopping. P04's complete qualified A+B author costs 2,205,658 versus 1,227,282; its extra post-GREEN work is traced, but no historical share is established. P09's actual short/full/short diagnostic passes exact input/usage joins at 50,863 raw. Complete-stage routing and remaining profile boundaries precede a full batch.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
 | P01 | DONE | Faithful launch setup: source trace, benchmark-local repair, failure-path tests and actual verification; include tracker-rule qualification. |
 | P02 | DONE | Exact effective-factor/reference manifest and common-boundary qualification for individual and joint tests. |
-| P03 | CHECKING | Qualified B-only next-action/handoff-guidance screen. |
-| P04 | CHECKING | Qualified A+B publication/test-order plus guidance joint screen. |
-| P05 | BLOCKED | Exact instruction/feedback → decision → actual work → usage mechanism, before and after first GREEN. |
+| P03 | DONE | Qualified B-only next-action/handoff-guidance screen. |
+| P04 | DONE | Qualified A+B publication/test-order plus guidance joint screen. |
+| P05 | DONE | Exact instruction/feedback → decision → actual work → usage mechanism, before and after first GREEN. |
 | P06 | BLOCKED | Refresh × continuation joint check, C08 × C25. |
 | P07 | BLOCKED | Author policy × refresh × continuation joint check, A+B+C08+C25. |
 | P08 | BLOCKED | Remaining exercised whole-package interaction: custody/tools, information, review/repair, lifecycle, scheduling and auxiliary work. |
@@ -119,13 +119,13 @@ Previously unaccounted bug fixes use their separate counter; they do not expand 
 
 ## Live priority — qualified author contrasts, then broader joints
 
-Last maintained: **2026-09-14 22:36 UTC**. [P04-qualified002's result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P04-qualified002/RESULT.md) is a qualified joint screen with observable extra post-GREEN work. P03's same-thread continuation follows a saved-real-response acceptance repair; no first response is regenerated. Earlier confounded observations remain separate. Complete-workflow stage/input qualification still precedes larger confirmation.
+Last maintained: **2026-09-14 22:56 UTC**. [The qualified comparison](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/QUALIFIED-COMPARISON.md) preserves P04's complete joint signal and P03's inconclusive fragmentation before any GREEN. P03/P04/P05 close as three distinct bounded deliverables, not three proven causal factors. Earlier confounded attempts remain separate. Full-workflow stage/input qualification precedes P09's batch.
 The accepted historical gap and the user's no-quality-loss assumption remain premises.
 
 | Priority | Evidence and potential explanatory reach | Next cheap check / stop gate |
 | --- | --- | --- |
-| Strongest qualified actionable signal: A+B | P04-qualified002 completes at 2,205,658 raw versus saved 1,227,282. Test-first publication/RED is observed; post-GREEN extra validation/inspection contributes 693,895 of its 978,376 excess. No later edit occurs. | Complete P03 comparison and P05 trace; qualify full-workflow stage inputs before P09. One joint author is not a historical effect estimate; preserve downstream offsets. |
-| B feedback/handoff discriminator | P03's first native turn completed at 575,731 raw; the host rejected a recovered diagnostic before applying its cohesive proposal. Eleven acceptance/recovery tests pass on an isolated overlay. | P03-recovered004 reuses the exact saved final/thread and actual host feedback, with a separate 900-second cap and original cost retained. Inspect completed post-GREEN decisions only after closure. |
+| Strongest qualified actionable signal: A+B | P04 completes at 2,205,658 raw versus saved 1,227,282. Actual test-first/RED and post-GREEN extra validation/inspection are traced; post-GREEN difference is 693,895 of the 978,376 excess. | P03/P05 comparison is complete. P09's 50,863-raw actual stage-input diagnostic passes; qualify full-stage routing and remaining metadata boundary before its three-workflow batch. Preserve later offsets. |
+| B-only discriminator: parked after valid bounded check | P03 ends at 3,088,197 raw with four matcher rejections and seven accepted source-only fragments, before any check/GREEN. Actual B-off feedback is exposed, but post-result stopping is not. | No repeat selected and no independent B percentage. Use the qualified complete joint package for the next existing confirmation task. |
 | Strongest retained broader joint: C08 × C25 | Both constituent directions have positive net evidence from incompatible targets; they cannot be added. The first H003 refresh file is recoverable. | P06's complete runtime/native-prefix restoration remains unresolved. Reuse the precise blocker while the actionable pair runs; no null or automatic coverage exclusion. |
 | Whole author/refresh/residual joints: P07/P08 | Existing single-condition policies, private RED preview, standalone final custody and saved DTOs do not supply the declared faithful connected package. Later review/repair/integration paths are exercised, not absent. | Source-backed blockers are saved in P07-BLOCKER.md/P08-BLOCKER.md. No coverage exclusion or null result; no hidden multi-experiment bucket. |
 | Completed P10; dependent P09/P11–P16 | P10's four old admissions retain 3,567,272 raw plus two unknown tails; the later diagnostic contributes 48,827 raw separately. Qualified P04 supplies an author-only signal, not a complete-workflow or historical net amount. | Keep admission accounting disjoint. P09 also needs faithful complete-stage inputs; P15 stays conditional and P16 unfinished. |

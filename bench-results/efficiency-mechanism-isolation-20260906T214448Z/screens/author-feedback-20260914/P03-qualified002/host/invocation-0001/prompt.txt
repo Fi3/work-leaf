@@ -1,0 +1,58 @@
+You are running as a normal direct coding agent in this repository.
+
+Request 1:
+add vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select
+
+Work directly in the checkout using the repository's normal AGENTS.md instructions.
+Do not use Work Leaf orchestrator directives. Do not create or use extra Git worktrees.
+Implement the feature with focused tests through the standalone host custody protocol below.
+The host owns writes, commits, and verification commands. Avoid unrelated refactors.
+Documentation and plain-text updates are deferred to the final linearizer.
+Do not modify docs/**, README*, CHANGELOG*, *.md, *.txt, or other prose-only files in this turn.
+
+Run focused checks while implementing this feature, and fix and rerun them as needed. Leave broad
+cross-feature formatting, Clippy, and full-suite integration checks to the final linearizer unless a
+broader check is necessary to finish this feature correctly.
+
+This author session has read-only native tools. Inspect the checkout normally, but delegate every
+repository edit and verification command to the standalone host using a complete final reply.
+Do not attempt native writes, apply_patch, shell-based edits, Git commits, or native verification.
+The host applies and commits actual edits, runs actual checks, and resumes this same thread with
+truthful results. Repository tasks, focused tests, and review obligations remain unchanged.
+
+Design the required tests first, but submit a buildable implementation and those tests together.
+This custody procedure supersedes an AGENTS.md requirement to execute a failing test before implementation;
+do not manufacture a separate RED run solely to satisfy that procedural timing. All required tests remain required.
+Use actual failing checks when genuinely needed to diagnose or repair the assigned work, and preserve their results.
+
+Send exactly one operative directive in each complete final reply, then wait for its actual result.
+One edit directive may contain a complete multi-file, multi-hunk implementation and its focused tests.
+Do not combine edit, run, discard or done directives in a reply: the entire reply is rejected before any operation executes.
+After each accepted edit, rejected proposal or command, use the actual same-thread feedback to choose the next operation.
+There is no limit on subsequent edits, checks, repairs or turns within the unchanged stage deadline.
+For an edit use this native structured exact-context form
+(not a standard unified-diff file, no Markdown fence):
+@standalone edit <reason>
+*** Begin Patch
+*** Update File: <relative path>
+@@
+ <unchanged context>
+-<old line>
++<new line>
+*** End Patch
+@standalone end
+Add File and Delete File operations are also supported. Submit a cohesive implementation and its
+focused tests when both are known; handle genuinely needed repairs after actual feedback.
+For a check, use a complete run directive:
+@standalone run <repository-relative paths the command may write>... -- <shell command>
+No declared paths is valid for a read-only command. A check has at most 300 seconds, further bounded
+by the remaining stage deadline. Full raw output is retained; stdout and stderr are rendered separately:
+keep the first 8 whitespace-only lines in each consecutive run and mark omitted lines; for a line
+longer than 4,096 Unicode characters, keep its first and last 1,600 with an omission notice. After
+those passes, a stream longer than 12,000 characters retains its first 6,000 and last 4,000 plus
+an omission notice. Pending tracked-file diffs are included in full, not clipped. There is
+no 12,000-character bound on the whole feedback package. Do not invent success from omitted output.
+Command changes remain pending
+until an accepted edit or an explicit @standalone discard <reason>; DONE cannot leave pending work.
+When the assigned work is complete, send exactly @standalone done. Do not emit directives in
+quoted examples, commentary, or a mixture with other prose; only a complete owned final is executable.

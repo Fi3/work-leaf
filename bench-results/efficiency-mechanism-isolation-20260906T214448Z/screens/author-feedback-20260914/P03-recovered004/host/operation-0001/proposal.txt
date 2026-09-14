@@ -1,0 +1,15 @@
+*** Begin Patch
+*** Update File: src/ui.rs
+@@
+ pub enum UiMode {
+     Command,
+     Insert,
+     Prompt,
+ }
++#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++pub enum UiVisualMode {
++    Character,
++    Line,
++    Block,
++}
+*** End Patch

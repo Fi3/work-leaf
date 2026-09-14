@@ -1,0 +1,71 @@
+@standalone edit add visual selection state types and public yank accessors
+*** Begin Patch
+*** Update File: src/ui.rs
+@@
+ pub enum UiKey {
+     Char(char),
+     Esc,
++    CtrlV,
+     CtrlW,
+     Up,
+@@
+ pub enum UiAction {
+     OpenChatSamePane(AgentId),
+     OpenChatNewWindow(AgentId),
+     ForkAgent(AgentId),
++    CopyText(String),
+ }
+@@
+ struct PromptView {
+     line: String,
+     cursor_column: u16,
+ }
++#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++struct TextPosition {
++    line: usize,
++    column: usize,
++}
++#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++struct VisualSelection {
++    focus: PaneFocus,
++    mode: UiVisualMode,
++    anchor: TextPosition,
++    cursor: TextPosition,
++}
++#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++enum VisualCopyKind {
++    Selection,
++    Lines,
++}
++#[derive(Clone, Debug, Eq, PartialEq)]
++struct LeftPaneRow {
++    text: String,
++    ready: bool,
++}
+@@
+     status_notice: Option<StatusNotice>,
+     command_mode_typing_count: usize,
+     command_mode_typing_controls_only: bool,
++    visual_selection: Option<VisualSelection>,
++    yank_register: String,
+ }
+@@
+             status_notice: None,
+             command_mode_typing_count: 0,
+             command_mode_typing_controls_only: true,
++            visual_selection: None,
++            yank_register: String::new(),
+         }
+     }
+@@
+     pub fn mode(&self) -> UiMode {
+         self.mode
+     }
++    pub fn visual_mode(&self) -> Option<UiVisualMode> {
++        self.visual_selection.map(|selection| selection.mode)
++    }
++    pub fn yank_register(&self) -> &str {
++        &self.yank_register
++    }
+*** End Patch
+@standalone end

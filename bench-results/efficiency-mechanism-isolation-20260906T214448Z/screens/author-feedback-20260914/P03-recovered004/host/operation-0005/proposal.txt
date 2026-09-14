@@ -1,0 +1,24 @@
+*** Begin Patch
+*** Update File: src/ui.rs
+@@
+-    pub fn handle_key(&mut self, key: UiKey) -> Vec<UiAction> {
+-        let command_mode_text_key = self.command_mode_text_key_control_status(key);
+-        let actions = self.handle_key_inner(key);
+-        self.update_command_mode_typing_notice(command_mode_text_key);
+-        actions
+-    }
++    pub fn handle_key(&mut self, key: UiKey) -> Vec<UiAction> {
++        self.handle_key_with_right_content(key, "")
++    }
++
++    pub fn handle_key_with_right_content(
++        &mut self,
++        key: UiKey,
++        right_content: &str,
++    ) -> Vec<UiAction> {
++        let command_mode_text_key = self.command_mode_text_key_control_status(key);
++        let actions = self.handle_key_inner(key, right_content);
++        self.update_command_mode_typing_notice(command_mode_text_key);
++        actions
++    }
+*** End Patch

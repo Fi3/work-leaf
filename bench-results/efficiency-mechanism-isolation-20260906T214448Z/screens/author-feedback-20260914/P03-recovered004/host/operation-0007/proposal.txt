@@ -1,0 +1,9 @@
+*** Begin Patch
+*** Update File: src/ui.rs
+@@
+             UiKey::MouseClick { column, row } => {
+                 self.pending = None;
++                self.visual_selection = None;
+                 return self.handle_mouse_click(column, row);
+             }
+*** End Patch

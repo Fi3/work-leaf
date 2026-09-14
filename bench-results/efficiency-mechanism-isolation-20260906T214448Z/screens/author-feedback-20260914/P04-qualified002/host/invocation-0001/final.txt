@@ -1,0 +1,212 @@
+@standalone edit add focused failing visual-mode UI tests
+*** Begin Patch
+*** Update File: tests/ui_harness.rs
+@@
+ fn scripted_harness_structural_command_keys_do_not_show_typing_notice() {
+     let mut harness = UiHarness::new(80, 24);
+ 
+     harness.handle_bytes(&[23, b'l']);
+ 
+     assert_eq!(harness.ui().focus(), PaneFocus::Right);
+     assert!(!harness.render_frame().contains("command mode: press i"));
+ }
+ 
++#[test]
++fn scripted_harness_visual_line_yanks_right_pane_text() {
++    let mut harness = UiHarness::new(120, 24);
++
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_bytes(b"Vjy");
++
++    let frame = harness.render_frame();
++    assert!(frame.contains("mode=command focus=right"));
++    assert_eq!(
++        osc52_copied_text(&frame),
++        "UI harness\nEsc command, i insert, : prompt, Ctrl-W h/j/k/l focus, , toggle right, q quit\n"
++    );
++}
++
++#[test]
++fn scripted_harness_visual_block_yanks_rectangular_right_pane_text() {
++    let mut harness = UiHarness::new(120, 24);
++
++    harness.handle_bytes(&[23, b'l', 22, b'l', b'l', b'j', b'y']);
++
++    assert_eq!(osc52_copied_text(&harness.render_frame()), "UI \nEsc");
++}
++
+ #[test]
+ fn scripted_harness_left_pane_navigation_does_not_show_typing_notice() {
+     let mut harness = UiHarness::new(80, 24);
+ 
+     harness.handle_bytes(b"jjjjj");
+@@
+ fn strip_ansi(input: &str) -> String {
+     let mut output = String::new();
+     let mut chars = input.chars();
+     while let Some(ch) = chars.next() {
+         if ch == '\u{1b}' {
+@@
+     }
+     output
+ }
++
++fn osc52_copied_text(frame: &str) -> String {
++    let payload = frame
++        .strip_prefix("\u{1b}]52;c;")
++        .and_then(|rest| rest.split_once('\u{7}'))
++        .map(|(payload, _)| payload)
++        .expect("frame should start with an OSC 52 clipboard payload");
++    decode_base64(payload)
++}
++
++fn decode_base64(input: &str) -> String {
++    assert_eq!(input.len() % 4, 0, "base64 payload should be padded");
++    let mut bytes = Vec::new();
++    for chunk in input.as_bytes().chunks(4) {
++        let values = [
++            base64_value(chunk[0]),
++            base64_value(chunk[1]),
++            base64_value(chunk[2]),
++            base64_value(chunk[3]),
++        ];
++        let packed = (u32::from(values[0]) << 18)
++            | (u32::from(values[1]) << 12)
++            | (u32::from(values[2]) << 6)
++            | u32::from(values[3]);
++        bytes.push(((packed >> 16) & 0xff) as u8);
++        if chunk[2] != b'=' {
++            bytes.push(((packed >> 8) & 0xff) as u8);
++        }
++        if chunk[3] != b'=' {
++            bytes.push((packed & 0xff) as u8);
++        }
++    }
++    String::from_utf8(bytes).expect("OSC 52 payload should be UTF-8")
++}
++
++fn base64_value(byte: u8) -> u8 {
++    match byte {
++        b'A'..=b'Z' => byte - b'A',
++        b'a'..=b'z' => byte - b'a' + 26,
++        b'0'..=b'9' => byte - b'0' + 52,
++        b'+' => 62,
++        b'/' => 63,
++        b'=' => 0,
++        _ => panic!("invalid base64 byte {byte}"),
++    }
++}
+*** Update File: tests/terminal_ui.rs
+@@
+ fn focus_cursor_stays_inside_left_or_right_pane() {
+     let mut ui = TerminalUi::new(100, 20);
+     let left = ui.render_screen("command chat");
+     assert!(left.ends_with("\u{1b}[2;2H"));
+ 
+@@
+     let right = ui.render_screen("command chat");
+     assert!(right.ends_with("\u{1b}[2;22H"));
+ }
+ 
++#[test]
++fn visual_character_mode_highlights_and_yanks_left_pane_text() {
++    let mut ui = TerminalUi::new(160, 20);
++    let agent_id = AgentId::new("chat-a").unwrap();
++    ui.add_agent(AgentListEntry::new(agent_id.clone(), "parser"));
++    ui.select_agent(&agent_id).unwrap();
++
++    ui.handle_key(UiKey::Char('v'));
++    ui.handle_key(UiKey::Char('l'));
++    ui.handle_key(UiKey::Char('l'));
++
++    let visual_frame = ui.render_screen("alpha");
++    assert!(visual_frame.contains("mode=visual focus=left"));
++    assert!(visual_frame.contains("\u{1b}[7m>pa\u{1b}[0mrser chat-a"));
++
++    ui.handle_key(UiKey::Char('y'));
++
++    let copied_frame = ui.render_screen("alpha");
++    assert!(copied_frame.contains("mode=command focus=left"));
++    assert_eq!(osc52_copied_text(&copied_frame), ">pa");
++}
++
++#[test]
++fn visual_uppercase_y_yanks_selected_left_pane_lines() {
++    let mut ui = TerminalUi::new(160, 20);
++    let agent_id = AgentId::new("chat-a").unwrap();
++    ui.add_agent(AgentListEntry::new(agent_id.clone(), "parser"));
++    ui.select_agent(&agent_id).unwrap();
++
++    ui.handle_key(UiKey::Char('v'));
++    ui.handle_key(UiKey::Char('l'));
++    ui.handle_key(UiKey::Char('Y'));
++
++    assert_eq!(
++        osc52_copied_text(&ui.render_screen("alpha")),
++        ">parser chat-a\n"
++    );
++}
++
+ #[test]
+ fn left_pane_navigation_moves_cursor_to_selected_agent_row_and_opens_chat() {
+     let mut ui = TerminalUi::new(100, 20);
+     let chat_a = AgentId::new("chat-a").unwrap();
+     let chat_b = AgentId::new("chat-b").unwrap();
+@@
+ fn strip_ansi(input: &str) -> String {
+     let mut output = String::new();
+     let mut chars = input.chars();
+     while let Some(ch) = chars.next() {
+         if ch == '\u{1b}' {
+@@
+     }
+     output
+ }
++
++fn osc52_copied_text(frame: &str) -> String {
++    let payload = frame
++        .strip_prefix("\u{1b}]52;c;")
++        .and_then(|rest| rest.split_once('\u{7}'))
++        .map(|(payload, _)| payload)
++        .expect("frame should start with an OSC 52 clipboard payload");
++    decode_base64(payload)
++}
++
++fn decode_base64(input: &str) -> String {
++    assert_eq!(input.len() % 4, 0, "base64 payload should be padded");
++    let mut bytes = Vec::new();
++    for chunk in input.as_bytes().chunks(4) {
++        let values = [
++            base64_value(chunk[0]),
++            base64_value(chunk[1]),
++            base64_value(chunk[2]),
++            base64_value(chunk[3]),
++        ];
++        let packed = (u32::from(values[0]) << 18)
++            | (u32::from(values[1]) << 12)
++            | (u32::from(values[2]) << 6)
++            | u32::from(values[3]);
++        bytes.push(((packed >> 16) & 0xff) as u8);
++        if chunk[2] != b'=' {
++            bytes.push(((packed >> 8) & 0xff) as u8);
++        }
++        if chunk[3] != b'=' {
++            bytes.push((packed & 0xff) as u8);
++        }
++    }
++    String::from_utf8(bytes).expect("OSC 52 payload should be UTF-8")
++}
++
++fn base64_value(byte: u8) -> u8 {
++    match byte {
++        b'A'..=b'Z' => byte - b'A',
++        b'a'..=b'z' => byte - b'a' + 26,
++        b'0'..=b'9' => byte - b'0' + 52,
++        b'+' => 62,
++        b'/' => 63,
++        b'=' => 0,
++        _ => panic!("invalid base64 byte {byte}"),
++    }
++}
+*** End Patch
+@standalone end
