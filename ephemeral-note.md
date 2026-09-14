@@ -1,10 +1,10 @@
 # Provisional investigation ledger
 
-Live analysis counter: **DONE: 75 | TODO: 15 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
+Live analysis counter: **DONE: 76 | TODO: 14 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
-**Bug-fix counter: DONE: 2 | TODO: 0 | TOTAL: 2.** BUG001 and BUG002 have retained fail-first/green results. No extra model observation was needed for either fix.
-**Current activity, 2026-09-14T20:01:35+00:00:** P01's actual input qualification is complete, with 5,372 active local seconds under its 5,400-second approved ceiling; separately recorded bug-fix activity is not hidden in research scope. The sentinel used 15,873 raw in 6.08 seconds, with identical saved base/developer input and all 74 source endpoints unchanged. P02's factor/reference qualification is next; no feature workflow is running.
+**Bug-fix counter: DONE: 2 | TODO: 1 | TOTAL: 3.** BUG003: classify native resume correctly when exec options precede the subcommand. Caught before feature admission; no wrongly modified resume has run.
+**Current activity, 2026-09-14T20:28:03+00:00:** P02 is complete after 20m03s of local design/source qualification. P03/P04 prepare one B-only and one A+B episode, with separate checkouts and no control. BUG003's seven local tests pass; real resume verification remains pending inside P03. No feature has been admitted yet. Joint common-boundary limitations remain explicit, not negative results.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
 
 **2026-09-14T19:20:55+00:00 — approved continuation and separate bug counter:** the exact
@@ -77,6 +77,22 @@ Source mounts are private, UID is unchanged, preparation capabilities are droppe
 real sentinel confirms native input fidelity. No feature benchmark or further diagnostic runs.
 Cargo formatting, strict Clippy and the complete test suite passed. The final input correction
 changes no usage charge and preserves the preliminary representation-error report.
+
+**2026-09-14 20:08 UTC — P02 starts (45-minute local ceiling, through 20:53 UTC):**
+reuse R01's five-arm design, R07's historical refresh/continuation overlap, R12's complete
+coverage map and the frozen author host. Establish precise B/A+B prompt/feedback deltas,
+startup/resume compatibility and specific activation/common-reference decisions for P03–P08.
+No new model observation in this task. The P01 repair, two bug fixes and diagnostics are
+committed in cde93db; unrelated user configuration and historical STATE edits remain unstaged.
+
+**2026-09-14 20:13:14 UTC — BUG003 discovered in P02's source check:** the frozen host
+emits `exec --color never resume ...`, whereas P01's private wrapper recognizes only
+`exec resume ...`. Its fresh real input qualification remains valid; its broader resume
+passthrough claim requires this correction before feature use. No wrongly classified real
+resume has run. Preserve the admitted P01 module/tests unchanged and put the corrected
+dispatch in P02. The standing bug-fix authority supplies the separate counter; this is
+not an extra scientific task or provider observation. Use the approved P03 episode for
+real-workflow verification of the corrected dispatch, without an additional diagnostic.
 
 **2026-09-14T19:00:55+00:00 — verification and handoff:** the existing accounting core audits the single new
 native response once: zero errors, duplicates, missing completions or compactions; public/native

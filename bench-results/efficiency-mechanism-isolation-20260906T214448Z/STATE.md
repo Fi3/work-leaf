@@ -7,13 +7,13 @@ below remain historical records, not authority for new runs or a substitute for 
 ## Primary goal status
 
 **Historical saving explained as a verified combined percentage: NOT ESTABLISHED.
-Overall attribution goal: UNFINISHED. Progress is 75/15/90; P01 actual input qualification is complete. Separate unforeseen bug fixes: 2 DONE / 0 TODO.**
+Overall attribution goal: UNFINISHED. Progress is 76/14/90; P01/P02 qualification is complete and P03/P04 preparation is active. Separate unforeseen bug fixes: 2 DONE / 1 TODO.**
 The [complete non-WL reproduction](RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md)
 uses 18,545,304 raw tokens, 48.6513% below the saved six-Direct mean. Native,
 public, observer and independent accounting agree. The historically exposed
 upstream joint mechanism and one complete reproduction pass qualified independent
 acceptance; full historical causal attribution and its residual bound do not.
-Fixed progress is 75 DONE / 15 TODO / 90 TOTAL. All 74 historical completed records and prior
+Fixed progress is 76 DONE / 14 TODO / 90 TOTAL. All 74 historical completed records and prior
 publication checkpoints are preserved; the old G03 aggregate is not an extra task.
 The frozen feature result is 2/3; the user's no-quality-loss premise remains explicit.
 R02/R03/R04/R06 are closed; R08 admits no full batch. Accepted historical reduction remains

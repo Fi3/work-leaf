@@ -1,0 +1,65 @@
+F..F..FFFF
+======================================================================
+FAIL: test_equal_sign_options_and_config_values (__main__.DispatchTests.test_equal_sign_options_and_config_values)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P02/test_catalog_dispatch.py", line 23, in test_equal_sign_options_and_config_values
+    self.assertFalse(dispatch.needs_view(["exec", "--color=never", "-c", "model='resume'", "resume", "-"], self.env))
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_host_resume_after_exec_color_options_bypasses_view (__main__.DispatchTests.test_host_resume_after_exec_color_options_bypasses_view)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P02/test_catalog_dispatch.py", line 10, in test_host_resume_after_exec_color_options_bypasses_view
+    self.assertFalse(dispatch.needs_view(
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+        ["--cd", "/tmp/fixture", "--sandbox", "read-only", "--ask-for-approval", "never",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+         "--model", "gpt-5.5", "exec", "--color", "never", "resume", "--json",
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+         "-o", "/tmp/result", "session-id", "-"], self.env))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_unsupported_or_incomplete_command_fails_closed (__main__.DispatchTests.test_unsupported_or_incomplete_command_fails_closed) (argv=['exec', '--color'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P02/test_catalog_dispatch.py", line 31, in test_unsupported_or_incomplete_command_fails_closed
+    with self.subTest(argv=argv), self.assertRaises(ValueError):
+                                  ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_unsupported_or_incomplete_command_fails_closed (__main__.DispatchTests.test_unsupported_or_incomplete_command_fails_closed) (argv=['exec', '--unknown'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P02/test_catalog_dispatch.py", line 31, in test_unsupported_or_incomplete_command_fails_closed
+    with self.subTest(argv=argv), self.assertRaises(ValueError):
+                                  ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_unsupported_or_incomplete_command_fails_closed (__main__.DispatchTests.test_unsupported_or_incomplete_command_fails_closed) (argv=['exec', 'fork', '-'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P02/test_catalog_dispatch.py", line 31, in test_unsupported_or_incomplete_command_fails_closed
+    with self.subTest(argv=argv), self.assertRaises(ValueError):
+                                  ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_unsupported_or_incomplete_command_fails_closed (__main__.DispatchTests.test_unsupported_or_incomplete_command_fails_closed) (argv=['--model', 'exec', 'review'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P02/test_catalog_dispatch.py", line 31, in test_unsupported_or_incomplete_command_fails_closed
+    with self.subTest(argv=argv), self.assertRaises(ValueError):
+                                  ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.001s
+
+FAILED (failures=6)

@@ -1,16 +1,16 @@
-# DONE: 75 | TODO: 15 | TOTAL: 90
-## BUG FIXES — DONE: 2 | TODO: 0 | TOTAL: 2
+# DONE: 76 | TODO: 14 | TOTAL: 90
+## BUG FIXES — DONE: 2 | TODO: 1 | TOTAL: 3
 
-**Pending check: P02 — exact effective-factor/reference manifest and common-boundary qualification. P01's actual input gate passed; P03–P16 remain pending.**
+**Pending checks: P03/P04 — CHECKING preparation for the approved B-only and A+B initial-author screens. P02's exact comparison map is complete; no feature run is admitted yet.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-14T20:01:35+00:00:** P01 is complete: input-002 used 15,873 raw / 6.08 seconds and exactly matches the saved base/developer input. BUG001's report normalization and BUG002's stale publication-test assertion are fixed with fail-first regressions. No feature benchmark is running; P02 is next. This is setup progress, not a quantified token-saving cause.
+**Activity, 2026-09-14T20:28:03+00:00:** P02's factor/reference map is complete, including explicit joint-boundary blockers rather than unrun tests counted as negatives. P03/P04 prepare one episode each, with identical reference/non-targets. BUG003 passes local tests; actual resume verification remains pending inside P03. No feature benchmark is running yet.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
 | P01 | DONE | Faithful launch setup: source trace, benchmark-local repair, failure-path tests and actual verification; include tracker-rule qualification. |
-| P02 | TODO | Exact effective-factor/reference manifest and common-boundary qualification for individual and joint tests. |
-| P03 | TODO | Qualified B-only next-action/handoff-guidance screen. |
-| P04 | TODO | Qualified A+B publication/test-order plus guidance joint screen. |
+| P02 | DONE | Exact effective-factor/reference manifest and common-boundary qualification for individual and joint tests. |
+| P03 | CHECKING | Qualified B-only next-action/handoff-guidance screen. |
+| P04 | CHECKING | Qualified A+B publication/test-order plus guidance joint screen. |
 | P05 | TODO | Exact instruction/feedback → decision → actual work → usage mechanism, before and after first GREEN. |
 | P06 | TODO | Refresh × continuation joint check, C08 × C25. |
 | P07 | TODO | Author policy × refresh × continuation joint check, A+B+C08+C25. |
@@ -108,17 +108,17 @@ permit honest discovery, not automatic scientific scope: research additions or c
 still require an exact proposal and user approval. The separate bug-fix-only authority above
 allows previously unaccounted repairs without another question; it does not expand research TODO.
 
-## Live priority — P02 reference qualification; feature admissions closed
+## Live priority — B-only and A+B shallow screens
 
-Last maintained: **2026-09-14T20:05:58+00:00**. [P01's actual input qualification](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/P01.md) is supported. Both diagnostics remain retained. P02 must establish exact factor/reference fidelity before feature admission.
+Last maintained: **2026-09-14T20:28:03+00:00**. [P02's exact map](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/P02.md) is complete. P03/P04 require individual frozen admissions and actual input/activation checks; no feature is running yet. Joint blockers remain visible in P02's manifest.
 The accepted historical gap and the user's no-quality-loss assumption remain premises.
 
 | Priority | Evidence and potential explanatory reach | Next cheap check / stop gate |
 | --- | --- | --- |
-| Prerequisite: P02 effective factor/reference | P01's private local-registration launch matches actual saved base/developer input exactly; 15,873 raw, one complete response, no source drift or tools. | Reuse the qualified startup-only launcher; verify exact B and A+B bytes, native resume exposure and the common boundary for conditional joints before admitting features. |
+| Completed prerequisite: P02 effective factor/reference | Exact B/A+B spans and common-reference decisions are saved; local host/dispatch/monitor tests pass. | Actual native startup/resume and factor exposure are checked in each admitted screen; no additional setup diagnostic. |
 | Strongest candidate: P03 B feedback/handoff | R04's extra usage is concentrated after first GREEN: +1,350,327 raw, offset by −147,082 earlier. Real failure recovery remains included. | One qualified fresh B-only screen, then P05's clause/feedback → decision → work trace. No forced first-GREEN stop. |
 | Joint candidate: P04 A+B | R04 is +1,203,245 raw overall, but catalog drift confounds attribution. | One qualified A+B screen; compare conditionally with P03, not by adding separate percentages. |
-| Conditional connected joints: P06–P08 | C08/C25 have positive separate contrasts but overlapping histories and different targets. Joint author/refresh/continuation and residual effects are unpriced. | P02 must establish a common reference and actual connected exposure. Promote promising joint evidence immediately, without waiting for ID order. |
+| Conditional connected joints: P06–P08 | P02 confirms separate composable refresh/wait controls, but historical state restoration is unqualified. Full author-policy and residual packages lack a faithful currently available shared boundary. | P06's bounded restoration check is the next joint gate; P07/P08 remain unlaunchable absent their stated prerequisites. These are blockers, not null effects. |
 | P09–P16 confirmation and final attribution | No qualified full-workflow treatment from the preceding eight-task extension exists. Explained historical share and offsets remain unavailable. | Escalate only a qualified mechanism signal; retain all later costs and the final evidence gates. |
 | Parked A-only / C-only / old weak cues | R02 incomplete; R05 lacks a faithful C-only boundary; native R06 is cheaper than R04, opposite the predicted direction. | No automatic repeats or new bridge framework. Reconsider only with a specific genuinely new fact. |
 
