@@ -4,12 +4,45 @@ Live analysis counter: **DONE: 74 | TODO: 0 | TOTAL: 74** — [hypotesis.md](hyp
 **2026-09-14 operating scope:** all 66 completed records and the old zero checkpoint remain intact.
 The user explicitly approves exactly R13–R20: [authority](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-EIGHT-TASK-EXTENSION-20260914.md).
 The [frozen extension](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASK-EXTENSION-20260914.json) defines the eight tasks and budgets.
-**Current activity:** STOPPED AT ZERO, case (1). All eight tasks have terminal outcomes; no feature experiment ran. No provider or research task runs. R21 is a source-only proposal, not authority.
+**Current activity:** STOPPED AT ZERO; the user's comprehensive-list request is planning/documentation only. No provider or research task runs. The [sixteen-item end-to-end proposal](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-END-TO-END-SCOPE-20260914.md) is not live TODO or authority. The earlier R21-only request remains historical, not the recommended continuation.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
 
 DONE only increases; TODO only decreases within the approved 74 total. At zero, stop with a supported answer
 or explicit case (1)/(2), exact proposed tasks/count and a permission question. No hidden extra work,
 automatic controls, replacements, baseline re-audit, API credits or ordinary WL changes.
+
+## Comprehensive-list planning — 2026-09-14
+
+The user rejects successive additions and requests a comprehensive remaining-work list.
+This is a planning turn only: no source-loader investigation, repair, diagnostic, author
+screen or full workflow is resumed. The live ledger and publication history stay 74/0/74.
+
+The known planning failure is explicit: R13's faithful-input work already included the
+unresolved source/loader boundary. It stopped after 26m56s of 45 minutes, leaving 18m04s
+for local work; exhausting its one generated diagnostic did not forbid source inspection.
+R14/R15/R16 then closed without feature generation. Those are retained terminal records,
+not successful cause checks or evidence against the accepted historical saving.
+
+P01–P16 include setup/repair/qualification, complete comparison mapping, clean B and A+B,
+decision-chain localization, C08×C25, the author/refresh/continuation joint, remaining
+whole-package interaction, full confirmation, new accounting, downstream offsets, joint
+allocation, historical transfer, non-WL recipe, conditional original-error check and final
+acceptance. Existing 69-entry results are reused, not restarted. Routine debug/verification
+belongs inside its task. The proposed completion contract keeps failed setup and unrun
+dependent experiments in TODO; it requires approval and does not rewrite old completions.
+
+The full proposal includes conditional gates and finite ceilings. Preparing it authorizes
+no counter increase or generation; P06–P08's common-boundary feasibility is not asserted.
+No savings result changed: historical reduction remains accepted at 45.38%–51.62%, and
+the combined causally explained share remains NOT ESTABLISHED. The R21-only proposal and
+R20's original zero decision remain untouched as dated history.
+
+**17:12 UTC — publication checks:** both progress suites pass (26 original and
+17 extension tests); the root and detailed proposal each list P01–P16 exactly once.
+The complete existing individual-hypothesis sections match the committed source
+byte-for-byte. Cargo format, strict all-target/all-feature Clippy and the complete
+all-target/all-feature tests pass. This is documentation only; no real-agent
+workflow, source prompt, approved task contract, ledger or publication-history changes.
 
 ## Approved extension activity — 2026-09-14
 

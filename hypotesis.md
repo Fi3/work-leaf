@@ -2,7 +2,7 @@
 
 **STOPPED AT ZERO — case (1): additional work needs permission. All eight tasks have terminal results, not eight successful experiments.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-14T15:48:21+00:00:** input qualification failed; R14/R15 and the conditional full batch were not launched. The only diagnostic used 15,687 raw. [One source-only trace task](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-CLI-TRACE-SCOPE-20260914.md) is proposed, not TODO or authority to run.
+**Activity, 2026-09-14:** research remains stopped; the user's comprehensive-list request is documentation/planning only. [The complete known remaining-work proposal](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-END-TO-END-SCOPE-20260914.md) contains 16 proposed tasks, including setup repair and conditional joint/error checks, not live TODO or launch authority. No experiment is running.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
@@ -62,20 +62,54 @@ The guard validates declarations and evidence files, not causal truth. The earli
 
 ## Live priority — stopped at zero; further work needs approval
 
-Last maintained: **2026-09-14 15:48 UTC**. The one diagnostic is closed; no feature observation is admitted or running.
+Last maintained: **2026-09-14, comprehensive-plan review**. The one diagnostic is closed; no feature observation is admitted or running.
 The accepted historical gap and the user's no-quality-loss assumption remain premises.
 
 | Priority | Evidence, explanatory reach and status | Next bounded check / stop gate |
 | --- | --- | --- |
-| Blocking prerequisite: R13 failed; source-level trace proposed only | The monitor passes, but actual exec still omits 775 bytes of the saved developer catalog. Supported config previews did not restore it. | Proposed R21 traces the pinned CLI loader decision without generation; it needs explicit permission. No repeat diagnostic is authorized. |
+| Blocking prerequisite: faithful launch, including repair | The monitor passes, but actual exec still omits 775 bytes of the saved developer catalog. R13 was closed with 18m04s of its local allowance unused. Source tracing is unfinished setup work, not a new saving hypothesis. | Proposed P01 includes trace, permitted repair and actual verification together. The standalone R21 request is historical, not the recommended continuation. No diagnostic or repair is authorized by the proposal. |
 | Strongest scientific candidate: B feedback/handoff | Prior R04's extra usage appears after first GREEN: +1,350,327 raw, partly offset by −147,082 before/through GREEN. The suffix includes genuine failure recovery. | R14 was not launched because input fidelity failed. No new cue effect or clean null. A fresh check would need a faithful repair and new approval. |
 | Joint candidate: A+B | Prior R04 finishes +1,203,245 raw versus the saved author, but catalog drift confounds it. | R15 was not launched. The conditional comparison remains scientifically unresolved; no automatic replacement. |
+| Conditional joint/residual candidates | C08 and C25 have positive separate contrasts but overlapping histories/different targets. Their combination with author policy is unpriced; remaining exercised package differences are not eliminated. | Proposed P02/P06–P08 require a common reference and actual connected exposure before any short screen. Promote a promising joint immediately; no automatic enumeration of combinations. |
 | R16–R20 closed | No qualified feature/full-workflow treatment exists. The single diagnostic costs 15,687 raw and does not test the mechanism. | No full batch. Offset, explained amount and residual remain unavailable. Final review preserves case (1), with no counter increase. |
 | Parked: A alone / C alone | R02 incomplete; R05 lacks faithful C-only boundary; native R06 cost less than R04, opposite the predicted direction. | No rerun or interception framework. Not proof of zero effect. |
 
 R01–R12's result records remain unchanged. R13–R20 are distinct approved work, not reopened old tasks.
 The [original eight-task proposal](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-NEXT-SCOPE-20260914.md) retains its dated permission-only wording as history;
 the linked explicit authority governs execution.
+
+## Comprehensive remaining-work proposal — not approved TODO
+
+**The sixteen items below describe known remaining research obligations, not sixteen newly approved runs.**
+Their [full scope, dependencies, completion gates, ceilings and all-family coverage](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-END-TO-END-SCOPE-20260914.md)
+include the predictable repair and failure paths. All existing 74 completion records stay unchanged.
+The proposed rule is: setup failure stays BLOCKED; an unrun dependent experiment stays NOT RUN;
+both remain in TODO. Routine debugging belongs inside its owning task, not another extension.
+That rule and a one-time sixteen-task extension require approval; neither is silently applied here.
+
+| Proposed ID | Complete remaining-work list | State |
+| --- | --- | --- |
+| P01 | Faithful launch setup: source trace, benchmark-local repair, failure-path tests and actual verification; include tracker-rule qualification. | PROPOSED |
+| P02 | Exact effective-factor/reference manifest and common-boundary qualification for individual and joint tests. | PROPOSED |
+| P03 | Qualified B-only next-action/handoff-guidance screen. | PROPOSED |
+| P04 | Qualified A+B publication/test-order plus guidance joint screen. | PROPOSED |
+| P05 | Exact instruction/feedback → decision → actual work → usage mechanism, before and after first GREEN. | PROPOSED |
+| P06 | Refresh × continuation joint check, C08 × C25. | PROPOSED, CONDITIONAL |
+| P07 | Author policy × refresh × continuation joint check, A+B+C08+C25. | PROPOSED, CONDITIONAL |
+| P08 | Remaining exercised whole-package interaction: custody/tools, information, review/repair, lifecycle, scheduling and auxiliary work. | PROPOSED, CONDITIONAL |
+| P09 | One three-workflow confirmation batch of the strongest qualified reversal, with all required stages. | PROPOSED, SIGNAL-GATED |
+| P10 | Source/input/activation and complete distinct-response accounting for every new observation. | PROPOSED |
+| P11 | Full author/review/repair/integration cost offsets. | PROPOSED |
+| P12 | Combined same-target effect, interactions and context amplification without double counting. | PROPOSED |
+| P13 | Historical six-vs-six transfer, explained amount/share and justified residual. | PROPOSED |
+| P14 | Evidence-backed executable non-WL causal recipe; reuse existing real execution where it matches. | PROPOSED |
+| P15 | Original-benchmark error/accounting/configuration check only after valid causal coverage fails to reconcile the gap. | PROPOSED, CONDITIONAL |
+| P16 | Final source/coverage acceptance of the requested causal answer or concrete corrected benchmark error. | PROPOSED |
+
+This covers the known remaining work and all existing hypothesis families; it is not proof that every
+conceivable cause has been eliminated. A broken setup cannot justify the benchmark-error branch.
+Scientific completion requires the attribution/coverage gates, not merely exhausted run allowances.
+No new ordinary control, all-on reproduction or renamed weak screen is part of this proposal.
 
 ## Verified findings and coverage
 
@@ -87,7 +121,7 @@ unidentified; R01–R12's completed finite checks did not establish that causal 
 C08/C25's positive individual contrasts remain non-additive. Source/outcome qualifications,
 including the frozen 2/3 feature result under the user's quality premise, are retained.
 
-This is the **complete, finite approved task list**, with no pending work authorized, not a guarantee that every
+The **74-record approved ledger** has no pending work authorized; the sixteen-item proposal is separate. Neither is a guarantee that every
 conceivable hidden cause has been experimentally excluded. The causal entry-point
 framework covers measured population/aggregation; initial effective input/state; returned
 information and non-model transitions; generated work/model transitions; scheduling,
