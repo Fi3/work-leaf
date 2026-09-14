@@ -56,14 +56,14 @@
     "V15",
     "J04-STAGE-REACH-20260912",
     "G01",
-    "G02"
+    "G02",
+    "R01",
+    "R05"
   ],
   "pending": [
-    "R01",
     "R02",
     "R03",
     "R04",
-    "R05",
     "R06",
     "R07",
     "R08",
@@ -80,9 +80,22 @@
         "scope": "Using the preserved historical launch/feedback records, current frozen host/driver and existing variant-feasibility report, specify exactly groups A, B and C below, the reference, changed bytes/state and invariants for R02–R06. Produce one exposure/contrast matrix with an explicit feasibility verdict for each of the five arms. No new model call or historical savings re-audit.",
         "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R01.md"
       },
-      "status": "pending",
-      "started_at": null,
-      "result": null
+      "status": "done",
+      "started_at": "2026-09-14T13:02:22+00:00",
+      "result": {
+        "completed_at": "2026-09-14T13:10:55+00:00",
+        "outcome": "supported",
+        "checked": "One saved-source A/B/C exposure and five-arm contrast matrix; no generation.",
+        "evidence": [
+          "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R01.md",
+          "bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/drivers/host_custody.py",
+          "bench-results/efficiency-mechanism-isolation-20260906T214448Z/infrastructure/driver-source/bench-three-features-direct-common",
+          "bench-results/efficiency-mechanism-isolation-20260906T214448Z/EVIDENCE-H-TEST-TIMING.md",
+          "bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/postcapture/EXISTING-WL-JOINT-VARIANT-FEASIBILITY.md"
+        ],
+        "finding": "R02/R03/R04 and the full R06 inverse have existing source boundaries; isolated R05 lacks faithful per-operation B feedback with native writes. R04/R06 is a conditional custody contrast with A/B off.",
+        "limits": "Design feasibility only, not a positive token effect or historical share; every provider observation still needs source/input qualification and admission."
+      }
     },
     "R02": {
       "definition": {
@@ -91,8 +104,8 @@
         "scope": "One A-off/B-on/C-on initial-author screen, compared with the corresponding saved all-on episode. Keep real host feedback and write custody fixed; restore the declared original test-first/work-unit obligations. Record submitted work units, actual failures/checks and complete recorded usage. This is not a repeat of the old production-cohesion wording-only screen.",
         "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R02.md"
       },
-      "status": "pending",
-      "started_at": null,
+      "status": "checking",
+      "started_at": "2026-09-14T13:15:00+00:00",
       "result": null
     },
     "R03": {
@@ -113,8 +126,8 @@
         "scope": "One A-off/B-off/C-on initial-author screen. Compare its actual operation/history chain with the saved all-on episode and any completed R02/R03 observations. Test the combined causal prediction, not a generic all-on reproduction. This joint screen may precede the single-group screens.",
         "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R04.md"
       },
-      "status": "pending",
-      "started_at": null,
+      "status": "checking",
+      "started_at": "2026-09-14T13:15:00+00:00",
       "result": null
     },
     "R05": {
@@ -124,9 +137,21 @@
         "scope": "One A-on/B-on/C-off initial-author screen, only if R01 identifies a faithful boundary that leaves A/B and required work intact. Group C is precisely defined below; do not label a different whole workflow a C-only effect. No faithful finite contrast means a recorded unqualified result, not permission to expand the task.",
         "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R05.md"
       },
-      "status": "pending",
-      "started_at": null,
-      "result": null
+      "status": "done",
+      "started_at": "2026-09-14T13:40:00+00:00",
+      "result": {
+        "completed_at": "2026-09-14T13:42:04+00:00",
+        "outcome": "failed_setup",
+        "checked": "Conditional C-only admission gate using the saved boundary matrix and qualified real-Git custody rejection; no provider observation.",
+        "evidence": [
+          "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R05.md",
+          "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R01.md",
+          "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-inverse-20260914/test_author_inverse.py",
+          "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-inverse-20260914/QUALIFICATION.md"
+        ],
+        "finding": "Native writes alone violate custody; accepting them only after the native turn changes B feedback timing. No faithful existing C-only boundary, so no R05 generation.",
+        "limits": "No C-only token estimate or zero-effect claim. R04/R06 is conditional on A/B off; a new per-tool interception framework is outside this task."
+      }
     },
     "R06": {
       "definition": {
@@ -135,8 +160,8 @@
         "scope": "One A-off/B-off/C-off initial-author screen, with the exact group set frozen by R01. This is the whole-package inverse, not another all-on run. Include every actual rejection, check and missing tail. Where a group contrast is inseparable, label it as such rather than assigning independent percentages.",
         "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R06.md"
       },
-      "status": "pending",
-      "started_at": null,
+      "status": "checking",
+      "started_at": "2026-09-14T13:15:00+00:00",
       "result": null
     },
     "R07": {
@@ -146,8 +171,8 @@
         "scope": "Use the saved H refresh/continuation inventories and the existing C08/C25 effect reports once. Map the actual affected response/history windows, any shared window and the differing reference populations. Produce one overlap/transfer table; do not add old percentages or rerun either single. If no valid historical transfer is available, record that exact limit. No generation.",
         "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R07.md"
       },
-      "status": "pending",
-      "started_at": null,
+      "status": "checking",
+      "started_at": "2026-09-14T13:40:00+00:00",
       "result": null
     },
     "R08": {
@@ -390,10 +415,194 @@
         "G01",
         "G02"
       ]
+    },
+    {
+      "event": "task_completed",
+      "scope_id": "approved-task-correction-20260914",
+      "at": "2026-09-14T13:10:55+00:00",
+      "done": 55,
+      "todo": 11,
+      "total": 66,
+      "completed": [
+        "C01",
+        "C02",
+        "C03",
+        "C04",
+        "C06",
+        "C07",
+        "C08",
+        "C09",
+        "C10",
+        "C12",
+        "C13",
+        "C14",
+        "C15",
+        "C16",
+        "C17",
+        "C19",
+        "C20",
+        "C21",
+        "C24",
+        "C25",
+        "C28",
+        "C29",
+        "C30",
+        "C31",
+        "C32",
+        "C33",
+        "C36",
+        "C37",
+        "X01",
+        "X02",
+        "X03",
+        "X05",
+        "X07",
+        "M02",
+        "J02",
+        "J04",
+        "J10",
+        "J12",
+        "N01",
+        "V04",
+        "V05",
+        "V06",
+        "V07",
+        "V08",
+        "V09",
+        "V10",
+        "V11",
+        "V12",
+        "V13",
+        "V14",
+        "V15",
+        "J04-STAGE-REACH-20260912",
+        "G01",
+        "G02",
+        "R01"
+      ],
+      "completion": {
+        "id": "R01",
+        "record": {
+          "definition": {
+            "id": "R01",
+            "question": "Define a faithful inverse of the reproduced author package.",
+            "scope": "Using the preserved historical launch/feedback records, current frozen host/driver and existing variant-feasibility report, specify exactly groups A, B and C below, the reference, changed bytes/state and invariants for R02–R06. Produce one exposure/contrast matrix with an explicit feasibility verdict for each of the five arms. No new model call or historical savings re-audit.",
+            "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R01.md"
+          },
+          "status": "done",
+          "started_at": "2026-09-14T13:02:22+00:00",
+          "result": {
+            "completed_at": "2026-09-14T13:10:55+00:00",
+            "outcome": "supported",
+            "checked": "One saved-source A/B/C exposure and five-arm contrast matrix; no generation.",
+            "evidence": [
+              "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R01.md",
+              "bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/drivers/host_custody.py",
+              "bench-results/efficiency-mechanism-isolation-20260906T214448Z/infrastructure/driver-source/bench-three-features-direct-common",
+              "bench-results/efficiency-mechanism-isolation-20260906T214448Z/EVIDENCE-H-TEST-TIMING.md",
+              "bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/postcapture/EXISTING-WL-JOINT-VARIANT-FEASIBILITY.md"
+            ],
+            "finding": "R02/R03/R04 and the full R06 inverse have existing source boundaries; isolated R05 lacks faithful per-operation B feedback with native writes. R04/R06 is a conditional custody contrast with A/B off.",
+            "limits": "Design feasibility only, not a positive token effect or historical share; every provider observation still needs source/input qualification and admission."
+          }
+        }
+      }
+    },
+    {
+      "event": "task_completed",
+      "scope_id": "approved-task-correction-20260914",
+      "at": "2026-09-14T13:42:04+00:00",
+      "done": 56,
+      "todo": 10,
+      "total": 66,
+      "completed": [
+        "C01",
+        "C02",
+        "C03",
+        "C04",
+        "C06",
+        "C07",
+        "C08",
+        "C09",
+        "C10",
+        "C12",
+        "C13",
+        "C14",
+        "C15",
+        "C16",
+        "C17",
+        "C19",
+        "C20",
+        "C21",
+        "C24",
+        "C25",
+        "C28",
+        "C29",
+        "C30",
+        "C31",
+        "C32",
+        "C33",
+        "C36",
+        "C37",
+        "X01",
+        "X02",
+        "X03",
+        "X05",
+        "X07",
+        "M02",
+        "J02",
+        "J04",
+        "J10",
+        "J12",
+        "N01",
+        "V04",
+        "V05",
+        "V06",
+        "V07",
+        "V08",
+        "V09",
+        "V10",
+        "V11",
+        "V12",
+        "V13",
+        "V14",
+        "V15",
+        "J04-STAGE-REACH-20260912",
+        "G01",
+        "G02",
+        "R01",
+        "R05"
+      ],
+      "completion": {
+        "id": "R05",
+        "record": {
+          "definition": {
+            "id": "R05",
+            "question": "Does native write/tool availability explain behavior beyond the author contract?",
+            "scope": "One A-on/B-on/C-off initial-author screen, only if R01 identifies a faithful boundary that leaves A/B and required work intact. Group C is precisely defined below; do not label a different whole workflow a C-only effect. No faithful finite contrast means a recorded unqualified result, not permission to expand the task.",
+            "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R05.md"
+          },
+          "status": "done",
+          "started_at": "2026-09-14T13:40:00+00:00",
+          "result": {
+            "completed_at": "2026-09-14T13:42:04+00:00",
+            "outcome": "failed_setup",
+            "checked": "Conditional C-only admission gate using the saved boundary matrix and qualified real-Git custody rejection; no provider observation.",
+            "evidence": [
+              "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R05.md",
+              "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R01.md",
+              "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-inverse-20260914/test_author_inverse.py",
+              "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-inverse-20260914/QUALIFICATION.md"
+            ],
+            "finding": "Native writes alone violate custody; accepting them only after the native turn changes B feedback timing. No faithful existing C-only boundary, so no R05 generation.",
+            "limits": "No C-only token estimate or zero-effect claim. R04/R06 is conditional on A/B off; a new per-tool interception framework is outside this task."
+          }
+        }
+      }
     }
   ],
   "research": {
-    "status": "paused",
+    "status": "active",
     "zero_decision": null
   },
   "scope_issues": []

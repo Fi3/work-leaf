@@ -101,9 +101,10 @@ to the supervising investigation; preserve frozen measured-agent instructions an
 
 ## Current mechanism-investigation authority
 
-The 2026-09-14 tracker-only correction is approved. Research remains paused until the user
-restarts it. The twelve approved task definitions constrain that next scope; listing them is
-not a provider admission. Earlier continuation authority below does not bypass this pause.
+The user's 2026-09-14 “ok restart the research” resumes the twelve approved finite tasks.
+The sibling study record `AUTHORITY-RESEARCH-RESUMPTION-20260914.md` records this authority.
+The task definitions and budgets remain fixed; listing a task is not a provider admission.
+Earlier continuation authority below does not enlarge this scope.
 
 The token-mechanism investigation reuses the existing normal-WL baseline. Additional normal-WL
 control workflows or unmodified Direct sequential controls require fresh explicit user authorization. The

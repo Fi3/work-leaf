@@ -1,18 +1,18 @@
-# DONE: 54 | TODO: 12 | TOTAL: 66
+# DONE: 56 | TODO: 10 | TOTAL: 66
 
-**Pending: R01–R12 below; none started. Last completed legacy record: G02.**
+**Pending: R02–R04, R06–R12. R02/R04/R06 are running; R07 is an offline overlap check. Last completed: R05 (unqualified C-only setup).**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity: research paused; tracker correction only.** No benchmark is running or admitted by this correction.
+**Activity, 2026-09-14 13:38 UTC:** R02/R04/R06 launch three bounded inverse-author screens, each one attempt, 15 minutes and a 3M observed-raw tripwire.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
-| R01 | TODO | Define a faithful inverse of the reproduced author package. |
-| R02 | TODO | Does removing cohesive implementation-plus-tests publication increase work and tokens? |
+| R01 | DONE | Define a faithful inverse of the reproduced author package. |
+| R02 | CHECKING | Does removing cohesive implementation-plus-tests publication increase work and tokens? |
 | R03 | TODO | Does removing result-bound validation/completion guidance increase work and tokens? |
-| R04 | TODO | Do publication policy and feedback act jointly? |
-| R05 | TODO | Does native write/tool availability explain behavior beyond the author contract? |
-| R06 | TODO | Does reversing the complete A+B+C package restore the expensive behavior? |
-| R07 | TODO | How do the already-positive C08/C25 pathways overlap with this package in the historical runs? |
+| R04 | CHECKING | Do publication policy and feedback act jointly? |
+| R05 | DONE | Does native write/tool availability explain behavior beyond the author contract? |
+| R06 | CHECKING | Does reversing the complete A+B+C package restore the expensive behavior? |
+| R07 | CHECKING | How do the already-positive C08/C25 pathways overlap with this package in the historical runs? |
 | R08 | TODO | Does the strongest observed causal reversal survive a full workflow? |
 | R09 | TODO | Are the new intervention observations valid evidence for their declared factors? |
 | R10 | TODO | Is any apparent author saving merely work shifted into review, repair or integration? |
@@ -69,7 +69,13 @@ python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progr
 
 The guard checks declarations, result files and consistency; it does not prove a causal claim.
 
-## Live priority — paused, not an execution queue
+## Live priority — R01 complete; inverse screens next
+
+[R01's completed contrast matrix](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R01.md):
+the current host can accept test-only RED before implementation without a custody change.
+R02/R03/R04 and the full R06 inverse have existing boundaries. R05 alone lacks
+a faithful native-write/per-operation-feedback boundary; it is not a zero-effect finding.
+R04 → R06 can test custody conditionally with A/B off. Three author observations are admitted under the saved wave protocol.
 
 Last maintained: **2026-09-14**. The historical ~50% gap and the user's no-quality-loss
 assumption are the research premises. No repeat to establish that savings exist, ordinary
@@ -87,7 +93,8 @@ All prior failures, missing usage and qualifications remain visible in the regis
 Re-rank after material findings. A promising approved joint arm may precede singles.
 Every provider observation still needs its frozen prospective protocol, subscription-only
 authentication and budget/stop criteria. The [approved plan](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md) defines A/B/C
-and the R08 selection rule. This tracker approval is not research resumption or run admission.
+and the R08 selection rule. The [user's research resumption](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-RESEARCH-RESUMPTION-20260914.md)
+authorizes this finite investigation; each actual provider observation still requires admission.
 
 ## Verified findings and coverage
 
@@ -551,6 +558,7 @@ path that actually requires that absent activation, not every interaction of the
 
 ### J04 — Cohesion × test timing × ACK/completion × host editing
 
+- **2026-09-14 R01:** [five-arm source/contrast matrix](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R01.md) complete. Existing standalone host permits actual test-only publication; A/B inverse and native full-inverse paths are feasible subject to qualification. R04/R06 conditional custody contrast is prioritized. No new token effect yet; earlier completed screens remain retained.
 - **Work status:** DONE — prior shared closeout and scopes v4–v14 complete. No repeat or model generation selected. N01 remains closed/deprioritized.
 - **2026-09-13 00:52 verified mechanism/reproduction:** one corrected-host non-WL workflow completes in 58m24.72s with 18,545,304 raw, 48.6513% below historical Direct. All three initial authors publish one accepted implementation/tests unit, receive real acceptance, check and return DONE. All five rejected proposals, repairs, reviews and integration remain counted. Native/public/observer and independent audits agree. G01/G02 close at this operational mechanism/reproduction scope; G03 historical attributable share remains unbounded. Frozen features are 2/3 under the user's explicit quality premise. [Verified result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md). Generic confirmation is not admitted as a substitute for attribution.
 - **2026-09-12 16:11 source recurrence:** V13 establishes one additional-selection-state repair chain; V14 finds the underlying controller route in4/6 Direct and2/6 WL final trees. Mixed exposure demotes it as a majority explanation; no causal savings share or quality inference follows.
@@ -626,6 +634,7 @@ path that actually requires that absent activation, not every interaction of the
 
 ### J13 — Higher-order residual package and cancellation of effects
 
+- **2026-09-14 activity:** the approved R04/R06 joint inverses target the explicitly defined A/B/C package. R01's matrix is complete, not a residual bound or new model observation. R12 retains the finite coverage/zero-counter decision.
 - **Work status:** PARKED / UNCERTAINTY — no further check selected; outside TODO.
 - **Hypothesis:** several weak/inconclusive factors can act jointly, while WL overhead offsets genuine savings; there need not be one dominant independent cause.
 - **Test/result:** no experiment identifies every higher-order interaction. J02 shows why simple addition fails; J04/J10 provide package observations and C09/C19/C22/C30/C31 provide offsets. **The full residual remains unallocated.** Naming this family does not close interaction coverage.

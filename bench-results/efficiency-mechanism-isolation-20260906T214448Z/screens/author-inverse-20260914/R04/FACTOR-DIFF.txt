@@ -1,0 +1,60 @@
+--- saved-all-on-prompt
++++ R04-prompt
+@@ -20,10 +20,10 @@
+ The host applies and commits actual edits, runs actual checks, and resumes this same thread with
+ truthful results. Repository tasks, focused tests, and review obligations remain unchanged.
+ 
+-Design the required tests first, but submit a buildable implementation and those tests together.
+-This custody procedure supersedes an AGENTS.md requirement to execute a failing test before implementation;
+-do not manufacture a separate RED run solely to satisfy that procedural timing. All required tests remain required.
+-Use actual failing checks when genuinely needed to diagnose or repair the assigned work, and preserve their results.
++Before production implementation, publish the required new tests through the host and run the relevant
++focused checks to observe their failure for the missing behavior or API. Then implement the feature and
++rerun the checks. Follow the repository's executed-test-first requirement, not only test design.
++All required tests and genuine failures remain; retain actual failure output and repair real defects.
+ 
+ Send exactly one operative directive in each complete final reply, then wait for its actual result.
+ One edit directive may contain a complete multi-file, multi-hunk implementation and its focused tests.
+@@ -41,8 +41,8 @@
+ +<new line>
+ *** End Patch
+ @standalone end
+-Add File and Delete File operations are also supported. Submit a cohesive implementation and its
+-focused tests when both are known; handle genuinely needed repairs after actual feedback.
++Add File and Delete File operations are also supported. Publish each genuinely ready test or implementation
++unit through the ordinary edit operation; handle genuinely needed repairs after actual feedback.
+ For a check, use a complete run directive:
+ @standalone run <repository-relative paths the command may write>... -- <shell command>
+ No declared paths is valid for a read-only command. A check has at most 300 seconds, further bounded
+@@ -54,6 +54,5 @@
+ no 12,000-character bound on the whole feedback package. Do not invent success from omitted output.
+ Command changes remain pending
+ until an accepted edit or an explicit @standalone discard <reason>; DONE cannot leave pending work.
+-When the assigned work is complete, send exactly @standalone done. This is not an obligation to stop
+-after one green check: complete any genuinely remaining task work first. Do not emit directives in
++When the assigned work is complete, send exactly @standalone done. Do not emit directives in
+ quoted examples, commentary, or a mixture with other prose; only a complete owned final is executable.
+
+--- saved-host
++++ R04-host
+@@ -616,7 +616,7 @@
+             path = folder / f"{stream}.txt"
+             output.append(f"{stream}:\n" + render_output(path.read_bytes().decode("utf-8", errors="replace")))
+         pending = "\n" + self.pending_feedback() if self.pending else ""
+-        return f"Host command completed.\ncommand: {command}\nstatus: {receipt['exit_code']}\n" + "\n".join(output) + pending + "\nUse another requested command or an ordinary edit for concrete remaining work. When the required work and focused validation are complete, send @standalone done."
++        return f"Host command completed.\ncommand: {command}\nstatus: {receipt['exit_code']}\n" + "\n".join(output) + pending
+ 
+     def pending_feedback(self):
+         diff = "\n".join(self.pending[name]["diff"] for name in self.pending_changes)
+@@ -674,9 +674,9 @@
+                 self.event("proposal_rejected", reason=str(exc), accepted_paths=accepted)
+                 deliver(f"Host proposal rejected: {exc}. No success is claimed for the rejected operation. Previously accepted paths in this reply: {', '.join(accepted) or 'none'}. Inspect the actual source and submit a corrected complete operation.")
+         if accepted and not self.completed:
+-            deliver(f"Host accepted files: {', '.join(dict.fromkeys(accepted))}. Each accepted edit has its provisional commit already saved. Do not resend or restate accepted patches. Run at most one relevant focused validation step for this accepted work; after it passes, send @standalone done. Send another edit for a concrete issue in your own patch. The complete requested work remains required; concrete unresolved requirements may still be addressed.")
++            deliver(f"Host accepted files: {', '.join(dict.fromkeys(accepted))}. Each accepted edit has its provisional commit already saved.")
+         if not prompts and not self.completed:
+-            deliver("Pending output explicitly discarded. Continue concrete required work or send @standalone done when complete.")
++            deliver("Pending output explicitly discarded.")
+         # This joined string is only a provider-free unit-test view. Production
+         # invokes feedback separately at EACH deliver call, never as a bundle.
+         return None if self.completed else "\n\n".join(prompts)

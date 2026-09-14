@@ -1,0 +1,29 @@
+--- saved-all-on-prompt
++++ R02-prompt
+@@ -20,10 +20,10 @@
+ The host applies and commits actual edits, runs actual checks, and resumes this same thread with
+ truthful results. Repository tasks, focused tests, and review obligations remain unchanged.
+ 
+-Design the required tests first, but submit a buildable implementation and those tests together.
+-This custody procedure supersedes an AGENTS.md requirement to execute a failing test before implementation;
+-do not manufacture a separate RED run solely to satisfy that procedural timing. All required tests remain required.
+-Use actual failing checks when genuinely needed to diagnose or repair the assigned work, and preserve their results.
++Before production implementation, publish the required new tests through the host and run the relevant
++focused checks to observe their failure for the missing behavior or API. Then implement the feature and
++rerun the checks. Follow the repository's executed-test-first requirement, not only test design.
++All required tests and genuine failures remain; retain actual failure output and repair real defects.
+ 
+ Send exactly one operative directive in each complete final reply, then wait for its actual result.
+ One edit directive may contain a complete multi-file, multi-hunk implementation and its focused tests.
+@@ -41,8 +41,8 @@
+ +<new line>
+ *** End Patch
+ @standalone end
+-Add File and Delete File operations are also supported. Submit a cohesive implementation and its
+-focused tests when both are known; handle genuinely needed repairs after actual feedback.
++Add File and Delete File operations are also supported. Publish each genuinely ready test or implementation
++unit through the ordinary edit operation; handle genuinely needed repairs after actual feedback.
+ For a check, use a complete run directive:
+ @standalone run <repository-relative paths the command may write>... -- <shell command>
+ No declared paths is valid for a read-only command. A check has at most 300 seconds, further bounded
+

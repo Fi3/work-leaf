@@ -1,11 +1,12 @@
 # Provisional investigation ledger
 
-Live analysis counter: **DONE: 54 | TODO: 12 | TOTAL: 66** — [hypotesis.md](hypotesis.md).
+Live analysis counter: **DONE: 56 | TODO: 10 | TOTAL: 66** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** the user-approved one-time correction retains all
-54 completed records and names twelve finite remaining tasks, R01–R12. None has
-started. [Approved questions, scope limits and completion criteria](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md).
-Research remains paused until the user restarts it; no benchmark/provider call
-is admitted by this tracker correction. The verified historical attributable
+54 historical completed records and twelve finite tasks, R01–R12. R01 is DONE;
+R02/R04/R06 are admitted for concurrent author screens; other remaining tasks have not started. [Approved questions, scope limits and completion criteria](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md).
+Research resumed at 13:02 UTC on the user's explicit instruction. R01 is a
+30-minute saved-source contrast/feasibility pass; no provider call is admitted.
+The verified historical attributable
 combined percentage remains **NOT ESTABLISHED**.
 
 DONE only increases and TODO only decreases within this fixed scope. No new task,
@@ -22,7 +23,65 @@ Cargo format, strict all-target/all-feature Clippy and full test commands pass.
 The prior hypothesis entries, evidence links, old opening and full run chronology
 pass exact preservation checks. [Verification record](bench-results/efficiency-mechanism-isolation-20260906T214448Z/TRACKER-VERIFICATION-20260914.md).
 No agent-facing runtime workflow is affected; no provider call or benchmark is
-part of this repair. R01–R12 remain unstarted and research remains paused.
+part of that repair; it preceded the research resumption below.
+
+## Active research — 2026-09-14 13:02 UTC
+
+[Resumption authority](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-RESEARCH-RESUMPTION-20260914.md):
+R01 traces the accepted host's actual launch contract, edit/check feedback and
+historical author obligations into the five approved A/B/C inverse arms.
+The exact existing variant-feasibility report is an input, not an excuse to
+rename old cue-only tests. No new model call, control, accounting replay or
+experimental host is part of this initial pass. Counters remain 54/12/66.
+
+**13:10:55 UTC — R01 complete:** [five-arm matrix](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R01.md).
+The standalone host accepts actual test-only publication without changing its
+custody. A/B inverses and the full native inverse have existing paths; C-only
+with unchanged per-operation B feedback does not. No model call occurred.
+The published counter advances once to 55/11/66, with matching histories.
+
+**13:15 UTC — R02/R04/R06 preparation:** one author episode per arm, not full
+workflows. Shared 45-minute preparation ceiling ends 14:00 UTC; each admitted
+episode has a 15-minute wall and 3M observed-raw tripwire. No controls or
+replacements. [Prospective wave protocol](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-inverse-20260914/PROTOCOL.md).
+Current work is exact-span adapters and existing host/observer/profile reuse.
+No provider is running or admitted yet; the historical explained share is unchanged.
+
+**13:32 UTC — local qualification:** all 14 new exact-inverse/local-path tests,
+88 retained serialized-host tests, 40 retained host-custody tests and six one-shot
+launcher tests pass. New tests caught native result-shape adapter errors before
+generation; both fixes have fail-first coverage. Cargo format, strict Clippy and
+all-target/all-feature tests also pass. CLI 0.153.4 reports “Logged in using ChatGPT”.
+Three separate original-base checkouts have exact reference AGENTS/provider waivers.
+No provider screen is admitted yet; resource/control qualification and pins remain.
+
+**13:38 UTC — three author admissions:** R02/R04/R06 each bind the exact prompt,
+factor diff, source, subscription CLI, profile, observer, effective policy and
+environment. The cross-tool stop control passes with the same absolute-argv shape.
+Preparation is inside its 14:00 ceiling. Launching the three one-attempt screens
+concurrently, each 900 seconds with 3M recorded-raw tripwire. No controls,
+replacement or extension. The sampler inspects resources only until closure.
+
+**13:40 UTC — all three provider threads are active.** A resource-only watcher
+samples and retains native/public counts every 15 seconds and automatically
+signals the exact supervisor at the tripwire. The initial operator sampling gap
+was 42 seconds (above the declared 30); the second sample was below 0.21M in
+every arm. This deviation is retained for R09, not erased or used for a rerun.
+R05's conditional feasibility disposition and R07's saved C08/C25 overlap table
+are being checked while the three admitted screens run. No new generation is
+part of those two tasks.
+
+**13:42:04 UTC — R05 complete, unqualified C-only setup:**
+[Result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R05.md).
+No faithful existing native-write toggle preserves B feedback between operations.
+No provider call or new interception framework; no zero-effect claim. The R04/R06
+conditional comparison remains active. Counter advances once to 56/10/66.
+
+**13:44 UTC — resource checkpoint:** R02 494,226, R04 724,790 and R06
+669,039 recorded distinct-response raw. All three remain active below 3M;
+their common 900-second deadline is approximately 13:53:26 UTC. These are
+in-progress resource counts, not final costs or mechanism results. The watcher
+retains a sample every 15 seconds under the wave's resources directory.
 
 ## Primary metric: how much of the historical saving is explained?
 
