@@ -1,0 +1,30 @@
+...EE..
+======================================================================
+ERROR: test_real_saved_completed_turn_is_accepted_without_generation (__main__.OwnedFinalTests.test_real_saved_completed_turn_is_accepted_without_generation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/recovered-final-004/test_recover_host.py", line 42, in test_real_saved_completed_turn_is_accepted_without_generation
+    thread, final, public = self.module.owned_final(folder / "stdout.jsonl", folder / "final.txt", None)
+                            ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/drivers/host_custody.py", line 441, in owned_final
+    raise Fatal("native invocation failed")
+scheduled_private_benchmark_host.Fatal: native invocation failed
+
+======================================================================
+ERROR: test_recovered_diagnostic_keeps_owned_final_and_evidence (__main__.OwnedFinalTests.test_recovered_diagnostic_keeps_owned_final_and_evidence)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/recovered-final-004/test_recover_host.py", line 32, in test_recovered_diagnostic_keeps_owned_final_and_evidence
+    thread, final, public = self.accept()
+                            ~~~~~~~~~~~^^
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/recovered-final-004/test_recover_host.py", line 29, in accept
+    return self.module.owned_final(self.raw, self.final, expected)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/drivers/host_custody.py", line 441, in owned_final
+    raise Fatal("native invocation failed")
+scheduled_private_benchmark_host.Fatal: native invocation failed
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.042s
+
+FAILED (errors=2)

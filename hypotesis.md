@@ -1,9 +1,9 @@
 # DONE: 77 | TODO: 13 | TOTAL: 90
-## BUG FIXES — DONE: 6 | TODO: 0 | TOTAL: 6
+## BUG FIXES — DONE: 7 | TODO: 0 | TOTAL: 7
 
-**Pending checks: 13 research obligations remain. P03-qualified002 and P04-qualified002 are running concurrently, admitted at 22:01 UTC and launched at 22:03:27 UTC. Each has a 1,200-second wall / 3M recorded-raw cap.**
+**Pending checks: 13 research obligations remain. P04-qualified002 has a qualified joint mechanism signal. P03-recovered004 is running on the original thread, reusing its completed first response after BUG007's locally verified acceptance repair.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-14T22:03:27+00:00:** Both existing author contrasts are running with frozen factor prompts, separate clean checkouts and the reference-state catalog schedule. The external monitor uses explicit output paths and both possible native dates. Old confounded outcomes remain retained. No scientific task is closed by setup qualification.
+**Activity, 2026-09-14T22:36:32+00:00:** the same-thread P03 continuation launched with 900 additional wall seconds and a 3M cumulative recorded-raw tripwire including the original 575,731 raw. Eleven fail-first acceptance/recovery tests and Cargo format/Clippy/all-target tests pass; actual continuation verification is underway. No first response is regenerated. P04's 2,205,658 raw exceeds the saved author by 978,376; 70.92% of that screen excess lies after first GREEN, in further validation/inspection without an edit. This is not the historical explained share.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
@@ -119,16 +119,16 @@ Previously unaccounted bug fixes use their separate counter; they do not expand 
 
 ## Live priority — qualified author contrasts, then broader joints
 
-Last maintained: **2026-09-14 21:55 UTC**. [P10's complete audit](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/P10.md) retains its four admissions and rejects the old P03/P04 resumed-input comparison. [The subsequent read-only diagnostic](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/resume-input-003/RESULT.md) qualifies a concrete repair without rewriting those outcomes. A newly bounded pair is being prepared under the user's continuation rule. No larger confirmation is eligible yet.
+Last maintained: **2026-09-14 22:36 UTC**. [P04-qualified002's result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P04-qualified002/RESULT.md) is a qualified joint screen with observable extra post-GREEN work. P03's same-thread continuation follows a saved-real-response acceptance repair; no first response is regenerated. Earlier confounded observations remain separate. Complete-workflow stage/input qualification still precedes larger confirmation.
 The accepted historical gap and the user's no-quality-loss assumption remain premises.
 
 | Priority | Evidence and potential explanatory reach | Next cheap check / stop gate |
 | --- | --- | --- |
-| First actionable joint candidate: A+B | P04's first response has exact startup input and publishes tests only; later drift invalidates its net contrast. The resumed-input repair passes actual native delivery. | P04-qualified002, alongside B-only, has a separate 1,200-second/3M cap. Require actual exposure, matched non-target inputs and work/usage chain; larger totals alone do not advance. |
-| B feedback/handoff discriminator | Old post-GREEN excess is confounded; old P03 stopped before any completed post-GREEN decision. | P03-qualified002 keeps A/custody and removes B alone. Inspect whether additional work follows sufficient success feedback; preserve genuine repairs and later offsets. |
+| Strongest qualified actionable signal: A+B | P04-qualified002 completes at 2,205,658 raw versus saved 1,227,282. Test-first publication/RED is observed; post-GREEN extra validation/inspection contributes 693,895 of its 978,376 excess. No later edit occurs. | Complete P03 comparison and P05 trace; qualify full-workflow stage inputs before P09. One joint author is not a historical effect estimate; preserve downstream offsets. |
+| B feedback/handoff discriminator | P03's first native turn completed at 575,731 raw; the host rejected a recovered diagnostic before applying its cohesive proposal. Eleven acceptance/recovery tests pass on an isolated overlay. | P03-recovered004 reuses the exact saved final/thread and actual host feedback, with a separate 900-second cap and original cost retained. Inspect completed post-GREEN decisions only after closure. |
 | Strongest retained broader joint: C08 × C25 | Both constituent directions have positive net evidence from incompatible targets; they cannot be added. The first H003 refresh file is recoverable. | P06's complete runtime/native-prefix restoration remains unresolved. Reuse the precise blocker while the actionable pair runs; no null or automatic coverage exclusion. |
 | Whole author/refresh/residual joints: P07/P08 | Existing single-condition policies, private RED preview, standalone final custody and saved DTOs do not supply the declared faithful connected package. Later review/repair/integration paths are exercised, not absent. | Source-backed blockers are saved in P07-BLOCKER.md/P08-BLOCKER.md. No coverage exclusion or null result; no hidden multi-experiment bucket. |
-| Completed P10; dependent P09/P11–P16 | P10 retains 3,567,272 raw plus two unknown tails for its four admissions. The later delivery diagnostic contributes 48,827 raw separately. No qualified net reversal; historical explained share remains unavailable. | Keep admission accounting disjoint. No expensive confirmation before a qualified mechanism signal; P15 stays conditional and P16 unfinished. |
+| Completed P10; dependent P09/P11–P16 | P10's four old admissions retain 3,567,272 raw plus two unknown tails; the later diagnostic contributes 48,827 raw separately. Qualified P04 supplies an author-only signal, not a complete-workflow or historical net amount. | Keep admission accounting disjoint. P09 also needs faithful complete-stage inputs; P15 stays conditional and P16 unfinished. |
 | Parked A-only / C-only / old weak cues | R02 incomplete; R05 lacks a faithful C-only boundary; native R06 is cheaper than R04, opposite the predicted direction. | No automatic repeats or new bridge framework. Reconsider only with a specific genuinely new fact. |
 
 The [work-chain report](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/RESULT.md)

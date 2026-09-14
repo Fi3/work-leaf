@@ -3,9 +3,75 @@
 Live analysis counter: **DONE: 77 | TODO: 13 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
-**Bug-fix counter: DONE: 6 | TODO: 0 | TOTAL: 6.** BUG006's five tests and actual saved-native replay pass. Explicit public paths and possible rollout dates recover all three diagnostic responses / 48,827 raw; old zero samples are retained as missing monitoring coverage. No extra model turn or main research completion.
-**Current activity, 2026-09-14T22:03:27+00:00:** P03-qualified002 and P04-qualified002 are running concurrently in separate clean checkouts. Each has a 1,200-second wall and 3M recorded-raw tripwire. The monitor covers explicit host outputs and native September 14/15 directories. Main progress 77/13/90; bug fixes 6/0/6. Actual launch/resume inputs are checked during these observations.
+**Bug-fix counter: DONE: 7 | TODO: 0 | TOTAL: 7.** BUG007 passes fail-first/local checks and actual same-thread feedback-delivery verification. Original failed-host outcome and first response remain intact; the scientific observation is still running.
+**Current activity, 2026-09-14T22:36:32+00:00:** P03-recovered004 is running on the original native thread after acceptance/recovery fail-first tests. It consumes the original first response once and resumes actual host feedback; 900 additional wall seconds, 3M cumulative raw including 575,731 already spent. P04's qualified joint signal is saved; complete-stage confirmation qualification is the next parallel read-only work.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-14T22:39:53+00:00 — BUG007 actual boundary verified:**
+The first resumed turn belongs to the original native thread, receives the
+exact real host feedback, preserves the original native prefix and all six
+saved files, and matches the scheduled input/model/sandbox boundaries.
+Seven bug fixes are complete; research count remains 77/13/90. This is repair
+verification, not author completion or causal evidence. The continued agent
+is still generating within its admitted cap. P09's saved-reference metadata
+screen finds distinct stage-specific catalog schedules, including short/full
+transitions; reusing the first-author schedule for every stage would be wrong.
+
+**2026-09-14T22:36:32+00:00 — P03 exact saved-response continuation launched:**
+Eleven recovery tests pass, including actual saved-native final acceptance,
+strict terminal failure/ownership rejection, stale prompt/prefix detection,
+consumed-state rejection and once-only invocation/ordinal restoration.
+Both fail-first outputs are retained. Cargo fmt, strict all-feature Clippy
+and all-target/all-feature tests pass. Original sources remain hash-identical.
+The separately pinned admission 464932f45efceb42f81ffe9851d354149c41759666e54e859505f0e9212747d3
+uses the same checkout/thread and B-off host. The 575,731 first-response raw
+charge remains inside the cumulative tripwire. No operator text, regenerated
+first response, new control or normal-WL change. BUG007 stays pending until
+actual resumed-boundary verification; main task counts stay 77/13/90.
+
+**2026-09-14T22:25:41+00:00 — BUG007, successful provider turn rejected by host:**
+P03 ends at 22:22:42 UTC. The native child exits 0 after 1,154.19 seconds,
+with ten completed responses / 575,731 raw and an owned 40,603-byte final.
+The host's generic error branch rejects the earlier recovered transport
+diagnostic before applying the proposed cohesive edit. The checkout is clean.
+This corrects the earlier live inference of a failed provider call. Preserve
+both the recovered warning and failed host outcome. A benchmark-only repair
+must reject genuine terminal/ownership failures and may reuse the saved final
+once, continuing with actual unchanged B-off host feedback under a new bound.
+This is a routine bug, not a new scientific task or permission pause.
+
+**2026-09-14T22:20:24+00:00 — completed joint screen; transport failure in B-only:**
+P04 publishes tests, corrects an invalid Cargo command, observes actual RED,
+publishes implementation, passes the focused tests, then runs broader suites,
+inspects source/history and finally returns DONE. No post-GREEN edit occurs.
+Its complete cost is 978,376 raw above the fixed 1,227,282 reference author.
+After first GREEN it spends 832,596 raw versus reference 138,701; the 693,895
+difference locates 70.92% of this screen's excess after first GREEN. This is a
+work-location decomposition, not an isolated B share or the historical 50%.
+P04's once-only audit and all eight catalog-boundary checks pass. The declared
+held-short tail covers turns 6–8, not an observed reference decision.
+P03's public stream reports `Reconnecting... 2/5 (stream disconnected before
+completion: idle timeout waiting for websocket)`. Nine completed responses
+record 479,296 raw, but the initial outer turn has not completed; native retry
+and unfinished charges cannot be treated as zero. No ordinary control or
+automatic replacement is launched. The existing wall cap remains in force.
+
+**2026-09-14T22:12:14+00:00 — actual resume-boundary qualification:**
+P04's first six outer-turn catalogs follow full/full/full/full/short/short,
+including the actual reference turn-5 transition. No boundary error appears;
+the sixth held-short state is explicitly extrapolated, not an observed baseline
+decision. P03 still has its first outer turn open. Live lower totals are
+479,296 and 1,373,062 native raw, respectively. Both remain below their caps;
+no feature result or saving is asserted from these partial totals.
+
+**2026-09-14T22:10:02+00:00 — resource/input monitoring, no outcome tuning:**
+Both screens remain active and below their caps. P03 has 479,296 recorded
+native raw across nine completed responses, with its first outer turn still
+open. P04 has 1,113,302 recorded native raw across sixteen responses and three
+completed outer turns. These are live lower totals, not comparable completed
+effects. Startup input equality is saved; continued boundary qualification
+checks only input/session metadata. No further generation is admitted, no
+unfinished call is treated as zero, and no confirmation batch is eligible yet.
 
 **2026-09-14T22:03:27+00:00 — two qualified-input author screens launched:**
 P03-qualified002 is the B-only removal; P04-qualified002 is A+B removal.

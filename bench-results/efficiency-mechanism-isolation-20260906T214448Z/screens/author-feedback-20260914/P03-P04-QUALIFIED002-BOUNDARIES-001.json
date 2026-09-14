@@ -1,0 +1,157 @@
+{
+  "checked_at": "2026-09-14T22:12:14+00:00",
+  "command": "python3 - <<'PY'\nfrom pathlib import Path\nimport json,hashlib,re\nS=Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z');D=S/'screens/author-feedback-20260914';Q=D/'resume-input-003';reference=Path('/home/user/.codex/sessions/2026/09/13/rollout-2026-09-13T01-27-10-01a097f2-3f03-7463-9756-4e849ed94e8d.jsonl');rr=[json.loads(l) for l in reference.read_bytes().splitlines()];refmeta=next(r['payload'] for r in rr if r['type']=='session_meta');refdev=next(r['payload']['content'] for r in rr if r['type']=='response_item' and r['payload'].get('role')=='developer');out=[]\nimport sys;sys.path.insert(0,str(D/'P10'));import catalog_boundary\nfor name in ('P03-qualified002','P04-qualified002'):\n root=D/name;starts=[]\n for p in sorted(root.glob('host/invocation-*/stdout.jsonl')):\n  for l in p.read_bytes().splitlines():\n   try:r=json.loads(l)\n   except ValueError:continue\n   if r.get('type')=='thread.started':starts.append(r['thread_id'])\n if not starts:out.append({'id':name,'ready':False});continue\n assert len(set(starts))==1\n paths=[p for date in ('14','15') for p in Path('/home/user/.codex/sessions/2026/09/'+date).glob('*'+starts[0]+'*.jsonl')];assert len(paths)==1;p=paths[0];rows=[]\n for l in p.read_bytes().splitlines():\n  try:rows.append(json.loads(l))\n  except ValueError:pass\n meta=next(r['payload'] for r in rows if r['type']=='session_meta');dev=[r['payload']['content'] for r in rows if r['type']=='response_item' and r['payload'].get('role')=='developer'];contexts=[r['payload'] for r in rows if r['type']=='turn_context']\n ids=[r['payload']['turn_id'] for r in rows if r['type']=='event_msg' and r['payload'].get('type')=='task_started'];boundaries,errors=catalog_boundary._boundaries(rows,ids)\n qualified=[]\n for ordinal,item in enumerate(boundaries,1):\n  expected='228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d' if ordinal<=4 else 'fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0';actual=hashlib.sha256(item['catalog'].encode()).hexdigest() if item['catalog'] else None;qualified.append({'ordinal':ordinal,'turn_id':item['turn_id'],'catalog_matches_schedule':actual==expected,'held_tail':ordinal>5})\n out.append({'id':name,'boundary_checks':qualified,'boundary_errors':errors,'ready':bool(dev),'thread_id':starts[0],'native_path':str(p),'native_prefix_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'base_exact':meta['base_instructions']==refmeta['base_instructions'],'initial_developer_exact':bool(dev) and dev[0]==refdev,'native_source':meta['source'],'cli_version':meta['cli_version'],'contexts':[ {k:c.get(k) for k in ('turn_id','model','effort','approval_policy','sandbox_policy','cwd')} for c in contexts],'developer_catalog_digests':[hashlib.sha256(m.group(0).encode()).hexdigest() for content in dev for item in content for m in re.finditer('<skills_instructions>.*?</skills_instructions>',item.get('text',''),re.S)]})\nprint(json.dumps(out,indent=2))\nPY",
+  "result": [
+    {
+      "id": "P03-qualified002",
+      "boundary_checks": [
+        {
+          "ordinal": 1,
+          "turn_id": "01a0a1f2-5523-7bd2-a054-d43a61f96898",
+          "catalog_matches_schedule": true,
+          "held_tail": false
+        }
+      ],
+      "boundary_errors": [],
+      "ready": true,
+      "thread_id": "01a0a1f2-54aa-7983-b2d5-c80b87ce2ab9",
+      "native_path": "/home/user/.codex/sessions/2026/09/15/rollout-2026-09-15T00-03-28-01a0a1f2-54aa-7983-b2d5-c80b87ce2ab9.jsonl",
+      "native_prefix_sha256": "a58ed8f7f5587fb40c5d94bcb82775794dee9bf2443f05c53e9e9df9f1df35b3",
+      "base_exact": true,
+      "initial_developer_exact": true,
+      "native_source": "exec",
+      "cli_version": "0.153.4",
+      "contexts": [
+        {
+          "turn_id": "01a0a1f2-5523-7bd2-a054-d43a61f96898",
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "cwd": "/tmp/wl-author-qualified002-20260914.xUBuLn/P03"
+        }
+      ],
+      "developer_catalog_digests": [
+        "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+      ]
+    },
+    {
+      "id": "P04-qualified002",
+      "boundary_checks": [
+        {
+          "ordinal": 1,
+          "turn_id": "01a0a1f2-551d-79b2-8fab-e264e392a76d",
+          "catalog_matches_schedule": true,
+          "held_tail": false
+        },
+        {
+          "ordinal": 2,
+          "turn_id": "01a0a1f6-5f0c-7cb1-8e48-176891916db1",
+          "catalog_matches_schedule": true,
+          "held_tail": false
+        },
+        {
+          "ordinal": 3,
+          "turn_id": "01a0a1f6-7d77-77a1-ad05-4880dcbf8e38",
+          "catalog_matches_schedule": true,
+          "held_tail": false
+        },
+        {
+          "ordinal": 4,
+          "turn_id": "01a0a1f6-b8cd-7531-9580-09a23a0a4d79",
+          "catalog_matches_schedule": true,
+          "held_tail": false
+        },
+        {
+          "ordinal": 5,
+          "turn_id": "01a0a1fa-274e-72a2-8cb9-25edcd715850",
+          "catalog_matches_schedule": true,
+          "held_tail": false
+        },
+        {
+          "ordinal": 6,
+          "turn_id": "01a0a1fa-4947-7b83-bee2-277c6fb2b849",
+          "catalog_matches_schedule": true,
+          "held_tail": true
+        }
+      ],
+      "boundary_errors": [],
+      "ready": true,
+      "thread_id": "01a0a1f2-54a9-7ab3-bb7b-bffb62caf5c8",
+      "native_path": "/home/user/.codex/sessions/2026/09/15/rollout-2026-09-15T00-03-28-01a0a1f2-54a9-7ab3-bb7b-bffb62caf5c8.jsonl",
+      "native_prefix_sha256": "b7cb7f2fe05d2ed972f137f51d21d834eb2cead4895f675dfb07fecc9a736e15",
+      "base_exact": true,
+      "initial_developer_exact": true,
+      "native_source": "exec",
+      "cli_version": "0.153.4",
+      "contexts": [
+        {
+          "turn_id": "01a0a1f2-551d-79b2-8fab-e264e392a76d",
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "cwd": "/tmp/wl-author-qualified002-20260914.xUBuLn/P04"
+        },
+        {
+          "turn_id": "01a0a1f6-5f0c-7cb1-8e48-176891916db1",
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "cwd": "/tmp/wl-author-qualified002-20260914.xUBuLn/P04"
+        },
+        {
+          "turn_id": "01a0a1f6-7d77-77a1-ad05-4880dcbf8e38",
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "cwd": "/tmp/wl-author-qualified002-20260914.xUBuLn/P04"
+        },
+        {
+          "turn_id": "01a0a1f6-b8cd-7531-9580-09a23a0a4d79",
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "cwd": "/tmp/wl-author-qualified002-20260914.xUBuLn/P04"
+        },
+        {
+          "turn_id": "01a0a1fa-274e-72a2-8cb9-25edcd715850",
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "cwd": "/tmp/wl-author-qualified002-20260914.xUBuLn/P04"
+        },
+        {
+          "turn_id": "01a0a1fa-4947-7b83-bee2-277c6fb2b849",
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "cwd": "/tmp/wl-author-qualified002-20260914.xUBuLn/P04"
+        }
+      ],
+      "developer_catalog_digests": [
+        "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d",
+        "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+      ]
+    }
+  ]
+}
