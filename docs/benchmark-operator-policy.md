@@ -70,13 +70,16 @@ inconclusive or deprioritized screens are DONE; proposals and scientific uncerta
 from the work queue. A concrete new reason and explicit selection precede any scope extension;
 an unproved zero effect is not a reason to repeat a screen. Do not treat shared evidence as
 independent experiments. The user-approved 2026-09-14 finite task counter is
-DONE+TODO=TOTAL=74: all 66 completed records plus eight approved tasks, R13–R20.
+DONE+TODO=TOTAL=90: all 74 completed records plus sixteen remaining obligations, P01–P16.
 The header and visible rows derive from the ledger linked in `../hypotesis.md`.
 The approved task contract freezes identities, questions, observation/preparation ceilings and
 completion criteria. Reordering by promise is allowed; adding, splitting, replacing, reopening,
 broadening or hiding extra work as an uncounted substep is not. A dated result with evidence and
-honest limitations closes one task, including a failed-setup or inconclusive bounded outcome.
-Those dispositions are not scientific disproof.
+honest limitations closes an actual required deliverable. Under the P01–P16 contract, failed
+setup remains BLOCKED in TODO and unrun dependent checks remain TODO. Valid executed bounded
+screens may close with a negative or inconclusive result; unavailable attribution/offset evidence
+does not complete those obligations. Earlier terminal records retain their original definitions.
+None of these dispositions is scientific disproof.
 
 DONE cannot decrease and TODO cannot increase without subsequent explicit user approval.
 Record newly necessary work as an unapproved scope issue, without executing it. At zero, stop:
@@ -91,7 +94,12 @@ The stable-ID ledger and mandatory regression command are linked at the top of
 The sibling `PROGRESS-PUBLICATION-HISTORY.json` separately preserves the old 52/3 and 54/1
 checkpoints, the once-approved 54/12 correction, the 66/0 checkpoint and approved 66/8/74 extension.
 The pinned extension contract preserves the original zero ledger and publications byte-for-byte.
-The additive `test_progress_extension.py` runs alongside the unchanged original regressions.
+The approved complete-known-work contract pins the final 74/0 ledger and publication archives,
+the sixteen-item plan and the user's conditional authority. Both additive guards,
+`test_progress_extension.py` and `test_progress_end_to_end.py`, run alongside the unchanged
+original regressions. The complete-plan guard rejects blocked/unrun work as completion and
+requires declared actual deliverables, justified conditional exclusions and evidence-backed
+final acceptance. These are declaration checks, not a substitute for scientific source review.
 Each completion appends one matching
 checkpoint and its result declaration. Never rewrite or truncate earlier checkpoints.
 A pinned contract rejects task substitution or altered limits; comparing both histories rejects
@@ -104,11 +112,22 @@ to the supervising investigation; preserve frozen measured-agent instructions an
 
 ## Current mechanism-investigation authority
 
-The user's 2026-09-14 “ok you can now proceed with the new 8 task” authorizes R13–R20.
-The sibling study record `AUTHORITY-EIGHT-TASK-EXTENSION-20260914.md` records this authority;
-`PROGRESS-TASK-EXTENSION-20260914.json` freezes the eight scopes and their ceilings.
-The task definitions and budgets remain fixed; listing a task is not a provider admission.
-Earlier continuation authority below does not enlarge this scope.
+The user's conditional 2026-09-14 approval permits publication of the complete known
+remaining-work list, P01–P16, as 74 DONE / 16 TODO / 90 TOTAL. The study record
+`AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md` preserves the reply and its scope;
+`PROGRESS-END-TO-END-CONTRACT-20260914.json` pins all sixteen definitions and ceilings.
+Research is paused after the requested register update. No provider observation is admitted
+by task publication, and earlier continuation authority does not bypass this pause.
+
+All known necessary work belongs in the list upfront, including routine debugging, repair,
+verification and known joint/comparison setup. Genuinely unexpected issues or promising
+causes grounded in previously unknown facts may be recorded and prioritized. Record the
+discovery date, exact new fact, why it was unknown at the freeze, related previous results,
+upstream decision/work pathway, plausible explanatory reach and smallest discriminating check.
+A favorable total, an unallocated residual or a renamed weak hypothesis is not a new discovery.
+A known omission is case (2), an initial-checklist error, not an unexpected issue. Reprioritizing
+existing in-scope work changes no count. Additional work, retries or larger budgets still need
+explicit approval before the counter or execution scope grows.
 
 The token-mechanism investigation reuses the existing normal-WL baseline. Additional normal-WL
 control workflows or unmodified Direct sequential controls require fresh explicit user authorization. The

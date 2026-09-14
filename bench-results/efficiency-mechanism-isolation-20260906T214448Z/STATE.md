@@ -7,13 +7,13 @@ below remain historical records, not authority for new runs or a substitute for 
 ## Primary goal status
 
 **Historical saving explained as a verified combined percentage: NOT ESTABLISHED.
-Overall attribution goal: UNFINISHED. Research stopped at 74/0/74, case (1); further work needs explicit approval.**
+Overall attribution goal: UNFINISHED. The complete known-work list is published at 74/16/90; research is paused after the requested register update.**
 The [complete non-WL reproduction](RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md)
 uses 18,545,304 raw tokens, 48.6513% below the saved six-Direct mean. Native,
 public, observer and independent accounting agree. The historically exposed
 upstream joint mechanism and one complete reproduction pass qualified independent
 acceptance; full historical causal attribution and its residual bound do not.
-Fixed progress is 74 DONE / 0 TODO / 74 TOTAL. All 66 pre-extension completed records and prior
+Fixed progress is 74 DONE / 16 TODO / 90 TOTAL. All 74 completed records and prior
 publication checkpoints are preserved; the old G03 aggregate is not an extra task.
 The frozen feature result is 2/3; the user's no-quality-loss premise remains explicit.
 R02/R03/R04/R06 are closed; R08 admits no full batch. Accepted historical reduction remains
@@ -27,14 +27,20 @@ Completed scope: R01–R20, with all failures and causal qualifications retained
 The approved R13–R20 extension has one completed 15,687-raw input diagnostic.
 The monitor qualification passes, but the actual developer catalog still lacks
 775 bytes. R14/R15 are not launched and R16 admits no full batch.
-[R20's zero decision](progress-results/R20.md) requests permission for
-[one source-only CLI trace task](PROPOSED-CLI-TRACE-SCOPE-20260914.md), not a new benchmark.
+[R20's zero decision](progress-results/R20.md) and its one-task trace proposal remain dated history.
+The [conditional complete-plan approval](AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) covers
+P01–P16 and pins the 74/0 checkpoint in [the current contract](PROGRESS-END-TO-END-CONTRACT-20260914.json).
+Source tracing, repair and verification are included in P01; no new setup task is needed for them.
+Unexpected issues and promising causes require genuinely new facts; an omitted known check is
+case (2), not a discovery. Extra scope or budgets still need explicit permission.
 
-## Closed scope and permission boundary
+## Preserved closed scope and current permission boundary
 
 The [original approved inventory](PROGRESS-TASKS-PROPOSAL-20260914.md) and
 [approved extension](PROGRESS-TASK-EXTENSION-20260914.json) specify R01–R20.
-All twenty finite result files are complete. DONE never decreases;
+All twenty earlier finite result files are complete under their original scopes.
+The current sixteen-task list keeps failed setup and unrun dependent work in TODO;
+P01 preparation does not establish successful input qualification. DONE never decreases;
 TODO never increases without subsequent explicit user approval. At zero, stop with a supported
 answer or case (1) necessary additional work and/or case (2) an incorrect initial checklist;
 name the exact proposed additional tasks/count and ask permission. No uncounted work,

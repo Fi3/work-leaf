@@ -52,7 +52,7 @@ its study's frozen protocol. Preserve admitted runs and record all outcomes.
 ### Mandatory shallow screening before expensive experiments
 
 The first line of `hypotesis.md` uses the user-approved finite task ledger:
-`DONE + TODO = TOTAL = 74`. Its source is
+`DONE + TODO = TOTAL = 90`. Its source is
 `bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-CHECKLIST.json`.
 The 2026-09-14 one-time correction preserves all 54 completed historical records and replaces
 the misleading G03 aggregate with twelve explicitly bounded tasks, R01–R12. Definitions, budgets
@@ -60,8 +60,10 @@ and completion criteria are frozen in `PROGRESS-TASK-SCOPE-20260914.json` and th
 plan beside the ledger. These are tasks, not independent hypotheses or a percentage of effort.
 DONE never decreases; TODO never increases without subsequent explicit user approval.
 No added, split, replaced, reopened or broadened task; no hidden supplementary experiment.
-A listed task closes only with its saved dated result, evidence and honest terminal outcome.
-Negative, inconclusive and failed-setup results finish bounded checks, not scientific proof.
+A listed task closes only with its saved dated result, evidence and its required deliverable.
+P01–P16 use the frozen `PROGRESS-END-TO-END-CONTRACT-20260914.json`: setup failures stay
+BLOCKED in TODO, and unrun dependent checks remain TODO. Valid executed negative/inconclusive
+screens may finish their bounded check, not scientific attribution. Old terminal records stay intact.
 New necessary work is an unapproved scope issue, not an execution queue.
 **At zero TODO, stop.** Report a supported answer, or explicitly state case (1) additional work
 beyond the list and/or case (2) an incorrect initial checklist; name the exact proposed tasks/count
@@ -77,8 +79,17 @@ zero ledger, publication history and eight-task proposal. All 66 completed recor
 Every completion appends a matching checkpoint, including its result declaration.
 Never rewrite or truncate previous checkpoints. Publication validation rejects rollback even when
 the live history is truncated; the pinned task contract also rejects same-ID scope substitution.
-The user's “ok you can now proceed with the new 8 task” authorizes exactly R13–R20.
-Run the additive `test_progress_extension.py` beside the mandatory original progress tests.
+The conditional complete-known-work approval is recorded in
+`AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md`. It permits the once-only 74/16/90 publication,
+preserving all 74 completed records and the byte-pinned 74/0 ledger/publication archives.
+Research remains paused after this requested tracker update; publication is not a benchmark admission.
+Run `test_progress_extension.py` and `test_progress_end_to_end.py` beside the mandatory original tests.
+Known necessary work, routine repair, verification and already-described joint checks belong inside
+the listed tasks. Unexpected issues and promising causes from previously unknown facts are legitimate
+discoveries: record the dated fact, why it was unknown, the decision/work mechanism, potential token
+impact, prior related results and next cheap discriminator. An omitted known requirement is case (2),
+not novelty. Neither discovery nor reprioritization permits an automatic TODO/budget increase or extra
+provider observation; new scope still requires explicit approval. Root `hypotesis.md` owns the full list.
 
 The mechanism-research objective is to explain the historical ~50% result as fast as evidence
 permits, not to complete candidates in ID order. Maintain a live most-promising ranking near the

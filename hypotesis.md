@@ -1,8 +1,122 @@
-# DONE: 74 | TODO: 0 | TOTAL: 74
+# DONE: 74 | TODO: 16 | TOTAL: 90
 
-**STOPPED AT ZERO — case (1): additional work needs permission. All eight tasks have terminal results, not eight successful experiments.**
+**Pending check: P01 — faithful launch setup and repair. Tracker preparation is performed; actual input qualification is still unresolved.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-14:** research remains stopped; the user's comprehensive-list request is documentation/planning only. [The complete known remaining-work proposal](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-END-TO-END-SCOPE-20260914.md) contains 16 proposed tasks, including setup repair and conditional joint/error checks, not live TODO or launch authority. No experiment is running.
+**Activity, 2026-09-14T18:11:26+00:00:** the conditionally approved sixteen-task list is published. Research is paused after the requested register update; no diagnostic or benchmark is admitted or running.
+
+| ID | Status | Remaining check |
+| --- | --- | --- |
+| P01 | TODO | Faithful launch setup: source trace, benchmark-local repair, failure-path tests and actual verification; include tracker-rule qualification. |
+| P02 | TODO | Exact effective-factor/reference manifest and common-boundary qualification for individual and joint tests. |
+| P03 | TODO | Qualified B-only next-action/handoff-guidance screen. |
+| P04 | TODO | Qualified A+B publication/test-order plus guidance joint screen. |
+| P05 | TODO | Exact instruction/feedback → decision → actual work → usage mechanism, before and after first GREEN. |
+| P06 | TODO | Refresh × continuation joint check, C08 × C25. |
+| P07 | TODO | Author policy × refresh × continuation joint check, A+B+C08+C25. |
+| P08 | TODO | Remaining exercised whole-package interaction: custody/tools, information, review/repair, lifecycle, scheduling and auxiliary work. |
+| P09 | TODO | One three-workflow confirmation batch of the strongest qualified reversal, with all required stages. |
+| P10 | TODO | Source/input/activation and complete distinct-response accounting for every new observation. |
+| P11 | TODO | Full author/review/repair/integration cost offsets. |
+| P12 | TODO | Combined same-target effect, interactions and context amplification without double counting. |
+| P13 | TODO | Historical six-vs-six transfer, explained amount/share and justified residual. |
+| P14 | TODO | Evidence-backed executable non-WL causal recipe; reuse existing real execution where it matches. |
+| P15 | TODO | Original-benchmark error/accounting/configuration check only after valid causal coverage fails to reconcile the gap. |
+| P16 | TODO | Final source/coverage acceptance of the requested causal answer or concrete corrected benchmark error. |
+
+All **74 historical completion records** and the **74/0 zero checkpoint** remain immutable.
+The [user's conditional approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md)
+permits the one-time 74/0/74 → 74/16/90 publication, provided all known necessary work is listed upfront.
+The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json)
+pins these sixteen identities, their scopes, completion gates and budgets from the
+[dated end-to-end plan](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-END-TO-END-SCOPE-20260914.md).
+The plan's original proposal wording is historical; the linked approval governs this publication.
+
+## Counter contract — complete known remaining work
+
+**DONE + TODO = TOTAL = 90.** These are remaining research obligations, not independent
+hypotheses, successful experiments, equal effort units or a promise of an empirical result.
+The [ledger](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-CHECKLIST.json) and
+[publication history](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-PUBLICATION-HISTORY.json) retain all earlier checkpoints,
+including 52/3, 54/1, the approved 54/12 correction, 66/0, 66/8 and 74/0.
+The [74/0 ledger archive](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-archive/PROGRESS-CHECKLIST-v4-ZERO-20260914.json)
+and [publication archive](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-archive/PROGRESS-PUBLICATION-HISTORY-v3-ZERO-20260914.json)
+are byte-for-byte pinned. Old R01–R20 outcomes are not rewritten to fit the new completion rule.
+
+- DONE never decreases. TODO never increases without subsequent explicit user approval.
+- Routine source tracing, debugging, local repair and verification belong inside their listed task.
+  A setup failure stays **BLOCKED and in TODO**. An unrun dependent experiment stays **TODO**;
+  no completed count is awarded for its failed prerequisite.
+- A valid executed bounded screen can close as positive, negative or inconclusive, with dated
+  evidence and limits. Inconclusive is not zero effect. An unavailable required analysis stays unfinished.
+- Conditional discharge requires evidence of an absent/shared pathway, coverage by verified joint
+  attribution, or the demonstrated benchmark-error alternative. Failed setup is not such evidence.
+- Preparation and provider ceilings stop spending; they do not manufacture task completion.
+  No hidden extra experiment, automatic replacement, scope substitution or budget extension.
+- At zero, stop with the supported answer or report case (1) genuinely additional work and/or
+  case (2) an incorrect initial checklist, giving exact proposed tasks/count and asking permission.
+  The final acceptance item cannot close merely because attempts or budgets are exhausted.
+
+Before every progress report or affected commit, require all three guards:
+
+```sh
+python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_counter.py
+python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_extension.py
+python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_end_to_end.py
+```
+
+These tests validate frozen declarations, histories and evidence files, not scientific truth.
+The original 26 and eight-task extension's 17 tests remain unchanged.
+
+## New discoveries versus omitted known work — user rule, 2026-09-14
+
+The current list includes all **known necessary remaining work**, including setup repair,
+individual and joint mechanisms, confirmation, offsets, attribution, reproduction and the
+conditional original-benchmark error investigation. The 69-entry register and the plan's
+coverage table preserve already-tested, negative, inconclusive, excluded and parked causes.
+P06–P08 explicitly include known joint/comparison feasibility issues; they are not ready-made experiments.
+
+**Acceptable genuinely new developments:**
+
+- An unexpected issue: a previously unknown concrete failure or external-state change,
+  with dated evidence and its affected task.
+- A promising cause from a previously unknown fact: record what was discovered, when,
+  why it was not known at this freeze, how it could change actual decisions/work and
+  materially reduce tokens, related prior results, and the next cheap discriminating check.
+  A favorable total, mere possibility or unexplained residual is not enough.
+
+Known unfinished setup, already-described joint hypotheses, routine follow-up work and old
+weak/parked candidates are **not discoveries**. Fresh evidence may justify reprioritizing a
+parked candidate, but must identify the specific new fact; a new name or renewed interest does not.
+An omitted known requirement is **case (2), a planning mistake**, and must be reported that way.
+P08 is one explicitly scoped residual-package check, not permission for an uncounted series of tests.
+
+Record genuinely new evidence and re-rank existing in-scope work immediately. These exceptions
+permit honest discovery, not automatic extra scope: additions or changed budgets still require
+an exact proposal and user approval before increasing TODO or executing extra work.
+
+## Live priority — published; research paused
+
+Last maintained: **2026-09-14T18:11:26+00:00**. No new provider observation is admitted.
+The accepted historical gap and the user's no-quality-loss assumption remain premises.
+
+| Priority | Evidence and potential explanatory reach | Next cheap check / stop gate |
+| --- | --- | --- |
+| Prerequisite: P01 faithful launch | Actual input still lacks 775 bytes of the saved developer catalog. This is known unfinished setup, not a newly discovered saving cause. | Finish source trace, permitted repair and actual qualification within P01. Tracker publication alone does not pass the gate. |
+| Strongest candidate: P03 B feedback/handoff | R04's extra usage is concentrated after first GREEN: +1,350,327 raw, offset by −147,082 earlier. Real failure recovery remains included. | One qualified fresh B-only screen, then P05's clause/feedback → decision → work trace. No forced first-GREEN stop. |
+| Joint candidate: P04 A+B | R04 is +1,203,245 raw overall, but catalog drift confounds attribution. | One qualified A+B screen; compare conditionally with P03, not by adding separate percentages. |
+| Conditional connected joints: P06–P08 | C08/C25 have positive separate contrasts but overlapping histories and different targets. Joint author/refresh/continuation and residual effects are unpriced. | P02 must establish a common reference and actual connected exposure. Promote promising joint evidence immediately, without waiting for ID order. |
+| P09–P16 confirmation and final attribution | No qualified full-workflow treatment from the preceding eight-task extension exists. Explained historical share and offsets remain unavailable. | Escalate only a qualified mechanism signal; retain all later costs and the final evidence gates. |
+| Parked A-only / C-only / old weak cues | R02 incomplete; R05 lacks a faithful C-only boundary; native R06 is cheaper than R04, opposite the predicted direction. | No automatic repeats or new bridge framework. Reconsider only with a specific genuinely new fact. |
+
+P01's local preparation ceiling includes tracker publication; elapsed work is retained in the ledger
+and operational note. Remaining time is not an automatic provider allowance. A user-controlled pause
+does not spend local preparation time. No benchmark budget has been used for this update.
+
+## Historical completed task records
+
+These are the earlier dated terminal checks, including failed setup and unrun-dependent outcomes
+under their old contracts; they are not twenty successful causal experiments. Their 54 historical
+predecessors and all result files remain intact.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
@@ -27,90 +141,6 @@
 | R19 | DONE | What amount of the accepted historical gap is supported by the qualified joint evidence? |
 | R20 | DONE | Does the finite extension support the requested answer, or require another explicit zero-counter decision? |
 
-The approved extension consists of R13–R20; their actual pending statuses are above. All **66 pre-extension completed records** remain immutable.
-They include the 54 historical completions and R01–R12, with their negative/inconclusive qualifications.
-The [approved extension](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASK-EXTENSION-20260914.json) freezes all eight scopes and budgets.
-[Explicit user authority](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-EIGHT-TASK-EXTENSION-20260914.md) permits 66/0/66 → 66/8/74 once.
-
-## Counter contract — user-approved 2026-09-14
-
-**DONE + TODO = TOTAL = 74.** These are finite tasks, not independent hypotheses or effort percentages.
-The old 52/3, 54/1, approved 54/12 correction and **66/0 zero checkpoint** remain unchanged.
-The [zero ledger archive](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-archive/PROGRESS-CHECKLIST-v3-ZERO-20260914.json)
-and [zero publication archive](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-archive/PROGRESS-PUBLICATION-HISTORY-v2-ZERO-20260914.json)
-preserve the completed results and original permission decision.
-
-- A listed task closes only with its saved dated result, actual evidence and honest terminal outcome.
-  Supported, unsupported, inconclusive, failed-setup and justified-not-needed outcomes are distinct.
-- DONE never decreases; TODO never increases without subsequent explicit user approval.
-  No added, split, replaced, reopened or broadened task, hidden supplementary experiment or automatic replacement.
-- New necessary work is an unapproved scope issue, not an execution queue.
-- **At TODO=0, stop.** Give the supported answer or report case (1) additional work and/or case (2)
-  an incorrect initial checklist. Name exact proposed tasks/count and ask permission before any increase or execution.
-  Zero is checklist exhaustion, not scientific success.
-
-The [ledger](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-CHECKLIST.json), [publication history](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-PUBLICATION-HISTORY.json)
-and pinned contracts reject counter rollback, missing evidence, overwritten results and task substitution.
-Before every progress report or affected commit, require:
-
-```sh
-python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_counter.py
-python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_extension.py
-```
-
-The guard validates declarations and evidence files, not causal truth. The earlier 26 regressions remain unchanged.
-
-## Live priority — stopped at zero; further work needs approval
-
-Last maintained: **2026-09-14, comprehensive-plan review**. The one diagnostic is closed; no feature observation is admitted or running.
-The accepted historical gap and the user's no-quality-loss assumption remain premises.
-
-| Priority | Evidence, explanatory reach and status | Next bounded check / stop gate |
-| --- | --- | --- |
-| Blocking prerequisite: faithful launch, including repair | The monitor passes, but actual exec still omits 775 bytes of the saved developer catalog. R13 was closed with 18m04s of its local allowance unused. Source tracing is unfinished setup work, not a new saving hypothesis. | Proposed P01 includes trace, permitted repair and actual verification together. The standalone R21 request is historical, not the recommended continuation. No diagnostic or repair is authorized by the proposal. |
-| Strongest scientific candidate: B feedback/handoff | Prior R04's extra usage appears after first GREEN: +1,350,327 raw, partly offset by −147,082 before/through GREEN. The suffix includes genuine failure recovery. | R14 was not launched because input fidelity failed. No new cue effect or clean null. A fresh check would need a faithful repair and new approval. |
-| Joint candidate: A+B | Prior R04 finishes +1,203,245 raw versus the saved author, but catalog drift confounds it. | R15 was not launched. The conditional comparison remains scientifically unresolved; no automatic replacement. |
-| Conditional joint/residual candidates | C08 and C25 have positive separate contrasts but overlapping histories/different targets. Their combination with author policy is unpriced; remaining exercised package differences are not eliminated. | Proposed P02/P06–P08 require a common reference and actual connected exposure before any short screen. Promote a promising joint immediately; no automatic enumeration of combinations. |
-| R16–R20 closed | No qualified feature/full-workflow treatment exists. The single diagnostic costs 15,687 raw and does not test the mechanism. | No full batch. Offset, explained amount and residual remain unavailable. Final review preserves case (1), with no counter increase. |
-| Parked: A alone / C alone | R02 incomplete; R05 lacks faithful C-only boundary; native R06 cost less than R04, opposite the predicted direction. | No rerun or interception framework. Not proof of zero effect. |
-
-R01–R12's result records remain unchanged. R13–R20 are distinct approved work, not reopened old tasks.
-The [original eight-task proposal](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-NEXT-SCOPE-20260914.md) retains its dated permission-only wording as history;
-the linked explicit authority governs execution.
-
-## Comprehensive remaining-work proposal — not approved TODO
-
-**The sixteen items below describe known remaining research obligations, not sixteen newly approved runs.**
-Their [full scope, dependencies, completion gates, ceilings and all-family coverage](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-END-TO-END-SCOPE-20260914.md)
-include the predictable repair and failure paths. All existing 74 completion records stay unchanged.
-The proposed rule is: setup failure stays BLOCKED; an unrun dependent experiment stays NOT RUN;
-both remain in TODO. Routine debugging belongs inside its owning task, not another extension.
-That rule and a one-time sixteen-task extension require approval; neither is silently applied here.
-
-| Proposed ID | Complete remaining-work list | State |
-| --- | --- | --- |
-| P01 | Faithful launch setup: source trace, benchmark-local repair, failure-path tests and actual verification; include tracker-rule qualification. | PROPOSED |
-| P02 | Exact effective-factor/reference manifest and common-boundary qualification for individual and joint tests. | PROPOSED |
-| P03 | Qualified B-only next-action/handoff-guidance screen. | PROPOSED |
-| P04 | Qualified A+B publication/test-order plus guidance joint screen. | PROPOSED |
-| P05 | Exact instruction/feedback → decision → actual work → usage mechanism, before and after first GREEN. | PROPOSED |
-| P06 | Refresh × continuation joint check, C08 × C25. | PROPOSED, CONDITIONAL |
-| P07 | Author policy × refresh × continuation joint check, A+B+C08+C25. | PROPOSED, CONDITIONAL |
-| P08 | Remaining exercised whole-package interaction: custody/tools, information, review/repair, lifecycle, scheduling and auxiliary work. | PROPOSED, CONDITIONAL |
-| P09 | One three-workflow confirmation batch of the strongest qualified reversal, with all required stages. | PROPOSED, SIGNAL-GATED |
-| P10 | Source/input/activation and complete distinct-response accounting for every new observation. | PROPOSED |
-| P11 | Full author/review/repair/integration cost offsets. | PROPOSED |
-| P12 | Combined same-target effect, interactions and context amplification without double counting. | PROPOSED |
-| P13 | Historical six-vs-six transfer, explained amount/share and justified residual. | PROPOSED |
-| P14 | Evidence-backed executable non-WL causal recipe; reuse existing real execution where it matches. | PROPOSED |
-| P15 | Original-benchmark error/accounting/configuration check only after valid causal coverage fails to reconcile the gap. | PROPOSED, CONDITIONAL |
-| P16 | Final source/coverage acceptance of the requested causal answer or concrete corrected benchmark error. | PROPOSED |
-
-This covers the known remaining work and all existing hypothesis families; it is not proof that every
-conceivable cause has been eliminated. A broken setup cannot justify the benchmark-error branch.
-Scientific completion requires the attribution/coverage gates, not merely exhausted run allowances.
-No new ordinary control, all-on reproduction or renamed weak screen is part of this proposal.
-
 ## Verified findings and coverage
 
 The [complete non-WL reproduction](bench-results/efficiency-mechanism-isolation-20260906T214448Z/RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md)
@@ -121,7 +151,7 @@ unidentified; R01–R12's completed finite checks did not establish that causal 
 C08/C25's positive individual contrasts remain non-additive. Source/outcome qualifications,
 including the frozen 2/3 feature result under the user's quality premise, are retained.
 
-The **74-record approved ledger** has no pending work authorized; the sixteen-item proposal is separate. Neither is a guarantee that every
+The **90-record approved ledger** includes sixteen remaining obligations and the 74 preserved records. It is not a guarantee that every
 conceivable hidden cause has been experimentally excluded. The causal entry-point
 framework covers measured population/aggregation; initial effective input/state; returned
 information and non-model transitions; generated work/model transitions; scheduling,

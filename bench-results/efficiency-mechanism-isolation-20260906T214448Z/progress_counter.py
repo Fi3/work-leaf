@@ -134,6 +134,9 @@ def validate_zero_decision(ledger, definitions, final_id="R12"):
 
 def validate_ledger(ledger):
     """Validate the declared finite work and retained evidence; not causal truth."""
+    if ledger.get("schema") == 5:
+        from progress_end_to_end import validate_ledger as validate_complete_plan
+        return validate_complete_plan(ledger)
     if ledger.get("schema") == 4:
         from progress_extension import validate_ledger as validate_extension
         return validate_extension(ledger)
@@ -217,7 +220,11 @@ def read_counts(first_line):
     match = re.fullmatch(r"# DONE: (\d+) \| TODO: (\d+) \| TOTAL: (\d+)", first_line)
     require(match is not None, "DONE / TODO / TOTAL must occupy the first line")
     done, todo, total = map(int, match.groups())
-    if total == 74:
+    if total == 90:
+        from progress_end_to_end import load_contract as load_complete_plan
+        load_complete_plan()
+        require(done + todo == 90 and done >= 74, "preserve all 74 completions in the approved scope")
+    elif total == 74:
         from progress_extension import load_contract as load_extension
         load_extension()
         require(done + todo == 74 and done >= 66, "preserve all 66 completions in the approved scope")
@@ -228,6 +235,9 @@ def read_counts(first_line):
 
 
 def validate_published_progress(ledger, publications):
+    if ledger.get("schema") == 5:
+        from progress_end_to_end import validate_publications
+        return validate_publications(ledger, publications)
     if ledger.get("schema") == 4:
         from progress_extension import validate_publications
         return validate_publications(ledger, publications)
@@ -247,6 +257,9 @@ def validate_published_progress(ledger, publications):
 
 
 def validate_visible_progress(ledger, hypothesis, note):
+    if ledger.get("schema") == 5:
+        from progress_end_to_end import validate_visible_progress as validate_complete_plan
+        return validate_complete_plan(ledger, hypothesis, note)
     counts = validate_ledger(ledger)
     lines = hypothesis.splitlines()
     require(bool(lines) and read_counts(lines[0]) == counts, "header and ledger disagree")
@@ -263,6 +276,9 @@ def validate_visible_progress(ledger, hypothesis, note):
 def validate_evidence_files(ledger):
     """Check retained source existence and dated result records before publication."""
     validate_ledger(ledger)
+    if ledger.get("schema") == 5:
+        from progress_end_to_end import validate_auxiliary_evidence
+        validate_auxiliary_evidence(ledger)
     _, legacy, _ = load_contract()
     sources = [group["source"] for group in legacy["completed_record_sources"].values()]
     sources += [source for item in legacy["deliverables"].values() for source in item["evidence"]]

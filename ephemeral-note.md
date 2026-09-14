@@ -1,15 +1,51 @@
 # Provisional investigation ledger
 
-Live analysis counter: **DONE: 74 | TODO: 0 | TOTAL: 74** — [hypotesis.md](hypotesis.md).
-**2026-09-14 operating scope:** all 66 completed records and the old zero checkpoint remain intact.
-The user explicitly approves exactly R13–R20: [authority](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-EIGHT-TASK-EXTENSION-20260914.md).
-The [frozen extension](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASK-EXTENSION-20260914.json) defines the eight tasks and budgets.
-**Current activity:** STOPPED AT ZERO; the user's comprehensive-list request is planning/documentation only. No provider or research task runs. The [sixteen-item end-to-end proposal](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-END-TO-END-SCOPE-20260914.md) is not live TODO or authority. The earlier R21-only request remains historical, not the recommended continuation.
+Live analysis counter: **DONE: 74 | TODO: 16 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
+**2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
+The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
+**Current activity:** the requested list/counter publication is prepared; research is paused. P01 tracker preparation is performed, but actual launch repair/qualification remains unfinished. No diagnostic or benchmark is admitted or running.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
 
-DONE only increases; TODO only decreases within the approved 74 total. At zero, stop with a supported answer
+DONE only increases; TODO only decreases within the approved 90 total. At zero, stop with a supported answer
 or explicit case (1)/(2), exact proposed tasks/count and a permission question. No hidden extra work,
 automatic controls, replacements, baseline re-audit, API credits or ordinary WL changes.
+
+## Conditional approval and publication — 2026-09-14
+
+The user accepts genuinely unexpected issues and promising causes grounded in facts not known at
+the list freeze. Known necessary work must already be listed. The scope retains exactly P01–P16;
+the saved 69-entry coverage map and prior setup/joint/attribution gaps have a listed owner. No
+additional known necessary task is identified in this publication review. This is not a claim
+that P06–P08's connected comparison boundaries have passed qualification.
+
+**2026-09-14T18:11:26+00:00 — counter publication:** 74/0/74 → 74/16/90 once. Old ledgers and publications have
+byte-identical pinned archives. Setup failures and unrun dependent experiments remain TODO.
+New discoveries require a dated new fact, why it was unknown, its decision/work mechanism,
+plausible explanatory reach and a cheap discriminator. Known omissions are case (2), not novelty.
+Future scope/budget increases still require explicit user approval; no hidden provider retry.
+
+The additive guard tests failed first on the absent complete-plan validator, then on the old
+74/0 actual publication before the approved ledger update. Existing regressions remain unchanged.
+P01 preparation starts at 2026-09-14T18:02:45+00:00; 521 seconds have been used through this
+publication checkpoint and later publication verification is recorded before handoff. This uses
+its existing 3,600-second local allowance; no provider observation is consumed. After publication,
+the user-controlled research pause does not consume preparation time. A local publication helper
+used an unavailable JavaScript cloning helper before any write; the corrected local copy retained
+all original records. No generated observation or counter increment was caused by that helper error.
+
+**2026-09-14T18:18:20+00:00 — publication verification complete:** 26 original, 17 old-extension and
+30 complete-plan regressions pass. The new generated-work start gate failed its added test
+before the guard was implemented; a blocked setup cannot be bypassed by reporting a dependent
+screen as CHECKING. Both old progress test files and every C/X/M/J/N result section are
+unchanged. Cargo format, strict all-target/all-feature Clippy and all-target/all-feature tests pass.
+The 74/0 ledger and publications are byte-identical archives; only one 74/16/90 checkpoint is added.
+P01 has used 935 seconds of its 3,600-second local preparation allowance through this
+verification checkpoint (2665 seconds remain); input qualification remains TODO.
+No actual-agent workflow is affected: the code is an offline progress guard, not a launch,
+prompt, runtime or provider change. No real-agent call or benchmark was run. Research remains
+paused after this file/tracker update; final commit housekeeping does not resume experiments.
+
+Earlier entries below retain their exact dated authority, counters, outcomes and costs.
 
 ## Comprehensive-list planning — 2026-09-14
 
