@@ -7,7 +7,7 @@ below remain historical records, not authority for new runs or a substitute for 
 ## Primary goal status
 
 **Historical saving explained as a verified combined percentage: NOT ESTABLISHED.
-Overall attribution goal: UNFINISHED. Progress is 77/13/90; no benchmark is running. P03/P04 lack qualified resumed inputs, and P06–P08 lack faithful joint-test boundaries. Separate unforeseen bug fixes: 5 DONE / 0 TODO.**
+Overall attribution goal: UNFINISHED. Progress is 77/13/90. P03-qualified002 and P04-qualified002 are running concurrently after real resumed-input qualification; P06–P08 still lack faithful joint-test boundaries. Separate unforeseen bug fixes: 6 DONE / 0 TODO.**
 The [complete non-WL reproduction](RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md)
 uses 18,545,304 raw tokens, 48.6513% below the saved six-Direct mean. Native,
 public, observer and independent accounting agree. The historically exposed
@@ -36,16 +36,20 @@ input-002 uses 15,873 raw and exactly matches saved base/developer objects. Its 
 15,709-raw startup-wait predecessor remains retained. Both diagnostic allocations are consumed.
 P02's exact factor/reference map is complete. P10 retains four actual admissions,
 43 unique recorded responses and 3,567,272 raw plus two unknown stopped tails.
-P03/P04 both run to their 900-second walls and remain incomplete. Their initial
+The original P03/P04 attempts both reach their 900-second walls and remain incomplete. Their initial
 input and 82 source endpoints match, but the developer catalog changes at author
 turn 2 instead of reference turn 5. BUG005's turn-aligned verifier rejects the
-earlier pooled-profile interpretation. Those contrasts remain BLOCKED, not null.
+earlier pooled-profile interpretation. Those old contrasts remain unqualified, not null.
+The separate qualified002 attempts run after the actual resumed-input repair,
+with 1,200-second prospective walls and no rewritten original record.
 P05 retains actual test-first/RED, rejection and genuine repair work without an
 identified net effect. P06–P08 have no faithful common runtime/package boundary;
 P09 admits no full workflow. P11–P14/P16 lack their required causal evidence, and
 P15's conditional original-benchmark-error investigation is not activated.
 Unexpected issues and promising causes require genuinely new facts; an omitted known check is
-case (2), not a discovery. Extra scientific scope or budgets still need explicit permission.
+case (2), not a discovery. Extra scientific scope still needs explicit permission;
+the later AUTHORITY-NO-ROUTINE-PAUSE-20260914.md permits necessary bounded
+continuation and verification inside the existing thirteen obligations.
 The user's standing bug-fix authority permits unaccounted defects without another question,
 with a separate visible counter and retained reproduction/verification evidence.
 

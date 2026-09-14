@@ -1,0 +1,58 @@
+{
+  "command": "python3 - <<'PY'\nfrom pathlib import Path\nimport json,hashlib,re\nS=Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z');D=S/'screens/author-feedback-20260914';Q=D/'resume-input-003';reference=Path('/home/user/.codex/sessions/2026/09/13/rollout-2026-09-13T01-27-10-01a097f2-3f03-7463-9756-4e849ed94e8d.jsonl');rr=[json.loads(l) for l in reference.read_bytes().splitlines()];refmeta=next(r['payload'] for r in rr if r['type']=='session_meta');refdev=next(r['payload']['content'] for r in rr if r['type']=='response_item' and r['payload'].get('role')=='developer');out=[]\nfor name in ('P03-qualified002','P04-qualified002'):\n root=D/name;starts=[]\n for p in sorted(root.glob('host/invocation-*/stdout.jsonl')):\n  for l in p.read_bytes().splitlines():\n   try:r=json.loads(l)\n   except ValueError:continue\n   if r.get('type')=='thread.started':starts.append(r['thread_id'])\n if not starts:out.append({'id':name,'ready':False});continue\n assert len(set(starts))==1\n paths=[p for date in ('14','15') for p in Path('/home/user/.codex/sessions/2026/09/'+date).glob('*'+starts[0]+'*.jsonl')];assert len(paths)==1;p=paths[0];rows=[]\n for l in p.read_bytes().splitlines():\n  try:rows.append(json.loads(l))\n  except ValueError:pass\n meta=next(r['payload'] for r in rows if r['type']=='session_meta');dev=[r['payload']['content'] for r in rows if r['type']=='response_item' and r['payload'].get('role')=='developer'];contexts=[r['payload'] for r in rows if r['type']=='turn_context']\n out.append({'id':name,'ready':bool(dev),'thread_id':starts[0],'native_path':str(p),'native_prefix_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'base_exact':meta['base_instructions']==refmeta['base_instructions'],'initial_developer_exact':bool(dev) and dev[0]==refdev,'native_source':meta['source'],'cli_version':meta['cli_version'],'contexts':[ {k:c.get(k) for k in ('turn_id','model','effort','approval_policy','sandbox_policy','cwd')} for c in contexts],'developer_catalog_digests':[hashlib.sha256(m.group(0).encode()).hexdigest() for content in dev for item in content for m in re.finditer('<skills_instructions>.*?</skills_instructions>',item.get('text',''),re.S)]})\nprint(json.dumps(out,indent=2))\nPY",
+  "check": [
+    {
+      "id": "P03-qualified002",
+      "ready": true,
+      "thread_id": "01a0a1f2-54aa-7983-b2d5-c80b87ce2ab9",
+      "native_path": "/home/user/.codex/sessions/2026/09/15/rollout-2026-09-15T00-03-28-01a0a1f2-54aa-7983-b2d5-c80b87ce2ab9.jsonl",
+      "native_prefix_sha256": "edfdbc8890a861c90d15e4eeacc5b091421fd09603d45f683772d226198ed717",
+      "base_exact": true,
+      "initial_developer_exact": true,
+      "native_source": "exec",
+      "cli_version": "0.153.4",
+      "contexts": [
+        {
+          "turn_id": "01a0a1f2-5523-7bd2-a054-d43a61f96898",
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "cwd": "/tmp/wl-author-qualified002-20260914.xUBuLn/P03"
+        }
+      ],
+      "developer_catalog_digests": [
+        "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+      ]
+    },
+    {
+      "id": "P04-qualified002",
+      "ready": true,
+      "thread_id": "01a0a1f2-54a9-7ab3-bb7b-bffb62caf5c8",
+      "native_path": "/home/user/.codex/sessions/2026/09/15/rollout-2026-09-15T00-03-28-01a0a1f2-54a9-7ab3-bb7b-bffb62caf5c8.jsonl",
+      "native_prefix_sha256": "cefcde952e11caafcc1060fdd682cef1f871cf5ecd11c9dacbc82e4db064a806",
+      "base_exact": true,
+      "initial_developer_exact": true,
+      "native_source": "exec",
+      "cli_version": "0.153.4",
+      "contexts": [
+        {
+          "turn_id": "01a0a1f2-551d-79b2-8fab-e264e392a76d",
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "cwd": "/tmp/wl-author-qualified002-20260914.xUBuLn/P04"
+        }
+      ],
+      "developer_catalog_digests": [
+        "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+      ]
+    }
+  ],
+  "scope": "Live startup input check only; prefix hashes are not final native hashes and usage is not audited here."
+}

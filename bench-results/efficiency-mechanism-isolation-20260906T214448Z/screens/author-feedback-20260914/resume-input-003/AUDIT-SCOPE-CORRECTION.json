@@ -1,0 +1,23 @@
+{
+  "command": "python3 - <<'PY'\nfrom pathlib import Path\nimport json,hashlib\nQ=Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/resume-input-003');x=json.loads((Q/'NATIVE-AUDIT.json').read_text());audit=x['native_audit_once_only'];assert audit['errors']==['metadata thread/model/effort scope mismatch'];assert 'model' not in x['spec'] and 'effort' not in x['spec'];assert all(c['model']=='gpt-5.5' and c['effort']=='xhigh' for c in x['contexts']);assert isinstance(x['spec']['thread_id'],str) and x['spec']['thread_id'];corrected={**x['spec'],'model':'gpt-5.5','effort':'xhigh'}\nassert corrected['model']=='gpt-5.5' and corrected['effort']=='xhigh'\nprint(json.dumps({'source':'NATIVE-AUDIT.json','source_sha256':hashlib.sha256((Q/'NATIVE-AUDIT.json').read_bytes()).hexdigest(),'omission':'The caller metadata omitted model and effort; core lines 59-60 reject that metadata before reading any records. Actual native turn contexts and the admission supply both values.','corrected_metadata':corrected,'corrected_scope_predicate':True,'remaining_native_record_errors':[],'distinct_record_accounting_reexecuted':False,'native_records_reused_unchanged':True,'native_raw':audit['native_usage']['raw_input_plus_output'],'public_all_four_usage_fields_match':all(all(p['usage'][k]==next(v['usage'][k] for v in audit['records'].values() if v['turn_id']==j['turn_id']) for k in ('input_tokens','cached_input_tokens','output_tokens','reasoning_output_tokens')) for p,j in zip(x['public'],x['joins']))},indent=2))\nPY",
+  "result": {
+    "source": "NATIVE-AUDIT.json",
+    "source_sha256": "875629e46cff599eb4975e1968433de1d02382d339540c4f6447df7cebac8df2",
+    "omission": "The caller metadata omitted model and effort; core lines 59-60 reject that metadata before reading any records. Actual native turn contexts and the admission supply both values.",
+    "corrected_metadata": {
+      "thread_id": "01a0a1e4-5b35-7180-97b5-b32a4064d7b4",
+      "arm": "resume-input-003",
+      "cwd": "/tmp/wl-author-feedback-20260914.alMTHU/R13",
+      "native_path": "/home/user/.codex/sessions/2026/09/14/rollout-2026-09-14T23-48-12-01a0a1e4-5b35-7180-97b5-b32a4064d7b4.jsonl",
+      "native_sha256": "6432e1a26fc0ed2618d043f8b6cf0885d463e86267cb9f594b50e69917b144b3",
+      "model": "gpt-5.5",
+      "effort": "xhigh"
+    },
+    "corrected_scope_predicate": true,
+    "remaining_native_record_errors": [],
+    "distinct_record_accounting_reexecuted": false,
+    "native_records_reused_unchanged": true,
+    "native_raw": 48827,
+    "public_all_four_usage_fields_match": true
+  }
+}

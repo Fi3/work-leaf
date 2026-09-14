@@ -1,0 +1,8 @@
+{
+  "command": "python3 - <<'PY'\nfrom pathlib import Path\nimport sys,json\nq=Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/resume-input-003').resolve();sys.path.insert(0,str(q));import output_monitor\nprint(json.dumps(output_monitor.sample(q,sorted(q.glob('turn-*/stdout.jsonl')),[Path('/home/user/.codex/sessions/2026/09/14'),Path('/home/user/.codex/sessions/2026/09/15')]),indent=2))\nPY",
+  "chunk_id": "1ac3ef",
+  "wall_time_seconds": 0.000008311,
+  "exit_code": 0,
+  "original_token_count": 112,
+  "output": "{\n  \"arm\": \"resume-input-003\",\n  \"native_recorded_raw\": 48827,\n  \"distinct_responses\": 3,\n  \"public_completed_raw\": 48827,\n  \"completed_public_turns\": 3,\n  \"threads\": [\n    \"01a0a1e4-5b35-7180-97b5-b32a4064d7b4\"\n  ],\n  \"native_paths\": [\n    \"/home/user/.codex/sessions/2026/09/14/rollout-2026-09-14T23-48-12-01a0a1e4-5b35-7180-97b5-b32a4064d7b4.jsonl\"\n  ],\n  \"native_pending_threads\": [],\n  \"terminal\": true,\n  \"stop_threshold_reached\": false\n}\n"
+}

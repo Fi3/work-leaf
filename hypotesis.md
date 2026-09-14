@@ -1,16 +1,16 @@
 # DONE: 77 | TODO: 13 | TOTAL: 90
-## BUG FIXES — DONE: 5 | TODO: 0 | TOTAL: 5
+## BUG FIXES — DONE: 6 | TODO: 0 | TOTAL: 6
 
-**Pending checks: 13 research obligations remain. Research is active under the user's no-routine-pause rule. Next is the existing resumed-input blocker for P03/P04, with repairs and necessary verification kept inside scope. No benchmark is currently running.**
+**Pending checks: 13 research obligations remain. P03-qualified002 and P04-qualified002 are running concurrently, admitted at 22:01 UTC and launched at 22:03:27 UTC. Each has a 1,200-second wall / 3M recorded-raw cap.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-14T21:30:22+00:00:** The user's stop rule is saved in AUTHORITY-NO-ROUTINE-PAUSE-20260914.md and the operator instructions. Routine repair, verification and bounded work within the remaining tasks continue without another permission pause. The last audited costs and failed resumed-input qualification remain unchanged; no new run or completion is claimed.
+**Activity, 2026-09-14T22:03:27+00:00:** Both existing author contrasts are running with frozen factor prompts, separate clean checkouts and the reference-state catalog schedule. The external monitor uses explicit output paths and both possible native dates. Old confounded outcomes remain retained. No scientific task is closed by setup qualification.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
 | P01 | DONE | Faithful launch setup: source trace, benchmark-local repair, failure-path tests and actual verification; include tracker-rule qualification. |
 | P02 | DONE | Exact effective-factor/reference manifest and common-boundary qualification for individual and joint tests. |
-| P03 | BLOCKED | Qualified B-only next-action/handoff-guidance screen. |
-| P04 | BLOCKED | Qualified A+B publication/test-order plus guidance joint screen. |
+| P03 | CHECKING | Qualified B-only next-action/handoff-guidance screen. |
+| P04 | CHECKING | Qualified A+B publication/test-order plus guidance joint screen. |
 | P05 | BLOCKED | Exact instruction/feedback → decision → actual work → usage mechanism, before and after first GREEN. |
 | P06 | BLOCKED | Refresh × continuation joint check, C08 × C25. |
 | P07 | BLOCKED | Author policy × refresh × continuation joint check, A+B+C08+C25. |
@@ -117,18 +117,18 @@ questions and main TODO increases still need approval. Routine repair, verificat
 bounded continuation of existing work follow the current no-routine-pause authority.
 Previously unaccounted bug fixes use their separate counter; they do not expand research TODO.
 
-## Live priority — retained mechanism signals and blocked follow-through
+## Live priority — qualified author contrasts, then broader joints
 
-Last maintained: **2026-09-14T21:14:52+00:00**. [P10's complete audit](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/P10.md) retains all four admissions and rejects full resumed-input equivalence for P03/P04. Their source pins/startup equality still pass. No qualified larger experiment is eligible.
+Last maintained: **2026-09-14 21:55 UTC**. [P10's complete audit](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/P10.md) retains its four admissions and rejects the old P03/P04 resumed-input comparison. [The subsequent read-only diagnostic](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/resume-input-003/RESULT.md) qualifies a concrete repair without rewriting those outcomes. A newly bounded pair is being prepared under the user's continuation rule. No larger confirmation is eligible yet.
 The accepted historical gap and the user's no-quality-loss assumption remain premises.
 
 | Priority | Evidence and potential explanatory reach | Next cheap check / stop gate |
 | --- | --- | --- |
-| Strongest retained broad joint candidate: C08 × C25 | Both constituent directions have retained positive net evidence, but from incompatible targets; their contribution cannot be added. The exact first H003 refresh file is recoverable. | P06's missing complete runtime/native-prefix restoration blocks its connected check. No new replay framework or generated episode is admitted. |
-| Partial publication-order witness: A+B | P04's first response has exact non-target startup input and publishes tests only. Actual RED follows, but turn-2 catalog drift prevents a clean net cost attribution. Later rereads/rejections are observed, not proved A-caused. | A future eligible comparison needs verified resumed boundaries and a complete cost trajectory; the current frozen screen slot is consumed. No automatic repeat or P09 batch. |
-| B feedback/handoff: not confirmed | Old R04's post-GREEN excess remains confounded. P03 reaches GREEN after a genuine repair, then stops before any completed post-GREEN decision. | Keep B's possibility distinct from a verified effect. No further spending on the existing inconclusive screen. |
+| First actionable joint candidate: A+B | P04's first response has exact startup input and publishes tests only; later drift invalidates its net contrast. The resumed-input repair passes actual native delivery. | P04-qualified002, alongside B-only, has a separate 1,200-second/3M cap. Require actual exposure, matched non-target inputs and work/usage chain; larger totals alone do not advance. |
+| B feedback/handoff discriminator | Old post-GREEN excess is confounded; old P03 stopped before any completed post-GREEN decision. | P03-qualified002 keeps A/custody and removes B alone. Inspect whether additional work follows sufficient success feedback; preserve genuine repairs and later offsets. |
+| Strongest retained broader joint: C08 × C25 | Both constituent directions have positive net evidence from incompatible targets; they cannot be added. The first H003 refresh file is recoverable. | P06's complete runtime/native-prefix restoration remains unresolved. Reuse the precise blocker while the actionable pair runs; no null or automatic coverage exclusion. |
 | Whole author/refresh/residual joints: P07/P08 | Existing single-condition policies, private RED preview, standalone final custody and saved DTOs do not supply the declared faithful connected package. Later review/repair/integration paths are exercised, not absent. | Source-backed blockers are saved in P07-BLOCKER.md/P08-BLOCKER.md. No coverage exclusion or null result; no hidden multi-experiment bucket. |
-| Completed P10; dependent P09/P11–P16 | Four actual admissions: 3,567,272 recorded raw plus two unknown tails. No qualified net reversal; historical explained share remains unavailable. | Preserve all costs. No expensive batch; P15 stays conditional until valid causal coverage, and P16 stays unfinished. |
+| Completed P10; dependent P09/P11–P16 | P10 retains 3,567,272 raw plus two unknown tails for its four admissions. The later delivery diagnostic contributes 48,827 raw separately. No qualified net reversal; historical explained share remains unavailable. | Keep admission accounting disjoint. No expensive confirmation before a qualified mechanism signal; P15 stays conditional and P16 unfinished. |
 | Parked A-only / C-only / old weak cues | R02 incomplete; R05 lacks a faithful C-only boundary; native R06 is cheaper than R04, opposite the predicted direction. | No automatic repeats or new bridge framework. Reconsider only with a specific genuinely new fact. |
 
 The [work-chain report](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/RESULT.md)

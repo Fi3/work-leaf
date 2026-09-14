@@ -3,9 +3,49 @@
 Live analysis counter: **DONE: 77 | TODO: 13 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
-**Bug-fix counter: DONE: 5 | TODO: 0 | TOTAL: 5.** BUG005's eight regressions pass and exact saved-native replay detects the catalog timing mismatch. BUG003's command classification is fixed, but its pooled-profile verification did not prove historical boundary equality. BUG004 preserves the shared 364-second bookkeeping interval separately; limits remain unchanged.
-**Current activity, 2026-09-14T21:30:22+00:00:** Research continues under the user's no-routine-pause instruction. Routine repair and necessary verification within the thirteen existing obligations are not another approval stop. The resumed-input blocker is next; no new model run has started. Prior costs, failed qualification and unfinished scientific conclusions remain unchanged.
+**Bug-fix counter: DONE: 6 | TODO: 0 | TOTAL: 6.** BUG006's five tests and actual saved-native replay pass. Explicit public paths and possible rollout dates recover all three diagnostic responses / 48,827 raw; old zero samples are retained as missing monitoring coverage. No extra model turn or main research completion.
+**Current activity, 2026-09-14T22:03:27+00:00:** P03-qualified002 and P04-qualified002 are running concurrently in separate clean checkouts. Each has a 1,200-second wall and 3M recorded-raw tripwire. The monitor covers explicit host outputs and native September 14/15 directories. Main progress 77/13/90; bug fixes 6/0/6. Actual launch/resume inputs are checked during these observations.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-14T22:03:27+00:00 — two qualified-input author screens launched:**
+P03-qualified002 is the B-only removal; P04-qualified002 is A+B removal.
+The old factor prompts match byte-for-byte. Both checkouts have the same
+tracked base and exact effective AGENTS/skip-worktree policy. Each admission
+pins 105 inputs/sources and the new protocol. Source/code/monitor edits stop
+for these admitted observations. No third screen/control or automatic retry.
+The continuous operator command is P03-P04-QUALIFIED002-OPERATOR-COMMAND.json.
+P03/P04 are CHECKING, not completed; old blocker evidence stays in its files.
+
+**2026-09-14T22:00:41+00:00 — BUG006 fixed during admission checks:** the old sampler
+does not discover the new diagnostic's turn-*/stdout.jsonl layout, so its four
+resource snapshots show no threads. Independent wall/three-turn caps and the
+diagnostic's own post-completion usage check remained enforced. The generic
+explicit-path repair also handles native date rollover; five tests and replay
+of the real saved diagnostic pass. Keep the old missing-coverage samples and
+use the qualified sampler for the upcoming pair. Bug counter 6/0/6; research
+counter unchanged. No additional provider turn was used to fix the monitor.
+
+**2026-09-14 21:55 UTC — real delivery qualified; author pair preparation:**
+`resume-input-003/RESULT.md` preserves the native evidence and scope-only audit
+metadata correction (caller model/effort omitted; actual contexts match; no
+second distinct-response accounting). Ninety admitted source endpoints match.
+Fourteen scheduler/host-bridge tests pass after fail-first checks. Required Cargo
+format, strict Clippy and all-target/all-feature tests pass. The bridge changes
+only the native invocation's private boundary environment value; factor prompts,
+feedback, argv/session behavior and host custody stay unchanged. The new pair
+has a prospectively declared 1,200-second/3M ceiling each, permitting the same
+initial-author task a little more wall time without altering old 900-second
+attempts. Rank actionable A+B/B ahead of the still-unrestored C08×C25 joint.
+No causal percentage or research completion follows from this setup result.
+
+**2026-09-14 21:42 UTC — local catalog profiles:** full and short private-config previews
+match the saved 5,813-byte and 5,038-byte catalog texts exactly. The first local
+preview parser incorrectly assumed a JSON object instead of a list; corrected
+parsing retains both outcomes without making any provider call. The first
+generated private configuration patch was truncated in tool output; exact-source
+comparison repaired and verified it before use. All configuration edits remain
+inside the private `/tmp` view. This is the already-known P03/P04 setup repair,
+not an extra scientific task or a newly counted bug. No old admission is altered.
 
 **2026-09-14T21:30:22+00:00 — user corrects the stop rule:** keep working within the remaining
 thirteen tasks, including fixes and necessary verification. Stop only for a
