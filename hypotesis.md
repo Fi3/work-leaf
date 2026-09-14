@@ -1,493 +1,120 @@
-# DONE: 54 | TODO: 1 | TOTAL: 55
+# DONE: 54 | TODO: 12 | TOTAL: 66
 
-**TRACKER REPAIR — awaiting permission for the one-time numerical correction.**
-The displayed TODO=1 is the legacy G03 aggregate, **not one remaining hypothesis**.
-The [proposed replacement lists all 12 finite remaining tasks](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md),
-including each causal screen and the separate confirmation, evidence and conclusion checks.
-The proposed corrected counter is 54 DONE / 12 TODO / 66 TOTAL. It is not active or
-permission to run experiments. Research remains paused while the reset is unapproved.
-The user's current zero rule requires a stop and an explicit case (1) additional work
-or case (2) initially omitted/miscounted work, followed by a permission request before
-any increase. The legacy counter/guard below require migration to that policy; do not
-use their earlier "zero always means success" rule to claim a finished investigation.
+**Pending: R01–R12 below; none started. Last completed legacy record: G02.**
+**Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
+**Activity: research paused; tracker correction only.** No benchmark is running or admitted by this correction.
 
-**Analysis unfinished. Fixed named-record count, not a percentage of research effort.**
-DONE comprises 39 completed register dispositions, 12 completed follow-up records (V04–V15),
-the completed J04 initial-stage reach check, G01's verified upstream joint mechanism and
-G02's complete non-WL reproduction. These are **54 named records, not 54 independent
-experiments or successful mechanisms**; shared evidence, failures and inconclusive results remain explicit.
-
-**TODO — one required final deliverable. G01/G02 are verified at the scope below:**
-
-| ID | Status | Required result before completion |
+| ID | Status | Remaining check |
 | --- | --- | --- |
-| G01 | DONE | Historically exposed joint mechanism verified: cohesive implementation/tests → real host acceptance/commit → focused validation/handoff. This is not a quantified attribution of the entire historical gap. |
-| G02 | DONE | Complete non-WL reproduction: 18,545,304 raw, 48.6513% below saved Direct. Native/independent checks pass; all outcomes retained under the user's explicit no-quality-loss comparison premise. |
-| G03 | TODO | Reconcile the full historical result numerically: denominator, missing usage, comparability, boundary coverage, joint effects/residual, downstream costs and independent final audit. |
+| R01 | TODO | Define a faithful inverse of the reproduced author package. |
+| R02 | TODO | Does removing cohesive implementation-plus-tests publication increase work and tokens? |
+| R03 | TODO | Does removing result-bound validation/completion guidance increase work and tokens? |
+| R04 | TODO | Do publication policy and feedback act jointly? |
+| R05 | TODO | Does native write/tool availability explain behavior beyond the author contract? |
+| R06 | TODO | Does reversing the complete A+B+C package restore the expensive behavior? |
+| R07 | TODO | How do the already-positive C08/C25 pathways overlap with this package in the historical runs? |
+| R08 | TODO | Does the strongest observed causal reversal survive a full workflow? |
+| R09 | TODO | Are the new intervention observations valid evidence for their declared factors? |
+| R10 | TODO | Is any apparent author saving merely work shifted into review, repair or integration? |
+| R11 | TODO | How much of the accepted historical gap is supported by the joint evidence? |
+| R12 | TODO | Does the finished checklist support the requested conclusion, or require permission for more work? |
 
-**TOTAL stays 55. DONE can only increase and TODO can only decrease.**
-New experiments and discoveries are evidence substeps of these deliverables, not extra counted tasks.
-**TODO = 0 means the analysis is verified complete**, not merely that a batch or screen ended.
-G03 still needs a same-target joint causal effect and defensible historical residual bound.
-Its exact accounting and known limitations are documented; numerical overlap from another
-cohort does not supply that bound. This count is not an ETA or percentage of effort.
+These are **12 concrete tasks**, not one broad G03 bucket or 12 independent hypotheses.
+DONE retains all **54 historical completed records**, including negative/inconclusive checks.
+The 39 register dispositions, 12 follow-ups V04–V15, J04 initial-stage check and G01/G02
+retain their evidence and original qualifications. No old completion is undone.
+The [approved full task definitions, limits and completion criteria](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md)
+are frozen. Each task has its own `progress-results/Rxx.md` result before it can become DONE.
 
-The [named ledger](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-CHECKLIST.json)
-contains every counted ID, evidence references, acceptance criteria and monotonic history.
-The earlier 48/1, 50/1 and 49/0 displays are superseded bookkeeping, not undone scientific work.
-Their error was mixing a growing experiment log with a fixed queue, then omitting the unfinished
-analysis deliverables. The [old subset snapshot](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-CHECKLIST-SUPERSEDED-49.json)
-is retained; it does not govern current progress.
+## Counter contract — user-approved 2026-09-14
 
-**Current activity, 2026-09-13 00:52 UTC:** the global-hunk pilot completed PASS
-in 58m24.72s, including reviews, integration and all final repository checks.
-Native, public and observer accounting agree exactly: **18,545,304 raw tokens,
-48.6513% below the historical Direct mean**, 191 unique responses, 31 completed
-turns, no compaction or recorded unfinished turn. Independent accounting and
-custody review pass. The separate frozen feature scorer passes visual/status
-and fails completion at line 23 (no displayed completion question); this actual
-failure is retained, not scored as a pass or attributed to the old line-41 issue.
-The user's no-quality-loss comparison premise remains explicit. Independent final
-assessment accepts G01/G02's qualified mechanism/reproduction and leaves G03 open.
-[Verified result and non-WL recipe](bench-results/efficiency-mechanism-isolation-20260906T214448Z/RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md).
-No model is running. No control, continuation or replacement is queued.
-Counts are 54/1/55; both histories retain the earlier 52/3 checkpoint and append this advance.
-The previous authorization hold is historical, not the current activity.
-Private matcher preparation and independent review are complete.16new/52inherited
-behavior checks, root repository gates, exact source inverse and all five saved-proposal
-plans pass. The completed pilot verifies the actual corrected matcher with a real agent.
-The historical Direct repeated pair contains genuinely wrong old text, not the pilot's
-source-order defect. Other error cases are parked, not extra TODO. No normal-WL changes.
-The previous pilot ran15:53:51–17:23:52UTC and stopped at its90-minute wall (exit143).
-All three feature chains reached clean review; integration and final workflow checks remain
-unfinished. Its47 completed public turns report18,232,633 raw;196 native response identities
-sum18,467,802 after the exact235,169 compaction response is included once. Integration's
-unreported tail remains unknown. This incomplete total is not a full-workflow saving.
-Original runtime/stage evidence survives.
-[Prospective protocol](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROTOCOL-STANDALONE-COMPLETION-PILOT.md).
-No continuation or replacement is admitted. The bounded author screen reproduces five
-cohesive-proposal rejections at the private host's forward-only hunk cursor, followed by
-fragmented edits. Their2,746,111 public raw is observed work, not removable cost or an
-explanation of the historical gap. Counts remain52/3/55.
-The joint downstream screen is complete: seven of nine feature chains reach NO_FINDINGS,
-two remain interrupted, and all three whole workflows fail. Actual repairs and all costs remain.
-The J04 initial-stage reach check is complete: all nine initial stages account for 17,422,482 raw,
-mean 5,807,494 per three-feature initial window. All three whole workflows remain failures;
-20,569,088 recorded raw lies outside those stages, with further tails unknown.
-This is a completed screen, not a verified full-workflow explanation.
-V15 completed before the pause: exposed slash author/reviewer histories total30,494,327raw
-(14.07% of Direct), enclosing work not causal savings. No majority-scale downstream
-controller-selection dependency was established in the bounded indexed check. No model running.
-**Prior result, v14:** all 12 final trees checked. Controller-selected raw slash dispatch
-occurs in 4/6 Direct and 2/6 WL implementations: it is not a WL-exclusive difference.
-The specific clear-selection HTTP API occurs in 1/6 Direct and 0/6 WL final trees.
-This mixed exposure lowers its priority as a majority explanation; no token share follows.
-V14's bounded source screen is closed; no model or benchmark is running.
-**V13's H004/step4-003 pair:** both final terminals use the existing agent-message route. Direct additionally
-implements raw HTTP command dispatch and separate selection state; that state causes a recorded
-stale-selection repair. WL004 lacks that extra interface. This is not a measured savings share.
-**Prior result, v12:** all 18 Direct authors checked; patch-feedback replay potential is 6.81%
-of Direct raw, or 12.15% under the generous selected-input model. Not measured savings.
-The overlap-ignoring joint orientation with reasoning is 20.16%, not a 50% explanation.
-V11 remains unqualified after developer reinjection. No retry; parked ideas are not TODO.
+**DONE + TODO = TOTAL = 66.** The one-time authorized correction is 54/1/55 → 54/12/66:
+the misleading unfinished G03 aggregate is replaced by the twelve listed finite tasks.
+G03 is not an extra thirteenth task and is not a completed record. Earlier 52/3 and 54/1
+checkpoints remain unchanged in the [archived ledger](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-archive/PROGRESS-CHECKLIST-v2.json)
+and [publication archive](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-archive/PROGRESS-PUBLICATION-HISTORY-v1.json).
+The [previous opening and detailed historical checkpoints](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-archive/HYPOTESIS-OPENING-20260914.txt)
+remain preserved; they do not govern the live queue.
 
-**RESULTS: G01 upstream joint mechanism and G02 complete non-WL reproduction VERIFIED.
-The pilot uses 48.6513% lower full-workflow raw; native and independent accounting agree.
-Two earlier positive individual contrasts: C08,C25.
-Verified combined causal share of the historical ~50% saving: NOT ESTABLISHED.**
+- DONE increases by one and TODO decreases by one only after a listed finite check has
+  its dated result, actual evidence and honest limitations. Starting, preparing a protocol
+  or stopping at a time limit without a result record does not count as completion.
+  Supported, unsupported, inconclusive, failed-setup and justified not-needed are terminal
+  check outcomes; they are not interchangeable scientific conclusions.
+- **TODO never increases without explicit subsequent user approval.** No silently added,
+  split, replaced, reopened or broadened task; no new work hidden as an uncounted substep.
+  Reordering the approved tasks by promise is allowed. Protocols implement these finite
+  scopes; they cannot add observations or turn a result row into another experiment.
+- Necessary work discovered outside this list is an **unapproved scope issue**, not an
+  execution queue. Record its exact question/scope and reason without doing it. Continue
+  only listed work that remains meaningful.
+- **At TODO=0, stop.** Report the supported answer if one exists. Otherwise state
+  **case (1): additional work beyond the list is necessary**, and/or
+  **case (2): the initial checklist omitted or miscounted necessary work**.
+  Name the exact additional tasks and requested count, ask permission, and remain stopped.
+  Do not claim scientific success just because the counter reaches zero.
+- Only explicit subsequent user approval permits another appended scope checkpoint.
+  Preserve the zero checkpoint and every completed record. No self-approved reset,
+  counter replenishment, or lowered completion criteria.
 
-**Maintenance rule: the first-line counts derive only from the fixed 55-record ledger.**
-Follow-ups attach to unfinished G01–G03 with hypothesis cross-references and separate activity/results.
-They cannot increase the total, replenish TODO, or turn an inconclusive screen into verified attribution.
-All final criteria, evidence and independent audit are mandatory before zero TODO.
-The G01/G02 acceptance is mechanism-level and one-observation reproduction, not an
-identified whole-historical causal share. G03 owns that remaining requirement.
-The separate [publication archive](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-PUBLICATION-HISTORY.json)
-retains each published checkpoint. Verified advances append matching ledger/archive checkpoints;
-existing checkpoints are never rewritten or removed. Both histories must agree before publication.
-Before reporting or committing progress, this regression guard must pass:
-`python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_counter.py`.
+The single source is [PROGRESS-CHECKLIST.json](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-CHECKLIST.json);
+[the approved scope](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASK-SCOPE-20260914.json) freezes identities,
+questions and limits. The separate [publication history](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-PUBLICATION-HISTORY.json)
+retains each completion and its result declaration, detecting rollback and same-ID scope edits.
+Before every progress report or commit affecting the tracker, require:
 
-## Latest check details
+```sh
+python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_counter.py
+```
 
-**G01/G02 VERIFIED, 2026-09-13 00:52 UTC:** the source-linked upstream chain,
-all three actual cohesive initial publications, actual matcher activation and complete
-non-WL workflow are independently qualified. Native/public/observer usage matches
-18,545,304 raw exactly; the historical comparison is 48.6513% lower. All failures and
-the 2/3 frozen feature result remain. [Acceptance audit](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/postcapture/FINAL-ACCEPTANCE-INDEPENDENT.md).
-G03's same-target historical residual remains unbounded. A generic three-run repeat
-would test recurrence, not close that identification requirement; no new run is admitted.
+The guard checks declarations, result files and consistency; it does not prove a causal claim.
 
-**G01 private fidelity qualification,2026-09-12 18:00UTC:** one-line bare-hunk-only
-copy is locally qualified; all original hosts/outcomes remain intact. Implementation
-completed17:55UTC, before its17:58stop; independent review is published separately.
-[Preparation](bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/standalone-whole-file-hunks-20260912/RESULT.md),
-[root verification](bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/standalone-whole-file-hunks-20260912/ROOT-VERIFICATION.md)
-and[independent review](bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/standalone-whole-file-hunks-20260912/INDEPENDENT-REVIEW.md).
-No real-agent or token-effect claim. The[historical pair check](bench-results/efficiency-mechanism-isolation-20260906T214448Z/G01-HISTORICAL-PATCH-ERROR-CAUSE-SCREEN-20260912.md)
-is a negative witness for attributing that pair to the private source-order restriction.
-One new90-minute/25Mobservedraw full-workflow pilot is proposed, not admitted.
+## Live priority — paused, not an execution queue
 
-**G01 terminal pilot, 2026-09-12 17:38 UTC:** one90-minute wall failure, all three
-feature reviews clean, integration/final gates incomplete. Recorded native prefix18,467,802
-raw; no full-workflow saving. [Native qualification](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-completion-pilot-01/postcapture/NATIVE-USAGE-QUALIFICATION.md).
-The first five large proposals revisit earlier source hunks and are rejected before any
-write; generic feedback omits the location/order cause. Exact saved-proposal replay reproduces
-the failure. [Author behavior](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-completion-pilot-01/postcapture/AUTHOR-BEHAVIOR-SCREEN.md).
-This is a private experimental-host obstruction, not a proven historical benchmark error.
-[Custody qualification](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-completion-pilot-01/postcapture/CUSTODY-QUALIFICATION.md)
-verifies retained originals/all56pins and records three monitoring gaps and missing final
-publication. No scorer fallback, retry or continuation is performed.
+Last maintained: **2026-09-14**. The historical ~50% gap and the user's no-quality-loss
+assumption are the research premises. No repeat to establish that savings exist, ordinary
+control, API-credit use, quality study or original-benchmark revalidation is in this scope.
+All prior failures, missing usage and qualifications remain visible in the register below.
 
-**J04 initial-stage reach CLOSED, 2026-09-12 14:43 UTC:** all nine initial stages,
-181 response identities and 55 outer turns reconcile to 17,422,482 raw. Exact native/public
-usage and input joins pass; all three failed workflows and later costs remain included.
-[Result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/JOINT-INITIAL-STAGE-REACH-20260912.md).
-No full-workflow saving or historical causal share follows.
-
-**Supplementary V15 CLOSED,2026-09-12:** root and independent joins agree on
-23,820,033author+6,674,294reviewer raw across four exposed Direct runs (14.07% of Direct).
-The indexed integration spillover is added slash help→viewport failure→shorter help,
-not demonstrated duplicated-selection amplification. No generation occurred.
-[Result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/SLASH-WORK-REACH-20260912.md).
-
-**Scope v14 CLOSED, 2026-09-12 16:11 Rome:** complete six-WL/six-Direct source census;
-source inspection finished within the 14:10:37 UTC stop, publication afterward.
-Additional controller state/dispatch overlaps arms (Direct4/6, WL2/6). All Direct terminals
-and five WL terminals use explicit-ID agent messages; WL005 uses explicit-ID `/command/selected`.
-No quality, benchmark-error or token-effect conclusion. [Result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/SLASH-COHORT-RESULT-20260912.md).
-
-**Scope v13 CLOSED,2026-09-12 16:02Rome:** exact final H004/Direct step4-003 source proves
-different raw `/command` capability despite the same selected-terminal `/agent/message` route.
-The additional Direct selection state leads to a real stale-selection finding and clear-state API.
-Task text does not enumerate interfaces; no quality-loss, necessity or benchmark-error conclusion.
-[Result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/SLASH-ENTRYPOINT-SCOPE-RESULT-20260912.md).
-
-**Scope v12 CLOSED,2026-09-12 15:43Rome:** all18author threads and their complete raw totals
-match saved source pins;45adjacent successful-patch chains contain14,747,459potential replayed
-input (6.81% of whole Direct raw). Generous selected patch-response inputs26,332,145(12.15%).
-All outputs stay; no causal savings or all-editing/behavioral bound follows. Root exact
-reproduction and independent point7 witness pass. [Result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PATCH-BARRIER-REACH-20260912.md),
-[qualified joint orientation](bench-results/efficiency-mechanism-isolation-20260906T214448Z/JOINT-REPLAY-REACH-20260912.md).
-
-**Scope v11 CLOSED,2026-09-12 15:35Rome:** one admitted turn; exact82-byte cue deletion,
-unchanged DONE and reconciled99,137raw. Saved command-prefix developer reinjection violates
-the non-target gate despite matching source/context settings. This is not a clean negative,
-a105-token cue effect or a historical saving estimate. [Result and audit](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/fresh-completion-cue-20260912/RESULT.md).
-
-**Scope v10 CLOSED:** original cwd and native inspection/recursion-guard settings are
-required. The exact cwd is restored and independently verifies all47 source/index records.
-The sole prompt change removes the82-byte fresh completion sentence. The trial ends at
-the first owned final/directive; no requested host operation will be executed. V11 admission is
-recorded at **2026-09-12 15:25:32 Europe/Rome**; execution started15:31Rome.
-**Scope v9 CLOSED/PASS:** all47 tracked files/modes/index state match the saved GREEN receipt;
-one before-turn fork preserves exactly the two preceding public turns/62items and leaves the
-original history unchanged. Zero model turns. Changed cwd, missing build cache and original
-tool/profile restoration remain explicit gates before any cue trial.
-[Recovery result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/cue-checkpoint-qualification-20260912/RESULT.md).
-**Scope v8 CLOSED:** rollback is blocked for the saved paginated thread, but exact source
-supports an exclusive `beforeTurnId` fork. The older serialized run retains the GREEN-state
-Git bundle and receipts. V9 verifies a new isolated checkout and one original-safe fork;
-the v8/v9 setup scopes themselves admit no model generation.
-**Scope v7 CLOSED:** all six Direct workflows /42 native threads /1,921 recorded responses
-reconcile to216,698,290 raw. Hypothetical repeated earlier reasoning is3.29% across completed
-turns, or8.01% including the current turn. **This is potential, not measured saving; it does
-not support reasoning recharge as the50% explanation or a large follow-up batch.**
-[Cohort reach result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/H-REASONING-REACH-BRIDGE-20260912.md).
-**Scope v6 CLOSED/PASS:** the three-turn diagnostic uses30,165 exact raw tokens in17.46seconds.
-Live/restart input boundaries fit exclusion/restoration of433 reasoning tokens, with18/22-token
-residuals; identical follow-ups and no reinjection/compaction. Native and independent audits pass.
-[Verified result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/reasoning-client-continuity-20260912/RESULT.md).
-Scope v11 used one60-second/250k-observed-raw native-turn limit on the qualified child.
-No copied policy, forced DONE, fresh ordinary control or follow-up host operation occurred.
-**Scope v5 CLOSED:**17 saved boundaries checked; one prior-compaction case excluded from the
-full-reasoning-removal inference. WL and exec-resume show different input-history patterns.
-Exact historical client source supplies a possible `all_turns` branch, but actual branch selection
-is unverified. Scope v6 tested client continuity: two live turns, then restart/resume
-and one identical follow-up. [Frozen180-second scope](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/reasoning-client-continuity-20260912/PROTOCOL.md).
-Private adapter has24 passing provider-free tests and independent source review. Resume capture
-differences are handled explicitly; native postclosure accounting is mandatory. Exactly one
-diagnostic was admitted14:48:44 Rome and launched once. Saved-data headroom is1,107,922 hypothetical
-raw units in the sampled Direct author/fix thread (7.18% of that thread, not measured savings).
-This does not justify a large confirmation batch or explain50% by itself.
-**Scope v4 CLOSED:** all three workflows timed out. Retained records verify37,991,570
-observed raw tokens including819,309 from unfinished turns; further tails remain unknown.
-Joint author behavior activated, but no complete-workflow saving was established.
-Normal artifact publication failed; missing host receipts remain an explicit evidence limit.
-No automatic repeat, replacement or extension. Last checkpoint **2026-09-12 15:45 Europe/Rome**.
-
-The 52 completed records comprise 39 register dispositions, V04–V15 and the J04 initial-stage
-reach check, including negative/inconclusive outcomes. G01–G03 remain necessary pending work.
-No generation or follow-up is selected. Reasoning recharge is demoted after its small cohort reach;
-the cue trial is parked after confounding. B01's supporting harness qualification is separate evidence.
-Proposals and parked uncertainties do not create separate TODO entries; G03 must address any
-limitations they impose on the final conclusion.
-
-## WL token-saving hypothesis register
-
-Last maintained: **2026-09-13, Europe/Rome**. Status: operational TODO separated from evidence uncertainty; causal investigation unfinished.
-This register covers the historical six-WL/six-Direct comparison, subsequent interventions,
-joint mechanisms and alternative explanations for a misleading benchmark. It does not admit runs.
-
-## Live research priority — adaptive, not ID order
-
-Authority: the user's **2026-09-12 research restart** selects fast, evidence-led investigation.
-The active goal is a verified upstream explanation of the historical ~50% gap and a reproducible
-non-WL recipe, or a concrete benchmark correction. Choose the highest expected explanatory value
-per unit of time/subscription usage; joint causes may precede unfinished singles. Re-rank after
-each material result. Use bounded representative screens, then park weak approaches promptly.
-
-Ranking checkpoint: **2026-09-13 00:52 UTC**. The corrected-host joint pilot is
-complete and its 48.6513% full-cost difference is independently reconciled.
-Actual authors publish implementation plus tests as cohesive accepted edits,
-then receive real check feedback and finish. G01/G02 acceptance is independently
-qualified. G03's historical joint residual remains; generic repetitions do not
-close it. No provider or further observation is running.
-**Scopes v4–v15 and the initial-stage reach check CLOSED.** The local
-context signal has insufficient modeled direct reach for a majority explanation. V11's unchanged
-DONE is confounded by developer reinjection; no repeat is selected. No provider is running.
-V12 demotes literal patch-feedback replay as the majority explanation; no larger experiment
-is selected. A new candidate must identify a distinct upstream route, not repeat these screens.
-
-| Rank | Candidate and current promise | Evidence and potential reach | Current cheap check / stop gate |
-| --- | --- | --- | --- |
-| Verified mechanism; G03 residual remains | **J04 joint-package author behavior and downstream completion**, retaining every failure/cost. | Completed non-WL workflow: 18,545,304 raw, 48.6513% below historical Direct. Three cohesive initial publications; reviews, fixes and integration included. Actual accepted proposal activates corrected matcher. | G01/G02 pass independent qualified acceptance. [Result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md). Same-target historical attribution remains unbounded; generic repetitions do not close it. No controls, replacements or new run admitted. |
-| Selected case parked | **Initial-review eager evidence assembly**, distinct mechanism but poor selected trial. | Static001 completion review already uses six responses/213,426raw; exact pre-review HEAD/base absent from retained bundle. | [Feasibility result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/G01-INITIAL-REVIEW-ASSEMBLY-FEASIBILITY-20260912.md). No reconstruction, fork repair or generation. Broader mechanism remains unproved. |
-| Signal retained | **J04 full proposal/feedback author package**, downstream closure incomplete. | Initial mean5,807,494; seven of nine feature chains reach NO_FINDINGS. Actual repair/review work remains; all whole workflows fail. Static003 already combined near-WL initial cost with8,404,736 later fix raw. | [Downstream result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/JOINT-DOWNSTREAM-CAUSE-SCREEN-20260912.md) and [stage bridge](bench-results/efficiency-mechanism-isolation-20260906T214448Z/G01-JOINT-STAGE-BRIDGE-20260912.md) complete. No initial-only repeat or automatic failed-host batch. |
-| Demoted | **J04/J05 additional interface × duplicated selection state**, real local repair, limited observed workload. | V14 exposure is Direct4/6 versus WL2/6. Supplementary V15 encloses all exposed slash author/reviewer histories in30,494,327raw (14.07% of Direct), not removable cost. Indexed wider repairs supply no majority-scale controller-selection chain. | **V13 and supplementary V14/V15 complete:** no generation selected. No causal bound, quality inference or historical share follows. |
-| Demoted | **J04 dependent production edits × repeated input**, limited selected reach. | V12 covers18authors:6.81% narrow and12.15% generous fixed-trace input potential; all outputs retained. Joint orientation with v7 is20.16% before removing overlap, not measured effects. | **V12 DONE:** no larger cohesion/reasoning experiment justified by direct replay reach. Other behavioral routes remain unproved, not automatic TODO. |
-| Parked | **J04 fresh result-bound completion feedback**, no clean cue-only signal. | V11 removes exactly82bytes and still returns DONE;321bytes of new developer context violate the isolated-input gate.99,137raw in7.38seconds. | **Scopes v8–v11 DONE.** Source/checkpoint qualification passes, but actual rendering is confounded. No retry, more fork machinery or full host batch. |
-| 2 | **J04 actual proposal/commit/feedback package**, behavioral signal with failed full workflows; further batches parked. | [Closed screen](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-bounded-package-01/postcapture/MECHANISM-SCREEN.md):7/9 initials cohesive,15/16 completed author stages firstGREEN→DONE; real repairs and12 rejections remain. Three wall failures,37,991,570 observed native raw plus unknown tails; no whole-workflow saving. | **Scope v4 DONE.** [Retained census](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-bounded-package-01/postcapture/RETAINED-RESULT.md), native supplement and exact trust-entry qualification saved. No automatic repaired batch or archive reconstruction. |
-| 3 | **J04 client continuity × outer turns × reasoning lifetime — partial, demoted.** | [V6](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/reasoning-client-continuity-20260912/RESULT.md) verifies a local exclusion/restoration pattern without WL. [V7](bench-results/efficiency-mechanism-isolation-20260906T214448Z/H-REASONING-REACH-BRIDGE-20260912.md) covers all six Direct runs:3.29% prior-turn and8.01% all-earlier-response modeled exposure. | **Scopes v5/v6/v7 DONE.** No larger experiment: fixed-trace recharge is too small for the majority. Behavioral amplification remains unproved and is not an automatic TODO. |
-| 4 | **J01 C08 × C25**, demoted pending an actual historical joint pathway. | Positive singles are not additive; automatic full refresh and a 120-second wait do not establish Direct's actual behavior. [Priority screen][fast-joint] keeps this possible, not disproved. | Saved priority check complete. Promote only with a concrete historical joint exposure/value chain; joint experiment remains outside TODO. |
-
-This order is provisional, not a schedule. A promising new joint witness can immediately change
-it. N02 reporting-only is a small discriminating option, not an assumed explanation of the majority.
-Saved whole reporting windows and stage gaps are not marginal causal shares. No new controls,
-replacement observations, API use or normal-WL implementation changes follow from this ranking.
-
-## Progress at a glance — fixed full-analysis tracker and historical subsets
-
-**Original selected scope CLOSED: 38 DONE / 0 TODO.**
-**Scope v2 CLOSED — production-cohesion screen: 1 completed / 0 TODO.**
-**Completed register dispositions: 39 DONE, 2 proposals, 28 parked/uncertainty entries = 69.**
-**Live full-analysis counts: the first line is authoritative; TOTAL is fixed at 55.**
-**Completed record set: 39 dispositions + V04–V15 + J04 initial-stage reach.**
-**Required remaining work: G01 explanation/error, G02 reproduction, G03 numerical reconciliation/audit.**
-**Activity: private correction locally qualified; proposed generation awaits direction. No model or full benchmark running.**
-The closed scope counts below are historical subsets, not the full-analysis TODO.
-**Scope v4 CLOSED — one J04 bounded-package check:1 DONE /0 TODO.**
-**Scope v5 CLOSED — one distinct J04 boundary check:1 DONE /0 TODO.**
-**Scope v6 CLOSED — one client-continuity diagnostic:1 DONE /0 TODO.** Actual17.46seconds,
-30,165 raw; native and independent audits pass. **Scope v7 CLOSED:1 DONE /0 TODO**, all six
-Direct workflows reconciled and reach screened. **Scope v8 CLOSED:1 DONE /0 TODO**, source
-feasibility. **Scope v9 CLOSED:1 DONE /0 TODO**, exact source/public-prefix qualification.
-**Scope v10 CLOSED:1 DONE /0 TODO**, trial non-target gate. **Scope v11 CLOSED:1 DONE /0 TODO**,
-one bounded native next-directive screen, unchanged DONE but confounded; no repeat.
-**Scope v12 CLOSED:1 DONE /0 TODO**, six-minute saved patch-replay reach screen; qualified limits retained.
-**Scope v13 CLOSED:1 DONE /0 TODO**, final slash-interface/source discriminator; no runtime test or generation.
-**Supplementary V14 CLOSED**, all12 final-source recurrence checks complete; mixed exposure, no token attribution.
-**Supplementary V15 CLOSED**, affected-work envelope and indexed dependencies checked; no majority explanation.
-V14/V15 are included in the frozen completed record set. B01 remains supporting evidence,
-not an extra counted record or a new causal hypothesis.
-
-**Scope v3 CLOSED — supporting qualification B01: 1 completed / 0 TODO.**
-This is a finite harness-readiness check, not a seventieth causal hypothesis or a reopening of N01.
-At12:40 Rome the one-predicate private whitespace fix and54 tests pass; its real failure-path
-qualification is prepared with a300-second wall,500k observed raw and eight-invocation bounds.
-Actual whitespace exposure, failed check, real repair/commit, passing check and separate DONE are
-required. [Prospective scope](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/outer-whitespace-real-20260912/PROTOCOL.md).
-No full batch or replacement follows automatically. **B01 completed12:43:14 Rome** in81.56seconds:
-actual whitespace exposure, failed check, real commit, four passing tests and separate DONE;
-all18source endpoints match. [Independent real qualification](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/outer-whitespace-real-20260912/RESULT.md)
-is PASS at12:47: actual owned whitespace, preserved original assertions, four same-thread calls
-and clean scoped commit/validation/DONE. No effect estimate or batch admission follows.
-
-The 69 stable IDs are overlapping hypotheses/check records, not 69 separate experiments.
-**TODO means only work already identified as necessary and still pending.** A completed screen is
-DONE even when negative, inconclusive, failed or deliberately deprioritized. Its result and remaining
-scientific uncertainty stay visible; they do not create a rerun obligation. Untested possibilities
-and future proposals are not individual TODO entries merely because they have not been ruled out.
-The required final explanation, reproduction and reconciliation are genuine TODO: G01–G03.
-G03 accounts for remaining limitations rather than silently declaring them resolved.
-
-| Register section | Done | TODO | Proposed, not selected | Parked / uncertainty | Total |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Individual mechanisms C01–C38 | 28 | 0 | 0 | 10 | 38 |
-| Shared-factor checks X01–X07 | 5 | 0 | 0 | 2 | 7 |
-| Benchmark validity M01–M08 | 1 | 0 | 0 | 7 | 8 |
-| Joint mechanisms J01–J13 | 4 | 0 | 1 | 8 | 13 |
-| Narrower screens N01–N03 | 1 | 0 | 1 | 1 | 3 |
-| **Total** | **39** | **0** | **2** | **28** | **69** |
-
-### TODO — only selected necessary pending work
-
-**Only G03 remains pending**, as specified in the first table and fixed ledger.
-G01/G02's qualified mechanism/reproduction acceptance does not assert the missing
-historical causal percentage. No quality study or generic repeat batch is in TODO.
-These are required analysis deliverables, not three automatically authorized experiments.
-All selected screens V04–V15 and the initial-stage reach check are closed; no provider or new
-control workflow is selected. Follow-up experiments are subordinate evidence for unfinished
-deliverables, never additions to the total.
-
-The C17/J04/J12 shared closeout is [complete][fast-serialized]. Its completed disposition records
-remain intact; the shared action is not three independent experiments. Historical limitations,
-failed-wave accounting and parked hypotheses remain inputs to G03's final evidence assessment,
-not obligations to rerun every old screen.
-
-### DONE — completed screening or recorded disposition, 39 entries
-
-- **C01, C02, C06, C13, C14, C15, C16, C20, C21, C24, C28, C29:** the saved screens/analyses are
-  complete. Nonqualifying, opposite-direction, inconclusive, stopped and failed results stay
-  recorded. There is **no automatic repeat** and no claim that every effect is zero.
-- **C03, C04, C07, C12, C32, C33, C36:** named historical pathways absent; later exposure does not
-  create exposure in H.
-- **C08, C25:** positive saved net contrasts and observed mechanisms; their joint historical share
-  remains unestablished.
-- **C09, C19, C30, C31:** observed overhead recorded. C19/C31 concern local later-cohort behavior,
-  not a measured whole-workflow historical effect.
-- **C10, X01, X02, X03, X05, X07:** the specified shared-factor/shortcut checks are complete.
-- **C37, M02:** the scoped restart/counter-reset checks are complete; hidden retries and all-six
-  measurement coverage are not thereby proved.
-- **J02, J10:** saved interaction/package tests are complete; internal historical allocation is not.
-- **C17, J04, J12:** the shared saved-stage behavioral closeout is complete; uncertainty about net
-  token effects and the confounded eleven GREEN→DONE transitions remains, without automatic reruns.
-- **N01:** one bounded real native screen is complete as a screening decision: failed production-cohesion activation, budget-stopped author episode, no saving established and no automatic repeat.
-
-### Proposals — not TODO and not permission to run
-
-| ID | Proposed check | Decision state |
+| Priority | Approved task(s), evidence and potential reach | Next bounded check and stop/advance gate |
 | --- | --- | --- |
-| N02 | Native-Direct completion/reporting guidance alone after required work. | Not selected; launch-only semantics already appear in the static bundle. Fresh result-bound timing is a distinct unresolved factor, not an automatic experiment. |
-| J01 | Joint C08 compact refresh × C25 bounded continuation, with representative exposure. | Demoted pending an actual historical joint pathway; not selected/admitted, no assumed historical percentage. |
+| Prerequisite | R01: distinguish the reproduced publication/feedback/custody package. The [saved non-WL result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md) demonstrates the combined workflow, not each factor's share. | One saved-source exposure/contrast matrix for A/B/C and all five arms. An unfaithful contrast gets an explicit infeasibility verdict; no new framework or model call. |
+| Highest joint priority | R04 and, if separable, R06: reverse A+B or A+B+C. A joint reversal could distinguish the combined mechanism without waiting for positive singles; its magnitude is unknown. | At most one initial-author episode per arm, 15-minute wall and 45-minute preparation ceiling. Advance only on the predicted input/state → decision → work/history change with preserved non-targets. |
+| Conditional component separation | R02/R03, then R05 when faithful: publication, result-bound handoff, and native write/tool custody. Old cue-only screens do not establish these effects. | Same one-episode ceilings. Record weak/broken/inconclusive outcomes and move on; no automatic repair-and-rerun. |
+| Saved-evidence overlap | R07: C08/C25 already have positive contrasts in different populations, not additive historical shares. | One historical affected-window/overlap table. Record absent transfer evidence; no single-factor reruns. |
+| Confirmation and closure | R08–R12 use the strongest qualified reversal, retain costs, check downstream offsets and reconcile the accepted historical denominator. | R08 is one decision and, only if eligible, three modified full workflows (90 minutes each), no controls/replacements. R09–R12 are finite analyses, not places to hide new experiments. |
 
-### Parked / remaining uncertainty — not TODO, 28 entries
+Re-rank after material findings. A promising approved joint arm may precede singles.
+Every provider observation still needs its frozen prospective protocol, subscription-only
+authentication and budget/stop criteria. The [approved plan](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md) defines A/B/C
+and the R08 selection rule. This tracker approval is not research resumption or run admission.
 
-These preserve coverage without creating a work queue. “Parked” is a current operating disposition,
-not a claim that an untested hypothesis was experimentally rejected or that the user rejected each
-one individually. An uncertainty can constrain the final claim without requiring another experiment.
+## Verified findings and coverage
 
-| Entries | Why retained outside TODO |
-| --- | --- |
-| C05, C11, C18, C22, C23, C26, C27, C34, C35, C38 | Local observations or unresolved wider mechanisms; no distinct further check selected. Related narrower proposals remain separate. |
-| X04, X06 | Cross-references to remaining measurement/configuration qualifications, not independent queued work. |
-| M01, M03, M04, M05, M06, M07, M08 | Missing-usage bounds, hidden/comparability/sample/outcome qualifications and existing audit limitations. No blanket re-audit or quality study selected. |
-| J03, J05, J06, J07, J08, J09, J11, J13 | Interaction/attribution uncertainties and eventual evidential requirements. These are not eight decided experiments. |
-| N03 | Repair-only feedback idea is unadmitted and not prioritized; C15 already includes natural review-driven previews. |
+The [complete non-WL reproduction](bench-results/efficiency-mechanism-isolation-20260906T214448Z/RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md)
+uses **18,545,304 raw tokens**, 48.6513% below the saved Direct average. Its qualified
+operational chain is cohesive implementation/tests → real host acceptance/commit →
+focused validation/handoff. The historical share attributable to that package remains
+unidentified; R01–R12 distinguish that question from merely reproducing a low total.
+C08/C25's positive individual contrasts remain non-additive. Source/outcome qualifications,
+including the frozen 2/3 feature result under the user's quality premise, are retained.
 
-### Counting and maintenance rules
+This is the **complete, finite approved remaining task list**, not a guarantee that every
+conceivable hidden cause has been experimentally excluded. The causal entry-point
+framework covers measured population/aggregation; initial effective input/state; returned
+information and non-model transitions; generated work/model transitions; scheduling,
+continuation and termination; and arbitrary-order interactions/downstream offsets.
+The [source-coverage map][map] and [preserved full framework](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-archive/HYPOTESIS-OPENING-20260914.txt)
+bind those boundaries to the historical evidence. R12 reviews every existing C/X/M/J/N
+entry against that map once. It cannot launch a missing check inside the review.
 
-- **DONE only increases; TODO only decreases for the current fixed work scope.** Record completed
-  screens with their actual outcome, including inconclusive/deprioritized outcomes. Do not keep or
-  reopen them in TODO solely because a zero effect has not been proved.
-- New work requires a specific reason, a distinct finite check and an explicit selection decision.
-  Keep proposals separate until that decision. Follow-ups are subchecks under existing IDs and
-  never increment the fixed 55-record total. Necessary new research belongs under G01–G03,
-  not a replacement checklist or replenished counter. Generation still requires admission.
-- Keep the 69 IDs and original evidence intact. One shared action can satisfy several IDs; never
-  perform duplicate work just to close each row separately.
-- A completed screen does not mean “cause disproved.” G01–G03 require verified deliverables,
-  not merely attempted checks. TODO reaches zero only after explanation/error, reproduction
-  and full numerical reconciliation with independent final audit are complete.
-- Preserve corrections and new findings openly. Neither a monotonic counter nor a parked label
-  may conceal evidence that changes a conclusion.
-
-| Status basis | Done | TODO | Proposed | Parked / uncertainty |
-| --- | ---: | ---: | ---: | ---: |
-| Operational classification under the user's TODO definition, 2026-09-12 | 35 | 3 | 3 | 28 |
-| Original selected scope closed, 2026-09-12 12:07 Rome | 38 | 0 | 3 | 28 |
-| Explicit scope v2: select N01, same 69 IDs | 38 | 1 | 2 | 28 |
-| Scope v2 closed after failed activation, 2026-09-12 12:29 Rome | 39 | 0 | 2 | 28 |
-
-The earlier **21 done / 48 unresolved** snapshot measured evidential closure, not selected work.
-It remains in the operational chronology as a superseded classification, not a work queue.
-The difference is a corrected status definition, **not fourteen new experiments or causal results**.
-
-## Exhaustive causal coverage and the condition for finishing
-
-**The coverage framework below is exhaustive at the level of causal entry points for this
-benchmark. The individual mechanisms and their interactions are NOT all resolved.** The previous
-inventory of 69 names alone is not proof of exhaustiveness. Coverage is established by the
-accounting identity and workflow boundaries, with explicit unobservable-state obligations rather
-than an untested “other interactions” explanation.
-
-For a workflow, true raw usage is the sum of **input + output for every distinct charged response**.
-The reported comparison additionally selects workflows/roles/responses and applies a measurement
-and aggregation rule. A difference therefore enters through that rule or population, through the
-initial effective state, through a model or non-model state transition (including termination), or
-through their combination. A token reduction cannot occur outside those entry points. “Fewer
-responses” locates a difference but does not explain the transition that caused it.
-
-These are **coverage/closure requirements owned by existing IDs**, not extra counted hypotheses or
-authorized runs. A boundary can be closed by a proven absence, equivalence, correction, causal
-intervention or sufficiently tight bound. Unknown exposure, hidden state and an inconclusive test
-are not closure.
-
-| Exhaustive entry point | Concrete causes included | Owning checks and remaining closure |
-| --- | --- | --- |
-| Measurement and aggregation | Missing/duplicate/partial charges; compaction/title/retry scope; input/output/cache/reasoning units; counters, caps, joins and denominators. | X04, M01–M03, M08: reconcile the actual compared population and charge identities or bound every missing part. |
-| Population, task and outcome selection | Different tasks/base states, obligations, completed work, failures, filtering, cohort/time selection and stochastic sample composition. | M05/M06: retain all outcomes; verify or explicitly condition work equivalence; distinguish this sample's gap from a repeatable effect. |
-| Initial effective model state/input | Instructions and priority layers, task text, history/memory, tool schemas, permissions, model/decoder/client/server configuration and provider-internal state. | C09/C26, X06, M04: bind exposed state and exact relevant differences; hidden differences need evidence or a defensible effect bound, not assumed equality. |
-| Non-model transitions and returned information | Every read/search/bundle/snapshot, edit/commit/ACK, command result, error, lock, review/fix/integration handoff, filesystem/tool/environment change and external event. | C01–C24/C28–C36, J03–J09: connect the inspected source paths to actual delivered inputs and downstream actions, including offsetting work. |
-| Model transitions and generated work | Reasoning/output length, implementation/design choices, tool choice, repeated work, erroneous repairs, reporting, randomness and hidden provider generation/retry behavior. | C13–C18/C23/C26/C27/C37/C38, M03/M04/M06: link changed decisions to their input/state trigger; retain stochastic and hidden-state uncertainty. |
-| Scheduling, continuation and termination | Interleaving, response/result ordering, interruption, grace/drain, resume/retry, resource contention, limits and premature or delayed completion. | C17/C25/C29/C37/C38, M07, J08/J11/J12: verify actual sequencing and required completion; separate generation changes from visibility changes. |
-| Arbitrary-order interactions and offsets | Every combination of the entry points above, including interactions without positive individual effects and effects cancelled by WL overhead. | J01–J13: use complete-package and conditional component contrasts at the same target comparison; close the joint residual, not merely each single-factor screen. |
-
-Repository ownership for these boundaries is the [source-coverage matrix][map]:
-`PromptPolicy`/`CodexBackend` launch and send; orchestrator read/result/ACK paths and `FileReadTracker`;
-`GitPatcher`; `GitHistory`/review; linearization; `WorkLeafController` scheduling and auxiliary
-workers; the actual saved Direct driver; and observer/native accounting. Current architecture is
-documented in [docs/architecture.md](docs/architecture.md); historical behavior must remain tied
-to the saved source/input records, not inferred from current code alone.
-
-**Interactions cannot be closed by testing only singles or a few pairs.** J13 requires a specified
-complete set of effective arm differences and a whole-package contrast, plus conditional
-interventions that reproduce the operative input/state → action → charged-history chain outside
-WL where required. Conditional increments along a declared sequence of configurations include the
-interactions with previously changed factors; their sum describes that sequence's package contrast,
-not unique independent percentages. This is a coverage method, not an instruction to run every
-possible combination or build another experimental host. A new package must pass the existing
-representative shallow-screen and admission gates first.
-
-The final attribution must reconcile the **same target gap and denominator**, including overhead,
-measurement uncertainty and all unresolved joint effects. A numerical match from unrelated cohorts
-is insufficient. Any remaining residual needs a stated bound and justified precision/confidence;
-until it has one, J13 is open. An inaccessible provider variable is an explicit unresolved boundary,
-not a reason to assert exhaustive experimental exclusion.
-
-**What a negative conclusion would mean:** sufficiently informative checks that rule out a
-repeatable ~50% WL causal advantage would be evidence against that interpretation of the original
-benchmark. A concrete accounting/design error requires identifying the error and its corrected
-result. An accurately measured but unrepresentative sample is another possibility; it is not
-necessarily an arithmetic or implementation bug. Merely finishing weak/inconclusive experiments,
-or failing to identify a mechanism, does **not** establish that a benchmark error is very likely.
-That stronger conclusion is permitted only when the remaining alternatives are actually excluded
-or bounded by the coverage requirements above.
-
-## Current answer and activity
-
-- Historical reported reduction: **45.38%–51.62% raw tokens**, conditional on the original ceiling
-  for 35 missing WL response charges. That ceiling is not independently established as an upstream
-  request limit. No recovered correction demonstrates that the historical gap disappears.
-- **Two individual mechanisms have positive saved net contrasts: C08 and C25.** Their combined
-  share of the historical saving is **not established**; their percentages cannot be added.
-- The separate connected WL package comparison is 45.84% lower; the three completed standalone
-  author-policy runs are 21.9912% lower than saved Direct. Neither isolates a historical causal share.
-- **The corrected-host full three-feature pilot completed PASS**, 18,545,304 raw,
-  48.6513% below historical Direct. Native/public/observer and independent accounting agree.
-  Frozen feature checks are 2/3, with the actual completion failure retained. G01/G02's
-  mechanism/reproduction are independently verified; G03 historical attribution remains.
-  No model is running and earlier failed/partial outcomes remain.
-- The fresh non-generating wrapper login-status check reports ChatGPT. Quota headroom is not
-  inferred from the older account snapshot. The benchmark retains pinned CLI0.153.4 and GPT-5.5/xhigh.
-- The existing user assumption is no quality reduction. Actual outcomes remain visible; M05 below
-  records what that assumption leaves conditional without authorizing another quality study.
-- Coverage: **38 original mechanism families, seven shared-factor checks, eight benchmark-validity
-  alternatives, thirteen interaction families and three proposed subfactor screens**. These 69
-  indexed entries overlap; they are not 69 independent causes or 69 completed experiments.
-
-Source: [endpoint audit][endpoint], [latest contribution synthesis][synthesis],
-[standalone native accounting][static-usage], and [current operational log](ephemeral-note.md).
+R01–R06 address J04/J13's package and C13–C16/C20/X02 custody/feedback distinctions;
+R07 covers C08/C25/J01 overlap; R08–R11 cover confirmation, new-observation validity,
+downstream offsets and the numerical joint residual. R12 reviews all 69 register entries.
+The older C/X/M/J/N status labels below describe their preserved checks, not additional
+live tasks. A parked uncertainty does not silently reopen a check. An omission discovered
+by coverage review triggers the zero-counter permission rule, not an assumption that the
+historical saving is false. No unique additive percentages are invented for inseparable causes.
 
 ## Reading the entries
 
@@ -1059,63 +686,27 @@ Workflow success, feature scoring, measurement qualification and a positive effe
 | **Direct resume-counter witness** | September12 **10:11**, saved-file check of 18 epochs in two Direct observations. | Every inspected resume resets; suspected cross-resume double-count unsupported in that scope. No new accounting total. [Witness][counter-witness]. |
 | **Functional delivery/host diagnostics** | Bounded read, candidate-v4, C08, C15, C21 and standalone qualifications across September6–12; individual attempts in [complete operational log](ephemeral-note.md). | Failures, verifier repairs and successes remain. The study ledger is54 frozen benchmark identities (including six unlaunched R slots) and31 diagnostic identities; these are **not** 54 successful benchmarks or31 saving tests. Diagnostics establish plumbing, not net effects. |
 
-## Coverage and what would count as resolving the investigation
-
-The [source-coverage map][map] binds these families to `PromptPolicy`, the orchestrator read/result/
-ACK paths, `GitPatcher`, review/fix/linearize, workspace scheduling, Codex launch/send/interrupt and
-the actual Direct drivers. Native tool/input/schema and hidden-provider limits remain explicit.
-At the accounting level, raw usage is the sum of distinct responses' input plus output. Differences
-must therefore involve delivered/retained input, generated work/output and its feedback dependencies,
-or measurement/population scope. Smaller input and changed work interact; “fewer calls” alone is
-not an upstream explanation.
-
-A high-confidence conclusion requires all of the following, not a checkbox beside every name:
-
-1. Every exercised source/input/action/role boundary has a disposition tied to H, including overhead
-   and counterexamples. Source inspection is not substituted for an intervention result.
-2. Open measurement/comparability alternatives have defensible bounds or actual corrections. No
-   unsupported missing-response ceiling, implicit zero, or sampling-confidence claim remains hidden.
-3. A tested absence claim has enough evidence to exclude an effect large enough to explain the
-   relevant residual. A small inconclusive screen only deprioritizes; it does not establish that bound.
-4. Connected interactions and downstream repair/integration offsets are covered or explicitly
-   bounded. Failed component screens alone do not exclude high-order effects.
-5. The explanation names actual instruction/information/state change → decision/operation → charged
-   response/history consequences, and an intervention reproduces that consequence with required work
-   preserved. A stage or favorable package total alone is not the historical causal allocation.
-
-If these checks expose an original arithmetic, usage-scope, task or configuration error, report that
-error and a corrected result. If they establish that the sample magnitude is not reproducible, label
-that claim with its supporting evidence. **Failure to find a cause is not itself proof that the
-original measured saving was false.** Nor does an accurately measured small-sample gap have to equal
-a universal, deterministic 50% property. This register is comprehensive for the inspected boundaries,
-not a claim to enumerate every hidden provider implementation or every conceivable future workload.
-
 ## Continuous maintenance contract
 
-- This file is the primary hypothesis/status register; [ephemeral-note.md](ephemeral-note.md) remains
-  the operational chronology. Read both before resuming hypothesis work.
-- Maintain the operational status table and detailed Work status fields together. DONE includes
-  completed inconclusive/deprioritized screens; TODO contains only selected necessary pending work.
-  Keep proposals and scientific uncertainties outside the individually counted TODO entries.
-  The frozen full-analysis total is 55: DONE only increases, TODO only decreases and their sum
-  always equals 55. Follow-ups are evidence substeps under unfinished G01–G03, not new counted tasks.
-  Run the first-line ledger regression guard before every progress report. Preserve all 69
-  hypothesis IDs, corrections and limitations. Zero TODO requires verified full-analysis completion.
-- Before starting a check, mark its entry **checking**, record start time/owner/scope and link the
-  approved budget/stop criteria. A proposal or pending task is not active execution.
-- After every completed check, failure, stop or new finding, update the affected individual **and
-  joint** entries, date/method/result/evidence, the experiment index and the headline if affected.
-  Update before reporting progress. Preserve superseded results with their qualifications and links.
-- Add new hypotheses under stable IDs with their parent families and distinguishing prediction;
-  never silently rename/retest an old inconclusive factor. Record when introduced and last checked.
-  New subcases belong to their family's coverage and separate activity log, not extra header
-  tasks. The full-analysis counter remains fixed at 55.
-- Retain every admitted failure/partial/unlaunched outcome. Do not promote a fake-backend/local
-  diagnostic, a repaired verifier, or a lower response count into a successful token-effect test.
-- Follow [mandatory shallow screening](docs/benchmark-operator-policy.md#shallow-screen-and-resource-gates):
-  representative failure-path checks, then the smallest useful real screen, then separately justified
-  confirmation. Numerical budgets and stop/advance criteria precede generation. No automatic controls,
-  replacements, budget extensions, API fallback or new host implementation follows from this list.
+- Read this register and [ephemeral-note.md](ephemeral-note.md) before research resumes.
+  Keep the first-line counts, twelve task rows, current activity and verified metric synchronized
+  with the ledger. The fixed total is 66, with all 54 historical completions retained.
+- Before an approved task starts, record its start time and precise prospective scope/budget;
+  mark CHECKING only for actual work. After a result, failure or stop, maintain the affected
+  individual and joint entries with method, date, evidence, observed direction and limits.
+- A terminal task requires its own dated result. Preserve every admitted partial, failed and
+  unlaunched outcome. Local qualification, a working host or fewer responses is not a causal
+  effect estimate. New experiments are never hidden inside completed tasks or analysis rows.
+- New ideas may be recorded as unapproved scope issues with family cross-references, not as
+  selected TODO or uncounted executable work. No TODO increase, scope expansion or reopening
+  without subsequent explicit user approval. At zero, stop and follow the case (1)/(2) rule above.
+- Preserve all 69 hypothesis IDs and historical results. Append matching ledger/publication
+  completion checkpoints; never rewrite past checkpoints or completed result declarations.
+  Run the progress guard before reporting or committing.
+- Follow [mandatory shallow screening](docs/benchmark-operator-policy.md#shallow-screen-and-resource-gates).
+  Rank by explanatory value versus time/subscription cost, promote promising approved joints,
+  stop weak approaches at their declared gates, and preserve frozen non-target invariants.
+  No automatic controls, replacements, budget extensions, API fallback or research restart.
 
 ## Evidence references
 

@@ -1,11 +1,11 @@
-# Concrete remaining task inventory
+# Approved finite remaining task inventory
 
-This is a proposed one-time replacement of the misleading G03 counter bucket.
-It is not a benchmark admission or a restart of the research. The current user
-request is tracker repair only. Explicit approval of the numerical reset is
-pending; the live counter is unchanged until that approval arrives.
+Authority: the user's 2026-09-14 approval, “Approve the one-time correction and test updates”.
+The active counter is 54 DONE / 12 TODO / 66 TOTAL. This scope governs the finite
+remaining task inventory; it is not a benchmark admission or a restart of research.
+Research remains paused until the user restarts it.
 
-The proposal preserves the 54 completed legacy records and replaces the one
+The ledger preserves the 54 completed legacy records and replaces the one
 unfinished aggregate with **12 finite tasks: 54 DONE / 12 TODO / 66 TOTAL**.
 The old 52/3 and 54/1 publications remain archived byte-for-byte. Neither those
 records nor the successful reproduction claims are additional new work.
@@ -86,9 +86,9 @@ handles the two positive individual pathways' historical overlap; R09–R12
 handle evidence, downstream effects and final coverage without reopening the
 accepted saving. Prior absent/shared/overhead pathways and unpromising tests
 remain closed or parked with their actual reasons. R12 must flag—not silently
-work on—any necessary omission from this proposed finite list.
+work on—any necessary omission from this finite list.
 
-This is the complete proposed task inventory for the next authorized research
+This is the complete approved task inventory for the next authorized research
 scope, **not a claim that every possible hidden cause is excluded**. A successful
 scientific conclusion cannot be guaranteed by choosing a fixed number of tasks.
 The zero rule below is the safeguard when the finite plan is insufficient.

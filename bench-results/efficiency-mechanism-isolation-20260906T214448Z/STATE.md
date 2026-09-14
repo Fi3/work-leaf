@@ -1,6 +1,46 @@
 # Study state
 
+Current cross-phase hypothesis statuses, interactions, benchmark-validity alternatives and dated
+test results are maintained in [the root hypothesis register](../../hypotesis.md). Dated checkpoints
+below remain historical records, not authority for new runs or a substitute for that live register.
+
+## Primary goal status
+
+**Historical saving explained as a verified combined percentage: NOT ESTABLISHED.
+Overall attribution goal: UNFINISHED. Research paused; R01–R12 TODO.**
+The [complete non-WL reproduction](RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md)
+uses 18,545,304 raw tokens, 48.6513% below the saved six-Direct mean. Native,
+public, observer and independent accounting agree. The historically exposed
+upstream joint mechanism and one complete reproduction pass qualified independent
+acceptance; full historical causal attribution and its residual bound do not.
+Fixed progress is 54 DONE / 12 TODO / 66 TOTAL. All 54 historical completions and prior
+publication checkpoints are preserved; the old G03 aggregate is not an extra task.
+The frozen feature result is 2/3; the user's no-quality-loss premise remains explicit.
+No provider is running or further generation admitted. Accepted historical reduction remains
+45.38%–51.62%; C08 and C25 are the two positive measured net contrasts, not
+additive shares of that gap. The authoritative continuously maintained snapshot,
+denominators, bounds and update rules are at the top of
+[ephemeral-note.md](../../ephemeral-note.md). Answer this metric immediately
+from that snapshot and lead progress reports with it. The closed investigations
+below are bounded phase completions, not completion of the overall goal.
+Current task scope: 2026-09-14. No new generation is admitted by this tracker-only correction.
+
 ## Active continuation plan
+
+The [approved finite inventory](PROGRESS-TASKS-PROPOSAL-20260914.md) specifies R01–R12.
+None is started. Research remains paused until the user restarts it. DONE never decreases;
+TODO never increases without subsequent explicit user approval. At zero, stop with a supported
+answer or case (1) necessary additional work and/or case (2) an incorrect initial checklist;
+name the exact proposed additional tasks/count and ask permission. No uncounted work,
+replacement, reopening or scope expansion is permitted.
+
+The completed global-hunk pilot and terminal audits support the source-linked
+mechanism and non-WL recipe in the result above. Remaining tasks address a same-target
+historical joint effect and defensible residual bound. Three generic repetitions
+can test recurrence but cannot supply that identification; no already-qualified
+WL configuration reverses the entire package. The [confirmation decision](G01-CORRECTED-PACKAGE-CONFIRMATION-DECISION-20260913.md)
+and [existing-variant feasibility](phases/standalone-global-hunk-pilot-01/postcapture/EXISTING-WL-JOINT-VARIANT-FEASIBILITY.md)
+retain these bounded checks. Earlier dated continuation records follow as history.
 
 The user's2026-09-08 priority decision is **finish C08 using collected data,
 then reassess C15/C21**. The38-entry inventory is not an instruction to spend

@@ -1,356 +1,325 @@
-"""Full-analysis progress guard. No model, benchmark or WL runtime invocation."""
+"""Regression tests for the user-approved finite task counter; no provider calls."""
 
 import copy
 import json
 import pathlib
-import re
 import unittest
 
-
-ROOT = pathlib.Path(__file__).resolve().parents[2]
-FIXED_TOTAL = 55
-BASELINE_IDS = frozenset(
-    "C01 C02 C03 C04 C06 C07 C08 C09 C10 C12 C13 C14 C15 C16 C17 C19 C20 C21 "
-    "C24 C25 C28 C29 C30 C31 C32 C33 C36 C37 X01 X02 X03 X05 X07 M02 J02 J04 "
-    "J10 J12 N01 J04-STAGE-REACH-20260912".split()
-) | {f"V{number:02}" for number in range(4, 16)}
-REQUIRED_CRITERIA = {
-    "G01": {"upstream_causal_chain_or_specific_benchmark_error",
-            "historical_exposure_and_alternatives", "supporting_evidence_verified"},
-    "G02": {"non_wl_recipe_or_correction_procedure",
-            "reproduction_result_and_all_outcomes", "non_target_and_measurement_checks"},
-    "G03": {"historical_population_units_and_denominator",
-            "missing_usage_and_comparability_limits", "boundary_and_joint_coverage",
-            "joint_residual_and_downstream_offsets", "independent_final_audit"},
-}
-FIXED_IDS = BASELINE_IDS | REQUIRED_CRITERIA.keys()
-
-
-def validate_ledger(ledger):
-    """Validate evidence declarations and counts, not the scientific truth of a claim."""
-    if ledger.get("schema") != 2 or ledger.get("fixed_total") != FIXED_TOTAL:
-        raise ValueError("the full-analysis ledger has a fixed total of 55")
-    completed, pending = ledger["completed"], ledger["pending"]
-    identities = completed + pending
-    if len(identities) != FIXED_TOTAL or set(identities) != FIXED_IDS:
-        raise ValueError("missing, duplicate or added fixed record ID")
-    if not BASELINE_IDS <= set(completed):
-        raise ValueError("completed historical records cannot be reopened")
-
-    history = ledger["history"]
-    previous_ids = BASELINE_IDS
-    if not history or set(history[0]["completed"]) != BASELINE_IDS:
-        raise ValueError("the audited 52/3 checkpoint must remain")
-    for entry in history:
-        current = (entry["done"], entry["todo"])
-        current_ids = set(entry["completed"])
-        if any(type(value) is not int or value < 0 for value in current):
-            raise ValueError("counts must be nonnegative integers")
-        if (sum(current) != FIXED_TOTAL or len(current_ids) != current[0]
-                or len(entry["completed"]) != current[0]
-                or not previous_ids <= current_ids <= FIXED_IDS):
-            raise ValueError("total drift, duplicate history or backward progress")
-        previous_ids = current_ids
-    if previous_ids != set(completed):
-        raise ValueError("history does not match record statuses")
-    if (history[-1]["done"], history[-1]["todo"]) != (len(completed), len(pending)):
-        raise ValueError("history does not match counts")
-
-    sources = ledger["completed_record_sources"]
-    source_ids = [identity for group in sources.values() for identity in group["ids"]]
-    if len(source_ids) != len(BASELINE_IDS) or set(source_ids) != BASELINE_IDS:
-        raise ValueError("each audited completed record requires a source")
-    if any(not group["source"] for group in sources.values()):
-        raise ValueError("completed source references cannot be empty")
-
-    deliverables = ledger.get("deliverables", {})
-    if set(deliverables) != set(REQUIRED_CRITERIA):
-        raise ValueError("the unfinished analysis deliverables cannot be omitted")
-    for identity, names in REQUIRED_CRITERIA.items():
-        item = deliverables[identity]
-        if set(item["criteria"]) != names:
-            raise ValueError("final acceptance criteria cannot be removed")
-        if identity in completed:
-            if (item["status"] != "verified" or not item["evidence"]
-                    or not item["verified_at"]
-                    or any(value != "pass" for value in item["criteria"].values())):
-                raise ValueError("final deliverables need verified evidence for every criterion")
-        elif item["status"] not in {"pending", "checking"}:
-            raise ValueError("pending deliverable status contradicts the counts")
-    if "G02" in completed and "G01" not in completed:
-        raise ValueError("reproduction must verify the identified explanation or error")
-    if "G03" in completed and not {"G01", "G02"} <= set(completed):
-        raise ValueError("final reconciliation requires explanation and reproduction")
-
-    analysis = ledger["analysis"]
-    final_done = set(completed) & REQUIRED_CRITERIA.keys()
-    if final_done and analysis["branch"] not in {
-            "verified_mechanism", "verified_benchmark_error"}:
-        raise ValueError("completed deliverables must identify an accepted conclusion branch")
-    if not pending:
-        audit = analysis.get("independent_audit")
-        if (analysis["status"] != "complete" or not analysis["conclusion_evidence"]
-                or not isinstance(audit, dict) or audit.get("status") != "pass"
-                or not audit.get("reviewer") or not audit.get("evidence")):
-            raise ValueError("zero TODO requires a complete, independently audited analysis")
-    elif analysis["status"] != "unfinished":
-        raise ValueError("the analysis remains unfinished while any deliverable is pending")
-
-    supplementary_ids = set()
-    for item in ledger["supplementary"]:
-        if (item["parent"] not in FIXED_IDS or item["id"] in FIXED_IDS
-                or item["id"] in supplementary_ids):
-            raise ValueError("substeps need distinct IDs and an existing parent")
-        if item["status"] in {"pending", "checking"} and item["parent"] in completed:
-            raise ValueError("unfinished substeps belong to an unfinished deliverable")
-        supplementary_ids.add(item["id"])
-    return len(completed), len(pending)
-
-
-def read_counts(first_line):
-    match = re.fullmatch(r"# DONE: (\d+) \| TODO: (\d+) \| TOTAL: (\d+)", first_line)
-    if match is None:
-        raise ValueError("DONE / TODO / TOTAL must occupy the first line")
-    done, todo, total = map(int, match.groups())
-    if total != FIXED_TOTAL or done + todo != FIXED_TOTAL or done < len(BASELINE_IDS):
-        raise ValueError("DONE + TODO = TOTAL = 55; completed records cannot decrease")
-    return done, todo
-
-
-def validate_published_progress(ledger, publication_history):
-    """Require retained publication checkpoints, not only self-consistent live history.
-
-    Publication appends preserve old checkpoints. This catches ledger-only rollback;
-    it is not tamperproof against deliberately rewriting both files or this validator.
-    """
-    counts = validate_ledger(ledger)
-    if (not isinstance(publication_history, dict)
-            or type(publication_history.get("schema")) is not int
-            or publication_history.get("schema") != 1
-            or publication_history.get("fixed_total") != FIXED_TOTAL):
-        raise ValueError("a separate fixed-55 publication checkpoint archive is required")
-    checkpoints = publication_history.get("checkpoints")
-    expected = [{key: entry[key] for key in ("done", "todo", "completed")}
-                for entry in ledger["history"]]
-    if (not isinstance(checkpoints, list) or not checkpoints
-            or any(not isinstance(entry, dict)
-                   or type(entry.get("done")) is not int
-                   or type(entry.get("todo")) is not int for entry in checkpoints)
-            or checkpoints != expected):
-        raise ValueError("publication checkpoints differ: retain published history and append before reporting")
-    return counts
+from progress_counter import (
+    ROOT, STUDY, load_contract, migration_checkpoint, read_counts,
+    validate_ledger, validate_published_progress, validate_visible_progress,
+    validate_evidence_files,
+)
 
 
 class ProgressCounterTests(unittest.TestCase):
-    def actual(self):
-        return json.loads(pathlib.Path(__file__).with_name("PROGRESS-CHECKLIST.json").read_text())
+    def setUp(self):
+        self.scope, self.legacy, self.old_publications = load_contract()
+        self.definitions = {task["id"]: task for task in self.scope["tasks"]}
 
-    def publications(self):
-        return json.loads(pathlib.Path(__file__).with_name(
-            "PROGRESS-PUBLICATION-HISTORY.json").read_text())
-
-    def publication_fixture(self, ledger):
-        return {"schema": 1, "fixed_total": FIXED_TOTAL, "checkpoints": [
-            {key: copy.deepcopy(entry[key]) for key in ("done", "todo", "completed")}
-            for entry in ledger["history"]]}
-
-    def ledger(self):
-        # Mutation tests use the frozen baseline even after real final deliverables close.
-        fixture = self.actual()
-        fixture["completed"] = list(fixture["history"][0]["completed"])
-        fixture["pending"] = list(REQUIRED_CRITERIA)
-        fixture["history"] = fixture["history"][:1]
-        fixture["supplementary"] = []
-        fixture["analysis"] = {
-            "status": "unfinished", "branch": None,
-            "conclusion_evidence": [], "independent_audit": None,
+    def fixture(self):
+        ledger = {
+            "schema": 3, "scope_id": self.scope["id"], "fixed_total": 66,
+            "completed": list(self.legacy["completed"]),
+            "pending": list(self.definitions),
+            "tasks": {identity: {"definition": copy.deepcopy(definition),
+                                "status": "pending", "started_at": None, "result": None}
+                      for identity, definition in self.definitions.items()},
+            "history": copy.deepcopy(self.legacy["history"]) + [
+                migration_checkpoint(self.scope, self.legacy)],
+            "research": {"status": "paused", "zero_decision": None},
+            "scope_issues": [],
         }
-        for identity, item in fixture["deliverables"].items():
-            item.update(status="pending", evidence=[], verified_at=None)
-            item["criteria"] = dict.fromkeys(REQUIRED_CRITERIA[identity], "pending")
-        return fixture
+        return ledger
 
-    def complete(self, ledger, identity):
+    def publications(self, ledger):
+        return {
+            "schema": 2, "scope_id": self.scope["id"], "fixed_total": 66,
+            "checkpoints": copy.deepcopy(self.old_publications["checkpoints"])
+            + copy.deepcopy(ledger["history"][len(self.legacy["history"]):]),
+        }
+
+    def complete(self, ledger, identity, outcome="inconclusive"):
+        item = ledger["tasks"][identity]
+        item.update(status="done", started_at="2026-09-14T13:00:00+00:00",
+                    result={"completed_at": "2026-09-14T13:01:00+00:00",
+                            "outcome": outcome, "checked": "Finite declared check.",
+                            "evidence": ["test-only-evidence.md"],
+                            "finding": "Test fixture, not a scientific result.",
+                            "limits": "Test fixture, not a causal claim."})
         ledger["pending"].remove(identity)
         ledger["completed"].append(identity)
-        item = ledger["deliverables"][identity]
-        item.update(status="verified", verified_at="test-only timestamp",
-                    evidence=["test-only evidence"])
-        item["criteria"] = dict.fromkeys(REQUIRED_CRITERIA[identity], "pass")
-        ledger["analysis"]["branch"] = "verified_mechanism"
         ledger["history"].append({
-            "done": len(ledger["completed"]), "todo": len(ledger["pending"]),
+            "event": "task_completed", "scope_id": self.scope["id"],
+            "at": item["result"]["completed_at"], "done": len(ledger["completed"]),
+            "todo": len(ledger["pending"]), "total": 66,
             "completed": list(ledger["completed"]),
+            "completion": {"id": identity, "record": copy.deepcopy(item)},
         })
 
-    def test_zero_todo_without_analysis_deliverables_is_rejected(self):
-        legacy = json.loads(pathlib.Path(__file__).with_name(
-            "PROGRESS-CHECKLIST-SUPERSEDED-49.json").read_text())
-        self.assertEqual(legacy["pending"], [])
-        self.assertNotIn("deliverables", legacy)
-        with self.assertRaises(ValueError):
-            validate_ledger(legacy)
-
-    def test_actual_audited_ledger_and_evidence_sources(self):
-        ledger = self.actual()
-        validate_published_progress(ledger, self.publications())
-        sources = [group["source"] for group in ledger["completed_record_sources"].values()]
-        sources += [source for item in ledger["deliverables"].values()
-                    for source in item["evidence"]]
-        sources += ledger["analysis"]["conclusion_evidence"]
-        audit = ledger["analysis"]["independent_audit"]
-        if audit:
-            sources.append(audit["evidence"])
-        for source in sources:
-            self.assertTrue((ROOT / source).is_file(), source)
-
-    def test_header_and_live_note_match_task_ledger(self):
-        counts = validate_published_progress(self.actual(), self.publications())
-        header = (ROOT / "hypotesis.md").read_text().splitlines()[0]
-        self.assertEqual(read_counts(header), counts)
-        self.assertIn(header.removeprefix("# "),
-                      (ROOT / "ephemeral-note.md").read_text().splitlines()[2])
-
-    def test_first_pending_table_matches_actual_pending_ids(self):
-        validate_published_progress(self.actual(), self.publications())
-        opening = "\n".join((ROOT / "hypotesis.md").read_text().splitlines()[:35])
-        ids = re.findall(r"^\| (G\d\d) \| TODO \|", opening, re.MULTILINE)
-        self.assertEqual(ids, self.actual()["pending"])
-
-    def test_prior_inflated_and_backward_headers_are_rejected(self):
-        for line in ("# DONE: 50 | TODO: 1 | TOTAL: 51",
-                     "# DONE: 49 | TODO: 0 | TOTAL: 49",
-                     "# DONE: 51 | TODO: 4 | TOTAL: 55",
-                     "# DONE: 53 | TODO: 3 | TOTAL: 55"):
-            with self.subTest(line=line), self.assertRaises(ValueError):
-                read_counts(line)
-
-    def test_added_or_duplicate_task_is_rejected(self):
-        for added in ("V16", "V15"):
-            ledger = self.ledger()
-            ledger["completed"].append(added)
-            with self.subTest(added=added), self.assertRaises(ValueError):
-                validate_ledger(ledger)
-
-    def test_changed_total_or_backward_history_is_rejected(self):
-        changed_total = self.ledger()
-        changed_total["fixed_total"] += 1
-        backward = self.ledger()
-        backward["history"].append({"done": 51, "todo": 4,
-                                   "completed": backward["completed"][:-1]})
-        for ledger in (changed_total, backward):
-            with self.assertRaises(ValueError):
-                validate_ledger(ledger)
-
-    def test_completed_baseline_cannot_be_erased_by_truncating_history(self):
-        ledger = self.ledger()
-        ledger["completed"].remove("V15")
-        ledger["pending"].append("V15")
-        ledger["history"] = [{"done": 51, "todo": 4,
-                              "completed": list(ledger["completed"])}]
-        with self.assertRaises(ValueError):
-            validate_ledger(ledger)
-
-    def test_followup_substeps_do_not_change_counts(self):
-        ledger = self.ledger()
-        counts = validate_ledger(ledger)
-        ledger["supplementary"].append({
-            "id": "test-only-followup", "parent": "G01", "status": "checking"})
-        self.assertEqual(validate_ledger(ledger), counts)
-
-    def test_required_deliverables_and_criteria_cannot_be_removed(self):
-        missing_deliverable = self.ledger()
-        del missing_deliverable["deliverables"]["G03"]
-        missing_criterion = self.ledger()
-        del missing_criterion["deliverables"]["G03"]["criteria"]["joint_residual_and_downstream_offsets"]
-        for ledger in (missing_deliverable, missing_criterion):
-            with self.assertRaises(ValueError):
-                validate_ledger(ledger)
-
-    def test_only_evidence_backed_final_deliverable_advances_progress(self):
-        ledger = self.ledger()
-        self.complete(ledger, "G01")
-        self.assertEqual(validate_ledger(ledger), (53, 2))
-        ledger["deliverables"]["G01"]["evidence"] = []
-        with self.assertRaises(ValueError):
-            validate_ledger(ledger)
-
-    def test_reopening_completed_deliverable_is_rejected(self):
-        ledger = self.ledger()
-        self.complete(ledger, "G01")
-        ledger["completed"].remove("G01")
-        ledger["pending"].append("G01")
-        ledger["history"].append({"done": 52, "todo": 3,
-                                  "completed": list(ledger["completed"])})
-        with self.assertRaises(ValueError):
-            validate_ledger(ledger)
-
-    def test_zero_todo_requires_final_independent_audit(self):
-        ledger = self.ledger()
-        for identity in REQUIRED_CRITERIA:
+    def zero(self):
+        ledger = self.fixture()
+        for identity in self.definitions:
             self.complete(ledger, identity)
+        return ledger
+
+    def permission(self, ledger, cases):
+        ledger["research"] = {
+            "status": "awaiting_permission",
+            "zero_decision": {
+                "kind": "permission_required", "cases": cases,
+                "reason": "The listed checks did not identify the historical share.",
+                "evidence": [self.definitions["R12"]["result"]],
+                "additional_tasks": [
+                    {"id": "proposed-extra", "question": "A specific missing check?",
+                     "scope": "One bounded check, not yet authorized."}],
+                "requested_todo_increase": 1,
+                "permission_question": "May I add this one specified task?",
+            },
+        }
+
+    def visible(self, ledger):
+        done, todo = len(ledger["completed"]), len(ledger["pending"])
+        header = f"# DONE: {done} | TODO: {todo} | TOTAL: 66"
+        rows = ["| ID | Status | Remaining check |", "| --- | --- | --- |"]
+        for identity, definition in self.definitions.items():
+            status = {"pending": "TODO", "checking": "CHECKING", "done": "DONE"}[
+                ledger["tasks"][identity]["status"]]
+            rows.append(f'| {identity} | {status} | {definition["question"]} |')
+        return header + "\n\n" + "\n".join(rows), (
+            "# Provisional investigation ledger\n\nLive analysis counter: **"
+            + header.removeprefix("# ") + "**"
+        )
+
+    def assert_invalid(self, ledger):
         with self.assertRaises(ValueError):
-            validate_ledger(ledger)
-        ledger["analysis"].update(
-            status="complete", conclusion_evidence=["test-only report"],
-            independent_audit={"status": "pass", "reviewer": "test-only reviewer",
-                               "evidence": "test-only independent report"})
-        self.assertEqual(validate_ledger(ledger), (55, 0))
-        for field in ("conclusion_evidence", "independent_audit"):
-            invalid = copy.deepcopy(ledger)
-            invalid["analysis"][field] = None
-            with self.subTest(field=field), self.assertRaises(ValueError):
-                validate_ledger(invalid)
+            validate_published_progress(ledger, self.publications(ledger))
 
-    def test_unfinished_substeps_cannot_hide_under_completed_records(self):
-        ledger = self.ledger()
-        ledger["supplementary"].append({
-            "id": "test-only-followup", "parent": "V13", "status": "checking"})
+    def test_actual_ledger_header_tasks_note_and_evidence(self):
+        ledger = json.loads((STUDY / "PROGRESS-CHECKLIST.json").read_text())
+        publications = json.loads((STUDY / "PROGRESS-PUBLICATION-HISTORY.json").read_text())
+        validate_published_progress(ledger, publications)
+        validate_visible_progress(ledger, (ROOT / "hypotesis.md").read_text(),
+                                  (ROOT / "ephemeral-note.md").read_text())
+        validate_evidence_files(ledger)
+
+    def test_approved_correction_retains_all_54_and_old_checkpoints(self):
+        ledger = self.fixture()
+        self.assertEqual(validate_published_progress(ledger, self.publications(ledger)), (54, 12))
+        self.assertEqual(ledger["history"][:2], self.legacy["history"])
+        self.assertEqual(len(ledger["completed"]), 54)
+
+    def test_old_aggregate_and_superseded_zero_are_not_live_ledgers(self):
+        for name in ("progress-archive/PROGRESS-CHECKLIST-v2.json",
+                     "PROGRESS-CHECKLIST-SUPERSEDED-49.json"):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                validate_ledger(json.loads((STUDY / name).read_text()))
+
+    def test_header_total_floor_and_first_line_are_strict(self):
+        self.assertEqual(read_counts("# DONE: 54 | TODO: 12 | TOTAL: 66"), (54, 12))
+        for header in ("# DONE: 54 | TODO: 1 | TOTAL: 55",
+                       "# DONE: 53 | TODO: 13 | TOTAL: 66",
+                       "# DONE: 54 | TODO: 13 | TOTAL: 66",
+                       "# DONE: 67 | TODO: 0 | TOTAL: 67",
+                       "text\n# DONE: 54 | TODO: 12 | TOTAL: 66"):
+            with self.subTest(header=header), self.assertRaises(ValueError):
+                read_counts(header)
+
+    def test_no_extra_duplicate_replacement_or_removed_task(self):
+        for mutation in ("extra", "duplicate", "replacement", "removed"):
+            ledger = self.fixture()
+            if mutation == "extra":
+                ledger["pending"].append("R13")
+                ledger["fixed_total"] += 1
+            elif mutation == "duplicate":
+                ledger["pending"][-1] = "R01"
+            elif mutation == "replacement":
+                ledger["pending"][-1] = "R13"
+                ledger["tasks"]["R13"] = ledger["tasks"].pop("R12")
+            else:
+                ledger["pending"].pop()
+                ledger["tasks"].pop("R12")
+            with self.subTest(mutation=mutation):
+                self.assert_invalid(ledger)
+
+    def test_same_id_cannot_hide_changed_question_scope_or_result_location(self):
+        for field in ("question", "scope", "result"):
+            ledger = self.fixture()
+            ledger["tasks"]["R04"]["definition"][field] += " and extra work"
+            with self.subTest(field=field):
+                self.assert_invalid(ledger)
+
+    def test_hidden_supplementary_work_or_task_fields_are_rejected(self):
+        for location in ("ledger", "task"):
+            ledger = self.fixture()
+            target = ledger if location == "ledger" else ledger["tasks"]["R01"]
+            target["supplementary"] = [{"id": "extra", "status": "checking"}]
+            with self.subTest(location=location):
+                self.assert_invalid(ledger)
+
+    def test_historical_records_and_history_cannot_be_erased(self):
+        for mutation in ("record", "history", "checkpoint", "approval"):
+            ledger = self.fixture()
+            if mutation == "record":
+                ledger["completed"].remove("G01")
+                ledger["pending"].append("G01")
+            elif mutation == "history":
+                ledger["history"] = ledger["history"][1:]
+            elif mutation == "checkpoint":
+                ledger["history"][0]["done"] = 51
+            else:
+                ledger["history"][2]["approval_id"] = "agent-approved"
+            with self.subTest(mutation=mutation):
+                self.assert_invalid(ledger)
+
+    def test_starting_a_task_does_not_advance_count(self):
+        ledger = self.fixture()
+        ledger["tasks"]["R01"].update(status="checking",
+                                    started_at="2026-09-14T13:00:00+00:00")
+        self.assertEqual(validate_ledger(ledger), (54, 12))
+        ledger["tasks"]["R01"]["started_at"] = None
+        self.assert_invalid(ledger)
+
+    def test_every_terminal_outcome_needs_actual_dated_result(self):
+        for outcome in ("supported", "unsupported", "inconclusive",
+                        "failed_setup", "justified_not_needed"):
+            ledger = self.fixture()
+            self.complete(ledger, "R01", outcome)
+            self.assertEqual(validate_ledger(ledger), (55, 11))
+        for field in ("completed_at", "evidence", "checked", "finding", "limits"):
+            ledger = self.fixture()
+            self.complete(ledger, "R01")
+            ledger["tasks"]["R01"]["result"][field] = None
+            self.assert_invalid(ledger)
+
+    def test_protocol_or_timeout_alone_is_not_completion(self):
+        for outcome in ("protocol_written", "timed_out", "pending", "pass"):
+            ledger = self.fixture()
+            self.complete(ledger, "R01", outcome)
+            self.assert_invalid(ledger)
+
+    def test_completed_result_is_preserved_by_publication(self):
+        ledger = self.fixture()
+        self.complete(ledger, "R01")
+        ledger["tasks"]["R01"]["result"]["finding"] = "Rewritten conclusion."
+        self.assert_invalid(ledger)
+
+    def test_each_completion_has_one_matching_publication(self):
+        ledger = self.fixture()
+        publications = self.publications(ledger)
+        self.complete(ledger, "R01")
         with self.assertRaises(ValueError):
-            validate_ledger(ledger)
-
-    def test_published_completion_survives_ledger_history_truncation(self):
-        baseline = self.ledger()
-        advanced = copy.deepcopy(baseline)
-        self.complete(advanced, "G01")
-        publications = self.publication_fixture(advanced)
-        self.assertEqual(validate_published_progress(advanced, publications), (53, 2))
-        # Restoring the earlier ledger also truncates history and clears G01 evidence.
-        # Internal ledger validation alone accepts this backward publication.
-        self.assertEqual(validate_ledger(baseline), (52, 3))
-        with self.assertRaisesRegex(ValueError, "publication checkpoint"):
-            validate_published_progress(baseline, publications)
-
-    def test_progress_requires_corresponding_publication_append(self):
-        ledger = self.ledger()
-        publications = self.publication_fixture(ledger)
-        self.complete(ledger, "G01")
-        with self.assertRaisesRegex(ValueError, "publication checkpoint"):
             validate_published_progress(ledger, publications)
-        publications["checkpoints"].append(self.publication_fixture(ledger)["checkpoints"][-1])
-        self.assertEqual(validate_published_progress(ledger, publications), (53, 2))
+        self.assertEqual(validate_published_progress(ledger, self.publications(ledger)), (55, 11))
+        self.complete(ledger, "R02")
+        ledger["history"].pop(-2)
+        self.assert_invalid(ledger)
 
-    def test_missing_or_mismatched_publication_checkpoints_are_rejected(self):
-        ledger = self.ledger()
-        correct = self.publication_fixture(ledger)
-        invalid = [None, {}, dict(correct, schema=2), dict(correct, fixed_total=56),
-                   dict(correct, checkpoints=[]), dict(correct, checkpoints="invalid")]
-        mismatched = copy.deepcopy(correct)
-        mismatched["checkpoints"][0]["completed"][0] = "G01"
-        invalid.append(mismatched)
-        missing_field = copy.deepcopy(correct)
-        del missing_field["checkpoints"][0]["todo"]
-        invalid.append(missing_field)
-        for publications in invalid:
-            with self.subTest(publications=publications), self.assertRaises(ValueError):
-                validate_published_progress(ledger, publications)
+    def test_published_advance_cannot_be_rolled_back_even_with_truncated_ledger(self):
+        baseline = self.fixture()
+        advanced = self.fixture()
+        self.complete(advanced, "R01")
+        with self.assertRaises(ValueError):
+            validate_published_progress(baseline, self.publications(advanced))
 
-    def test_unpublished_substeps_do_not_need_new_count_checkpoints(self):
-        ledger = self.ledger()
-        publications = self.publication_fixture(ledger)
-        ledger["supplementary"].append({
-            "id": "test-only-substep", "parent": "G01", "status": "checking"})
-        self.assertEqual(validate_published_progress(ledger, publications), (52, 3))
+    def test_reopening_a_task_or_swapping_completed_ids_is_rejected(self):
+        ledger = self.fixture()
+        self.complete(ledger, "R01")
+        ledger["completed"].remove("R01")
+        ledger["pending"].append("R01")
+        ledger["tasks"]["R01"] = self.fixture()["tasks"]["R01"]
+        self.assert_invalid(ledger)
+
+    def test_malformed_publication_archives_are_rejected(self):
+        ledger = self.fixture()
+        good = self.publications(ledger)
+        for bad in (None, {}, dict(good, schema=1), dict(good, fixed_total=55),
+                    dict(good, checkpoints=[]), dict(good, checkpoints="invalid")):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                validate_published_progress(ledger, bad)
+
+    def test_scope_issues_are_unapproved_notes_not_untracked_execution(self):
+        ledger = self.fixture()
+        ledger["scope_issues"] = [{
+            "case": 2, "status": "unapproved", "reason": "A missing finite check.",
+            "proposed_tasks": [{"id": "extra", "question": "An omitted check?",
+                                "scope": "One finite observation."}],
+        }]
+        self.assertEqual(validate_ledger(ledger), (54, 12))
+        ledger["scope_issues"][0]["status"] = "checking"
+        self.assert_invalid(ledger)
+
+    def test_zero_without_explicit_decision_is_rejected(self):
+        ledger = self.zero()
+        for status in ("active", "paused", "complete", "awaiting_permission"):
+            ledger["research"]["status"] = status
+            self.assert_invalid(ledger)
+
+    def test_zero_may_stop_for_case_one_case_two_or_both(self):
+        for cases in ([1], [2], [1, 2]):
+            ledger = self.zero()
+            self.permission(ledger, cases)
+            self.assertEqual(validate_ledger(ledger), (66, 0))
+
+    def test_zero_permission_hold_cannot_run_or_claim_success(self):
+        ledger = self.zero()
+        self.permission(ledger, [2])
+        for status in ("active", "complete"):
+            ledger["research"]["status"] = status
+            self.assert_invalid(ledger)
+
+    def test_zero_requires_exact_additional_tasks_count_reason_and_question(self):
+        for field in ("cases", "reason", "additional_tasks", "permission_question", "evidence"):
+            ledger = self.zero()
+            self.permission(ledger, [2])
+            ledger["research"]["zero_decision"][field] = []
+            self.assert_invalid(ledger)
+        ledger = self.zero()
+        self.permission(ledger, [2])
+        ledger["research"]["zero_decision"]["requested_todo_increase"] = 2
+        self.assert_invalid(ledger)
+
+    def test_zero_supported_answer_requires_evidence_and_no_unapproved_work(self):
+        ledger = self.zero()
+        ledger["research"] = {
+            "status": "complete",
+            "zero_decision": {"kind": "supported", "evidence": [
+                self.definitions["R12"]["result"]], "conclusion": "Test-only supported answer."},
+        }
+        self.assertEqual(validate_ledger(ledger), (66, 0))
+        ledger["scope_issues"] = [{"case": 1, "status": "unapproved", "reason": "More work",
+                                 "proposed_tasks": [{"id": "extra", "question": "Why?",
+                                                     "scope": "A finite extra check."}]}]
+        self.assert_invalid(ledger)
+
+    def test_nonzero_cannot_claim_finished_analysis(self):
+        ledger = self.fixture()
+        ledger["research"]["status"] = "complete"
+        self.assert_invalid(ledger)
+
+    def test_final_coverage_cannot_close_before_its_eleven_input_tasks(self):
+        ledger = self.fixture()
+        self.complete(ledger, "R12")
+        self.assert_invalid(ledger)
+
+    def test_visible_header_note_and_each_of_twelve_rows_are_checked(self):
+        ledger = self.fixture()
+        hypothesis, note = self.visible(ledger)
+        validate_visible_progress(ledger, hypothesis, note)
+        for bad_hypothesis, bad_note in (
+                (hypothesis.replace("R02 | TODO", "R02 | DONE"), note),
+                (hypothesis.replace("R12 | TODO", "R13 | TODO"), note),
+                (hypothesis.replace(self.definitions["R04"]["question"], "Do unlimited work."), note),
+                (hypothesis, note.replace("TODO: 12", "TODO: 1")),
+                ("\n" + hypothesis, note)):
+            with self.assertRaises(ValueError):
+                validate_visible_progress(ledger, bad_hypothesis, bad_note)
+
+    def test_missing_result_file_is_not_live_evidence(self):
+        ledger = self.fixture()
+        self.complete(ledger, "R01")
+        with self.assertRaises(ValueError):
+            validate_evidence_files(ledger)
 
 
 if __name__ == "__main__":

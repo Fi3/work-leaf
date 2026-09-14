@@ -49,6 +49,80 @@ Codex benchmark generation uses the user's existing ChatGPT subscription, not AP
 or API credits. Before planning or launching a batch, read `docs/benchmark-operator-policy.md` and
 its study's frozen protocol. Preserve admitted runs and record all outcomes.
 
+### Mandatory shallow screening before expensive experiments
+
+The first line of `hypotesis.md` uses the user-approved finite task ledger:
+`DONE + TODO = TOTAL = 66`. Its source is
+`bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-CHECKLIST.json`.
+The 2026-09-14 one-time correction preserves all 54 completed historical records and replaces
+the misleading G03 aggregate with twelve explicitly bounded tasks, R01–R12. Definitions, budgets
+and completion criteria are frozen in `PROGRESS-TASK-SCOPE-20260914.json` and the linked approved
+plan beside the ledger. These are tasks, not independent hypotheses or a percentage of effort.
+DONE never decreases; TODO never increases without subsequent explicit user approval.
+No added, split, replaced, reopened or broadened task; no hidden supplementary experiment.
+A listed task closes only with its saved dated result, evidence and honest terminal outcome.
+Negative, inconclusive and failed-setup results finish bounded checks, not scientific proof.
+New necessary work is an unapproved scope issue, not an execution queue.
+**At zero TODO, stop.** Report a supported answer, or explicitly state case (1) additional work
+beyond the list and/or case (2) an incorrect initial checklist; name the exact proposed tasks/count
+and ask the user before increasing TODO or executing them. Zero alone is not scientific success.
+Only subsequent explicit user approval permits a scope/count extension; preserve the zero checkpoint.
+Before every progress report or commit affecting this ledger, run
+`python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_counter.py`
+and require success. The guard checks declarations and evidence files, not scientific truth.
+`PROGRESS-PUBLICATION-HISTORY.json` retains the old 52/3 and 54/1 checkpoints plus the approved
+54/12 correction. Every completion appends a matching checkpoint, including its result declaration.
+Never rewrite or truncate previous checkpoints. Publication validation rejects rollback even when
+the live history is truncated; the pinned task contract also rejects same-ID scope substitution.
+Research remains paused after tracker repair until the user restarts it.
+
+The mechanism-research objective is to explain the historical ~50% result as fast as evidence
+permits, not to complete candidates in ID order. Maintain a live most-promising ranking near the
+top of `hypotesis.md`, with evidence, potential explanatory reach, next cheap check and stop gate.
+Re-rank after each material finding. Promote a promising joint cause immediately when it offers
+more explanatory value than unfinished singles; no fixed candidate order or single-factor-first
+prerequisite applies. A joint screen must declare its whole factor set and preserve non-targets.
+Use short, representative checks to classify promise; park weak or broken approaches promptly.
+Do not spend a night extending a dead end or building machinery before a mechanism signal.
+The active goal and `ephemeral-note.md` preserve decisions, activity, costs and reasons to pivot.
+This adaptive selection authority does not waive subscription-only use, no extra ordinary controls,
+frozen admitted outcomes, prospective budgets or benchmark-only isolation of interventions.
+
+Before expanding a hypothesis into long benchmarks or substantial experimental infrastructure,
+use the smallest representative check that can expose a broken setup or an unpromising mechanism.
+Read prior candidate results first; do not rename and repeat an unsuccessful screen without a
+specific new distinction. Freeze the hypothesis, single changed factor or declared joint-factor set,
+predicted behavior,
+non-target invariants, observation count, time/usage budgets, and stop/advance criteria before
+generation. Test relevant rejection, retry and stale-state paths, not only a happy-path smoke.
+A working harness is not a positive mechanism result. Escalation requires an observed mechanism
+signal relevant to the question, not merely successful execution or a favorable-looking total.
+An inconclusive shallow screen is not proof of zero effect; preserve it and deprioritize or seek
+direction instead of automatically extending, replacing, or repairing-and-rerunning whole batches.
+Budget ceilings are stopping conditions, not targets to spend. Preserve partial/failed outcomes and
+accounting tails. Keep screen, harness qualification and full-workflow causal confirmation distinct.
+Follow `docs/benchmark-operator-policy.md` for admission and monitoring details. This policy does not
+authorize new runs or controls, alter the approved three-workflow concurrency rule, or permit
+injecting operator instructions into frozen benchmark-agent prompts.
+
+For token-mechanism investigations, read root `hypotesis.md` and `ephemeral-note.md` before resuming.
+`hypotesis.md` is the primary hypothesis register: update the individual and joint entries when a
+check starts, finishes, fails or stops, and before reporting status. Include what/how tested,
+observed direction and limits, exact evidence, dated last check and truthful current activity.
+Preserve prior results; proposals, local checks, failed experiments and causal confirmation are
+different states. Record new hypotheses and their relation to already-tested factors there.
+Maintain its fixed-scope done/to-do counts and explicit remaining-check list with every closure.
+The very first line of `hypotesis.md` must show the absolute DONE / TODO counts. Immediately below
+it, show the actual pending check and current verified result. Keep this opening block current;
+priorities, explanations and historical detail belong below it, never before it.
+TODO contains ONLY selected, necessary pending checks. Completed negative/inconclusive/deprioritized
+screens are DONE; proposals and remaining scientific uncertainties stay outside TODO. Do not reopen
+a screen merely because its effect has not been proved zero; require a concrete new reason and
+explicitly record any selected scope extension. Distinguish overlapping register IDs from work items.
+Preserve cumulative completed checks; flag invalidated conclusions and genuinely new scope openly.
+Do not mark exhaustive causal coverage complete merely because experiments ran or returned null:
+the register's measurement, boundary and joint-residual closure requirements must be satisfied.
+
 ## Documentation writing rule
 When updating documentation anywhere in the repo, including any `README.md` and anything under `./docs`,
 agents must describe the system in its current resulting state, not the fact that it was changed.
