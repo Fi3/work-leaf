@@ -1,0 +1,225 @@
+{
+  "at": "2026-09-14T21:04:36+00:00",
+  "scope": "Input-only event alignment; no native usage re-accounting",
+  "command": "python3 - <<'PY'\nimport json,hashlib\nfrom pathlib import Path\nfiles={'reference':Path('/home/user/.codex/sessions/2026/09/13/rollout-2026-09-13T01-27-10-01a097f2-3f03-7463-9756-4e849ed94e8d.jsonl'),'P03':Path('/home/user/.codex/sessions/2026/09/14/rollout-2026-09-14T22-34-08-01a0a1a0-8b34-7d32-b01f-e9038b7188b9.jsonl'),'P04':Path('/home/user/.codex/sessions/2026/09/14/rollout-2026-09-14T22-34-08-01a0a1a0-8b2a-7e02-a32a-46ecf0a927c2.jsonl')};out={}\nfor name,path in files.items():\n current=0;items=[]\n for lineno,line in enumerate(path.read_text().splitlines(),1):\n  e=json.loads(line);p=e.get('payload',{})\n  if e['type']=='event_msg' and p.get('type')=='task_started':\n   current+=1;items.append({'line':lineno,'turn_index':current,'kind':'start','turn_id':p.get('turn_id')})\n  if e['type']=='response_item' and p.get('role')=='developer':\n   txt='\\n'.join(x.get('text','') for x in p['content']);items.append({'line':lineno,'turn_index':current,'kind':'developer','bytes':len(txt.encode()),'sha256':hashlib.sha256(txt.encode()).hexdigest(),'prefix':txt[:80]})\n out[name]=items\nprint(json.dumps(out,indent=2))\nPY",
+  "observations": {
+    "reference": [
+      {
+        "line": 2,
+        "turn_index": 1,
+        "kind": "start",
+        "turn_id": "01a097f2-3f5c-7b30-aec4-b5569427d593"
+      },
+      {
+        "line": 3,
+        "turn_index": 1,
+        "kind": "developer",
+        "bytes": 7817,
+        "sha256": "077f23d17df246409154a9190ab8d10ce56f12e90ec7ef682cce47ff2da2ffe7",
+        "prefix": "<skills_instructions>\n## Skills\nA skill is a set of local instructions to follow"
+      },
+      {
+        "line": 129,
+        "turn_index": 2,
+        "kind": "start",
+        "turn_id": "01a097f9-232c-7231-9fb4-b23001148b88"
+      },
+      {
+        "line": 190,
+        "turn_index": 3,
+        "kind": "start",
+        "turn_id": "01a097fc-156a-7492-ace7-6c228444aea6"
+      },
+      {
+        "line": 202,
+        "turn_index": 4,
+        "kind": "start",
+        "turn_id": "01a097fe-5b3a-7230-bbd5-8ef117b87072"
+      },
+      {
+        "line": 214,
+        "turn_index": 5,
+        "kind": "start",
+        "turn_id": "01a097fe-ae53-7351-8dd1-1701672a7f7b"
+      },
+      {
+        "line": 215,
+        "turn_index": 5,
+        "kind": "developer",
+        "bytes": 5038,
+        "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0",
+        "prefix": "<skills_instructions>\n## Skills\nA skill is a set of local instructions to follow"
+      },
+      {
+        "line": 228,
+        "turn_index": 6,
+        "kind": "start",
+        "turn_id": "01a09802-363e-7101-97d8-419f327adfa3"
+      },
+      {
+        "line": 229,
+        "turn_index": 6,
+        "kind": "developer",
+        "bytes": 5813,
+        "sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d",
+        "prefix": "<skills_instructions>\n## Skills\nA skill is a set of local instructions to follow"
+      },
+      {
+        "line": 312,
+        "turn_index": 7,
+        "kind": "start",
+        "turn_id": "01a09803-dba2-7fd0-8323-67ee35507b97"
+      },
+      {
+        "line": 326,
+        "turn_index": 8,
+        "kind": "start",
+        "turn_id": "01a09804-4b69-7513-9461-fed699dee07a"
+      },
+      {
+        "line": 327,
+        "turn_index": 8,
+        "kind": "developer",
+        "bytes": 5038,
+        "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0",
+        "prefix": "<skills_instructions>\n## Skills\nA skill is a set of local instructions to follow"
+      },
+      {
+        "line": 355,
+        "turn_index": 9,
+        "kind": "start",
+        "turn_id": "01a09804-9bc0-7d63-8023-1642242e2863"
+      },
+      {
+        "line": 367,
+        "turn_index": 10,
+        "kind": "start",
+        "turn_id": "01a09804-c1dc-7230-8177-3f835a3ab903"
+      }
+    ],
+    "P03": [
+      {
+        "line": 2,
+        "turn_index": 1,
+        "kind": "start",
+        "turn_id": "01a0a1a0-8baa-7d40-b276-6c1555e95ac0"
+      },
+      {
+        "line": 3,
+        "turn_index": 1,
+        "kind": "developer",
+        "bytes": 7817,
+        "sha256": "077f23d17df246409154a9190ab8d10ce56f12e90ec7ef682cce47ff2da2ffe7",
+        "prefix": "<skills_instructions>\n## Skills\nA skill is a set of local instructions to follow"
+      },
+      {
+        "line": 149,
+        "turn_index": 2,
+        "kind": "start",
+        "turn_id": "01a0a1a9-424a-7821-ace7-8d31a96cea1c"
+      },
+      {
+        "line": 150,
+        "turn_index": 2,
+        "kind": "developer",
+        "bytes": 5038,
+        "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0",
+        "prefix": "<skills_instructions>\n## Skills\nA skill is a set of local instructions to follow"
+      },
+      {
+        "line": 204,
+        "turn_index": 3,
+        "kind": "start",
+        "turn_id": "01a0a1ac-8620-7320-8ed3-4af5c58fa94f"
+      },
+      {
+        "line": 216,
+        "turn_index": 4,
+        "kind": "start",
+        "turn_id": "01a0a1ac-eb66-7772-b7e6-13bb1e538452"
+      },
+      {
+        "line": 228,
+        "turn_index": 5,
+        "kind": "start",
+        "turn_id": "01a0a1ad-6f4a-7f60-8c97-41103a5eeb16"
+      },
+      {
+        "line": 240,
+        "turn_index": 6,
+        "kind": "start",
+        "turn_id": "01a0a1ad-c630-7810-afa0-0cd393457993"
+      }
+    ],
+    "P04": [
+      {
+        "line": 2,
+        "turn_index": 1,
+        "kind": "start",
+        "turn_id": "01a0a1a0-8bac-7001-bf96-637282bdf299"
+      },
+      {
+        "line": 3,
+        "turn_index": 1,
+        "kind": "developer",
+        "bytes": 7817,
+        "sha256": "077f23d17df246409154a9190ab8d10ce56f12e90ec7ef682cce47ff2da2ffe7",
+        "prefix": "<skills_instructions>\n## Skills\nA skill is a set of local instructions to follow"
+      },
+      {
+        "line": 185,
+        "turn_index": 2,
+        "kind": "start",
+        "turn_id": "01a0a1a6-23d7-79b0-88df-5167dafddc9f"
+      },
+      {
+        "line": 186,
+        "turn_index": 2,
+        "kind": "developer",
+        "bytes": 5038,
+        "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0",
+        "prefix": "<skills_instructions>\n## Skills\nA skill is a set of local instructions to follow"
+      },
+      {
+        "line": 199,
+        "turn_index": 3,
+        "kind": "start",
+        "turn_id": "01a0a1a6-7589-7932-a64f-84e110633f9e"
+      },
+      {
+        "line": 200,
+        "turn_index": 3,
+        "kind": "developer",
+        "bytes": 5813,
+        "sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d",
+        "prefix": "<skills_instructions>\n## Skills\nA skill is a set of local instructions to follow"
+      },
+      {
+        "line": 259,
+        "turn_index": 4,
+        "kind": "start",
+        "turn_id": "01a0a1aa-a116-7330-8b14-17ba9c0871a8"
+      },
+      {
+        "line": 318,
+        "turn_index": 5,
+        "kind": "start",
+        "turn_id": "01a0a1ad-48aa-7790-9804-9bb2d7bd2e03"
+      },
+      {
+        "line": 319,
+        "turn_index": 5,
+        "kind": "developer",
+        "bytes": 5038,
+        "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0",
+        "prefix": "<skills_instructions>\n## Skills\nA skill is a set of local instructions to follow"
+      },
+      {
+        "line": 332,
+        "turn_index": 6,
+        "kind": "start",
+        "turn_id": "01a0a1ad-ca65-7b11-b02e-8df025d98288"
+      }
+    ]
+  }
+}

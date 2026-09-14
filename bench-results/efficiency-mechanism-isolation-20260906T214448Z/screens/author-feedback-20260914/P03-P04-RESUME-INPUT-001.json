@@ -1,0 +1,194 @@
+{
+  "scope": "Live input check at 2026-09-14T20:41:11+00:00; not completed workflow accounting",
+  "command": "python3 - <<'PY'\nimport sys,json,hashlib,difflib\nfrom pathlib import Path\ns=Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z');d=s/'screens/author-feedback-20260914';sys.path.insert(0,str(s/'screens/author-inverse-20260914'));import resource_sample as r\nref=Path('/home/user/.codex/sessions/2026/09/13/rollout-2026-09-13T01-27-10-01a097f2-3f03-7463-9756-4e849ed94e8d.jsonl');rr=r.events(ref)\nselect=lambda rows:[x['payload']['content'] for x in rows if x['type']=='response_item' and x['payload'].get('role')=='developer']\nrd=select(rr);canon=lambda c:'\\n'.join(x.get('text','') for x in c).encode();out=[]\nfor i in ['P03','P04']:\n sample=r.sample_arm(d/i,Path('/home/user/.codex/sessions/2026/09/14'))\n for p in sample['native_paths']:\n  rows=r.events(p);ds=select(rows);contexts=[x['payload'] for x in rows if x['type']=='turn_context']\n  out.append({'id':i,'native_path':p,'scope':'live actual native input qualification only; not final usage audit','native_context_count':len(contexts),'reference_developer_profiles':[{'bytes':len(canon(c)),'sha256':hashlib.sha256(canon(c)).hexdigest()} for c in rd], 'actual_developers':[{'bytes':len(canon(c)),'sha256':hashlib.sha256(canon(c)).hexdigest(),'matches_reference_initial':c==rd[0],'matches_reference_resume':c in rd[1:]} for c in ds],'context_core_differences':[{k:c.get(k) for k in ('model','effort','approval_policy','sandbox_policy','permission_profile','comp_hash')} for c in contexts]})\nprint(json.dumps(out,indent=2))\nPY",
+  "observations": [
+    {
+      "id": "P03",
+      "native_path": "/home/user/.codex/sessions/2026/09/14/rollout-2026-09-14T22-34-08-01a0a1a0-8b34-7d32-b01f-e9038b7188b9.jsonl",
+      "scope": "live actual native input qualification only; not final usage audit",
+      "native_context_count": 1,
+      "reference_developer_profiles": [
+        {
+          "bytes": 7817,
+          "sha256": "077f23d17df246409154a9190ab8d10ce56f12e90ec7ef682cce47ff2da2ffe7"
+        },
+        {
+          "bytes": 5038,
+          "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+        },
+        {
+          "bytes": 5813,
+          "sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+        },
+        {
+          "bytes": 5038,
+          "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+        }
+      ],
+      "actual_developers": [
+        {
+          "bytes": 7817,
+          "sha256": "077f23d17df246409154a9190ab8d10ce56f12e90ec7ef682cce47ff2da2ffe7",
+          "matches_reference_initial": true,
+          "matches_reference_resume": false
+        }
+      ],
+      "context_core_differences": [
+        {
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "permission_profile": {
+            "type": "managed",
+            "file_system": {
+              "type": "restricted",
+              "entries": [
+                {
+                  "path": {
+                    "type": "special",
+                    "value": {
+                      "kind": "root"
+                    }
+                  },
+                  "access": "read"
+                }
+              ]
+            },
+            "network": "restricted"
+          },
+          "comp_hash": "2911"
+        }
+      ]
+    },
+    {
+      "id": "P04",
+      "native_path": "/home/user/.codex/sessions/2026/09/14/rollout-2026-09-14T22-34-08-01a0a1a0-8b2a-7e02-a32a-46ecf0a927c2.jsonl",
+      "scope": "live actual native input qualification only; not final usage audit",
+      "native_context_count": 3,
+      "reference_developer_profiles": [
+        {
+          "bytes": 7817,
+          "sha256": "077f23d17df246409154a9190ab8d10ce56f12e90ec7ef682cce47ff2da2ffe7"
+        },
+        {
+          "bytes": 5038,
+          "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+        },
+        {
+          "bytes": 5813,
+          "sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+        },
+        {
+          "bytes": 5038,
+          "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+        }
+      ],
+      "actual_developers": [
+        {
+          "bytes": 7817,
+          "sha256": "077f23d17df246409154a9190ab8d10ce56f12e90ec7ef682cce47ff2da2ffe7",
+          "matches_reference_initial": true,
+          "matches_reference_resume": false
+        },
+        {
+          "bytes": 5038,
+          "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0",
+          "matches_reference_initial": false,
+          "matches_reference_resume": true
+        },
+        {
+          "bytes": 5813,
+          "sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d",
+          "matches_reference_initial": false,
+          "matches_reference_resume": true
+        }
+      ],
+      "context_core_differences": [
+        {
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "permission_profile": {
+            "type": "managed",
+            "file_system": {
+              "type": "restricted",
+              "entries": [
+                {
+                  "path": {
+                    "type": "special",
+                    "value": {
+                      "kind": "root"
+                    }
+                  },
+                  "access": "read"
+                }
+              ]
+            },
+            "network": "restricted"
+          },
+          "comp_hash": "2911"
+        },
+        {
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "permission_profile": {
+            "type": "managed",
+            "file_system": {
+              "type": "restricted",
+              "entries": [
+                {
+                  "path": {
+                    "type": "special",
+                    "value": {
+                      "kind": "root"
+                    }
+                  },
+                  "access": "read"
+                }
+              ]
+            },
+            "network": "restricted"
+          },
+          "comp_hash": "2911"
+        },
+        {
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "permission_profile": {
+            "type": "managed",
+            "file_system": {
+              "type": "restricted",
+              "entries": [
+                {
+                  "path": {
+                    "type": "special",
+                    "value": {
+                      "kind": "root"
+                    }
+                  },
+                  "access": "read"
+                }
+              ]
+            },
+            "network": "restricted"
+          },
+          "comp_hash": "2911"
+        }
+      ]
+    }
+  ]
+}

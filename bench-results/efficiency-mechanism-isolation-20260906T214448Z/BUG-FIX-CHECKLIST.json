@@ -18,8 +18,13 @@
       "event": "fixed",
       "id": "BUG001",
       "at": "2026-09-14T19:59:52+00:00",
-      "reproduction": ["bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/BUG001-RED.txt"],
-      "verification": ["bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/BUG001-GREEN.txt", "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/INPUT-VERIFIER-CORRECTION-002.json"],
+      "reproduction": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/BUG001-RED.txt"
+      ],
+      "verification": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/BUG001-GREEN.txt",
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/INPUT-VERIFIER-CORRECTION-002.json"
+      ],
       "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/BUG001-RESULT.md"
     },
     {
@@ -29,10 +34,22 @@
       "title": "Allow the actual-publication regression to accept legitimate completed-task advances",
       "related_task": "P01",
       "already_accounted": false,
-      "evidence": ["bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_end_to_end.py"]
+      "evidence": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_end_to_end.py"
+      ]
     },
-    {"event": "fixed", "id": "BUG002", "at": "2026-09-14T20:01:35+00:00", "reproduction": ["bench-results/efficiency-mechanism-isolation-20260906T214448Z/BUG002-RED.txt"], "verification": ["bench-results/efficiency-mechanism-isolation-20260906T214448Z/BUG002-GREEN.txt"], "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/BUG002-RESULT.md"}
-    ,
+    {
+      "event": "fixed",
+      "id": "BUG002",
+      "at": "2026-09-14T20:01:35+00:00",
+      "reproduction": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/BUG002-RED.txt"
+      ],
+      "verification": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/BUG002-GREEN.txt"
+      ],
+      "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/BUG002-RESULT.md"
+    },
     {
       "event": "discovered",
       "id": "BUG003",
@@ -40,7 +57,74 @@
       "title": "Recognize native resume after exec options without changing its input",
       "related_task": "P02",
       "already_accounted": false,
-      "evidence": ["bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/private_catalog.py", "bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/drivers/host_custody.py"]
+      "evidence": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/private_catalog.py",
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/drivers/host_custody.py"
+      ]
+    },
+    {
+      "event": "fixed",
+      "id": "BUG003",
+      "at": "2026-09-14T20:45:30+00:00",
+      "reproduction": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P02/BUG003-RED.txt"
+      ],
+      "verification": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P02/BUG003-GREEN.txt",
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P02/BUG003-REAL-RESUME.json"
+      ],
+      "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P02/BUG003-RESULT.md"
+    },
+    {
+      "event": "discovered",
+      "id": "BUG004",
+      "at": "2026-09-14T20:51:33+00:00",
+      "title": "Separate frozen-admission bookkeeping from additional experimental preparation",
+      "related_task": "P03",
+      "already_accounted": false,
+      "evidence": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-CHECKLIST.json",
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P03/ADMISSION.json",
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P04/ADMISSION.json"
+      ]
+    },
+    {
+      "event": "fixed",
+      "id": "BUG004",
+      "at": "2026-09-14T20:54:21+00:00",
+      "reproduction": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/BUG004-RED.txt"
+      ],
+      "verification": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/BUG004-GREEN.txt",
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/ADMISSION-BOOKKEEPING.json"
+      ],
+      "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/BUG004-RESULT.md"
+    },
+    {
+      "event": "discovered",
+      "id": "BUG005",
+      "at": "2026-09-14T21:04:36+00:00",
+      "title": "Qualify developer catalog at the actual outer-turn boundary instead of a pooled profile set",
+      "related_task": "P10",
+      "already_accounted": false,
+      "evidence": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P10/FINAL-INPUT-SOURCES.json",
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P03-P04-RESUME-INPUT-001.json"
+      ]
+    },
+    {
+      "event": "fixed",
+      "id": "BUG005",
+      "at": "2026-09-14T21:07:45+00:00",
+      "reproduction": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P10/BUG005-RED.txt"
+      ],
+      "verification": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P10/BUG005-GREEN.txt",
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P10/CATALOG-BOUNDARY-QUALIFICATION.json"
+      ],
+      "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P10/BUG005-RESULT.md"
     }
   ]
 }

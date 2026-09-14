@@ -1,0 +1,98 @@
+Extracted pre-fix pooled-profile algorithm; expected boundary tests fail.
+FFF.FFFF
+======================================================================
+FAIL: test_catalog_from_later_stage_cannot_qualify_author (__main__.CatalogBoundaryTests.test_catalog_from_later_stage_cannot_qualify_author)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P10/test_catalog_boundary.py", line 50, in test_catalog_from_later_stage_cannot_qualify_author
+    self.assertFalse(compare_catalog_boundaries(
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        reference, actual, ["r1", "r2"], ["a1", "a2"]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )["matches"])
+    ^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_duplicate_requested_ids_fail_closed (__main__.CatalogBoundaryTests.test_duplicate_requested_ids_fail_closed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P10/test_catalog_boundary.py", line 77, in test_duplicate_requested_ids_fail_closed
+    self.assertFalse(compare_catalog_boundaries(
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rows, rows, ["one", "one"], ["one", "one"]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )["matches"])
+    ^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_extra_actual_turn_requires_an_explicit_reference (__main__.CatalogBoundaryTests.test_extra_actual_turn_requires_an_explicit_reference)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P10/test_catalog_boundary.py", line 71, in test_extra_actual_turn_requires_an_explicit_reference
+    self.assertFalse(compare_catalog_boundaries(
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        reference, actual, ["r1"], ["a1", "a2"]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )["matches"])
+    ^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_missing_requested_turn_fails_closed (__main__.CatalogBoundaryTests.test_missing_requested_turn_fails_closed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P10/test_catalog_boundary.py", line 64, in test_missing_requested_turn_fails_closed
+    self.assertFalse(compare_catalog_boundaries(
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rows, rows, ["one", "absent"], ["one"]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )["matches"])
+    ^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_profile_missing_before_request_fails_closed (__main__.CatalogBoundaryTests.test_profile_missing_before_request_fails_closed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P10/test_catalog_boundary.py", line 83, in test_profile_missing_before_request_fails_closed
+    self.assertFalse(compare_catalog_boundaries(
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rows, rows, ["one"], ["one"]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )["matches"])
+    ^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_same_profiles_at_earlier_boundary_are_rejected (__main__.CatalogBoundaryTests.test_same_profiles_at_earlier_boundary_are_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P10/test_catalog_boundary.py", line 40, in test_same_profiles_at_earlier_boundary_are_rejected
+    self.assertFalse(compare_catalog_boundaries(
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        reference, actual, ["r1", "r2", "r3"], ["a1", "a2", "a3"]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )["matches"])
+    ^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_source_order_is_required (__main__.CatalogBoundaryTests.test_source_order_is_required)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P10/test_catalog_boundary.py", line 89, in test_source_order_is_required
+    self.assertFalse(compare_catalog_boundaries(
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rows, rows, ["two", "one"], ["one", "two"]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )["matches"])
+    ^^^^^^^^^^^^^
+AssertionError: True is not false
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.001s
+
+FAILED (failures=7)
+

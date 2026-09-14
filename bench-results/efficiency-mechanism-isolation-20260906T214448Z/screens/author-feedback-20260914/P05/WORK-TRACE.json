@@ -1,0 +1,1174 @@
+{
+  "scope": "Closed public work extraction; no new native usage audit",
+  "command": "python3 - <<'PY'\nimport json,hashlib\nfrom pathlib import Path\ns=Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z');d=s/'screens/author-feedback-20260914'\na=json.loads((d/'P10/NATIVE-AUDIT.json').read_text());out=[]\nfor run in a['runs']:\n arm=run.get('arm');print('AUDIT RUN KEYS',list(run)) if not arm else None\nfor arm in ['P03','P04']:\n host=d/arm/'host';turns=[]\n for p in sorted(host.glob('invocation-*')):\n  events=[json.loads(x) for x in (p/'stdout.jsonl').read_text().splitlines() if x.strip()];tools=[]\n  for n,e in enumerate(events,1):\n   item=e.get('item',{})\n   if item.get('type') not in ('command_execution','mcp_tool_call','web_search') or e.get('type') != 'item.completed':continue\n   tools.append({'line':n,'event':e['type'],'type':item['type'],'command':item.get('command','')[:220],'exit_code':item.get('exit_code'),'status':item.get('status'),'output_bytes':len(item.get('aggregated_output','').encode())})\n  f=p/'final.txt';prompt=(p/'prompt.txt').read_text()\n  turns.append({'invocation':p.name,'prompt_bytes':len(prompt.encode()),'prompt_head':prompt[:500],'prompt_tail':prompt[-650:] if p.name!='invocation-0001' else None,'final_first_line':f.read_text().splitlines()[0] if f.exists() else None,'exit':{k:v for k,v in json.loads((p/'exit.json').read_text()).items() if k!='argv'},'public_tools':tools})\n operations=[]\n for p in sorted(host.glob('operation-*')):\n  receipt=json.loads((p/'receipt.json').read_text());o={'operation':p.name,'receipt':{k:v for k,v in receipt.items() if k in ['commit','paths','reason','status','exit_code','command','custody_errors','pending_paths','before_head']}}\n  for name in ['stdout.txt','stderr.txt']:\n   q=p/name\n   if q.exists():\n    txt=q.read_text();o[name+'_last']=txt[-1600:];o[name+'_sha256']=hashlib.sha256(q.read_bytes()).hexdigest()\n  operations.append(o)\n out.append({'arm':arm,'turns':turns,'operations':operations,'result':{k:v for k,v in json.loads((host/'result.json').read_text()).items() if k in ['initial_head','final_head','accepted_commits','completed','pending_changes','clean','errors','unprocessed_replies']}})\nprint(json.dumps(out,indent=2))\nPY",
+  "observations": [
+    {
+      "arm": "P03",
+      "turns": [
+        {
+          "invocation": "invocation-0001",
+          "prompt_bytes": 4128,
+          "prompt_head": "You are running as a normal direct coding agent in this repository.\n\nRequest 1:\nadd vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select\n\nWork directly in the checkout using the repository's normal AGENTS.md instructions.\nDo not use Work Leaf orchestrator directives. Do not create or use extra Git worktrees.\nImplement the feature with focused tests through the stan",
+          "prompt_tail": null,
+          "final_first_line": "@standalone edit add visual selection, yank clipboard, and UI harness coverage",
+          "exit": {
+            "exit_code": 0,
+            "timed_out": false,
+            "cancelled_signal": null,
+            "duration_seconds": 571.0774133839877
+          },
+          "public_tools": [
+            {
+              "line": 5,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc 'pwd && rg --files'",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 868
+            },
+            {
+              "line": 7,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,240p' docs/architecture.md\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 14327
+            },
+            {
+              "line": 9,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc 'git status --short'",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 0
+            },
+            {
+              "line": 12,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '241,520p' docs/architecture.md\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 11912
+            },
+            {
+              "line": 14,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,260p' src/ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 6157
+            },
+            {
+              "line": 16,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,260p' src/ui_harness.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 9574
+            },
+            {
+              "line": 18,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,260p' tests/ui_harness.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 7790
+            },
+            {
+              "line": 21,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '260,620p' src/ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 13969
+            },
+            {
+              "line": 23,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '260,620p' src/ui_harness.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 11827
+            },
+            {
+              "line": 26,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,260p' tests/terminal_ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 8806
+            },
+            {
+              "line": 27,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '260,620p' tests/ui_harness.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 8170
+            },
+            {
+              "line": 30,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '620,1120p' src/ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 16890
+            },
+            {
+              "line": 32,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,320p' src/terminal_app.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 8660
+            },
+            {
+              "line": 34,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '260,620p' tests/terminal_ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 1948
+            },
+            {
+              "line": 36,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc 'rg \"UiMode|UiKey|handle_key|render_screen_with_cursors|right_content|CHAT_PROMPT|clipboard|copy|yank|Visual|Mouse|CtrlW\" src tests -n'",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 20913
+            },
+            {
+              "line": 39,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1100,1320p' src/ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 6748
+            },
+            {
+              "line": 42,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1180,1225p' src/cli.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 1417
+            },
+            {
+              "line": 43,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '440,980p' src/terminal_app.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 19233
+            },
+            {
+              "line": 45,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,90p' src/lib.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 1706
+            },
+            {
+              "line": 48,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '320,460p' src/terminal_app.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 4069
+            },
+            {
+              "line": 50,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '980,1090p' src/terminal_app.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 3152
+            },
+            {
+              "line": 52,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc 'rg \"mode=|focus=|visual|status_line|render_status_line|clipboard|copied|yank\" tests src -n'",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 1621
+            },
+            {
+              "line": 54,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,520p' tests/terminal_app.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 17245
+            },
+            {
+              "line": 56,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,220p' Cargo.toml\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 454
+            },
+            {
+              "line": 58,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc 'rg \"ui_action_text|UiAction::\" -n src tests'",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 1011
+            },
+            {
+              "line": 60,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1288,1308p' src/cli.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 630
+            },
+            {
+              "line": 62,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"rg \\\"pub struct Cell\\\" ~/.cargo/registry/src -g 'buffer.rs' -n | head\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 110
+            },
+            {
+              "line": 64,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,80p' /home/user/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tui-0.19.0/src/buffer.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 1774
+            }
+          ]
+        },
+        {
+          "invocation": "invocation-0002",
+          "prompt_bytes": 238,
+          "prompt_head": "Host proposal rejected: old block absent or ambiguous in declared range. No success is claimed for the rejected operation. Previously accepted paths in this reply: none. Inspect the actual source and submit a corrected complete operation.",
+          "prompt_tail": "Host proposal rejected: old block absent or ambiguous in declared range. No success is claimed for the rejected operation. Previously accepted paths in this reply: none. Inspect the actual source and submit a corrected complete operation.",
+          "final_first_line": "@standalone edit add vim visual selection with yanks and focused ui harness tests",
+          "exit": {
+            "exit_code": 0,
+            "timed_out": false,
+            "cancelled_signal": null,
+            "duration_seconds": 213.81218492705375
+          },
+          "public_tools": [
+            {
+              "line": 7,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/ui.rs | sed -n '1,220p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 6773
+            },
+            {
+              "line": 8,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/ui_harness.rs | sed -n '1,260p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 11394
+            },
+            {
+              "line": 9,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/ui.rs | sed -n '300,760p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 21140
+            },
+            {
+              "line": 11,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/terminal_app.rs | sed -n '470,700p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 10699
+            },
+            {
+              "line": 13,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/ui.rs | sed -n '1145,1345p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 6812
+            },
+            {
+              "line": 15,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/ui.rs | sed -n '760,1145p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 15358
+            },
+            {
+              "line": 17,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/ui_harness.rs | sed -n '400,600p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 8042
+            },
+            {
+              "line": 19,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/terminal_app.rs | sed -n '780,1080p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 12156
+            },
+            {
+              "line": 21,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba tests/ui_harness.rs | sed -n '1,120p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 4535
+            }
+          ]
+        },
+        {
+          "invocation": "invocation-0003",
+          "prompt_bytes": 165,
+          "prompt_head": "Host accepted files: src/ui.rs, src/ui_harness.rs, src/terminal_app.rs, src/cli.rs, tests/ui_harness.rs. Each accepted edit has its provisional commit already saved.",
+          "prompt_tail": "Host accepted files: src/ui.rs, src/ui_harness.rs, src/terminal_app.rs, src/cli.rs, tests/ui_harness.rs. Each accepted edit has its provisional commit already saved.",
+          "final_first_line": "@standalone run target -- cargo test --test ui_harness",
+          "exit": {
+            "exit_code": 0,
+            "timed_out": false,
+            "cancelled_signal": null,
+            "duration_seconds": 19.689310437068343
+          },
+          "public_tools": []
+        },
+        {
+          "invocation": "invocation-0004",
+          "prompt_bytes": 4007,
+          "prompt_head": "Host command completed.\ncommand: cargo test --test ui_harness\nstatus: 101\nstdout:\n\nrunning 31 tests\ntest scripted_harness_arrow_keys_edit_focused_chat_without_switching_to_command ... ok\ntest scripted_harness_arrow_keys_move_left_pane_selection_like_j_k ... ok\ntest scripted_harness_arrow_keys_recall_chat_history ... ok\ntest scripted_harness_bytewise_arrow_keys_edit_focused_chat_without_switching_to_command ... ok\ntest scripted_harness_bytewise_prompt_arrow_keys_edit_without_leaving_prompt ... ok",
+          "prompt_tail": "1.13.3\n   Compiling itoa v1.0.18\n   Compiling cassowary v0.3.0\n   Compiling bitflags v1.3.2\n   Compiling nix v0.31.3\n   Compiling utf8parse v0.2.2\n   Compiling unicode-width v0.1.14\n   Compiling unicode-width v0.2.2\n   Compiling log v0.4.32\n   Compiling tui v0.19.0\n   Compiling syn v2.0.117\n   Compiling serde_derive v1.0.228\n   Compiling rustyline v18.0.0\n   Compiling work-leaf v0.1.0 (/tmp/wl-author-feedback-screens-20260914.xn5zxE/P03)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.18s\n     Running tests/ui_harness.rs (target/debug/deps/ui_harness-d0c1af5448c0db63)\nerror: test failed, to rerun pass `--test ui_harness`\n",
+          "final_first_line": "@standalone edit widen visual-line harness selection to include the next agent row",
+          "exit": {
+            "exit_code": 0,
+            "timed_out": false,
+            "cancelled_signal": null,
+            "duration_seconds": 33.80929801904131
+          },
+          "public_tools": []
+        },
+        {
+          "invocation": "invocation-0005",
+          "prompt_bytes": 102,
+          "prompt_head": "Host accepted files: tests/ui_harness.rs. Each accepted edit has its provisional commit already saved.",
+          "prompt_tail": "Host accepted files: tests/ui_harness.rs. Each accepted edit has its provisional commit already saved.",
+          "final_first_line": "@standalone run target -- cargo test --test ui_harness",
+          "exit": {
+            "exit_code": 0,
+            "timed_out": false,
+            "cancelled_signal": null,
+            "duration_seconds": 21.790872806916013
+          },
+          "public_tools": []
+        },
+        {
+          "invocation": "invocation-0006",
+          "prompt_bytes": 2733,
+          "prompt_head": "Host command completed.\ncommand: cargo test --test ui_harness\nstatus: 0\nstdout:\n\nrunning 31 tests\ntest scripted_harness_arrow_keys_move_left_pane_selection_like_j_k ... ok\ntest scripted_harness_arrow_keys_edit_focused_chat_without_switching_to_command ... ok\ntest scripted_harness_arrow_keys_recall_chat_history ... ok\ntest scripted_harness_bytewise_arrow_keys_edit_focused_chat_without_switching_to_command ... ok\ntest scripted_harness_bytewise_prompt_arrow_keys_edit_without_leaving_prompt ... ok\nt",
+          "prompt_tail": "d_harness_mouse_wheel_scrolls_chat_history ... ok\ntest scripted_harness_drives_ctrl_w_navigation_and_left_toggle ... ok\ntest scripted_harness_prompt_arrow_keys_move_visible_cursor ... ok\ntest scripted_harness_switches_modes_without_enter ... ok\ntest scripted_harness_rings_and_highlights_ready_chat ... ok\n\ntest result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n\nstderr:\n   Compiling work-leaf v0.1.0 (/tmp/wl-author-feedback-screens-20260914.xn5zxE/P03)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.20s\n     Running tests/ui_harness.rs (target/debug/deps/ui_harness-d0c1af5448c0db63)\n",
+          "final_first_line": null,
+          "exit": {
+            "exit_code": -15,
+            "timed_out": true,
+            "cancelled_signal": null,
+            "duration_seconds": 33.10422242595814
+          },
+          "public_tools": []
+        }
+      ],
+      "operations": [
+        {
+          "operation": "operation-0001",
+          "receipt": {
+            "before_head": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+            "commit": "ba1739b7bbdd4c1d3464b37ac9e2e75a1f34ecd2",
+            "paths": [
+              "src/ui.rs",
+              "src/ui_harness.rs",
+              "src/terminal_app.rs",
+              "src/cli.rs",
+              "tests/ui_harness.rs"
+            ],
+            "reason": "add vim visual selection with yanks and focused ui harness tests"
+          }
+        },
+        {
+          "operation": "operation-0002",
+          "receipt": {
+            "exit_code": 101,
+            "command": "cargo test --test ui_harness",
+            "custody_errors": [],
+            "pending_paths": []
+          },
+          "stdout.txt_last": "pted_harness_yanks_left_pane_visual_line_selection_with_uppercase_v_and_y ... FAILED\ntest scripted_harness_bytewise_arrow_prefix_keeps_focused_chat_in_insert_mode ... ok\ntest scripted_harness_ctrl_c_shows_quit_notice ... ok\ntest scripted_harness_command_mode_typing_shows_insert_mode_notice ... ok\ntest scripted_harness_left_pane_navigation_does_not_show_typing_notice ... ok\ntest scripted_harness_new_commands_select_new_agent_chat ... ok\ntest scripted_harness_structural_command_keys_do_not_show_typing_notice ... ok\ntest scripted_harness_yanks_right_pane_visual_character_selection ... ok\ntest scripted_harness_renders_full_width_crlf_frame ... ok\ntest scripted_harness_drives_ctrl_w_navigation_and_left_toggle ... ok\ntest scripted_harness_mouse_wheel_scrolls_chat_history ... ok\ntest scripted_harness_insert_arrow_keys_move_visible_chat_cursor ... ok\ntest scripted_harness_prompt_arrow_keys_move_visible_cursor ... ok\ntest scripted_harness_switches_modes_without_enter ... ok\ntest scripted_harness_rings_and_highlights_ready_chat ... ok\n\nfailures:\n\n---- scripted_harness_yanks_left_pane_visual_line_selection_with_uppercase_v_and_y stdout ----\n\nthread 'scripted_harness_yanks_left_pane_visual_line_selection_with_uppercase_v_and_y' (404683) panicked at tests/ui_harness.rs:83:5:\nassertion failed: copied.contains(\"user-2\")\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    scripted_harness_yanks_left_pane_visual_line_selection_with_uppercase_v_and_y\n\ntest result: FAILED. 30 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+          "stdout.txt_sha256": "388417f64226277aac8e1c8184ad01fd62a9c5d6735df5c65e00bc3df968775a",
+          "stderr.txt_last": "   Compiling proc-macro2 v1.0.106\n   Compiling quote v1.0.45\n   Compiling unicode-ident v1.0.24\n   Compiling cfg_aliases v0.2.1\n   Compiling serde_core v1.0.228\n   Compiling libc v0.2.186\n   Compiling zmij v1.0.21\n   Compiling serde v1.0.228\n   Compiling bitflags v2.13.0\n   Compiling memchr v2.8.1\n   Compiling serde_json v1.0.150\n   Compiling cfg-if v1.0.4\n   Compiling unicode-segmentation v1.13.3\n   Compiling itoa v1.0.18\n   Compiling cassowary v0.3.0\n   Compiling bitflags v1.3.2\n   Compiling nix v0.31.3\n   Compiling utf8parse v0.2.2\n   Compiling unicode-width v0.1.14\n   Compiling unicode-width v0.2.2\n   Compiling log v0.4.32\n   Compiling tui v0.19.0\n   Compiling syn v2.0.117\n   Compiling serde_derive v1.0.228\n   Compiling rustyline v18.0.0\n   Compiling work-leaf v0.1.0 (/tmp/wl-author-feedback-screens-20260914.xn5zxE/P03)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.18s\n     Running tests/ui_harness.rs (target/debug/deps/ui_harness-d0c1af5448c0db63)\nerror: test failed, to rerun pass `--test ui_harness`\n",
+          "stderr.txt_sha256": "1cbb300135133282e27044e4f7643a925a380e504f99761d792aa6c91a54332a"
+        },
+        {
+          "operation": "operation-0003",
+          "receipt": {
+            "before_head": "ba1739b7bbdd4c1d3464b37ac9e2e75a1f34ecd2",
+            "commit": "db2a4dca1879835960c9a2250caef94298e95f36",
+            "paths": [
+              "tests/ui_harness.rs"
+            ],
+            "reason": "widen visual-line harness selection to include the next agent row"
+          }
+        },
+        {
+          "operation": "operation-0004",
+          "receipt": {
+            "exit_code": 0,
+            "command": "cargo test --test ui_harness",
+            "custody_errors": [],
+            "pending_paths": []
+          },
+          "stdout.txt_last": ". ok\ntest scripted_harness_prompt_arrow_keys_recall_prompt_history ... ok\ntest scripted_harness_prompt_history_down_restores_in_progress_prompt ... ok\ntest scripted_harness_quits_only_through_colon_q ... ok\ntest scripted_harness_yanks_left_pane_visual_block_selection_with_ctrl_v ... ok\ntest scripted_harness_slash_command_starts_agent_chat_command_from_chat_view ... ok\ntest scripted_harness_long_prompt_arrows_keep_rendered_cursor_at_edit_position ... ok\ntest scripted_harness_yanks_left_pane_visual_line_selection_with_uppercase_v_and_y ... ok\ntest scripted_harness_command_mode_typing_shows_insert_mode_notice ... ok\ntest scripted_harness_left_pane_navigation_does_not_show_typing_notice ... ok\ntest scripted_harness_new_commands_select_new_agent_chat ... ok\ntest scripted_harness_bytewise_arrow_prefix_keeps_focused_chat_in_insert_mode ... ok\ntest scripted_harness_structural_command_keys_do_not_show_typing_notice ... ok\ntest scripted_harness_insert_arrow_keys_move_visible_chat_cursor ... ok\ntest scripted_harness_ctrl_c_shows_quit_notice ... ok\ntest scripted_harness_renders_full_width_crlf_frame ... ok\ntest scripted_harness_yanks_right_pane_visual_character_selection ... ok\ntest scripted_harness_mouse_wheel_scrolls_chat_history ... ok\ntest scripted_harness_drives_ctrl_w_navigation_and_left_toggle ... ok\ntest scripted_harness_prompt_arrow_keys_move_visible_cursor ... ok\ntest scripted_harness_switches_modes_without_enter ... ok\ntest scripted_harness_rings_and_highlights_ready_chat ... ok\n\ntest result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+          "stdout.txt_sha256": "8185f6f4f9860cf27d992872c610664c9ff5de75f32a2198248cc73ba8a1ea5e",
+          "stderr.txt_last": "   Compiling work-leaf v0.1.0 (/tmp/wl-author-feedback-screens-20260914.xn5zxE/P03)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.20s\n     Running tests/ui_harness.rs (target/debug/deps/ui_harness-d0c1af5448c0db63)\n",
+          "stderr.txt_sha256": "4d1a9d9a9f09bd66d3aea3c4167d40379e6062e2e14ef538aedb29327e11bd71"
+        }
+      ],
+      "result": {
+        "initial_head": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+        "final_head": "db2a4dca1879835960c9a2250caef94298e95f36",
+        "accepted_commits": [
+          "ba1739b7bbdd4c1d3464b37ac9e2e75a1f34ecd2",
+          "db2a4dca1879835960c9a2250caef94298e95f36"
+        ],
+        "completed": false,
+        "pending_changes": [],
+        "clean": true,
+        "errors": [
+          "native child failed or timed out; retained without retry"
+        ],
+        "unprocessed_replies": []
+      }
+    },
+    {
+      "arm": "P04",
+      "turns": [
+        {
+          "invocation": "invocation-0001",
+          "prompt_bytes": 4114,
+          "prompt_head": "You are running as a normal direct coding agent in this repository.\n\nRequest 1:\nadd vim like visual mode for both panes when I do v I can select the text in focused the panes same keystrokes of vim y Y for copy maiusc V line select block select with ctrl v block select\n\nWork directly in the checkout using the repository's normal AGENTS.md instructions.\nDo not use Work Leaf orchestrator directives. Do not create or use extra Git worktrees.\nImplement the feature with focused tests through the stan",
+          "prompt_tail": null,
+          "final_first_line": "@standalone edit add focused UI harness tests for vim-like visual selection before implementation",
+          "exit": {
+            "exit_code": 0,
+            "timed_out": false,
+            "cancelled_signal": null,
+            "duration_seconds": 366.684293607017
+          },
+          "public_tools": [
+            {
+              "line": 5,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,260p' docs/architecture.md\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 15665
+            },
+            {
+              "line": 7,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc 'pwd && rg --files'",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 868
+            },
+            {
+              "line": 9,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc 'git status --short'",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 0
+            },
+            {
+              "line": 12,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '260,620p' docs/architecture.md\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 10642
+            },
+            {
+              "line": 14,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,260p' src/ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 6157
+            },
+            {
+              "line": 16,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,260p' src/ui_harness.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 9574
+            },
+            {
+              "line": 18,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,260p' tests/ui_harness.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 7790
+            },
+            {
+              "line": 21,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '260,620p' src/ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 13969
+            },
+            {
+              "line": 23,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '620,1040p' src/ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 14594
+            },
+            {
+              "line": 26,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '260,620p' tests/ui_harness.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 8170
+            },
+            {
+              "line": 27,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '260,620p' src/ui_harness.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 11827
+            },
+            {
+              "line": 29,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,280p' tests/terminal_ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 9495
+            },
+            {
+              "line": 32,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '280,620p' tests/terminal_ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 1255
+            },
+            {
+              "line": 35,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,360p' src/terminal_app.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 9973
+            },
+            {
+              "line": 36,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '360,760p' src/terminal_app.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 13784
+            },
+            {
+              "line": 38,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"rg \\\"clipboard|copy|yank|visual|selection|OSC|\\\\]52|copied\\\" -n src tests Cargo.toml\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 1996
+            },
+            {
+              "line": 40,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1000,1320p' src/ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 9932
+            },
+            {
+              "line": 42,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '760,1180p' src/terminal_app.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 13030
+            },
+            {
+              "line": 44,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,140p' src/lib.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 1706
+            },
+            {
+              "line": 46,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '620,760p' tests/terminal_app.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 4628
+            },
+            {
+              "line": 48,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,220p' Cargo.toml\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 454
+            },
+            {
+              "line": 50,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,220p' src/bin/work-leaf.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 49
+            },
+            {
+              "line": 52,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,260p' src/cli.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 8637
+            },
+            {
+              "line": 54,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc 'rg \"render_frame|stdout|execute|Alternate|enable_raw|crossterm|Mouse|bracket\" -n src/bin src/terminal_app.rs tests/terminal_pty.rs'",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 1931
+            },
+            {
+              "line": 57,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc 'rg \"run_command_chat|render_frame|enable|raw|stdin|read_exact|write_all\" -n src/cli.rs src/terminal_app.rs src/bin'",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 2234
+            },
+            {
+              "line": 58,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '260,520p' src/cli.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 9210
+            },
+            {
+              "line": 60,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '520,900p' src/cli.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 13948
+            },
+            {
+              "line": 62,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1180,1360p' src/terminal_app.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 6143
+            },
+            {
+              "line": 64,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '960,1230p' src/cli.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 7880
+            },
+            {
+              "line": 66,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,240p' tests/terminal_pty.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 7910
+            },
+            {
+              "line": 70,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc 'rg \"pub struct Cell|set_modifier|Modifier\" -n ~/.cargo/registry/src 2>/dev/null | head -80'",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 12719
+            },
+            {
+              "line": 71,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc 'rg \"struct Buffer|fn get_mut|pub fn get\" -n ~/.cargo/registry/src 2>/dev/null | head -80'",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 12137
+            },
+            {
+              "line": 73,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc 'rg \"bitflags.*Modifier|pub struct Modifier\" -n ~/.cargo/registry/src 2>/dev/null | head -80'",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 378
+            },
+            {
+              "line": 75,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,220p' /home/user/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tui-0.19.0/src/buffer.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 6415
+            },
+            {
+              "line": 77,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,100p' /home/user/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tui-0.19.0/src/style.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 2937
+            },
+            {
+              "line": 80,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"printf '%s' '> w' | base64 -w0 && printf '\\\\n'; printf '%s' 'UI\nEsc' | base64 -w0\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 13
+            },
+            {
+              "line": 82,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"printf '%s' 'UI harness\nEsc command, i insert, : prompt, Ctrl-W h/j/k/l focus, , toggle right, q quit' | base64 -w0\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 120
+            },
+            {
+              "line": 84,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba tests/ui_harness.rs | sed -n '1,560p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 19794
+            }
+          ]
+        },
+        {
+          "invocation": "invocation-0002",
+          "prompt_bytes": 102,
+          "prompt_head": "Host accepted files: tests/ui_harness.rs. Each accepted edit has its provisional commit already saved.",
+          "prompt_tail": "Host accepted files: tests/ui_harness.rs. Each accepted edit has its provisional commit already saved.",
+          "final_first_line": "@standalone run target -- cargo test --test ui_harness",
+          "exit": {
+            "exit_code": 0,
+            "timed_out": false,
+            "cancelled_signal": null,
+            "duration_seconds": 13.98125330498442
+          },
+          "public_tools": []
+        },
+        {
+          "invocation": "invocation-0003",
+          "prompt_bytes": 4743,
+          "prompt_head": "Host command completed.\ncommand: cargo test --test ui_harness\nstatus: 101\nstdout:\n\nrunning 31 tests\ntest scripted_harness_arrow_keys_recall_chat_history ... ok\ntest scripted_harness_arrow_keys_move_left_pane_selection_like_j_k ... ok\ntest scripted_harness_arrow_keys_edit_focused_chat_without_switching_to_command ... ok\ntest scripted_harness_bytewise_arrow_keys_edit_focused_chat_without_switching_to_command ... ok\ntest scripted_harness_chat_history_down_restores_in_progress_message ... ok\ntest sc",
+          "prompt_tail": "v1.0.4\n   Compiling itoa v1.0.18\n   Compiling cassowary v0.3.0\n   Compiling unicode-width v0.1.14\n   Compiling nix v0.31.3\n   Compiling utf8parse v0.2.2\n   Compiling log v0.4.32\n   Compiling bitflags v1.3.2\n   Compiling unicode-width v0.2.2\n   Compiling tui v0.19.0\n   Compiling syn v2.0.117\n   Compiling serde_derive v1.0.228\n   Compiling rustyline v18.0.0\n   Compiling work-leaf v0.1.0 (/tmp/wl-author-feedback-screens-20260914.xn5zxE/P04)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.92s\n     Running tests/ui_harness.rs (target/debug/deps/ui_harness-d0c1af5448c0db63)\nerror: test failed, to rerun pass `--test ui_harness`\n",
+          "final_first_line": "@standalone edit implement terminal visual selection and OSC52 yanking for both panes",
+          "exit": {
+            "exit_code": 0,
+            "timed_out": false,
+            "cancelled_signal": null,
+            "duration_seconds": 272.49323772406206
+          },
+          "public_tools": [
+            {
+              "line": 7,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '340,470p' src/ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 5294
+            },
+            {
+              "line": 8,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1,180p' src/ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 3953
+            },
+            {
+              "line": 9,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '470,840p' src/ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 14160
+            },
+            {
+              "line": 11,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '840,1120p' src/ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 8846
+            },
+            {
+              "line": 13,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '150,340p' src/ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 5414
+            },
+            {
+              "line": 15,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1120,1320p' src/ui.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 6332
+            },
+            {
+              "line": 17,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '80,240p' src/ui_harness.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 6299
+            },
+            {
+              "line": 19,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '440,570p' src/terminal_app.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 4901
+            },
+            {
+              "line": 21,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '570,690p' src/terminal_app.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 4643
+            },
+            {
+              "line": 23,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"sed -n '1010,1070p' src/terminal_app.rs\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 2053
+            }
+          ]
+        },
+        {
+          "invocation": "invocation-0004",
+          "prompt_bytes": 238,
+          "prompt_head": "Host proposal rejected: old block absent or ambiguous in declared range. No success is claimed for the rejected operation. Previously accepted paths in this reply: none. Inspect the actual source and submit a corrected complete operation.",
+          "prompt_tail": "Host proposal rejected: old block absent or ambiguous in declared range. No success is claimed for the rejected operation. Previously accepted paths in this reply: none. Inspect the actual source and submit a corrected complete operation.",
+          "final_first_line": "@standalone edit add TerminalUi visual-selection state, rendering, movement, and OSC52 clipboard queuing",
+          "exit": {
+            "exit_code": 0,
+            "timed_out": false,
+            "cancelled_signal": null,
+            "duration_seconds": 175.60875116998795
+          },
+          "public_tools": [
+            {
+              "line": 5,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/ui.rs | sed -n '1,260p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 7977
+            },
+            {
+              "line": 7,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/ui.rs | sed -n '260,620p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 16496
+            },
+            {
+              "line": 9,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/ui.rs | sed -n '620,980p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 15079
+            },
+            {
+              "line": 11,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/ui.rs | sed -n '980,1280p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 11423
+            },
+            {
+              "line": 13,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/ui_harness.rs | sed -n '120,250p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 6495
+            },
+            {
+              "line": 15,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/ui_harness.rs | sed -n '330,460p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 5449
+            },
+            {
+              "line": 17,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/ui_harness.rs | sed -n '460,560p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 4038
+            },
+            {
+              "line": 19,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/terminal_app.rs | sed -n '520,720p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 9300
+            },
+            {
+              "line": 22,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/terminal_app.rs | sed -n '1060,1125p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 1969
+            },
+            {
+              "line": 23,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/terminal_app.rs | sed -n '880,1060p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 7364
+            },
+            {
+              "line": 25,
+              "event": "item.completed",
+              "type": "command_execution",
+              "command": "/usr/bin/bash -lc \"nl -ba src/ui_harness.rs | sed -n '560,620p'\"",
+              "exit_code": 0,
+              "status": "completed",
+              "output_bytes": 1786
+            }
+          ]
+        },
+        {
+          "invocation": "invocation-0005",
+          "prompt_bytes": 238,
+          "prompt_head": "Host proposal rejected: old block absent or ambiguous in declared range. No success is claimed for the rejected operation. Previously accepted paths in this reply: none. Inspect the actual source and submit a corrected complete operation.",
+          "prompt_tail": "Host proposal rejected: old block absent or ambiguous in declared range. No success is claimed for the rejected operation. Previously accepted paths in this reply: none. Inspect the actual source and submit a corrected complete operation.",
+          "final_first_line": "@standalone edit add Ctrl-V as a terminal UI key for visual block mode",
+          "exit": {
+            "exit_code": 0,
+            "timed_out": false,
+            "cancelled_signal": null,
+            "duration_seconds": 33.15789644699544
+          },
+          "public_tools": []
+        },
+        {
+          "invocation": "invocation-0006",
+          "prompt_bytes": 92,
+          "prompt_head": "Host accepted files: src/ui.rs. Each accepted edit has its provisional commit already saved.",
+          "prompt_tail": "Host accepted files: src/ui.rs. Each accepted edit has its provisional commit already saved.",
+          "final_first_line": null,
+          "exit": {
+            "exit_code": -15,
+            "timed_out": true,
+            "cancelled_signal": null,
+            "duration_seconds": 31.920267801964656
+          },
+          "public_tools": []
+        }
+      ],
+      "operations": [
+        {
+          "operation": "operation-0001",
+          "receipt": {
+            "before_head": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+            "commit": "6f94ccd0d92109d3890dd15c76f6f01b824eb02c",
+            "paths": [
+              "tests/ui_harness.rs"
+            ],
+            "reason": "add focused UI harness tests for vim-like visual selection before implementation"
+          }
+        },
+        {
+          "operation": "operation-0002",
+          "receipt": {
+            "exit_code": 101,
+            "command": "cargo test --test ui_harness",
+            "custody_errors": [],
+            "pending_paths": []
+          },
+          "stdout.txt_last": "visible_chat_cursor ... ok\ntest scripted_harness_switches_modes_without_enter ... ok\ntest scripted_harness_visual_char_mode_selects_and_yanks_left_pane_text ... FAILED\ntest scripted_harness_visual_line_mode_selects_and_yanks_right_pane_lines ... FAILED\ntest scripted_harness_rings_and_highlights_ready_chat ... ok\n\nfailures:\n\n---- scripted_harness_visual_block_mode_selects_and_yanks_right_pane_columns stdout ----\n\nthread 'scripted_harness_visual_block_mode_selects_and_yanks_right_pane_columns' (395687) panicked at tests/ui_harness.rs:586:5:\nassertion failed: selecting_frame.contains(\"mode=visual-block focus=right\")\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n---- scripted_harness_visual_char_mode_selects_and_yanks_left_pane_text stdout ----\n\nthread 'scripted_harness_visual_char_mode_selects_and_yanks_left_pane_text' (395688) panicked at tests/ui_harness.rs:544:5:\nassertion failed: selecting_frame.contains(\"mode=visual focus=left\")\n\n---- scripted_harness_visual_line_mode_selects_and_yanks_right_pane_lines stdout ----\n\nthread 'scripted_harness_visual_line_mode_selects_and_yanks_right_pane_lines' (395689) panicked at tests/ui_harness.rs:564:5:\nassertion failed: selecting_frame.contains(\"mode=visual-line focus=right\")\n\n\nfailures:\n    scripted_harness_visual_block_mode_selects_and_yanks_right_pane_columns\n    scripted_harness_visual_char_mode_selects_and_yanks_left_pane_text\n    scripted_harness_visual_line_mode_selects_and_yanks_right_pane_lines\n\ntest result: FAILED. 28 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+          "stdout.txt_sha256": "03d5d095088f339555f53689ca95427775491e12e107eae478336d718c34eb6e",
+          "stderr.txt_last": "   Compiling proc-macro2 v1.0.106\n   Compiling quote v1.0.45\n   Compiling unicode-ident v1.0.24\n   Compiling serde_core v1.0.228\n   Compiling libc v0.2.186\n   Compiling cfg_aliases v0.2.1\n   Compiling zmij v1.0.21\n   Compiling bitflags v2.13.0\n   Compiling unicode-segmentation v1.13.3\n   Compiling serde v1.0.228\n   Compiling memchr v2.8.1\n   Compiling serde_json v1.0.150\n   Compiling cfg-if v1.0.4\n   Compiling itoa v1.0.18\n   Compiling cassowary v0.3.0\n   Compiling unicode-width v0.1.14\n   Compiling nix v0.31.3\n   Compiling utf8parse v0.2.2\n   Compiling log v0.4.32\n   Compiling bitflags v1.3.2\n   Compiling unicode-width v0.2.2\n   Compiling tui v0.19.0\n   Compiling syn v2.0.117\n   Compiling serde_derive v1.0.228\n   Compiling rustyline v18.0.0\n   Compiling work-leaf v0.1.0 (/tmp/wl-author-feedback-screens-20260914.xn5zxE/P04)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.92s\n     Running tests/ui_harness.rs (target/debug/deps/ui_harness-d0c1af5448c0db63)\nerror: test failed, to rerun pass `--test ui_harness`\n",
+          "stderr.txt_sha256": "49e014118a014bab2128b4bc5c167bb512b9c5c53b62128ddc760d24cda78948"
+        },
+        {
+          "operation": "operation-0003",
+          "receipt": {
+            "before_head": "6f94ccd0d92109d3890dd15c76f6f01b824eb02c",
+            "commit": "a940e1801a17395d76c58b17e538349b32ae4a25",
+            "paths": [
+              "src/ui.rs"
+            ],
+            "reason": "add Ctrl-V as a terminal UI key for visual block mode"
+          }
+        }
+      ],
+      "result": {
+        "initial_head": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+        "final_head": "a940e1801a17395d76c58b17e538349b32ae4a25",
+        "accepted_commits": [
+          "6f94ccd0d92109d3890dd15c76f6f01b824eb02c",
+          "a940e1801a17395d76c58b17e538349b32ae4a25"
+        ],
+        "completed": false,
+        "pending_changes": [],
+        "clean": true,
+        "errors": [
+          "native child failed or timed out; retained without retry"
+        ],
+        "unprocessed_replies": []
+      }
+    }
+  ]
+}

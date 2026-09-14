@@ -1,0 +1,93 @@
+*** Begin Patch
+*** Update File: tests/ui_harness.rs
+@@
+ fn scripted_harness_left_right_arrows_move_left_pane_selection_like_j_k() {
+     let mut harness = UiHarness::new(80, 24);
+ 
+     assert_eq!(harness.ui().focus(), PaneFocus::Left);
+     assert_eq!(
+         harness.ui().selected_agent().map(|id| id.as_str()),
+         Some("user-1")
+     );
+ 
+     harness.handle_bytes(b"\x1b[C");
+     assert_eq!(
+         harness.ui().selected_agent().map(|id| id.as_str()),
+         Some("user-2")
+     );
+ 
+     harness.handle_bytes(b"\x1b[D");
+     assert_eq!(
+         harness.ui().selected_agent().map(|id| id.as_str()),
+         Some("user-1")
+     );
+ }
++
++#[test]
++fn scripted_harness_visual_char_mode_selects_and_yanks_left_pane_text() {
++    let mut harness = UiHarness::new(100, 24);
++
++    harness.handle_byte(b'k');
++    harness.handle_bytes(b"vll");
++
++    let selecting_frame = harness.render_frame();
++    assert!(selecting_frame.contains("mode=visual focus=left"));
++    assert!(selecting_frame.contains("\u{1b}[7m> w\u{1b}[0mork-leaf"));
++
++    harness.handle_byte(b'y');
++
++    let copied_frame = harness.render_frame();
++    assert_eq!(harness.ui().mode(), UiMode::Command);
++    assert!(copied_frame.contains("\u{1b}]52;c;PiB3\u{7}"));
++    assert!(copied_frame.contains("copied 3 chars"));
++    assert!(!copied_frame.contains("\u{1b}[7m> w\u{1b}[0mork-leaf"));
++}
++
++#[test]
++fn scripted_harness_visual_line_mode_selects_and_yanks_right_pane_lines() {
++    let mut harness = UiHarness::new(100, 24);
++
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_bytes(b"Vj");
++
++    let selecting_frame = harness.render_frame();
++    assert!(selecting_frame.contains("mode=visual-line focus=right"));
++    assert!(selecting_frame.contains("\u{1b}[7mUI harness\u{1b}[0m"));
++    assert!(selecting_frame.contains("\u{1b}[7mEsc command, i insert"));
++
++    harness.handle_byte(b'Y');
++
++    let copied_frame = harness.render_frame();
++    assert_eq!(harness.ui().mode(), UiMode::Command);
++    assert!(copied_frame.contains("\u{1b}]52;c;VUkgaGFybmVzcwpFc2MgY29tbWFuZCwgaSBpbnNlcnQsIDogcHJvbXB0LCBDdHJsLVcgaC9qL2svbCBmb2N1cywgLCB0b2dnbGUgcmlnaHQsIHEgcXVpdA==\u{7}"));
++    assert!(copied_frame.contains("copied 91 chars"));
++    assert!(!copied_frame.contains("mode=visual-line"));
++}
++
++#[test]
++fn scripted_harness_visual_block_mode_selects_and_yanks_right_pane_columns() {
++    let mut harness = UiHarness::new(100, 24);
++
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_byte(22);
++    harness.handle_bytes(b"llj");
++
++    let selecting_frame = harness.render_frame();
++    assert!(selecting_frame.contains("mode=visual-block focus=right"));
++    assert!(selecting_frame.contains("\u{1b}[7mUI \u{1b}[0mharness"));
++    assert!(selecting_frame.contains("\u{1b}[7mEsc\u{1b}[0m command"));
++
++    harness.handle_byte(b'y');
++
++    let copied_frame = harness.render_frame();
++    assert_eq!(harness.ui().mode(), UiMode::Command);
++    assert!(copied_frame.contains("\u{1b}]52;c;VUkgCkVzYw==\u{7}"));
++    assert!(copied_frame.contains("copied 7 chars"));
++    assert!(!copied_frame.contains("mode=visual-block"));
++}
+ 
+ fn strip_ansi(input: &str) -> String {
+     let mut output = String::new();
+     let mut chars = input.chars();
+     while let Some(ch) = chars.next() {
+*** End Patch

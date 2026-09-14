@@ -7,13 +7,13 @@ below remain historical records, not authority for new runs or a substitute for 
 ## Primary goal status
 
 **Historical saving explained as a verified combined percentage: NOT ESTABLISHED.
-Overall attribution goal: UNFINISHED. Progress is 76/14/90; P01/P02 qualification is complete and P03/P04 preparation is active. Separate unforeseen bug fixes: 2 DONE / 1 TODO.**
+Overall attribution goal: UNFINISHED. Progress is 77/13/90; no benchmark is running. P03/P04 lack qualified resumed inputs, and P06–P08 lack faithful joint-test boundaries. Separate unforeseen bug fixes: 5 DONE / 0 TODO.**
 The [complete non-WL reproduction](RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md)
 uses 18,545,304 raw tokens, 48.6513% below the saved six-Direct mean. Native,
 public, observer and independent accounting agree. The historically exposed
 upstream joint mechanism and one complete reproduction pass qualified independent
 acceptance; full historical causal attribution and its residual bound do not.
-Fixed progress is 76 DONE / 14 TODO / 90 TOTAL. All 74 historical completed records and prior
+Fixed progress is 77 DONE / 13 TODO / 90 TOTAL. All 74 historical completed records and prior
 publication checkpoints are preserved; the old G03 aggregate is not an extra task.
 The frozen feature result is 2/3; the user's no-quality-loss premise remains explicit.
 R02/R03/R04/R06 are closed; R08 admits no full batch. Accepted historical reduction remains
@@ -23,7 +23,7 @@ denominators, bounds and update rules are at the top of
 [ephemeral-note.md](../../ephemeral-note.md). Answer this metric immediately
 from that snapshot and lead progress reports with it. The closed investigations
 below are bounded phase completions, not completion of the overall goal.
-Completed scope: R01–R20 and P01, with all failures and causal qualifications retained.
+Completed scope: R01–R20, P01, P02 and P10, with all failures and causal qualifications retained.
 The approved R13–R20 extension has one completed 15,687-raw input diagnostic.
 The monitor qualification passes, but the actual developer catalog still lacks
 775 bytes. R14/R15 are not launched and R16 admits no full batch.
@@ -34,7 +34,16 @@ Source tracing, repair and verification are included in P01; no new setup task i
 The [P01 result](progress-results/P01.md) qualifies the private local-registration launch:
 input-002 uses 15,873 raw and exactly matches saved base/developer objects. Its failed
 15,709-raw startup-wait predecessor remains retained. Both diagnostic allocations are consumed.
-P02's exact factor/reference map precedes any feature admission; P02–P16 remain pending.
+P02's exact factor/reference map is complete. P10 retains four actual admissions,
+43 unique recorded responses and 3,567,272 raw plus two unknown stopped tails.
+P03/P04 both run to their 900-second walls and remain incomplete. Their initial
+input and 82 source endpoints match, but the developer catalog changes at author
+turn 2 instead of reference turn 5. BUG005's turn-aligned verifier rejects the
+earlier pooled-profile interpretation. Those contrasts remain BLOCKED, not null.
+P05 retains actual test-first/RED, rejection and genuine repair work without an
+identified net effect. P06–P08 have no faithful common runtime/package boundary;
+P09 admits no full workflow. P11–P14/P16 lack their required causal evidence, and
+P15's conditional original-benchmark-error investigation is not activated.
 Unexpected issues and promising causes require genuinely new facts; an omitted known check is
 case (2), not a discovery. Extra scientific scope or budgets still need explicit permission.
 The user's standing bug-fix authority permits unaccounted defects without another question,

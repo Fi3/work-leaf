@@ -1,0 +1,12 @@
+*** Begin Patch
+*** Update File: tests/ui_harness.rs
+@@
+ fn scripted_harness_yanks_left_pane_visual_line_selection_with_uppercase_v_and_y() {
+     let mut harness = UiHarness::new(80, 24);
+ 
+-    harness.handle_bytes(b"VjjY");
++    harness.handle_bytes(b"VjjjjY");
+ 
+     let copied = harness
+         .clipboard_text()
+*** End Patch

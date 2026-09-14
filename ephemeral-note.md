@@ -1,11 +1,70 @@
 # Provisional investigation ledger
 
-Live analysis counter: **DONE: 76 | TODO: 14 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
+Live analysis counter: **DONE: 77 | TODO: 13 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
-**Bug-fix counter: DONE: 2 | TODO: 1 | TOTAL: 3.** BUG003: classify native resume correctly when exec options precede the subcommand. Caught before feature admission; no wrongly modified resume has run.
-**Current activity, 2026-09-14T20:28:03+00:00:** P02 is complete after 20m03s of local design/source qualification. P03/P04 prepare one B-only and one A+B episode, with separate checkouts and no control. BUG003's seven local tests pass; real resume verification remains pending inside P03. No feature has been admitted yet. Joint common-boundary limitations remain explicit, not negative results.
+**Bug-fix counter: DONE: 5 | TODO: 0 | TOTAL: 5.** BUG005's eight regressions pass and exact saved-native replay detects the catalog timing mismatch. BUG003's command classification is fixed, but its pooled-profile verification did not prove historical boundary equality. BUG004 preserves the shared 364-second bookkeeping interval separately; limits remain unchanged.
+**Current activity, 2026-09-14T21:14:52+00:00:** P10's complete four-admission audit retains 43 recorded responses and 3,567,272 raw plus two unknown tails. P03/P04 are incomplete and fail corresponding resumed-catalog input qualification, despite exact startup/source endpoints. P05 retains public work but lacks a qualified net chain; P06–P08 lack faithful joint boundaries. P09 has no eligible arm, so its three full workflows remain unlaunched. Dependent attribution tasks stay in TODO; P15's conditional original-benchmark audit is not activated. No benchmark, repeat, resumed extension or full batch is running.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-14T21:21:43+00:00 — bounded execution hold:** the current admissible experiments and
+available analyses have reached their saved qualification blockers. No model
+process remains. The existing goal is unfinished; this is not a zero checkpoint
+or a claim of research success. REQUEST-RESUME-INPUT-ALLOWANCE.md proposes only
+30 local minutes plus one conditional 60-second/100k read-only fresh/resume
+diagnostic, without new research tasks, author replacements or full workflows.
+This remains unapproved. Automatic unforeseen bug-fix authority remains in
+effect, but does not supply extra known setup/provider allocations.
+
+**2026-09-14T21:14:52+00:00 — audit complete, qualified causal work remains blocked:**
+P10 alone closes, raising research progress to 77/13/90; P03/P04/P05 and the
+joint/attribution obligations remain unfinished. All four actual admissions retain
+43 distinct recorded responses and 3,567,272 raw plus two unknown final tails.
+The first P04 publication is genuinely test-only under matching startup input.
+The later RED response costs 101,821 raw, but that is an observed operation cost,
+not its causal net share. P03's real repair/retest costs 262,632 raw; no completed
+post-GREEN decision occurs before its stop. No full-workflow escalation is eligible.
+P07/P08's short source checks preserve their missing semantic/state boundaries.
+Their blocker assessments and P09/P11–P16 prerequisite assessments are not
+completed experiments. P15 is not activated by failed setup or an unexplained gap.
+
+**2026-09-14T21:04:36+00:00 — BUG005 discovered during final input qualification:** the reference
+native thread contains later review-repair turns as well as its first five author
+turns. Comparing developer profile membership/order across the entire thread
+incorrectly accepts the same catalog appearing at a different outer-turn boundary.
+The first catalog drop is reference author turn 5 versus P03/P04 turn 2.
+P04's later full/short profiles also occur at different boundaries. Initial input
+equality and the resume command parser remain verified; the complete causal
+comparison does not. Correct the verifier with a fail-first boundary regression,
+preserve earlier receipts, and attach the failed qualification to both screens.
+This is analysis-only bug repair: no new diagnostic, replacement run or source
+mutation of admitted experiments. No full-workflow escalation is eligible yet.
+
+**2026-09-14T20:51:33+00:00 — BUG004 report classification:** a manual status update put the
+364 seconds from P02 closure to launch into each screen's experimental preparation
+field. The guard correctly rejects that field against its zero allowance. During
+that interval the already-qualified adapter/factors were unchanged: work was
+ordinary clone/effective-policy setup, frozen prompt/environment/admission publication
+and commit/monitor launch. This operating time must remain visible separately;
+it is not another experimental adaptation allowance. Restore the experimental
+preparation fields to zero and retain the complete 364-second bookkeeping interval.
+No frozen limit, old completion, model observation or token charge is rewritten.
+
+**2026-09-14T20:42:18+00:00 — P06 cheap state gate stops, no provider usage:** the exact first
+refresh file reconstructs successfully from base plus saved diff, with both FNV
+digests matching. The original runtime is gone; saved snapshots are display DTOs
+and base/pre-linearize/final Git records, not the selected multi-agent execution
+checkpoint. No verified restore exists for read tracker, pending ownership,
+backend attachments and original CLI input. P06/BLOCKER.md retains exact evidence
+and limits. Leave P06 BLOCKED in TODO; do not spend the rest of its local ceiling
+on an unapproved replay framework. Both author screens continue unchanged.
+
+**2026-09-14 20:37 UTC — P06 local gate alongside the running screens:** inspect the
+exact H003 post-refresh/resumed-output window for a recoverable native prefix and
+repository/tracker state. Thirty-minute local ceiling; no model turn or fork of
+the historical thread. Reuse R07 and the prior rollback/V11 failures. Only a
+faithful connected restoration can admit P06's conditional joint screen; missing
+state is a blocker, not a null result. P03/P04 continue unchanged.
 
 **2026-09-14T19:20:55+00:00 — approved continuation and separate bug counter:** the exact
 [user authority](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-P01-EXTRA-AND-BUGFIX-20260914.md)
@@ -84,6 +143,16 @@ coverage map and the frozen author host. Establish precise B/A+B prompt/feedback
 startup/resume compatibility and specific activation/common-reference decisions for P03–P08.
 No new model observation in this task. The P01 repair, two bug fixes and diagnostics are
 committed in cde93db; unrelated user configuration and historical STATE edits remain unstaged.
+
+**2026-09-14 20:34:07 UTC — both approved author screens launched:** P03 removes the
+complete B guidance group; P04 also restores actual test-first publication (A+B).
+Both use the exact c92a0b7 base, byte-identical effective policy, existing skip-worktree
+rule and the same qualified private startup/resume wrapper. Separate cloned checkouts
+are /tmp/wl-author-feedback-screens-20260914.xn5zxE/P03 and /P04; evidence roots use
+the same P03/P04 IDs under screens/author-feedback-20260914. Each run has one
+900-second/3M-recorded-raw allowance. Five-second monitor receipts start before
+generation. No additional diagnostic, control or replacement. P02 closed at
+20:28:03 after 20m03s; its joint-boundary decisions remain in the saved manifest.
 
 **2026-09-14 20:13:14 UTC — BUG003 discovered in P02's source check:** the frozen host
 emits `exec --color never resume ...`, whereas P01's private wrapper recognizes only

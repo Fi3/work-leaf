@@ -1,0 +1,301 @@
+{
+  "completedInvocation": {
+    "scenario": "P04 actual same-thread resume after native exec options; no separate diagnostic",
+    "request": {
+      "role": "initial-author-host-0002",
+      "artifact_dir": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P04/host/invocation-0002",
+      "argv": [
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P02/catalog-profile/codex",
+        "--cd",
+        "/tmp/wl-author-feedback-screens-20260914.xn5zxE/P04",
+        "--sandbox",
+        "read-only",
+        "--ask-for-approval",
+        "never",
+        "--model",
+        "gpt-5.5",
+        "exec",
+        "--color",
+        "never",
+        "resume",
+        "--json",
+        "-o",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P04/host/invocation-0002/final.txt",
+        "01a0a1a0-8b2a-7e02-a32a-46ecf0a927c2",
+        "-"
+      ],
+      "expected_thread": "01a0a1a0-8b2a-7e02-a32a-46ecf0a927c2",
+      "prompt_sha256": "bc1db764598c2479fa2818fd593be209fb1184fa7a2e4970abdf86883dd3f583"
+    },
+    "exit": {
+      "argv": [
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P02/catalog-profile/codex",
+        "--cd",
+        "/tmp/wl-author-feedback-screens-20260914.xn5zxE/P04",
+        "--sandbox",
+        "read-only",
+        "--ask-for-approval",
+        "never",
+        "--model",
+        "gpt-5.5",
+        "exec",
+        "--color",
+        "never",
+        "resume",
+        "--json",
+        "-o",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P04/host/invocation-0002/final.txt",
+        "01a0a1a0-8b2a-7e02-a32a-46ecf0a927c2",
+        "-"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "cancelled_signal": null,
+      "duration_seconds": 13.98125330498442
+    },
+    "public_terminal_types": [
+      {
+        "type": "thread.started",
+        "thread_id": "01a0a1a0-8b2a-7e02-a32a-46ecf0a927c2"
+      },
+      {
+        "type": "turn.completed",
+        "usage": {
+          "input_tokens": 101685,
+          "cached_input_tokens": 98688,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 136,
+          "reasoning_output_tokens": 117
+        }
+      }
+    ],
+    "source_sha256": {
+      "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P04/host/invocation-0002/request.json": "5a03a56b0ab16ba88377ac8ff320a60d06f1ada97108c9868907c8d4f0e428cd",
+      "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P04/host/invocation-0002/exit.json": "34363f05c015401a81fc28e738ce54d3edfcbc6b10491d49f420b6667a793305",
+      "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P04/host/invocation-0002/stdout.jsonl": "aed170f713ce57d6175c528ac54417c5f71bba208d61f3d5b44e48a8b327ca7c"
+    }
+  },
+  "inputCheck": [
+    {
+      "id": "P03",
+      "native_path": "/home/user/.codex/sessions/2026/09/14/rollout-2026-09-14T22-34-08-01a0a1a0-8b34-7d32-b01f-e9038b7188b9.jsonl",
+      "scope": "live actual native input qualification only; not final usage audit",
+      "native_context_count": 2,
+      "reference_developer_profiles": [
+        {
+          "bytes": 7817,
+          "sha256": "077f23d17df246409154a9190ab8d10ce56f12e90ec7ef682cce47ff2da2ffe7"
+        },
+        {
+          "bytes": 5038,
+          "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+        },
+        {
+          "bytes": 5813,
+          "sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+        },
+        {
+          "bytes": 5038,
+          "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+        }
+      ],
+      "actual_developers": [
+        {
+          "bytes": 7817,
+          "sha256": "077f23d17df246409154a9190ab8d10ce56f12e90ec7ef682cce47ff2da2ffe7",
+          "matches_reference_initial": true,
+          "matches_reference_resume": false
+        },
+        {
+          "bytes": 5038,
+          "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0",
+          "matches_reference_initial": false,
+          "matches_reference_resume": true
+        }
+      ],
+      "context_core_differences": [
+        {
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "permission_profile": {
+            "type": "managed",
+            "file_system": {
+              "type": "restricted",
+              "entries": [
+                {
+                  "path": {
+                    "type": "special",
+                    "value": {
+                      "kind": "root"
+                    }
+                  },
+                  "access": "read"
+                }
+              ]
+            },
+            "network": "restricted"
+          },
+          "comp_hash": "2911"
+        },
+        {
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "permission_profile": {
+            "type": "managed",
+            "file_system": {
+              "type": "restricted",
+              "entries": [
+                {
+                  "path": {
+                    "type": "special",
+                    "value": {
+                      "kind": "root"
+                    }
+                  },
+                  "access": "read"
+                }
+              ]
+            },
+            "network": "restricted"
+          },
+          "comp_hash": "2911"
+        }
+      ]
+    },
+    {
+      "id": "P04",
+      "native_path": "/home/user/.codex/sessions/2026/09/14/rollout-2026-09-14T22-34-08-01a0a1a0-8b2a-7e02-a32a-46ecf0a927c2.jsonl",
+      "scope": "live actual native input qualification only; not final usage audit",
+      "native_context_count": 3,
+      "reference_developer_profiles": [
+        {
+          "bytes": 7817,
+          "sha256": "077f23d17df246409154a9190ab8d10ce56f12e90ec7ef682cce47ff2da2ffe7"
+        },
+        {
+          "bytes": 5038,
+          "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+        },
+        {
+          "bytes": 5813,
+          "sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+        },
+        {
+          "bytes": 5038,
+          "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+        }
+      ],
+      "actual_developers": [
+        {
+          "bytes": 7817,
+          "sha256": "077f23d17df246409154a9190ab8d10ce56f12e90ec7ef682cce47ff2da2ffe7",
+          "matches_reference_initial": true,
+          "matches_reference_resume": false
+        },
+        {
+          "bytes": 5038,
+          "sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0",
+          "matches_reference_initial": false,
+          "matches_reference_resume": true
+        },
+        {
+          "bytes": 5813,
+          "sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d",
+          "matches_reference_initial": false,
+          "matches_reference_resume": true
+        }
+      ],
+      "context_core_differences": [
+        {
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "permission_profile": {
+            "type": "managed",
+            "file_system": {
+              "type": "restricted",
+              "entries": [
+                {
+                  "path": {
+                    "type": "special",
+                    "value": {
+                      "kind": "root"
+                    }
+                  },
+                  "access": "read"
+                }
+              ]
+            },
+            "network": "restricted"
+          },
+          "comp_hash": "2911"
+        },
+        {
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "permission_profile": {
+            "type": "managed",
+            "file_system": {
+              "type": "restricted",
+              "entries": [
+                {
+                  "path": {
+                    "type": "special",
+                    "value": {
+                      "kind": "root"
+                    }
+                  },
+                  "access": "read"
+                }
+              ]
+            },
+            "network": "restricted"
+          },
+          "comp_hash": "2911"
+        },
+        {
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          },
+          "permission_profile": {
+            "type": "managed",
+            "file_system": {
+              "type": "restricted",
+              "entries": [
+                {
+                  "path": {
+                    "type": "special",
+                    "value": {
+                      "kind": "root"
+                    }
+                  },
+                  "access": "read"
+                }
+              ]
+            },
+            "network": "restricted"
+          },
+          "comp_hash": "2911"
+        }
+      ]
+    }
+  ]
+}

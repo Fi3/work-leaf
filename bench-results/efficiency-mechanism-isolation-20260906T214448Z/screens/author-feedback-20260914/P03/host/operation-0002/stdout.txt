@@ -1,0 +1,48 @@
+
+running 31 tests
+test scripted_harness_arrow_keys_edit_focused_chat_without_switching_to_command ... ok
+test scripted_harness_arrow_keys_move_left_pane_selection_like_j_k ... ok
+test scripted_harness_arrow_keys_recall_chat_history ... ok
+test scripted_harness_bytewise_arrow_keys_edit_focused_chat_without_switching_to_command ... ok
+test scripted_harness_bytewise_prompt_arrow_keys_edit_without_leaving_prompt ... ok
+test scripted_harness_chat_history_down_restores_in_progress_message ... ok
+test scripted_harness_ctrl_c_never_quits_and_only_right_focus_interrupts_agent ... ok
+test scripted_harness_insert_mode_records_chat_text_and_literal_colons ... ok
+test scripted_harness_left_right_arrows_move_left_pane_selection_like_j_k ... ok
+test scripted_harness_names_new_chat_from_first_inserted_prompt ... ok
+test scripted_harness_prompt_history_down_restores_in_progress_prompt ... ok
+test scripted_harness_quits_only_through_colon_q ... ok
+test scripted_harness_slash_command_starts_agent_chat_command_from_chat_view ... ok
+test scripted_harness_long_prompt_arrows_keep_rendered_cursor_at_edit_position ... ok
+test scripted_harness_prompt_arrow_keys_recall_prompt_history ... ok
+test scripted_harness_yanks_left_pane_visual_block_selection_with_ctrl_v ... ok
+test scripted_harness_yanks_left_pane_visual_line_selection_with_uppercase_v_and_y ... FAILED
+test scripted_harness_bytewise_arrow_prefix_keeps_focused_chat_in_insert_mode ... ok
+test scripted_harness_ctrl_c_shows_quit_notice ... ok
+test scripted_harness_command_mode_typing_shows_insert_mode_notice ... ok
+test scripted_harness_left_pane_navigation_does_not_show_typing_notice ... ok
+test scripted_harness_new_commands_select_new_agent_chat ... ok
+test scripted_harness_structural_command_keys_do_not_show_typing_notice ... ok
+test scripted_harness_yanks_right_pane_visual_character_selection ... ok
+test scripted_harness_renders_full_width_crlf_frame ... ok
+test scripted_harness_drives_ctrl_w_navigation_and_left_toggle ... ok
+test scripted_harness_mouse_wheel_scrolls_chat_history ... ok
+test scripted_harness_insert_arrow_keys_move_visible_chat_cursor ... ok
+test scripted_harness_prompt_arrow_keys_move_visible_cursor ... ok
+test scripted_harness_switches_modes_without_enter ... ok
+test scripted_harness_rings_and_highlights_ready_chat ... ok
+
+failures:
+
+---- scripted_harness_yanks_left_pane_visual_line_selection_with_uppercase_v_and_y stdout ----
+
+thread 'scripted_harness_yanks_left_pane_visual_line_selection_with_uppercase_v_and_y' (404683) panicked at tests/ui_harness.rs:83:5:
+assertion failed: copied.contains("user-2")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    scripted_harness_yanks_left_pane_visual_line_selection_with_uppercase_v_and_y
+
+test result: FAILED. 30 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

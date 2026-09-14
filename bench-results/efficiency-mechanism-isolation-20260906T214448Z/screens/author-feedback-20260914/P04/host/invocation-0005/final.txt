@@ -1,0 +1,14 @@
+@standalone edit add Ctrl-V as a terminal UI key for visual block mode
+*** Begin Patch
+*** Update File: src/ui.rs
+@@
+ pub enum UiKey {
+     Char(char),
+     Esc,
+     CtrlW,
++    CtrlV,
+     Up,
+     Down,
+     Left,
+*** End Patch
+@standalone end

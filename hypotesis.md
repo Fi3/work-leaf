@@ -1,28 +1,28 @@
-# DONE: 76 | TODO: 14 | TOTAL: 90
-## BUG FIXES — DONE: 2 | TODO: 1 | TOTAL: 3
+# DONE: 77 | TODO: 13 | TOTAL: 90
+## BUG FIXES — DONE: 5 | TODO: 0 | TOTAL: 5
 
-**Pending checks: P03/P04 — CHECKING preparation for the approved B-only and A+B initial-author screens. P02's exact comparison map is complete; no feature run is admitted yet.**
+**Pending checks: 13 research obligations remain. Research is paused at the allocation/qualification boundary, not finished. P03/P04 need qualified resumed inputs; P06–P08 lack faithful joint-test boundaries. P10's audit is complete. No benchmark is running or eligible for escalation.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-14T20:28:03+00:00:** P02's factor/reference map is complete, including explicit joint-boundary blockers rather than unrun tests counted as negatives. P03/P04 prepare one episode each, with identical reference/non-targets. BUG003 passes local tests; actual resume verification remains pending inside P03. No feature benchmark is running yet.
+**Activity, 2026-09-14T21:14:52+00:00:** All four actual admissions are audited: 43 recorded responses, 3,567,272 raw plus two unknown stopped tails. The boundary-aware verifier rejects both new screens' resumed-input comparison; initial equality remains valid. Their actual test/publication/repair work is retained, not a clean cost effect. Joint setup and dependent attribution tasks remain unfinished; the original-benchmark-error branch is not activated.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
 | P01 | DONE | Faithful launch setup: source trace, benchmark-local repair, failure-path tests and actual verification; include tracker-rule qualification. |
 | P02 | DONE | Exact effective-factor/reference manifest and common-boundary qualification for individual and joint tests. |
-| P03 | CHECKING | Qualified B-only next-action/handoff-guidance screen. |
-| P04 | CHECKING | Qualified A+B publication/test-order plus guidance joint screen. |
-| P05 | TODO | Exact instruction/feedback → decision → actual work → usage mechanism, before and after first GREEN. |
-| P06 | TODO | Refresh × continuation joint check, C08 × C25. |
-| P07 | TODO | Author policy × refresh × continuation joint check, A+B+C08+C25. |
-| P08 | TODO | Remaining exercised whole-package interaction: custody/tools, information, review/repair, lifecycle, scheduling and auxiliary work. |
-| P09 | TODO | One three-workflow confirmation batch of the strongest qualified reversal, with all required stages. |
-| P10 | TODO | Source/input/activation and complete distinct-response accounting for every new observation. |
-| P11 | TODO | Full author/review/repair/integration cost offsets. |
-| P12 | TODO | Combined same-target effect, interactions and context amplification without double counting. |
-| P13 | TODO | Historical six-vs-six transfer, explained amount/share and justified residual. |
-| P14 | TODO | Evidence-backed executable non-WL causal recipe; reuse existing real execution where it matches. |
+| P03 | BLOCKED | Qualified B-only next-action/handoff-guidance screen. |
+| P04 | BLOCKED | Qualified A+B publication/test-order plus guidance joint screen. |
+| P05 | BLOCKED | Exact instruction/feedback → decision → actual work → usage mechanism, before and after first GREEN. |
+| P06 | BLOCKED | Refresh × continuation joint check, C08 × C25. |
+| P07 | BLOCKED | Author policy × refresh × continuation joint check, A+B+C08+C25. |
+| P08 | BLOCKED | Remaining exercised whole-package interaction: custody/tools, information, review/repair, lifecycle, scheduling and auxiliary work. |
+| P09 | BLOCKED | One three-workflow confirmation batch of the strongest qualified reversal, with all required stages. |
+| P10 | DONE | Source/input/activation and complete distinct-response accounting for every new observation. |
+| P11 | BLOCKED | Full author/review/repair/integration cost offsets. |
+| P12 | BLOCKED | Combined same-target effect, interactions and context amplification without double counting. |
+| P13 | BLOCKED | Historical six-vs-six transfer, explained amount/share and justified residual. |
+| P14 | BLOCKED | Evidence-backed executable non-WL causal recipe; reuse existing real execution where it matches. |
 | P15 | TODO | Original-benchmark error/accounting/configuration check only after valid causal coverage fails to reconcile the gap. |
-| P16 | TODO | Final source/coverage acceptance of the requested causal answer or concrete corrected benchmark error. |
+| P16 | BLOCKED | Final source/coverage acceptance of the requested causal answer or concrete corrected benchmark error. |
 
 All **74 historical completion records** and the **74/0 zero checkpoint** remain immutable.
 The [user's conditional approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md)
@@ -108,23 +108,26 @@ permit honest discovery, not automatic scientific scope: research additions or c
 still require an exact proposal and user approval. The separate bug-fix-only authority above
 allows previously unaccounted repairs without another question; it does not expand research TODO.
 
-## Live priority — B-only and A+B shallow screens
+## Live priority — retained mechanism signals and blocked follow-through
 
-Last maintained: **2026-09-14T20:28:03+00:00**. [P02's exact map](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/P02.md) is complete. P03/P04 require individual frozen admissions and actual input/activation checks; no feature is running yet. Joint blockers remain visible in P02's manifest.
+Last maintained: **2026-09-14T21:14:52+00:00**. [P10's complete audit](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/P10.md) retains all four admissions and rejects full resumed-input equivalence for P03/P04. Their source pins/startup equality still pass. No qualified larger experiment is eligible.
 The accepted historical gap and the user's no-quality-loss assumption remain premises.
 
 | Priority | Evidence and potential explanatory reach | Next cheap check / stop gate |
 | --- | --- | --- |
-| Completed prerequisite: P02 effective factor/reference | Exact B/A+B spans and common-reference decisions are saved; local host/dispatch/monitor tests pass. | Actual native startup/resume and factor exposure are checked in each admitted screen; no additional setup diagnostic. |
-| Strongest candidate: P03 B feedback/handoff | R04's extra usage is concentrated after first GREEN: +1,350,327 raw, offset by −147,082 earlier. Real failure recovery remains included. | One qualified fresh B-only screen, then P05's clause/feedback → decision → work trace. No forced first-GREEN stop. |
-| Joint candidate: P04 A+B | R04 is +1,203,245 raw overall, but catalog drift confounds attribution. | One qualified A+B screen; compare conditionally with P03, not by adding separate percentages. |
-| Conditional connected joints: P06–P08 | P02 confirms separate composable refresh/wait controls, but historical state restoration is unqualified. Full author-policy and residual packages lack a faithful currently available shared boundary. | P06's bounded restoration check is the next joint gate; P07/P08 remain unlaunchable absent their stated prerequisites. These are blockers, not null effects. |
-| P09–P16 confirmation and final attribution | No qualified full-workflow treatment from the preceding eight-task extension exists. Explained historical share and offsets remain unavailable. | Escalate only a qualified mechanism signal; retain all later costs and the final evidence gates. |
+| Strongest retained broad joint candidate: C08 × C25 | Both constituent directions have retained positive net evidence, but from incompatible targets; their contribution cannot be added. The exact first H003 refresh file is recoverable. | P06's missing complete runtime/native-prefix restoration blocks its connected check. No new replay framework or generated episode is admitted. |
+| Partial publication-order witness: A+B | P04's first response has exact non-target startup input and publishes tests only. Actual RED follows, but turn-2 catalog drift prevents a clean net cost attribution. Later rereads/rejections are observed, not proved A-caused. | A future eligible comparison needs verified resumed boundaries and a complete cost trajectory; the current frozen screen slot is consumed. No automatic repeat or P09 batch. |
+| B feedback/handoff: not confirmed | Old R04's post-GREEN excess remains confounded. P03 reaches GREEN after a genuine repair, then stops before any completed post-GREEN decision. | Keep B's possibility distinct from a verified effect. No further spending on the existing inconclusive screen. |
+| Whole author/refresh/residual joints: P07/P08 | Existing single-condition policies, private RED preview, standalone final custody and saved DTOs do not supply the declared faithful connected package. Later review/repair/integration paths are exercised, not absent. | Source-backed blockers are saved in P07-BLOCKER.md/P08-BLOCKER.md. No coverage exclusion or null result; no hidden multi-experiment bucket. |
+| Completed P10; dependent P09/P11–P16 | Four actual admissions: 3,567,272 recorded raw plus two unknown tails. No qualified net reversal; historical explained share remains unavailable. | Preserve all costs. No expensive batch; P15 stays conditional until valid causal coverage, and P16 stays unfinished. |
 | Parked A-only / C-only / old weak cues | R02 incomplete; R05 lacks a faithful C-only boundary; native R06 is cheaper than R04, opposite the predicted direction. | No automatic repeats or new bridge framework. Reconsider only with a specific genuinely new fact. |
 
-P01's local preparation ceiling includes tracker publication; elapsed work is retained in the ledger
-and operational note. Remaining time is not an automatic provider allowance. A user-controlled pause
-does not spend local preparation time. No benchmark budget has been used for this update.
+The [work-chain report](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/RESULT.md)
+distinguishes observed publication/RED/repair work from causally identified excess.
+Each admitted author screen spent its full 900-second wall, not its 3M recorded-usage tripwire.
+Their incomplete results, unknown tails and failed qualification are preserved. P01's two
+diagnostic allocations and P03/P04's two episode allocations are consumed. The separate bug-fix
+authority does not admit replacement observations or an increased scientific budget.
 
 ## Historical completed task records
 
@@ -261,6 +264,8 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 - **Date/activity:** [H context][h-context]/[command census][command-census], review 2026-09-12. **Closed H exclusion; inactive.**
 
 ### C08 — Compact automatic conflict refresh
+
+- **2026-09-14 joint check:** P06 reconstructs the first H003 refreshed file with both historical digests matching, but no qualified full runtime/native-prefix restoration exists. [State/continuation blocker](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P06/BLOCKER.md). No joint episode or new C08 marginal runs; its prior positive evidence is unchanged.
 
 - **2026-09-14 check/status:** [R07](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R07.md) maps 14 H refreshes in nine author histories onto 121 distinct interrupt windows. This is overlap, not a marginal historical C08 price; no generation.
 - **Work status:** DONE — recorded check/screen complete; retain the qualified result below.
@@ -407,6 +412,8 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 - **Date/activity:** workflow **2026-09-07 14:28–15:15 Rome**; carry result **18:38**. [Carry review][candidate-carry]. **Completed; inactive.**
 
 ### C25 — Bound generation before an operation's result
+
+- **2026-09-14 joint check:** C08's runtime switch and C25's external observer wait are structurally composable, but the selected connected H003 execution state is not qualified for restoration. [P06](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P06/BLOCKER.md) remains blocked without generation; this is not evidence against C25 or permission to add the two saved means.
 
 - **2026-09-14 check/status:** [R07](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R07.md)'s 121 overlapping H interrupt windows include 106 advancing-usage, 14 resumed-output and one timeout. Window membership is not avoided-response cost; no additive C08+C25 share.
 - **Work status:** DONE — recorded check/screen complete; retain the qualified result below.
@@ -567,6 +574,8 @@ WL optimizations. Finding a mechanism is different from validating a numerical b
 
 ### M04 — Different effective source, model, tools or settings
 
+- **2026-09-14 21:14 UTC:** [P10](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/P10.md) qualifies exact new startup input but rejects resumed-catalog boundary fidelity. Both P03/P04 drop two skill descriptions at author turn 2; the reference does so at turn 5. BUG005 fixes the pooled-profile verifier that mixed later reference stages with the author boundary. Both full causal comparisons remain blocked; the historical benchmark is not re-audited or corrected by this finding.
+
 - **2026-09-14 extension:** [R17](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R17.md) verifies the one diagnostic's model/base/source/prompt and complete accounting, plus the exact persistent 775-byte developer catalog mismatch. It blocks new feature contrasts; it is not an error finding against the accepted historical benchmark.
 - **2026-09-14 check/status:** [R09](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R09.md) identifies a concrete unintended developer catalog difference versus the saved reference. Source/task/model pins did not preserve all actual input; no pure causal attribution from these screens.
 - **Work status:** PARKED / UNCERTAINTY — no further check selected; outside TODO.
@@ -635,6 +644,8 @@ path that actually requires that absent activation, not every interaction of the
 - **Date/activity:** August and September7–8 tests; review **2026-09-12**. **Partly tested, inactive.** [Prior tests][prior-tests], [R][r-ledger], [C08][c08].
 
 ### J04 — Cohesion × test timing × ACK/completion × host editing
+
+- **2026-09-14 21:14 UTC:** P03 B-only records 1,507,326 raw plus an unknown stopped tail; it reaches GREEN after a genuine repair but has no completed post-GREEN decision. P04 A+B records 2,028,364 plus an unknown tail; its initially input-qualified proposal publishes tests only, followed by real RED and rejected implementation work. [Exact work/cost chain](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/RESULT.md). Both later comparisons fail resumed-input qualification, so no net A/B share or P09 escalation follows. P03/P04/P05 remain unfinished.
 
 - **2026-09-14 extension:** R13's sole 15,687-raw diagnostic fails input fidelity; R14/R15 remain unlaunched and [R16](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R16.md) admits no full batch. Monitor repair is verified, but no new package effect exists. [R19](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R19.md) preserves the unidentified historical share.
 - **2026-09-14 check/status:** Complete A+B and A+B+C inverses show RED and post-GREEN work, but catalog drift prevents pure saved-reference attribution. B-only aborts, A-only is incomplete, C-only unavailable. [R08](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R08.md) admits no batch; [R09](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R09.md) retains 6,032,785 recorded raw plus unknown tails.
@@ -715,6 +726,8 @@ path that actually requires that absent activation, not every interaction of the
 - **Date/activity:** failed wave **2026-09-12 03:50–07:06**; diagnosis **07:26**, accounting **07:59**; serialized closure **09:33**, [behavioral closeout][fast-serialized] **11:59**. [Earlier traces][host-failure]/[usage][host-usage]. **Prior check stays complete.** The private outer-space/tab predicate passes [B01's actual failure/repair/commit/GREEN/DONE qualification](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/outer-whitespace-real-20260912/RESULT.md) at **12:45**, without changing patch interiors or normal WL. Its separately selected [scope v4 joint package](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-bounded-package-01/PROTOCOL.md) ran **13:00:44–14:00:45 Rome** and closed with three wall failures. Scope v4 is **1 DONE / 0 TODO**, shared with J04 rather than an additional check. Retained native-prefix evidence does not establish whole-workflow savings; no repeat is selected.
 
 ### J13 — Higher-order residual package and cancellation of effects
+
+- **2026-09-14 local qualification:** [P07](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P07-BLOCKER.md) and [P08](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P08-BLOCKER.md) retain missing common intervention/state boundaries. Existing single-condition variants and an initial-author host do not expose the complete exercised package. No joint generation, exclusion, residual bound or completed coverage is claimed; these obligations remain in TODO.
 
 - **2026-09-14 extension:** [R18](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R18.md) retains unavailable treatment offsets and [R19](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R19.md) retains an unidentified joint historical amount/residual. R20 must stop at zero; no negative causal conclusion follows from the setup failure.
 - **2026-09-14 check/status:** [R08](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R08.md) rejects escalation under the frozen non-target gate. R10/R11 retain the absent full-workflow/transfer contrast; R12 must flag missing scope, not silently run more checks.

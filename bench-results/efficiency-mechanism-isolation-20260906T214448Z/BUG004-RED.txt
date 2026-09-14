@@ -1,0 +1,25 @@
+E.........................
+======================================================================
+ERROR: test_actual_ledger_header_tasks_note_and_evidence (__main__.ProgressCounterTests.test_actual_ledger_header_tasks_note_and_evidence)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_counter.py", line 101, in test_actual_ledger_header_tasks_note_and_evidence
+    validate_published_progress(ledger, publications)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress_counter.py", line 240, in validate_published_progress
+    return validate_publications(ledger, publications)
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress_end_to_end.py", line 219, in validate_publications
+    counts = validate_ledger(ledger)
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress_end_to_end.py", line 157, in validate_ledger
+    core.require(item["status"] == "blocked",
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                 "budget exhaustion stops work; retain any actual overrun as blocked")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress_counter.py", line 24, in require
+    raise ValueError(message)
+ValueError: budget exhaustion stops work; retain any actual overrun as blocked
+
+----------------------------------------------------------------------
+Ran 26 tests in 0.028s
+
+FAILED (errors=1)

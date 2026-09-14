@@ -1,0 +1,196 @@
+{
+  "scope": "Corrected input-only qualification; prior pooled receipts are preserved but do not prove turn equality",
+  "command": "python3 - <<'PY'\nimport json,sys\nfrom pathlib import Path\nd=Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P10');sys.path.insert(0,str(d));from catalog_boundary import compare_catalog_boundaries\nload=lambda p:[json.loads(x) for x in Path(p).read_text().splitlines() if x.strip()]\nref='/home/user/.codex/sessions/2026/09/13/rollout-2026-09-13T01-27-10-01a097f2-3f03-7463-9756-4e849ed94e8d.jsonl';rr=load(ref)\nrids=[t['turn_id'] for t in json.loads((d.parent/'P05/REFERENCE-TURNS.json').read_text())['turns']]\naudit=json.loads((d/'NATIVE-AUDIT.json').read_text());inputs=json.loads((d/'FINAL-INPUT-SOURCES.json').read_text());out=[]\nfor run in audit['runs']:\n inp=next(x for x in inputs['observations'] if x['arm']==run['arm']);rows=load(inp['native_path']);actual_ids=[e['payload']['turn_id'] for e in rows if e['type']=='event_msg' and e['payload'].get('type')=='task_started']\n aligned=compare_catalog_boundaries(rr,rows,rids,actual_ids[:len(rids)])\n out.append({'arm':run['arm'],'mapping_scope':'first five actual author outer-turn ordinals versus exactly the five fixed reference-author turns; this detects input drift, not semantic causal equivalence','catalog_boundary_comparison':aligned,'unmatched_stopped_actual_turns':actual_ids[len(rids):],'qualified_full_contrast':False,'reason':'non-target catalog differs by author turn 2; pooled-profile matches ignore update timing and include later reference stages'})\nprint(json.dumps(out,indent=2))\nPY",
+  "observations": [
+    {
+      "arm": "P03",
+      "mapping_scope": "first five actual author outer-turn ordinals versus exactly the five fixed reference-author turns; this detects input drift, not semantic causal equivalence",
+      "catalog_boundary_comparison": {
+        "matches": false,
+        "pairs": [
+          {
+            "reference": {
+              "turn_id": "01a097f2-3f5c-7b30-aec4-b5569427d593",
+              "start_line": 2,
+              "catalog_line": 3,
+              "catalog_bytes": 5813,
+              "catalog_sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+            },
+            "actual": {
+              "turn_id": "01a0a1a0-8baa-7d40-b276-6c1555e95ac0",
+              "start_line": 2,
+              "catalog_line": 3,
+              "catalog_bytes": 5813,
+              "catalog_sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+            },
+            "equal": true
+          },
+          {
+            "reference": {
+              "turn_id": "01a097f9-232c-7231-9fb4-b23001148b88",
+              "start_line": 129,
+              "catalog_bytes": 5813,
+              "catalog_sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+            },
+            "actual": {
+              "turn_id": "01a0a1a9-424a-7821-ace7-8d31a96cea1c",
+              "start_line": 149,
+              "catalog_line": 150,
+              "catalog_bytes": 5038,
+              "catalog_sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+            },
+            "equal": false
+          },
+          {
+            "reference": {
+              "turn_id": "01a097fc-156a-7492-ace7-6c228444aea6",
+              "start_line": 190,
+              "catalog_bytes": 5813,
+              "catalog_sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+            },
+            "actual": {
+              "turn_id": "01a0a1ac-8620-7320-8ed3-4af5c58fa94f",
+              "start_line": 204,
+              "catalog_bytes": 5038,
+              "catalog_sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+            },
+            "equal": false
+          },
+          {
+            "reference": {
+              "turn_id": "01a097fe-5b3a-7230-bbd5-8ef117b87072",
+              "start_line": 202,
+              "catalog_bytes": 5813,
+              "catalog_sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+            },
+            "actual": {
+              "turn_id": "01a0a1ac-eb66-7772-b7e6-13bb1e538452",
+              "start_line": 216,
+              "catalog_bytes": 5038,
+              "catalog_sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+            },
+            "equal": false
+          },
+          {
+            "reference": {
+              "turn_id": "01a097fe-ae53-7351-8dd1-1701672a7f7b",
+              "start_line": 214,
+              "catalog_line": 215,
+              "catalog_bytes": 5038,
+              "catalog_sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+            },
+            "actual": {
+              "turn_id": "01a0a1ad-6f4a-7f60-8c97-41103a5eeb16",
+              "start_line": 228,
+              "catalog_bytes": 5038,
+              "catalog_sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+            },
+            "equal": true
+          }
+        ],
+        "errors": []
+      },
+      "unmatched_stopped_actual_turns": [
+        "01a0a1ad-c630-7810-afa0-0cd393457993"
+      ],
+      "qualified_full_contrast": false,
+      "reason": "non-target catalog differs by author turn 2; pooled-profile matches ignore update timing and include later reference stages"
+    },
+    {
+      "arm": "P04",
+      "mapping_scope": "first five actual author outer-turn ordinals versus exactly the five fixed reference-author turns; this detects input drift, not semantic causal equivalence",
+      "catalog_boundary_comparison": {
+        "matches": false,
+        "pairs": [
+          {
+            "reference": {
+              "turn_id": "01a097f2-3f5c-7b30-aec4-b5569427d593",
+              "start_line": 2,
+              "catalog_line": 3,
+              "catalog_bytes": 5813,
+              "catalog_sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+            },
+            "actual": {
+              "turn_id": "01a0a1a0-8bac-7001-bf96-637282bdf299",
+              "start_line": 2,
+              "catalog_line": 3,
+              "catalog_bytes": 5813,
+              "catalog_sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+            },
+            "equal": true
+          },
+          {
+            "reference": {
+              "turn_id": "01a097f9-232c-7231-9fb4-b23001148b88",
+              "start_line": 129,
+              "catalog_bytes": 5813,
+              "catalog_sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+            },
+            "actual": {
+              "turn_id": "01a0a1a6-23d7-79b0-88df-5167dafddc9f",
+              "start_line": 185,
+              "catalog_line": 186,
+              "catalog_bytes": 5038,
+              "catalog_sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+            },
+            "equal": false
+          },
+          {
+            "reference": {
+              "turn_id": "01a097fc-156a-7492-ace7-6c228444aea6",
+              "start_line": 190,
+              "catalog_bytes": 5813,
+              "catalog_sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+            },
+            "actual": {
+              "turn_id": "01a0a1a6-7589-7932-a64f-84e110633f9e",
+              "start_line": 199,
+              "catalog_line": 200,
+              "catalog_bytes": 5813,
+              "catalog_sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+            },
+            "equal": true
+          },
+          {
+            "reference": {
+              "turn_id": "01a097fe-5b3a-7230-bbd5-8ef117b87072",
+              "start_line": 202,
+              "catalog_bytes": 5813,
+              "catalog_sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+            },
+            "actual": {
+              "turn_id": "01a0a1aa-a116-7330-8b14-17ba9c0871a8",
+              "start_line": 259,
+              "catalog_bytes": 5813,
+              "catalog_sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d"
+            },
+            "equal": true
+          },
+          {
+            "reference": {
+              "turn_id": "01a097fe-ae53-7351-8dd1-1701672a7f7b",
+              "start_line": 214,
+              "catalog_line": 215,
+              "catalog_bytes": 5038,
+              "catalog_sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+            },
+            "actual": {
+              "turn_id": "01a0a1ad-48aa-7790-9804-9bb2d7bd2e03",
+              "start_line": 318,
+              "catalog_line": 319,
+              "catalog_bytes": 5038,
+              "catalog_sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0"
+            },
+            "equal": true
+          }
+        ],
+        "errors": []
+      },
+      "unmatched_stopped_actual_turns": [
+        "01a0a1ad-ca65-7b11-b02e-8df025d98288"
+      ],
+      "qualified_full_contrast": false,
+      "reason": "non-target catalog differs by author turn 2; pooled-profile matches ignore update timing and include later reference stages"
+    }
+  ]
+}
