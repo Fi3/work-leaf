@@ -70,8 +70,8 @@ inconclusive or deprioritized screens are DONE; proposals and scientific uncerta
 from the work queue. A concrete new reason and explicit selection precede any scope extension;
 an unproved zero effect is not a reason to repeat a screen. Do not treat shared evidence as
 independent experiments. The user-approved 2026-09-14 finite task counter is
-DONE+TODO=TOTAL=66: all 54 historical completed records plus twelve bounded remaining tasks,
-R01–R12. The header and twelve visible rows derive from the ledger linked in `../hypotesis.md`.
+DONE+TODO=TOTAL=74: all 66 completed records plus eight approved tasks, R13–R20.
+The header and visible rows derive from the ledger linked in `../hypotesis.md`.
 The approved task contract freezes identities, questions, observation/preparation ceilings and
 completion criteria. Reordering by promise is allowed; adding, splitting, replacing, reopening,
 broadening or hiding extra work as an uncounted substep is not. A dated result with evidence and
@@ -89,20 +89,24 @@ not an automatic claim of verified causal attribution.
 The stable-ID ledger and mandatory regression command are linked at the top of
 `../hypotesis.md`; require a passing guard before every progress report or affected commit.
 The sibling `PROGRESS-PUBLICATION-HISTORY.json` separately preserves the old 52/3 and 54/1
-checkpoints and the once-approved 54/12 correction. Each completion appends one matching
+checkpoints, the once-approved 54/12 correction, the 66/0 checkpoint and approved 66/8/74 extension.
+The pinned extension contract preserves the original zero ledger and publications byte-for-byte.
+The additive `test_progress_extension.py` runs alongside the unchanged original regressions.
+Each completion appends one matching
 checkpoint and its result declaration. Never rewrite or truncate earlier checkpoints.
 A pinned contract rejects task substitution or altered limits; comparing both histories rejects
 ledger-only rollback. This is accidental-drift protection, not defense against an operator
 deliberately rewriting the contract, both records and guard. Numeric/file validation does not
-establish scientific truth. R12's finite coverage review must flag necessary omissions instead
+establish scientific truth. The finite final coverage review must flag necessary omissions instead
 of performing new experiments inside an analysis row.
 Record screen decisions and budget outcomes in the operational chronology. Operator guidance belongs
 to the supervising investigation; preserve frozen measured-agent instructions and source snapshots.
 
 ## Current mechanism-investigation authority
 
-The user's 2026-09-14 “ok restart the research” resumes the twelve approved finite tasks.
-The sibling study record `AUTHORITY-RESEARCH-RESUMPTION-20260914.md` records this authority.
+The user's 2026-09-14 “ok you can now proceed with the new 8 task” authorizes R13–R20.
+The sibling study record `AUTHORITY-EIGHT-TASK-EXTENSION-20260914.md` records this authority;
+`PROGRESS-TASK-EXTENSION-20260914.json` freezes the eight scopes and their ceilings.
 The task definitions and budgets remain fixed; listing a task is not a provider admission.
 Earlier continuation authority below does not enlarge this scope.
 

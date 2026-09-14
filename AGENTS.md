@@ -52,7 +52,7 @@ its study's frozen protocol. Preserve admitted runs and record all outcomes.
 ### Mandatory shallow screening before expensive experiments
 
 The first line of `hypotesis.md` uses the user-approved finite task ledger:
-`DONE + TODO = TOTAL = 66`. Its source is
+`DONE + TODO = TOTAL = 74`. Its source is
 `bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-CHECKLIST.json`.
 The 2026-09-14 one-time correction preserves all 54 completed historical records and replaces
 the misleading G03 aggregate with twelve explicitly bounded tasks, R01–R12. Definitions, budgets
@@ -71,10 +71,14 @@ Before every progress report or commit affecting this ledger, run
 `python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_counter.py`
 and require success. The guard checks declarations and evidence files, not scientific truth.
 `PROGRESS-PUBLICATION-HISTORY.json` retains the old 52/3 and 54/1 checkpoints plus the approved
-54/12 correction. Every completion appends a matching checkpoint, including its result declaration.
+54/12 correction, the completed 66/0 checkpoint and the explicitly approved 66/8/74 extension.
+The frozen `PROGRESS-TASK-EXTENSION-20260914.json` defines R13–R20 and pins the original
+zero ledger, publication history and eight-task proposal. All 66 completed records remain immutable.
+Every completion appends a matching checkpoint, including its result declaration.
 Never rewrite or truncate previous checkpoints. Publication validation rejects rollback even when
 the live history is truncated; the pinned task contract also rejects same-ID scope substitution.
-Research remains paused after tracker repair until the user restarts it.
+The user's “ok you can now proceed with the new 8 task” authorizes exactly R13–R20.
+Run the additive `test_progress_extension.py` beside the mandatory original progress tests.
 
 The mechanism-research objective is to explain the historical ~50% result as fast as evidence
 permits, not to complete candidates in ID order. Maintain a live most-promising ranking near the

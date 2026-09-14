@@ -7,13 +7,13 @@ below remain historical records, not authority for new runs or a substitute for 
 ## Primary goal status
 
 **Historical saving explained as a verified combined percentage: NOT ESTABLISHED.
-Overall attribution goal: UNFINISHED. Research stopped at zero, case (1), awaiting permission.**
+Overall attribution goal: UNFINISHED. Research stopped at 74/0/74, case (1); further work needs explicit approval.**
 The [complete non-WL reproduction](RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md)
 uses 18,545,304 raw tokens, 48.6513% below the saved six-Direct mean. Native,
 public, observer and independent accounting agree. The historically exposed
 upstream joint mechanism and one complete reproduction pass qualified independent
 acceptance; full historical causal attribution and its residual bound do not.
-Fixed progress is 66 DONE / 0 TODO / 66 TOTAL. All 54 historical completions and prior
+Fixed progress is 74 DONE / 0 TODO / 74 TOTAL. All 66 pre-extension completed records and prior
 publication checkpoints are preserved; the old G03 aggregate is not an extra task.
 The frozen feature result is 2/3; the user's no-quality-loss premise remains explicit.
 R02/R03/R04/R06 are closed; R08 admits no full batch. Accepted historical reduction remains
@@ -23,14 +23,18 @@ denominators, bounds and update rules are at the top of
 [ephemeral-note.md](../../ephemeral-note.md). Answer this metric immediately
 from that snapshot and lead progress reports with it. The closed investigations
 below are bounded phase completions, not completion of the overall goal.
-Completed scope: R01–R12, with all failures and causal qualifications retained.
-[R12's zero decision](progress-results/R12.md) requests permission for
-[eight exact additional tasks](PROPOSED-NEXT-SCOPE-20260914.md); none is added to TODO or admitted.
+Completed scope: R01–R20, with all failures and causal qualifications retained.
+The approved R13–R20 extension has one completed 15,687-raw input diagnostic.
+The monitor qualification passes, but the actual developer catalog still lacks
+775 bytes. R14/R15 are not launched and R16 admits no full batch.
+[R20's zero decision](progress-results/R20.md) requests permission for
+[one source-only CLI trace task](PROPOSED-CLI-TRACE-SCOPE-20260914.md), not a new benchmark.
 
 ## Closed scope and permission boundary
 
-The [approved finite inventory](PROGRESS-TASKS-PROPOSAL-20260914.md) specifies R01–R12.
-All twelve finite result files are complete. DONE never decreases;
+The [original approved inventory](PROGRESS-TASKS-PROPOSAL-20260914.md) and
+[approved extension](PROGRESS-TASK-EXTENSION-20260914.json) specify R01–R20.
+All twenty finite result files are complete. DONE never decreases;
 TODO never increases without subsequent explicit user approval. At zero, stop with a supported
 answer or case (1) necessary additional work and/or case (2) an incorrect initial checklist;
 name the exact proposed additional tasks/count and ask permission. No uncounted work,
@@ -42,7 +46,8 @@ drift prevents pure comparison with the saved reference. R03's monitor-directory
 error is an operator setup failure, not a B effect. No expensive batch follows.
 R04's extra cost is descriptively +1,350,327 raw after first GREEN, offset by
 −147,082 before/through it; B's post-result guidance is the next proposed
-discriminator, not a verified historical share. No new research occurs before approval.
+discriminator, not a verified historical share. R13's failed input gate prevents
+the approved extension from supplying a new causal contrast. No new research occurs before approval.
 
 The completed global-hunk pilot and terminal audits support the source-linked
 mechanism and non-WL recipe in the result above. Remaining tasks address a same-target

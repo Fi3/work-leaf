@@ -1,32 +1,74 @@
 # Provisional investigation ledger
 
-Live analysis counter: **DONE: 66 | TODO: 0 | TOTAL: 66** — [hypotesis.md](hypotesis.md).
-**2026-09-14 operating scope:** the user-approved one-time correction retains all
-54 historical completed records and twelve finite tasks, R01–R12, all with
-saved terminal results. **Research stopped at zero, case (1): additional work
-needs permission.** No provider is running or admitted; the exact eight proposed
-follow-up tasks are not TODO or authority to execute.
-[Approved questions, scope limits and completion criteria](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md).
-Research resumed at 13:02 UTC on the user's explicit instruction. R01 is a
-completed saved-source contrast/feasibility pass; four later screen attempts are closed.
-The verified historical attributable
-combined percentage remains **NOT ESTABLISHED**.
+Live analysis counter: **DONE: 74 | TODO: 0 | TOTAL: 74** — [hypotesis.md](hypotesis.md).
+**2026-09-14 operating scope:** all 66 completed records and the old zero checkpoint remain intact.
+The user explicitly approves exactly R13–R20: [authority](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-EIGHT-TASK-EXTENSION-20260914.md).
+The [frozen extension](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASK-EXTENSION-20260914.json) defines the eight tasks and budgets.
+**Current activity:** STOPPED AT ZERO, case (1). All eight tasks have terminal outcomes; no feature experiment ran. No provider or research task runs. R21 is a source-only proposal, not authority.
+The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
 
-DONE only increases and TODO only decreases within this fixed scope. No new task,
-replacement, reopening, scope expansion or hidden supplementary experiment is
-allowed. At zero, stop: report a supported answer or explicitly identify case (1)
-additional work and/or case (2) an incorrect initial checklist, list the exact
-proposed added tasks/count, and ask the user before increasing TODO or doing them.
-Both publication histories retain the old 52/3 and 54/1 checkpoints. The old G03
-aggregate is superseded by R01–R12, not marked completed. Historical entries below
-describe their dated scopes, not the current count or run authority.
+DONE only increases; TODO only decreases within the approved 74 total. At zero, stop with a supported answer
+or explicit case (1)/(2), exact proposed tasks/count and a permission question. No hidden extra work,
+automatic controls, replacements, baseline re-audit, API credits or ordinary WL changes.
 
-**Tracker verification, 2026-09-14:** all 26 progress regressions and the required
-Cargo format, strict all-target/all-feature Clippy and full test commands pass.
-The prior hypothesis entries, evidence links, old opening and full run chronology
-pass exact preservation checks. [Verification record](bench-results/efficiency-mechanism-isolation-20260906T214448Z/TRACKER-VERIFICATION-20260914.md).
-No agent-facing runtime workflow is affected; no provider call or benchmark is
-part of that repair; it preceded the research resumption below.
+## Approved extension activity — 2026-09-14
+
+**15:07:49 UTC — R13 starts.** The 45-minute clock includes overlapping counter administration.
+The smallest next check is matching the saved developer skill catalog and testing missing monitoring directories,
+first-publication failure and exact cancellation. R14/R15 are conditional on this qualification.
+No feature generation is part of R13. At most one separately admitted read-only 60-second/100k subscription
+diagnostic is allowed if actual input delivery cannot be verified locally.
+
+**15:17 UTC — append-only scope publication.** The old 66/0 ledger and complete publication history are
+hash-pinned archives. The twelve added extension regressions failed first on the absent extension validator,
+then pass; all 26 existing progress regressions pass unchanged. The new scope is 66/8/74.
+OpenAI Docs skill use is limited to supported Codex skill/plugin configuration; pinned CLI verification is
+still required. No global configuration or saved benchmark input has been edited.
+
+**15:25 UTC — R13 local qualification:** six fail-first monitor tests pass, including two real
+processes proving exact cancellation leaves the other supervisor alive. Nongenerating CLI previews
+omit the saved catalog despite enabled installed plugins; no preview override enters a measured run.
+The one permitted read-only input diagnostic is admitted separately with a 60-second wall,
+100k recorded-raw tripwire and 5-second samples. Its exact command, sources and no-retry boundary
+are saved in the new author-feedback screen directory. No feature screen is admitted.
+The repository's Git worktree metadata is read-only here; a separate shared-object clone at the
+same original commit supplies the diagnostic checkout. No old checkout or admitted run is replaced.
+
+**15:28 UTC — R13 diagnostic complete:** 5.23 seconds, one recorded response, 15,687 raw;
+public/native resource totals agree, source endpoints match, and the exact acknowledgment returned.
+Actual base instructions, CLI, model, effort and read-only policy match. The actual developer input
+still omits precisely the same 775-byte plugin catalog (7,042 versus 7,817 bytes). Qualification
+has not passed; R14/R15 cannot launch. The one diagnostic allowance is exhausted; no second call
+or hidden replacement is permitted. Any remaining R13 checks are local only before 15:52:49 UTC.
+
+**2026-09-14T15:34:45+00:00 — R13 closed as failed setup.** The monitor repair passes; all selected cheap local
+input checks still fail to restore the saved catalog. Stop this setup before its ceiling instead of
+extending configuration guesses. The only actual diagnostic used 15,687 recorded raw. R14/R15's
+explicit qualification prerequisite fails; no feature work is admitted. Counter 67/7/74.
+
+**2026-09-14T15:36:04+00:00 — R14/R15/R16 terminal eligibility decisions:** both conditional author episodes fail
+their R13 prerequisite and remain unlaunched. R16 selects no arm and admits no full batch.
+Three separate dated records preserve these outcomes; they are not three negative mechanism tests.
+The roster has one actual diagnostic only. R17's existing-core audit begins; counter 70/4/74.
+
+**2026-09-14T15:40:13+00:00 — R17/R18/R19 results saved:** the existing core audits the single new thread
+exactly once: one response, one complete task, 15,687 raw, exact prompt and all usage joins,
+no source errors or unfinished tail. The diagnostic's input mismatch is verified; no feature
+contrast exists. The required stage/offset table records absent R16 data as unavailable, not zero.
+Fixed historical synthesis preserves 45.383421%–51.624357% and the unidentified causal share;
+no old baseline accounting or quality work is rerun. R20 reviews these results; counter 73/1/74.
+
+**2026-09-14T15:48:21+00:00 — R20 closed; stop at 74/0/74.** Seven input-result files and 27 evidence files
+pass the final source/arithmetic check. All old heading-delimited register text survives unchanged
+after removing the explicit extension notes. A local overescaped-regex review-query error is saved
+alongside the corrected successful query; no provider or native accounting is rerun for it.
+The requested causal answer remains unverified. Case (1), not a counter error: one distinct
+30-minute, provider-free CLI source/loader trace is proposed for permission only. It would produce
+a repair proposal, not silently restart diagnostics or benches. All original progress tests,
+17 additive regressions, six monitor checks and required Cargo checks pass. Research stops here;
+only publication/commit housekeeping remains. No further TODO increase or experiment is authorized.
+
+Earlier entries below retain their exact dated scopes, outcomes and costs. They are not current authority.
 
 ## Active research — 2026-09-14 13:02 UTC
 

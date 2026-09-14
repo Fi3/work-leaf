@@ -1,0 +1,27 @@
+python3 - <<'PY'
+from pathlib import Path
+import json,hashlib,types,collections
+S=Path('/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z');D=S/'screens/author-feedback-20260914';R=D/'R13'
+sha=lambda b:hashlib.sha256(b).hexdigest()
+core=S/'audit_compaction.py';corebytes=core.read_bytes();assert sha(corebytes)=='dd5127f937ec1cc4d41a443ba7640fca93e82484f345ac8c56aeef5325d68153'
+mod=types.ModuleType('existing_core');mod.__file__=str(core);exec(compile(corebytes,str(core),'exec'),mod.__dict__)
+comp=json.loads((D/'ACTUAL-INPUT-COMPARISON.json').read_text());m=comp['diagnostic'];p=Path(m['path']);data=p.read_bytes();assert sha(data)==m['source_sha256'];rows=list(mod.json_rows(data))
+public_path=R/'native.stdout.jsonl';pubbytes=public_path.read_bytes();public=list(mod.json_rows(pubbytes));starts=[x for x in public if x.get('type')=='thread.started'];ends=[x for x in public if x.get('type')=='turn.completed'];assert len(starts)==len(ends)==1
+spec={'arm':'R13','thread_id':starts[0]['thread_id'],'model':'gpt-5.5','effort':'xhigh','cwd':m['context']['cwd'],'native_path':str(p),'native_sha256':sha(data),'public':[{'path':str(public_path),'sha256':sha(pubbytes)}]}
+audit=mod.audit_rollout(rows,spec,'gpt-5.5','xhigh')
+user_texts=[];tasks=[];terminals=[];tool_items=[];contexts=[]
+for e in rows:
+ q=e.get('payload',{})
+ if e.get('type')=='response_item' and q.get('role')=='user':user_texts.extend(v.get('text','') for v in q.get('content',[]) if v.get('type') in ('input_text','text'))
+ if e.get('type')=='response_item' and q.get('type') in ('function_call','custom_tool_call','web_search_call','local_shell_call'):tool_items.append(q.get('type'))
+ if e.get('type')=='turn_context':contexts.append({k:q.get(k) for k in ('turn_id','model','effort','cwd','approval_policy','sandbox_policy')})
+ if e.get('type')=='event_msg' and q.get('type')=='task_started':tasks.append(q.get('turn_id'))
+ if e.get('type')=='event_msg' and q.get('type') in ('task_complete','turn_aborted'):terminals.append({'turn_id':q.get('turn_id'),'type':q['type']})
+public_usage=mod.metrics(mod.checked_usage(ends[0]['usage']))
+prompt=(R/'PROMPT.txt').read_bytes();prompt_match=prompt.decode() in user_texts
+admission=json.loads((R/'ADMISSION.json').read_text());terminal=json.loads((R/'TERMINAL.json').read_text())
+endpoints=[{'path':f,'expected':h,'actual':sha(Path(f).read_bytes())} for f,h in admission['source_sha256'].items()]
+result={'scope':'R17: the one actual new diagnostic only; existing audit_rollout called exactly once; no old baseline accounting replay','core_sha256':sha(corebytes),'metadata':spec,'audit':audit,'public_usage':public_usage,'native_minus_public':{k:audit['native_usage'][k]-public_usage[k] for k in mod.FIELDS},'exact_prompt_match':prompt_match,'prompt_sha256':sha(prompt),'task_starts':tasks,'task_terminals':terminals,'tool_call_items':tool_items,'contexts':contexts,'source_endpoints':endpoints,'source_endpoint_errors':[x for x in endpoints if x['expected']!=x['actual']],'admission_matches_terminal':sha((R/'ADMISSION.json').read_bytes())==terminal['admission_sha256'],'base_equal':comp['base_equal'],'developer_equal':comp['developer_equal'],'admissions':[str(x) for x in sorted(D.rglob('ADMISSION.json'))],'unfinished_turns':[x for x in tasks if not any(t['turn_id']==x and t['type']=='task_complete' for t in terminals)],'unlaunched':['R14 author episode','R15 author episode','R16 workflow 1','R16 workflow 2','R16 workflow 3'],'conclusion':'valid completed diagnostic accounting and input-mismatch evidence; no qualified feature intervention or causal token effect'}
+assert sha(p.read_bytes())==spec['native_sha256'];assert sha(public_path.read_bytes())==spec['public'][0]['sha256']
+print(json.dumps(result,indent=2))
+PY

@@ -1,8 +1,8 @@
-# DONE: 66 | TODO: 0 | TOTAL: 66
+# DONE: 74 | TODO: 0 | TOTAL: 74
 
-**STOPPED AT ZERO — case (1): additional work is needed. All approved tasks have terminal results; the causal explanation is not verified.**
+**STOPPED AT ZERO — case (1): additional work needs permission. All eight tasks have terminal results, not eight successful experiments.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-14 14:31 UTC:** R12's review is complete. No provider or research task is running. [Eight exact follow-up tasks](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-NEXT-SCOPE-20260914.md) are proposed for permission only; **they are not added to TODO**.
+**Activity, 2026-09-14T15:48:21+00:00:** input qualification failed; R14/R15 and the conditional full batch were not launched. The only diagnostic used 15,687 raw. [One source-only trace task](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-CLI-TRACE-SCOPE-20260914.md) is proposed, not TODO or authority to run.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
@@ -18,79 +18,64 @@
 | R10 | DONE | Is any apparent author saving merely work shifted into review, repair or integration? |
 | R11 | DONE | How much of the accepted historical gap is supported by the joint evidence? |
 | R12 | DONE | Does the finished checklist support the requested conclusion, or require permission for more work? |
+| R13 | DONE | Can a benchmark-isolated launch reproduce the saved effective non-target input and survive monitor publication failures? |
+| R14 | DONE | Does the complete B feedback/handoff inverse change actual work and cost when non-target inputs match? |
+| R15 | DONE | Does the A+B joint inverse change actual work and cost with the same qualified input boundary? |
+| R16 | DONE | Does the strongest qualified B or A+B reversal persist through complete required workflows? |
+| R17 | DONE | Are all newly admitted qualification, author and workflow observations valid for their declared contrasts? |
+| R18 | DONE | Does reduced author work shift cost into later review, repair or integration in the qualified treatment? |
+| R19 | DONE | What amount of the accepted historical gap is supported by the qualified joint evidence? |
+| R20 | DONE | Does the finite extension support the requested answer, or require another explicit zero-counter decision? |
 
-These are **12 concrete tasks**, not one broad G03 bucket or 12 independent hypotheses.
-DONE retains all **54 historical completed records**, including negative/inconclusive checks.
-The 39 register dispositions, 12 follow-ups V04–V15, J04 initial-stage check and G01/G02
-retain their evidence and original qualifications. No old completion is undone.
-The [approved full task definitions, limits and completion criteria](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md)
-are frozen. Each task has its own `progress-results/Rxx.md` result before it can become DONE.
+The approved extension consists of R13–R20; their actual pending statuses are above. All **66 pre-extension completed records** remain immutable.
+They include the 54 historical completions and R01–R12, with their negative/inconclusive qualifications.
+The [approved extension](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASK-EXTENSION-20260914.json) freezes all eight scopes and budgets.
+[Explicit user authority](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-EIGHT-TASK-EXTENSION-20260914.md) permits 66/0/66 → 66/8/74 once.
 
 ## Counter contract — user-approved 2026-09-14
 
-**DONE + TODO = TOTAL = 66.** The one-time authorized correction is 54/1/55 → 54/12/66:
-the misleading unfinished G03 aggregate is replaced by the twelve listed finite tasks.
-G03 is not an extra thirteenth task and is not a completed record. Earlier 52/3 and 54/1
-checkpoints remain unchanged in the [archived ledger](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-archive/PROGRESS-CHECKLIST-v2.json)
-and [publication archive](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-archive/PROGRESS-PUBLICATION-HISTORY-v1.json).
-The [previous opening and detailed historical checkpoints](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-archive/HYPOTESIS-OPENING-20260914.txt)
-remain preserved; they do not govern the live queue.
+**DONE + TODO = TOTAL = 74.** These are finite tasks, not independent hypotheses or effort percentages.
+The old 52/3, 54/1, approved 54/12 correction and **66/0 zero checkpoint** remain unchanged.
+The [zero ledger archive](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-archive/PROGRESS-CHECKLIST-v3-ZERO-20260914.json)
+and [zero publication archive](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-archive/PROGRESS-PUBLICATION-HISTORY-v2-ZERO-20260914.json)
+preserve the completed results and original permission decision.
 
-- DONE increases by one and TODO decreases by one only after a listed finite check has
-  its dated result, actual evidence and honest limitations. Starting, preparing a protocol
-  or stopping at a time limit without a result record does not count as completion.
-  Supported, unsupported, inconclusive, failed-setup and justified not-needed are terminal
-  check outcomes; they are not interchangeable scientific conclusions.
-- **TODO never increases without explicit subsequent user approval.** No silently added,
-  split, replaced, reopened or broadened task; no new work hidden as an uncounted substep.
-  Reordering the approved tasks by promise is allowed. Protocols implement these finite
-  scopes; they cannot add observations or turn a result row into another experiment.
-- Necessary work discovered outside this list is an **unapproved scope issue**, not an
-  execution queue. Record its exact question/scope and reason without doing it. Continue
-  only listed work that remains meaningful.
-- **At TODO=0, stop.** Report the supported answer if one exists. Otherwise state
-  **case (1): additional work beyond the list is necessary**, and/or
-  **case (2): the initial checklist omitted or miscounted necessary work**.
-  Name the exact additional tasks and requested count, ask permission, and remain stopped.
-  Do not claim scientific success just because the counter reaches zero.
-- Only explicit subsequent user approval permits another appended scope checkpoint.
-  Preserve the zero checkpoint and every completed record. No self-approved reset,
-  counter replenishment, or lowered completion criteria.
+- A listed task closes only with its saved dated result, actual evidence and honest terminal outcome.
+  Supported, unsupported, inconclusive, failed-setup and justified-not-needed outcomes are distinct.
+- DONE never decreases; TODO never increases without subsequent explicit user approval.
+  No added, split, replaced, reopened or broadened task, hidden supplementary experiment or automatic replacement.
+- New necessary work is an unapproved scope issue, not an execution queue.
+- **At TODO=0, stop.** Give the supported answer or report case (1) additional work and/or case (2)
+  an incorrect initial checklist. Name exact proposed tasks/count and ask permission before any increase or execution.
+  Zero is checklist exhaustion, not scientific success.
 
-The single source is [PROGRESS-CHECKLIST.json](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-CHECKLIST.json);
-[the approved scope](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASK-SCOPE-20260914.json) freezes identities,
-questions and limits. The separate [publication history](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-PUBLICATION-HISTORY.json)
-retains each completion and its result declaration, detecting rollback and same-ID scope edits.
-Before every progress report or commit affecting the tracker, require:
+The [ledger](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-CHECKLIST.json), [publication history](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-PUBLICATION-HISTORY.json)
+and pinned contracts reject counter rollback, missing evidence, overwritten results and task substitution.
+Before every progress report or affected commit, require:
 
 ```sh
 python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_counter.py
+python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_extension.py
 ```
 
-The guard checks declarations, result files and consistency; it does not prove a causal claim.
+The guard validates declarations and evidence files, not causal truth. The earlier 26 regressions remain unchanged.
 
-## Live priority — stopped; proposed work needs approval
+## Live priority — stopped at zero; further work needs approval
 
-Last maintained: **2026-09-14 14:31 UTC**. No provider is running or admitted.
+Last maintained: **2026-09-14 15:48 UTC**. The one diagnostic is closed; no feature observation is admitted or running.
 The accepted historical gap and the user's no-quality-loss assumption remain premises.
 
 | Priority | Evidence, explanatory reach and status | Next bounded check / stop gate |
 | --- | --- | --- |
-| Necessary qualification, not approved: proposed R13 | R09 identifies catalog mismatch and the operator's R03 monitor-directory failure. | Bound input/monitor qualification before any further feature generation. No global/source-reference mutation or hidden replacement. |
-| Strongest next discriminator, not approved: proposed R14 B alone | R04's observed increase is concentrated after first GREEN: +1,350,327 raw, offset by −147,082 before/through that GREEN. The suffix includes genuine failure recovery, not just reporting. R03 did not test B because it aborted before verified prompt delivery. | One fresh bounded B-only episode after qualification; look for actual post-result work decisions with required work preserved. Exact scope/ceilings are in the permission proposal. |
-| Promising joint, not approved: proposed R15 A+B | R04 completes at +1,203,245 raw versus the saved author; R06 adds +1,085,606 with native custody. Both saved-reference contrasts have catalog drift. | One qualified A+B screen, then only a demonstrated discriminating signal may select proposed R16's three modified full workflows. No generic control or all-on reproduction. |
-| Completed: R10–R12 | Offset and numerical tables explicitly retain missing causal transfer; all 69 register entries and eleven preceding results pass the finite coverage review. | Research stopped at zero, case (1). Proposed R17–R20 name the audit/offset/synthesis/closure needed only if new observations are approved. |
-| Deprioritized: A alone / C alone | R02 is incomplete. R05 has no faithful existing C-only boundary. Complete R04→R06 costs 117,639 fewer raw with native custody, opposite the predicted direction. | No automatic extension or per-tool bridge; not proof of zero effect. |
+| Blocking prerequisite: R13 failed; source-level trace proposed only | The monitor passes, but actual exec still omits 775 bytes of the saved developer catalog. Supported config previews did not restore it. | Proposed R21 traces the pinned CLI loader decision without generation; it needs explicit permission. No repeat diagnostic is authorized. |
+| Strongest scientific candidate: B feedback/handoff | Prior R04's extra usage appears after first GREEN: +1,350,327 raw, partly offset by −147,082 before/through GREEN. The suffix includes genuine failure recovery. | R14 was not launched because input fidelity failed. No new cue effect or clean null. A fresh check would need a faithful repair and new approval. |
+| Joint candidate: A+B | Prior R04 finishes +1,203,245 raw versus the saved author, but catalog drift confounds it. | R15 was not launched. The conditional comparison remains scientifically unresolved; no automatic replacement. |
+| R16–R20 closed | No qualified feature/full-workflow treatment exists. The single diagnostic costs 15,687 raw and does not test the mechanism. | No full batch. Offset, explained amount and residual remain unavailable. Final review preserves case (1), with no counter increase. |
+| Parked: A alone / C alone | R02 incomplete; R05 lacks faithful C-only boundary; native R06 cost less than R04, opposite the predicted direction. | No rerun or interception framework. Not proof of zero effect. |
 
-R01–R12 have terminal check outcomes, not twelve positive mechanisms.
-[R08's decision](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R08.md) and [R09's audit](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R09.md)
-preserve behavioral signals and causal limits. The [approved finite scope](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md)
-and [resumption authority](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-RESEARCH-RESUMPTION-20260914.md) prohibit new observations inside completed tasks.
-
-[R12's final review and exact permission request](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R12.md)
-classify this as case (1), not a counter rollback. The B-only setup failure and
-unqualified joint contrasts require fresh observations; they are not evidence
-that every cause has been disproved or that the historical saving is false.
+R01–R12's result records remain unchanged. R13–R20 are distinct approved work, not reopened old tasks.
+The [original eight-task proposal](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-NEXT-SCOPE-20260914.md) retains its dated permission-only wording as history;
+the linked explicit authority governs execution.
 
 ## Verified findings and coverage
 
@@ -102,7 +87,7 @@ unidentified; R01–R12's completed finite checks did not establish that causal 
 C08/C25's positive individual contrasts remain non-additive. Source/outcome qualifications,
 including the frozen 2/3 feature result under the user's quality premise, are retained.
 
-This is the **complete, finite approved remaining task list**, not a guarantee that every
+This is the **complete, finite approved task list**, with no pending work authorized, not a guarantee that every
 conceivable hidden cause has been experimentally excluded. The causal entry-point
 framework covers measured population/aggregation; initial effective input/state; returned
 information and non-model transitions; generated work/model transitions; scheduling,
@@ -240,6 +225,7 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 
 ### C13 — Number of post-patch validation steps
 
+- **2026-09-14 extension:** R13 fails the actual-input gate; [R14](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R14.md) is not launched. No additional validation-policy effect is measured; prior results remain unchanged.
 - **2026-09-14 check/status:** [R04](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R04.md) performs adjacent checks, transient-failure recovery and final inspection after first GREEN. Those enclosing invocations cost 1,489,028 raw, not an isolated removable validation charge. Catalog drift prevents pure attribution.
 - **Work status:** DONE — recorded check/screen complete; retain the qualified result below.
 - **Cause:** the “at most one focused validation” cue may avoid additional check/result/decision cycles, with possible later repair offsets.
@@ -249,6 +235,7 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 
 ### C14 — Cohesive work units and continuation permission
 
+- **2026-09-14 extension:** [R15](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R15.md) is not launched after failed input qualification. No new cohesion or A+B effect is measured.
 - **2026-09-14 check/status:** R02/R04 actually publish tests before production; R06 executes native RED. R02 is incomplete and the saved-reference comparisons have a developer-input difference. [R09](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R09.md): no pure cohesion share.
 - **Work status:** DONE — recorded check/screen complete; retain the qualified result below.
 - **Cause:** assembling related code/tests together can avoid partial implementation cycles; larger edits can also increase rejections and repair.
@@ -258,6 +245,7 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 
 ### C15 — Executed test failure before implementation
 
+- **2026-09-14 extension:** R15's A+B check has a failed prerequisite and no new RED/implementation observation. No test-first cost is inferred from the R13 acknowledgment.
 - **2026-09-14 check/status:** R02/R04/R06 execute real RED. [R04](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R04.md) reaches new-test GREEN at 941,499 raw and then does additional real work; RED alone is not established as its full cost increase. Prior C15 results remain.
 - **Work status:** DONE — recorded check/screen complete; retain the qualified result below.
 - **Cause:** mandatory RED creates test/failure/implementation feedback and may prevent subsequent repair; WL's shared-tree policy changes this sequence.
@@ -300,6 +288,7 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 
 ### C20 — Command-result next-action and brevity cue
 
+- **2026-09-14 extension:** the monitor's failure paths pass, but [R13](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R13.md) still lacks the saved skill catalog. R14's fresh B-only episode is not launched; no new cue result.
 - **2026-09-14 check/status:** The distinct fresh B-only [R03 attempt](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R03.md) aborts after an operator monitor-directory error, before verified prompt delivery. No cue effect, clean null or replacement.
 - **Work status:** DONE — recorded check/screen complete; retain the qualified result below.
 - **Cause:** brief next-directive guidance may reduce explanation or exploration after a command; it can also change useful investigation.
@@ -500,6 +489,7 @@ WL optimizations. Finding a mechanism is different from validating a numerical b
 
 ### M04 — Different effective source, model, tools or settings
 
+- **2026-09-14 extension:** [R17](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R17.md) verifies the one diagnostic's model/base/source/prompt and complete accounting, plus the exact persistent 775-byte developer catalog mismatch. It blocks new feature contrasts; it is not an error finding against the accepted historical benchmark.
 - **2026-09-14 check/status:** [R09](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R09.md) identifies a concrete unintended developer catalog difference versus the saved reference. Source/task/model pins did not preserve all actual input; no pure causal attribution from these screens.
 - **Work status:** PARKED / UNCERTAINTY — no further check selected; outside TODO.
 - **Possible error:** the compared arms or reused baselines differ beyond the claimed factor, including client/driver revisions, tool definitions, policy layers or shared configuration.
@@ -568,6 +558,7 @@ path that actually requires that absent activation, not every interaction of the
 
 ### J04 — Cohesion × test timing × ACK/completion × host editing
 
+- **2026-09-14 extension:** R13's sole 15,687-raw diagnostic fails input fidelity; R14/R15 remain unlaunched and [R16](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R16.md) admits no full batch. Monitor repair is verified, but no new package effect exists. [R19](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R19.md) preserves the unidentified historical share.
 - **2026-09-14 check/status:** Complete A+B and A+B+C inverses show RED and post-GREEN work, but catalog drift prevents pure saved-reference attribution. B-only aborts, A-only is incomplete, C-only unavailable. [R08](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R08.md) admits no batch; [R09](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R09.md) retains 6,032,785 recorded raw plus unknown tails.
 - **2026-09-14 R01:** [five-arm source/contrast matrix](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R01.md) complete. Existing standalone host permits actual test-only publication; A/B inverse and native full-inverse paths are feasible subject to qualification. R04/R06 conditional custody contrast is prioritized. No new token effect yet; earlier completed screens remain retained.
 - **Work status:** DONE — prior shared closeout and scopes v4–v14 complete. No repeat or model generation selected. N01 remains closed/deprioritized.
@@ -647,6 +638,7 @@ path that actually requires that absent activation, not every interaction of the
 
 ### J13 — Higher-order residual package and cancellation of effects
 
+- **2026-09-14 extension:** [R18](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R18.md) retains unavailable treatment offsets and [R19](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R19.md) retains an unidentified joint historical amount/residual. R20 must stop at zero; no negative causal conclusion follows from the setup failure.
 - **2026-09-14 check/status:** [R08](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R08.md) rejects escalation under the frozen non-target gate. R10/R11 retain the absent full-workflow/transfer contrast; R12 must flag missing scope, not silently run more checks.
 - **2026-09-14 activity:** the approved R04/R06 joint inverses target the explicitly defined A/B/C package. R01's matrix is complete, not a residual bound or new model observation. R12 retains the finite coverage/zero-counter decision.
 - **Work status:** PARKED / UNCERTAINTY — no further check selected; outside TODO.

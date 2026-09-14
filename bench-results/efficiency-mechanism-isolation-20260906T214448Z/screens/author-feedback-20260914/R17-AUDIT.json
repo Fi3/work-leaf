@@ -1,0 +1,184 @@
+{
+  "scope": "R17: the one actual new diagnostic only; existing audit_rollout called exactly once; no old baseline accounting replay",
+  "core_sha256": "dd5127f937ec1cc4d41a443ba7640fca93e82484f345ac8c56aeef5325d68153",
+  "metadata": {
+    "arm": "R13",
+    "thread_id": "01a0a087-cc72-72a1-984a-ee416b3525c2",
+    "model": "gpt-5.5",
+    "effort": "xhigh",
+    "cwd": "/tmp/wl-author-feedback-20260914.alMTHU/R13",
+    "native_path": "/home/user/.codex/sessions/2026/09/14/rollout-2026-09-14T17-27-29-01a0a087-cc72-72a1-984a-ee416b3525c2.jsonl",
+    "native_sha256": "0aed801b9f28e94c54f5163701b36ece7b857a10f41509a47ef568c63b4f6a75",
+    "public": [
+      {
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/R13/native.stdout.jsonl",
+        "sha256": "4a6024f91150b8bf2927ecd7edd4b41a307904807a7693124afa75f931ea4604"
+      }
+    ]
+  },
+  "audit": {
+    "thread_id": "01a0a087-cc72-72a1-984a-ee416b3525c2",
+    "errors": [],
+    "records": {
+      "resp_050d7c3dda572255016aa81263fbf487d287acd4b2035f634d": {
+        "response_id": "resp_050d7c3dda572255016aa81263fbf487d287acd4b2035f634d",
+        "thread_id": "01a0a087-cc72-72a1-984a-ee416b3525c2",
+        "turn_id": "01a0a087-ccdc-78e3-952b-29a974323534",
+        "usage": {
+          "input_tokens": 15658,
+          "cached_input_tokens": 4480,
+          "output_tokens": 29,
+          "reasoning_output_tokens": 14
+        },
+        "line": 13
+      }
+    },
+    "response_count": 1,
+    "duplicate_response_records": 0,
+    "native_usage": {
+      "input_tokens": 15658,
+      "cached_input_tokens": 4480,
+      "output_tokens": 29,
+      "reasoning_output_tokens": 14,
+      "raw_input_plus_output": 15687,
+      "uncached_input_plus_output": 11207
+    },
+    "compaction_markers": []
+  },
+  "public_usage": {
+    "input_tokens": 15658,
+    "cached_input_tokens": 4480,
+    "output_tokens": 29,
+    "reasoning_output_tokens": 14,
+    "raw_input_plus_output": 15687,
+    "uncached_input_plus_output": 11207
+  },
+  "native_minus_public": {
+    "input_tokens": 0,
+    "cached_input_tokens": 0,
+    "output_tokens": 0,
+    "reasoning_output_tokens": 0
+  },
+  "exact_prompt_match": true,
+  "prompt_sha256": "64f0bf27c55d9e0f216f3a80747136362d2d23e533277151f7131e54ee84f58a",
+  "task_starts": [
+    "01a0a087-ccdc-78e3-952b-29a974323534"
+  ],
+  "task_terminals": [
+    {
+      "turn_id": "01a0a087-ccdc-78e3-952b-29a974323534",
+      "type": "task_complete"
+    }
+  ],
+  "tool_call_items": [],
+  "contexts": [
+    {
+      "turn_id": "01a0a087-ccdc-78e3-952b-29a974323534",
+      "model": "gpt-5.5",
+      "effort": "xhigh",
+      "cwd": "/tmp/wl-author-feedback-20260914.alMTHU/R13",
+      "approval_policy": "never",
+      "sandbox_policy": {
+        "type": "read-only"
+      }
+    }
+  ],
+  "source_endpoints": [
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/PROTOCOL-R13.md",
+      "expected": "bf0feb2f023dda5fbc0ecfabc777c470c8545aecda37b137fd52cc6f403e9ea1",
+      "actual": "bf0feb2f023dda5fbc0ecfabc777c470c8545aecda37b137fd52cc6f403e9ea1"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/run_input_diagnostic.py",
+      "expected": "f09740f8fee5c40adb0b24869c7214ea24fe73155f57cf762d248569546c61ae",
+      "actual": "f09740f8fee5c40adb0b24869c7214ea24fe73155f57cf762d248569546c61ae"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/monitor.py",
+      "expected": "2589b0f75adf293f631c05e8b140428f25a97c118efb723078ac79bb8df8a011",
+      "actual": "2589b0f75adf293f631c05e8b140428f25a97c118efb723078ac79bb8df8a011"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/test_monitor.py",
+      "expected": "7739719a0146304b2a13a749143ea47956e68b202885dc59b41946c9ffd813c4",
+      "actual": "7739719a0146304b2a13a749143ea47956e68b202885dc59b41946c9ffd813c4"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/idle_supervisor.py",
+      "expected": "b134467bc7cf8f529d00d338276b9a2e1d0ec0f7ecb6736f5db53aebb9b75549",
+      "actual": "b134467bc7cf8f529d00d338276b9a2e1d0ec0f7ecb6736f5db53aebb9b75549"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/R13/PROMPT.txt",
+      "expected": "64f0bf27c55d9e0f216f3a80747136362d2d23e533277151f7131e54ee84f58a",
+      "actual": "64f0bf27c55d9e0f216f3a80747136362d2d23e533277151f7131e54ee84f58a"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/R13/profile/codex",
+      "expected": "5b981fc30d65ef820a0505f7414a604acc8afb7455b2da6bb2ae9317742d48f6",
+      "actual": "5b981fc30d65ef820a0505f7414a604acc8afb7455b2da6bb2ae9317742d48f6"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic/bounded_launch.py",
+      "expected": "f181729b5c26e4cfc85477c82918fb9468fb4a9482d8700c36134ecd3a175db1",
+      "actual": "f181729b5c26e4cfc85477c82918fb9468fb4a9482d8700c36134ecd3a175db1"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-inverse-20260914/author_inverse.py",
+      "expected": "9afbe2c342a4f5e23ee46dedb7c16df68a1099622b53efaa09b71adb9e774358",
+      "actual": "9afbe2c342a4f5e23ee46dedb7c16df68a1099622b53efaa09b71adb9e774358"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-inverse-20260914/resource_sample.py",
+      "expected": "607ece4d4384d5ed49560cc8250838dedf3ba5e4924ddc993b1d93102a63ea5b",
+      "actual": "607ece4d4384d5ed49560cc8250838dedf3ba5e4924ddc993b1d93102a63ea5b"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/drivers/host_custody.py",
+      "expected": "5e5be14ae50574e1d3ee81991cb4fee2d33e923ca825655644a1c33aac18b537",
+      "actual": "5e5be14ae50574e1d3ee81991cb4fee2d33e923ca825655644a1c33aac18b537"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/provider/codex",
+      "expected": "8ad1d261979029fec24cf4e143aaf6afc6c688056c6bc702c824b3538b92ff32",
+      "actual": "8ad1d261979029fec24cf4e143aaf6afc6c688056c6bc702c824b3538b92ff32"
+    },
+    {
+      "path": "/tmp/work-leaf-cli-01534.r6qIK3/cache/_npx/61b275e57bf5ae43/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex",
+      "expected": "56ef98ab4032d317ab26e9b5e5a175650717351edb16ed9cde0cb6d1734d62da",
+      "actual": "56ef98ab4032d317ab26e9b5e5a175650717351edb16ed9cde0cb6d1734d62da"
+    },
+    {
+      "path": "/tmp/wl-author-feedback-20260914.alMTHU/R13/AGENTS.md",
+      "expected": "5f6ba65e9708299c97fa6856d6eb4e9ac09434ca19d7add22b90862fb20d652c",
+      "actual": "5f6ba65e9708299c97fa6856d6eb4e9ac09434ca19d7add22b90862fb20d652c"
+    },
+    {
+      "path": "/home/user/.codex/config.toml",
+      "expected": "f20c71778fecbbe16ccefadad444a2c4578800a4c365e5b4fb69e35ccb6a52ee",
+      "actual": "f20c71778fecbbe16ccefadad444a2c4578800a4c365e5b4fb69e35ccb6a52ee"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/R13/ENVIRONMENT.json",
+      "expected": "5b224ec9c013ef49de0421ed383bf618284a76f87d0bdfa09f9fc99e34543654",
+      "actual": "5b224ec9c013ef49de0421ed383bf618284a76f87d0bdfa09f9fc99e34543654"
+    }
+  ],
+  "source_endpoint_errors": [],
+  "admission_matches_terminal": true,
+  "base_equal": true,
+  "developer_equal": false,
+  "admissions": [
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/R13/ADMISSION.json"
+  ],
+  "unfinished_turns": [],
+  "unlaunched": [
+    "R14 author episode",
+    "R15 author episode",
+    "R16 workflow 1",
+    "R16 workflow 2",
+    "R16 workflow 3"
+  ],
+  "conclusion": "valid completed diagnostic accounting and input-mismatch evidence; no qualified feature intervention or causal token effect"
+}

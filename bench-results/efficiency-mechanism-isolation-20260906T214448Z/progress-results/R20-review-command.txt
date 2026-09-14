@@ -1,0 +1,35 @@
+python3 - <<'PY'
+from pathlib import Path
+from fractions import Fraction
+import json,hashlib,re,subprocess
+s=Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z');d=s/'screens/author-feedback-20260914'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+ledger=json.loads((s/'PROGRESS-CHECKLIST.json').read_text())
+paths=set();results={}
+for identity in ['R13','R14','R15','R16','R17','R18','R19']:
+ item=ledger['tasks'][identity];p=Path(item['definition']['result']);body=p.read_text()
+ assert item['status']=='done'
+ for marker in ('# '+identity,item['result']['completed_at'],item['result']['outcome'],'## Check performed','## Evidence','## Result','## Limits'):assert marker in body
+ paths.add(str(p));paths.update(item['result']['evidence'])
+ results[identity]={'outcome':item['result']['outcome'],'path':str(p),'sha256':sha(p)}
+missing=[p for p in sorted(paths) if not Path(p).is_file()]
+assert not missing
+a=json.loads((d/'R17-AUDIT.json').read_text());syn=json.loads((d/'R18-R19-SYNTHESIS.json').read_text())
+assert not a['audit']['errors'] and not a['source_endpoint_errors'] and not a['unfinished_turns']
+assert a['exact_prompt_match'] and a['admission_matches_terminal'] and a['base_equal'] and not a['developer_equal']
+assert a['audit']['response_count']==1 and a['audit']['native_usage']['raw_input_plus_output']==15687
+assert not any(a['native_minus_public'].values()) and not a['tool_call_items']
+assert sum(syn['reference_categories'].values())==syn['reference_total_raw']==18545304
+assert syn['historical_explained_share_percent'] is None and syn['downstream_offset'] is None
+expected=[str(d/'R13/ADMISSION.json')];assert [str(p) for p in sorted(d.rglob('ADMISSION.json'))]==expected
+old=subprocess.check_output(['git','show','HEAD:hypotesis.md'],text=True);new=Path('hypotesis.md').read_text()
+pattern=re.compile(r'^### ([CXMNJ]\d\d) — .+\n',re.M)
+def sections(body):
+ ms=list(pattern.finditer(body));return {m.group(1):body[m.start():(ms[i+1].start() if i+1<len(ms) else len(body))] for i,m in enumerate(ms)}
+old_sections,new_sections=sections(old),sections(new)
+preserved=[k for k,v in old_sections.items() if re.sub(r'^- \*\*2026-09-14 extension:\*\*.*\n','',new_sections.get(k,''),flags=re.M)==v]
+assert len(preserved)==len(old_sections)==62
+normal_diff=subprocess.check_output(['git','diff','--name-only','--','src','tests','Cargo.toml','Cargo.lock'],text=True).strip();assert not normal_diff
+old_test_diff=subprocess.check_output(['git','diff','--name-only','--',str(s/'test_progress_counter.py')],text=True).strip();assert not old_test_diff
+print(json.dumps({'scope':'R20 one final source/evidence/arithmetic/affected-register review; no provider or native-audit execution','result_records':results,'evidence':[{'path':p,'sha256':sha(Path(p))} for p in sorted(paths)],'missing':missing,'affected_register_ids':['C13','C14','C15','C20','M04','J04','J13'],'unchanged_prior_register_sections':len(preserved),'all_old_section_text_preserved_after_removing_declared_extension_notes':True,'actual_admissions':expected,'new_complete_diagnostic_raw':15687,'normal_runtime_diff':normal_diff,'original_progress_tests_diff':old_test_diff,'conclusion':'No qualified feature experiment; case (1) additional source-level launch work, not an arithmetic rollback or historical benchmark error.'},indent=2))
+PY

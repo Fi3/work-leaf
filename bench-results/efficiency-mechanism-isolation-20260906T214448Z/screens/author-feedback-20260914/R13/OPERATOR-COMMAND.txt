@@ -1,0 +1,21 @@
+python3 - <<'PY'
+import pathlib,subprocess,sys,time
+s=pathlib.Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z').resolve(); d=s/'screens/author-feedback-20260914'
+sys.path.insert(0,str(d))
+import monitor
+root=d/'R13'
+child=subprocess.Popen([sys.executable,str(s/'preflight/c15-real-diagnostic/bounded_launch.py'),str(root/'ADMISSION.json'),'8db35710f568595e97a8dc59daa247a66484094095c683577399491bb5deb229'],stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+index=1
+while True:
+    sample=monitor.step(root,index,lambda:monitor.resources.sample_arm(root,pathlib.Path('/home/user/.codex/sessions/2026/09/14')),
+        lambda:monitor.resources.stop_owned(d/'run_input_diagnostic.py','R13',root))
+    print({'sample':index,'raw':sample['native_recorded_raw'],'public':sample['public_completed_raw'],'terminal':sample['terminal']},flush=True)
+    if child.poll() is not None: break
+    if max(sample['native_recorded_raw'],sample['public_completed_raw']) >= 100000:
+        monitor.publish(root/'resource-stop.json',monitor.resources.stop_owned(d/'run_input_diagnostic.py','R13',root))
+        break
+    time.sleep(5); index+=1
+stdout,stderr=child.communicate(timeout=65)
+monitor.publish(root/'OPERATOR-TERMINAL.json',{'exit_code':child.returncode,'stdout':stdout,'stderr':stderr})
+print(stdout,stderr,flush=True)
+PY

@@ -86,7 +86,7 @@ def validate_proposals(proposals):
     require(len(set(identities)) == len(identities), "duplicate proposed task")
 
 
-def validate_zero_decision(ledger, definitions):
+def validate_zero_decision(ledger, definitions, final_id="R12"):
     research = ledger["research"]
     keys(research, "status zero_decision")
     issues = ledger["scope_issues"]
@@ -104,7 +104,7 @@ def validate_zero_decision(ledger, definitions):
         return
     require(isinstance(decision, dict), "zero TODO requires an explicit stop decision")
     require(strings(decision.get("evidence"))
-            and definitions["R12"]["result"] in decision["evidence"],
+            and definitions[final_id]["result"] in decision["evidence"],
             "the zero decision requires the final coverage/result evidence")
     if decision.get("kind") == "supported":
         keys(decision, "kind evidence conclusion")
@@ -134,6 +134,9 @@ def validate_zero_decision(ledger, definitions):
 
 def validate_ledger(ledger):
     """Validate the declared finite work and retained evidence; not causal truth."""
+    if ledger.get("schema") == 4:
+        from progress_extension import validate_ledger as validate_extension
+        return validate_extension(ledger)
     scope, legacy, _ = load_contract()
     keys(ledger, "schema scope_id fixed_total completed pending tasks history research scope_issues")
     require(type(ledger["schema"]) is int and ledger["schema"] == 3
@@ -214,12 +217,20 @@ def read_counts(first_line):
     match = re.fullmatch(r"# DONE: (\d+) \| TODO: (\d+) \| TOTAL: (\d+)", first_line)
     require(match is not None, "DONE / TODO / TOTAL must occupy the first line")
     done, todo, total = map(int, match.groups())
-    require(total == FIXED_TOTAL and done + todo == FIXED_TOTAL and done >= 54,
-            "DONE + TODO = TOTAL = 66; all 54 historical completions remain")
+    if total == 74:
+        from progress_extension import load_contract as load_extension
+        load_extension()
+        require(done + todo == 74 and done >= 66, "preserve all 66 completions in the approved scope")
+    else:
+        require(total == FIXED_TOTAL and done + todo == FIXED_TOTAL and done >= 54,
+                "DONE + TODO = TOTAL = 66; all 54 historical completions remain")
     return done, todo
 
 
 def validate_published_progress(ledger, publications):
+    if ledger.get("schema") == 4:
+        from progress_extension import validate_publications
+        return validate_publications(ledger, publications)
     counts = validate_ledger(ledger)
     scope, legacy, old_publications = load_contract()
     keys(publications, "schema scope_id fixed_total checkpoints")
@@ -246,7 +257,7 @@ def validate_visible_progress(ledger, hypothesis, note):
                       "\n".join(lines[:35]), re.MULTILINE)
     expected = [(identity, {"pending": "TODO", "checking": "CHECKING", "done": "DONE"}[
         item["status"]], item["definition"]["question"]) for identity, item in ledger["tasks"].items()]
-    require(rows == expected, "all twelve visible task IDs, statuses and questions must match")
+    require(rows == expected, "all visible task IDs, statuses and questions must match")
 
 
 def validate_evidence_files(ledger):

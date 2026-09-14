@@ -1,0 +1,14 @@
+python3 - <<'PY'
+from pathlib import Path
+from fractions import Fraction
+import json,hashlib
+s=Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z');p=s/'progress-results/R10-R11-saved-projection.json';v=json.loads(p.read_text())
+a=json.loads((s/'screens/author-feedback-20260914/R17-AUDIT.json').read_text())
+categories={k:x['native_usage']['raw_input_plus_output'] for k,x in v['reference_categories'].items()}
+assert sum(categories.values())==v['reference_total_raw']==18545304
+h=v['historical_preserved'];direct=Fraction(h['direct_total'],h['n'])
+low=direct-h['wl_conditional_upper_mean'];high=direct-h['wl_recorded_mean']
+assert str(direct)==h['direct_mean'] and str(low)==h['gap_low'] and str(high)==h['gap_high']
+assert a['audit']['response_count']==1 and a['audit']['native_usage']['raw_input_plus_output']==15687
+print(json.dumps({'scope':'R18/R19 fixed saved projection and new diagnostic only; no historical native accounting replay','saved_projection':str(p),'saved_projection_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'reference_categories':categories,'reference_total_raw':v['reference_total_raw'],'reference_later_work_raw':sum(x for k,x in categories.items() if k!='initial_author'),'r16_admitted_workflows':[],'qualified_treatment_categories':None,'downstream_offset':None,'historical_direct_mean':str(direct),'historical_gap_low':str(low),'historical_gap_high':str(high),'historical_reduction_percent':[float(low/direct*100),float(high/direct*100)],'historical_explained_amount':None,'historical_explained_share_percent':None,'historical_residual':None,'new_investigation_overhead_raw':15687,'overhead_is_not_an_intervention_effect':True,'missing_identification':['faithful B or A+B author contrast','qualified full-workflow contrast including review/repair/integration','overlap-aware historical transfer using saved R07'],'no_additive_c08_c25_allocation':True},indent=2))
+PY
