@@ -1,11 +1,14 @@
 # Provisional investigation ledger
 
-Live analysis counter: **DONE: 56 | TODO: 10 | TOTAL: 66** — [hypotesis.md](hypotesis.md).
+Live analysis counter: **DONE: 66 | TODO: 0 | TOTAL: 66** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** the user-approved one-time correction retains all
-54 historical completed records and twelve finite tasks, R01–R12. R01 is DONE;
-R02/R04/R06 are admitted for concurrent author screens; other remaining tasks have not started. [Approved questions, scope limits and completion criteria](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md).
+54 historical completed records and twelve finite tasks, R01–R12, all with
+saved terminal results. **Research stopped at zero, case (1): additional work
+needs permission.** No provider is running or admitted; the exact eight proposed
+follow-up tasks are not TODO or authority to execute.
+[Approved questions, scope limits and completion criteria](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md).
 Research resumed at 13:02 UTC on the user's explicit instruction. R01 is a
-30-minute saved-source contrast/feasibility pass; no provider call is admitted.
+completed saved-source contrast/feasibility pass; four later screen attempts are closed.
 The verified historical attributable
 combined percentage remains **NOT ESTABLISHED**.
 
@@ -83,7 +86,104 @@ their common 900-second deadline is approximately 13:53:26 UTC. These are
 in-progress resource counts, not final costs or mechanism results. The watcher
 retains a sample every 15 seconds under the wave's resources directory.
 
+**13:49:17 UTC — R07 complete:** [overlap/transfer result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R07.md).
+Fourteen H refreshes in nine author histories intersect 121 distinct interrupt
+turns. These are overlapping history windows, not 121 extra responses or a token
+allocation. The saved C08/C25 effects cannot be added to a package effect or
+transferred directly to the historical gap. Counter advances to 57/9/66.
+The research/admission checkpoint is committed as d60ff44. R03 preparation starts
+at 13:49:17, using the already-tested feedback-only adapter; its own 45-minute
+preparation ceiling is 14:34:17. No fourth simultaneous screen is permitted.
+
+**13:53 UTC — two joint screens closed; R03 launched:** R06 finishes at
+13:47:57, exit 0, 2,312,888 recorded/public raw; R04 finishes at 13:48:43,
+exit 0, 2,430,527 raw. Both preserve an explicit global-configuration drift flag
+for qualification; no source error is concealed. R04's retained operation log
+shows test-only publication → real failure → implementation → real checks → DONE.
+Its exact attribution and required validation still need terminal analysis.
+R03 uses the already-defined B-only inverse, one 900-second/3M attempt, with
+immediate 15-second resource supervision. At launch only R02 remains active,
+so concurrency is two, not four. No replacement or new ordinary baseline.
+
+**13:54 UTC — all four admitted screens are closed.** R03's monitor failed on
+its first write because I omitted its resources directory. The exception path
+sent SIGINT and the run stopped after 1.068679s; its second error-record write
+also failed on that absent parent. [Failure record](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-inverse-20260914/R03/MONITOR-FAILURE.md).
+There are zero recorded response charges, not proof of zero actual usage. Source
+is clean and no edit was accepted. This is my setup error, not a B-factor result.
+No retry or replacement. R02 hit its original 900-second wall at 13:53:26,
+with 1,289,370 recorded raw at the last pre-stop sample; its tail remains to audit.
+R04 and R06 completed successfully at 2,430,527 and 2,312,888 raw respectively.
+No provider remains running; terminal mechanism/custody analysis is active.
+
+**13:58 UTC — closed-screen audit starts:** R09 binds all four actual native
+threads and 17 public invocations, including the R02 timeout and R03 setup failure.
+The unchanged native accounting core will run once per new thread. No old baseline
+accounting is rerun. Global config differs only by R06's exact 81-byte automatic
+trust section; removing that section in memory reproduces the admission hash.
+The original drift flags remain. R04's extra work includes genuine initial RED,
+then further UI/app validation after its new tests pass, including a transient
+existing-test failure and unchanged-source reruns. That offset remains in its cost.
+
+**14:06:59 UTC — all four screen result records complete:** R02/R03/R04/R06
+are saved individually with their actual qualifications. The native audit reused
+the unchanged core once per thread: 69 distinct recorded responses, 6,032,785 raw,
+15 completed invocations and two unfinished tasks. The latter retain unknown
+tails. R02/R04/R06 exact prompts and completed-public/native usage match; R03
+stopped before its first prompt or turn context was recorded.
+
+The actual developer-input check finds a 775-byte non-target difference versus
+the saved all-on reference: two optional skill descriptions are absent. Base
+instructions match. R02/R04 share the same current developer input; R06 additionally
+has the declared native permission boundary. No unused-skill assumption is used
+to invent a bound on changed model decisions. R04's post-first-GREEN invocations
+cost 1,489,028 raw, an enclosing-work amount rather than an independently removable
+cause allocation. R08 applies its existing eligibility gate before any full batch.
+The four matching completion checkpoints advance the counter to 61/5/66.
+
+**14:17:20 UTC — R08/R09 complete:** no arm passes the frozen eligibility
+gate, so no full-workflow confirmation batch is admitted. Both complete package
+signals have an unintended catalog difference against the saved reference;
+conditional native custody does not show the predicted expensive direction.
+The audit retains all four attempts, 69 recorded responses / 6,032,785 raw,
+two unknown tails, actual-input differences and monitoring deviations. Exact
+owned trust normalization qualifies only the configuration drift, not the catalog.
+[Decision](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R08.md)
+and [audit](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R09.md).
+Counter advances twice to 63/3/66. R10/R11 inspect available offsets and the fixed
+historical denominator; no generation, baseline re-audit, repair or replacement.
+
 ## Primary metric: how much of the historical saving is explained?
+
+**14:24:33 UTC — R10/R11 complete:** the saved all-on workflow contains
+14,236,905 raw after its initial authors, including real visual fixes, completion
+formatting, docs and integration validation. New author-only screens cannot
+measure those offsets. The accepted historical gap remains
+16,390,849⅔–18,644,849⅔ raw/workflow, but no pure joint effect and historical
+transfer identify an attributable amount; the explained share is NOT ESTABLISHED,
+not zero. [Offset table](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R10.md)
+and [synthesis](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R11.md).
+Counter advances to 65/1/66. R12 reviews the fixed register and result set once;
+any additional necessary task is a permission request, not hidden execution.
+
+**14:31:22 UTC — R12 complete; research stopped at 66/0/66:** all 69
+register IDs and eleven preceding results pass the finite coverage/evidence and
+arithmetic review; 60 unique local evidence paths exist. This is not a positive
+causal conclusion. R04's descriptive +1,203,245 decomposes into −147,082 through
+first GREEN and +1,350,327 afterward, making B's post-result guidance the most
+informative next discriminator. Real failure recovery remains; no first-GREEN
+cutoff or causal suffix subtraction is justified.
+[Final review](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R12.md).
+Case (1): failed/unqualified observations require new work, not a rollback or
+silent reopening. [Eight proposed bounded tasks](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-NEXT-SCOPE-20260914.md)
+cover qualification, B-only, A+B, conditional three-workflow confirmation,
+new-observation audit, offsets, numerical synthesis and final closure. They are
+not admitted or added to TODO. No further research occurs before user approval.
+Final checks: 26 progress regressions, 17 private tests, Cargo format, strict
+Clippy and all-target/all-feature tests pass. The screen adapters are already
+committed in d60ff44; all new admissions, outcome evidence and tracker results
+are retained in the terminal archival checkpoint. The private launch remains
+unqualified for causal reuse until the proposed input/monitor work is approved.
 
 **Current verified combined share: NOT ESTABLISHED. The attribution goal is unfinished.**
 

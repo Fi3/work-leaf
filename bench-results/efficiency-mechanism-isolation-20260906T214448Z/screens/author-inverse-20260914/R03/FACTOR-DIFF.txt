@@ -1,0 +1,34 @@
+--- saved-all-on-prompt
++++ R03-prompt
+@@ -54,6 +54,5 @@
+ no 12,000-character bound on the whole feedback package. Do not invent success from omitted output.
+ Command changes remain pending
+ until an accepted edit or an explicit @standalone discard <reason>; DONE cannot leave pending work.
+-When the assigned work is complete, send exactly @standalone done. This is not an obligation to stop
+-after one green check: complete any genuinely remaining task work first. Do not emit directives in
++When the assigned work is complete, send exactly @standalone done. Do not emit directives in
+ quoted examples, commentary, or a mixture with other prose; only a complete owned final is executable.
+
+--- saved-host
++++ R03-host
+@@ -616,7 +616,7 @@
+             path = folder / f"{stream}.txt"
+             output.append(f"{stream}:\n" + render_output(path.read_bytes().decode("utf-8", errors="replace")))
+         pending = "\n" + self.pending_feedback() if self.pending else ""
+-        return f"Host command completed.\ncommand: {command}\nstatus: {receipt['exit_code']}\n" + "\n".join(output) + pending + "\nUse another requested command or an ordinary edit for concrete remaining work. When the required work and focused validation are complete, send @standalone done."
++        return f"Host command completed.\ncommand: {command}\nstatus: {receipt['exit_code']}\n" + "\n".join(output) + pending
+ 
+     def pending_feedback(self):
+         diff = "\n".join(self.pending[name]["diff"] for name in self.pending_changes)
+@@ -674,9 +674,9 @@
+                 self.event("proposal_rejected", reason=str(exc), accepted_paths=accepted)
+                 deliver(f"Host proposal rejected: {exc}. No success is claimed for the rejected operation. Previously accepted paths in this reply: {', '.join(accepted) or 'none'}. Inspect the actual source and submit a corrected complete operation.")
+         if accepted and not self.completed:
+-            deliver(f"Host accepted files: {', '.join(dict.fromkeys(accepted))}. Each accepted edit has its provisional commit already saved. Do not resend or restate accepted patches. Run at most one relevant focused validation step for this accepted work; after it passes, send @standalone done. Send another edit for a concrete issue in your own patch. The complete requested work remains required; concrete unresolved requirements may still be addressed.")
++            deliver(f"Host accepted files: {', '.join(dict.fromkeys(accepted))}. Each accepted edit has its provisional commit already saved.")
+         if not prompts and not self.completed:
+-            deliver("Pending output explicitly discarded. Continue concrete required work or send @standalone done when complete.")
++            deliver("Pending output explicitly discarded.")
+         # This joined string is only a provider-free unit-test view. Production
+         # invokes feedback separately at EACH deliver call, never as a bundle.
+         return None if self.completed else "\n\n".join(prompts)

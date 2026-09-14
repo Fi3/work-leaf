@@ -1,0 +1,18 @@
+Implemented Vim-like visual selection for both panes, left uncommitted.
+
+Core changes:
+- [src/ui.rs](/tmp/wl-author-inverse-20260914.BBmGzh/R06/src/ui.rs:391): added visual character, line, and block selection with `v`, `V`, and Ctrl-V.
+- [src/ui.rs](/tmp/wl-author-inverse-20260914.BBmGzh/R06/src/ui.rs:840): added `h/j/k/l` and arrow movement while selecting, plus `y`/`Y` yank behavior.
+- [src/ui.rs](/tmp/wl-author-inverse-20260914.BBmGzh/R06/src/ui.rs:680): renders selected text with reverse-video highlighting and emits OSC52 clipboard output after yank.
+- [src/terminal_app.rs](/tmp/wl-author-inverse-20260914.BBmGzh/R06/src/terminal_app.rs:670) and [src/ui_harness.rs](/tmp/wl-author-inverse-20260914.BBmGzh/R06/src/ui_harness.rs:418): route real app and harness input through pane-aware selection handling.
+
+Tests added in [tests/terminal_ui.rs](/tmp/wl-author-inverse-20260914.BBmGzh/R06/tests/terminal_ui.rs:305) and [tests/ui_harness.rs](/tmp/wl-author-inverse-20260914.BBmGzh/R06/tests/ui_harness.rs:536).
+
+Checks run:
+- `cargo test --test terminal_ui`
+- `cargo test --test ui_harness`
+- `cargo test --test terminal_app`
+- `cargo clippy --test terminal_ui --test ui_harness --test terminal_app -- -D warnings`
+- `git diff --check`
+
+No docs/prose files were modified. Real-agent verification was not run per the benchmark checkout waiver; this change is terminal selection/yank UI behavior, not provider launch/send logic.

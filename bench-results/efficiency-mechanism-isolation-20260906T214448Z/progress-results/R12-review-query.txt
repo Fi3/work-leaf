@@ -1,0 +1,23 @@
+python3 - <<'PY'
+import re,json,hashlib,pathlib
+from fractions import Fraction
+root=pathlib.Path.cwd(); s=root/'bench-results/efficiency-mechanism-isolation-20260906T214448Z'; h=(root/'hypotesis.md').read_text(); ledger=json.loads((s/'PROGRESS-CHECKLIST.json').read_text())
+refs=dict(re.findall(r'^\[([^\]]+)\]:\s*(\S+)',h,re.M)); starts=list(re.finditer(r'^### ([CMJN]\d\d) — ([^\n]+)',h,re.M)); rows=[]
+for i,m in enumerate(starts):
+ end=starts[i+1].start() if i+1<len(starts) else h.index('## Dated experiment',m.end()); body=h[m.start():end].split('\n## ')[0]
+ targets=re.findall(r'\]\(([^\n)]+)\)',body)+[refs[k] for k in re.findall(r'\]\[([^\]]+)\]',body) if k in refs]
+ rows.append({'id':m[1],'title':m[2],'entry_sha256':hashlib.sha256(body.encode()).hexdigest(),'status_line':next((x for x in body.splitlines() if '**Work status:**' in x),None),'evidence_paths':sorted(set(targets))})
+for m in re.finditer(r'^\| \*\*(X\d\d) — ([^*]+)\*\* \| (.*) \|$',h,re.M):
+ body=m[0];targets=[refs[k] for k in re.findall(r'\]\[([^\]]+)\]',body) if k in refs]
+ rows.append({'id':m[1],'title':m[2],'entry_sha256':hashlib.sha256(body.encode()).hexdigest(),'status_line':m[3].split('**')[1],'evidence_paths':sorted(set(targets))})
+expected=[f'{p}{i:02}' for p,n in [('C',38),('X',7),('M',8),('J',13),('N',3)] for i in range(1,n+1)]
+actual=[r['id'] for r in rows]; assert len(actual)==len(set(actual))==69 and set(actual)==set(expected)
+paths=sorted(set(v for r in rows for v in r['evidence_paths'] if not v.startswith(('https://','http://','#')))); missing=[v for v in paths if not (root/v.split('#')[0].strip('<>')).exists()]
+results=[]
+for ident in [f'R{i:02}' for i in range(1,12)]:
+ t=ledger['tasks'][ident]; assert t['status']=='done'; body=(root/t['definition']['result']).read_text(); assert all(mark in body for mark in [f'# {ident}',t['result']['completed_at'],t['result']['outcome'],'## Check performed','## Evidence','## Result','## Limits']); results.append({'id':ident,'outcome':t['result']['outcome'],'evidence_files':len(t['result']['evidence'])})
+a=json.loads((s/'screens/author-inverse-20260914/SCREEN-NATIVE-AUDIT.json').read_text()); projection=json.loads((s/'progress-results/R10-R11-saved-projection.json').read_text()); raw=sum(r['native_usage']['raw_input_plus_output'] for r in a['runs']); ids=[rid for r in a['runs'] for rid in r['records']]; assert len(ids)==len(set(ids))==69 and raw==6032785
+categories=projection['reference_categories']; assert sum(v['native_usage']['raw_input_plus_output'] for v in categories.values())==18545304; assert 18545304-4308399==14236905; assert 2430527-1227282==1203245 and 2312888-1227282==1085606 and 2312888-2430527==-117639
+assert Fraction(216698290,6)-19725532==Fraction(49172549,3) and Fraction(216698290,6)-17471532==Fraction(55934549,3)
+print(json.dumps({'scope':'R12 register/result coverage and saved arithmetic review; no generator or accounting core execution','register_snapshot_sha256':hashlib.sha256(h.encode()).hexdigest(),'source_map':'bench-results/efficiency-mechanism-isolation-20260906T214448Z/CANDIDATE-MAP.md','entry_count':len(rows),'entries':sorted(rows,key=lambda r:expected.index(r['id'])),'unique_local_evidence_paths':len(paths),'missing_paths':missing,'finite_completed_results':results,'arithmetic_checks':'pass','check_vs_proof':'entry coverage and source existence are not experimental causal coverage or independent replication'}))
+PY

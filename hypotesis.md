@@ -1,23 +1,23 @@
-# DONE: 56 | TODO: 10 | TOTAL: 66
+# DONE: 66 | TODO: 0 | TOTAL: 66
 
-**Pending: R02–R04, R06–R12. R02/R04/R06 are running; R07 is an offline overlap check. Last completed: R05 (unqualified C-only setup).**
+**STOPPED AT ZERO — case (1): additional work is needed. All approved tasks have terminal results; the causal explanation is not verified.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-14 13:38 UTC:** R02/R04/R06 launch three bounded inverse-author screens, each one attempt, 15 minutes and a 3M observed-raw tripwire.
+**Activity, 2026-09-14 14:31 UTC:** R12's review is complete. No provider or research task is running. [Eight exact follow-up tasks](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROPOSED-NEXT-SCOPE-20260914.md) are proposed for permission only; **they are not added to TODO**.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
 | R01 | DONE | Define a faithful inverse of the reproduced author package. |
-| R02 | CHECKING | Does removing cohesive implementation-plus-tests publication increase work and tokens? |
-| R03 | TODO | Does removing result-bound validation/completion guidance increase work and tokens? |
-| R04 | CHECKING | Do publication policy and feedback act jointly? |
+| R02 | DONE | Does removing cohesive implementation-plus-tests publication increase work and tokens? |
+| R03 | DONE | Does removing result-bound validation/completion guidance increase work and tokens? |
+| R04 | DONE | Do publication policy and feedback act jointly? |
 | R05 | DONE | Does native write/tool availability explain behavior beyond the author contract? |
-| R06 | CHECKING | Does reversing the complete A+B+C package restore the expensive behavior? |
-| R07 | CHECKING | How do the already-positive C08/C25 pathways overlap with this package in the historical runs? |
-| R08 | TODO | Does the strongest observed causal reversal survive a full workflow? |
-| R09 | TODO | Are the new intervention observations valid evidence for their declared factors? |
-| R10 | TODO | Is any apparent author saving merely work shifted into review, repair or integration? |
-| R11 | TODO | How much of the accepted historical gap is supported by the joint evidence? |
-| R12 | TODO | Does the finished checklist support the requested conclusion, or require permission for more work? |
+| R06 | DONE | Does reversing the complete A+B+C package restore the expensive behavior? |
+| R07 | DONE | How do the already-positive C08/C25 pathways overlap with this package in the historical runs? |
+| R08 | DONE | Does the strongest observed causal reversal survive a full workflow? |
+| R09 | DONE | Are the new intervention observations valid evidence for their declared factors? |
+| R10 | DONE | Is any apparent author saving merely work shifted into review, repair or integration? |
+| R11 | DONE | How much of the accepted historical gap is supported by the joint evidence? |
+| R12 | DONE | Does the finished checklist support the requested conclusion, or require permission for more work? |
 
 These are **12 concrete tasks**, not one broad G03 bucket or 12 independent hypotheses.
 DONE retains all **54 historical completed records**, including negative/inconclusive checks.
@@ -69,32 +69,28 @@ python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progr
 
 The guard checks declarations, result files and consistency; it does not prove a causal claim.
 
-## Live priority — R01 complete; inverse screens next
+## Live priority — stopped; proposed work needs approval
 
-[R01's completed contrast matrix](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R01.md):
-the current host can accept test-only RED before implementation without a custody change.
-R02/R03/R04 and the full R06 inverse have existing boundaries. R05 alone lacks
-a faithful native-write/per-operation-feedback boundary; it is not a zero-effect finding.
-R04 → R06 can test custody conditionally with A/B off. Three author observations are admitted under the saved wave protocol.
+Last maintained: **2026-09-14 14:31 UTC**. No provider is running or admitted.
+The accepted historical gap and the user's no-quality-loss assumption remain premises.
 
-Last maintained: **2026-09-14**. The historical ~50% gap and the user's no-quality-loss
-assumption are the research premises. No repeat to establish that savings exist, ordinary
-control, API-credit use, quality study or original-benchmark revalidation is in this scope.
-All prior failures, missing usage and qualifications remain visible in the register below.
-
-| Priority | Approved task(s), evidence and potential reach | Next bounded check and stop/advance gate |
+| Priority | Evidence, explanatory reach and status | Next bounded check / stop gate |
 | --- | --- | --- |
-| Prerequisite | R01: distinguish the reproduced publication/feedback/custody package. The [saved non-WL result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md) demonstrates the combined workflow, not each factor's share. | One saved-source exposure/contrast matrix for A/B/C and all five arms. An unfaithful contrast gets an explicit infeasibility verdict; no new framework or model call. |
-| Highest joint priority | R04 and, if separable, R06: reverse A+B or A+B+C. A joint reversal could distinguish the combined mechanism without waiting for positive singles; its magnitude is unknown. | At most one initial-author episode per arm, 15-minute wall and 45-minute preparation ceiling. Advance only on the predicted input/state → decision → work/history change with preserved non-targets. |
-| Conditional component separation | R02/R03, then R05 when faithful: publication, result-bound handoff, and native write/tool custody. Old cue-only screens do not establish these effects. | Same one-episode ceilings. Record weak/broken/inconclusive outcomes and move on; no automatic repair-and-rerun. |
-| Saved-evidence overlap | R07: C08/C25 already have positive contrasts in different populations, not additive historical shares. | One historical affected-window/overlap table. Record absent transfer evidence; no single-factor reruns. |
-| Confirmation and closure | R08–R12 use the strongest qualified reversal, retain costs, check downstream offsets and reconcile the accepted historical denominator. | R08 is one decision and, only if eligible, three modified full workflows (90 minutes each), no controls/replacements. R09–R12 are finite analyses, not places to hide new experiments. |
+| Necessary qualification, not approved: proposed R13 | R09 identifies catalog mismatch and the operator's R03 monitor-directory failure. | Bound input/monitor qualification before any further feature generation. No global/source-reference mutation or hidden replacement. |
+| Strongest next discriminator, not approved: proposed R14 B alone | R04's observed increase is concentrated after first GREEN: +1,350,327 raw, offset by −147,082 before/through that GREEN. The suffix includes genuine failure recovery, not just reporting. R03 did not test B because it aborted before verified prompt delivery. | One fresh bounded B-only episode after qualification; look for actual post-result work decisions with required work preserved. Exact scope/ceilings are in the permission proposal. |
+| Promising joint, not approved: proposed R15 A+B | R04 completes at +1,203,245 raw versus the saved author; R06 adds +1,085,606 with native custody. Both saved-reference contrasts have catalog drift. | One qualified A+B screen, then only a demonstrated discriminating signal may select proposed R16's three modified full workflows. No generic control or all-on reproduction. |
+| Completed: R10–R12 | Offset and numerical tables explicitly retain missing causal transfer; all 69 register entries and eleven preceding results pass the finite coverage review. | Research stopped at zero, case (1). Proposed R17–R20 name the audit/offset/synthesis/closure needed only if new observations are approved. |
+| Deprioritized: A alone / C alone | R02 is incomplete. R05 has no faithful existing C-only boundary. Complete R04→R06 costs 117,639 fewer raw with native custody, opposite the predicted direction. | No automatic extension or per-tool bridge; not proof of zero effect. |
 
-Re-rank after material findings. A promising approved joint arm may precede singles.
-Every provider observation still needs its frozen prospective protocol, subscription-only
-authentication and budget/stop criteria. The [approved plan](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md) defines A/B/C
-and the R08 selection rule. The [user's research resumption](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-RESEARCH-RESUMPTION-20260914.md)
-authorizes this finite investigation; each actual provider observation still requires admission.
+R01–R12 have terminal check outcomes, not twelve positive mechanisms.
+[R08's decision](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R08.md) and [R09's audit](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R09.md)
+preserve behavioral signals and causal limits. The [approved finite scope](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md)
+and [resumption authority](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-RESEARCH-RESUMPTION-20260914.md) prohibit new observations inside completed tasks.
+
+[R12's final review and exact permission request](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R12.md)
+classify this as case (1), not a counter rollback. The B-only setup failure and
+unqualified joint contrasts require fresh observations; they are not evidence
+that every cause has been disproved or that the historical saving is false.
 
 ## Verified findings and coverage
 
@@ -102,7 +98,7 @@ The [complete non-WL reproduction](bench-results/efficiency-mechanism-isolation-
 uses **18,545,304 raw tokens**, 48.6513% below the saved Direct average. Its qualified
 operational chain is cohesive implementation/tests → real host acceptance/commit →
 focused validation/handoff. The historical share attributable to that package remains
-unidentified; R01–R12 distinguish that question from merely reproducing a low total.
+unidentified; R01–R12's completed finite checks did not establish that causal share.
 C08/C25's positive individual contrasts remain non-additive. Source/outcome qualifications,
 including the frozen 2/3 feature result under the user's quality premise, are retained.
 
@@ -113,7 +109,7 @@ information and non-model transitions; generated work/model transitions; schedul
 continuation and termination; and arbitrary-order interactions/downstream offsets.
 The [source-coverage map][map] and [preserved full framework](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-archive/HYPOTESIS-OPENING-20260914.txt)
 bind those boundaries to the historical evidence. R12 reviews every existing C/X/M/J/N
-entry against that map once. It cannot launch a missing check inside the review.
+entry against that map once; that review is complete. It cannot launch a missing check inside the review.
 
 R01–R06 address J04/J13's package and C13–C16/C20/X02 custody/feedback distinctions;
 R07 covers C08/C25/J01 overlap; R08–R11 cover confirmation, new-observation validity,
@@ -203,6 +199,7 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 
 ### C08 — Compact automatic conflict refresh
 
+- **2026-09-14 check/status:** [R07](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R07.md) maps 14 H refreshes in nine author histories onto 121 distinct interrupt windows. This is overlap, not a marginal historical C08 price; no generation.
 - **Work status:** DONE — recorded check/screen complete; retain the qualified result below.
 - **Cause:** after a rejected patch/edit when tracked file text has changed, a compact current-snapshot diff replaces a full file repeatedly charged in later inputs. Not every rejection is caused by stale context.
 - **How checked:** three full-refresh modified workflows versus six saved W references; exact 11 full-refresh deliveries and 237 item/response recharge associations. H itself has 14 changed refreshes; its omission ceilings do not activate.
@@ -243,6 +240,7 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 
 ### C13 — Number of post-patch validation steps
 
+- **2026-09-14 check/status:** [R04](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R04.md) performs adjacent checks, transient-failure recovery and final inspection after first GREEN. Those enclosing invocations cost 1,489,028 raw, not an isolated removable validation charge. Catalog drift prevents pure attribution.
 - **Work status:** DONE — recorded check/screen complete; retain the qualified result below.
 - **Cause:** the “at most one focused validation” cue may avoid additional check/result/decision cycles, with possible later repair offsets.
 - **How checked:** S replaced only that cue with required focused steps. The modified workflow records 12 ACKs and 38 command-result boundaries; control records 10 and 15, including one reviewer command. These are whole-run descriptive counts, not effects attributed to the ACK cue or response counts.
@@ -251,6 +249,7 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 
 ### C14 — Cohesive work units and continuation permission
 
+- **2026-09-14 check/status:** R02/R04 actually publish tests before production; R06 executes native RED. R02 is incomplete and the saved-reference comparisons have a developer-input difference. [R09](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R09.md): no pure cohesion share.
 - **Work status:** DONE — recorded check/screen complete; retain the qualified result below.
 - **Cause:** assembling related code/tests together can avoid partial implementation cycles; larger edits can also increase rejections and repair.
 - **How checked:** W's twelve workflows compare a combined launch/test-translation/ACK work policy. Later standalone static instructions test another package; N01 proposes a separate production-cohesion-only screen.
@@ -259,6 +258,7 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 
 ### C15 — Executed test failure before implementation
 
+- **2026-09-14 check/status:** R02/R04/R06 execute real RED. [R04](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R04.md) reaches new-test GREEN at 941,499 raw and then does additional real work; RED alone is not established as its full cost increase. Prior C15 results remain.
 - **Work status:** DONE — recorded check/screen complete; retain the qualified result below.
 - **Cause:** mandatory RED creates test/failure/implementation feedback and may prevent subsequent repair; WL's shared-tree policy changes this sequence.
 - **How checked:** H has 18 Direct test-first initial authors. First private-preview batch had parser/observer failures; corrected three-workflow screen delivered 9 initial and 4 additional private previews, retaining ordinary implementation/review/integration.
@@ -275,6 +275,7 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 
 ### C17 — Host application, commit timing and acknowledgements
 
+- **2026-09-14 check/status:** [R05](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R05.md) finds no faithful existing native/per-operation-feedback C-only boundary. [R06](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R06.md) is 117,639 raw cheaper than R04 with A/B off; not a positive custody saving or general zero-effect result.
 - **Work status:** DONE — shared saved-stage behavioral closeout complete; no automatic rerun.
 - **Cause:** host-applied proposals and actual ACKs can alter mechanical inspections and subsequent work, while introducing extra handoffs.
 - **How checked:** both historical arms already auto-commit; H has 53 accepted edit groups. Independent host reproduction and corrected serialized version were run, not merely designed.
@@ -299,6 +300,7 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 
 ### C20 — Command-result next-action and brevity cue
 
+- **2026-09-14 check/status:** The distinct fresh B-only [R03 attempt](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R03.md) aborts after an operator monitor-directory error, before verified prompt delivery. No cue effect, clean null or replacement.
 - **Work status:** DONE — recorded check/screen complete; retain the qualified result below.
 - **Cause:** brief next-directive guidance may reduce explanation or exploration after a command; it can also change useful investigation.
 - **How checked:** S removed only that owned guidance, preserving actual result/output, locks, failures and pending diffs.
@@ -339,6 +341,7 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 
 ### C25 — Bound generation before an operation's result
 
+- **2026-09-14 check/status:** [R07](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R07.md)'s 121 overlapping H interrupt windows include 106 advancing-usage, 14 resumed-output and one timeout. Window membership is not avoided-response cost; no additive C08+C25 share.
 - **Work status:** DONE — recorded check/screen complete; retain the qualified result below.
 - **Cause:** after requesting a read/edit/check, continued generation without its result can repeat requests, use older evidence or make premature decisions; resulting history is charged later.
 - **How checked:** three historical modified workflows wait through resumed output up to 120 seconds instead of normal 1-second/forward behavior. Eight completed resumed continuations and a timeout are retained; exact public chains classify the resulting work.
@@ -347,6 +350,7 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 
 ### C26 — Tool definitions, permissions and provider transport
 
+- **2026-09-14 check/status:** [R09](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R09.md) finds two missing skill descriptions versus saved reference; R06 also has its declared native permission boundary. These qualify the new screens, not prove a historical cause.
 - **Work status:** PARKED / UNCERTAINTY — no further check selected; outside TODO.
 - **Cause:** different available tools, sandbox rules, request framing or truncation can alter both input size and chosen work, despite the same model label.
 - **How checked:** exact saved launch/input/role records. H WL authors are read-only with mediated writes; Direct authors have native workspace-write. Direct-read WL changes a package of permissions and policy, not just tool-schema bytes.
@@ -364,6 +368,7 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 
 ### C28 — Integration target context and work shifted downstream
 
+- **2026-09-14 check/status:** [R08](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R08.md) admits no workflow batch. Initial-author-only observations cannot estimate review/integration offsets; R10 retains that unavailable contrast.
 - **Work status:** DONE — recorded check/screen complete; retain the qualified result below.
 - **Cause:** explicit reviewed targets may avoid reconstruction, but earlier author savings may be repaid in final integration/repair.
 - **How checked:** each H workflow has one linearizer and two plan/accept turns; all actual final work remains. Three compact-Direct plan variants supply exact targets and commits; all three actual payloads are verified.
@@ -445,6 +450,7 @@ multiple families. Counts of entries, checks, calls and benchmark workflows are 
 
 ### C38 — Completion boundaries and extra DONE exchanges
 
+- **2026-09-14 check/status:** [R04](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R04.md)'s post-GREEN inspections follow real adjacent-test recovery; [R06](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R06.md)'s final inspection finds a genuine missing lowercase-y classification. Neither whole suffix is automatically dispensable reporting.
 - **Work status:** PARKED / UNCERTAINTY — no further check selected; outside TODO.
 - **Cause:** explicit completion can stop optional work or add confirmation exchanges; it must not bypass actual obligations.
 - **How checked:** all H linearizers use two plan/accept turns with no extra completion request. Separately, all 35 observed passing WL command-result turns next emit DONE; 13/39 Direct author cycles gather final-summary locations through 45 `nl`/`rg` calls.
@@ -494,6 +500,7 @@ WL optimizations. Finding a mechanism is different from validating a numerical b
 
 ### M04 — Different effective source, model, tools or settings
 
+- **2026-09-14 check/status:** [R09](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R09.md) identifies a concrete unintended developer catalog difference versus the saved reference. Source/task/model pins did not preserve all actual input; no pure causal attribution from these screens.
 - **Work status:** PARKED / UNCERTAINTY — no further check selected; outside TODO.
 - **Possible error:** the compared arms or reused baselines differ beyond the claimed factor, including client/driver revisions, tool definitions, policy layers or shared configuration.
 - **Checked/result:** [actual historical inputs][endpoint]/[lifecycle][h-life] bind tasks and target model/effort; first three Direct use CLI0.149.1, remaining Direct/all WL0.150.1, and Direct driver revisions differ. Native sandbox differences are real. Full hidden request/tool-definition equivalence is unknown; later config/trust qualifications cannot certify every old invocation.
@@ -515,6 +522,7 @@ WL optimizations. Finding a mechanism is different from validating a numerical b
 
 ### M07 — Measurement and resource limits change behavior
 
+- **2026-09-14 check/status:** [R09](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R09.md) retains R02's 900-second timeout, R03's one-second safety abort and one 42-second resource-sampling gap above the 30-second rule. All charges/unknown tails remain.
 - **Work status:** PARKED / UNCERTAINTY — no further check selected; outside TODO.
 - **Possible error:** observer grace, scheduling, timeouts, shared resource contention, cancellation or usage limits alter the work being measured.
 - **Checked/result:** H actually uses a 1,000-ms usage grace; C25 changes waiting behavior and future history, not only telemetry. C15's first batch has a live preview/grace mismatch; the serialized host follow-up has stream/quota failures. [Protocol audit][prior-protocol], [C15 result][c15] and [last batch][serialized-result] retain these distinctions.
@@ -522,6 +530,7 @@ WL optimizations. Finding a mechanism is different from validating a numerical b
 
 ### M08 — Analyzer/verifier bugs or wrong cohort/record selection
 
+- **2026-09-14 check/status:** [R03 failure](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-inverse-20260914/R03/MONITOR-FAILURE.md): the operator omitted the monitor-output parent. Cancellation worked; target activation did not. Not an H accounting error or falsified mechanism.
 - **Work status:** PARKED / UNCERTAINTY — no further check selected; outside TODO.
 - **Possible error:** malformed joins, missing roles, unit/denominator confusion, post-hoc subset selection or experimental harness defects can invalidate a claimed result.
 - **Checked/result:** [candidate carry review][candidate-carry] retains original capture/publication errors alongside the separately qualified result; [R qualification][r-ledger] distinguishes absent controller usage from zero; [C21 result][responses] retains verifier corrections without replacing observations. [Host failures][host-failure] expose real experimental parser/queue defects, not an original H accounting error.
@@ -537,6 +546,7 @@ path that actually requires that absent activation, not every interaction of the
 
 ### J01 — Compact automatic refresh × bounded continuation (C08 × C25)
 
+- **2026-09-14 check/status:** [R07](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R07.md) verifies actual refresh/interrupt overlap. Separate component treatments still lack a common-target joint counterfactual or historical transfer; no additive combined percentage.
 - **Work status:** PROPOSED — not selected/admitted; outside TODO.
 - **Hypothesis:** smaller refresh content and fewer pre-result continuations may reinforce or overlap, because both affect later history charges.
 - **Test/result:** both components have positive saved contrasts; **no joint C08+C25 experiment or combined historical share is established**. Their reference populations/denominators differ.
@@ -558,6 +568,7 @@ path that actually requires that absent activation, not every interaction of the
 
 ### J04 — Cohesion × test timing × ACK/completion × host editing
 
+- **2026-09-14 check/status:** Complete A+B and A+B+C inverses show RED and post-GREEN work, but catalog drift prevents pure saved-reference attribution. B-only aborts, A-only is incomplete, C-only unavailable. [R08](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R08.md) admits no batch; [R09](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R09.md) retains 6,032,785 recorded raw plus unknown tails.
 - **2026-09-14 R01:** [five-arm source/contrast matrix](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R01.md) complete. Existing standalone host permits actual test-only publication; A/B inverse and native full-inverse paths are feasible subject to qualification. R04/R06 conditional custody contrast is prioritized. No new token effect yet; earlier completed screens remain retained.
 - **Work status:** DONE — prior shared closeout and scopes v4–v14 complete. No repeat or model generation selected. N01 remains closed/deprioritized.
 - **2026-09-13 00:52 verified mechanism/reproduction:** one corrected-host non-WL workflow completes in 58m24.72s with 18,545,304 raw, 48.6513% below historical Direct. All three initial authors publish one accepted implementation/tests unit, receive real acceptance, check and return DONE. All five rejected proposals, repairs, reviews and integration remain counted. Native/public/observer and independent audits agree. G01/G02 close at this operational mechanism/reproduction scope; G03 historical attributable share remains unbounded. Frozen features are 2/3 under the user's explicit quality premise. [Verified result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md). Generic confirmation is not admitted as a substitute for attribution.
@@ -576,6 +587,7 @@ path that actually requires that absent activation, not every interaction of the
 
 ### J05 — Test/check timing × implementation choices × downstream repairs
 
+- **2026-09-14 check/status:** [R06](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R06.md)'s post-GREEN inspection finds a real key-routing defect and repairs/retests it. R04 has transient adjacent-test recovery. Do not delete these costs; no R08 population exists for downstream offsets.
 - **Work status:** PARKED / UNCERTAINTY — no further check selected; outside TODO.
 - **2026-09-12 16:11 bounded follow-up:** V13/V14 source screens are closed. The clear-selection HTTP API appears in1/6 Direct final trees and0/6 WL, but controller-selected raw slash dispatch exists in both arms (4/6 versus2/6). The real step4-003 repair remains a local witness, not an isolated or priced general effect.
 - **Hypothesis:** a cheaper initial implementation may produce later fixes, or early feedback may prevent them; model-chosen state/design errors and test-fixture mistakes affect both stages (C10–C16/C22/C23/C28).
@@ -591,6 +603,7 @@ path that actually requires that absent activation, not every interaction of the
 
 ### J07 — Explicit completion × already-collected host evidence
 
+- **2026-09-14 check/status:** [R04](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R04.md) shows post-result decisions with combined A/B changes and catalog drift. R03 has no verified B-only exposure; no isolated reporting share.
 - **Work status:** PARKED / UNCERTAINTY — no further check selected; outside TODO.
 - **Hypothesis:** when patches/checks already supply the handoff evidence, explicit DONE guidance can remove optional reporting research without removing required validation (C13/C17/C20/C21/C38).
 - **Test/result:** exact instruction→post-validation action chains observed; reporting-only design is unexecuted. The broad static package changes other instructions too. **No isolated reporting or joint net percentage.**
@@ -634,6 +647,7 @@ path that actually requires that absent activation, not every interaction of the
 
 ### J13 — Higher-order residual package and cancellation of effects
 
+- **2026-09-14 check/status:** [R08](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R08.md) rejects escalation under the frozen non-target gate. R10/R11 retain the absent full-workflow/transfer contrast; R12 must flag missing scope, not silently run more checks.
 - **2026-09-14 activity:** the approved R04/R06 joint inverses target the explicitly defined A/B/C package. R01's matrix is complete, not a residual bound or new model observation. R12 retains the finite coverage/zero-counter decision.
 - **Work status:** PARKED / UNCERTAINTY — no further check selected; outside TODO.
 - **Hypothesis:** several weak/inconclusive factors can act jointly, while WL overhead offsets genuine savings; there need not be one dominant independent cause.
@@ -654,6 +668,7 @@ These are subhypotheses of the families above, not new independent percentages o
 
 ### N02 — Completion/reporting guidance alone in native Direct
 
+- **2026-09-14 check/status:** [R03](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/R03.md) is a fresh host-feedback B-only attempt, not this native-suffix proposal. It fails before prompt delivery and supplies no isolated reporting null.
 - **Work status:** PROPOSED — not selected/admitted; outside TODO.
 - **Hypothesis/test proposal:** change only handoff guidance once all requirements/mandatory checks are satisfied; preserve truthful grounded reporting, tests-first and edit behavior. Look for disappearance of optional reporting-only lookups, not an enforced early stop.
 - **Result:** **not run in isolation; no measured reduction**. [Exact comparison][fast-serialized] finds these launch-only semantics already present in static POLICY. Eleven serialized GREEN→DONEs do not isolate fresh feedback timing, bare DONE, narrower check guidance or outer-turn boundaries.

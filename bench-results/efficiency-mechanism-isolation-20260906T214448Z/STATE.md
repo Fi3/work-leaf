@@ -7,32 +7,42 @@ below remain historical records, not authority for new runs or a substitute for 
 ## Primary goal status
 
 **Historical saving explained as a verified combined percentage: NOT ESTABLISHED.
-Overall attribution goal: UNFINISHED. Research active; R01/R05 complete.**
+Overall attribution goal: UNFINISHED. Research stopped at zero, case (1), awaiting permission.**
 The [complete non-WL reproduction](RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md)
 uses 18,545,304 raw tokens, 48.6513% below the saved six-Direct mean. Native,
 public, observer and independent accounting agree. The historically exposed
 upstream joint mechanism and one complete reproduction pass qualified independent
 acceptance; full historical causal attribution and its residual bound do not.
-Fixed progress is 56 DONE / 10 TODO / 66 TOTAL. All 54 historical completions and prior
+Fixed progress is 66 DONE / 0 TODO / 66 TOTAL. All 54 historical completions and prior
 publication checkpoints are preserved; the old G03 aggregate is not an extra task.
 The frozen feature result is 2/3; the user's no-quality-loss premise remains explicit.
-R02/R04/R06 are running as three bounded author screens. Accepted historical reduction remains
+R02/R03/R04/R06 are closed; R08 admits no full batch. Accepted historical reduction remains
 45.38%–51.62%; C08 and C25 are the two positive measured net contrasts, not
 additive shares of that gap. The authoritative continuously maintained snapshot,
 denominators, bounds and update rules are at the top of
 [ephemeral-note.md](../../ephemeral-note.md). Answer this metric immediately
 from that snapshot and lead progress reports with it. The closed investigations
 below are bounded phase completions, not completion of the overall goal.
-Current task scope: 2026-09-14 research resumption; each screen has its own frozen admission.
+Completed scope: R01–R12, with all failures and causal qualifications retained.
+[R12's zero decision](progress-results/R12.md) requests permission for
+[eight exact additional tasks](PROPOSED-NEXT-SCOPE-20260914.md); none is added to TODO or admitted.
 
-## Active continuation plan
+## Closed scope and permission boundary
 
 The [approved finite inventory](PROGRESS-TASKS-PROPOSAL-20260914.md) specifies R01–R12.
-R07 checks saved overlap while the three author screens run. DONE never decreases;
+All twelve finite result files are complete. DONE never decreases;
 TODO never increases without subsequent explicit user approval. At zero, stop with a supported
 answer or case (1) necessary additional work and/or case (2) an incorrect initial checklist;
 name the exact proposed additional tasks/count and ask permission. No uncounted work,
 replacement, reopening or scope expansion is permitted.
+
+The four attempts retain 6,032,785 recorded raw plus unknown R02/R03 tails.
+R04/R06 show real test-first and post-GREEN work, but actual developer skill-catalog
+drift prevents pure comparison with the saved reference. R03's monitor-directory
+error is an operator setup failure, not a B effect. No expensive batch follows.
+R04's extra cost is descriptively +1,350,327 raw after first GREEN, offset by
+−147,082 before/through it; B's post-result guidance is the next proposed
+discriminator, not a verified historical share. No new research occurs before approval.
 
 The completed global-hunk pilot and terminal audits support the source-linked
 mechanism and non-WL recipe in the result above. Remaining tasks address a same-target

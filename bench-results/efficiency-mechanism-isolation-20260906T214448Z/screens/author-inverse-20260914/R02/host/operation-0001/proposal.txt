@@ -1,0 +1,117 @@
+*** Begin Patch
+*** Update File: tests/terminal_ui.rs
+@@
+ fn activating_agent_chat_moves_cursor_to_right_insert_mode() {
+     let mut ui = TerminalUi::new(80, 20);
+     let agent_id = AgentId::new("chat-a").unwrap();
+     ui.add_agent(AgentListEntry::new(agent_id.clone(), "parser"));
+ 
+@@
+     assert_eq!(ui.focus(), PaneFocus::Right);
+     assert_eq!(ui.mode(), UiMode::Insert);
+     assert_eq!(ui.selected_agent().map(AgentId::as_str), Some("chat-a"));
+ }
++
++#[test]
++fn visual_mode_highlights_and_yanks_right_pane_character_selection() {
++    let mut ui = TerminalUi::new(80, 12);
++    let right_content = "abcdef";
++
++    ui.handle_key(UiKey::CtrlW);
++    ui.handle_key(UiKey::Char('l'));
++    ui.handle_key_with_content(UiKey::Char('v'), right_content, Some(1));
++    ui.handle_key_with_content(UiKey::Char('l'), right_content, Some(1));
++
++    let rendered = ui.render_screen_with_cursors(right_content, "", 0, Some(1));
++    assert!(rendered.contains("a\u{1b}[7mbc\u{1b}[0mdef"));
++
++    ui.handle_key_with_content(UiKey::Char('y'), right_content, Some(1));
++
++    assert_eq!(ui.last_yanked_text(), Some("bc"));
++    assert_eq!(ui.mode(), UiMode::Command);
++    assert!(
++        ui.render_screen_with_cursors(right_content, "", 0, Some(1))
++            .contains("copied 2 chars")
++    );
++}
++
++#[test]
++fn shift_v_line_selection_yanks_focused_left_pane_lines() {
++    let mut ui = TerminalUi::new(100, 20);
++    let agent_id = AgentId::new("user-1").unwrap();
++    ui.add_agent(AgentListEntry::new(agent_id, "parser"));
++
++    ui.handle_key_with_content(UiKey::Char('V'), "", None);
++    ui.handle_key_with_content(UiKey::Char('j'), "", None);
++    ui.handle_key_with_content(UiKey::Char('y'), "", None);
++
++    assert_eq!(
++        ui.last_yanked_text(),
++        Some("> work-leaf  command\n parser user-1")
++    );
++}
++
++#[test]
++fn ctrl_v_block_selection_yanks_rectangular_region_from_right_pane() {
++    let mut ui = TerminalUi::new(80, 12);
++    let right_content = "abcdef\nABCDEF";
++
++    ui.handle_key(UiKey::CtrlW);
++    ui.handle_key(UiKey::Char('l'));
++    ui.handle_key_with_content(UiKey::CtrlV, right_content, Some(1));
++    ui.handle_key_with_content(UiKey::Up, right_content, Some(1));
++    ui.handle_key_with_content(UiKey::Char('l'), right_content, Some(1));
++    ui.handle_key_with_content(UiKey::Char('y'), right_content, Some(1));
++
++    assert_eq!(ui.last_yanked_text(), Some("bc\nBC"));
++}
++
++#[test]
++fn uppercase_y_yanks_the_focused_pane_line_without_entering_visual_mode() {
++    let mut ui = TerminalUi::new(80, 12);
++    let right_content = "first line\nsecond line";
++
++    ui.handle_key(UiKey::CtrlW);
++    ui.handle_key(UiKey::Char('l'));
++    ui.handle_key_with_content(UiKey::Char('Y'), right_content, Some(0));
++
++    assert_eq!(ui.last_yanked_text(), Some("second line"));
++    assert_eq!(ui.mode(), UiMode::Command);
++}
+ 
+ #[test]
+ fn prompt_mode_renders_colon_command_line_and_cursor_on_bottom_row() {
+     let mut ui = TerminalUi::new(80, 10);
+     ui.handle_key(UiKey::Char(':'));
+*** Update File: tests/ui_harness.rs
+@@
+ fn scripted_harness_slash_command_starts_agent_chat_command_from_chat_view() {
+     let mut harness = UiHarness::new(80, 24);
+ 
+     assert_eq!(harness.ui().mode(), UiMode::Command);
+     assert_eq!(
+@@
+             .iter()
+             .any(|line| line == "user-1> /status")
+     );
+ }
++
++#[test]
++fn scripted_harness_visual_mode_yanks_from_focused_right_pane() {
++    let mut harness = UiHarness::new(80, 24);
++
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_bytes(b"ihello world");
++    harness.handle_bytes(b"\x1b");
++    harness.handle_bytes(b"vhhhhy");
++
++    assert_eq!(harness.last_yanked_text(), Some("world"));
++    assert_eq!(harness.ui().mode(), UiMode::Command);
++    assert!(harness.render_frame().contains("copied 5 chars"));
++}
+ 
+ #[test]
+ fn scripted_harness_mouse_wheel_scrolls_chat_history() {
+     let mut harness = UiHarness::new(80, 10);
+ 
+*** End Patch

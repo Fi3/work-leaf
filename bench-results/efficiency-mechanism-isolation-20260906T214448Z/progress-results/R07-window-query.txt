@@ -1,0 +1,48 @@
+python3 - <<'PY'
+from pathlib import Path
+import json,hashlib
+from collections import Counter
+D=json.loads(Path('bench-results/efficiency-exact-normal-work-leaf-20260829T181318Z/evidence.json').read_text())
+rows=[]
+def sha(p):
+ with Path(p).open('rb') as f: return hashlib.file_digest(f,'sha256').hexdigest()
+for f in D['accounting']['capture_bound_audits']:
+ cp,sp=Path(f['client_stream']),Path(f['server_stream'])
+ gp=Path(f['unresolved_response_tail_audit']['grace_stream'])
+ for p,expected in [(cp,f['client_stream_sha256']),(sp,f['server_stream_sha256']),(gp,f['unresolved_response_tail_audit']['grace_stream_sha256'])]:
+  assert sha(p)==expected, str(p)
+ requests={}
+ for line_no,line in enumerate(cp.open(),1):
+  e=json.loads(line)
+  if e.get('method')!='turn/start': continue
+  text='\n'.join(v.get('text','') for v in e['params'].get('input',[]))
+  identity=e['id']; assert identity not in requests
+  requests[identity]={'client_line':line_no,'thread':e['params']['threadId'],'text':text}
+ replies={}
+ for line_no,line in enumerate(sp.open(),1):
+  e=json.loads(line)
+  if e.get('id') in requests:
+   identity=e['id'];assert identity not in replies
+   assert 'error' not in e and e['result']['turn']['id']
+   replies[identity]={'turn':e['result']['turn']['id'],'server_reply_line':line_no}
+ assert requests.keys()==replies.keys()
+ turns={}
+ for identity,r in requests.items():
+  r.update(replies[identity]);key=(r['thread'],r['turn']);assert key not in turns;turns[key]=r
+ grace=[]
+ for line_no,line in enumerate(gp.open(),1):
+  e=json.loads(line);r=turns[(e['thread_id'],e['turn_id'])]
+  grace.append({'grace_line':line_no,'thread':r['thread'],'turn':r['turn'],'client_line':r['client_line'],'outcome':e['outcome']})
+ refresh=[r for r in requests.values() if r['text'].startswith('The orchestrator could not apply your edit.\n') and '\nRebase your exact edit blocks against the compact file refresh below.\n' in r['text']]
+ boundaries=[]
+ for r in refresh:
+  window=[v for v in requests.values() if v['thread']==r['thread'] and v['client_line']>=r['client_line']]
+  overlaps=[v for v in grace if v['thread']==r['thread'] and v['client_line']>=r['client_line']]
+  boundaries.append({'client_line':r['client_line'],'server_reply_line':r['server_reply_line'],'thread':r['thread'],'turn':r['turn'],'message_sha256':hashlib.sha256(r['text'].encode()).hexdigest(),'message_utf8_bytes':len(r['text'].encode()),'history_window_last_client_line':max(v['client_line'] for v in window),'later_same_thread_accepted_turns_including_refresh':len(window),'later_ack_inputs':sum(v['text'].startswith('work-leaf patch applied\n') for v in window),'later_command_inputs':sum(v['text'].startswith('work-leaf command result\n') for v in window),'interrupt_overlap':overlaps})
+ union={(g['thread'],g['turn']):g for r in boundaries for g in r['interrupt_overlap']}
+ for b in boundaries: b['interrupt_overlap_grace_lines']=[v['grace_line'] for v in b.pop('interrupt_overlap')]
+ rows.append({'run':f['run_id'],'source_pins':{str(p):sha(p) for p in [cp,sp,gp]},'refresh_inputs':len(refresh),'all_interrupts':len(grace),'all_interrupt_outcomes':dict(Counter(v['outcome'] for v in grace)),'post_refresh_interrupt_union':len(union),'post_refresh_outcomes':dict(Counter(v['outcome'] for v in union.values())),'boundaries':boundaries})
+assert [r['refresh_inputs'] for r in rows]==[2,2,2,1,4,3]
+assert sum(r['all_interrupts'] for r in rows)==287
+print(json.dumps({'schema':'r07-historical-history-window-overlap-v1','scope':'saved H accepted-input/grace windows only; no usage re-total, no intervention transfer or response-cost claim','runs':rows},indent=2))
+PY

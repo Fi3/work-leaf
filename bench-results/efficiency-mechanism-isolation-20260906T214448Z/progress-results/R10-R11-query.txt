@@ -1,0 +1,7 @@
+python3 - <<'PY'
+from pathlib import Path
+import json,hashlib
+from fractions import Fraction
+s=Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z'); p=s/'phases/standalone-global-hunk-pilot-01/postcapture/NATIVE-USAGE-SUPPLEMENT.json'; a=json.loads(p.read_text())
+print(json.dumps({'scope':'R10/R11 saved-ledger projection only; no native accounting rerun','source':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'reference_categories':a['category_totals'],'reference_turns':[{'path':r['path'],'prompt':r['prompt_path'],'category':r['category'],'role':r['role'],'raw':r['native_usage']['raw_input_plus_output'],'responses':len(r['native_response_ids'])} for r in a['turns']],'reference_total_raw':a['native_usage']['raw_input_plus_output'],'historical_preserved':{'direct_total':216698290,'n':6,'direct_mean':str(Fraction(216698290,6)),'wl_recorded_mean':17471532,'wl_conditional_upper_mean':19725532,'gap_low':str(Fraction(216698290,6)-19725532),'gap_high':str(Fraction(216698290,6)-17471532),'reduction_low_percent':float(100*(1-Fraction(19725532*6,216698290))),'reduction_high_percent':float(100*(1-Fraction(17471532*6,216698290))),'reproduction_reduction_percent':float(100*(1-Fraction(18545304*6,216698290))),'explained_amount':None,'explained_share_percent':None,'residual':None}}))
+PY

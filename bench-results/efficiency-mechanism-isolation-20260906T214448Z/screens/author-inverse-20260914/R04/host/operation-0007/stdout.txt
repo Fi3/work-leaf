@@ -1,0 +1,63 @@
+
+running 35 tests
+test terminal_app_command_prompt_arrows_keep_visible_cursor_at_edit_position ... ok
+test terminal_app_ctrl_c_shows_quit_notice ... ok
+test terminal_app_command_mode_typing_shows_insert_mode_notice ... ok
+test terminal_app_keeps_visible_cursor_on_chat_input ... ok
+test terminal_app_chat_arrows_keep_visible_cursor_at_edit_position ... ok
+test terminal_app_does_not_clear_screen_on_each_render_or_drop_fast_input ... ok
+test terminal_app_keeps_chat_prompt_visible_after_large_agent_output ... ok
+test terminal_app_command_agent_opens_multiple_patch_agents_from_chat_request ... ok
+test terminal_app_does_not_run_project_required_checks_outside_agent ... ok
+test terminal_app_answers_agent_file_requests_even_when_one_requested_path_is_missing ... ok
+test terminal_app_quits_only_from_prompt_q ... ok
+test terminal_app_mouse_wheel_scrolls_chat_history ... ok
+test terminal_app_comma_collapses_left_pane_and_keeps_selected_chat_visible ... ok
+test terminal_app_prompt_history_down_restores_in_progress_command ... ok
+test terminal_app_chat_focus_arrows_edit_buffer_while_command_mode_is_active ... ok
+test terminal_app_bytewise_arrow_prefix_keeps_focused_chat_in_insert_mode ... ok
+test terminal_app_names_user_session_from_first_prompt_immediately ... ok
+test terminal_app_names_interactive_chat_from_first_inserted_prompt_immediately ... ok
+[master (root-commit) ce5ab23] UPDATE apply parser patch from user-1
+ 1 file changed, 4 insertions(+)
+ create mode 100644 README.md
+test terminal_app_chat_history_down_restores_in_progress_message ... ok
+test terminal_app_left_pane_keyboard_selection_switches_the_visible_chat ... ok
+test terminal_app_review_adds_reviewer_chat_and_streams_output_immediately ... ok
+test terminal_app_spawned_codex_processes_directive_message_before_later_prose_message ... ok
+test terminal_app_chat_focus_arrows_recall_history_while_command_mode_is_active ... ok
+test terminal_app_new_and_chat_message_use_real_command_chat_backend ... ok
+test terminal_app_new_and_chat_work_through_spawned_codex_backend ... ok
+test terminal_app_sends_spawned_codex_slash_command_as_raw_command ... ok
+test terminal_app_sgr_mouse_click_on_left_agent_row_selects_that_chat ... ok
+test terminal_app_slash_command_from_chat_view_sends_agent_command ... ok
+test terminal_app_chat_pane_shows_only_the_selected_agent_session ... ok
+test terminal_app_sgr_mouse_release_on_left_agent_row_selects_that_chat ... ok
+test terminal_app_sends_to_one_chat_while_another_chat_is_waiting_for_codex ... ok
+test terminal_app_ctrl_c_never_quits_and_only_right_focus_interrupts_agent ... ok
+test terminal_app_new_adds_agent_immediately_while_backend_is_loading ... ok
+test terminal_app_streams_automatic_agent_follow_up_output ... ok
+test terminal_app_streams_spawned_codex_output_before_process_finishes ... ok
+
+test result: ok. 35 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.05s
+
+
+running 15 tests
+test colon_enters_command_prompt_only_from_command_mode ... ok
+test activating_agent_chat_moves_cursor_to_right_insert_mode ... ok
+test comma_does_not_hide_the_right_chat_while_chat_focus_is_active ... ok
+test agent_list_actions_expose_split_window_fork_and_ready_highlight ... ok
+test left_pane_includes_command_interface_and_agent_introspection ... ok
+test mouse_clicking_a_left_pane_agent_row_opens_that_agent_chat ... ok
+test terminal_layout_reserves_left_fifth_for_agents ... ok
+test vim_style_keys_drive_mode_focus_visibility_and_tabs ... ok
+test raw_mode_screen_uses_crlf_so_frame_fills_terminal_width ... ok
+test screen_renderer_draws_left_fifth_right_pane_and_status_line ... ok
+test prompt_mode_renders_colon_command_line_and_cursor_on_bottom_row ... ok
+test selecting_agent_changes_right_surface_to_agent_chat ... ok
+test left_pane_can_hide_selected_agents_from_control_list ... ok
+test focus_cursor_stays_inside_left_or_right_pane ... ok
+test left_pane_navigation_moves_cursor_to_selected_agent_row_and_opens_chat ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

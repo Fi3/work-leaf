@@ -1,0 +1,118 @@
+@standalone edit add focused ui harness tests for vim-style visual selection before implementation
+*** Begin Patch
+*** Update File: tests/ui_harness.rs
+@@
+ fn scripted_harness_left_right_arrows_move_left_pane_selection_like_j_k() {
+     let mut harness = UiHarness::new(80, 24);
+ 
+     assert_eq!(harness.ui().focus(), PaneFocus::Left);
+     assert_eq!(
+@@
+     assert_eq!(
+         harness.ui().selected_agent().map(|id| id.as_str()),
+         Some("user-1")
+     );
+ }
++
++#[test]
++fn scripted_harness_visual_character_selection_copies_right_pane_text() {
++    let mut harness = UiHarness::new(100, 24);
++
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_byte(b'v');
++
++    assert!(
++        harness
++            .render_frame()
++            .contains("mode=visual focus=right selection=character")
++    );
++
++    harness.handle_byte(b'l');
++    assert!(harness.render_frame().contains("\u{1b}[7mUI\u{1b}[0m"));
++
++    harness.handle_byte(b'y');
++
++    let copied_frame = harness.render_frame();
++    assert!(copied_frame.starts_with(&osc52("UI")), "{copied_frame:?}");
++    assert_eq!(harness.ui().mode(), UiMode::Command);
++    assert!(!harness.render_frame().contains("\u{1b}]52;"));
++}
++
++#[test]
++fn scripted_harness_visual_line_selection_copies_left_pane_line() {
++    let mut harness = UiHarness::new(140, 24);
++
++    harness.handle_byte(b'k');
++    harness.handle_bytes(b"Vy");
++
++    let copied_frame = harness.render_frame();
++    assert!(
++        copied_frame.starts_with(&osc52("> work-leaf  command")),
++        "{copied_frame:?}"
++    );
++}
++
++#[test]
++fn scripted_harness_visual_block_selection_copies_right_pane_rectangle() {
++    let mut harness = UiHarness::new(100, 24);
++
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_byte(22);
++    harness.handle_bytes(b"ljy");
++
++    let copied_frame = harness.render_frame();
++    assert!(copied_frame.starts_with(&osc52("UI\nEs")), "{copied_frame:?}");
++}
++
++#[test]
++fn scripted_harness_yank_line_key_copies_right_pane_line() {
++    let mut harness = UiHarness::new(100, 24);
++
++    harness.handle_bytes(&[23, b'l']);
++    harness.handle_byte(b'Y');
++
++    let copied_frame = harness.render_frame();
++    assert!(
++        copied_frame.starts_with(&osc52("UI harness")),
++        "{copied_frame:?}"
++    );
++}
+ 
+ fn strip_ansi(input: &str) -> String {
+     let mut output = String::new();
+     let mut chars = input.chars();
+     while let Some(ch) = chars.next() {
+@@
+     }
+     output
+ }
++
++fn osc52(text: &str) -> String {
++    format!("\u{1b}]52;c;{}\u{7}", base64(text.as_bytes()))
++}
++
++fn base64(bytes: &[u8]) -> String {
++    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
++    let mut encoded = String::new();
++    for chunk in bytes.chunks(3) {
++        let first = chunk[0];
++        let second = chunk.get(1).copied().unwrap_or(0);
++        let third = chunk.get(2).copied().unwrap_or(0);
++        let triple = ((first as u32) << 16) | ((second as u32) << 8) | third as u32;
++        encoded.push(TABLE[((triple >> 18) & 0x3f) as usize] as char);
++        encoded.push(TABLE[((triple >> 12) & 0x3f) as usize] as char);
++        encoded.push(if chunk.len() > 1 {
++            TABLE[((triple >> 6) & 0x3f) as usize] as char
++        } else {
++            '='
++        });
++        encoded.push(if chunk.len() > 2 {
++            TABLE[(triple & 0x3f) as usize] as char
++        } else {
++            '='
++        });
++    }
++    encoded
++}
+*** End Patch
+@standalone end

@@ -1,0 +1,78 @@
+python3 - <<'PY'
+import json,hashlib,types,collections
+from pathlib import Path
+S=Path('/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z')
+P=S/'screens/author-inverse-20260914'
+core=S/'audit_compaction.py'
+sha=lambda b:hashlib.sha256(b).hexdigest()
+assert sha(core.read_bytes())=='dd5127f937ec1cc4d41a443ba7640fca93e82484f345ac8c56aeef5325d68153'
+mod=types.ModuleType('existing_core');mod.__file__=str(core)
+exec(compile(core.read_bytes(),str(core),'exec'),mod.__dict__)
+inputs=json.loads((P/'SCREEN-NATIVE-INPUTS.json').read_text())['inputs']
+results=[];global_ids=set()
+for spec in inputs:
+    errors=[];p=Path(spec['native_path']);data=p.read_bytes()
+    assert sha(data)==spec['native_sha256']
+    rows=list(mod.json_rows(data))
+    audit=mod.audit_rollout(rows,spec,'gpt-5.5','xhigh')
+    epochs=[];current=None;contexts=[];session=[];prompt_items=[]
+    for n,e in enumerate(rows,1):
+        kind=e.get('type');q=e.get('payload',{})
+        if kind=='session_meta':
+            session.append({k:q.get(k) for k in ['id','cwd','cli_version','model_provider']})
+            if q.get('cwd')!=spec['cwd'] or q.get('cli_version')!='0.153.4' or q.get('model_provider')!='openai':
+                errors.append('session/cwd/CLI/provider mismatch')
+        if kind=='turn_context':
+            contexts.append({'line':n,**{k:q.get(k) for k in ['turn_id','cwd','model','effort','approval_policy','sandbox_policy']}})
+            if q.get('cwd')!=spec['cwd']:errors.append('context cwd mismatch')
+        if kind=='event_msg' and q.get('type')=='task_started':
+            if current is not None: errors.append('overlapping native task')
+            current={'turn_id':q.get('turn_id'),'start_line':n,'terminal':None,'end_line':None,'prompt_hashes':[]}
+            epochs.append(current)
+        if kind=='event_msg' and q.get('type') in ['task_complete','turn_aborted']:
+            if current is None or q.get('turn_id')!=current['turn_id']:
+                errors.append('terminal native task mismatch')
+            else:
+                current['end_line']=n;current['terminal']=q['type'];current=None
+        if kind=='response_item' and q.get('type')=='message' and q.get('role')=='user' and current is not None:
+            texts=[v.get('text','') for v in q.get('content',[]) if v.get('type') in ['input_text','text']]
+            current['prompt_hashes'].extend(sha(x.encode()) for x in texts)
+        if kind=='response_item' and q.get('type')=='message' and q.get('role') in ['system','developer']:
+            text='\n'.join(v.get('text','') for v in q.get('content',[]) if 'text' in v)
+            prompt_items.append({'line':n,'role':q['role'],'bytes':len(text.encode()),'sha256':sha(text.encode())})
+    byturn=collections.defaultdict(list)
+    for rid,rec in audit['records'].items():
+        if rid in global_ids:errors.append('duplicate response across screen threads')
+        global_ids.add(rid);byturn[rec['turn_id']].append(rec)
+    joined=[]
+    if len(spec['public'])!=len(epochs):errors.append('public/native task count mismatch')
+    for pub,epoch in zip(spec['public'],epochs):
+        f=Path(pub['path']);b=f.read_bytes();assert sha(b)==pub['sha256']
+        events=list(mod.json_rows(b))
+        starts=[e for e in events if e.get('type')=='thread.started']
+        ends=[e for e in events if e.get('type')=='turn.completed']
+        if len(starts)!=1 or starts[0]['thread_id']!=spec['thread_id']:errors.append('public ownership mismatch')
+        prompt=f.parent/'prompt.txt' if f.name=='stdout.jsonl' else P/spec['arm']/'PROMPT.txt'
+        prompt_hash=sha(prompt.read_bytes());prompt_ok=prompt_hash in epoch['prompt_hashes']
+        if not prompt_ok:errors.append('exact prompt mismatch: '+str(prompt))
+        records=byturn.get(epoch['turn_id'],[])
+        usage=mod.metrics(mod.summed(r['usage'] for r in records))
+        public_usage=mod.metrics(mod.checked_usage(ends[0]['usage'])) if len(ends)==1 else None
+        delta=None if public_usage is None else {k:usage[k]-public_usage[k] for k in mod.FIELDS}
+        if delta and any(delta.values()):errors.append('native/public usage mismatch: '+str(f))
+        joined.append({'file':str(f),'prompt_file':str(prompt),'prompt_sha256':prompt_hash,'exact_prompt_match':prompt_ok,
+                       **epoch,'native_response_ids':[r['response_id'] for r in records],
+                       'native_usage':usage,'public_usage':public_usage,'native_minus_public':delta})
+    if set(byturn)-{e['turn_id'] for e in epochs}:errors.append('response outside task epochs')
+    assert sha(p.read_bytes())==spec['native_sha256']
+    for pub in spec['public']:assert sha(Path(pub['path']).read_bytes())==pub['sha256']
+    terminal=json.loads((P/spec['arm']/'TERMINAL.json').read_text())
+    results.append({'arm':spec['arm'],'metadata':spec,'terminal':terminal,'core_errors':audit['errors'],'join_errors':errors,
+                    'response_count':audit['response_count'],'duplicate_response_records':audit['duplicate_response_records'],
+                    'native_usage':audit['native_usage'],'records':audit['records'],'compaction_markers':audit['compaction_markers'],
+                    'session':session,'contexts':contexts,'system_developer_items':prompt_items,'turns':joined,
+                    'unfinished_turns':[e['turn_id'] for e in epochs if e['terminal']!='task_complete'],
+                    'tail_limit':'Incomplete/aborted tasks have unknown in-flight or unreported charges; recorded zero is not actual zero.'})
+print(json.dumps({'schema':'author-inverse-native-audit-v1','scope':'four new admitted screens; unchanged audit_rollout called exactly once per thread',
+                  'core_sha256':sha(core.read_bytes()),'global_distinct_responses':len(global_ids),'runs':results},separators=(',',':')))
+PY

@@ -1,0 +1,16 @@
+python3 - <<'PY'
+import hashlib,json,pathlib,subprocess
+root=pathlib.Path.cwd(); d=root/'bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-inverse-20260914'
+sha=lambda p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
+rows=[]
+for arm in ['R02','R03','R04','R06']:
+ p=d/arm; a=json.loads((p/'ADMISSION.json').read_text()); t=json.loads((p/'TERMINAL.json').read_text())
+ matches=[]; different=[]
+ for name,want in a['source_sha256'].items():
+  got=sha(name)
+  (matches if got==want else different).append({'path':name,'admitted':want,'actual':got})
+ rows.append({'arm':arm,'admission_matches_terminal':sha(p/'ADMISSION.json')==t['admission_sha256'],'checked_source_count':len(a['source_sha256']),'matched_source_count':len(matches),'different_sources':different,'base_is_ancestor':subprocess.run(['git','merge-base','--is-ancestor','c92a0b7060a36eac6db2d869b85e589a7a9480f9','HEAD'],cwd=a['cwd']).returncode==0,'final_head':subprocess.check_output(['git','rev-parse','HEAD'],cwd=a['cwd'],text=True).strip(),'final_status':subprocess.check_output(['git','status','--porcelain'],cwd=a['cwd'],text=True)})
+config=pathlib.Path('/home/user/.codex/config.toml').read_bytes()
+owned=b'\n[projects."/tmp/wl-author-inverse-20260914.BBmGzh/R06"]\ntrust_level = "trusted"\n'
+print(json.dumps({'scope':'terminal source endpoints and owned trust qualification; source read only','runs':rows,'owned_trust_occurrences':config.count(owned),'owned_trust_bytes':len(owned),'configuration_sha256':hashlib.sha256(config).hexdigest(),'configuration_without_exact_owned_trust_sha256':hashlib.sha256(config.replace(owned,b'')).hexdigest()}))
+PY
