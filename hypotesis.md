@@ -1,5 +1,16 @@
 # DONE: 54 | TODO: 1 | TOTAL: 55
 
+**TRACKER REPAIR — awaiting permission for the one-time numerical correction.**
+The displayed TODO=1 is the legacy G03 aggregate, **not one remaining hypothesis**.
+The [proposed replacement lists all 12 finite remaining tasks](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md),
+including each causal screen and the separate confirmation, evidence and conclusion checks.
+The proposed corrected counter is 54 DONE / 12 TODO / 66 TOTAL. It is not active or
+permission to run experiments. Research remains paused while the reset is unapproved.
+The user's current zero rule requires a stop and an explicit case (1) additional work
+or case (2) initially omitted/miscounted work, followed by a permission request before
+any increase. The legacy counter/guard below require migration to that policy; do not
+use their earlier "zero always means success" rule to claim a finished investigation.
+
 **Analysis unfinished. Fixed named-record count, not a percentage of research effort.**
 DONE comprises 39 completed register dispositions, 12 completed follow-up records (V04–V15),
 the completed J04 initial-stage reach check, G01's verified upstream joint mechanism and

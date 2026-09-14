@@ -1,6 +1,18 @@
 # Provisional investigation ledger
 
 Live analysis counter: **DONE: 54 | TODO: 1 | TOTAL: 55** — [hypotesis.md](hypotesis.md).
+**2026-09-14 tracker repair:** this is the legacy aggregate counter, not the true
+number of remaining hypotheses. The [proposed concrete list](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-TASKS-PROPOSAL-20260914.md)
+enumerates 12 finite tasks; the proposed one-time correction preserves 54 completed
+records and would display 54/12/66. Explicit permission for that increase and the
+committed progress-test migration has been requested; neither is applied yet.
+Research remains paused. No model, new baseline or reproduction is admitted.
+The user's zero rule is: stop; report case (1) new additional work or case (2)
+wrong/omitted initial inventory; ask permission for exact added tasks before increasing
+TODO. The legacy guard's zero-success assumption is not the replacement policy.
+Root Cargo format, strict all-target/all-feature Clippy and full tests pass for the
+tracker-preparation workspace; no agent-facing behavior or WL implementation is changed.
+
 The fixed 55 records comprise the 52 retained screening/disposition records plus
 verified G01 mechanism and G02 non-WL reproduction; only G03 remains pending.
 They are not 54 independent experiments or a percentage of remaining effort.
