@@ -82,10 +82,20 @@ the live history is truncated; the pinned task contract also rejects same-ID sco
 The conditional complete-known-work approval is recorded in
 `AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md`. It permits the once-only 74/16/90 publication,
 preserving all 74 completed records and the byte-pinned 74/0 ledger/publication archives.
-Task publication is not a benchmark admission. The current P01 input gate is blocked; read
-`screens/author-feedback-20260914/P01/RESULT.md` under the study before resuming.
-Its one actual diagnostic retained the missing catalog. A SessionStart wait follows initial
-context capture and is not a qualified repair. No additional diagnostic is approved; P01 stays TODO.
+Task publication is not a benchmark admission. P01's actual input gate is qualified; read
+`progress-results/P01.md` and its corrected input-002 evidence under the study before resuming.
+The failed input-001 startup wait remains retained. The separately pinned
+`P01-BUDGET-EXCEPTION-20260914.json` permits 30 additional local minutes and one conditional
+60-second/100k read-only subscription diagnostic after a distinct local repair; that slot is consumed.
+P02's effective-factor/reference qualification precedes any feature admission.
+The user's `AUTHORITY-P01-EXTRA-AND-BUGFIX-20260914.md` permits previously unaccounted
+bug-fix-only tasks without another permission question. Record them before work in
+`BUG-FIX-CHECKLIST.json` and the separate BUG FIXES counter on line two of root `hypotesis.md`.
+Only verified fixes with reproduction and dated evidence advance that counter's DONE.
+Do not count known repairs twice or use this authority for extra research scope/provider usage.
+Run `test_progress_repairs.py` and `test_progress_publication_regression.py` with the three
+existing progress guards. BUG002's actual-publication assertion follows validated live counts,
+not the initial 74/16 snapshot; frozen scope, histories and evidence checks remain intact.
 Run `test_progress_extension.py` and `test_progress_end_to_end.py` beside the mandatory original tests.
 Known necessary work, routine repair, verification and already-described joint checks belong inside
 the listed tasks. Unexpected issues and promising causes from previously unknown facts are legitimate

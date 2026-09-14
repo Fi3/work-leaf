@@ -1,12 +1,13 @@
-# DONE: 74 | TODO: 16 | TOTAL: 90
+# DONE: 75 | TODO: 15 | TOTAL: 90
+## BUG FIXES — DONE: 2 | TODO: 0 | TOTAL: 2
 
-**Pending check: P01 — BLOCKED: the actual startup-delay diagnostic retained the input mismatch. P02–P16 remain unrun/pending.**
+**Pending check: P02 — exact effective-factor/reference manifest and common-boundary qualification. P01's actual input gate passed; P03–P16 remain pending.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-14T19:00:55+00:00:** P01 verification is complete and the input gate remains BLOCKED. One diagnostic used 15,709 raw tokens; its startup delay occurs after the mismatched context is recorded. Research is paused pending explicit additional-budget approval. No feature benchmark ran; no further diagnostic is authorized; no task is marked complete.
+**Activity, 2026-09-14T20:01:35+00:00:** P01 is complete: input-002 used 15,873 raw / 6.08 seconds and exactly matches the saved base/developer input. BUG001's report normalization and BUG002's stale publication-test assertion are fixed with fail-first regressions. No feature benchmark is running; P02 is next. This is setup progress, not a quantified token-saving cause.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
-| P01 | BLOCKED | Faithful launch setup: source trace, benchmark-local repair, failure-path tests and actual verification; include tracker-rule qualification. |
+| P01 | DONE | Faithful launch setup: source trace, benchmark-local repair, failure-path tests and actual verification; include tracker-rule qualification. |
 | P02 | TODO | Exact effective-factor/reference manifest and common-boundary qualification for individual and joint tests. |
 | P03 | TODO | Qualified B-only next-action/handoff-guidance screen. |
 | P04 | TODO | Qualified A+B publication/test-order plus guidance joint screen. |
@@ -33,6 +34,17 @@ The plan's original proposal wording is historical; the linked approval governs 
 
 ## Counter contract — complete known remaining work
 
+The separate [bug-fix ledger](bench-results/efficiency-mechanism-isolation-20260906T214448Z/BUG-FIX-CHECKLIST.json)
+records only previously unaccounted bug-fix tasks under the
+[standing user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-P01-EXTRA-AND-BUGFIX-20260914.md).
+Record each new defect before work and its reproduction, verification and dated result before
+DONE. Bug additions may increase only this separate counter; no second permission question
+is required. Existing research tasks, known repairs and this requested tracker administration
+are not counted twice. This authority does not admit new scientific experiments or extra
+provider usage. The immutable [P01 budget exception](bench-results/efficiency-mechanism-isolation-20260906T214448Z/P01-BUDGET-EXCEPTION-20260914.json)
+allows 5,400 total local seconds and one additional conditional diagnostic; it does not
+rewrite the original task contract or the failed input-001 record.
+
 **DONE + TODO = TOTAL = 90.** These are remaining research obligations, not independent
 hypotheses, successful experiments, equal effort units or a promise of an empirical result.
 The [ledger](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-CHECKLIST.json) and
@@ -56,12 +68,13 @@ are byte-for-byte pinned. Old R01–R20 outcomes are not rewritten to fit the ne
   case (2) an incorrect initial checklist, giving exact proposed tasks/count and asking permission.
   The final acceptance item cannot close merely because attempts or budgets are exhausted.
 
-Before every progress report or affected commit, require all three guards:
+Before every progress report or affected commit, require all four guards:
 
 ```sh
 python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_counter.py
 python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_extension.py
 python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_end_to_end.py
+python3 bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_repairs.py
 ```
 
 These tests validate frozen declarations, histories and evidence files, not scientific truth.
@@ -91,17 +104,18 @@ An omitted known requirement is **case (2), a planning mistake**, and must be re
 P08 is one explicitly scoped residual-package check, not permission for an uncounted series of tests.
 
 Record genuinely new evidence and re-rank existing in-scope work immediately. These exceptions
-permit honest discovery, not automatic extra scope: additions or changed budgets still require
-an exact proposal and user approval before increasing TODO or executing extra work.
+permit honest discovery, not automatic scientific scope: research additions or changed budgets
+still require an exact proposal and user approval. The separate bug-fix-only authority above
+allows previously unaccounted repairs without another question; it does not expand research TODO.
 
-## Live priority — P01 blocked; provider admissions closed
+## Live priority — P02 reference qualification; feature admissions closed
 
-Last maintained: **2026-09-14T18:57:11+00:00**. The [P01 actual result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/RESULT.md) fails input qualification. The consumed diagnostic is retained; no replacement or dependent feature observation is admitted.
+Last maintained: **2026-09-14T20:05:58+00:00**. [P01's actual input qualification](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/P01.md) is supported. Both diagnostics remain retained. P02 must establish exact factor/reference fidelity before feature admission.
 The accepted historical gap and the user's no-quality-loss assumption remain premises.
 
 | Priority | Evidence and potential explanatory reach | Next cheap check / stop gate |
 | --- | --- | --- |
-| Prerequisite: P01 faithful launch — BLOCKED | The local time-only trace resolves discovery after 1.5 seconds, but the actual two-second startup hook follows context capture and retains the 775-byte omission. The [audited diagnostic](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/NATIVE-AUDIT.json) costs 15,709 raw, has one complete response and no source drift. | A distinct repair must act before initial context capture. No late-hook repeat or feature launch. The [same-task budget request](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/REQUEST-BUDGET.md) needs explicit approval and proposes no counter increase. |
+| Prerequisite: P02 effective factor/reference | P01's private local-registration launch matches actual saved base/developer input exactly; 15,873 raw, one complete response, no source drift or tools. | Reuse the qualified startup-only launcher; verify exact B and A+B bytes, native resume exposure and the common boundary for conditional joints before admitting features. |
 | Strongest candidate: P03 B feedback/handoff | R04's extra usage is concentrated after first GREEN: +1,350,327 raw, offset by −147,082 earlier. Real failure recovery remains included. | One qualified fresh B-only screen, then P05's clause/feedback → decision → work trace. No forced first-GREEN stop. |
 | Joint candidate: P04 A+B | R04 is +1,203,245 raw overall, but catalog drift confounds attribution. | One qualified A+B screen; compare conditionally with P03, not by adding separate percentages. |
 | Conditional connected joints: P06–P08 | C08/C25 have positive separate contrasts but overlapping histories and different targets. Joint author/refresh/continuation and residual effects are unpriced. | P02 must establish a common reference and actual connected exposure. Promote promising joint evidence immediately, without waiting for ID order. |

@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "authority": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-P01-EXTRA-AND-BUGFIX-20260914.md",
+  "events": [
+    {
+      "event": "discovered",
+      "id": "BUG001",
+      "at": "2026-09-14T19:53:15+00:00",
+      "title": "Normalize input-report hashes and joins to avoid false qualification failure",
+      "related_task": "P01",
+      "already_accounted": false,
+      "evidence": [
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/ACTUAL-INPUT-COMPARISON-002.json",
+        "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/INPUT-VERIFIER-CORRECTION-002.json"
+      ]
+    },
+    {
+      "event": "fixed",
+      "id": "BUG001",
+      "at": "2026-09-14T19:59:52+00:00",
+      "reproduction": ["bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/BUG001-RED.txt"],
+      "verification": ["bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/BUG001-GREEN.txt", "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/INPUT-VERIFIER-CORRECTION-002.json"],
+      "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/BUG001-RESULT.md"
+    },
+    {
+      "event": "discovered",
+      "id": "BUG002",
+      "at": "2026-09-14T19:59:52+00:00",
+      "title": "Allow the actual-publication regression to accept legitimate completed-task advances",
+      "related_task": "P01",
+      "already_accounted": false,
+      "evidence": ["bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_end_to_end.py"]
+    },
+    {"event": "fixed", "id": "BUG002", "at": "2026-09-14T20:01:35+00:00", "reproduction": ["bench-results/efficiency-mechanism-isolation-20260906T214448Z/BUG002-RED.txt"], "verification": ["bench-results/efficiency-mechanism-isolation-20260906T214448Z/BUG002-GREEN.txt"], "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/BUG002-RESULT.md"}
+  ]
+}

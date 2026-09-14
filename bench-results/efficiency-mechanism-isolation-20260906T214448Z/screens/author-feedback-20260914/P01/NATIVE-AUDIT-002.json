@@ -1,0 +1,478 @@
+{
+  "scope": "P01: the one actual new diagnostic only; retained for P10 without another accounting replay; existing audit_rollout called exactly once; no old baseline accounting replay",
+  "core_sha256": "dd5127f937ec1cc4d41a443ba7640fca93e82484f345ac8c56aeef5325d68153",
+  "metadata": {
+    "arm": "P01",
+    "thread_id": "01a0a17a-25a4-70a0-a6c3-a71d2e2bc6bf",
+    "model": "gpt-5.5",
+    "effort": "xhigh",
+    "cwd": "/tmp/wl-author-feedback-20260914.alMTHU/R13",
+    "native_path": "/home/user/.codex/sessions/2026/09/14/rollout-2026-09-14T21-52-11-01a0a17a-25a4-70a0-a6c3-a71d2e2bc6bf.jsonl",
+    "native_sha256": "7345362427c3108dc0a60536d6942a103c6b18a7f1f38da55fa4de2df1dbea1b",
+    "public": [
+      {
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/input-002/native.stdout.jsonl",
+        "sha256": "fcc2828c66dec1a0ee869b2d3c2d0dca1dd992389bdf581f600ba41b95dfa992"
+      }
+    ]
+  },
+  "audit": {
+    "thread_id": "01a0a17a-25a4-70a0-a6c3-a71d2e2bc6bf",
+    "errors": [],
+    "records": {
+      "resp_0dd49a36c811e9ee016aa8506f05e887d2800cf37dac8f5cca": {
+        "response_id": "resp_0dd49a36c811e9ee016aa8506f05e887d2800cf37dac8f5cca",
+        "thread_id": "01a0a17a-25a4-70a0-a6c3-a71d2e2bc6bf",
+        "turn_id": "01a0a17a-2610-7a23-9973-f9f5e671d13c",
+        "usage": {
+          "input_tokens": 15841,
+          "cached_input_tokens": 9600,
+          "output_tokens": 32,
+          "reasoning_output_tokens": 17
+        },
+        "line": 13
+      }
+    },
+    "response_count": 1,
+    "duplicate_response_records": 0,
+    "native_usage": {
+      "input_tokens": 15841,
+      "cached_input_tokens": 9600,
+      "output_tokens": 32,
+      "reasoning_output_tokens": 17,
+      "raw_input_plus_output": 15873,
+      "uncached_input_plus_output": 6273
+    },
+    "compaction_markers": []
+  },
+  "public_usage": {
+    "input_tokens": 15841,
+    "cached_input_tokens": 9600,
+    "output_tokens": 32,
+    "reasoning_output_tokens": 17,
+    "raw_input_plus_output": 15873,
+    "uncached_input_plus_output": 6273
+  },
+  "native_minus_public": {
+    "input_tokens": 0,
+    "cached_input_tokens": 0,
+    "output_tokens": 0,
+    "reasoning_output_tokens": 0
+  },
+  "exact_prompt_match": true,
+  "prompt_sha256": "1cdcbc62c151af3a6f9da69a51f9e2841b305e33b3b2147b08eadd866b2b56cd",
+  "task_starts": [
+    "01a0a17a-2610-7a23-9973-f9f5e671d13c"
+  ],
+  "task_terminals": [
+    {
+      "turn_id": "01a0a17a-2610-7a23-9973-f9f5e671d13c",
+      "type": "task_complete"
+    }
+  ],
+  "tool_call_items": [],
+  "contexts": [
+    {
+      "turn_id": "01a0a17a-2610-7a23-9973-f9f5e671d13c",
+      "model": "gpt-5.5",
+      "effort": "xhigh",
+      "cwd": "/tmp/wl-author-feedback-20260914.alMTHU/R13",
+      "approval_policy": "never",
+      "sandbox_policy": {
+        "type": "read-only"
+      }
+    }
+  ],
+  "source_endpoints": [
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/monitor.py",
+      "expected": "2589b0f75adf293f631c05e8b140428f25a97c118efb723078ac79bb8df8a011",
+      "actual": "2589b0f75adf293f631c05e8b140428f25a97c118efb723078ac79bb8df8a011"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/test_monitor.py",
+      "expected": "7739719a0146304b2a13a749143ea47956e68b202885dc59b41946c9ffd813c4",
+      "actual": "7739719a0146304b2a13a749143ea47956e68b202885dc59b41946c9ffd813c4"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/idle_supervisor.py",
+      "expected": "b134467bc7cf8f529d00d338276b9a2e1d0ec0f7ecb6736f5db53aebb9b75549",
+      "actual": "b134467bc7cf8f529d00d338276b9a2e1d0ec0f7ecb6736f5db53aebb9b75549"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic/bounded_launch.py",
+      "expected": "f181729b5c26e4cfc85477c82918fb9468fb4a9482d8700c36134ecd3a175db1",
+      "actual": "f181729b5c26e4cfc85477c82918fb9468fb4a9482d8700c36134ecd3a175db1"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-inverse-20260914/author_inverse.py",
+      "expected": "9afbe2c342a4f5e23ee46dedb7c16df68a1099622b53efaa09b71adb9e774358",
+      "actual": "9afbe2c342a4f5e23ee46dedb7c16df68a1099622b53efaa09b71adb9e774358"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-inverse-20260914/resource_sample.py",
+      "expected": "607ece4d4384d5ed49560cc8250838dedf3ba5e4924ddc993b1d93102a63ea5b",
+      "actual": "607ece4d4384d5ed49560cc8250838dedf3ba5e4924ddc993b1d93102a63ea5b"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/drivers/host_custody.py",
+      "expected": "5e5be14ae50574e1d3ee81991cb4fee2d33e923ca825655644a1c33aac18b537",
+      "actual": "5e5be14ae50574e1d3ee81991cb4fee2d33e923ca825655644a1c33aac18b537"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/provider/codex",
+      "expected": "8ad1d261979029fec24cf4e143aaf6afc6c688056c6bc702c824b3538b92ff32",
+      "actual": "8ad1d261979029fec24cf4e143aaf6afc6c688056c6bc702c824b3538b92ff32"
+    },
+    {
+      "path": "/tmp/work-leaf-cli-01534.r6qIK3/cache/_npx/61b275e57bf5ae43/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex",
+      "expected": "56ef98ab4032d317ab26e9b5e5a175650717351edb16ed9cde0cb6d1734d62da",
+      "actual": "56ef98ab4032d317ab26e9b5e5a175650717351edb16ed9cde0cb6d1734d62da"
+    },
+    {
+      "path": "/tmp/wl-author-feedback-20260914.alMTHU/R13/AGENTS.md",
+      "expected": "5f6ba65e9708299c97fa6856d6eb4e9ac09434ca19d7add22b90862fb20d652c",
+      "actual": "5f6ba65e9708299c97fa6856d6eb4e9ac09434ca19d7add22b90862fb20d652c"
+    },
+    {
+      "path": "/home/user/.codex/config.toml",
+      "expected": "f20c71778fecbbe16ccefadad444a2c4578800a4c365e5b4fb69e35ccb6a52ee",
+      "actual": "f20c71778fecbbe16ccefadad444a2c4578800a4c365e5b4fb69e35ccb6a52ee"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/run_input_diagnostic.py",
+      "expected": "a667af1ce461209e18d2b5171c399243341b3c4c8efb3139c177cdbf99f927e3",
+      "actual": "a667af1ce461209e18d2b5171c399243341b3c4c8efb3139c177cdbf99f927e3"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/private_catalog.py",
+      "expected": "a06cb222718aa85b3fd8bc2ff740e2062e35b4345d294930e40120fe79b46c54",
+      "actual": "a06cb222718aa85b3fd8bc2ff740e2062e35b4345d294930e40120fe79b46c54"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/test_private_catalog.py",
+      "expected": "407c69b4bb37ae88f19dda7128480831233a63c3c45585c50425191ae220d71c",
+      "actual": "407c69b4bb37ae88f19dda7128480831233a63c3c45585c50425191ae220d71c"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/PRIVATE-VIEW.json",
+      "expected": "b19483d686c6d1ffe837e1889d09ab6f033e4f71ef6e4a33bd3c122e74dc054a",
+      "actual": "b19483d686c6d1ffe837e1889d09ab6f033e4f71ef6e4a33bd3c122e74dc054a"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/catalog-profile/codex",
+      "expected": "060f9b661addfeb9a289cae1c477b73887e93060d5b832b79aa2068a66fc63aa",
+      "actual": "060f9b661addfeb9a289cae1c477b73887e93060d5b832b79aa2068a66fc63aa"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/CATALOG-PROTOCOL.md",
+      "expected": "fbfd8c704b390ab666604b4b1c6e73b112e2f2f01e714388eeda2d15346baeb7",
+      "actual": "fbfd8c704b390ab666604b4b1c6e73b112e2f2f01e714388eeda2d15346baeb7"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/input-002/PROMPT.txt",
+      "expected": "1cdcbc62c151af3a6f9da69a51f9e2841b305e33b3b2147b08eadd866b2b56cd",
+      "actual": "1cdcbc62c151af3a6f9da69a51f9e2841b305e33b3b2147b08eadd866b2b56cd"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-P01-EXTRA-AND-BUGFIX-20260914.md",
+      "expected": "b321e20d9e784dea8ee560e1dd695c67b1e0d132b7161969f429a77dcd42c7f2",
+      "actual": "b321e20d9e784dea8ee560e1dd695c67b1e0d132b7161969f429a77dcd42c7f2"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/P01-BUDGET-EXCEPTION-20260914.json",
+      "expected": "f17a9c912531368db2ad3f1c9a3e7a95d5142c4d5839b654a2a0634204efc484",
+      "actual": "f17a9c912531368db2ad3f1c9a3e7a95d5142c4d5839b654a2a0634204efc484"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/config.toml",
+      "expected": "156029126354d651f1e855a987456c630ee21b5a203f243ca18a6cba3ffdbd82",
+      "actual": "156029126354d651f1e855a987456c630ee21b5a203f243ca18a6cba3ffdbd82"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-loader.UC94EW/marketplace/.agents/plugins/marketplace.json",
+      "expected": "089323ee9e4cb4835e91f0be40fe6449c4ee58e2a2fadfd86276f75293b91bbe",
+      "actual": "089323ee9e4cb4835e91f0be40fe6449c4ee58e2a2fadfd86276f75293b91bbe"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/.app.json",
+      "expected": "99b8ba5f9f9ec198071ef338d2d0f621c91593ea5fa1fe324648e2a0533dfafc",
+      "actual": "99b8ba5f9f9ec198071ef338d2d0f621c91593ea5fa1fe324648e2a0533dfafc"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/.codex-plugin/plugin.json",
+      "expected": "d2cbbd434a5c8123a9e1612663f0598cdd13ba71bfb55e172e8132ed9e5d4474",
+      "actual": "d2cbbd434a5c8123a9e1612663f0598cdd13ba71bfb55e172e8132ed9e5d4474"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-three-statement-forecast/SKILL.md",
+      "expected": "74f4a5cccec0107b861548b157e04c51d9b58ec13a990c86394b4c529b8ecf41",
+      "actual": "74f4a5cccec0107b861548b157e04c51d9b58ec13a990c86394b4c529b8ecf41"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-team-alignment/SKILL.md",
+      "expected": "26d7cafdcd1899a937b325c5d02ac57c162d45002153be33a934d35f81eb6110",
+      "actual": "26d7cafdcd1899a937b325c5d02ac57c162d45002153be33a934d35f81eb6110"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-system-design/SKILL.md",
+      "expected": "87f7b7ed1b0d8410f5e5971cd7f7db9a4165e2f37069e97e52dbfb469b75a57c",
+      "actual": "87f7b7ed1b0d8410f5e5971cd7f7db9a4165e2f37069e97e52dbfb469b75a57c"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-strategy-memorandum/SKILL.md",
+      "expected": "51d7882ac94e8e57b323394825728c33925af878806e37277217c2dc12a912e5",
+      "actual": "51d7882ac94e8e57b323394825728c33925af878806e37277217c2dc12a912e5"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-simple-light-mode/SKILL.md",
+      "expected": "7c68430c6cf57b55b457d4735dbd1a46b889bef135a32222902dd0848b6e1752",
+      "actual": "7c68430c6cf57b55b457d4735dbd1a46b889bef135a32222902dd0848b6e1752"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-simple-dark-mode/SKILL.md",
+      "expected": "b7c8d0c05f75878b9bc21e56a57c41ec1aa29700aca0a24822be0f9f1bd53207",
+      "actual": "b7c8d0c05f75878b9bc21e56a57c41ec1aa29700aca0a24822be0f9f1bd53207"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-sales-pipeline/SKILL.md",
+      "expected": "15cfeeedf440021f16ed3f3ad8c7c1ef6d48898b9447741e223d2fb41cfc9800",
+      "actual": "15cfeeedf440021f16ed3f3ad8c7c1ef6d48898b9447741e223d2fb41cfc9800"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-project-tracker/SKILL.md",
+      "expected": "d97d5be20189b7f53dd269b6e1c5f694eaf53e5a72f6559fcb1578911b7cda82",
+      "actual": "d97d5be20189b7f53dd269b6e1c5f694eaf53e5a72f6559fcb1578911b7cda82"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-project-kickoff/SKILL.md",
+      "expected": "aa893ebd89e7c8d1db4261d01cc2b1add35d78d00785871ccaaa5fc8db783ec9",
+      "actual": "aa893ebd89e7c8d1db4261d01cc2b1add35d78d00785871ccaaa5fc8db783ec9"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-operating-review/SKILL.md",
+      "expected": "6d63c5cd025ffe936e7bab5db3023672bbaec26af55c2bb8b057d38c202c9c32",
+      "actual": "6d63c5cd025ffe936e7bab5db3023672bbaec26af55c2bb8b057d38c202c9c32"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-operating-calendar/SKILL.md",
+      "expected": "33bb660791a0b9a21628a42c34934932220203b6aabd84e98cb1b45327d0384c",
+      "actual": "33bb660791a0b9a21628a42c34934932220203b6aabd84e98cb1b45327d0384c"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-minimal-letterhead/SKILL.md",
+      "expected": "880ef094d4d0c89a7bde5ce9bbe4086625c186651e9e6efc8ba8bdd7cc77f9d5",
+      "actual": "880ef094d4d0c89a7bde5ce9bbe4086625c186651e9e6efc8ba8bdd7cc77f9d5"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-market-trends-report/SKILL.md",
+      "expected": "d58d019b89cb6f292ac3ab991d561489eef477ff53ce05fb024a0c936f5af26a",
+      "actual": "d58d019b89cb6f292ac3ab991d561489eef477ff53ce05fb024a0c936f5af26a"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-legal-memorandum/SKILL.md",
+      "expected": "51fb9d21baf6119c4ccb1903638a6bac0e859210de63460fffa7025d52e997e0",
+      "actual": "51fb9d21baf6119c4ccb1903638a6bac0e859210de63460fffa7025d52e997e0"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-investment-committee-memo/SKILL.md",
+      "expected": "68abd08cfe5e073e3c446a3f675f44c5bf98f57434dba679e8acd8a763379a8b",
+      "actual": "68abd08cfe5e073e3c446a3f675f44c5bf98f57434dba679e8acd8a763379a8b"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-financial-budget/SKILL.md",
+      "expected": "c0b6b7a62a15597aaf2b1ec679e21da48f533b756127f0aef957cdfe9f3da738",
+      "actual": "c0b6b7a62a15597aaf2b1ec679e21da48f533b756127f0aef957cdfe9f3da738"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-experiment-analysis/SKILL.md",
+      "expected": "0b05effc47df0a14f8e0c3e3597e6722224747435546385d38a2cae279bd20b9",
+      "actual": "0b05effc47df0a14f8e0c3e3597e6722224747435546385d38a2cae279bd20b9"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-design-report/SKILL.md",
+      "expected": "563722f53854e606f8a9f87e37e72d7ef70a22d46d5836b8e4d6abfb1b79e9e0",
+      "actual": "563722f53854e606f8a9f87e37e72d7ef70a22d46d5836b8e4d6abfb1b79e9e0"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-business-review/SKILL.md",
+      "expected": "27721fc1d67d1b41949caa75ac8f94f81952ff124406878af6524047929e60d2",
+      "actual": "27721fc1d67d1b41949caa75ac8f94f81952ff124406878af6524047929e60d2"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-analytics-dashboard/SKILL.md",
+      "expected": "cf5360fd8b197673bb237c52c603c97fa319c875c3dfa2cd8efff52d4422f513",
+      "actual": "cf5360fd8b197673bb237c52c603c97fa319c875c3dfa2cd8efff52d4422f513"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-analytics-dashboard/agents/openai.yaml",
+      "expected": "392f620a50c2a39bb3b3e80e376a27385d312ba7a8abf14cfabb7f02f761a273",
+      "actual": "392f620a50c2a39bb3b3e80e376a27385d312ba7a8abf14cfabb7f02f761a273"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-business-review/agents/openai.yaml",
+      "expected": "cde1beac06ca33c9a0a12c1cbf2b5834dd208a5f732069fd790d7bf9483bcbdd",
+      "actual": "cde1beac06ca33c9a0a12c1cbf2b5834dd208a5f732069fd790d7bf9483bcbdd"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-design-report/agents/openai.yaml",
+      "expected": "bd8e8ba79937d8fc087ced20bab5f25fa9a160303762f7567ef2bdcb739d3f9a",
+      "actual": "bd8e8ba79937d8fc087ced20bab5f25fa9a160303762f7567ef2bdcb739d3f9a"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-experiment-analysis/agents/openai.yaml",
+      "expected": "861a34c68d0d899bb17029316ca8a3d3951a20c206cb8c1890652c2ff06ca626",
+      "actual": "861a34c68d0d899bb17029316ca8a3d3951a20c206cb8c1890652c2ff06ca626"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-financial-budget/agents/openai.yaml",
+      "expected": "ac5c29e75dc2e335aa4cab9999d291c081cb07b3eaab6eaaae7f6e6068aba2a4",
+      "actual": "ac5c29e75dc2e335aa4cab9999d291c081cb07b3eaab6eaaae7f6e6068aba2a4"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-investment-committee-memo/agents/openai.yaml",
+      "expected": "0264537a7b51ef28e41907d34bd09c3e0259045a84f0591e13fd2efd44a3ac69",
+      "actual": "0264537a7b51ef28e41907d34bd09c3e0259045a84f0591e13fd2efd44a3ac69"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-legal-memorandum/agents/openai.yaml",
+      "expected": "bfd77de2f34d5222e9db4b469aab576426c73b0850f5c3a628e4a5e8f8587887",
+      "actual": "bfd77de2f34d5222e9db4b469aab576426c73b0850f5c3a628e4a5e8f8587887"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-market-trends-report/agents/openai.yaml",
+      "expected": "fe84725e0c898778a5ed33bfab12a99beb171b08e98a834ebdc55860ac0d4efd",
+      "actual": "fe84725e0c898778a5ed33bfab12a99beb171b08e98a834ebdc55860ac0d4efd"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-minimal-letterhead/agents/openai.yaml",
+      "expected": "f5b9311a53150e4d19c5c90664942a1537a73cec687b128dc6c6301261b803ad",
+      "actual": "f5b9311a53150e4d19c5c90664942a1537a73cec687b128dc6c6301261b803ad"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-operating-calendar/agents/openai.yaml",
+      "expected": "cd41437c7fd39159b21d5decedcb3b53c9737e3854b7f9e46efcddfb73f610d5",
+      "actual": "cd41437c7fd39159b21d5decedcb3b53c9737e3854b7f9e46efcddfb73f610d5"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-operating-review/agents/openai.yaml",
+      "expected": "871a705a344c2461bb3fa43495ac9fb9724ee583649cafce9b97a054702b6cae",
+      "actual": "871a705a344c2461bb3fa43495ac9fb9724ee583649cafce9b97a054702b6cae"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-project-kickoff/agents/openai.yaml",
+      "expected": "3f62c61df6cd23f81c6f412994f40ff176b006d40b913b3c423480279eb4aff5",
+      "actual": "3f62c61df6cd23f81c6f412994f40ff176b006d40b913b3c423480279eb4aff5"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-project-tracker/agents/openai.yaml",
+      "expected": "e858f66b2cd5a17a12ce7059be560d47c429faf34c1665b716c62e67b6b10496",
+      "actual": "e858f66b2cd5a17a12ce7059be560d47c429faf34c1665b716c62e67b6b10496"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-sales-pipeline/agents/openai.yaml",
+      "expected": "ea4d9150379ec34447137c436a7459c5f8863e7532a6a87ef1d0871412ee4410",
+      "actual": "ea4d9150379ec34447137c436a7459c5f8863e7532a6a87ef1d0871412ee4410"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-simple-dark-mode/agents/openai.yaml",
+      "expected": "a5c3103290b5e28efec73cf5ad7af7c5a9212ff422256e2e831f11b456e995b9",
+      "actual": "a5c3103290b5e28efec73cf5ad7af7c5a9212ff422256e2e831f11b456e995b9"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-simple-light-mode/agents/openai.yaml",
+      "expected": "82d2ce0edb52134049718151db345ad1748a358ae1d20c2efe9e274404a1d029",
+      "actual": "82d2ce0edb52134049718151db345ad1748a358ae1d20c2efe9e274404a1d029"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-strategy-memorandum/agents/openai.yaml",
+      "expected": "1a277cd3a6fd6be41fee1546183f5ea1119ea7c661e1cf156c6cce9b55c65bd3",
+      "actual": "1a277cd3a6fd6be41fee1546183f5ea1119ea7c661e1cf156c6cce9b55c65bd3"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-system-design/agents/openai.yaml",
+      "expected": "fe728562ab2857373f460a25b5954ef532034ab21e10c38b36c739bc5c5ffd77",
+      "actual": "fe728562ab2857373f460a25b5954ef532034ab21e10c38b36c739bc5c5ffd77"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-team-alignment/agents/openai.yaml",
+      "expected": "dea3d32230b1e7e62d3f4844d3b1ddceb5f2855cd5fbe31e0849e51e1aa11c1d",
+      "actual": "dea3d32230b1e7e62d3f4844d3b1ddceb5f2855cd5fbe31e0849e51e1aa11c1d"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-three-statement-forecast/agents/openai.yaml",
+      "expected": "240d75e1e7b2f33a16a10538e125342ee6c701637e12c0fbe0d8aad5919b48eb",
+      "actual": "240d75e1e7b2f33a16a10538e125342ee6c701637e12c0fbe0d8aad5919b48eb"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/plugin-management/0.1.0/.app.json",
+      "expected": "8392e042417a3de2db3a9f2e2385f4bd80f462c98ed2d8a6ef60dff002e2f06c",
+      "actual": "8392e042417a3de2db3a9f2e2385f4bd80f462c98ed2d8a6ef60dff002e2f06c"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/plugin-management/0.1.0/.codex-plugin/plugin.json",
+      "expected": "5deb3b2f943fff03a928e1faed2b040bad7dabcf71c11f183fc67dcc0793e3c3",
+      "actual": "5deb3b2f943fff03a928e1faed2b040bad7dabcf71c11f183fc67dcc0793e3c3"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/plugin-management/0.1.0/skills/plugin-management/SKILL.md",
+      "expected": "653841cc21205269f08b0ce135891e1518dac616a766bcfb0b57d788d3f68b10",
+      "actual": "653841cc21205269f08b0ce135891e1518dac616a766bcfb0b57d788d3f68b10"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/deep-research-work/0.1.15/.app.json",
+      "expected": "b8a5baa99ec4ed7a277c655a5fc802ae90f32e10d32c021112e7300fc7754db1",
+      "actual": "b8a5baa99ec4ed7a277c655a5fc802ae90f32e10d32c021112e7300fc7754db1"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/deep-research-work/0.1.15/.codex-plugin/plugin.json",
+      "expected": "7c1d94e0c3892469bde09ed42d1cb32c63801f61f93ef1e01d5dde1a2bc01255",
+      "actual": "7c1d94e0c3892469bde09ed42d1cb32c63801f61f93ef1e01d5dde1a2bc01255"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/deep-research-work/0.1.15/skills/deep-research/SKILL.md",
+      "expected": "fe92f226b47314a3963738a7b98d5afc5d51973c7b589c72277e3cc9e59d44eb",
+      "actual": "fe92f226b47314a3963738a7b98d5afc5d51973c7b589c72277e3cc9e59d44eb"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/deep-research-work/0.1.15/skills/deep-research/agents/openai.yaml",
+      "expected": "397a75460a55d81149dbba7b51a4c5f2f52abb1df0c5d1e0362aca35133c3b84",
+      "actual": "397a75460a55d81149dbba7b51a4c5f2f52abb1df0c5d1e0362aca35133c3b84"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/app-698f531bfb808191933a0dedad26a8c7/1.0.0/.app.json",
+      "expected": "5b2987b158543c8864afd010d76d260d2181a81ce7d358af5dfd6ae8700ef17a",
+      "actual": "5b2987b158543c8864afd010d76d260d2181a81ce7d358af5dfd6ae8700ef17a"
+    },
+    {
+      "path": "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache/openai-curated-remote/app-698f531bfb808191933a0dedad26a8c7/1.0.0/.codex-plugin/plugin.json",
+      "expected": "e1e2e07f9882e02acfbd72ac4f490895e7e451bc5092920b449ad3819c52ac6c",
+      "actual": "e1e2e07f9882e02acfbd72ac4f490895e7e451bc5092920b449ad3819c52ac6c"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/input-002/ENVIRONMENT.json",
+      "expected": "78f06cd6c23fc44ed7559124aaeb01307782fef942bea5c88c3fedf1cd49d20a",
+      "actual": "78f06cd6c23fc44ed7559124aaeb01307782fef942bea5c88c3fedf1cd49d20a"
+    }
+  ],
+  "source_endpoint_errors": [],
+  "admission_matches_terminal": true,
+  "base_equal": false,
+  "developer_equal": false,
+  "admissions": [
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/input-001/ADMISSION.json",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/input-002/ADMISSION.json"
+  ],
+  "unfinished_turns": [],
+  "unlaunched": [
+    "P03 author episode",
+    "P04 author episode",
+    "P06 joint screen",
+    "P07 joint screen",
+    "P08 package screen",
+    "P09 workflow 1",
+    "P09 workflow 2",
+    "P09 workflow 3"
+  ],
+  "conclusion": "completed actual-input qualification accounting; no feature intervention or causal token effect"
+}

@@ -123,7 +123,9 @@ def validate_issues(ledger, scope):
 
 def validate_ledger(ledger):
     scope, parent, _ = load_contract()
-    core.keys(ledger, "schema scope_id fixed_total completed pending tasks history research scope_issues")
+    from progress_repairs import preparation_limits
+    fields = "schema scope_id fixed_total completed pending tasks history research scope_issues"
+    core.keys(ledger, fields + (" budget_exceptions" if "budget_exceptions" in ledger else ""))
     core.require(type(ledger["schema"]) is int and ledger["schema"] == 5
                  and type(ledger["fixed_total"]) is int and ledger["fixed_total"] == 90
                  and ledger["scope_id"] == scope["id"], "only the approved fixed-90 scope is active")
@@ -141,6 +143,7 @@ def validate_ledger(ledger):
     core.require(isinstance(ledger["tasks"], dict)
                  and set(ledger["tasks"]) == set(parent["tasks"]) | set(definitions),
                  "no hidden supplementary work")
+    limits = preparation_limits(ledger)
     for identity, record in parent["tasks"].items():
         core.require(ledger["tasks"][identity] == record, "old completed records are immutable")
     for identity, definition in definitions.items():
@@ -150,7 +153,7 @@ def validate_ledger(ledger):
         spent = item["preparation_seconds"]
         core.require(type(spent) is int and spent >= 0,
                      "preparation spending must be explicit and nonnegative")
-        if spent > definition["preparation_limit_seconds"]:
+        if spent > limits[identity]:
             core.require(item["status"] == "blocked",
                          "budget exhaustion stops work; retain any actual overrun as blocked")
         if item["started_at"] is not None:

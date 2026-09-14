@@ -1,0 +1,28 @@
+F
+======================================================================
+FAIL: test_existing_actual_publication_check_accepts_a_valid_completion (__main__.PublicationAdvanceTests.test_existing_actual_publication_check_accepts_a_valid_completion)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_publication_regression.py", line 33, in test_existing_actual_publication_check_accepts_a_valid_completion
+    original.CompletePlanTests().test_actual_publication()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/test_progress_end_to_end.py", line 243, in test_actual_publication
+    self.assertEqual(core.validate_published_progress(ledger, pubs), (74, 16))
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Tuples differ: (75, 15) != (74, 16)
+
+First differing element 0:
+75
+74
+
+- (75, 15)
+?   ^   ^
+
++ (74, 16)
+?   ^   ^
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.012s
+
+FAILED (failures=1)

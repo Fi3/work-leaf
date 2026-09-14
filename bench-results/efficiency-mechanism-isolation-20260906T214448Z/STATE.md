@@ -7,13 +7,13 @@ below remain historical records, not authority for new runs or a substitute for 
 ## Primary goal status
 
 **Historical saving explained as a verified combined percentage: NOT ESTABLISHED.
-Overall attribution goal: UNFINISHED. Progress remains 74/16/90; P01 is blocked after its actual startup-delay diagnostic failed input fidelity.**
+Overall attribution goal: UNFINISHED. Progress is 75/15/90; P01 actual input qualification is complete. Separate unforeseen bug fixes: 2 DONE / 0 TODO.**
 The [complete non-WL reproduction](RESULT-NON-WL-JOINT-REPRODUCTION-20260913.md)
 uses 18,545,304 raw tokens, 48.6513% below the saved six-Direct mean. Native,
 public, observer and independent accounting agree. The historically exposed
 upstream joint mechanism and one complete reproduction pass qualified independent
 acceptance; full historical causal attribution and its residual bound do not.
-Fixed progress is 74 DONE / 16 TODO / 90 TOTAL. All 74 completed records and prior
+Fixed progress is 75 DONE / 15 TODO / 90 TOTAL. All 74 historical completed records and prior
 publication checkpoints are preserved; the old G03 aggregate is not an extra task.
 The frozen feature result is 2/3; the user's no-quality-loss premise remains explicit.
 R02/R03/R04/R06 are closed; R08 admits no full batch. Accepted historical reduction remains
@@ -23,7 +23,7 @@ denominators, bounds and update rules are at the top of
 [ephemeral-note.md](../../ephemeral-note.md). Answer this metric immediately
 from that snapshot and lead progress reports with it. The closed investigations
 below are bounded phase completions, not completion of the overall goal.
-Completed scope: R01–R20, with all failures and causal qualifications retained.
+Completed scope: R01–R20 and P01, with all failures and causal qualifications retained.
 The approved R13–R20 extension has one completed 15,687-raw input diagnostic.
 The monitor qualification passes, but the actual developer catalog still lacks
 775 bytes. R14/R15 are not launched and R16 admits no full batch.
@@ -31,12 +31,14 @@ The monitor qualification passes, but the actual developer catalog still lacks
 The [conditional complete-plan approval](AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) covers
 P01–P16 and pins the 74/0 checkpoint in [the current contract](PROGRESS-END-TO-END-CONTRACT-20260914.json).
 Source tracing, repair and verification are included in P01; no new setup task is needed for them.
-The [P01 result](screens/author-feedback-20260914/P01/RESULT.md) retains one completed
-15,709-raw diagnostic and a local cold/warm discovery trace. The actual startup wait follows
-the missing-catalog context capture, so it is not a qualified repair. No feature run or
-additional diagnostic is permitted. P02–P16 stay pending, not administratively completed.
+The [P01 result](progress-results/P01.md) qualifies the private local-registration launch:
+input-002 uses 15,873 raw and exactly matches saved base/developer objects. Its failed
+15,709-raw startup-wait predecessor remains retained. Both diagnostic allocations are consumed.
+P02's exact factor/reference map precedes any feature admission; P02–P16 remain pending.
 Unexpected issues and promising causes require genuinely new facts; an omitted known check is
-case (2), not a discovery. Extra scope or budgets still need explicit permission.
+case (2), not a discovery. Extra scientific scope or budgets still need explicit permission.
+The user's standing bug-fix authority permits unaccounted defects without another question,
+with a separate visible counter and retained reproduction/verification evidence.
 
 ## Preserved closed scope and current permission boundary
 
@@ -44,7 +46,7 @@ The [original approved inventory](PROGRESS-TASKS-PROPOSAL-20260914.md) and
 [approved extension](PROGRESS-TASK-EXTENSION-20260914.json) specify R01–R20.
 All twenty earlier finite result files are complete under their original scopes.
 The current sixteen-task list keeps failed setup and unrun dependent work in TODO;
-P01 preparation does not establish successful input qualification. DONE never decreases;
+Only actual input qualification completes P01. DONE never decreases;
 TODO never increases without subsequent explicit user approval. At zero, stop with a supported
 answer or case (1) necessary additional work and/or case (2) an incorrect initial checklist;
 name the exact proposed additional tasks/count and ask permission. No uncounted work,
@@ -57,8 +59,8 @@ error is an operator setup failure, not a B effect. No expensive batch follows.
 R04's extra cost is descriptively +1,350,327 raw after first GREEN, offset by
 −147,082 before/through it; B's post-result guidance is the next proposed
 discriminator, not a verified historical share. R13's failed input gate prevents
-the approved extension from supplying a new causal contrast. P01 also supplies no causal contrast;
-its pending budget request is not permission for another provider observation.
+the approved extension from supplying a new causal contrast. P01 supplies qualified setup,
+not a causal contrast. Its separately approved additional diagnostic is complete; no retry remains.
 
 The completed global-hunk pilot and terminal audits support the source-linked
 mechanism and non-WL recipe in the result above. Remaining tasks address a same-target

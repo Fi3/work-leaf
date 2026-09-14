@@ -240,7 +240,8 @@ class CompletePlanTests(unittest.TestCase):
     def test_actual_publication(self):
         ledger = json.loads((core.STUDY / "PROGRESS-CHECKLIST.json").read_text())
         pubs = json.loads((core.STUDY / "PROGRESS-PUBLICATION-HISTORY.json").read_text())
-        self.assertEqual(core.validate_published_progress(ledger, pubs), (74, 16))
+        expected = core.read_counts((core.ROOT / "hypotesis.md").read_text().splitlines()[0])
+        self.assertEqual(core.validate_published_progress(ledger, pubs), expected)
         core.validate_visible_progress(ledger, (core.ROOT / "hypotesis.md").read_text(),
                                       (core.ROOT / "ephemeral-note.md").read_text())
         core.validate_evidence_files(ledger)

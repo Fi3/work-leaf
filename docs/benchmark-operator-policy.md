@@ -117,10 +117,21 @@ remaining-work list, P01–P16, as 74 DONE / 16 TODO / 90 TOTAL. The study recor
 `AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md` preserves the reply and its scope;
 `PROGRESS-END-TO-END-CONTRACT-20260914.json` pins all sixteen definitions and ceilings.
 The restart authority is `AUTHORITY-P01-P16-RESUME-20260914.md`. Task publication alone
-admits no observation. P01's actual input gate remains blocked after its one permitted
-diagnostic; `screens/author-feedback-20260914/P01/RESULT.md` records the failed startup-delay
-qualification. No further diagnostic or dependent feature run is admitted. Unused feature
-slots cannot replace a consumed setup-diagnostic allowance; budget exceptions require approval.
+admits no observation. P01's actual input gate is qualified in `progress-results/P01.md`.
+Its first failed startup-delay diagnostic remains preserved beside the successful input-002.
+The exact user reply in `AUTHORITY-P01-EXTRA-AND-BUGFIX-20260914.md` approves
+`P01-BUDGET-EXCEPTION-20260914.json`: 30 extra local minutes and one conditional
+60-second/100k read-only subscription diagnostic after a distinct locally qualified repair.
+That additional diagnostic is consumed. P02's exact effective-factor/reference qualification
+precedes any feature admission; no further setup diagnostic is allocated.
+Previously unaccounted bug-fix-only tasks need no additional permission question under that
+same authority. Their separate append-only `BUG-FIX-CHECKLIST.json` counter is visible on
+line two of root `hypotesis.md`; record discovery before work and reproduction/verification
+evidence before completion. Existing repairs are not counted twice. This does not expand
+the fixed research checklist or permit extra scientific observations/budgets.
+`test_progress_repairs.py` validates the exception and bug ledger alongside the three prior guards.
+`test_progress_publication_regression.py` rejects the former test defect that froze the actual
+publication at its initial count instead of accepting valid completed-task advances.
 
 All known necessary work belongs in the list upfront, including routine debugging, repair,
 verification and known joint/comparison setup. Genuinely unexpected issues or promising

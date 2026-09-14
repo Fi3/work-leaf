@@ -1,10 +1,82 @@
 # Provisional investigation ledger
 
-Live analysis counter: **DONE: 74 | TODO: 16 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
+Live analysis counter: **DONE: 75 | TODO: 15 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
-**Current activity, 2026-09-14T19:00:55+00:00:** research is paused at blocked P01 after final source/accounting verification. Its one diagnostic completed in 8.24 seconds / 15,709 raw tokens but retained the missing catalog. No feature benchmark ran. Preparation used 3398 seconds including prior publication, leaving 202 seconds at this verification checkpoint; the pause does not spend the remaining allowance. Another actual diagnostic requires explicit approval, regardless of remaining local time.
+**Bug-fix counter: DONE: 2 | TODO: 0 | TOTAL: 2.** BUG001 and BUG002 have retained fail-first/green results. No extra model observation was needed for either fix.
+**Current activity, 2026-09-14T20:01:35+00:00:** P01's actual input qualification is complete, with 5,372 active local seconds under its 5,400-second approved ceiling; separately recorded bug-fix activity is not hidden in research scope. The sentinel used 15,873 raw in 6.08 seconds, with identical saved base/developer input and all 74 source endpoints unchanged. P02's factor/reference qualification is next; no feature workflow is running.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-14T19:20:55+00:00 — approved continuation and separate bug counter:** the exact
+[user authority](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-P01-EXTRA-AND-BUGFIX-20260914.md)
+permits the extra P01 allowance and solving genuinely unaccounted bug-fix-only tasks without
+another question. Every new defect must appear in the separate root-header counter before work.
+No research count, old outcome or frozen protocol is rewritten. New tests fail first on the
+absent implementation, then exercise the approved exception, overrun/repeat rejection and
+separate bug discovery/completion evidence. The OpenAI Docs skill guides supported loader checks.
+The previous startup wait acts too late and will not be repeated.
+
+**2026-09-14 19:32 UTC — early stdin screen parked:** holding fresh native exec stdin open
+for two seconds sent no prompt and started no model turn. State databases were open, but
+no reads of the four watched plugin manifests/skill files occurred and no loader log signal
+was emitted. This does not qualify a ready-catalog delay. The three tiny local ordering
+checks are retained in P01/STDIN-EARLY-CHECKS.json; no diagnostic allowance is spent.
+Next local discriminator: whether the same pinned CLI's local app-server initialization,
+using exec client identity, can preserve native source/configuration while warming the
+installed-skill snapshot before a thread starts. This is not an approved switch to a
+different binary/provider or a generated experiment.
+
+**2026-09-14 19:32:29 UTC — local-client alternative rejected:** exec client identity still
+returns source=vscode from the pinned app-server despite successful warm discovery. No model
+turn was submitted. P01/EXEC-IDENTITY-LOCAL-CHECK.json retains the exact trace. This is not
+a qualified native-exec replacement. The extra actual diagnostic remains unused.
+
+**2026-09-14 19:40:22 UTC — tool-free startup fixture parked:** four fail-first tests pass
+for an empty MCP initialization fixture (no capabilities, tools, resources, prompts or added
+instructions). Its local native prompt preview waited 2.914 seconds but still omitted both
+plugin entries. No actual diagnostic is admitted on that result. P01/EMPTY-MCP-PREVIEW.json
+retains the exact command and summary. Final cheap alternative: test synchronous local-plugin
+discovery in a credential-free temporary installation only; do not install into the user's
+global configuration/cache or make account-level plugin changes.
+
+**2026-09-14 19:50 UTC — positive local input signal:** synchronous local registration in a
+private on-disk config/cache view produces the exact saved 5,813-byte skill section.
+Command-line-only registration did not. The same canonical skill paths, user UID and native
+provider remain; a second preview verifies zero inherited/permitted/effective/ambient
+preparation capabilities. No credential is copied and host config/cache contents are untouched.
+Four fail-first startup/resume/opt-in tests and six monitor tests pass. The one approved
+additional 60-second/100k actual diagnostic is being prepared; it must establish full input
+equality before P01 can finish. This is a setup signal, not a token-saving mechanism result.
+
+**2026-09-14 19:53:15 UTC — BUG001 discovered after the actual diagnostic:** input-002 has
+15,873 raw, one completed response, no tools and all 74 source endpoints unchanged. Its first
+comparison report falsely reports mismatch because the old reference hashes serialized base
+objects and newline-joined developer chunks, while the new extraction hashes base text and
+concatenated chunks. The 19:54:26 input-only correction proves exact equality of both original
+objects and both canonical hashes. Token accounting is valid and is not repeated.
+This is a newly encountered report-verifier defect, separate from the already-listed CLI
+loader repair. Under the user's automatic bug-fix authority, BUG001 gets its own counter,
+regression and dated result. This counter entry was published after initial diagnosis, not
+before it; that publication delay is explicit. P01 active preparation stops at 19:53:15
+(5,338 seconds cumulative, 62 seconds left); BUG001 diagnosis/report repair has its own
+separate local activity record. No new scientific task, provider retry or P01 limit increase.
+
+**2026-09-14 19:59:52 UTC — BUG002 discovered before publishing P01 completion:** the
+committed actual-publication test asserts 74/16 literally, despite the contract requiring
+valid future completions to advance that pair. The standing bug-fix approval covers this
+unexpected test defect and its necessary test correction. An additive regression first
+reproduces rejection of a valid 75/15 fixture; only the stale initial-count assertion is
+corrected. The frozen task contract, source/evidence validation and append-only histories
+remain enforced. This is not a research-task increase or permission for extra observations.
+
+**2026-09-14 20:05:58 UTC — P01 publication validated:** the 75/15/90 completion checkpoint
+and both fixed bug events pass all five progress/repair regressions. The full local-alternative
+roster is P01/LOCAL-CATALOG-QUALIFICATION.json; it includes failed namespace/CLI-only views,
+the credential-free local-install signal and the successful private on-disk config view.
+Source mounts are private, UID is unchanged, preparation capabilities are dropped, and the
+real sentinel confirms native input fidelity. No feature benchmark or further diagnostic runs.
+Cargo formatting, strict Clippy and the complete test suite passed. The final input correction
+changes no usage charge and preserves the preliminary representation-error report.
 
 **2026-09-14T19:00:55+00:00 — verification and handoff:** the existing accounting core audits the single new
 native response once: zero errors, duplicates, missing completions or compactions; public/native
