@@ -1,0 +1,20 @@
+python3 - <<'PY'
+import pathlib,subprocess,sys,time
+s=pathlib.Path('/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z'); d=s/'screens/author-feedback-20260914'; root=d/'P01/input-001'
+sys.path.insert(0,str(d))
+import monitor
+child=subprocess.Popen([sys.executable,str(s/'preflight/c15-real-diagnostic/bounded_launch.py'),str(root/'ADMISSION.json'),'7055c3f56db1e8c2de4942f8d2dd39c395f2ac91d7f1ecd925dba877250b4dd5'],stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+index=1
+while True:
+    sample=monitor.step(root,index,lambda:monitor.resources.sample_arm(root,pathlib.Path('/home/user/.codex/sessions/2026/09/14')),
+        lambda:monitor.resources.stop_owned(d/'P01/run_input_diagnostic.py','P01',root))
+    print({'sample':index,'raw':sample['native_recorded_raw'],'public':sample['public_completed_raw'],'terminal':sample['terminal']},flush=True)
+    if child.poll() is not None: break
+    if max(sample['native_recorded_raw'],sample['public_completed_raw']) >= 100000:
+        monitor.publish(root/'resource-stop.json',monitor.resources.stop_owned(d/'P01/run_input_diagnostic.py','P01',root))
+        break
+    time.sleep(5); index+=1
+stdout,stderr=child.communicate(timeout=65)
+monitor.publish(root/'OPERATOR-TERMINAL.json',{'exit_code':child.returncode,'stdout':stdout,'stderr':stderr})
+print(stdout,stderr,flush=True)
+PY

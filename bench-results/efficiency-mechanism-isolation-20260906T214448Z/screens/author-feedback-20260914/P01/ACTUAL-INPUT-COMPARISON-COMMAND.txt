@@ -1,0 +1,24 @@
+python3 - <<'PY'
+from pathlib import Path
+import json,hashlib,difflib
+root=Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01')
+reference=Path('/home/user/.codex/sessions/2026/09/13/rollout-2026-09-13T01-27-10-01a097f2-3f03-7463-9756-4e849ed94e8d.jsonl')
+current=Path(json.loads((root/'input-001/resources/sample-0003.json').read_text())['native_paths'][0])
+sha=lambda b:hashlib.sha256(b).hexdigest()
+def first(path):
+ data=path.read_bytes(); out={'path':str(path),'source_sha256':sha(data)}
+ for line in data.splitlines():
+  e=json.loads(line);q=e.get('payload',{})
+  if e.get('type')=='session_meta':
+   out['base_sha256']=sha(json.dumps(q.get('base_instructions'),sort_keys=True).encode());out['cli_version']=q.get('cli_version')
+  if e.get('type')=='turn_context' and 'context' not in out:
+   out['context']={k:q.get(k) for k in ('model','effort','approval_policy','sandbox_policy','cwd')}
+  if e.get('type')=='response_item' and q.get('role')=='developer' and 'developer' not in out:
+   out['developer']='\n'.join(v.get('text','') for v in q.get('content',[]))
+ out['developer_sha256']=sha(out['developer'].encode());out['developer_bytes']=len(out['developer'].encode())
+ assert sha(path.read_bytes())==out['source_sha256']
+ return out
+old=first(reference);new=first(current)
+diff=''.join(difflib.unified_diff(old['developer'].splitlines(True),new['developer'].splitlines(True),fromfile='saved-all-on',tofile='P01-startup-delay'))
+print(json.dumps({'scope':'first actual developer/base input check, not a native accounting replay','reference':{k:v for k,v in old.items() if k!='developer'},'diagnostic':{k:v for k,v in new.items() if k!='developer'},'base_equal':old['base_sha256']==new['base_sha256'],'developer_equal':old['developer']==new['developer'],'developer_diff':diff},indent=2))
+PY

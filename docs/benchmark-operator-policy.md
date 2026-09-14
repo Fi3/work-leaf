@@ -116,8 +116,11 @@ The user's conditional 2026-09-14 approval permits publication of the complete k
 remaining-work list, P01–P16, as 74 DONE / 16 TODO / 90 TOTAL. The study record
 `AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md` preserves the reply and its scope;
 `PROGRESS-END-TO-END-CONTRACT-20260914.json` pins all sixteen definitions and ceilings.
-Research is paused after the requested register update. No provider observation is admitted
-by task publication, and earlier continuation authority does not bypass this pause.
+The restart authority is `AUTHORITY-P01-P16-RESUME-20260914.md`. Task publication alone
+admits no observation. P01's actual input gate remains blocked after its one permitted
+diagnostic; `screens/author-feedback-20260914/P01/RESULT.md` records the failed startup-delay
+qualification. No further diagnostic or dependent feature run is admitted. Unused feature
+slots cannot replace a consumed setup-diagnostic allowance; budget exceptions require approval.
 
 All known necessary work belongs in the list upfront, including routine debugging, repair,
 verification and known joint/comparison setup. Genuinely unexpected issues or promising

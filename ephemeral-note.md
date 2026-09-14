@@ -3,12 +3,69 @@
 Live analysis counter: **DONE: 74 | TODO: 16 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
-**Current activity:** the requested list/counter publication is prepared; research is paused. P01 tracker preparation is performed, but actual launch repair/qualification remains unfinished. No diagnostic or benchmark is admitted or running.
+**Current activity, 2026-09-14T19:00:55+00:00:** research is paused at blocked P01 after final source/accounting verification. Its one diagnostic completed in 8.24 seconds / 15,709 raw tokens but retained the missing catalog. No feature benchmark ran. Preparation used 3398 seconds including prior publication, leaving 202 seconds at this verification checkpoint; the pause does not spend the remaining allowance. Another actual diagnostic requires explicit approval, regardless of remaining local time.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-14T19:00:55+00:00 — verification and handoff:** the existing accounting core audits the single new
+native response once: zero errors, duplicates, missing completions or compactions; public/native
+totals agree; the exact sentinel prompt and all twenty admission source endpoints match. The
+benchmark checkout retains its pinned commit and the pre-existing provider-isolation AGENTS.md
+patch; no agent tool ran. The missing two skill entries remain the only developer-text difference.
+Cargo format, strict all-target/all-feature Clippy and all-target/all-feature tests pass. All
+26 original, 17 old-extension and 30 complete-plan progress tests pass; six new wrapper and six
+monitor tests pass. Real subscription verification **fails the input-fidelity gate**, despite
+completing the sentinel. The wrapper is retained as unqualified private evidence, not deployed.
+OpenAI Docs guided the zero-output hook check; the actual native result determines rejection.
+The [pending same-task request](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/REQUEST-BUDGET.md)
+asks for 30 additional local minutes and one conditional 60-second/100k diagnostic, with no
+new task or TODO increase. It is not approval. P01 remains BLOCKED and P02–P16 pending.
+
+**18:52:02 UTC — actual startup-delay result:**
+[actual input comparison](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/ACTUAL-INPUT-COMPARISON.json)
+has equal base instructions and unequal developer input: 7,042 versus the reference's 7,817
+UTF-8 bytes, the same two missing plugin skill entries. The native trace records developer
+context at 18:49:28.839, then the user item at 18:49:30.857 after the two-second delay.
+The startup hook is too late to restore the already-recorded context. This failed repair
+is not a null result for B, A+B or the historical saving. There is no retry allowance.
+The next required boundary is readiness before initial context capture, not a longer
+post-capture wait. Native source/accounting verification and local guard checks follow.
+
+**2026-09-14 18:49:04 UTC — P01-input-001 admission:** one subscription-only, read-only sentinel diagnostic
+is admitted under [the startup-delay protocol](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/PROTOCOL.md).
+The repair under qualification is a startup-only two-second sleep with zero output; no
+prompt, binary, global config, tool schema or native resume change. Six fail-first wrapper
+tests and all six existing monitor failure/cancellation tests pass. Monitoring directories
+exist before launch. The local idle-thread check verified hook configuration, not hook
+execution; the actual diagnostic must establish exact developer/base-input fidelity.
+Cap: 60 seconds / 100,000 recorded raw, no replacement. All other provider admissions remain closed.
 
 DONE only increases; TODO only decreases within the approved 90 total. At zero, stop with a supported answer
 or explicit case (1)/(2), exact proposed tasks/count and a permission question. No hidden extra work,
 automatic controls, replacements, baseline re-audit, API credits or ordinary WL changes.
+
+## Research resumption — 2026-09-14 18:19:52 UTC
+
+[Explicit restart](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-P01-P16-RESUME-20260914.md)
+resumes P01–P16 without increasing the counter or budgets. P01 uses the remaining
+44m25s to trace/repair the missing developer skill catalog and qualify actual input.
+The OpenAI Docs skill is used for official CLI skill/plugin behavior; pinned local
+implementation evidence must establish the actual loader decision. Existing R13
+config-preview attempts and the 15,687-raw diagnostic are retained, not repeated.
+One new P01 diagnostic is permitted only after a concrete repair, exact local checks
+and prospective admission. A working monitor alone is not input qualification.
+
+**18:34:29 UTC — nongenerating loader discriminator:** the pinned CLI reports both missing
+plugins installed/enabled. Its cold local `skills/list` returns six system skills and no
+plugin skills. In that same process, `plugin/installed` followed by a forced skills reload
+returns the remote plugin skills, including both missing entries. The
+[saved trace](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/LOADER-READ-TRACE.json)
+records the request sequence and public identity/skill fields; no model thread or turn starts.
+This is a concrete discovery-initialization distinction, not a measured token-saving cause.
+Separate-process listing and debug previews do not repair the measured native-exec launch.
+The bundled native binary is stripped and no local source files were found in its package,
+the known temporary CLI cache, or the targeted local source search. No binary, global config,
+saved reference or plugin content is edited. Official OpenAI documentation guides supported
+configuration checks; actual pinned-process evidence controls qualification.
 
 ## Conditional approval and publication — 2026-09-14
 

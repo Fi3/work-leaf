@@ -82,7 +82,10 @@ the live history is truncated; the pinned task contract also rejects same-ID sco
 The conditional complete-known-work approval is recorded in
 `AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md`. It permits the once-only 74/16/90 publication,
 preserving all 74 completed records and the byte-pinned 74/0 ledger/publication archives.
-Research remains paused after this requested tracker update; publication is not a benchmark admission.
+Task publication is not a benchmark admission. The current P01 input gate is blocked; read
+`screens/author-feedback-20260914/P01/RESULT.md` under the study before resuming.
+Its one actual diagnostic retained the missing catalog. A SessionStart wait follows initial
+context capture and is not a qualified repair. No additional diagnostic is approved; P01 stays TODO.
 Run `test_progress_extension.py` and `test_progress_end_to_end.py` beside the mandatory original tests.
 Known necessary work, routine repair, verification and already-described joint checks belong inside
 the listed tasks. Unexpected issues and promising causes from previously unknown facts are legitimate

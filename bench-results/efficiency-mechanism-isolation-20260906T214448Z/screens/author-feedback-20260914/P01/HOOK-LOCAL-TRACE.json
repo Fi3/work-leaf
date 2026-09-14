@@ -1,0 +1,215 @@
+{
+  "scope": "Nongenerating configuration/empty-thread check only; no turn submitted, no proof that SessionStart ran.",
+  "command": "python3 - <<'PY'\nimport sys, os, json, subprocess, threading, time\nsys.path.insert(0,'bench-results/efficiency-measurement-gate-20260906')\nimport handoff_probe as h\ncli='/tmp/work-leaf-cli-01534.r6qIK3/cache/_npx/61b275e57bf5ae43/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex'\ncwd='/tmp/wl-author-feedback-20260914.alMTHU/R13'\np=h.Probe(cli,cwd)\np.deadline=time.monotonic()+45\np.command=[cli,'--cd',cwd,'--sandbox','read-only','--ask-for-approval','never','-c','forced_login_method=\"chatgpt\"','-c','model=\"gpt-5.5\"','-c','model_reasoning_effort=\"xhigh\"','-c','hooks.SessionStart=[{matcher=\"^startup$\",hooks=[{type=\"command\",command=\"/usr/bin/sleep 2\",timeout=5}]}]','app-server','--listen','stdio://']\ntry:\n p.process=subprocess.Popen(p.command,cwd=cwd,env=h.child_environment(os.environ),stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1,start_new_session=True)\n for reader in (p.read_stdout,p.read_stderr):\n  t=threading.Thread(target=reader,daemon=True);t.start();p.readers.append(t)\n p.request('init','initialize',{'clientInfo':{'name':'work_leaf_p01_loader','version':'1'},'capabilities':{'experimentalApi':True}})\n p.send({'method':'initialized'})\n account=p.request('account','account/read',{'refreshToken':False})\n assert h.subscription_account(account)\n print(json.dumps({'account_type':'chatgpt','model_turns_requested':0}),flush=True)\n hooks=p.request('hooks','hooks/list',{'cwds':[cwd]})\n print(json.dumps({'hooks':hooks}),flush=True)\n entries=[x for e in hooks['data'] for x in e['hooks']]\n assert len(entries)==1 and entries[0]['command']=='/usr/bin/sleep 2'\n started=p.request('empty_thread','thread/start',{'cwd':cwd,'model':'gpt-5.5','modelProvider':'openai','sandbox':'read-only','approvalPolicy':'never','sessionStartSource':'startup','config':{'bypass_hook_trust':True}})\n print(json.dumps({'empty_thread':{k:v for k,v in started.items() if k in ('thread','model','reasoningEffort','sandbox','approvalPolicy')}}),flush=True)\n result=p.request('after_thread','skills/list',{'cwds':[cwd],'forceReload':False})\n print(json.dumps({'after_thread_skills':[{'cwd':e['cwd'],'errors':e['errors'],'names':[s['name'] for s in e['skills']]} for e in result['data']]}),flush=True)\nfinally:\n if p.process and p.process.poll() is None:\n  p.process.terminate()\n  try:p.process.wait(timeout=3)\n  except subprocess.TimeoutExpired:p.process.kill();p.process.wait()\n print(json.dumps({'trace':p.evidence['trace'],'model_turns_requested':0}),flush=True)\nPY",
+  "observations": [
+    {
+      "account_type": "chatgpt",
+      "model_turns_requested": 0
+    },
+    {
+      "hooks": {
+        "data": [
+          {
+            "cwd": "/tmp/wl-author-feedback-20260914.alMTHU/R13",
+            "hooks": [
+              {
+                "key": "/<session-flags>/config.toml:session_start:0:0",
+                "eventName": "sessionStart",
+                "handlerType": "command",
+                "command": "/usr/bin/sleep 2",
+                "async": false,
+                "matcher": "^startup$",
+                "timeoutSec": 5,
+                "statusMessage": null,
+                "additionalContextLimit": null,
+                "sourcePath": "/<session-flags>/config.toml",
+                "source": "sessionFlags",
+                "pluginId": null,
+                "displayOrder": 0,
+                "enabled": true,
+                "isManaged": false,
+                "currentHash": "sha256:7509789a8f90ec8f33aa2496a9ed7722dbd30c99f8b380ec4a8a6fd7199994a1",
+                "trustStatus": "untrusted"
+              }
+            ],
+            "warnings": [],
+            "errors": []
+          }
+        ]
+      }
+    },
+    {
+      "empty_thread": {
+        "thread": {
+          "id": "01a0a139-c7d0-7783-bb6f-2dba4f97228a",
+          "extra": null,
+          "sessionId": "01a0a139-c7d0-7783-bb6f-2dba4f97228a",
+          "forkedFromId": null,
+          "parentThreadId": null,
+          "preview": "",
+          "ephemeral": false,
+          "section": null,
+          "sectionEnteredAt": null,
+          "projectId": null,
+          "historyMode": "paginated",
+          "modelProvider": "openai",
+          "model": "gpt-5.5",
+          "reasoningEffort": "xhigh",
+          "createdAt": 1789411313,
+          "updatedAt": 1789411313,
+          "recencyAt": 1789411313,
+          "status": {
+            "type": "idle"
+          },
+          "path": "/home/user/.codex/sessions/2026/09/14/rollout-2026-09-14T20-41-53-01a0a139-c7d0-7783-bb6f-2dba4f97228a.jsonl",
+          "cwd": "/tmp/wl-author-feedback-20260914.alMTHU/R13",
+          "cliVersion": "0.153.4",
+          "source": "vscode",
+          "canAcceptDirectInput": true,
+          "threadSource": null,
+          "agentNickname": null,
+          "agentRole": null,
+          "gitInfo": null,
+          "name": null,
+          "turns": []
+        },
+        "model": "gpt-5.5",
+        "approvalPolicy": "never",
+        "sandbox": {
+          "type": "readOnly",
+          "networkAccess": false
+        },
+        "reasoningEffort": "xhigh"
+      }
+    },
+    {
+      "after_thread_skills": [
+        {
+          "cwd": "/tmp/wl-author-feedback-20260914.alMTHU/R13",
+          "errors": [],
+          "names": [
+            "imagegen",
+            "openai-docs",
+            "plugin-creator",
+            "review-agent",
+            "skill-creator",
+            "skill-installer"
+          ]
+        }
+      ]
+    },
+    {
+      "trace": [
+        {
+          "elapsed_seconds": 0.000912,
+          "event": "client_message",
+          "method": "initialize",
+          "id": "init"
+        },
+        {
+          "elapsed_seconds": 0.173312,
+          "event": "server_message",
+          "method": null,
+          "id": "init",
+          "received_seconds": 0.173227
+        },
+        {
+          "elapsed_seconds": 0.17337,
+          "event": "client_message",
+          "method": "initialized",
+          "id": null
+        },
+        {
+          "elapsed_seconds": 0.173387,
+          "event": "client_message",
+          "method": "account/read",
+          "id": "account"
+        },
+        {
+          "elapsed_seconds": 0.173406,
+          "event": "server_message",
+          "method": "configWarning",
+          "id": null,
+          "received_seconds": 0.173268
+        },
+        {
+          "elapsed_seconds": 0.173418,
+          "event": "server_message",
+          "method": "remoteControl/status/changed",
+          "id": null,
+          "received_seconds": 0.173277
+        },
+        {
+          "elapsed_seconds": 0.212874,
+          "event": "server_message",
+          "method": null,
+          "id": "account",
+          "received_seconds": 0.212816
+        },
+        {
+          "elapsed_seconds": 0.212977,
+          "event": "client_message",
+          "method": "hooks/list",
+          "id": "hooks"
+        },
+        {
+          "elapsed_seconds": 0.231097,
+          "event": "server_message",
+          "method": null,
+          "id": "hooks",
+          "received_seconds": 0.231026
+        },
+        {
+          "elapsed_seconds": 0.23122,
+          "event": "client_message",
+          "method": "thread/start",
+          "id": "empty_thread"
+        },
+        {
+          "elapsed_seconds": 0.340648,
+          "event": "server_message",
+          "method": null,
+          "id": "empty_thread",
+          "received_seconds": 0.340544
+        },
+        {
+          "elapsed_seconds": 0.340746,
+          "event": "client_message",
+          "method": "skills/list",
+          "id": "after_thread"
+        },
+        {
+          "elapsed_seconds": 0.340765,
+          "event": "server_message",
+          "method": "thread/started",
+          "id": null,
+          "received_seconds": 0.340595
+        },
+        {
+          "elapsed_seconds": 0.340779,
+          "event": "server_message",
+          "method": "warning",
+          "id": null,
+          "received_seconds": 0.340604,
+          "threadId": "01a0a139-c7d0-7783-bb6f-2dba4f97228a"
+        },
+        {
+          "elapsed_seconds": 0.340792,
+          "event": "server_message",
+          "method": "mcpServer/startupStatus/updated",
+          "id": null,
+          "received_seconds": 0.34061,
+          "threadId": "01a0a139-c7d0-7783-bb6f-2dba4f97228a"
+        },
+        {
+          "elapsed_seconds": 0.362224,
+          "event": "server_message",
+          "method": null,
+          "id": "after_thread",
+          "received_seconds": 0.362181
+        }
+      ],
+      "model_turns_requested": 0
+    }
+  ]
+}

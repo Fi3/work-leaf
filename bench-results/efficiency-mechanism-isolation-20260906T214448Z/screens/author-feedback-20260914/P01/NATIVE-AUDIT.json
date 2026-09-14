@@ -1,0 +1,207 @@
+{
+  "scope": "P01: the one actual new diagnostic only; retained for P10 without another accounting replay; existing audit_rollout called exactly once; no old baseline accounting replay",
+  "core_sha256": "dd5127f937ec1cc4d41a443ba7640fca93e82484f345ac8c56aeef5325d68153",
+  "metadata": {
+    "arm": "P01",
+    "thread_id": "01a0a140-b26b-7f13-87a3-e99a46f9a30f",
+    "model": "gpt-5.5",
+    "effort": "xhigh",
+    "cwd": "/tmp/wl-author-feedback-20260914.alMTHU/R13",
+    "native_path": "/home/user/.codex/sessions/2026/09/14/rollout-2026-09-14T20-49-26-01a0a140-b26b-7f13-87a3-e99a46f9a30f.jsonl",
+    "native_sha256": "ea3dcea27bc697c803d4525b8d25bc1c0bcddcd04faf990a94f17fb51be49781",
+    "public": [
+      {
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/input-001/native.stdout.jsonl",
+        "sha256": "2c224b52be30b54a103b122170408dc04847cf6b44fe1f8edce5f5de442ae4c2"
+      }
+    ]
+  },
+  "audit": {
+    "thread_id": "01a0a140-b26b-7f13-87a3-e99a46f9a30f",
+    "errors": [],
+    "records": {
+      "resp_032a2637385eacdf016aa841bb647c87d298fde393f5dcb81d": {
+        "response_id": "resp_032a2637385eacdf016aa841bb647c87d298fde393f5dcb81d",
+        "thread_id": "01a0a140-b26b-7f13-87a3-e99a46f9a30f",
+        "turn_id": "01a0a140-b2ee-7c61-bc52-5f1064f56233",
+        "usage": {
+          "input_tokens": 15662,
+          "cached_input_tokens": 4480,
+          "output_tokens": 47,
+          "reasoning_output_tokens": 32
+        },
+        "line": 13
+      }
+    },
+    "response_count": 1,
+    "duplicate_response_records": 0,
+    "native_usage": {
+      "input_tokens": 15662,
+      "cached_input_tokens": 4480,
+      "output_tokens": 47,
+      "reasoning_output_tokens": 32,
+      "raw_input_plus_output": 15709,
+      "uncached_input_plus_output": 11229
+    },
+    "compaction_markers": []
+  },
+  "public_usage": {
+    "input_tokens": 15662,
+    "cached_input_tokens": 4480,
+    "output_tokens": 47,
+    "reasoning_output_tokens": 32,
+    "raw_input_plus_output": 15709,
+    "uncached_input_plus_output": 11229
+  },
+  "native_minus_public": {
+    "input_tokens": 0,
+    "cached_input_tokens": 0,
+    "output_tokens": 0,
+    "reasoning_output_tokens": 0
+  },
+  "exact_prompt_match": true,
+  "prompt_sha256": "1cdcbc62c151af3a6f9da69a51f9e2841b305e33b3b2147b08eadd866b2b56cd",
+  "task_starts": [
+    "01a0a140-b2ee-7c61-bc52-5f1064f56233"
+  ],
+  "task_terminals": [
+    {
+      "turn_id": "01a0a140-b2ee-7c61-bc52-5f1064f56233",
+      "type": "task_complete"
+    }
+  ],
+  "tool_call_items": [],
+  "contexts": [
+    {
+      "turn_id": "01a0a140-b2ee-7c61-bc52-5f1064f56233",
+      "model": "gpt-5.5",
+      "effort": "xhigh",
+      "cwd": "/tmp/wl-author-feedback-20260914.alMTHU/R13",
+      "approval_policy": "never",
+      "sandbox_policy": {
+        "type": "read-only"
+      }
+    }
+  ],
+  "source_endpoints": [
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/monitor.py",
+      "expected": "2589b0f75adf293f631c05e8b140428f25a97c118efb723078ac79bb8df8a011",
+      "actual": "2589b0f75adf293f631c05e8b140428f25a97c118efb723078ac79bb8df8a011"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/test_monitor.py",
+      "expected": "7739719a0146304b2a13a749143ea47956e68b202885dc59b41946c9ffd813c4",
+      "actual": "7739719a0146304b2a13a749143ea47956e68b202885dc59b41946c9ffd813c4"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/idle_supervisor.py",
+      "expected": "b134467bc7cf8f529d00d338276b9a2e1d0ec0f7ecb6736f5db53aebb9b75549",
+      "actual": "b134467bc7cf8f529d00d338276b9a2e1d0ec0f7ecb6736f5db53aebb9b75549"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/preflight/c15-real-diagnostic/bounded_launch.py",
+      "expected": "f181729b5c26e4cfc85477c82918fb9468fb4a9482d8700c36134ecd3a175db1",
+      "actual": "f181729b5c26e4cfc85477c82918fb9468fb4a9482d8700c36134ecd3a175db1"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-inverse-20260914/author_inverse.py",
+      "expected": "9afbe2c342a4f5e23ee46dedb7c16df68a1099622b53efaa09b71adb9e774358",
+      "actual": "9afbe2c342a4f5e23ee46dedb7c16df68a1099622b53efaa09b71adb9e774358"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-inverse-20260914/resource_sample.py",
+      "expected": "607ece4d4384d5ed49560cc8250838dedf3ba5e4924ddc993b1d93102a63ea5b",
+      "actual": "607ece4d4384d5ed49560cc8250838dedf3ba5e4924ddc993b1d93102a63ea5b"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/drivers/host_custody.py",
+      "expected": "5e5be14ae50574e1d3ee81991cb4fee2d33e923ca825655644a1c33aac18b537",
+      "actual": "5e5be14ae50574e1d3ee81991cb4fee2d33e923ca825655644a1c33aac18b537"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/provider/codex",
+      "expected": "8ad1d261979029fec24cf4e143aaf6afc6c688056c6bc702c824b3538b92ff32",
+      "actual": "8ad1d261979029fec24cf4e143aaf6afc6c688056c6bc702c824b3538b92ff32"
+    },
+    {
+      "path": "/tmp/work-leaf-cli-01534.r6qIK3/cache/_npx/61b275e57bf5ae43/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex",
+      "expected": "56ef98ab4032d317ab26e9b5e5a175650717351edb16ed9cde0cb6d1734d62da",
+      "actual": "56ef98ab4032d317ab26e9b5e5a175650717351edb16ed9cde0cb6d1734d62da"
+    },
+    {
+      "path": "/tmp/wl-author-feedback-20260914.alMTHU/R13/AGENTS.md",
+      "expected": "5f6ba65e9708299c97fa6856d6eb4e9ac09434ca19d7add22b90862fb20d652c",
+      "actual": "5f6ba65e9708299c97fa6856d6eb4e9ac09434ca19d7add22b90862fb20d652c"
+    },
+    {
+      "path": "/home/user/.codex/config.toml",
+      "expected": "f20c71778fecbbe16ccefadad444a2c4578800a4c365e5b4fb69e35ccb6a52ee",
+      "actual": "f20c71778fecbbe16ccefadad444a2c4578800a4c365e5b4fb69e35ccb6a52ee"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/startup_delay.py",
+      "expected": "304407cbe9c26113cec793113fca95af1c099f624d3d4b64ea1a50a963a7f49a",
+      "actual": "304407cbe9c26113cec793113fca95af1c099f624d3d4b64ea1a50a963a7f49a"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/test_startup_delay.py",
+      "expected": "646a3fbaf57d0499380524272ab930fd8498f93698bd2c10b3bc7912d1a7ab55",
+      "actual": "646a3fbaf57d0499380524272ab930fd8498f93698bd2c10b3bc7912d1a7ab55"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/profile/codex",
+      "expected": "7957c65c2691892bb79693df8d81802354802140b7c3e5733bfde0edd853929d",
+      "actual": "7957c65c2691892bb79693df8d81802354802140b7c3e5733bfde0edd853929d"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/run_input_diagnostic.py",
+      "expected": "a667af1ce461209e18d2b5171c399243341b3c4c8efb3139c177cdbf99f927e3",
+      "actual": "a667af1ce461209e18d2b5171c399243341b3c4c8efb3139c177cdbf99f927e3"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/PROTOCOL.md",
+      "expected": "8453aeda47170bc7917001ef0e13664626081ce56c574f358b8454399fdea385",
+      "actual": "8453aeda47170bc7917001ef0e13664626081ce56c574f358b8454399fdea385"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/HOOK-LOCAL-TRACE.json",
+      "expected": "6a523623f9f9a111cdc341394cf38143e67512b5f0e5c851bfeac5f10babafde",
+      "actual": "6a523623f9f9a111cdc341394cf38143e67512b5f0e5c851bfeac5f10babafde"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/DELAY-AND-MONITOR-GREEN.txt",
+      "expected": "538a4ab36997b08d78bd9b99f9cd4c0eba8790d75e64d8357001c4dcd94e2e13",
+      "actual": "538a4ab36997b08d78bd9b99f9cd4c0eba8790d75e64d8357001c4dcd94e2e13"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/input-001/PROMPT.txt",
+      "expected": "1cdcbc62c151af3a6f9da69a51f9e2841b305e33b3b2147b08eadd866b2b56cd",
+      "actual": "1cdcbc62c151af3a6f9da69a51f9e2841b305e33b3b2147b08eadd866b2b56cd"
+    },
+    {
+      "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/input-001/ENVIRONMENT.json",
+      "expected": "2e65be392ff1efc414e6cc28d9589b486f2309620760625c56fd2f2a67b23d8b",
+      "actual": "2e65be392ff1efc414e6cc28d9589b486f2309620760625c56fd2f2a67b23d8b"
+    }
+  ],
+  "source_endpoint_errors": [],
+  "admission_matches_terminal": true,
+  "base_equal": true,
+  "developer_equal": false,
+  "admissions": [
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/input-001/ADMISSION.json"
+  ],
+  "unfinished_turns": [],
+  "unlaunched": [
+    "P03 author episode",
+    "P04 author episode",
+    "P06 joint screen",
+    "P07 joint screen",
+    "P08 package screen",
+    "P09 workflow 1",
+    "P09 workflow 2",
+    "P09 workflow 3"
+  ],
+  "conclusion": "valid completed diagnostic accounting and input-mismatch evidence; no qualified feature intervention or causal token effect"
+}

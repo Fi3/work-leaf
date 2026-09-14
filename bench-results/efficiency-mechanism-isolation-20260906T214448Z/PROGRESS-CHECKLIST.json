@@ -601,11 +601,18 @@
         "preparation_limit_seconds": 3600,
         "result": "bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/P01.md"
       },
-      "status": "pending",
+      "status": "blocked",
       "started_at": "2026-09-14T18:02:45+00:00",
       "result": null,
-      "blocker": null,
-      "preparation_seconds": 935
+      "blocker": {
+        "detected_at": "2026-09-14T18:52:02+00:00",
+        "reason": "The one P01 actual diagnostic retained the 775-byte developer-catalog mismatch. The startup delay follows context capture. No further generated diagnostic is authorized, so faithful actual qualification and dependent feature runs remain blocked.",
+        "evidence": [
+          "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/ACTUAL-INPUT-COMPARISON.json",
+          "bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/input-001/TERMINAL.json"
+        ]
+      },
+      "preparation_seconds": 3398
     },
     "P02": {
       "definition": {

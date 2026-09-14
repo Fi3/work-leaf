@@ -1,12 +1,12 @@
 # DONE: 74 | TODO: 16 | TOTAL: 90
 
-**Pending check: P01 — faithful launch setup and repair. Tracker preparation is performed; actual input qualification is still unresolved.**
+**Pending check: P01 — BLOCKED: the actual startup-delay diagnostic retained the input mismatch. P02–P16 remain unrun/pending.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-14T18:11:26+00:00:** the conditionally approved sixteen-task list is published. Research is paused after the requested register update; no diagnostic or benchmark is admitted or running.
+**Activity, 2026-09-14T19:00:55+00:00:** P01 verification is complete and the input gate remains BLOCKED. One diagnostic used 15,709 raw tokens; its startup delay occurs after the mismatched context is recorded. Research is paused pending explicit additional-budget approval. No feature benchmark ran; no further diagnostic is authorized; no task is marked complete.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
-| P01 | TODO | Faithful launch setup: source trace, benchmark-local repair, failure-path tests and actual verification; include tracker-rule qualification. |
+| P01 | BLOCKED | Faithful launch setup: source trace, benchmark-local repair, failure-path tests and actual verification; include tracker-rule qualification. |
 | P02 | TODO | Exact effective-factor/reference manifest and common-boundary qualification for individual and joint tests. |
 | P03 | TODO | Qualified B-only next-action/handoff-guidance screen. |
 | P04 | TODO | Qualified A+B publication/test-order plus guidance joint screen. |
@@ -94,14 +94,14 @@ Record genuinely new evidence and re-rank existing in-scope work immediately. Th
 permit honest discovery, not automatic extra scope: additions or changed budgets still require
 an exact proposal and user approval before increasing TODO or executing extra work.
 
-## Live priority — published; research paused
+## Live priority — P01 blocked; provider admissions closed
 
-Last maintained: **2026-09-14T18:11:26+00:00**. No new provider observation is admitted.
+Last maintained: **2026-09-14T18:57:11+00:00**. The [P01 actual result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/RESULT.md) fails input qualification. The consumed diagnostic is retained; no replacement or dependent feature observation is admitted.
 The accepted historical gap and the user's no-quality-loss assumption remain premises.
 
 | Priority | Evidence and potential explanatory reach | Next cheap check / stop gate |
 | --- | --- | --- |
-| Prerequisite: P01 faithful launch | Actual input still lacks 775 bytes of the saved developer catalog. This is known unfinished setup, not a newly discovered saving cause. | Finish source trace, permitted repair and actual qualification within P01. Tracker publication alone does not pass the gate. |
+| Prerequisite: P01 faithful launch — BLOCKED | The local time-only trace resolves discovery after 1.5 seconds, but the actual two-second startup hook follows context capture and retains the 775-byte omission. The [audited diagnostic](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/NATIVE-AUDIT.json) costs 15,709 raw, has one complete response and no source drift. | A distinct repair must act before initial context capture. No late-hook repeat or feature launch. The [same-task budget request](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/REQUEST-BUDGET.md) needs explicit approval and proposes no counter increase. |
 | Strongest candidate: P03 B feedback/handoff | R04's extra usage is concentrated after first GREEN: +1,350,327 raw, offset by −147,082 earlier. Real failure recovery remains included. | One qualified fresh B-only screen, then P05's clause/feedback → decision → work trace. No forced first-GREEN stop. |
 | Joint candidate: P04 A+B | R04 is +1,203,245 raw overall, but catalog drift confounds attribution. | One qualified A+B screen; compare conditionally with P03, not by adding separate percentages. |
 | Conditional connected joints: P06–P08 | C08/C25 have positive separate contrasts but overlapping histories and different targets. Joint author/refresh/continuation and residual effects are unpriced. | P02 must establish a common reference and actual connected exposure. Promote promising joint evidence immediately, without waiting for ID order. |

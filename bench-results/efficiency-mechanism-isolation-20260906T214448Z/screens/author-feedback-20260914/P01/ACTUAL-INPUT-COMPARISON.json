@@ -1,0 +1,40 @@
+{
+  "scope": "first actual developer/base input check, not a native accounting replay",
+  "reference": {
+    "path": "/home/user/.codex/sessions/2026/09/13/rollout-2026-09-13T01-27-10-01a097f2-3f03-7463-9756-4e849ed94e8d.jsonl",
+    "source_sha256": "05fd2b462a67e5ec9fdb0cce9a538c3b91e55744db78059aad5b80c95c8d0da4",
+    "base_sha256": "a22c77a33898c3d4f13d2521626357ad3afc3650d199aa0749f01d5113bff7b7",
+    "cli_version": "0.153.4",
+    "context": {
+      "model": "gpt-5.5",
+      "effort": "xhigh",
+      "approval_policy": "never",
+      "sandbox_policy": {
+        "type": "read-only"
+      },
+      "cwd": "/tmp/standalone-global-hunk-pilot-01.DEVbgh6s/standalone-global-hunk-pilot-001/work-leaf-3feature-sequential-bench.6LB634/repo"
+    },
+    "developer_sha256": "077f23d17df246409154a9190ab8d10ce56f12e90ec7ef682cce47ff2da2ffe7",
+    "developer_bytes": 7817
+  },
+  "diagnostic": {
+    "path": "/home/user/.codex/sessions/2026/09/14/rollout-2026-09-14T20-49-26-01a0a140-b26b-7f13-87a3-e99a46f9a30f.jsonl",
+    "source_sha256": "ea3dcea27bc697c803d4525b8d25bc1c0bcddcd04faf990a94f17fb51be49781",
+    "base_sha256": "a22c77a33898c3d4f13d2521626357ad3afc3650d199aa0749f01d5113bff7b7",
+    "cli_version": "0.153.4",
+    "context": {
+      "model": "gpt-5.5",
+      "effort": "xhigh",
+      "approval_policy": "never",
+      "sandbox_policy": {
+        "type": "read-only"
+      },
+      "cwd": "/tmp/wl-author-feedback-20260914.alMTHU/R13"
+    },
+    "developer_sha256": "3cb02d7778e5249ba75af6683d8827cbd2d7f98982493251587ac296c8c06275",
+    "developer_bytes": 7042
+  },
+  "base_equal": true,
+  "developer_equal": false,
+  "developer_diff": "--- saved-all-on\n+++ P01-startup-delay\n@@ -3,15 +3,12 @@\n A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and a short path that can be expanded into an absolute path using the skill roots table.\n ### Skill roots\n - `r0` = `/home/user/.codex/skills/.system`\n-- `r1` = `/home/user/.codex/plugins/cache/openai-curated-remote`\n ### Available skills\n - imagegen: Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, textures, sprites, mockups, or transparent-background cutouts. Use when Codex should create a brand-new image, transform an existing image, or derive visual variants from references, and the output should be a bitmap asset rather than repo-native code or vector. Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas. (file: r0/imagegen/SKILL.md)\n - openai-docs: Use for Codex models/pricing, scheduled tasks, skills, settings, setup, troubleshooting, customization, automations, and self-knowledge—including 'you,' 'your,' 'this app,' or 'this coding agent' when they refer to Codex—and for OpenAI APIs/products and ChatGPT Work. Also use for model choice/migration, prompting, SDKs, Responses, Realtime, agents, evals, and Chat/Work/Codex comparisons. Do not use for generic app/software tasks that merely mention Codex. (file: r0/openai-docs/SKILL.md)\n - plugin-creator: Create and scaffold plugin directories for Codex with a required `.codex-plugin/plugin.json`, optional plugin folders/files, valid manifest defaults, and personal-marketplace entries by default. Use when Codex needs to create a new personal plugin, add optional plugin structure, generate or update marketplace entries for plugin ordering and availability metadata, or update an existing local plugin during development with the CLI-driven cachebuster and reinstall flow. (file: r0/plugin-creator/SKILL.md)\n - skill-creator: Create or update a Codex skill with appropriately scoped instructions and any needed supporting resources. (file: r0/skill-creator/SKILL.md)\n - skill-installer: Install Codex skills into $CODEX_HOME/skills from a curated list or a GitHub repo path. Use when a user asks to list installable skills, install a curated skill, or install a skill from another repo (including private repos). (file: r0/skill-installer/SKILL.md)\n-- deep-research-work:deep-research: Use only when the user asks for deep research (or a clear equivalent), invokes $deep-research, or selects Deep Research in Work mode. Produce a comprehensive, cited artifact. Skip ordinary research requests. (file: r1/deep-research-work/0.1.15/skills/deep-research/SKILL.md)\n-- plugin-management:plugin-management: Discover and suggest relevant plugins, inspect app permissions and dependencies, and manage plugin connections or removal. Use when the user asks about plugins or when a task would materially benefit from an external app, account, service, or data source that available tools cannot access. (file: r1/plugin-management/0.1.0/skills/plugin-management/SKILL.md)\n ### How to use skills\n - Discovery: The list above is the skills available in this session (name + description + short path). Skill bodies live on disk at the listed paths after expanding the matching alias from `### Skill roots`.\n - Trigger rules: If the user names a skill (with `$SkillName` or plain text) OR the task clearly matches a skill's description shown above, you must use that skill for that turn. Multiple mentions mean use them all. Do not carry skills across turns unless re-mentioned.\n"
+}

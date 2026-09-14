@@ -1,0 +1,459 @@
+{
+  "recorded_at": "2026-09-14T18:34:29+00:00",
+  "scope": "Nongenerating local CLI app-server read methods, no thread/start or turn/start; existing subscription verified. Public skill/plugin identity fields retained; decorative URL/account fields omitted.",
+  "command": "python3 - <<'PY'\nimport sys, os, json, subprocess, threading, time\nsys.path.insert(0,'bench-results/efficiency-measurement-gate-20260906')\nimport handoff_probe as h\ncli='/tmp/work-leaf-cli-01534.r6qIK3/cache/_npx/61b275e57bf5ae43/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex'\ncwd='/tmp/wl-author-feedback-20260914.alMTHU/R13'\np=h.Probe(cli,cwd)\np.deadline=time.monotonic()+45\np.command=[cli,'--cd',cwd,'--sandbox','read-only','--ask-for-approval','never','-c','forced_login_method=\"chatgpt\"','-c','model=\"gpt-5.5\"','-c','model_reasoning_effort=\"xhigh\"','app-server','--listen','stdio://']\ntry:\n p.process=subprocess.Popen(p.command,cwd=cwd,env=h.child_environment(os.environ),stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1,start_new_session=True)\n for reader in (p.read_stdout,p.read_stderr):\n  t=threading.Thread(target=reader,daemon=True);t.start();p.readers.append(t)\n p.request('init','initialize',{'clientInfo':{'name':'work_leaf_p01_loader','version':'1'},'capabilities':{'experimentalApi':True}})\n p.send({'method':'initialized'})\n account=p.request('account','account/read',{'refreshToken':False})\n assert h.subscription_account(account)\n print(json.dumps({'account_type':'chatgpt','model_turns_requested':0}),flush=True)\n for identity,method,params in [('cold','skills/list',{'cwds':[cwd],'forceReload':True}),('installed','plugin/installed',{'cwds':[cwd]}),('warm','skills/list',{'cwds':[cwd],'forceReload':True})]:\n  result=p.request(identity,method,params)\n  print(json.dumps({'check':identity,'method':method,'result':result}),flush=True)\nfinally:\n if p.process and p.process.poll() is None:\n  p.process.terminate()\n  try:p.process.wait(timeout=3)\n  except subprocess.TimeoutExpired:p.process.kill();p.process.wait()\n print(json.dumps({'trace':p.evidence['trace'],'model_turns_requested':0}),flush=True)\nPY",
+  "observations": [
+    {
+      "account_type": "chatgpt",
+      "model_turns_requested": 0
+    },
+    {
+      "check": "cold",
+      "method": "skills/list",
+      "result": {
+        "data": [
+          {
+            "cwd": "/tmp/wl-author-feedback-20260914.alMTHU/R13",
+            "skills": [
+              {
+                "name": "imagegen",
+                "description": "Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, textures, sprites, mockups, or transparent-background cutouts. Use when Codex should create a brand-new image, transform an existing image, or derive visual variants from references, and the output should be a bitmap asset rather than repo-native code or vector. Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas.",
+                "path": "/home/user/.codex/skills/.system/imagegen/SKILL.md",
+                "scope": "system",
+                "enabled": true,
+                "pluginId": null
+              },
+              {
+                "name": "openai-docs",
+                "description": "Use for Codex models/pricing, scheduled tasks, skills, settings, setup, troubleshooting, customization, automations, and self-knowledge—including 'you,' 'your,' 'this app,' or 'this coding agent' when they refer to Codex—and for OpenAI APIs/products and ChatGPT Work. Also use for model choice/migration, prompting, SDKs, Responses, Realtime, agents, evals, and Chat/Work/Codex comparisons. Do not use for generic app/software tasks that merely mention Codex.",
+                "path": "/home/user/.codex/skills/.system/openai-docs/SKILL.md",
+                "scope": "system",
+                "enabled": true,
+                "pluginId": null
+              },
+              {
+                "name": "plugin-creator",
+                "description": "Create and scaffold plugin directories for Codex with a required `.codex-plugin/plugin.json`, optional plugin folders/files, valid manifest defaults, and personal-marketplace entries by default. Use when Codex needs to create a new personal plugin, add optional plugin structure, generate or update marketplace entries for plugin ordering and availability metadata, or update an existing local plugin during development with the CLI-driven cachebuster and reinstall flow.",
+                "path": "/home/user/.codex/skills/.system/plugin-creator/SKILL.md",
+                "scope": "system",
+                "enabled": true,
+                "pluginId": null
+              },
+              {
+                "name": "review-agent",
+                "description": "Perform a read-only, defect-first review of a specified code change and return every actionable finding. Use when another agent delegates review of uncommitted changes, a base-branch diff, a commit, or custom review instructions.",
+                "path": "/home/user/.codex/skills/.system/review-agent/SKILL.md",
+                "scope": "system",
+                "enabled": true,
+                "pluginId": null
+              },
+              {
+                "name": "skill-creator",
+                "description": "Create or update a Codex skill with appropriately scoped instructions and any needed supporting resources.",
+                "path": "/home/user/.codex/skills/.system/skill-creator/SKILL.md",
+                "scope": "system",
+                "enabled": true,
+                "pluginId": null
+              },
+              {
+                "name": "skill-installer",
+                "description": "Install Codex skills into $CODEX_HOME/skills from a curated list or a GitHub repo path. Use when a user asks to list installable skills, install a curated skill, or install a skill from another repo (including private repos).",
+                "path": "/home/user/.codex/skills/.system/skill-installer/SKILL.md",
+                "scope": "system",
+                "enabled": true,
+                "pluginId": null
+              }
+            ],
+            "errors": []
+          }
+        ]
+      }
+    },
+    {
+      "check": "installed",
+      "method": "plugin/installed",
+      "result": {
+        "marketplaces": [
+          {
+            "name": "openai-curated-remote",
+            "plugins": [
+              {
+                "id": "app-698f531bfb808191933a0dedad26a8c7@openai-curated-remote",
+                "remotePluginId": "plugin_asdk_app_698f531bfb808191933a0dedad26a8c7",
+                "name": "app-698f531bfb808191933a0dedad26a8c7",
+                "version": "1.0.0",
+                "installed": true,
+                "enabled": true,
+                "installPolicy": "AVAILABLE",
+                "availability": "AVAILABLE",
+                "disabledReason": null
+              },
+              {
+                "id": "deep-research-work@openai-curated-remote",
+                "remotePluginId": "plugin_connector_1p_ae06492f57648191bd558c9c45188734",
+                "name": "deep-research-work",
+                "version": "0.1.15",
+                "installed": true,
+                "enabled": true,
+                "installPolicy": "INSTALLED_BY_DEFAULT",
+                "availability": "AVAILABLE",
+                "disabledReason": null
+              },
+              {
+                "id": "openai-templates@openai-curated-remote",
+                "remotePluginId": "plugin_connector_1p_2330815c823c8191941e5dc465bb899f",
+                "name": "openai-templates",
+                "version": "0.1.1",
+                "installed": true,
+                "enabled": true,
+                "installPolicy": "INSTALLED_BY_DEFAULT",
+                "availability": "AVAILABLE",
+                "disabledReason": null
+              },
+              {
+                "id": "plugin-management@openai-curated-remote",
+                "remotePluginId": "plugin_connector_1p_b3438d6beb9081918fba3625bc988128",
+                "name": "plugin-management",
+                "version": "0.1.0",
+                "installed": true,
+                "enabled": true,
+                "installPolicy": "INSTALLED_BY_DEFAULT",
+                "availability": "AVAILABLE",
+                "disabledReason": null
+              }
+            ]
+          }
+        ],
+        "marketplaceLoadErrors": []
+      }
+    },
+    {
+      "check": "warm",
+      "method": "skills/list",
+      "result": {
+        "data": [
+          {
+            "cwd": "/tmp/wl-author-feedback-20260914.alMTHU/R13",
+            "skills": [
+              {
+                "name": "deep-research-work:deep-research",
+                "description": "Use only when the user asks for deep research (or a clear equivalent), invokes $deep-research, or selects Deep Research in Work mode. Produce a comprehensive, cited artifact. Skip ordinary research requests.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/deep-research-work/0.1.15/skills/deep-research/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "deep-research-work@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-analytics-dashboard",
+                "description": "Create a spreadsheet using the Analytics Dashboard template and its retained reference file. Use when the user selects or names Analytics Dashboard. Monitor acquisition, engagement, retention, revenue, and conversion funnel KPIs with charts.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-analytics-dashboard/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-business-review",
+                "description": "Create a presentation using the Business Review template and its retained reference file. Use when the user selects or names Business Review. Review business performance, KPIs, segment results, strategic priorities, decisions, and outlook.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-business-review/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-design-report",
+                "description": "Create a document using the Design Report template and its retained reference file. Use when the user selects or names Design Report. Produce design reports with an executive summary, key findings, implications, recommendations, and appendix.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-design-report/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-experiment-analysis",
+                "description": "Create a document using the Experiment Analysis template and its retained reference file. Use when the user selects or names Experiment Analysis. Analyze experiments with hypotheses, methodology, results, interpretation, limitations, and next steps.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-experiment-analysis/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-financial-budget",
+                "description": "Create a spreadsheet using the Financial Budget template and its retained reference file. Use when the user selects or names Financial Budget. Model actuals, budget and scenario forecasts, variances, cash runway, and departmental plans.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-financial-budget/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-investment-committee-memo",
+                "description": "Create a document using the Investment Committee Memo template and its retained reference file. Use when the user selects or names Investment Committee Memo. Prepare investment committee memos with the thesis, transaction details, financial analysis, risks, and recommendation.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-investment-committee-memo/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-legal-memorandum",
+                "description": "Create a document using the Legal Memorandum template and its retained reference file. Use when the user selects or names Legal Memorandum. Draft legal memoranda with the issue, brief answer, relevant facts, analysis, and conclusion.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-legal-memorandum/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-market-trends-report",
+                "description": "Create a presentation using the Market Trends Report template and its retained reference file. Use when the user selects or names Market Trends Report. Communicate market or industry trends, supporting evidence, implications, and recommended responses.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-market-trends-report/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-minimal-letterhead",
+                "description": "Create a document using the Minimal Letterhead template and its retained reference file. Use when the user selects or names Minimal Letterhead. Write professional business letters with sender, recipient, message, and signature fields in a minimal letterhead layout.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-minimal-letterhead/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-operating-calendar",
+                "description": "Create a spreadsheet using the Operating Calendar template and its retained reference file. Use when the user selects or names Operating Calendar. Plan annual and monthly operating milestones, campaigns, launches, deadlines, and recurring events.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-operating-calendar/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-operating-review",
+                "description": "Create a presentation using the Operating Review template and its retained reference file. Use when the user selects or names Operating Review. Run weekly operating reviews with scorecards, functional updates, risks, decisions, and action items.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-operating-review/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-project-kickoff",
+                "description": "Create a presentation using the Project Kickoff template and its retained reference file. Use when the user selects or names Project Kickoff. Align teams on project goals, scope, roles, milestones, risks, and the working model.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-project-kickoff/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-project-tracker",
+                "description": "Create a spreadsheet using the Project Tracker template and its retained reference file. Use when the user selects or names Project Tracker. Manage workstreams, tasks, owners, status, priority, dates, launch pulse, and a Gantt schedule.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-project-tracker/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-sales-pipeline",
+                "description": "Create a spreadsheet using the Sales Pipeline template and its retained reference file. Use when the user selects or names Sales Pipeline. Track opportunities, stages, owners, deal sizes, probabilities, forecasts, next steps, and risks.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-sales-pipeline/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-simple-dark-mode",
+                "description": "Create a presentation using the Simple Dark Mode template and its retained reference file. Use when the user selects or names Simple Dark Mode. Create clean dark-mode presentations with bold typography, simple sections, charts, and imagery.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-simple-dark-mode/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-simple-light-mode",
+                "description": "Create a presentation using the Simple Light Mode template and its retained reference file. Use when the user selects or names Simple Light Mode. Create clean light-mode presentations with spacious typography, simple sections, charts, and imagery.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-simple-light-mode/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-strategy-memorandum",
+                "description": "Create a document using the Strategy Memorandum template and its retained reference file. Use when the user selects or names Strategy Memorandum. Present strategic context, choices, rationale, risks, milestones, and a clear recommendation.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-strategy-memorandum/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-system-design",
+                "description": "Create a document using the System Design template and its retained reference file. Use when the user selects or names System Design. Document system architecture, requirements, components, data flows, APIs, tradeoffs, and operational considerations.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-system-design/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-team-alignment",
+                "description": "Create a presentation using the Team Alignment template and its retained reference file. Use when the user selects or names Team Alignment. Facilitate team offsites and planning with context, goals, priorities, decisions, and action items.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-team-alignment/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "openai-templates:artifact-template-three-statement-forecast",
+                "description": "Create a spreadsheet using the Three-Statement Forecast template and its retained reference file. Use when the user selects or names Three-Statement Forecast. Build an integrated income statement, balance sheet, and cash flow forecast with assumptions, checks, and an executive summary.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills/artifact-template-three-statement-forecast/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "openai-templates@openai-curated-remote"
+              },
+              {
+                "name": "plugin-management:plugin-management",
+                "description": "Discover and suggest relevant plugins, inspect app permissions and dependencies, and manage plugin connections or removal. Use when the user asks about plugins or when a task would materially benefit from an external app, account, service, or data source that available tools cannot access.",
+                "path": "/home/user/.codex/plugins/cache/openai-curated-remote/plugin-management/0.1.0/skills/plugin-management/SKILL.md",
+                "scope": "user",
+                "enabled": true,
+                "pluginId": "plugin-management@openai-curated-remote"
+              },
+              {
+                "name": "imagegen",
+                "description": "Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, textures, sprites, mockups, or transparent-background cutouts. Use when Codex should create a brand-new image, transform an existing image, or derive visual variants from references, and the output should be a bitmap asset rather than repo-native code or vector. Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas.",
+                "path": "/home/user/.codex/skills/.system/imagegen/SKILL.md",
+                "scope": "system",
+                "enabled": true,
+                "pluginId": null
+              },
+              {
+                "name": "openai-docs",
+                "description": "Use for Codex models/pricing, scheduled tasks, skills, settings, setup, troubleshooting, customization, automations, and self-knowledge—including 'you,' 'your,' 'this app,' or 'this coding agent' when they refer to Codex—and for OpenAI APIs/products and ChatGPT Work. Also use for model choice/migration, prompting, SDKs, Responses, Realtime, agents, evals, and Chat/Work/Codex comparisons. Do not use for generic app/software tasks that merely mention Codex.",
+                "path": "/home/user/.codex/skills/.system/openai-docs/SKILL.md",
+                "scope": "system",
+                "enabled": true,
+                "pluginId": null
+              },
+              {
+                "name": "plugin-creator",
+                "description": "Create and scaffold plugin directories for Codex with a required `.codex-plugin/plugin.json`, optional plugin folders/files, valid manifest defaults, and personal-marketplace entries by default. Use when Codex needs to create a new personal plugin, add optional plugin structure, generate or update marketplace entries for plugin ordering and availability metadata, or update an existing local plugin during development with the CLI-driven cachebuster and reinstall flow.",
+                "path": "/home/user/.codex/skills/.system/plugin-creator/SKILL.md",
+                "scope": "system",
+                "enabled": true,
+                "pluginId": null
+              },
+              {
+                "name": "review-agent",
+                "description": "Perform a read-only, defect-first review of a specified code change and return every actionable finding. Use when another agent delegates review of uncommitted changes, a base-branch diff, a commit, or custom review instructions.",
+                "path": "/home/user/.codex/skills/.system/review-agent/SKILL.md",
+                "scope": "system",
+                "enabled": true,
+                "pluginId": null
+              },
+              {
+                "name": "skill-creator",
+                "description": "Create or update a Codex skill with appropriately scoped instructions and any needed supporting resources.",
+                "path": "/home/user/.codex/skills/.system/skill-creator/SKILL.md",
+                "scope": "system",
+                "enabled": true,
+                "pluginId": null
+              },
+              {
+                "name": "skill-installer",
+                "description": "Install Codex skills into $CODEX_HOME/skills from a curated list or a GitHub repo path. Use when a user asks to list installable skills, install a curated skill, or install a skill from another repo (including private repos).",
+                "path": "/home/user/.codex/skills/.system/skill-installer/SKILL.md",
+                "scope": "system",
+                "enabled": true,
+                "pluginId": null
+              }
+            ],
+            "errors": []
+          }
+        ]
+      }
+    },
+    {
+      "trace": [
+        {
+          "elapsed_seconds": 0.000901,
+          "event": "client_message",
+          "method": "initialize",
+          "id": "init"
+        },
+        {
+          "elapsed_seconds": 0.191013,
+          "event": "server_message",
+          "method": null,
+          "id": "init",
+          "received_seconds": 0.190922
+        },
+        {
+          "elapsed_seconds": 0.19107,
+          "event": "client_message",
+          "method": "initialized",
+          "id": null
+        },
+        {
+          "elapsed_seconds": 0.191094,
+          "event": "client_message",
+          "method": "account/read",
+          "id": "account"
+        },
+        {
+          "elapsed_seconds": 0.191112,
+          "event": "server_message",
+          "method": "configWarning",
+          "id": null,
+          "received_seconds": 0.190966
+        },
+        {
+          "elapsed_seconds": 0.191125,
+          "event": "server_message",
+          "method": "remoteControl/status/changed",
+          "id": null,
+          "received_seconds": 0.190973
+        },
+        {
+          "elapsed_seconds": 0.231696,
+          "event": "server_message",
+          "method": null,
+          "id": "account",
+          "received_seconds": 0.231642
+        },
+        {
+          "elapsed_seconds": 0.231802,
+          "event": "client_message",
+          "method": "skills/list",
+          "id": "cold"
+        },
+        {
+          "elapsed_seconds": 0.254741,
+          "event": "server_message",
+          "method": null,
+          "id": "cold",
+          "received_seconds": 0.254694
+        },
+        {
+          "elapsed_seconds": 0.25484,
+          "event": "client_message",
+          "method": "plugin/installed",
+          "id": "installed"
+        },
+        {
+          "elapsed_seconds": 0.869373,
+          "event": "server_message",
+          "method": null,
+          "id": "installed",
+          "received_seconds": 0.869312
+        },
+        {
+          "elapsed_seconds": 0.86955,
+          "event": "client_message",
+          "method": "skills/list",
+          "id": "warm"
+        },
+        {
+          "elapsed_seconds": 0.89781,
+          "event": "server_message",
+          "method": null,
+          "id": "warm",
+          "received_seconds": 0.897764
+        }
+      ],
+      "model_turns_requested": 0
+    }
+  ]
+}
