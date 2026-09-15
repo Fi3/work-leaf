@@ -1,9 +1,9 @@
 # DONE: 80 | TODO: 10 | TOTAL: 90
 ## BUG FIXES — DONE: 8 | TODO: 0 | TOTAL: 8
 
-**Pending checks: 10 research obligations remain. Current: P09's guard-path repair passes the actual full observer/host route. The first three startup failures remain retained; a separately recorded bounded continuation is in preparation. No benchmark is running.**
+**Pending checks: 10 research obligations remain. Current: P09's three modified full workflows 004–006 are running concurrently, admitted at 00:15 UTC. Original 001–003 startup failures remain retained.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-15T00:12:00+00:00:** BUG008's real artifact-guard/full-setup/private-host check completes in 15 seconds at 32,338 raw, with identical directory identity, exact input/usage joins and no file changes. Its fail-first namespace test passes after a private path-only repair. The three pre-provider failures remain immutable; P09's continuation receives new identities and the same factor, reference, 90-minute/45M bounds. No historical attribution is claimed.
+**Activity, 2026-09-15T00:17:00+00:00:** the qualified P09 continuation runs under manifest `ee86651585f2f34224a33536e020790b167b7145e1657cca8b947bb037958fc9`. All three separate workflows have active native author threads. The same A+B inverse/reference and 90-minute/45M bounds apply. Only source/input/custody/resource/status checks occur during generation. No historical attribution is claimed.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
@@ -15,7 +15,7 @@
 | P06 | BLOCKED | Refresh × continuation joint check, C08 × C25. |
 | P07 | BLOCKED | Author policy × refresh × continuation joint check, A+B+C08+C25. |
 | P08 | BLOCKED | Remaining exercised whole-package interaction: custody/tools, information, review/repair, lifecycle, scheduling and auxiliary work. |
-| P09 | BLOCKED | One three-workflow confirmation batch of the strongest qualified reversal, with all required stages. |
+| P09 | CHECKING | One three-workflow confirmation batch of the strongest qualified reversal, with all required stages. |
 | P10 | DONE | Source/input/activation and complete distinct-response accounting for every new observation. |
 | P11 | BLOCKED | Full author/review/repair/integration cost offsets. |
 | P12 | BLOCKED | Combined same-target effect, interactions and context amplification without double counting. |

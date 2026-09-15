@@ -4,8 +4,29 @@ Live analysis counter: **DONE: 80 | TODO: 10 | TOTAL: 90** — [hypotesis.md](hy
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
 **Bug-fix counter: DONE: 8 | TODO: 0 | TOTAL: 8.** BUG008 passes fail-first namespace tests and actual full guard/observer/host verification. All three failed attempts remain intact.
-**Current activity, 2026-09-15T00:12:00+00:00:** the guard-path repair completes its actual verification at 32,338 raw/15 seconds with unchanged inputs, complete usage and no edits. A separately frozen P09 continuation is being prepared; no benchmark is running. The original three pre-provider failures retain their identities and outcomes.
+**Current activity, 2026-09-15T00:17:00+00:00:** P09's qualified continuation 004–006 runs concurrently from 00:15:02 UTC, in separate checkouts and artifact directories. All three have active native author threads. Only input/source/resource/custody monitoring occurs until all three stop; original 001–003 failures remain intact.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-15T00:15:02+00:00 — three qualified modified workflows launched:**
+Manifest ee86651585f2f34224a33536e020790b167b7145e1657cca8b947bb037958fc9
+admits 004–006 concurrently. Exactly the A+B inverse, saved 18,545,304 reference,
+full reviews/fixes/integration and original 90-minute/45M ceilings remain.
+The failed initial batch is separate; cumulative attempt count is six, not three.
+The new batch is not three additional ordinary controls or a new hypothesis.
+Research remains 80/10/90; bug fixes 8/0/8. Source/repair evidence is committed
+in 8a1a3b7; no normal WL change or credential copy. Native totals during generation
+are resource telemetry, not final scientific effects.
+
+**2026-09-15T00:25:00+00:00 — metadata passes; full-stage audit preparation:**
+All three first native inputs match the saved base/developer objects and intended
+prompt, model, effort and permissions. INITIAL-INPUT-CHECKPOINT.json records
+this source/input gate, not a live effect analysis. Whole-stage audit preparation
+reuses the original once-only native core and saved reference totals; completed,
+partial and setup-failed outcomes stay in the roster. P06–P08's saved state/
+joint-boundary blockers remain genuine; no replacement restoration framework
+or unsupported zero-effect conclusion is being built. Six generated executables
+were accidentally staged in 8a1a3b7; their Git tracking is removed in the next
+commit while all files and manifest hashes remain intact on disk.
 
 **2026-09-15T00:12:00+00:00 — BUG008 verified; bounded continuation prepared:**
 The actual original artifact guard and complete setup_observer function traverse
