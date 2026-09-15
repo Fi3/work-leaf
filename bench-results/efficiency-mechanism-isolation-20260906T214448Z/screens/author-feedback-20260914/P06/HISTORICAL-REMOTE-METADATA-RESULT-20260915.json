@@ -1,0 +1,37 @@
+{
+  "command": "python3 - <<'PY'\nimport json,os,pathlib,subprocess,sys,threading,time,hashlib\np=pathlib.Path(\"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P06/appserver-input-001\");repo=\"/tmp/wl-p06-fixed-review.uv1pRr/input-repo\"\nsys.path.insert(0,str(p));import wl_input_probe as w\nprobe=w.WlProbe(str(p/'appserver_provider.py'),repo);probe.deadline=time.monotonic()+15;base=w.previous.base\nraw=(p/'ORIGINAL-LOADER-PLAN.json').read_bytes();env=base.child_environment(os.environ);env.update({'WORK_LEAF_BENCH_P06_INPUT':'1','WORK_LEAF_BENCH_CODEX_ACTIVE':'1','WORK_LEAF_BENCH_P06_INPUT_PLAN':str(p/'ORIGINAL-LOADER-PLAN.json'),'WORK_LEAF_BENCH_P06_INPUT_PLAN_SHA256':hashlib.sha256(raw).hexdigest(),'WORK_LEAF_BENCH_P06_INPUT_RECEIPT':str(p/'HISTORICAL-REMOTE-METADATA-RECEIPT.json')})\nresult={'scope':'P06 historical public package metadata eligibility; zero models'}\ntry:\n probe.process=subprocess.Popen(probe.command,cwd=repo,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)\n for reader in (probe.read_stdout,probe.read_stderr):\n  t=threading.Thread(target=reader,daemon=True);t.start();probe.readers.append(t)\n probe.request('init','initialize',{});probe.send({'method':'initialized'})\n response=probe.request(\"read\",\"plugin/read\",{\"pluginName\":\"deep-research-work\",\"remoteMarketplaceName\":\"openai-curated-remote\"})\n plugin=response.get(\"plugin\",{});summary=plugin.get(\"summary\",{})\n result[\"summary\"]={k:summary.get(k) for k in (\"id\",\"name\",\"version\",\"localVersion\",\"remotePluginId\",\"installed\",\"enabled\",\"availability\")}\n result[\"skills\"]=[{\"name\":s.get(\"name\"),\"path\":s.get(\"path\"),\"description\":s.get(\"description\")} for s in plugin.get(\"skills\",[])]\n result[\"exact_required_version\"]=summary.get(\"version\")==\"0.1.14\"\n if result[\"exact_required_version\"]:\n  remote=summary.get(\"remotePluginId\")\n  if not remote:raise ValueError(\"exact version has no remote id\")\n  reply=probe.request(\"skill\",\"plugin/skill/read\",{\"remoteMarketplaceName\":\"openai-curated-remote\",\"remotePluginId\":remote,\"skillName\":\"deep-research\"})\n  body=reply.get(\"contents\")\n  result[\"public_skill\"]={\"contents\":body,\"sha256\":hashlib.sha256(body.encode()).hexdigest() if isinstance(body,str) else None}\n result['completed']=True\nexcept Exception as error:result.update(completed=False,error=str(error))\nfinally:\n probe.draining=True;probe.deadline=time.monotonic()+5;probe.cleanup()\nresult['rpc_requests']=probe.evidence['rpc_requests'];result['model_turns_requested']=len(probe.evidence['turns'])\nprint(json.dumps(result))\nPY",
+  "result": {
+    "scope": "P06 historical public package metadata eligibility; zero models",
+    "completed": false,
+    "error": "rpc_rejected_plugin_read",
+    "rpc_requests": [
+      {
+        "id": "init",
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "work_leaf",
+            "title": "Work Leaf",
+            "version": "0.1.3"
+          },
+          "capabilities": {
+            "experimentalApi": true,
+            "optOutNotificationMethods": [
+              "rawResponseItem/completed"
+            ]
+          }
+        }
+      },
+      {
+        "id": "read",
+        "method": "plugin/read",
+        "params": {
+          "pluginName": "deep-research-work",
+          "remoteMarketplaceName": "openai-curated-remote"
+        }
+      }
+    ],
+    "model_turns_requested": 0
+  },
+  "interpretation": "One plugin/read RPC rejected. The helper records the rejection but not the detailed server reason; absence or permission cause is not inferred. No skill body read, historical version selected, model turn, installation or retry."
+}

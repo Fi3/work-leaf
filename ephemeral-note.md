@@ -4,8 +4,53 @@ Live analysis counter: **DONE: 83 | TODO: 7 | TOTAL: 90** — [hypotesis.md](hyp
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
 **Bug-fix counter: DONE: 11 | TODO: 0 | TOTAL: 11.** BUG011's actual immutable input boundary qualifies. All earlier fixes and failed attempts remain intact.
-**Current activity, 2026-09-15T06:29:38+00:00:** P14's retained executable recipe and qualified causal reversal pass their source/evidence gate. Main83/7/90, bugs11/0/11. Remaining joint/transfer work is not closed; first-party artifact/version metadata is the next input-prerequisite check. No causal benchmark is admitted or running.
+**Current activity, 2026-09-15T06:59:20+00:00:** P12's component analysis is retained:99.6188% of the qualified net is input, without a second context-saving credit. A bounded original0.150.1 public-client distribution/capability check is selected for P06. Main83/7/90, bugs11/0/11. No causal benchmark is admitted or running.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-15T06:59:20+00:00 — P12 component result; original-client eligibility:**
+All ten connected-result source pins match. Once-counted selected response
+records reproduce+5,751,843⅓ exactly: cached input+5,518,080; uncached input
++211,834⅔; output+21,928⅔. Those are95.9359%,3.6829% and0.3812% of this
+net, not of H. Reasoning is already inside output. Direct A+B launch literals
+shrink121bytes; actual B feedback literals shrink317/162/72bytes. No per-message
+token allocation or independent context-saving component is invented. All stage
+and first-pass components and the exact analysis command are saved under P12;
+the command receipt avoids duplicating its entire result. P12 remains open for
+combined coverage/transfer. No model or native core is executed.
+The exact historical native binary is a distinct remaining P06 prerequisite:
+check public0.150.1 distribution and then its actual local capabilities, not
+another current-client flag. Private disk-backed artifacts only; no scripts,
+global install/config edits, model requests or credential copying. The plugin
+cache filename lookup returns no Git pack/ref or old-client package filename;
+this is not proof that every possible external old asset is absent.
+
+**2026-09-15T06:53:04+00:00 — P08 source gate retained; P12 components selected:**
+The complete frozen-driver diff preserves review, review-clean, validation,
+sequential scheduling and plan/accept integration code. Custody changes both
+author/fix execution and the actual evidence/history passed into those shared
+functions. Historical J10 retains105 interrupts after advancing usage; it is
+not native final-turn equivalence. An initial-author repeat cannot cover these
+later effects or exclude historical concurrent-WL paths. No such repeat or new
+host is selected. P08 remains unfinished, not zero effect. P12 reuses the exact
+qualified response ledgers to distinguish cached/uncached input, output and
+stage costs, with direct A/B bytes separate. No new native accounting execution
+or broader historical action census. All-source and actual-output limitations
+remain; unavailable per-message token allocation is not invented.
+
+**2026-09-15T06:45:49+00:00 — P08 source eligibility, no model admission:**
+The one H003 public-package metadata read returns rpc_rejected_plugin_read;
+the helper did not retain a more detailed server reason. No absent-version or
+permission cause is inferred, and no skill read, install or model turn follows.
+Its scope/receipt/result are retained under P06. The initial note patch fails
+exact-context validation before publication; the corrected patch preserves the
+same counters and historical records. P08 gets a separate thirty-minute local
+source check: inspect whether the qualified native route and existing complete
+stage chain expose the whole residual package. R06's cheaper but catalog-
+confounded initial author does not qualify a positive custody mechanism or an
+automatic rerun. No new host or full controller-replay framework is selected.
+The guard rejects CHECKING while the original blocker is still present; the
+task retains BLOCKED while this specific prerequisite check is active. Counts
+never change, and the blocker is not cleared merely because inspection resumes.
 
 **2026-09-15T06:29:38+00:00 — P14 verified; cumulative research83/7/90:**
 The existing all-on executable host/driver and actual real-agent operation logs
