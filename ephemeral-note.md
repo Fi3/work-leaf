@@ -4,8 +4,25 @@ Live analysis counter: **DONE: 80 | TODO: 10 | TOTAL: 90** — [hypotesis.md](hy
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
 **Bug-fix counter: DONE: 8 | TODO: 0 | TOTAL: 8.** BUG008 passes fail-first namespace tests and actual full guard/observer/host verification. All three failed attempts remain intact.
-**Current activity, 2026-09-15T00:36:43+00:00:** P09's qualified continuation 004–006 remains active from 00:15:02 UTC, in separate checkouts and artifact directories. Latest resource costs are 5,278,266 / 4,620,037 / 4,326,331 raw, not complete effects. Terminal accounting/offset preparation passes eleven new and eighteen existing audit tests and all required Cargo gates. Only input/source/resource/custody monitoring occurs on the live observations; original 001–003 failures remain intact.
+**Current activity, 2026-09-15T01:01:47+00:00:** P09's qualified continuation 004–006 remains active from 00:15:02 UTC; 0/3 workflows are terminal, about 47/90 outer-wall minutes elapsed. Latest resource costs are 13,901,485 / 14,196,522 / 13,752,606 raw, not complete effects. All 143 captured input boundaries pass. Terminal accounting/offset preparation is qualified. A six-minute local P06/P07 alternative check is saved; no fourth workflow, normal WL edit or additional generation occurred. Original 001–003 failures remain intact.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-15T01:01:47+00:00 — full inputs still match; joint-route screening preserved:**
+All 143 observed input boundaries qualify, including stage-local catalog/plugin
+transitions, whole developer messages, model/effort and sandbox settings.
+All 204 frozen source/configuration entries also match at 00:46:31. The saved
+reference partitions exactly into 4,308,399 initial-author, 3,050,077 author-fix,
+4,259,299 review and 6,927,529 integration raw; no original native audit repeats.
+The P06 fresh-boundary source check establishes that ordinary patch acceptance
+does not compile the tree: buildability is instructional. An exact private policy
+inverse need not create a publication engine, although no qualified composite
+flag currently exists. A start-from-base 3M joint screen is not representative:
+all five first changed-refresh exposures in six saved W controls occur after
+3.386M–9.006M recorded all-agent raw; the sixth has none. Those controls are
+reused, not rerun. Fresh native WL app-server inputs need their own qualification;
+P09's exec-only wrapper is not assumed interchangeable. The local check stops
+within its ten-minute bound; no expensive setup or extra generation follows.
+P09 remains the selected active experiment; P06/P07 remain required and unresolved.
 
 **2026-09-15T00:43:48+00:00 — resumed inputs qualify; recipe linked to actual execution:**
 The00:40:45 snapshot qualifies71 actual boundaries across eight native threads:
