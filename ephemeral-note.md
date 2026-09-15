@@ -7,6 +7,18 @@ The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation
 **Current activity, 2026-09-15T00:36:43+00:00:** P09's qualified continuation 004–006 remains active from 00:15:02 UTC, in separate checkouts and artifact directories. Latest resource costs are 5,278,266 / 4,620,037 / 4,326,331 raw, not complete effects. Terminal accounting/offset preparation passes eleven new and eighteen existing audit tests and all required Cargo gates. Only input/source/resource/custody monitoring occurs on the live observations; original 001–003 failures remain intact.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
 
+**2026-09-15T00:43:48+00:00 — resumed inputs qualify; recipe linked to actual execution:**
+The00:40:45 snapshot qualifies71 actual boundaries across eight native threads:
+effective catalogs, entire developer-message transitions, exact user prompts,
+base instructions, model/effort, CLI/provider and sandbox settings. No boundary
+issue is observed; held tails and fallback profiles remain explicit extrapolations,
+not matched stochastic histories. LIVE-INPUT-BOUNDARIES-0040 and
+LIVE-DEVELOPER-CHECK-0040 retain the input-only evidence. P14-RECIPE-CHECKPOINT
+links the actual non-WL host procedure and its saved execution to the A+B inverse;
+full net and historical transfer gates remain unfinished. No additional agent
+call or original accounting re-audit occurs. Analysis helpers are committed
+in a519a8b. P09 remains active; counters stay80/10/90 and8/0/8.
+
 **2026-09-15T00:36:43+00:00 — terminal accounting ready; all three workflows active:**
 The full-analysis-012 helper retains one native-core execution per closed thread,
 joins actual public prompts and usage, and partitions initial author, author fix,

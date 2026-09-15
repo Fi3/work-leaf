@@ -3,7 +3,7 @@
 
 **Pending checks: 10 research obligations remain. Current: P09's three modified full workflows 004–006 are running concurrently, admitted at 00:15 UTC. Original 001–003 startup failures remain retained.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-15T00:36:43+00:00:** all three P09 workflows remain active under manifest `ee86651585f2f34224a33536e020790b167b7145e1657cca8b947bb037958fc9`. Latest resource samples record 5.278M / 4.620M / 4.326M raw, below their 45M trips; these are incomplete costs, not effects. Terminal-only stage accounting passes eleven new and eighteen existing audit tests; required Cargo checks pass. The same A+B inverse/reference and 90-minute bounds apply. No historical attribution is claimed.
+**Activity, 2026-09-15T00:43:48+00:00:** all three P09 workflows remain active under manifest `ee86651585f2f34224a33536e020790b167b7145e1657cca8b947bb037958fc9`. The 00:40:45 input-only snapshot qualifies all71 observed launch/resume boundaries, including full developer messages and permissions. Latest resource samples record 7.307M / 7.180M / 7.225M raw, below their 45M trips; these are incomplete costs, not effects. Terminal accounting is qualified and P14's concrete recipe/source checkpoint is saved. The same A+B inverse/reference and 90-minute bounds apply. No historical attribution is claimed.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
