@@ -1,0 +1,36 @@
+{
+  "command": "python3 - <<'PY'\nimport hashlib,json,subprocess\nfrom pathlib import Path\ns=Path('/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z')\nd=s/'screens/author-feedback-20260914/source-restoration-014'\nrows=[]\nfor n in ('004','005','006'):\n repo=Path('/tmp/wl-p09-exact-restore.6hgpe1')/('repo'+n)\n bundle=d/('pre-integration-'+n+'.bundle')\n assert not bundle.exists()\n subprocess.run(['git','-C',str(repo),'bundle','create',str(bundle),'HEAD','^c92a0b7060a36eac6db2d869b85e589a7a9480f9'],check=True,capture_output=True)\n verification=subprocess.run(['git','-C',str(repo),'bundle','verify',str(bundle)],check=True,capture_output=True)\n rows.append({'run':n,'bundle':str(bundle),'bytes':bundle.stat().st_size,'sha256':hashlib.sha256(bundle.read_bytes()).hexdigest(),'verification_stdout':verification.stdout.decode(),'verification_stderr':verification.stderr.decode()})\nprint(json.dumps(rows,indent=2))\nPY",
+  "execution": {
+    "chunk_id": "6293c2",
+    "wall_time_seconds": 0.000007124,
+    "exit_code": 0,
+    "original_token_count": 564,
+    "output": "[\n  {\n    \"run\": \"004\",\n    \"bundle\": \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/source-restoration-014/pre-integration-004.bundle\",\n    \"bytes\": 25545,\n    \"sha256\": \"c4d2aa68929079dcf76fe427afc5ec81a71334f4061732e8158ab5be6a24fdbe\",\n    \"verification_stdout\": \"The bundle contains this ref:\\n7b16e5fbfa3f2cfd604c31405771a916f29cb938 HEAD\\nThe bundle requires this ref:\\nc92a0b7060a36eac6db2d869b85e589a7a9480f9 \\nThe bundle uses this hash algorithm: sha1\\n\",\n    \"verification_stderr\": \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/source-restoration-014/pre-integration-004.bundle is okay\\n\"\n  },\n  {\n    \"run\": \"005\",\n    \"bundle\": \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/source-restoration-014/pre-integration-005.bundle\",\n    \"bytes\": 25416,\n    \"sha256\": \"85768c94e4722adcb5e0d76a40b8fbff48024188afceb20c00566833dcb196e3\",\n    \"verification_stdout\": \"The bundle contains this ref:\\n138e1b51ecd7c989c8f48b37db387fbbe3fe6dac HEAD\\nThe bundle requires this ref:\\nc92a0b7060a36eac6db2d869b85e589a7a9480f9 \\nThe bundle uses this hash algorithm: sha1\\n\",\n    \"verification_stderr\": \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/source-restoration-014/pre-integration-005.bundle is okay\\n\"\n  },\n  {\n    \"run\": \"006\",\n    \"bundle\": \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/source-restoration-014/pre-integration-006.bundle\",\n    \"bytes\": 25394,\n    \"sha256\": \"f6a0d8e696c452271835323197548b2df7daf90d42957495fe46a505ca9a7501\",\n    \"verification_stdout\": \"The bundle contains this ref:\\n67fe0fd538d138b9fe41c2e84a8e93342c26966b HEAD\\nThe bundle requires this ref:\\nc92a0b7060a36eac6db2d869b85e589a7a9480f9 \\nThe bundle uses this hash algorithm: sha1\\n\",\n    \"verification_stderr\": \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/source-restoration-014/pre-integration-006.bundle is okay\\n\"\n  }\n]\n"
+  },
+  "bundles": [
+    {
+      "run": "004",
+      "bundle": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/source-restoration-014/pre-integration-004.bundle",
+      "bytes": 25545,
+      "sha256": "c4d2aa68929079dcf76fe427afc5ec81a71334f4061732e8158ab5be6a24fdbe",
+      "verification_stdout": "The bundle contains this ref:\n7b16e5fbfa3f2cfd604c31405771a916f29cb938 HEAD\nThe bundle requires this ref:\nc92a0b7060a36eac6db2d869b85e589a7a9480f9 \nThe bundle uses this hash algorithm: sha1\n",
+      "verification_stderr": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/source-restoration-014/pre-integration-004.bundle is okay\n"
+    },
+    {
+      "run": "005",
+      "bundle": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/source-restoration-014/pre-integration-005.bundle",
+      "bytes": 25416,
+      "sha256": "85768c94e4722adcb5e0d76a40b8fbff48024188afceb20c00566833dcb196e3",
+      "verification_stdout": "The bundle contains this ref:\n138e1b51ecd7c989c8f48b37db387fbbe3fe6dac HEAD\nThe bundle requires this ref:\nc92a0b7060a36eac6db2d869b85e589a7a9480f9 \nThe bundle uses this hash algorithm: sha1\n",
+      "verification_stderr": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/source-restoration-014/pre-integration-005.bundle is okay\n"
+    },
+    {
+      "run": "006",
+      "bundle": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/source-restoration-014/pre-integration-006.bundle",
+      "bytes": 25394,
+      "sha256": "f6a0d8e696c452271835323197548b2df7daf90d42957495fe46a505ca9a7501",
+      "verification_stdout": "The bundle contains this ref:\n67fe0fd538d138b9fe41c2e84a8e93342c26966b HEAD\nThe bundle requires this ref:\nc92a0b7060a36eac6db2d869b85e589a7a9480f9 \nThe bundle uses this hash algorithm: sha1\n",
+      "verification_stderr": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/source-restoration-014/pre-integration-006.bundle is okay\n"
+    }
+  ]
+}

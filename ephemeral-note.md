@@ -4,8 +4,21 @@ Live analysis counter: **DONE: 80 | TODO: 10 | TOTAL: 90** — [hypotesis.md](hy
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
 **Bug-fix counter: DONE: 10 | TODO: 0 | TOTAL: 10.** BUG009's actual integration-input boundary qualifies with exact-project trust. Earlier fixes and failed attempts remain intact; this does not complete the research or repair old outcomes.
-**Current activity, 2026-09-15T03:21:34+00:00:** Real-005 qualifies whole developer/base and actual permission/context input with47,674raw; all235pins and repository state match. P09 continuation-source qualification follows, with no model generation running. Research remains80/10/90; bugs10/0/10.
+**Current activity, 2026-09-15T03:40:00+00:00:** All three original pre-integration source chains qualify: 55 exact accepted commits, including 36 recovered missing objects, with clean checkpoint trees. Three small verified bundles preserve them. Preparing integration-only continuation through the original driver and BUG009's verified input repair. No model generation is running. Research remains 80/10/90; bugs 10/0/10.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-15T03:40:00+00:00 — all three original source chains recovered exactly:**
+The local screen recovers 005's 19 and 006's 17 missing commit objects from
+accepted host proposals/receipts. Each reconstructed object's complete Git SHA
+matches its original recorded identity; no source or metadata equivalence is
+assumed. All 55 commits across 004/005/006 and clean checkpoint trees match.
+Four fail-first identity/rejection tests and required Cargo checks pass. Three
+verified bundles total 76,355 bytes. Failed graph-format/all-ref comparisons
+and one malformed analysis command remain recorded; none generated model work.
+Next is the saved twenty-minute integration-only setup scope, reusing the
+original driver and same source clone refs. No author/review rerun, selected
+successful outcome, full replacement or model launch is admitted by this check.
+No main or bug count changes. Exact evidence is linked in hypotesis.md.
 
 **2026-09-15T03:21:34+00:00 — real integration-input repair qualified:**
 Real-005 closes03:17:51.528390 in15.64s,47,674raw,3responses,2turns,
