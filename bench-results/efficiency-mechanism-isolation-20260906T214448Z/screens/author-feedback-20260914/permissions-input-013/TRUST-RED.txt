@@ -1,0 +1,20 @@
+E
+======================================================================
+ERROR: test_trust_probe (unittest.loader._FailedTest.test_trust_probe)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_trust_probe
+Traceback (most recent call last):
+  File "/usr/lib/python3.14/unittest/loader.py", line 433, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/usr/lib/python3.14/unittest/loader.py", line 374, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/permissions-input-013/test_trust_probe.py", line 6, in <module>
+    import trust_probe
+ModuleNotFoundError: No module named 'trust_probe'
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (errors=1)

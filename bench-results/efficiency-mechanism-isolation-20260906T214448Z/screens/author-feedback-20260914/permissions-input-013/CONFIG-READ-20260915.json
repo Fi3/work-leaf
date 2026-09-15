@@ -1,0 +1,237 @@
+{
+  "scope": "read-only effective configuration, no thread/start or turn/start",
+  "argv": [
+    "unshare",
+    "--user",
+    "--map-current-user",
+    "--keep-caps",
+    "--mount",
+    "--propagation",
+    "private",
+    "/usr/bin/python3",
+    "-c",
+    "import json,os,sys;sys.path.insert(0,'/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01');import private_catalog;private_catalog.enter_view(json.load(open('/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-workflow-009/REFERENCE-PLAN.json'))['profiles']['short']['view']);os.execv(sys.argv[1],sys.argv[1:])",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/provider/codex",
+    "-c",
+    "projects.\"/tmp/wl-full-route-verify.cp2SON/repo\".trust_level=\"trusted\"",
+    "--cd",
+    "/tmp/wl-full-route-verify.cp2SON/repo",
+    "--sandbox",
+    "danger-full-access",
+    "--ask-for-approval",
+    "never",
+    "app-server",
+    "--listen",
+    "stdio://"
+  ],
+  "response_keys": [
+    "config",
+    "origins",
+    "layers"
+  ],
+  "config_keys": [
+    "model",
+    "review_model",
+    "model_context_window",
+    "model_auto_compact_token_limit",
+    "model_auto_compact_token_limit_scope",
+    "model_provider",
+    "approval_policy",
+    "approvals_reviewer",
+    "sandbox_mode",
+    "sandbox_workspace_write",
+    "forced_chatgpt_workspace_id",
+    "forced_login_method",
+    "web_search",
+    "tools",
+    "instructions",
+    "developer_instructions",
+    "compact_prompt",
+    "model_reasoning_effort",
+    "model_reasoning_summary",
+    "model_verbosity",
+    "service_tier",
+    "analytics",
+    "apps",
+    "browser_use",
+    "computer_use",
+    "desktop",
+    "project_doc_max_bytes",
+    "check_for_update_on_startup",
+    "disable_paste_burst",
+    "personality",
+    "cli_auth_credentials_store",
+    "experimental_thread_store",
+    "tui",
+    "hooks",
+    "experimental_realtime_start_instructions",
+    "oss_provider",
+    "mcp_optional_startup_grace_ms",
+    "hide_agent_reasoning",
+    "apps_mcp_product_sku",
+    "mcp_oauth_credentials_store",
+    "profile",
+    "experimental_thread_store_endpoint",
+    "mcp_oauth_callback_url",
+    "openai_base_url",
+    "background_terminal_max_timeout",
+    "agents",
+    "feedback",
+    "permissions",
+    "model_instructions_file",
+    "log_dir",
+    "skills",
+    "plan_mode_reasoning_effort",
+    "file_opener",
+    "memories",
+    "responses_api_metadata",
+    "include_environment_context",
+    "notice",
+    "default_permissions",
+    "experimental_compact_prompt_file",
+    "notify",
+    "auto_review",
+    "include_permissions_instructions",
+    "mcp_servers",
+    "model_providers",
+    "allow_login_shell",
+    "include_collaboration_mode_instructions",
+    "tool_output_token_limit",
+    "experimental_realtime_webrtc_call_base_url",
+    "project_doc_fallback_filenames",
+    "shell_environment_policy",
+    "ghost_snapshot",
+    "profiles",
+    "show_raw_agent_reasoning",
+    "orchestrator",
+    "marketplaces",
+    "goals",
+    "features",
+    "projects",
+    "suppress_unstable_features_warning",
+    "js_repl_node_path",
+    "include_apps_instructions",
+    "experimental_use_unified_exec_tool",
+    "windows",
+    "plugins",
+    "tool_suggest",
+    "history",
+    "audio",
+    "experimental_realtime_ws_base_url",
+    "model_catalog_json",
+    "project_root_markers",
+    "realtime",
+    "chatgpt_base_url",
+    "mcp_oauth_callback_port",
+    "experimental_realtime_ws_startup_context",
+    "otel",
+    "js_repl_node_module_dirs",
+    "experimental_realtime_ws_model",
+    "sqlite_home",
+    "experimental_realtime_ws_backend_prompt"
+  ],
+  "target_project": null,
+  "layers": [
+    {
+      "source": {
+        "type": "sessionFlags"
+      },
+      "config_keys": [
+        "forced_login_method",
+        "model_provider",
+        "model",
+        "model_reasoning_effort",
+        "projects"
+      ],
+      "target_project": null
+    },
+    {
+      "source": {
+        "type": "project",
+        "dotCodexFolder": "/tmp/wl-full-route-verify.cp2SON/repo/.codex"
+      },
+      "config_keys": [
+        "approval_policy",
+        "sandbox_mode",
+        "sandbox_workspace_write"
+      ],
+      "target_project": null
+    },
+    {
+      "source": {
+        "type": "user",
+        "file": "/home/user/.codex/config.toml",
+        "profile": null
+      },
+      "config_keys": [
+        "model",
+        "model_reasoning_effort",
+        "personality",
+        "marketplaces",
+        "plugins",
+        "projects",
+        "notice",
+        "tui",
+        "skills"
+      ],
+      "target_project": null
+    },
+    {
+      "source": {
+        "type": "system",
+        "file": "/etc/codex/config.toml"
+      },
+      "config_keys": [],
+      "target_project": null
+    }
+  ],
+  "trace": [
+    {
+      "elapsed_seconds": 0.001042,
+      "event": "client_message",
+      "method": "initialize",
+      "id": "init"
+    },
+    {
+      "elapsed_seconds": 0.171819,
+      "event": "server_message",
+      "method": null,
+      "id": "init",
+      "received_seconds": 0.171725
+    },
+    {
+      "elapsed_seconds": 0.171875,
+      "event": "client_message",
+      "method": "initialized",
+      "id": null
+    },
+    {
+      "elapsed_seconds": 0.17189,
+      "event": "client_message",
+      "method": "config/read",
+      "id": "config"
+    },
+    {
+      "elapsed_seconds": 0.171908,
+      "event": "server_message",
+      "method": "configWarning",
+      "id": null,
+      "received_seconds": 0.171774
+    },
+    {
+      "elapsed_seconds": 0.171921,
+      "event": "server_message",
+      "method": "remoteControl/status/changed",
+      "id": null,
+      "received_seconds": 0.171781
+    },
+    {
+      "elapsed_seconds": 0.229945,
+      "event": "server_message",
+      "method": null,
+      "id": "config",
+      "received_seconds": 0.229896
+    }
+  ],
+  "model_turns_requested": 0
+}

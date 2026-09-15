@@ -53,6 +53,11 @@ partial outcomes, missing usage and stop reasons remain in the record. A failure
 machinery is not a falsified hypothesis, but neither does it automatically justify more machinery
 or another full batch. A functioning smoke test is not evidence that the hypothesis is promising.
 
+Configuration repairs use a non-generating effective-configuration readback when the pinned client
+provides one, before a generated diagnostic. Verify the intended keys and preserved non-target
+settings rather than assuming command-line quoting or configuration merging applied them.
+Readback establishes configuration activation, not actual-agent input or behavioral verification.
+
 Only a relevant observed mechanism signal makes a larger experiment eligible for consideration;
 the applicable study/user authority is still required. A positive shallow screen is not an exact
 causal percentage, and an inconclusive one is not proof of no effect. Stop/deprioritize instead of

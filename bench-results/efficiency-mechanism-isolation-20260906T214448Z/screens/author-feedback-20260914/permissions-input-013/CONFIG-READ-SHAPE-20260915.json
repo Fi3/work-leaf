@@ -1,0 +1,94 @@
+{
+  "scope": "read-only effective configuration, no thread/start or turn/start",
+  "argv": [
+    "unshare",
+    "--user",
+    "--map-current-user",
+    "--keep-caps",
+    "--mount",
+    "--propagation",
+    "private",
+    "/usr/bin/python3",
+    "-c",
+    "import json,os,sys;sys.path.insert(0,'/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01');import private_catalog;private_catalog.enter_view(json.load(open('/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-workflow-009/REFERENCE-PLAN.json'))['profiles']['short']['view']);os.execv(sys.argv[1],sys.argv[1:])",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/provider/codex",
+    "-c",
+    "projects.\"/tmp/wl-full-route-verify.cp2SON/repo\".trust_level=\"trusted\"",
+    "--cd",
+    "/tmp/wl-full-route-verify.cp2SON/repo",
+    "--sandbox",
+    "danger-full-access",
+    "--ask-for-approval",
+    "never",
+    "app-server",
+    "--listen",
+    "stdio://"
+  ],
+  "response_keys": [
+    "config",
+    "origins",
+    "layers"
+  ],
+  "project_key_candidates": [
+    "\"/tmp/wl-full-route-verify"
+  ],
+  "target_project": null,
+  "session_flag_projects": [
+    {
+      "\"/tmp/wl-full-route-verify": {
+        "cp2SON/repo\"": {
+          "trust_level": "trusted"
+        }
+      }
+    }
+  ],
+  "trace": [
+    {
+      "elapsed_seconds": 0.001172,
+      "event": "client_message",
+      "method": "initialize",
+      "id": "init"
+    },
+    {
+      "elapsed_seconds": 0.209697,
+      "event": "server_message",
+      "method": null,
+      "id": "init",
+      "received_seconds": 0.209587
+    },
+    {
+      "elapsed_seconds": 0.20975,
+      "event": "client_message",
+      "method": "initialized",
+      "id": null
+    },
+    {
+      "elapsed_seconds": 0.209765,
+      "event": "client_message",
+      "method": "config/read",
+      "id": "config"
+    },
+    {
+      "elapsed_seconds": 0.209782,
+      "event": "server_message",
+      "method": "configWarning",
+      "id": null,
+      "received_seconds": 0.209631
+    },
+    {
+      "elapsed_seconds": 0.209794,
+      "event": "server_message",
+      "method": "remoteControl/status/changed",
+      "id": null,
+      "received_seconds": 0.20964
+    },
+    {
+      "elapsed_seconds": 0.266601,
+      "event": "server_message",
+      "method": null,
+      "id": "config",
+      "received_seconds": 0.26655
+    }
+  ],
+  "model_turns_requested": 0
+}

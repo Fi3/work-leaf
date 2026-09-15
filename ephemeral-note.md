@@ -3,9 +3,73 @@
 Live analysis counter: **DONE: 80 | TODO: 10 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
-**Bug-fix counter: DONE: 9 | TODO: 1 | TOTAL: 10.** BUG009's integration-input boundary remains open; BUG010's archive-ordering error has a fail-first regression and verified cached-only correction. Earlier fixes and all failed attempts remain intact.
-**Current activity, 2026-09-15T02:25:20+00:00:** all permission probes are terminal. Exact-input repair still fails; that flag/config approach is parked. Only004's original pre-integration head is available through retained bundles, not005/006. Existing joint P06 (compact refresh × continuation timing) is promoted for runtime/input/exposure qualification; no model generation is running or newly admitted. Counters remain80/10/90 and9/1/10.
+**Bug-fix counter: DONE: 10 | TODO: 0 | TOTAL: 10.** BUG009's actual integration-input boundary qualifies with exact-project trust. Earlier fixes and failed attempts remain intact; this does not complete the research or repair old outcomes.
+**Current activity, 2026-09-15T03:21:34+00:00:** Real-005 qualifies whole developer/base and actual permission/context input with47,674raw; all235pins and repository state match. P09 continuation-source qualification follows, with no model generation running. Research remains80/10/90; bugs10/0/10.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-15T03:21:34+00:00 — real integration-input repair qualified:**
+Real-005 closes03:17:51.528390 in15.64s,47,674raw,3responses,2turns,
+no accounting errors/tails and235matching pins. Correct exact-project trust
+preserves the reference16prefixes and eliminates the extra developer message.
+Whole base/developer sequences and both full permission/context objects match.
+Nine tests, effective-config readback and actual subscription launch/resume
+qualify BUG009's boundary. All four failures remain190,753raw; total238,427.
+No original full result is rewritten or declared qualified. Main80/10/90 stays;
+the separate bug ledger appends fixedBUG009 and reaches10/0/10. Next: bounded
+source restoration for all three original P09 pre-integration states. No full
+replacement or convenient004-only run is admitted. Commit a11fcdf saves P06's
+unadmitted preparation and P13's transfer map; normal WL source is unchanged.
+
+**2026-09-15T03:17:00+00:00 — effective config checked before another model call:**
+Real-004 completes03:09:09.158355 in14.33s,47,776raw,3responses,2turns,
+no accounting error/tail or source/repository mutation. It still has the extra
+permission input. A local config/read discovers its intended trust key was never
+set: CLI dotted-key splitting treats the quoted path's period as a separator.
+The corrected TOML table-value override resolves exact-checkout trust and preserves
+all330prior projects. Three read-only configuration queries create no thread or
+model turn. Nine local tests and required Cargo/83guards pass. Real-005 admission
+036aea0dbf429127bf0d65f8fa1dce230cbc2a58adfc428ff78f7ca982f7412a
+allows the same two-turn60s/100k actual-input qualification with correct activation.
+This is the existing BUG009 repair, not another scientific task. Prior failed
+probes total190,753raw. No full replacement or native-core re-audit follows.
+
+**2026-09-15T03:09:00+00:00 — concrete trust-state repair candidate admitted:**
+The16native prefixes exactly match tracked .codex/rules/default.rules. The frozen
+private config trusts the historical reference cwd but not this diagnostic cwd
+or any ancestor. Official rules documentation conditions project-rule loading
+on trust. The earlier home-only rule search missed the project-level file.
+Three new fail-first exact-path/quoting/rejection tests plus four prior probe
+tests,83guards and required Cargo gates pass. Admission6b2abcae646dbe40433514824f5043d6b0f7bcaf22140c4bca9433f115033e9a
+allows one fresh two-turn60-second/100k diagnostic with only process-local exact
+checkout trust supplied. Both complete inputs and unchanged permissions must
+qualify; two markers alone are insufficient. No global configuration/rule edit,
+old native rewrite, full replacement or new scientific task is authorized.
+
+**2026-09-15T03:02:00+00:00 — historical transfer map saved; no repeated census:**
+The original18/18 Direct test-first and17/18 WL cohesive publication patterns
+match the policy reversal's observed action chain. Reusing existing counters and
+the old35-tail roster gives an8.957M–9.730M initial-author gap and a disjoint
+7.434M–8.915M outside-initial gap; the two conditional widths sum exactly to
+the original2.254M measurement width. These are locations, not causal shares.
+P09's extra4.154M review/fix cost shows why later work must stay in the mechanism
+boundary, but cannot be added to a different historical cohort's amounts.
+P13 remains unfinished. Its local screen ends within20minutes without generation
+or native re-audit. Next:20minutes tracing BUG009's permission-state source;
+three failed flag/config approaches remain parked. No counter changes.
+
+**2026-09-15T02:45:21+00:00 — complete-input gate catches mismatch before spending:**
+P06's retained C08 runtime and C25 observer seam exist. Four new fail-first/local
+route/RPC/stale-input tests,24 reused transport tests and required Cargo gates
+pass. No real diagnostic is launched: all eight W002 native source pins match,
+but their complete input roster includes a5889-byte later skill catalog and
+deep-research-work0.1.14. Only0.1.15 is recovered in inspected public/private
+caches and readable temporary/repository skill assets. A matching first short
+message would not qualify later turns. The unadmitted adapters remain preparation,
+not a successful repair or negative joint test. No historical body is invented.
+The saved result stops this attempt below20 minutes and switches to existing P13:
+map the qualified author package onto historical action/stage evidence and retain
+the exact residual. No original usage audit, new control or research count change.
+Commit eb15435 preserves the three permission probes and saved-bundle findings.
 
 **2026-09-15T02:25:20+00:00 — failed setup approaches parked; broader joint promoted:**
 Real-003 used47,605 raw in13.49s, with exact accounting and215 matching pins.
