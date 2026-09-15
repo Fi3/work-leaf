@@ -1,0 +1,38 @@
+EEE
+======================================================================
+ERROR: test_actual_core_partitions_every_response_once (__main__.AggregateTests.test_actual_core_partitions_every_response_once)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-analysis-012/test_full_aggregate.py", line 97, in test_actual_core_partitions_every_response_once
+    result, output = self.audit()
+                     ~~~~~~~~~~^^
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-analysis-012/test_full_aggregate.py", line 89, in audit
+    source = a.aggregate_source(batch, run, "/fixture/repo", output, sessions_root=sessions)
+TypeError: aggregate_source() got an unexpected keyword argument 'sessions_root'
+
+======================================================================
+ERROR: test_partial_stage_cost_is_retained_with_unknown_tail (__main__.AggregateTests.test_partial_stage_cost_is_retained_with_unknown_tail)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-analysis-012/test_full_aggregate.py", line 105, in test_partial_stage_cost_is_retained_with_unknown_tail
+    result, _ = self.audit(partial=True)
+                ~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-analysis-012/test_full_aggregate.py", line 89, in audit
+    source = a.aggregate_source(batch, run, "/fixture/repo", output, sessions_root=sessions)
+TypeError: aggregate_source() got an unexpected keyword argument 'sessions_root'
+
+======================================================================
+ERROR: test_recovered_owned_diagnostic_does_not_erase_complete_usage (__main__.AggregateTests.test_recovered_owned_diagnostic_does_not_erase_complete_usage)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-analysis-012/test_full_aggregate.py", line 114, in test_recovered_owned_diagnostic_does_not_erase_complete_usage
+    result, _ = self.audit(diagnostic=True)
+                ~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-analysis-012/test_full_aggregate.py", line 89, in audit
+    source = a.aggregate_source(batch, run, "/fixture/repo", output, sessions_root=sessions)
+TypeError: aggregate_source() got an unexpected keyword argument 'sessions_root'
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.005s
+
+FAILED (errors=3)

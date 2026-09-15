@@ -3,7 +3,7 @@
 
 **Pending checks: 10 research obligations remain. Current: P09's three modified full workflows 004–006 are running concurrently, admitted at 00:15 UTC. Original 001–003 startup failures remain retained.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-15T00:17:00+00:00:** the qualified P09 continuation runs under manifest `ee86651585f2f34224a33536e020790b167b7145e1657cca8b947bb037958fc9`. All three separate workflows have active native author threads. The same A+B inverse/reference and 90-minute/45M bounds apply. Only source/input/custody/resource/status checks occur during generation. No historical attribution is claimed.
+**Activity, 2026-09-15T00:36:43+00:00:** all three P09 workflows remain active under manifest `ee86651585f2f34224a33536e020790b167b7145e1657cca8b947bb037958fc9`. Latest resource samples record 5.278M / 4.620M / 4.326M raw, below their 45M trips; these are incomplete costs, not effects. Terminal-only stage accounting passes eleven new and eighteen existing audit tests; required Cargo checks pass. The same A+B inverse/reference and 90-minute bounds apply. No historical attribution is claimed.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
@@ -119,7 +119,7 @@ Previously unaccounted bug fixes use their separate counter; they do not expand 
 
 ## Live priority — qualified author contrasts, then broader joints
 
-Last maintained: **2026-09-15 00:14 UTC**. [The qualified comparison](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/QUALIFIED-COMPARISON.md) preserves P04's complete joint signal and P03's inconclusive fragmentation before any GREEN. P03/P04/P05 are bounded deliverables, not three proven factors. P09's initial three launch attempts fail before native generation. BUG008's path-only repair passes actual artifact-guard/observer/private-host verification; the separately frozen continuation retains those failures and all previous outcomes.
+Last maintained: **2026-09-15 00:36 UTC**. [The qualified comparison](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/QUALIFIED-COMPARISON.md) preserves P04's complete joint signal and P03's inconclusive fragmentation before any GREEN. P03/P04/P05 are bounded deliverables, not three proven factors. P09's qualified three-workflow continuation is running; the first three pre-provider failures remain intact. No live scientific result changes the ranking. Terminal-only analysis will include later review, repair and integration offsets.
 The accepted historical gap and the user's no-quality-loss assumption remain premises.
 
 | Priority | Evidence and potential explanatory reach | Next cheap check / stop gate |

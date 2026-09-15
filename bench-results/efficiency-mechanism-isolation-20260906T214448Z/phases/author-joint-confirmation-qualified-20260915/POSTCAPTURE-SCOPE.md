@@ -1,6 +1,6 @@
 # Postcapture preparation for P09/P11/P12
 
-Prospective 2026-09-15T00:25:00+00:00. Reuse the original frozen full-workflow
+Prospective 2026-09-15T00:23:20+00:00. Reuse the original frozen full-workflow
 audit template and unchanged audit_rollout core. Preparation may test synthetic
 failure, duplicate, partial and stage-partition cases; it may not analyze live
 scientific outcomes. Run the actual audit only after all three phase outcomes

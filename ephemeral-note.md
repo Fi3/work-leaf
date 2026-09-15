@@ -4,8 +4,19 @@ Live analysis counter: **DONE: 80 | TODO: 10 | TOTAL: 90** — [hypotesis.md](hy
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
 **Bug-fix counter: DONE: 8 | TODO: 0 | TOTAL: 8.** BUG008 passes fail-first namespace tests and actual full guard/observer/host verification. All three failed attempts remain intact.
-**Current activity, 2026-09-15T00:17:00+00:00:** P09's qualified continuation 004–006 runs concurrently from 00:15:02 UTC, in separate checkouts and artifact directories. All three have active native author threads. Only input/source/resource/custody monitoring occurs until all three stop; original 001–003 failures remain intact.
+**Current activity, 2026-09-15T00:36:43+00:00:** P09's qualified continuation 004–006 remains active from 00:15:02 UTC, in separate checkouts and artifact directories. Latest resource costs are 5,278,266 / 4,620,037 / 4,326,331 raw, not complete effects. Terminal accounting/offset preparation passes eleven new and eighteen existing audit tests and all required Cargo gates. Only input/source/resource/custody monitoring occurs on the live observations; original 001–003 failures remain intact.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-15T00:36:43+00:00 — terminal accounting ready; all three workflows active:**
+The full-analysis-012 helper retains one native-core execution per closed thread,
+joins actual public prompts and usage, and partitions initial author, author fix,
+review and integration costs without duplicate response IDs. Partial outcomes
+remain in the three-row roster with unknown tails and no claimed full effect.
+Eleven fail-first/local regressions, eighteen original audit regressions, all83
+counter guards and Cargo fmt/strict Clippy/all-target tests pass. No live science
+or fresh generation is part of this preparation. Commit40c3ec2 retains the
+qualified admission and initial-input checks and removes tracking of the six
+generated executables while preserving their files and hashes on disk.
 
 **2026-09-15T00:15:02+00:00 — three qualified modified workflows launched:**
 Manifest ee86651585f2f34224a33536e020790b167b7145e1657cca8b947bb037958fc9
@@ -17,7 +28,7 @@ Research remains 80/10/90; bug fixes 8/0/8. Source/repair evidence is committed
 in 8a1a3b7; no normal WL change or credential copy. Native totals during generation
 are resource telemetry, not final scientific effects.
 
-**2026-09-15T00:25:00+00:00 — metadata passes; full-stage audit preparation:**
+**2026-09-15T00:23:20+00:00 — metadata passes; full-stage audit preparation:**
 All three first native inputs match the saved base/developer objects and intended
 prompt, model, effort and permissions. INITIAL-INPUT-CHECKPOINT.json records
 this source/input gate, not a live effect analysis. Whole-stage audit preparation
