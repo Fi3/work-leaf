@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec env WORK_LEAF_DIRECT_BENCH_AGENT=codex \
+  "$repo_root/bench-three-features-direct-common" sequential "$@"

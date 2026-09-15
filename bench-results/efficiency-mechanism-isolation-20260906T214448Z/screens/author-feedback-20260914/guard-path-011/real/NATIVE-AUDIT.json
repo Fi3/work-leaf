@@ -1,0 +1,210 @@
+{
+  "schema": "author-inverse-native-audit-v1",
+  "scope": "one closed guard-path-011/real; unchanged audit_rollout called exactly once; reuse this result for later attribution",
+  "core_sha256": "dd5127f937ec1cc4d41a443ba7640fca93e82484f345ac8c56aeef5325d68153",
+  "global_distinct_responses": 2,
+  "runs": [
+    {
+      "arm": "guard-path-011/real",
+      "metadata": {
+        "arm": "guard-path-011/real",
+        "thread_id": "01a0a265-8a8f-7d12-b2c0-a0dc0bd171b7",
+        "model": "gpt-5.5",
+        "effort": "xhigh",
+        "cwd": "/tmp/wl-full-route-verify.cp2SON/repo",
+        "native_path": "/home/user/.codex/sessions/2026/09/15/rollout-2026-09-15T02-09-18-01a0a265-8a8f-7d12-b2c0-a0dc0bd171b7.jsonl",
+        "native_sha256": "5384dbfa9c59c232e48fc11a45829af2b9f85f0cb050cbd374cb1dc5ca5c0d91",
+        "public": [
+          {
+            "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/guard-path-011/real/host/invocation-0001/stdout.jsonl",
+            "sha256": "fb60b34e7b940f0b7403770297273d080165c1e5ec5791917b5e257362e77fae",
+            "prompt_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/guard-path-011/real/host/invocation-0001/prompt.txt"
+          },
+          {
+            "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/guard-path-011/real/host/invocation-0002/stdout.jsonl",
+            "sha256": "533d0aee4712add69d0d0328aee33ffe42ea3a2fb4c913cdf1ef727db08d450f",
+            "prompt_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/guard-path-011/real/host/invocation-0002/prompt.txt"
+          }
+        ]
+      },
+      "terminal": {
+        "admission_sha256": "f09d8bc34871c148909628f3b19108dedfc6aa5357dab02b4c90b4d96f8edc1e",
+        "condition": "observer-guard-namespace-qualification",
+        "duration_seconds": 14.997762979008257,
+        "finished_at": "2026-09-15T00:09:33.329847+00:00",
+        "id": "P09-guard011",
+        "launch_status": "completed",
+        "launcher_exit_code": 0,
+        "observer_condition": "diagnostic",
+        "run_id": "P09-guard011",
+        "schema": "work-leaf-single-diagnostic-terminal-v1",
+        "source_endpoint_errors": [],
+        "source_endpoints_match": true,
+        "started_at": "2026-09-15T00:09:18.332087+00:00",
+        "timestamp_scope": "supervised command, not provider turn"
+      },
+      "core_errors": [],
+      "join_errors": [],
+      "response_count": 2,
+      "duplicate_response_records": 0,
+      "native_usage": {
+        "input_tokens": 32038,
+        "cached_input_tokens": 20224,
+        "output_tokens": 300,
+        "reasoning_output_tokens": 275,
+        "raw_input_plus_output": 32338,
+        "uncached_input_plus_output": 12114
+      },
+      "records": {
+        "resp_043c6e460a7999c6016aa88cb11ef087d290ca1e95300ff8a0": {
+          "response_id": "resp_043c6e460a7999c6016aa88cb11ef087d290ca1e95300ff8a0",
+          "thread_id": "01a0a265-8a8f-7d12-b2c0-a0dc0bd171b7",
+          "turn_id": "01a0a265-8afa-71c2-8b97-46424a5b12b2",
+          "usage": {
+            "input_tokens": 15883,
+            "cached_input_tokens": 4480,
+            "output_tokens": 240,
+            "reasoning_output_tokens": 225
+          },
+          "line": 13
+        },
+        "resp_0c96ba0f815e6625016aa88cba4a9487d287bb4844630100a4": {
+          "response_id": "resp_0c96ba0f815e6625016aa88cba4a9487d287bb4844630100a4",
+          "thread_id": "01a0a265-8a8f-7d12-b2c0-a0dc0bd171b7",
+          "turn_id": "01a0a265-aeb9-7263-aa1e-cf2b5bbf33ee",
+          "usage": {
+            "input_tokens": 16155,
+            "cached_input_tokens": 15744,
+            "output_tokens": 60,
+            "reasoning_output_tokens": 50
+          },
+          "line": 25
+        }
+      },
+      "compaction_markers": [],
+      "session": [
+        {
+          "id": "01a0a265-8a8f-7d12-b2c0-a0dc0bd171b7",
+          "cwd": "/tmp/wl-full-route-verify.cp2SON/repo",
+          "cli_version": "0.153.4",
+          "model_provider": "openai"
+        }
+      ],
+      "contexts": [
+        {
+          "line": 6,
+          "turn_id": "01a0a265-8afa-71c2-8b97-46424a5b12b2",
+          "cwd": "/tmp/wl-full-route-verify.cp2SON/repo",
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          }
+        },
+        {
+          "line": 18,
+          "turn_id": "01a0a265-aeb9-7263-aa1e-cf2b5bbf33ee",
+          "cwd": "/tmp/wl-full-route-verify.cp2SON/repo",
+          "model": "gpt-5.5",
+          "effort": "xhigh",
+          "approval_policy": "never",
+          "sandbox_policy": {
+            "type": "read-only"
+          }
+        }
+      ],
+      "system_developer_items": [
+        {
+          "line": 3,
+          "role": "developer",
+          "bytes": 7817,
+          "sha256": "077f23d17df246409154a9190ab8d10ce56f12e90ec7ef682cce47ff2da2ffe7"
+        }
+      ],
+      "turns": [
+        {
+          "file": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/guard-path-011/real/host/invocation-0001/stdout.jsonl",
+          "prompt_file": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/guard-path-011/real/host/invocation-0001/prompt.txt",
+          "prompt_sha256": "2a69abc3ea78e975ad95da90f869943e4c00f96970016cbe5608c32ae2f7a9bb",
+          "exact_prompt_match": true,
+          "turn_id": "01a0a265-8afa-71c2-8b97-46424a5b12b2",
+          "start_line": 2,
+          "terminal": "task_complete",
+          "end_line": 15,
+          "prompt_hashes": [
+            "8537baa1bf6de5d8933e4f187376590fec80b4a86da0f583f3a43eafce20588b",
+            "0134f3e65ac09550f7adea08137b4e32638538cd4073066e2ccd076fc8b04e5f",
+            "c90aa17267aed5198644b758f297567a626dafd26bede46de7324bf3d32bd97f",
+            "2a69abc3ea78e975ad95da90f869943e4c00f96970016cbe5608c32ae2f7a9bb"
+          ],
+          "native_response_ids": [
+            "resp_043c6e460a7999c6016aa88cb11ef087d290ca1e95300ff8a0"
+          ],
+          "native_usage": {
+            "input_tokens": 15883,
+            "cached_input_tokens": 4480,
+            "output_tokens": 240,
+            "reasoning_output_tokens": 225,
+            "raw_input_plus_output": 16123,
+            "uncached_input_plus_output": 11643
+          },
+          "public_usage": {
+            "input_tokens": 15883,
+            "cached_input_tokens": 4480,
+            "output_tokens": 240,
+            "reasoning_output_tokens": 225,
+            "raw_input_plus_output": 16123,
+            "uncached_input_plus_output": 11643
+          },
+          "native_minus_public": {
+            "input_tokens": 0,
+            "cached_input_tokens": 0,
+            "output_tokens": 0,
+            "reasoning_output_tokens": 0
+          }
+        },
+        {
+          "file": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/guard-path-011/real/host/invocation-0002/stdout.jsonl",
+          "prompt_file": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/guard-path-011/real/host/invocation-0002/prompt.txt",
+          "prompt_sha256": "6c5a7548030215da5a834706a0d43b5d9cafc49159b896a254a9edd507540e78",
+          "exact_prompt_match": true,
+          "turn_id": "01a0a265-aeb9-7263-aa1e-cf2b5bbf33ee",
+          "start_line": 17,
+          "terminal": "task_complete",
+          "end_line": 27,
+          "prompt_hashes": [
+            "6c5a7548030215da5a834706a0d43b5d9cafc49159b896a254a9edd507540e78"
+          ],
+          "native_response_ids": [
+            "resp_0c96ba0f815e6625016aa88cba4a9487d287bb4844630100a4"
+          ],
+          "native_usage": {
+            "input_tokens": 16155,
+            "cached_input_tokens": 15744,
+            "output_tokens": 60,
+            "reasoning_output_tokens": 50,
+            "raw_input_plus_output": 16215,
+            "uncached_input_plus_output": 471
+          },
+          "public_usage": {
+            "input_tokens": 16155,
+            "cached_input_tokens": 15744,
+            "output_tokens": 60,
+            "reasoning_output_tokens": 50,
+            "raw_input_plus_output": 16215,
+            "uncached_input_plus_output": 471
+          },
+          "native_minus_public": {
+            "input_tokens": 0,
+            "cached_input_tokens": 0,
+            "output_tokens": 0,
+            "reasoning_output_tokens": 0
+          }
+        }
+      ],
+      "unfinished_turns": [],
+      "tail_limit": "Incomplete/aborted tasks have unknown in-flight or unreported charges; recorded zero is not actual zero."
+    }
+  ]
+}

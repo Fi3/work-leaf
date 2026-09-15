@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import full_workflow
+
+try:
+    full_workflow.provider_main()
+except (KeyError, ValueError, OSError) as error:
+    print(str(error), file=sys.stderr)
+    raise SystemExit(86)

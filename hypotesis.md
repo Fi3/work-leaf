@@ -1,9 +1,9 @@
 # DONE: 80 | TODO: 10 | TOTAL: 90
-## BUG FIXES — DONE: 7 | TODO: 0 | TOTAL: 7
+## BUG FIXES — DONE: 8 | TODO: 0 | TOTAL: 8
 
-**Pending checks: 10 research obligations remain. Current: P09's three modified full workflows are prepared and verified, awaiting the recorded generation admission. Its real wrapper/host-resume check passed. No benchmark is running.**
+**Pending checks: 10 research obligations remain. Current: P09's guard-path repair passes the actual full observer/host route. The first three startup failures remain retained; a separately recorded bounded continuation is in preparation. No benchmark is running.**
 **Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-14T23:54:00+00:00:** the real pipeline diagnostic passes in 28.24 seconds at 68,203 raw with exact source/input/usage and unchanged files. All 21 adapter tests and required Cargo gates pass. P09's exact three-row disarmed manifest verifies; its non-generating dry-run report is preserved separately. Complete net author/review/repair/integration measurement is next. Historical attribution remains unestablished.
+**Activity, 2026-09-15T00:12:00+00:00:** BUG008's real artifact-guard/full-setup/private-host check completes in 15 seconds at 32,338 raw, with identical directory identity, exact input/usage joins and no file changes. Its fail-first namespace test passes after a private path-only repair. The three pre-provider failures remain immutable; P09's continuation receives new identities and the same factor, reference, 90-minute/45M bounds. No historical attribution is claimed.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
@@ -119,12 +119,12 @@ Previously unaccounted bug fixes use their separate counter; they do not expand 
 
 ## Live priority — qualified author contrasts, then broader joints
 
-Last maintained: **2026-09-14 23:54 UTC**. [The qualified comparison](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/QUALIFIED-COMPARISON.md) preserves P04's complete joint signal and P03's inconclusive fragmentation before any GREEN. P03/P04/P05 close as three distinct bounded deliverables, not three proven causal factors. Earlier confounded attempts remain separate. P13 reuses the existing historical work-location result without claiming causal attribution. P09's stage/input and actual host-route qualification pass; its disarmed three-workflow batch verifies.
+Last maintained: **2026-09-15 00:14 UTC**. [The qualified comparison](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/QUALIFIED-COMPARISON.md) preserves P04's complete joint signal and P03's inconclusive fragmentation before any GREEN. P03/P04/P05 are bounded deliverables, not three proven factors. P09's initial three launch attempts fail before native generation. BUG008's path-only repair passes actual artifact-guard/observer/private-host verification; the separately frozen continuation retains those failures and all previous outcomes.
 The accepted historical gap and the user's no-quality-loss assumption remain premises.
 
 | Priority | Evidence and potential explanatory reach | Next cheap check / stop gate |
 | --- | --- | --- |
-| Strongest qualified actionable signal: A+B | P04 completes at 2,205,658 raw versus saved 1,227,282. Actual test-first/RED and post-GREEN extra validation/inspection are traced; post-GREEN difference is 693,895 of the 978,376 excess. | P09's complete-plugin-state gate and actual observer/profile/host/fix/direct route pass. Admit its three modified full workflows with 90-minute/45M per-run ceilings, then measure complete-stage offsets. Input006/007 stay failed, not erased. |
+| Strongest qualified actionable signal: A+B | P04 completes at 2,205,658 raw versus saved 1,227,282. Actual test-first/RED and post-GREEN extra validation/inspection are traced; post-GREEN difference is 693,895 of the 978,376 excess. | Complete P09's qualified guard-path continuation, with 90-minute/45M ceilings, then measure full-stage offsets. Original 001–003 startup failures and input006/007 failures remain separate. No automatic further repetition or author-only historical share. |
 | B-only discriminator: parked after valid bounded check | P03 ends at 3,088,197 raw with four matcher rejections and seven accepted source-only fragments, before any check/GREEN. Actual B-off feedback is exposed, but post-result stopping is not. | No repeat selected and no independent B percentage. Use the qualified complete joint package for the next existing confirmation task. |
 | Strongest retained broader joint: C08 × C25 | Both constituent directions have positive net evidence from incompatible targets; they cannot be added. The first H003 refresh file is recoverable. | P06's complete runtime/native-prefix restoration remains unresolved. Reuse the precise blocker while the actionable pair runs; no null or automatic coverage exclusion. |
 | Whole author/refresh/residual joints: P07/P08 | Existing single-condition policies, private RED preview, standalone final custody and saved DTOs do not supply the declared faithful connected package. Later review/repair/integration paths are exercised, not absent. | Source-backed blockers are saved in P07-BLOCKER.md/P08-BLOCKER.md. No coverage exclusion or null result; no hidden multi-experiment bucket. |
@@ -654,6 +654,8 @@ path that actually requires that absent activation, not every interaction of the
 - **Date/activity:** August and September7–8 tests; review **2026-09-12**. **Partly tested, inactive.** [Prior tests][prior-tests], [R][r-ledger], [C08][c08].
 
 ### J04 — Cohesion × test timing × ACK/completion × host editing
+
+- **2026-09-15 00:14 UTC — current selected work:** P04's qualified complete A+B author costs 2,205,658 raw versus saved 1,227,282; exact work-chain evidence is in [P05](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/QUALIFIED-COMPARISON.md). P03 B-only is a valid bounded inconclusive screen, parked. P09's first three full attempts fail before native generation; [BUG008](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/guard-path-011/BUG008-RESULT.md) repairs their namespace path only and passes actual-agent verification. [Qualified continuation](bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/PROTOCOL.md) preserves all prior outcomes. Full net/historical share remains unestablished; the older DONE entries below refer to their dated scopes.
 
 - **2026-09-14 21:14 UTC:** P03 B-only records 1,507,326 raw plus an unknown stopped tail; it reaches GREEN after a genuine repair but has no completed post-GREEN decision. P04 A+B records 2,028,364 plus an unknown tail; its initially input-qualified proposal publishes tests only, followed by real RED and rejected implementation work. [Exact work/cost chain](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/RESULT.md). Both later comparisons fail resumed-input qualification, so no net A/B share or P09 escalation follows. P03/P04/P05 remain unfinished.
 

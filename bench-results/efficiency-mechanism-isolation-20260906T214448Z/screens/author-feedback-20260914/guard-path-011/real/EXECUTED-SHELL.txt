@@ -1,0 +1,72 @@
+set -euo pipefail
+source /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/infrastructure/drivers/bench-candidate-common
+fail_bench() { printf "%s\n" "$*" >&2; exit 86; }
+setup_observer() {
+  [[ -x "$observer_bin" ]] \
+    || fail_bench "required benchmark observer is not executable: $observer_bin"
+  local real_sh real_cargo experiment_commit real_codex
+  real_sh="$(command -v sh 2>/dev/null || true)"
+  [[ -n "$real_sh" ]] || fail_bench "observer could not resolve sh from PATH"
+  real_cargo="$(command -v cargo 2>/dev/null || true)"
+  [[ -n "$real_cargo" ]] || fail_bench "observer could not resolve cargo from PATH"
+  real_codex="$bench_profiled_codex_bin"
+  experiment_commit="$(git -C "$repo_root" rev-parse HEAD 2>/dev/null || printf 'unknown')"
+  observer_root="$artifact_dir/observation"
+  mkdir -p "$observer_root"
+  local observer_identity
+  observer_identity="$(stat -Lc '%d:%i' -- "$observer_root")" || fail_bench "observer directory identity unavailable"
+  observer_root="$(cd -- "$observer_root" && pwd -P)" || fail_bench "observer canonical directory unavailable"
+  [[ "$(stat -Lc '%d:%i' -- "$observer_root")" == "$observer_identity" ]] || fail_bench "observer canonical directory identity differs"
+  "$observer_bin" init \
+    --root "$observer_root" \
+    --study-id "$observer_study_id" \
+    --pair-id "$observer_pair_id" \
+    --condition direct \
+    --run-id "$run_id" \
+    --real-codex "$real_codex" \
+    --real-sh "$real_sh" \
+    --real-cargo "$real_cargo" \
+    --base-commit "$base_commit" \
+    --experiment-commit "$experiment_commit" \
+    --model "$bench_model" \
+    --effort "$agent_reasoning_effort" \
+    --require-complete-provider-usage true >/dev/null \
+    || fail_bench "failed to initialize benchmark observer"
+  observer_config="$observer_root/observer-config.json"
+  observer_proxy_dir="$observer_root/proxy-bin"
+  observer_primary_marker="$(jq -er '.primary_invocation_marker' "$observer_config")" \
+    || fail_bench "observer configuration has no primary invocation marker"
+  export WORK_LEAF_OBSERVER_CONFIG="$observer_config"
+  export PATH="$observer_proxy_dir:$PATH"
+  export WORK_LEAF_BENCH_INPUT_NEXT="$observer_proxy_dir/codex"
+  agent_bin="${WORK_LEAF_BENCH_FULL_PROVIDER:?private input wrapper required}"
+  observer_enabled=1
+  observer_timeline condition-start "schedule=sequential"
+}
+observer_timeline() {
+  [[ "$observer_enabled" == "1" ]] || return 0
+  local event="$1"
+  local detail="${2:-}"
+  if ! "$observer_bin" timeline --config "$observer_config" --event "$event" --detail "$detail"; then
+    log "observer timeline capture failed for $event"
+  fi
+  return 0
+}
+observer_bin=/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-20260915/infrastructure/bin/bench-observer
+bench_profiled_codex_bin=/tmp/wl-full-route-verify.cp2SON/profile/codex
+repo_root=/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/infrastructure/driver-source
+observer_study_id=P09-guard011
+observer_pair_id=P09-guard011
+run_id=P09-guard011
+base_commit=c92a0b7060a36eac6db2d869b85e589a7a9480f9
+bench_model=gpt-5.5
+agent_reasoning_effort=xhigh
+observer_enabled=0
+bench_begin_artifact_transaction /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/guard-path-011/real guard-artifacts guard.md guard.tsv
+trap 'bench_close_artifact_transaction_guard keep' EXIT
+artifact_dir="$bench_artifact_transaction_stage_fd_path"
+setup_observer
+printf "GUARD=%s\nCANONICAL_OBSERVER=%s\n" "$artifact_dir" "$observer_root"
+export WORK_LEAF_OBSERVER_PRIMARY_MARKER="$observer_primary_marker"
+export WORK_LEAF_OBSERVER_ROLE=sequential-feature-1-implement
+/usr/bin/python3 /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-workflow-009/host_custody.py --repo /tmp/wl-full-route-verify.cp2SON/repo --artifact-dir /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/guard-path-011/real/host --feature diagnostic --stage sequential-feature-1-implement --prompt-file /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/guard-path-011/real/PROMPT.txt --codex-bin /home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-workflow-009/input_provider --serialized-feedback --model gpt-5.5 --deadline 1058455.55101816

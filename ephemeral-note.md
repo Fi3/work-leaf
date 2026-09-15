@@ -3,9 +3,30 @@
 Live analysis counter: **DONE: 80 | TODO: 10 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
-**Bug-fix counter: DONE: 7 | TODO: 0 | TOTAL: 7.** BUG007 passes fail-first/local checks and actual same-thread feedback-delivery verification. Original failed-host outcome and first response remain intact; the scientific observation is closed and inconclusive.
-**Current activity, 2026-09-14T23:54:00+00:00:** P09's full-route diagnostic passes at 68,203 raw; all 21 local tests and required Cargo checks pass. The three modified full workflows are prepared under a verified disarmed manifest; no benchmark is running. P13's historical-reach checkpoint is descriptive, not causal attribution.
+**Bug-fix counter: DONE: 8 | TODO: 0 | TOTAL: 8.** BUG008 passes fail-first namespace tests and actual full guard/observer/host verification. All three failed attempts remain intact.
+**Current activity, 2026-09-15T00:12:00+00:00:** the guard-path repair completes its actual verification at 32,338 raw/15 seconds with unchanged inputs, complete usage and no edits. A separately frozen P09 continuation is being prepared; no benchmark is running. The original three pre-provider failures retain their identities and outcomes.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-15T00:12:00+00:00 — BUG008 verified; bounded continuation prepared:**
+The actual original artifact guard and complete setup_observer function traverse
+the private namespace using the same directory's canonical path. Real host git
+status, exact feedback and same-thread DONE finish in 14.997763 seconds with two
+responses/turns and 32,338 raw. Once-only native/public/input audit has no errors
+or tails; no files changed. The earlier normal-path smoke did not test the guard.
+The repair is outside all admitted original sources. Its three local tests and
+the prior 21 adapter tests pass; required Cargo gates pass. New P09 identities
+004–006 will preserve 001–003 as pre-provider failures, with no extra control or
+scientific factor. Admission is separate and prospective under the current
+in-scope repair/continuation authority, not an erased failed batch.
+
+**2026-09-15T00:04:00+00:00 — full batch retained as pre-provider startup failure:**
+Three admitted outcomes, not three missing/discarded observations. Manifest
+928ed0c156c4fe7714f129233c1f0fb681fb0f2ff5ace0ac0a774cf8934a815a
+and all 183 source entries retain their endpoint identity. The wrapper records
+its outer receipt, enters the private namespace, then rejects the original
+observer route through the artifact guard's proc fd. The observer and model
+never start. BUG008 has its separate discovery/counter and twenty-minute local
+bound. No root research count changes and no scientific conclusion follows.
 
 **2026-09-14T23:54:00+00:00 — real route passes; exact three-workflow manifest verifies:**
 The actual four-turn pipeline verifies real command feedback, same-author stage

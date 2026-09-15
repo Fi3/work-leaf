@@ -1,0 +1,49 @@
+{
+  "checked_at": "2026-09-14T23:50:00+00:00",
+  "tests": {
+    "chunk_id": "21304d",
+    "wall_time_seconds": 0.008009589,
+    "exit_code": 0,
+    "original_token_count": 334,
+    "output": "...{\"at\": \"2026-09-14T23:48:30.837386+00:00\", \"run_id\": \"sample\", \"resource\": {\"native_recorded_raw\": 45000001, \"public_completed_raw\": 2, \"distinct_responses\": 1, \"stop_threshold_reached\": true}, \"signalled_pid\": 321, \"signal\": \"SIGINT\", \"scope\": \"live alternate resource representations, never added together\"}\n{\"at\": \"2026-09-14T23:48:30.837576+00:00\", \"run_id\": \"sample\", \"resource\": {\"native_recorded_raw\": 45000001, \"public_completed_raw\": 2, \"distinct_responses\": 1, \"stop_threshold_reached\": true}, \"signalled_pid\": null, \"signal\": null, \"scope\": \"live alternate resource representations, never added together\"}\n{\"at\": \"2026-09-14T23:48:30.837692+00:00\", \"run_id\": \"sample\", \"resource\": {\"native_recorded_raw\": 45000001, \"public_completed_raw\": 2, \"distinct_responses\": 1, \"stop_threshold_reached\": true}, \"signalled_pid\": 321, \"signal\": \"SIGKILL\", \"scope\": \"live alternate resource representations, never added together\"}\n................{\"at\": \"2026-09-14T23:48:30.879630+00:00\", \"run_id\": \"owned\", \"resource\": {\"native_recorded_raw\": 45000000, \"public_completed_raw\": 0, \"stop_threshold_reached\": true}, \"signalled_pid\": 626146, \"signal\": \"SIGINT\", \"scope\": \"live alternate resource representations, never added together\"}\n..\n----------------------------------------------------------------------\nRan 21 tests in 0.083s\n\nOK\n"
+  },
+  "red": {
+    "routing": {
+      "chunk_id": "f4daab",
+      "wall_time_seconds": 0.000008311,
+      "exit_code": 1,
+      "original_token_count": 77,
+      "output": "Traceback (most recent call last):\n  File \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-workflow-009/test_full_workflow.py\", line 8, in <module>\n    import full_workflow as f\nModuleNotFoundError: No module named 'full_workflow'\n"
+    },
+    "batch": {
+      "chunk_id": "d2f514",
+      "wall_time_seconds": 0.000010686,
+      "exit_code": 1,
+      "original_token_count": 77,
+      "output": "Traceback (most recent call last):\n  File \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-workflow-009/test_batch_adapter.py\", line 4, in <module>\n    import batch_adapter as b\nModuleNotFoundError: No module named 'batch_adapter'\n"
+    },
+    "monitor_and_fallback": {
+      "chunk_id": "e4dd83",
+      "wall_time_seconds": 0.016201881,
+      "exit_code": 1,
+      "original_token_count": 503,
+      "output": "Traceback (most recent call last):\n  File \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-workflow-009/test_full_monitor.py\", line 6, in <module>\n    import full_monitor as m\nModuleNotFoundError: No module named 'full_monitor'\n........E....\n======================================================================\nERROR: test_published_plan_allows_every_later_review_round (__main__.FullWorkflowTests.test_published_plan_allows_every_later_review_round)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-workflow-009/test_full_workflow.py\", line 120, in test_published_plan_allows_every_later_review_round\n    self.choose(f'sequential-feature-2-review-{number}', 1, True)\n    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-workflow-009/test_full_workflow.py\", line 28, in choose\n    return f.select(self.plan, stage, ordinal, argv, env)\n           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-workflow-009/full_workflow.py\", line 82, in select\n    require(len(matches) == 1, \"unknown or ambiguous fallback stage\")\n    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-workflow-009/full_workflow.py\", line 22, in require\n    raise ValueError(message)\nValueError: unknown or ambiguous fallback stage\n\n----------------------------------------------------------------------\nRan 13 tests in 0.034s\n\nFAILED (errors=1)\n"
+    },
+    "real_route_driver": {
+      "chunk_id": "ef4770",
+      "wall_time_seconds": 0.000009498,
+      "exit_code": 1,
+      "original_token_count": 77,
+      "output": "Traceback (most recent call last):\n  File \"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-workflow-009/test_verify_routes.py\", line 3, in <module>\n    import verify_routes as v\nModuleNotFoundError: No module named 'verify_routes'\n"
+    }
+  },
+  "cargo": {
+    "fmt": "pass",
+    "clippy": "cargo clippy --all-targets --all-features -- -D warnings: pass",
+    "tests": "cargo test --all-targets --all-features: pass",
+    "invocation_at": "2026-09-14T23:41:15+00:00",
+    "exit": 0
+  },
+  "real_route": "../full-route-010/RESULT.md",
+  "limits": "No normal WL/public API change. Real diagnostic verifies routing/host result/resume, not a scientific token effect. Whole-file resource rescans have cumulative product cost."
+}

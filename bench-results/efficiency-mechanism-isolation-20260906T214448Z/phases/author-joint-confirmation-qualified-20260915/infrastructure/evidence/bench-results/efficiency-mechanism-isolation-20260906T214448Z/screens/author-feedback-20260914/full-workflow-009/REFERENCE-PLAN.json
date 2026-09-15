@@ -1,0 +1,197 @@
+{
+  "schema": 1,
+  "tail": "hold_last",
+  "stages": {
+    "sequential-feature-1-implement": {
+      "first": "fresh",
+      "kind": "host",
+      "states": [
+        "full",
+        "full",
+        "full",
+        "full",
+        "short"
+      ]
+    },
+    "sequential-feature-1-fix-1": {
+      "first": "resume",
+      "kind": "host",
+      "states": [
+        "full",
+        "full",
+        "short",
+        "short",
+        "short"
+      ]
+    },
+    "sequential-feature-1-review-1": {
+      "first": "fresh",
+      "kind": "direct",
+      "states": [
+        "short"
+      ]
+    },
+    "sequential-feature-1-review-2": {
+      "first": "resume",
+      "kind": "direct",
+      "states": [
+        "short"
+      ]
+    },
+    "sequential-feature-2-implement": {
+      "first": "fresh",
+      "kind": "host",
+      "states": [
+        "full",
+        "full",
+        "short"
+      ]
+    },
+    "sequential-feature-2-review-1": {
+      "first": "fresh",
+      "kind": "direct",
+      "states": [
+        "short"
+      ]
+    },
+    "sequential-feature-3-implement": {
+      "first": "fresh",
+      "kind": "host",
+      "states": [
+        "short",
+        "full",
+        "short",
+        "full",
+        "off"
+      ]
+    },
+    "sequential-feature-3-fix-1": {
+      "first": "resume",
+      "kind": "host",
+      "states": [
+        "short",
+        "short",
+        "short",
+        "short",
+        "short",
+        "short"
+      ]
+    },
+    "sequential-feature-3-review-1": {
+      "first": "fresh",
+      "kind": "direct",
+      "states": [
+        "short"
+      ]
+    },
+    "sequential-feature-3-review-2": {
+      "first": "resume",
+      "kind": "direct",
+      "states": [
+        "short"
+      ]
+    },
+    "linearize-plan": {
+      "first": "fresh",
+      "kind": "direct",
+      "states": [
+        "short"
+      ]
+    },
+    "linearize-accept": {
+      "first": "resume",
+      "kind": "direct",
+      "states": [
+        "short"
+      ]
+    }
+  },
+  "fallbacks": [
+    {
+      "pattern": "sequential-feature-[1-3]-fix-[1-9][0-9]*",
+      "first": "resume",
+      "kind": "host",
+      "states": [
+        "short"
+      ]
+    },
+    {
+      "pattern": "sequential-feature-[1-3]-review-(?:[2-9]|[1-9][0-9]+)",
+      "first": "resume",
+      "kind": "direct",
+      "states": [
+        "short"
+      ]
+    }
+  ],
+  "profiles": {
+    "full": {
+      "catalog_sha256": "228d836a605a60f7cbf7543f6ffa3581308dd967f88354261e0775f0429a105d",
+      "view": {
+        "uid": 1000,
+        "mounts": [
+          [
+            "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache",
+            "/home/user/.codex/plugins/cache"
+          ],
+          [
+            "/tmp/work-leaf-p01-cache-view.Xc6Oc6/config.toml",
+            "/home/user/.codex/config.toml"
+          ]
+        ]
+      }
+    },
+    "short": {
+      "catalog_sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0",
+      "view": {
+        "uid": 1000,
+        "mounts": [
+          [
+            "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache",
+            "/home/user/.codex/plugins/cache"
+          ],
+          [
+            "/tmp/work-leaf-p01-cache-view.Xc6Oc6/config-short-keep-plugins.toml",
+            "/home/user/.codex/config.toml"
+          ]
+        ]
+      }
+    },
+    "off": {
+      "catalog_sha256": "fe0cecd589d4f83d6312c95940166410a16b71a6ad0b6fc1bd44feaa3c2f7bc0",
+      "view": {
+        "uid": 1000,
+        "mounts": [
+          [
+            "/tmp/work-leaf-p01-cache-view.Xc6Oc6/cache",
+            "/home/user/.codex/plugins/cache"
+          ],
+          [
+            "/tmp/work-leaf-p01-cache-view.Xc6Oc6/config-short-no-plugins.toml",
+            "/home/user/.codex/config.toml"
+          ]
+        ]
+      }
+    }
+  },
+  "sources": {
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P01/private_catalog.py": "a06cb222718aa85b3fd8bc2ff740e2062e35b4345d294930e40120fe79b46c54",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P02/catalog_dispatch.py": "7598c58935869e8781c73a8b80b0d7d2e0bd92d2fdb0e41339fb9d96fe30a50c",
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/resume-input-003/catalog_schedule.py": "ca5421aa1833c50669c517d62bb002f8ed2f4df282480f29926075a61aa789da",
+    "/tmp/work-leaf-p01-cache-view.Xc6Oc6/config.toml": "156029126354d651f1e855a987456c630ee21b5a203f243ca18a6cba3ffdbd82",
+    "/tmp/work-leaf-p01-cache-view.Xc6Oc6/config-resume-short.toml": "9f56709b191ac99412961435fc18558d1dc364e3ef6ca20d55e214b747a463c6",
+    "/tmp/work-leaf-p01-cache-view.Xc6Oc6/config-short-keep-plugins.toml": "7e8fef831e32623c3b7f58873f3577b6b993278280075023299d84a9b4f8a38a",
+    "/tmp/work-leaf-p01-cache-view.Xc6Oc6/config-short-no-plugins.toml": "d875f2c8022e01d69230dc6121e9181ebeee669623fbdfb7350c6c5950210afc"
+  },
+  "reference_evidence": {
+    "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P09-REFERENCE-INPUT-SCHEDULE.json": "eb47c1991f53d29440445bba934fa142df5368f233aeddf943e7b9b573f5bc44",
+    "/home/user/.codex/sessions/2026/09/13/rollout-2026-09-13T01-27-10-01a097f2-3f03-7463-9756-4e849ed94e8d.jsonl": "05fd2b462a67e5ec9fdb0cce9a538c3b91e55744db78059aad5b80c95c8d0da4",
+    "/home/user/.codex/sessions/2026/09/13/rollout-2026-09-13T01-40-50-01a097fe-c340-7932-8543-cb15c17f3f1e.jsonl": "54cfa7c64ba5d00f2305e6a3b8e2ee6bd4c6c9208434adea0d95df77c23144e2",
+    "/home/user/.codex/sessions/2026/09/13/rollout-2026-09-13T01-50-08-01a09807-474d-7f63-ad03-0e4a3f67a4c7.jsonl": "5b13fa6447457ec22ecc20c727585ef4f5b0a288b5f252183f076e7247a13bd9",
+    "/home/user/.codex/sessions/2026/09/13/rollout-2026-09-13T01-54-09-01a0980a-f30c-71c0-8e9c-e282b5504a43.jsonl": "c24722295df24ac932d7b60005bec5c95220d04161af19e0d848f34cb138ee07",
+    "/home/user/.codex/sessions/2026/09/13/rollout-2026-09-13T01-56-30-01a0980d-1a9d-7020-9622-533e574de4d8.jsonl": "5108bb12862fe54663505b4d1e1309f7f79589c83ce2f9c77c0d0269dfd3a8be",
+    "/home/user/.codex/sessions/2026/09/13/rollout-2026-09-13T02-07-15-01a09816-f189-7771-a3eb-db8707b12dfa.jsonl": "62b4eae263e748b1918d14e06904f8fa50defb17f18ca2c08c9a2cacd61b0da3",
+    "/home/user/.codex/sessions/2026/09/13/rollout-2026-09-13T02-14-08-01a0981d-3fe0-7943-b455-85f40fe486d0.jsonl": "f58b2cc50b94750ae86a8e6d8e8efaaad00ffeec5956ba1f0a41e82b066bb4e4"
+  },
+  "scope": "P09 A+B inverse; exact retained stage-local state schedules; explicit held tails and further-round short states are extrapolations, not saved decisions."
+}
