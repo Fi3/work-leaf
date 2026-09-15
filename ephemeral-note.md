@@ -4,8 +4,62 @@ Live analysis counter: **DONE: 80 | TODO: 10 | TOTAL: 90** — [hypotesis.md](hy
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
 **Bug-fix counter: DONE: 9 | TODO: 1 | TOTAL: 10.** BUG009's integration-input boundary remains open; BUG010's archive-ordering error has a fail-first regression and verified cached-only correction. Earlier fixes and all failed attempts remain intact.
-**Current activity, 2026-09-15T01:56:24+00:00:** saved prefix analysis is complete as a partial deliverable; the required full net remains unavailable. One BUG009 actual integration-profile diagnostic is admitted (two turns/60s total/100k completed-public tripwire). No full workflow or replacement is admitted. Main counter remains80/10/90; bugs9/1/10.
+**Current activity, 2026-09-15T02:25:20+00:00:** all permission probes are terminal. Exact-input repair still fails; that flag/config approach is parked. Only004's original pre-integration head is available through retained bundles, not005/006. Existing joint P06 (compact refresh × continuation timing) is promoted for runtime/input/exposure qualification; no model generation is running or newly admitted. Counters remain80/10/90 and9/1/10.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-15T02:25:20+00:00 — failed setup approaches parked; broader joint promoted:**
+Real-003 used47,605 raw in13.49s, with exact accounting and215 matching pins.
+It preserves effective full-access permissions but repeats the unexpected
+developer message. All three small probes total142,977 raw; no fourth flag
+guess or full replacement follows. The saved-bundle check finds004's original
+pre-integration commit but not005/006, so a clean three-run integration-only
+continuation is not ready. Both results are saved with exact commands/evidence.
+The next existing question is P06's refresh × continuation joint. Preparation
+will reuse retained runtime/observer machinery, qualify actual WL app-server
+inputs, and select representative exposure before any generation admission.
+This is reprioritization of known work, not a new cause or counter extension.
+
+**2026-09-15T02:15:53+00:00 — last configuration discriminator admitted:**
+Admission 012429fc08ae50772eff45627e30c0c077c496ebb1e55865d370a42a902c4e51
+pins 215 inputs for real-003. One fresh command-bearing turn plus one resume,
+same prompts/tree/provider/CLI/catalog and actual full-access target profile.
+Four local tests, 83 guards and required Cargo gates pass. This tests explicit
+same-value configuration on both turns, not permission-flag omission. Its failed
+qualification gate parks further flag/config guesses. In parallel, a ten-minute
+local saved-Git-object check tests whether valid earlier stages can be retained
+for any future integration work; it admits no model generation or full repeat.
+
+**2026-09-15T02:11:26+00:00 — inheritance repair rejected, not extended:**
+Real-002 closed at 02:04:43.167567 UTC. Its once-only native audit joins both
+completed turns and all three responses exactly: 47,780 raw, no tail or audit
+error. All 213 pins and repository state match. The resumed context is read-only,
+and a new permission developer message appears; omission does not inherit the
+fresh full-access profile. The failed repair remains separate from real-001's
+47,592-raw reproduction. No full benchmark or native audit repeats. A distinct
+configuration-layer setup hypothesis is being checked locally; no third probe
+is admitted. Research continues inside the existing obligations.
+
+**2026-09-15T02:03:50+00:00 — prospective inheritance discriminator:**
+Admission5a1e1c014f18c456b34571210fad01c954fef4fa3382ccddf4bc70c44e3ed719
+admits one fresh two-turn diagnostic, not another feature workflow. Only resumed
+--sandbox/--ask-for-approval overrides are omitted; all fresh inputs and prompts
+stay identical.213pins,60s total provider wall,2turns maximum and100k completed-
+public tripwire. The fail-first argument test, two prior scenario tests,83guards
+and required Cargo gates pass. A changed actual permission profile, approval
+policy or extra developer input rejects the repair. No retries or old-history
+edits. The scientific checklist and BUG009's open state are unchanged.
+
+**2026-09-15T02:01:00+00:00 — cheap reproduction, not a full rerun:**
+P09-permission013 closes01:57:53.786961 after15.191192s. One git-status command
+and the same-thread marker resume complete; all211pins and repository state
+match. Native/public audit is exact:3responses,2turns,47,592raw, no tails.
+The second developer message repeats the same permissions instruction absent
+from the reference; approved-prefix state again changes16→0. BUG009 remains
+open, with a small reproducible failing fixture. Next: a locally tested resume
+permission-inheritance variant; actual disabled/never permissions and complete
+input equality must qualify before any use. No full replacement is selected.
+Commit4ac8657 preserves the source/input/accounting and nine-author work-chain
+evidence, including original false population flags and corrected supplements.
 
 **2026-09-15T01:56:24+00:00 — replicated upstream sequence; tiny setup discriminator admitted:**
 All nine modified initial authors first publish tests and execute failure before

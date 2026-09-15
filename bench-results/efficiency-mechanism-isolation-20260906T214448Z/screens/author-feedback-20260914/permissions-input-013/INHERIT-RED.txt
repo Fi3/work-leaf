@@ -1,0 +1,5 @@
+Before inherit_probe.py implementation:
+python3 test_inherit_probe.py -> exit1; one test fails.
+AssertionError: '--sandbox' unexpectedly found in the resumed argv.
+The test requires unchanged fresh arguments and omission only of redundant
+permission overrides on resume, retaining exact model/thread/prompt routing.
