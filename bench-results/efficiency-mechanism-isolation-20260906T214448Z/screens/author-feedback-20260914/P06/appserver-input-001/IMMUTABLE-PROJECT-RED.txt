@@ -1,0 +1,79 @@
+FEEEEEEE
+======================================================================
+ERROR: test_unadmitted_v1_argument_shape_remains_unchanged (test_immutable_project.ImmutableProjectTests.test_unadmitted_v1_argument_shape_remains_unchanged)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P06/appserver-input-001/test_immutable_project.py", line 29, in test_unadmitted_v1_argument_shape_remains_unchanged
+    self.assertEqual(route.provider_argv(
+                     ^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'appserver_provider' has no attribute 'provider_argv'
+
+======================================================================
+ERROR: test_v2_project_table_preserves_profile_and_stdio_arguments (test_immutable_project.ImmutableProjectTests.test_v2_project_table_preserves_profile_and_stdio_arguments)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P06/appserver-input-001/test_immutable_project.py", line 18, in test_v2_project_table_preserves_profile_and_stdio_arguments
+    self.assertEqual(route.provider_argv(plan, argv), ['-c', expected, *argv])
+                     ^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'appserver_provider' has no attribute 'provider_argv'
+
+======================================================================
+ERROR: test_v2_rejects_missing_relative_or_broad_project (test_immutable_project.ImmutableProjectTests.test_v2_rejects_missing_relative_or_broad_project) (cwd=None)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P06/appserver-input-001/test_immutable_project.py", line 24, in test_v2_rejects_missing_relative_or_broad_project
+    route.provider_argv({'schema': 'work-leaf-p06-appserver-input-v2',
+    ^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'appserver_provider' has no attribute 'provider_argv'
+
+======================================================================
+ERROR: test_v2_rejects_missing_relative_or_broad_project (test_immutable_project.ImmutableProjectTests.test_v2_rejects_missing_relative_or_broad_project) (cwd='')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P06/appserver-input-001/test_immutable_project.py", line 24, in test_v2_rejects_missing_relative_or_broad_project
+    route.provider_argv({'schema': 'work-leaf-p06-appserver-input-v2',
+    ^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'appserver_provider' has no attribute 'provider_argv'
+
+======================================================================
+ERROR: test_v2_rejects_missing_relative_or_broad_project (test_immutable_project.ImmutableProjectTests.test_v2_rejects_missing_relative_or_broad_project) (cwd='relative')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P06/appserver-input-001/test_immutable_project.py", line 24, in test_v2_rejects_missing_relative_or_broad_project
+    route.provider_argv({'schema': 'work-leaf-p06-appserver-input-v2',
+    ^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'appserver_provider' has no attribute 'provider_argv'
+
+======================================================================
+ERROR: test_v2_rejects_missing_relative_or_broad_project (test_immutable_project.ImmutableProjectTests.test_v2_rejects_missing_relative_or_broad_project) (cwd='/')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P06/appserver-input-001/test_immutable_project.py", line 24, in test_v2_rejects_missing_relative_or_broad_project
+    route.provider_argv({'schema': 'work-leaf-p06-appserver-input-v2',
+    ^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'appserver_provider' has no attribute 'provider_argv'
+
+======================================================================
+ERROR: test_v2_rejects_missing_relative_or_broad_project (test_immutable_project.ImmutableProjectTests.test_v2_rejects_missing_relative_or_broad_project) (cwd='/tmp/../project')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P06/appserver-input-001/test_immutable_project.py", line 24, in test_v2_rejects_missing_relative_or_broad_project
+    route.provider_argv({'schema': 'work-leaf-p06-appserver-input-v2',
+    ^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'appserver_provider' has no attribute 'provider_argv'
+
+======================================================================
+FAIL: test_catalog_entry_uses_the_qualified_read_only_remount (test_immutable_project.ImmutableProjectTests.test_catalog_entry_uses_the_qualified_read_only_remount)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P06/appserver-input-001/test_immutable_project.py", line 33, in test_catalog_entry_uses_the_qualified_read_only_remount
+    self.assertIn('private catalog read-only remount failed',
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                  route.qualified.enter_view.__code__.co_consts)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'private catalog read-only remount failed' not found in ('/proc/self/ns/mnt', 'WORK_LEAF_P01_PARENT_MNT', 'catalog mounts require a distinct private mount namespace', None, True, ('use_errno',), 'mounts', 4096, 'private catalog mount failed', 'uid', 'preserve the original user identity', 'cannot clear ambient capabilities', 537396514, 'cannot drop preparation capabilities')
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.002s
+
+FAILED (failures=1, errors=7)

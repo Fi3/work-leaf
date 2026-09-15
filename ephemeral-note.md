@@ -4,8 +4,81 @@ Live analysis counter: **DONE: 82 | TODO: 8 | TOTAL: 90** — [hypotesis.md](hyp
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
 **Bug-fix counter: DONE: 11 | TODO: 0 | TOTAL: 11.** BUG011's actual immutable input boundary qualifies. All earlier fixes and failed attempts remain intact.
-**Current activity, 2026-09-15T04:48:00+00:00:** P09/P11's source-connected recorded-stage comparison is complete, with failures preserved: mean24.297M versus18.545M, net+5.752M after integration offsets. Research82/8/90; bugs11/0/11. Next is local eligibility of a retained author prefix for the known C08 × C25 joint; no generation is admitted.
+**Current activity, 2026-09-15T06:02:14+00:00:** P06's single native fork and hydration retain the saved first-read prefix through an immutable parent reference, zero model turns and unchanged original source. Actual resumed input, WL attachment, later review input and exposure remain unqualified. The previous32,587-raw failure remains. No causal benchmark is admitted or running. Research82/8/90; bugs11/0/11.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-15T06:02:14+00:00 — native prefix capability, not a causal result:**
+The before-first-turn shortcut is rejected by source order without a fork: its
+automatic messages occur inside that first turn. A separately frozen single
+before-second-turn fork completes in0.743036 seconds. The original first output
+only requests files; source remains the original task base. New thread
+01a0a3a5-8211-70e3-94db-9dc348dd74e2 stores its parent through ordinal17/byte113034,
+so a physical-file comparison alone reports no copied responses. A subsequent
+native thread/turns/list read resolves that parent and returns the exact original
+read request and no later turn. Both checks are saved; zero model responses and
+no native-core execution. Original hash unchanged. Explicit history injection
+is not selected: the client's schema reserves it for Codex Cloud. No ordinary
+WL, historical controller or old admission is modified.
+
+**2026-09-15T05:46:00+00:00 — metadata attempt closed; native-prefix check selected:**
+Native plugin/installed and plugin/list omit deep-research-work although its old
+package remains on disk. Plugin-management is active; the current remote catalog
+has3862 entries and both changed recommended plugins remain available/uninstalled.
+No local original-menu source or faithful combined registration repair qualifies.
+The long skills-list tool output is partly truncated; only its complete preceding
+plugin summaries are parsed as a full result. No install/reconcile/account reset.
+The pinned client's own schema provides beforeTurnId on native thread/fork. One
+zero-model fork at the original first-task boundary is selected to check whether
+the old automatic prefix can survive without restoring a running WL controller.
+R06's previous native inverse remains weak/confounded, not renamed or repeated.
+Root required tests hit/tmp tmpfs capacity; the test cleans its own failed clone.
+The same required checks pass with disk-backed test scratch; no source/benchmark
+artifact is deleted and no code fix is claimed for that resource failure.
+
+
+**2026-09-15T05:29:01+00:00 — tiny input probe closed; exact differences identified:**
+Two turns/two responses finish05:25:27.691799 in7.755749 seconds,32,587 raw.
+The unchanged core executes once for new thread01a0a386-e041-7270-a47c-7a9e0177f6b7;
+public/native identity and every usage field agree, with no tail or duplicates.
+All45 pins and the checkout remain unchanged. Full base object and first7042-byte
+developer text match. Later skill text omits deep-research0.1.15,311 bytes; the
+first recommended menu substitutes Google Drive for Atlassian Rovo. No other
+first-user line differs after cwd/date normalization. This is failed full-input
+qualification, not a causal null. The private fixed-review/C08 patch is retained
+underP06/fixed-review-composite-001; ordinary WL is untouched. No automatic retry.
+
+
+**2026-09-15T05:24:41+00:00 — tiny original-loader input diagnostic admitted:**
+The private C08×fixed-review composition uses only existing renderers on exact
+retained sourcee497ff5d. New guards cover opt-in/condition rejection, actual
+activation, exact owned-span replacement and reused evidence rejection. The
+initial new fixture omitted its required review directory; that failed test is
+retained, then its corrected fixture and full required Cargo checks pass. A
+later repeated suite hits an existing CLI context-bundle timing failure; its
+isolated rerun passes. No original committed test is modified.
+All six C21 first authors have the short7042-byte developer input; later authors
+have7817 bytes. The original global loader already has the exact0.1.15/0.1.0
+public versions, so no synchronous local registration is needed for this probe.
+Read-only same-path mounts leave the global files unchanged. Configuration and
+account/capacity readback passes with zero model turns,330 preserved trust entries,
+GPT5.5/xhigh/ChatGPT and66% of the weekly allowance used. No reset or API credit.
+Admission0de8eda4de4e883bce5e4b297029723e97768a2271a91a2f77ac3dd83b51399c
+pins45 sources for one two-turn diagnostic; it is not a benchmark or a joint
+effect observation. Full actual input/accounting qualification follows closure.
+
+
+**2026-09-15T05:10:00+00:00 — fixed-review joint eligibility, no generation:**
+The bounded later-reference lookup finds available0.1.15 inputs, but every changed
+refresh in both saved C21 cohorts occurs after first reviewer launch. The first
+exploratory role query is retained as invalid; the corrected header-based query
+identifies all three authors/reviewers per row. A thirty-minute local scope tests
+the distinct existing-seam route: keep C21 review fixed on both sides while
+changing only C08 refresh and C25 waiting. The app-server adapter's four new
+fail-first tests expose missing exact-project/immutable handling; all eight old
+and new tests then pass. These are propagated existing repairs, not new bug tasks
+or proof of an actual agent input boundary. The exact C08 build source is located
+in its retained build attestation. No live model process, benchmark or new control.
+
 
 **2026-09-15T04:44:29+00:00 — P09/P11 complete; main counter82/8/90:**
 The three connected recorded-model totals are27,049,174 /23,754,840 /22,087,428;

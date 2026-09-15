@@ -1,0 +1,77 @@
+{
+  "command": "python3 - <<'PY'\nimport json,os,pathlib,subprocess,sys,threading,time,hashlib\np=pathlib.Path(\"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P06/appserver-input-001\");repo=\"/tmp/wl-p06-fixed-review.uv1pRr/input-repo\"\nsys.path.insert(0,str(p));import wl_input_probe as w\nprobe=w.WlProbe(str(p/'appserver_provider.py'),repo);probe.deadline=time.monotonic()+15;base=w.previous.base\nraw=(p/'ORIGINAL-LOADER-PLAN.json').read_bytes();env=base.child_environment(os.environ);env.update({'WORK_LEAF_BENCH_P06_INPUT':'1','WORK_LEAF_BENCH_CODEX_ACTIVE':'1','WORK_LEAF_BENCH_P06_INPUT_PLAN':str(p/'ORIGINAL-LOADER-PLAN.json'),'WORK_LEAF_BENCH_P06_INPUT_PLAN_SHA256':hashlib.sha256(raw).hexdigest(),'WORK_LEAF_BENCH_P06_INPUT_RECEIPT':str(p/'READ-PREFIX-HYDRATION-RECEIPT.json')})\nresult={'scope':'native plugin/skill metadata only, no thread or model turn'}\ntry:\n probe.process=subprocess.Popen(probe.command,cwd=repo,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)\n for reader in (probe.read_stdout,probe.read_stderr):\n  t=threading.Thread(target=reader,daemon=True);t.start();probe.readers.append(t)\n probe.request('init','initialize',{});probe.send({'method':'initialized'})\n response=probe.request(\"read\",\"thread/turns/list\",{\"threadId\":\"01a0a3a5-8211-70e3-94db-9dc348dd74e2\",\"itemsView\":\"full\",\"limit\":2,\"sortDirection\":\"asc\"})\n result[\"hydration\"]={\"keys\":list(response),\"nextCursor\":response.get(\"nextCursor\"),\"turns\":[]}\n for turn in response.get(\"data\",[]):\n  record={k:v for k,v in turn.items() if k!=\"items\"}\n  record[\"items\"]=[]\n  for item in turn.get(\"items\",[]):\n   text=item.get(\"text\")\n   record[\"items\"].append({\"id\":item.get(\"id\"),\"type\":item.get(\"type\"),\"text_sha256\":hashlib.sha256(text.encode()).hexdigest() if text else None,\"text\":text if item.get(\"type\")==\"agentMessage\" else None})\n  result[\"hydration\"][\"turns\"].append(record)\n result['completed']=True\nexcept Exception as error:result.update(completed=False,error=str(error))\nfinally:\n probe.draining=True;probe.deadline=time.monotonic()+5;probe.cleanup()\nresult['rpc_requests']=probe.evidence['rpc_requests'];result['model_turns_requested']=len(probe.evidence['turns'])\nprint(json.dumps(result))\nPY",
+  "result": {
+    "scope": "native plugin/skill metadata only, no thread or model turn",
+    "hydration": {
+      "keys": [
+        "data",
+        "nextCursor",
+        "backwardsCursor"
+      ],
+      "nextCursor": null,
+      "turns": [
+        {
+          "id": "01a09207-23b2-7761-9c9b-2d32b3b72e89",
+          "itemsView": "full",
+          "status": "interrupted",
+          "error": null,
+          "startedAt": 1789156336,
+          "completedAt": 1789156346,
+          "durationMs": 9712,
+          "items": [
+            {
+              "id": "01a09207-2c19-7c41-9e2a-ef9a7b89ffb5",
+              "type": "userMessage",
+              "text_sha256": null,
+              "text": null
+            },
+            {
+              "id": "rs_0dedbe13bff8f7e1016aa45bf41b1087d299470a98928e7c38",
+              "type": "reasoning",
+              "text_sha256": null,
+              "text": null
+            },
+            {
+              "id": "msg_0dedbe13bff8f7e1016aa45bf972c487d28e5674a5df7ca354",
+              "type": "agentMessage",
+              "text_sha256": "1cd72e74cf954aa859f9a9d564d0ce06734f7a06c797940dd26fa117b0c48dc8",
+              "text": "@work-leaf read docs/architecture.md src/ui.rs src/ui_harness.rs tests/ui_harness.rs tests/terminal_pty.rs src/workspace.rs src/lib.rs"
+            }
+          ]
+        }
+      ]
+    },
+    "completed": true,
+    "rpc_requests": [
+      {
+        "id": "init",
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "work_leaf",
+            "title": "Work Leaf",
+            "version": "0.1.3"
+          },
+          "capabilities": {
+            "experimentalApi": true,
+            "optOutNotificationMethods": [
+              "rawResponseItem/completed"
+            ]
+          }
+        }
+      },
+      {
+        "id": "read",
+        "method": "thread/turns/list",
+        "params": {
+          "threadId": "01a0a3a5-8211-70e3-94db-9dc348dd74e2",
+          "itemsView": "full",
+          "limit": 2,
+          "sortDirection": "asc"
+        }
+      }
+    ],
+    "model_turns_requested": 0
+  },
+  "qualification": "Result scope label inherited from metadata helper is stale; the retained rpc_requests establish only initialize and one thread/turns/list. No plugin query, model turn or second fork occurred."
+}

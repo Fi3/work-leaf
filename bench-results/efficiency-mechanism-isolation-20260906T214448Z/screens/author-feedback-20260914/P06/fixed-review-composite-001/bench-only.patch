@@ -1,0 +1,271 @@
+diff --git a/src/bench_automatic_refresh.rs b/src/bench_automatic_refresh.rs
+index 2e795791..532c74ca 100644
+--- a/src/bench_automatic_refresh.rs
++++ b/src/bench_automatic_refresh.rs
+@@ -2,6 +2,38 @@
+ use super::*;
+ use serde_json::Value;
+ 
++pub(super) static FIXED_REVIEW_REFRESH: OnceLock<bool> = OnceLock::new();
++
++pub(super) fn fixed_review_opt_in(
++    marker: Option<&std::ffi::OsStr>,
++    schema: &str,
++    condition: &str,
++) -> io::Result<bool> {
++    let Some(marker) = marker else {
++        return Ok(false);
++    };
++    if marker != std::ffi::OsStr::new("1")
++        || schema != SCHEMA_V5
++        || condition != "review-evidence-native"
++    {
++        return Err(invalid(
++            "fixed-review refresh requires explicit 1 and native-review v5",
++        ));
++    }
++    Ok(true)
++}
++
++fn selected(manifest: &Manifest, fixed_review: bool) -> bool {
++    (manifest.schema == SCHEMA_V7 && manifest.condition == "automatic-changed-refresh-full")
++        || (fixed_review
++            && manifest.schema == SCHEMA_V5
++            && manifest.condition == "review-evidence-native")
++}
++
++fn selected_active(manifest: &Manifest) -> bool {
++    selected(manifest, *FIXED_REVIEW_REFRESH.get().unwrap_or(&false))
++}
++
+ #[derive(Default)]
+ pub(crate) struct Capture {
+     replacements: Vec<Replacement>,
+@@ -20,7 +52,7 @@ struct Replacement {
+ impl Capture {
+     pub(crate) fn start() -> io::Result<Option<Self>> {
+         Ok(active()?
+-            .filter(|e| e.manifest.schema == SCHEMA_V7)
++            .filter(|e| selected_active(&e.manifest))
+             .map(|_| Self::default()))
+     }
+ 
+@@ -81,8 +113,8 @@ impl Capture {
+         metadata: Value,
+     ) -> io::Result<String> {
+         let experiment = active()?
+-            .filter(|e| e.manifest.schema == SCHEMA_V7)
+-            .ok_or_else(|| invalid("automatic refresh evidence requires active v7"))?;
++            .filter(|e| selected_active(&e.manifest))
++            .ok_or_else(|| invalid("automatic refresh evidence requires a selected condition"))?;
+         self.forward_with(experiment, agent_id, kind, original, metadata)
+     }
+ 
+@@ -99,11 +131,9 @@ impl Capture {
+             "edit" => "automatic-edit-refresh",
+             _ => return Err(invalid("unknown automatic refresh kind")),
+         };
+-        if experiment.manifest.schema != SCHEMA_V7
+-            || experiment.manifest.condition != "automatic-changed-refresh-full"
+-        {
++        if !selected_active(&experiment.manifest) {
+             return Err(invalid(
+-                "automatic refresh evidence requires its single v7 condition",
++                "automatic refresh evidence requires its selected condition",
+             ));
+         }
+         let (candidate, components) = self.candidate(&original)?;
+@@ -118,7 +148,7 @@ impl Capture {
+             .to_string();
+         let mut evidence = experiment.evidence.lock().map_err(invalid)?;
+         evidence.sequence += 1;
+-        let row = json!({"event":"automatic-refresh","schema":SCHEMA_V7,"sequence":evidence.sequence,
++        let row = json!({"event":"automatic-refresh","schema":experiment.manifest.schema,"sequence":evidence.sequence,
+             "run_id":experiment.manifest.run_id,"condition":experiment.manifest.condition,"process_id":std::process::id(),
+             "unix_time_ns":timestamp,"site":site,"agent_id":agent_id.to_string(),"original_prompt":original,"candidate_prompt":candidate,
+             "selected_candidate":if eligible {"candidate"}else{"baseline"},"original_bytes":original.len(),"candidate_bytes":candidate.len(),
+@@ -133,3 +163,7 @@ impl Capture {
+ #[cfg(test)]
+ #[path = "bench_automatic_refresh_tests.rs"]
+ mod tests;
++
++#[cfg(test)]
++#[path = "bench_fixed_review_refresh_tests.rs"]
++mod fixed_review_tests;
+diff --git a/src/bench_experiment.rs b/src/bench_experiment.rs
+index 986ed4c7..1da9dec4 100644
+--- a/src/bench_experiment.rs
++++ b/src/bench_experiment.rs
+@@ -87,7 +87,8 @@ fn invalid(message: impl std::fmt::Display) -> io::Error {
+ fn load() -> io::Result<Option<Experiment>> {
+     let marker = std::env::var_os("WORK_LEAF_BENCH_EXPERIMENT");
+     let path = std::env::var_os("WORK_LEAF_BENCH_EXPERIMENT_MANIFEST");
+-    if marker.is_none() && path.is_none() {
++    let joint = std::env::var_os("WORK_LEAF_BENCH_FIXED_REVIEW_REFRESH");
++    if marker.is_none() && path.is_none() && joint.is_none() {
+         return Ok(None);
+     }
+     if marker.as_deref() != Some(std::ffi::OsStr::new("1")) {
+@@ -99,6 +100,11 @@ fn load() -> io::Result<Option<Experiment>> {
+     }
+     let bytes = fs::read(&path)?;
+     let (manifest, review_root, private_preview) = private_test_first::parse_manifest(&bytes)?;
++    let fixed_review_refresh = automatic_refresh::fixed_review_opt_in(
++        joint.as_deref(),
++        &manifest.schema,
++        &manifest.condition,
++    )?;
+     if !matches!(
+         manifest.schema.as_str(),
+         SCHEMA | SCHEMA_V2 | SCHEMA_V3 | SCHEMA_V4 | SCHEMA_V5 | SCHEMA_V6 | SCHEMA_V7
+@@ -145,6 +151,11 @@ fn load() -> io::Result<Option<Experiment>> {
+     if !manifest.evidence_path.is_absolute() {
+         return Err(invalid("evidence_path must be absolute"));
+     }
++    if *automatic_refresh::FIXED_REVIEW_REFRESH.get_or_init(|| fixed_review_refresh)
++        != fixed_review_refresh
++    {
++        return Err(invalid("fixed-review refresh activation cannot change"));
++    }
+     if let Some(root) = review_root.as_ref() {
+         review_evidence::initialize_store(root)?;
+     }
+@@ -163,6 +174,12 @@ fn load() -> io::Result<Option<Experiment>> {
+     if let Some(root) = review_root {
+         activation["review_evidence_root"] = json!(root);
+     }
++    if fixed_review_refresh {
++        activation["joint_automatic_refresh"] = json!({
++            "condition":"automatic-changed-refresh-full", "renderer_schema":SCHEMA_V7,
++            "review_condition_held_constant":"review-evidence-native"
++        });
++    }
+     if let Some(descriptor) = private_preview {
+         activation["private_preview"] = json!(descriptor);
+     }
+diff --git a/src/bench_fixed_review_refresh_tests.rs b/src/bench_fixed_review_refresh_tests.rs
+new file mode 100644
+index 00000000..086c2352
+--- /dev/null
++++ b/src/bench_fixed_review_refresh_tests.rs
+@@ -0,0 +1,120 @@
++use super::*;
++
++#[test]
++fn fixed_review_process_activation_and_exact_refresh_preserve_other_bytes() {
++    let executable = std::env::current_exe().unwrap();
++    let root = std::env::temp_dir().join(format!("wl-joint-test-{}", std::process::id()));
++    std::fs::create_dir(&root).unwrap();
++    std::fs::create_dir(root.join("review")).unwrap();
++    let manifest = root.join("manifest.json");
++    let evidence = root.join("evidence.jsonl");
++    std::fs::write(
++        &manifest,
++        serde_json::to_vec(&json!({
++            "schema":SCHEMA_V5,"condition":"review-evidence-native","run_id":"joint-test",
++            "evidence_path":evidence,"review_evidence_root":root.join("review"),
++        }))
++        .unwrap(),
++    )
++    .unwrap();
++    let run = || {
++        std::process::Command::new(&executable)
++            .args([
++                "--exact",
++                "bench_experiment::automatic_refresh::fixed_review_tests::fixed_review_child",
++            ])
++            .env("WORK_LEAF_BENCH_EXPERIMENT", "1")
++            .env("WORK_LEAF_BENCH_EXPERIMENT_MANIFEST", &manifest)
++            .env("WORK_LEAF_BENCH_RUN_ID", "joint-test")
++            .env("WORK_LEAF_BENCH_FIXED_REVIEW_REFRESH", "1")
++            .env("WORK_LEAF_TEST_FIXED_REVIEW_CHILD", "1")
++            .output()
++            .unwrap()
++    };
++    let first = run();
++    assert!(
++        first.status.success(),
++        "{}",
++        String::from_utf8_lossy(&first.stdout)
++    );
++    let rows: Vec<Value> = std::fs::read_to_string(&evidence)
++        .unwrap()
++        .lines()
++        .map(|line| serde_json::from_str(line).unwrap())
++        .collect();
++    assert_eq!(rows.len(), 2);
++    assert_eq!(
++        rows[0]["joint_automatic_refresh"]["condition"],
++        "automatic-changed-refresh-full"
++    );
++    assert_eq!(rows[0]["condition"], "review-evidence-native");
++    assert_eq!(rows[1]["original_prompt"], "diagnostic compact tail");
++    assert_eq!(rows[1]["candidate_prompt"], "diagnostic current text tail");
++    let before = std::fs::read(&evidence).unwrap();
++    assert!(!run().status.success());
++    assert_eq!(std::fs::read(&evidence).unwrap(), before);
++    std::fs::remove_dir_all(root).unwrap();
++}
++
++#[test]
++fn fixed_review_child() {
++    if std::env::var("WORK_LEAF_TEST_FIXED_REVIEW_CHILD").as_deref() != Ok("1") {
++        return;
++    }
++    super::super::initialize().unwrap();
++    let mut capture = Capture::start().unwrap().unwrap();
++    capture.replace(
++        "current-full-text",
++        11..18,
++        "current text".into(),
++        Some(0..12),
++        Some(0),
++    );
++    let output = capture
++        .forward(
++            &AgentId::new("author").unwrap(),
++            "edit",
++            "diagnostic compact tail".into(),
++            json!({"diagnostic":"untouched"}),
++        )
++        .unwrap();
++    assert_eq!(output, "diagnostic current text tail");
++}
++
++#[test]
++fn fixed_review_opt_in_requires_exact_marker_and_constant_native_review() {
++    use std::ffi::OsStr;
++    assert!(!fixed_review_opt_in(None, SCHEMA_V5, "review-evidence-native").unwrap());
++    assert!(
++        fixed_review_opt_in(Some(OsStr::new("1")), SCHEMA_V5, "review-evidence-native").unwrap()
++    );
++    for (marker, schema, condition) in [
++        ("0", SCHEMA_V5, "review-evidence-native"),
++        ("", SCHEMA_V5, "review-evidence-native"),
++        ("1", SCHEMA_V5, "review-evidence-inline"),
++        ("1", SCHEMA_V7, "automatic-changed-refresh-full"),
++        ("1", SCHEMA_V2, "control"),
++    ] {
++        assert!(fixed_review_opt_in(Some(OsStr::new(marker)), schema, condition).is_err());
++    }
++}
++
++#[test]
++fn existing_schemas_require_no_new_opt_in_and_review_alone_stays_inactive() {
++    let make = |schema: &str, condition: &str| Manifest {
++        schema: schema.into(),
++        run_id: "joint-gate".into(),
++        condition: condition.into(),
++        evidence_path: PathBuf::from("/not-opened"),
++    };
++    let review = make(SCHEMA_V5, "review-evidence-native");
++    assert!(!selected(&review, false));
++    assert!(selected(&review, true));
++    assert!(!selected(&make(SCHEMA_V5, "review-evidence-inline"), true));
++    assert!(!selected(&make(SCHEMA_V2, "control"), true));
++    assert!(selected(
++        &make(SCHEMA_V7, "automatic-changed-refresh-full"),
++        false
++    ));
++    assert!(!selected(&make(SCHEMA_V7, "other"), false));
++}

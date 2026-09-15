@@ -1,0 +1,77 @@
+{
+  "scope": "Once-only native core for one closed original-loader diagnostic; no historical baseline audit",
+  "core": {
+    "thread_id": "01a0a386-e041-7270-a47c-7a9e0177f6b7",
+    "errors": [],
+    "records": {
+      "resp_05c5bd5831947767016aa8d6c3139487d2a2bfe73ed14459bd": {
+        "response_id": "resp_05c5bd5831947767016aa8d6c3139487d2a2bfe73ed14459bd",
+        "thread_id": "01a0a386-e041-7270-a47c-7a9e0177f6b7",
+        "turn_id": "01a0a386-e097-7903-b959-a13371104018",
+        "usage": {
+          "input_tokens": 15654,
+          "cached_input_tokens": 1408,
+          "output_tokens": 27,
+          "reasoning_output_tokens": 16
+        },
+        "line": 13
+      },
+      "resp_05c5bd5831947767016aa8d6c67b2887d29e8e243508200bc0": {
+        "response_id": "resp_05c5bd5831947767016aa8d6c67b2887d29e8e243508200bc0",
+        "thread_id": "01a0a386-e041-7270-a47c-7a9e0177f6b7",
+        "turn_id": "01a0a386-f5df-72b3-b9d5-437f875636d8",
+        "usage": {
+          "input_tokens": 16897,
+          "cached_input_tokens": 14720,
+          "output_tokens": 9,
+          "reasoning_output_tokens": 0
+        },
+        "line": 25
+      }
+    },
+    "response_count": 2,
+    "duplicate_response_records": 0,
+    "native_usage": {
+      "input_tokens": 32551,
+      "cached_input_tokens": 16128,
+      "output_tokens": 36,
+      "reasoning_output_tokens": 16,
+      "raw_input_plus_output": 32587,
+      "uncached_input_plus_output": 16459
+    },
+    "compaction_markers": []
+  },
+  "public_native_joins": [
+    {
+      "response_id": "resp_05c5bd5831947767016aa8d6c3139487d2a2bfe73ed14459bd",
+      "identity_and_usage_match": true
+    },
+    {
+      "response_id": "resp_05c5bd5831947767016aa8d6c67b2887d29e8e243508200bc0",
+      "identity_and_usage_match": true
+    }
+  ],
+  "join_errors": [],
+  "native_terminals": [
+    {
+      "type": "task_complete",
+      "turn_id": "01a0a386-e097-7903-b959-a13371104018",
+      "last_agent_message": "CONTEXT_BOUNDARY_OK",
+      "started_at": 1789449920,
+      "completed_at": 1789449926,
+      "duration_ms": 5435,
+      "time_to_first_token_ms": 4755
+    },
+    {
+      "type": "task_complete",
+      "turn_id": "01a0a386-f5df-72b3-b9d5-437f875636d8",
+      "last_agent_message": "CONTEXT_BOUNDARY_OK",
+      "started_at": 1789449926,
+      "completed_at": 1789449927,
+      "duration_ms": 1498,
+      "time_to_first_token_ms": 1254
+    }
+  ],
+  "public_observed_raw": 32587,
+  "unfinished_tail_observed": false
+}

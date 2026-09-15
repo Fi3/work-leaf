@@ -8,11 +8,22 @@ from pathlib import Path
 import sys
 
 HERE = Path(__file__).resolve().parent
-SOURCE = HERE.parents[1] / "P01/private_catalog.py"
+SOURCE = HERE.parents[1] / "catalog-immutability-016/readonly_catalog.py"
 spec = importlib.util.spec_from_file_location("p06_private_catalog", SOURCE)
-qualified = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(qualified)
+catalog = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(catalog)
+qualified = catalog.load()
 ALLOWED_CONFIG = {'model="gpt-5.5"', 'model_reasoning_effort="xhigh"'}
+
+def provider_argv(plan, argv):
+    if plan["schema"] == "work-leaf-p06-appserver-input-v1":
+        return list(argv)
+    cwd = plan.get("cwd")
+    if (not isinstance(cwd, str) or not cwd or not Path(cwd).is_absolute()
+            or str(Path(cwd)) != cwd or ".." in Path(cwd).parts or cwd == "/"):
+        raise ValueError("v2 requires one exact absolute project path")
+    projects = "projects={" + json.dumps(cwd) + '={trust_level="trusted"}}'
+    return ["-c", projects, *argv]
 
 def classify(argv):
     offset = 0
@@ -41,7 +52,8 @@ def main():
     if hashlib.sha256(raw).hexdigest() != os.environ["WORK_LEAF_BENCH_P06_INPUT_PLAN_SHA256"]:
         raise ValueError("P06 input plan digest differs")
     plan = json.loads(raw)
-    if plan["schema"] != "work-leaf-p06-appserver-input-v1":
+    if plan["schema"] not in ("work-leaf-p06-appserver-input-v1",
+                              "work-leaf-p06-appserver-input-v2"):
         raise ValueError("unsupported P06 input plan")
     for filename, expected in plan["sources"].items():
         if hashlib.sha256(Path(filename).read_bytes()).hexdigest() != expected:
@@ -49,6 +61,7 @@ def main():
     provider = plan["provider"]
     if not Path(provider).is_absolute() or not os.access(provider, os.X_OK):
         raise ValueError("provider is not an absolute executable")
+    effective_argv = provider_argv(plan, argv)
     if kind == "app-server" and not inside:
         receipt = Path(os.environ["WORK_LEAF_BENCH_P06_INPUT_RECEIPT"])
         with receipt.open("x") as output:
@@ -65,7 +78,7 @@ def main():
     for key in list(os.environ):
         if key.startswith("WORK_LEAF_BENCH_P06_INPUT") or key == "WORK_LEAF_P01_PARENT_MNT":
             os.environ.pop(key)
-    os.execv(provider, [provider, *argv])
+    os.execv(provider, [provider, *effective_argv])
 
 if __name__ == "__main__":
     try:

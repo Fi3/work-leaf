@@ -1,0 +1,144 @@
+{
+  "command": "python3 - <<'PY'\nimport hashlib,json,pathlib\nsource=pathlib.Path(\"/home/user/.codex/sessions/2026/09/11/rollout-2026-09-11T21-52-16-01a09207-2317-77f2-adc3-be4d2475af7c.jsonl\")\nfork=pathlib.Path(\"/home/user/.codex/sessions/2026/09/15/rollout-2026-09-15T07-58-48-01a0a3a5-8211-70e3-94db-9dc348dd74e2.jsonl\")\ndef read(p):return [json.loads(x) for x in p.read_text().splitlines()]\noriginal=read(source);rows=read(fork)\nend=next(i for i,r in enumerate(original) if r.get(\"type\")==\"event_msg\" and r[\"payload\"].get(\"type\")==\"task_started\" and r[\"payload\"].get(\"turn_id\")==\"01a09207-49c4-74d0-8926-c3a86c7ca9a7\")\nprefix=original[:end]\ndef payloads(seq):return [r[\"payload\"] for r in seq if r[\"type\"]==\"response_item\"]\ndef summary(seq):\n out=[]\n for i,r in enumerate(seq):\n  p=r.get(\"payload\",{});d={\"ordinal\":i,\"type\":r.get(\"type\"),\"payload_type\":p.get(\"type\"),\"role\":p.get(\"role\")}\n  if r.get(\"type\")==\"response_item\" and p.get(\"type\")==\"message\":\n   t=\"\\n\".join(x.get(\"text\",\"\") for x in p.get(\"content\",[]));d.update(text_bytes=len(t.encode()),text_sha256=hashlib.sha256(t.encode()).hexdigest())\n   if p.get(\"role\")==\"assistant\":d[\"assistant_text\"]=t\n  out.append(d)\n return out\na=payloads(prefix);b=payloads(rows)\nprint(json.dumps({\"fork_path\":str(fork),\"fork_sha256\":hashlib.sha256(fork.read_bytes()).hexdigest(),\"original_before_second_count\":len(prefix),\"fork_count\":len(rows),\"original_response_count\":len(a),\"fork_response_count\":len(b),\"response_payloads_exact\":a==b,\"original_prefix_summary\":summary(prefix),\"fork_summary\":summary(rows),\"base_instructions_equal\":prefix[0][\"payload\"].get(\"base_instructions\")==rows[0][\"payload\"].get(\"base_instructions\"),\"original_source_sha256\":hashlib.sha256(source.read_bytes()).hexdigest()}))\nPY",
+  "result": {
+    "fork_path": "/home/user/.codex/sessions/2026/09/15/rollout-2026-09-15T07-58-48-01a0a3a5-8211-70e3-94db-9dc348dd74e2.jsonl",
+    "fork_sha256": "594ed197f7157c4a0f2ae5ba2e9576fed3ecb5af2c917b3f6df865b35021dae4",
+    "original_before_second_count": 17,
+    "fork_count": 2,
+    "original_response_count": 6,
+    "fork_response_count": 0,
+    "response_payloads_exact": false,
+    "original_prefix_summary": [
+      {
+        "ordinal": 0,
+        "type": "session_meta",
+        "payload_type": null,
+        "role": null
+      },
+      {
+        "ordinal": 1,
+        "type": "event_msg",
+        "payload_type": "task_started",
+        "role": null
+      },
+      {
+        "ordinal": 2,
+        "type": "response_item",
+        "payload_type": "message",
+        "role": "developer",
+        "text_bytes": 7042,
+        "text_sha256": "3cb02d7778e5249ba75af6683d8827cbd2d7f98982493251587ac296c8c06275"
+      },
+      {
+        "ordinal": 3,
+        "type": "response_item",
+        "payload_type": "message",
+        "role": "user",
+        "text_bytes": 15040,
+        "text_sha256": "296fe3aa3b6670fc8114ac33fb94d64c9560e6112aee12654835fe401b3bf568"
+      },
+      {
+        "ordinal": 4,
+        "type": "world_state",
+        "payload_type": null,
+        "role": null
+      },
+      {
+        "ordinal": 5,
+        "type": "turn_context",
+        "payload_type": null,
+        "role": null
+      },
+      {
+        "ordinal": 6,
+        "type": "response_item",
+        "payload_type": "message",
+        "role": "user",
+        "text_bytes": 19286,
+        "text_sha256": "14975b677e3c7e88328303977bba56708b3fc4f84b922a0cf1d22d1f955393f5"
+      },
+      {
+        "ordinal": 7,
+        "type": "event_msg",
+        "payload_type": "item_completed",
+        "role": null
+      },
+      {
+        "ordinal": 8,
+        "type": "event_msg",
+        "payload_type": "item_completed",
+        "role": null
+      },
+      {
+        "ordinal": 9,
+        "type": "response_item",
+        "payload_type": "reasoning",
+        "role": null
+      },
+      {
+        "ordinal": 10,
+        "type": "event_msg",
+        "payload_type": "item_completed",
+        "role": null
+      },
+      {
+        "ordinal": 11,
+        "type": "response_item",
+        "payload_type": "message",
+        "role": "assistant",
+        "text_bytes": 134,
+        "text_sha256": "1cd72e74cf954aa859f9a9d564d0ce06734f7a06c797940dd26fa117b0c48dc8",
+        "assistant_text": "@work-leaf read docs/architecture.md src/ui.rs src/ui_harness.rs tests/ui_harness.rs tests/terminal_pty.rs src/workspace.rs src/lib.rs"
+      },
+      {
+        "ordinal": 12,
+        "type": "token_usage_record",
+        "payload_type": null,
+        "role": null
+      },
+      {
+        "ordinal": 13,
+        "type": "event_msg",
+        "payload_type": "token_count",
+        "role": null
+      },
+      {
+        "ordinal": 14,
+        "type": "response_item",
+        "payload_type": "message",
+        "role": "user",
+        "text_bytes": 226,
+        "text_sha256": "cfcc65d48ba8a671b116ec6da4e4f14e31f7dc0166c3dbad754f034b651f8942"
+      },
+      {
+        "ordinal": 15,
+        "type": "event_msg",
+        "payload_type": "turn_aborted",
+        "role": null
+      },
+      {
+        "ordinal": 16,
+        "type": "event_msg",
+        "payload_type": "thread_settings_applied",
+        "role": null
+      }
+    ],
+    "fork_summary": [
+      {
+        "ordinal": 0,
+        "type": "session_meta",
+        "payload_type": null,
+        "role": null
+      },
+      {
+        "ordinal": 1,
+        "type": "event_msg",
+        "payload_type": "thread_settings_applied",
+        "role": null
+      }
+    ],
+    "base_instructions_equal": true,
+    "original_source_sha256": "dd1dcfaf6b37a6bf13879cadd803e26a8b4ebf7b662d8d7d53c45995e552e008"
+  },
+  "interpretation": "Physical child log omits inherited response records; this is not input failure. Native session_meta.history_base points to original thread through exclusive ordinal17/byte113034. Resolve that immutable parent before comparing history."
+}

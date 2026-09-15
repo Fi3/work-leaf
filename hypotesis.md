@@ -1,9 +1,9 @@
 # DONE: 82 | TODO: 8 | TOTAL: 90
 ## BUG FIXES — DONE: 11 | TODO: 0 | TOTAL: 11
 
-**Pending checks: 8 research obligations remain. Current: qualify an existing author-prefix reference for the C08 × C25 joint; no new model run is admitted. P09's bounded confirmation and P11's recorded-stage offset comparison are finished.**
+**Pending checks: 8 research obligations remain. Current: qualify actual input after native saved-prefix retention for C08 × C25. Prefix retention works without generation; actual resumed input and faithful WL attachment remain unqualified. No causal benchmark is running.**
 **Current verified result:** reversing the author-policy package gives **24.297M versus 18.545M raw**, net **+5.752M** after integration offsets. The all-on package uses **23.6729% less in this contrast**. **The causally explained share of the historical ~50% gap remains NOT ESTABLISHED.**
-**Activity, 2026-09-15T04:48:00+00:00:** [The connected result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P11/CONNECTED-RESULT-20260915.md) retains all three rows, exact input/source/usage checks and old failed integration costs. Continuation004's original instruction-guard failure remains FAIL; its exact saved code passes the unchanged local final checks, without edits or model reruns. These are source-connected recorded-model outcomes, not three uninterrupted successful benchmarks or historical attribution. Research82/8/90; bugs11/0/11.
+**Activity, 2026-09-15T06:02:14+00:00:** The [single native fork](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P06/READ-PREFIX-RESULT-20260915.md) retains the genuine first read request and old startup prefix by an immutable parent reference; a native hydration read confirms the boundary. Zero model turns; original source unchanged. The previous32,587-raw fresh-input failure remains. Required root tests pass on disk-backed scratch after a retained tmpfs-capacity failure. Research82/8/90; bugs11/0/11.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
@@ -119,7 +119,7 @@ Previously unaccounted bug fixes use their separate counter; they do not expand 
 
 ## Live priority — known joint effects after the measured author-package net
 
-Last maintained: **2026-09-15 04:48 UTC**. [The connected result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P11/CONNECTED-RESULT-20260915.md)
+Last maintained: **2026-09-15 06:02 UTC**. [The connected result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P11/CONNECTED-RESULT-20260915.md)
 measures A+B's net +5,751,843⅓ raw after the1,830,866⅔ integration offset.
 The historical45.38%–51.62% saving and the user's no-quality-loss assumption remain premises.
 Highest next value is the known refresh × continuation interaction and its overlap with the
@@ -127,7 +127,7 @@ author package. No new scientific question or ordinary control is selected.
 
 | Priority | Evidence and potential explanatory reach | Next cheap check / stop gate |
 | --- | --- | --- |
-| Active local P06 reference qualification | C08/C25 have separate positive retained direction, but their combined amount is unmeasured. An already-collected later author prefix might have available0.1.15 inputs before any review intervention acts. | Check the earliest eligible prefix's exact inputs and refresh/continuation exposure, not its token total. No generation, new control or exclusion from a failed setup. |
+| Active local P06 saved-prefix qualification | Native fork and hydration preserve the original first read request/automatic prefix without generation. The fixed-review/C08 switch passes local guards and full Cargo checks. The32,587-raw fresh-input failure exposes remote catalog drift. | Qualify actual resumed input using the existing full private catalog; first establish a small faithful WL attachment and later-review/exposure route. No original-thread edits, hidden-controller recreation or full run from a known unrepresentative budget. |
 | Known P06 historical setup limitation | The0.1.14 body is unrecovered; the bounded retained-tool-read lookup finds no exact read across280 files. H003's isolated refresh file is not a connected runtime. | Preserve these failed setup attempts. An alternative must supply a same-target reference and explicit transfer limits; a3M from-base window known not to reach exposure is not a useful null screen. |
 | Completed A+B confirmation/offsets, P09/P11 | Full recorded-model net +5,751,843⅓; individual increases+3.542M–8.504M. All nine initial authors execute test-first.76.37% of initial excess follows first GREEN, including genuine repairs. | Use the joint package, not independent A/B shares. Keep004's failed guard report and separate exact-code validation. No additional confirmation batch selected. |
 | P07/P08 author/refresh/continuation and residual joints | Their named exercised differences are still not excluded or jointly measured. Standalone custody lacks WL refresh/continuation; no qualified connected composite exists. | Qualify the declared complete factor set and representative boundary. No new framework, hidden task, sum of unlike cohorts or scientific closure from failed setup. |
