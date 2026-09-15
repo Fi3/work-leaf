@@ -1,0 +1,47 @@
+Accepted. I’m going to snapshot the three reviewed diff groups, reset the branch back to the requested base, then replay each group with its documentation into one final commit. After that I’ll run the required Rust checks and fold any fixes into the owning commit.
+The branch is still at the reviewed provisional head and the worktree is clean, so this is a good point to rewrite. I’m exporting the three request-sized patches outside the repo before resetting.
+Patches are saved. I’m resetting to the base commit now, then I’ll apply request 1 and add its docs before making the first final commit.
+Base reset is done. I’m applying the first feature patch and will update the terminal UI documentation in the same commit so the history remains request-shaped.
+Request 1 is staged from the reviewed patch. Before committing it, I’m adding the missing system-oriented docs for the terminal visual selection and copy behavior.
+The first feature and its docs are in place. I’ll run formatter before committing so this commit is already in the expected Rust style.
+Formatter touched the staged Rust files, which is expected after replaying raw patches. I’m staging those formatting changes with the feature and docs, then committing request 1.
+The first final commit is staged as a single request-shaped change: implementation, tests, formatting, and docs together.
+Commit 1 is in place. I’m applying request 2 on top of that; if patch context moved because of formatting, I’ll use a three-way apply and keep the resulting diff scoped to the slash-command routing request.
+Request 2 applied cleanly. I’m adding the missing docs for the controller and terminal slash-command routing before committing it.
+The second feature docs are in place. I’ll format, stage the request 2 code/tests/docs together, then make the second final commit.
+Request 2 is staged as one commit, including the controller selection state, terminal prompt routing, regression tests, and docs.
+Commit 2 is done. I’m applying request 3 next, which covers the review completion prompt and the terminal close/reopen behavior.
+The third patch applied cleanly. I’m replacing the deferred review-flow wording with the actual resulting workflow: resolved reviews append a patch-chat confirmation, and the terminal handles yes/no plus reopening.
+I found the stale review-done wording in `docs/orchestrator-file-workflow.md`, plus the higher-level spec and architecture spots that need the same current-state description.
+That patch tool rejected the combined edit because it targeted the same file in two operations. I’ll apply the documentation edits file-by-file.
+Spec is updated. I’m applying the architecture wording next, split into one file patch.
+The architecture text had slightly different wrapping after earlier docs. I have the exact lines now and will apply the review-confirmation additions against that content.
+Architecture is current. I’m updating the workflow runbook wording for the same review-done flow.
+I found four stale review-completion passages in the workflow doc. I’m patching those to describe the prompt and terminal-close behavior.
+The stale review wording is gone. I’ll format the Rust files after the third replay, stage code/tests/docs, and commit request 3 as the final feature commit.
+Formatting only adjusted a bit of the third request after patch replay. I’m staging that with the review-confirmation docs and tests now.
+Request 3 is staged as the last final commit. After this I’ll verify the shape of the rewritten history before running the required checks.
+The rewritten history now has three commits. I’m checking the commit shape, then I’ll run the required suite exactly as listed in `AGENTS.md`: `cargo fmt`, clippy with all targets/features and warnings denied, then all-targets/all-features tests.
+History shape is correct: exactly three commits after the requested base, and the worktree is clean before validation. Running formatter check now.
+`cargo fmt` completed without output. I’ll confirm it didn’t change the tree, then start clippy.
+Formatter left the tree clean. Now clippy gets the longer turn at the wheel.
+Clippy found one validation issue in the review-confirmation harness code: a nested `if` that should be collapsed. That belongs to request 3, so I’ll fix it and amend the third commit.
+I’m making the smallest validation fix: keep the same reopen behavior, just express the condition in the form clippy expects.
+The clippy fix is in. I’ll format it, amend the third commit, then rerun clippy.
+The validation fix is folded into commit 3. Rerunning clippy now.
+Clippy is green after the amend. I’m running the full test suite now.
+The full test suite passed. I’m doing the final cleanliness and history checks now so the closeout can be precise.
+Done. Rewritten history is rooted at `c92a0b7060a36eac6db2d869b85e589a7a9480f9` with exactly three commits:
+
+1. `ae5845a ADD terminal visual modes so users can copy pane text`
+2. `0953b2b UPDATE slash command routing so selected agents receive prompt commands`
+3. `622d20b ADD review completion confirmation so finished chats close and reopen predictably`
+
+I folded the required docs into the owning commits: `Spec.md`, `docs/architecture.md`, and `docs/orchestrator-file-workflow.md` now describe the resulting UI/slash/review workflows.
+
+Verification:
+- `cargo fmt` passed
+- `cargo clippy --all-targets --all-features -- -D warnings` passed
+- `cargo test --all-targets --all-features` passed
+- Worktree is clean
+- Real-agent verification was not run because this benchmark’s `AGENTS.md` explicitly waives it and prohibits launching another provider from inside the turn.

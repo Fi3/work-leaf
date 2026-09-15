@@ -1,0 +1,206 @@
+{
+  "scope": "postcapture local check of exact committed candidate; original failed report unchanged; no provider generation",
+  "before": {
+    "head": "3ad407b9f9a915c938bedbcf404f16c84ab4f582",
+    "tree": "914ad086a03d7c386db9553e14f52eff48512762",
+    "count": "3",
+    "status": ""
+  },
+  "after": {
+    "head": "3ad407b9f9a915c938bedbcf404f16c84ab4f582",
+    "tree": "914ad086a03d7c386db9553e14f52eff48512762",
+    "count": "3",
+    "status": ""
+  },
+  "source_unchanged": true,
+  "gate_exit_code": 0,
+  "bundle_sha256": "81e09eeb93dd5ac50bc5fea105936fd657e2202380d424a13fbebeab5b212a59",
+  "gate_sha256": "235ef644d692098a670c4e61c3572f60f8830c445896f3639a56430c57781dca",
+  "log_path": "/tmp/wl-p09-final-validation.TCuh1l/checks.log",
+  "log_sha256": "20f69a109e29a11bca91c5a0ae27f1d84ca728c376bc06d4577a34e565086154",
+  "log_tail": "workspace.rs (target/debug/deps/workspace-2f8b7a53aaa2decd)\n\nrunning 18 tests\ntest controller_command_surface_slash_prompt_with_space_stays_with_command_agent ... ok\ntest controller_line_events_do_not_resend_full_session_transcripts ... ok\ntest controller_command_surface_slash_prompt_goes_to_selected_agent ... ok\ntest controller_keeps_agent_loading_scoped_to_the_active_session ... ok\ntest controller_exposes_ui_neutral_events_and_snapshot_without_terminal_ui ... ok\ntest controller_does_not_run_project_required_checks_after_agent_reply ... ok\ntest controller_uses_backend_agent_to_name_chat_from_first_prompt ... ok\ntest controller_status_events_do_not_resend_existing_large_transcripts ... ok\ntest controller_does_not_start_review_until_patch_agent_reports_done ... ok\ntest controller_uses_agent_profile_for_non_codex_launches_and_reviews ... ok\ntest controller_review_prompt_covers_all_agent_commits_since_launch ... ok\ntest controller_starts_review_after_patch_agent_done_and_loops_until_clean ... ok\ntest controller_auto_review_ignores_historical_agents_outside_current_patch_agent ... ok\ntest controller_prompts_for_feature_completion_after_review_and_reopens_on_new_input ... ok\ntest controller_linearize_uses_only_commits_reviewed_in_this_session ... ok\ntest controller_reuses_one_reviewer_for_repeated_patch_agent_iterations ... ok\ntest controller_reviews_only_unreviewed_patch_agent_commits ... ok\ntest controller_linearize_keeps_multiple_reviewed_commits_from_same_agent ... ok\n\ntest result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s\n\n     Running unittests examples/ui_harness.rs (target/debug/examples/ui_harness-6415d644da384f3f)\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "clone",
+        "--no-checkout",
+        "--no-hardlinks",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/infrastructure/driver-source",
+        "/tmp/wl-p09-final-validation.TCuh1l/repo"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "Cloning into '/tmp/wl-p09-final-validation.TCuh1l/repo'...\ndone.\n",
+      "seconds": 0.06028693891130388
+    },
+    {
+      "argv": [
+        "git",
+        "-C",
+        "/tmp/wl-p09-final-validation.TCuh1l/repo",
+        "bundle",
+        "verify",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-integration-20260915/runs/author-joint-integration-004/author-joint-integration-004-three-feature-sequential-bench-artifacts/patches/fail/commits.bundle"
+      ],
+      "returncode": 0,
+      "stdout": "The bundle contains this ref:\n3ad407b9f9a915c938bedbcf404f16c84ab4f582 HEAD\nThe bundle requires this ref:\nc92a0b7060a36eac6db2d869b85e589a7a9480f9 \nThe bundle uses this hash algorithm: sha1\n",
+      "stderr": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-integration-20260915/runs/author-joint-integration-004/author-joint-integration-004-three-feature-sequential-bench-artifacts/patches/fail/commits.bundle is okay\n",
+      "seconds": 0.00380889605730772
+    },
+    {
+      "argv": [
+        "git",
+        "-C",
+        "/tmp/wl-p09-final-validation.TCuh1l/repo",
+        "bundle",
+        "unbundle",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-integration-20260915/runs/author-joint-integration-004/author-joint-integration-004-three-feature-sequential-bench-artifacts/patches/fail/commits.bundle"
+      ],
+      "returncode": 0,
+      "stdout": "3ad407b9f9a915c938bedbcf404f16c84ab4f582 HEAD\n",
+      "stderr": "",
+      "seconds": 0.011000443017110229
+    },
+    {
+      "argv": [
+        "git",
+        "-C",
+        "/tmp/wl-p09-final-validation.TCuh1l/repo",
+        "checkout",
+        "--detach",
+        "3ad407b9f9a915c938bedbcf404f16c84ab4f582"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "HEAD is now at 3ad407b ADD review completion confirmation so reviewed patch chats close only after user approval\n",
+      "seconds": 0.006510030012577772
+    },
+    {
+      "argv": [
+        "git",
+        "-C",
+        "/tmp/wl-p09-final-validation.TCuh1l/repo",
+        "rev-parse",
+        "HEAD"
+      ],
+      "returncode": 0,
+      "stdout": "3ad407b9f9a915c938bedbcf404f16c84ab4f582\n",
+      "stderr": "",
+      "seconds": 0.0016408651135861874
+    },
+    {
+      "argv": [
+        "git",
+        "-C",
+        "/tmp/wl-p09-final-validation.TCuh1l/repo",
+        "rev-parse",
+        "HEAD^{tree}"
+      ],
+      "returncode": 0,
+      "stdout": "914ad086a03d7c386db9553e14f52eff48512762\n",
+      "stderr": "",
+      "seconds": 0.0009486619383096695
+    },
+    {
+      "argv": [
+        "git",
+        "-C",
+        "/tmp/wl-p09-final-validation.TCuh1l/repo",
+        "rev-list",
+        "--count",
+        "HEAD",
+        "^c92a0b7060a36eac6db2d869b85e589a7a9480f9"
+      ],
+      "returncode": 0,
+      "stdout": "3\n",
+      "stderr": "",
+      "seconds": 0.0016646110452711582
+    },
+    {
+      "argv": [
+        "git",
+        "-C",
+        "/tmp/wl-p09-final-validation.TCuh1l/repo",
+        "status",
+        "--porcelain=v1"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "",
+      "seconds": 0.00331616192124784
+    },
+    {
+      "argv": [
+        "timeout",
+        "840",
+        "bash",
+        "-c",
+        "source \"$1\"; bench_run_final_gate \"$2\" \"$3\" \"$4\"",
+        "_",
+        "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-integration-20260915/infrastructure/drivers/bench-validation-common",
+        "/tmp/wl-p09-final-validation.TCuh1l/repo",
+        "/tmp/wl-p09-final-validation.TCuh1l/child-tmp",
+        "/tmp/wl-p09-final-validation.TCuh1l/checks.log"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "",
+      "seconds": 15.404617478139699
+    },
+    {
+      "argv": [
+        "git",
+        "-C",
+        "/tmp/wl-p09-final-validation.TCuh1l/repo",
+        "rev-parse",
+        "HEAD"
+      ],
+      "returncode": 0,
+      "stdout": "3ad407b9f9a915c938bedbcf404f16c84ab4f582\n",
+      "stderr": "",
+      "seconds": 0.0012205559760332108
+    },
+    {
+      "argv": [
+        "git",
+        "-C",
+        "/tmp/wl-p09-final-validation.TCuh1l/repo",
+        "rev-parse",
+        "HEAD^{tree}"
+      ],
+      "returncode": 0,
+      "stdout": "914ad086a03d7c386db9553e14f52eff48512762\n",
+      "stderr": "",
+      "seconds": 0.0016242419369518757
+    },
+    {
+      "argv": [
+        "git",
+        "-C",
+        "/tmp/wl-p09-final-validation.TCuh1l/repo",
+        "rev-list",
+        "--count",
+        "HEAD",
+        "^c92a0b7060a36eac6db2d869b85e589a7a9480f9"
+      ],
+      "returncode": 0,
+      "stdout": "3\n",
+      "stderr": "",
+      "seconds": 0.0010745171457529068
+    },
+    {
+      "argv": [
+        "git",
+        "-C",
+        "/tmp/wl-p09-final-validation.TCuh1l/repo",
+        "status",
+        "--porcelain=v1"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "",
+      "seconds": 0.0036604818888008595
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+I’ll inspect the commit stack and the aggregate diff from the requested base, then map the provisional/review/validation commits back to the three feature requests. I’ll keep this to read-only git and file inspection, with no checks or history changes.
+The stack is clean and clearly tagged into request groups (`UPDATE 1`, `UPDATE 2`, `UPDATE 3`). Next I’m reading the grouped diffs and any existing docs that describe the affected surfaces, so the plan can call out exactly what needs to be folded into each final commit.
+The grouped stats show request 1 is almost entirely terminal UI and harness behavior, request 2 is controller/terminal routing for slash-prefixed chat, and request 3 is review-confirmation lifecycle behavior across controller, terminal app, and harness. I’m checking docs/plain text now for surfaces that mention these workflows.
+The source path is now clear: `WorkLeafController` emits the review prompt, `TerminalAppCore` handles the confirmation and hidden-row lifecycle, and `TerminalUi` owns visual selections and copied text. I’m checking the remaining UI methods and tests so the plan can name the right coverage and avoid smuggling unrelated changes into any final commit.
+There are no docs changes in the current aggregate diff, so the deferred-docs piece is real. I’ll pin the plan’s documentation work to the requests that changed user-visible behavior rather than making a catch-all docs commit.
+Inspected the stack from `c92a0b7060a36eac6db2d869b85e589a7a9480f9`; worktree is clean. I did not modify files, rewrite history, create commits, or run checks.
+
+**Proposed Linearization**
+1. `ADD terminal visual modes so users can copy pane text`
+   Fold `UPDATE 1` commits `c5194c8..c0eac70`.
+   Include visual character/line/block selection in `src/ui.rs`, OSC52 clipboard output in `src/terminal_app.rs`, harness plumbing, and UI/terminal tests. Add deferred docs to `Spec.md` and `docs/architecture.md` for visual selection/copy behavior.
+
+2. `UPDATE slash command routing so selected agents receive prompt commands`
+   Fold `UPDATE 2` commits `25035df..3c5902f`.
+   Include `WorkLeafController::execute_command_line` selected-agent slash routing, terminal prompt/chat routing safeguards, stale-selection protection, and workspace/terminal tests. Add deferred docs to `Spec.md` and `docs/architecture.md` for slash-prefixed selected-agent command routing.
+
+3. `ADD review completion confirmation so finished chats close and reopen predictably`
+   Fold `UPDATE 3` commits `9336d7e..67fe0fd`.
+   Include `REVIEW_DONE_CONFIRMATION_PROMPT`, controller duplicate prompt emission after resolved reviews, terminal yes/no handling, hidden/reopen chat behavior, UI harness support, and tests. Add deferred docs to `docs/orchestrator-file-workflow.md`, `docs/architecture.md`, and likely `Spec.md` to describe the current review-done confirmation workflow.
+
+After acceptance, I’ll rewrite the branch rooted at `c92a0b7060a36eac6db2d869b85e589a7a9480f9` into exactly those three commits, fold any validation/doc fixes into their owning commit, then run the required checks.

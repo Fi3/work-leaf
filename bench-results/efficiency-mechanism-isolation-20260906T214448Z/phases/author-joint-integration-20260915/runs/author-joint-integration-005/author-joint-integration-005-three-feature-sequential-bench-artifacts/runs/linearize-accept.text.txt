@@ -1,0 +1,50 @@
+Accepted. I’ll now turn the provisional stack into the three planned commits, add the deferred docs into the owning commits, then run the required `cargo fmt`, `cargo clippy`, and `cargo test` loop until clean.
+The worktree is clean, so I’m going to materialize each reviewed request as a patch, reset the branch back to `c92a0b7`, and replay the three request patches one by one with their docs before committing. This is the cleanest way to avoid stray fix-only commits while preserving the reviewed behavior.
+The three request patches are captured outside the repo. I’m rewinding to the accepted base now, then I’ll replay request 1 and add its terminal UI documentation before the first final commit.
+Base restored at `c92a0b7`. Applying request 1’s reviewed changes now, then I’ll update the docs to describe the visual/yank terminal controls as current behavior.
+I’m adding the request 1 documentation in the architecture terminal section and the terminal UI spec. The wording describes the resulting controls directly, so it stays out of changelog style.
+Request 1 is staged with its code, harness coverage, and terminal docs. I’m committing it as the first final commit before replaying request 2.
+First final commit is in place. I’m applying request 2 on top and will add the documentation for selected-agent slash command routing before committing it.
+I’m documenting request 2 at the controller/terminal boundary: slash-prefixed backend commands belong to the selected agent, while slash text from the command surface remains command-surface input.
+The docs patch missed because the controller-method bullet wraps differently in the current file. I’m checking that snippet and applying the same content against the exact text.
+The patch helper is still being picky, so I’ll split the documentation edits into smaller hunks and apply them independently.
+I found the exact wrapping. I’ll apply the architecture paragraph, controller bullet, and spec bullets separately.
+The architecture notes are in. I’m adding the matching short spec bullets for the terminal slash-command workflow.
+Request 2 now has its code, tests, and docs in the working tree. I’m committing it as the second final commit.
+Second final commit is done. I’m applying request 3 and will fold in the review completion documentation before the third commit.
+I’m adding request 3 docs in the review lifecycle and terminal readiness descriptions. The key user-visible behavior is that clean review completion prompts the patch chat, `yes` closes it without a backend send, and later work reopens it.
+Request 3 now has its controller, terminal, harness, tests, and review lifecycle docs together. I’m committing the third final commit.
+The three final commits are created. I’m verifying the history shape first, then I’ll run the required checks and amend the relevant commit if any validation fallout appears.
+History shape is correct: exactly three commits on top of `c92a0b7`, and the tree is clean before validation. Starting with `cargo fmt`.
+`cargo fmt` completed successfully. I’m checking whether it changed any files before moving on to clippy.
+Formatting left the tree clean. Running the full clippy gate now: `cargo clippy --all-targets --all-features -- -D warnings`.
+Clippy found two validation issues: one in request 1’s visual selection helper and one in request 2’s slash routing branch. I’ll fix them now, then fold each fix back into its owning final commit rather than leaving validation-fix commits behind.
+I’m patching the clippy findings directly: converting the visual range loop to iterator/enumerate form and collapsing the selected-agent slash branch.
+Those validation fixes are applied. I’m running `cargo fmt` again before creating fixup commits for the two affected final commits.
+Formatting is clean apart from the two intended source edits. I’m creating temporary fixup commits and autosquashing them into commits 1 and 2 so the final history still has exactly three commits.
+The request 1 clippy fix is parked as a fixup. I’m doing the same for the request 2 slash-routing fix, then autosquashing both.
+Both validation fixes are in fixup commits. I’m autosquashing them into the first two final commits now.
+Autosquash completed. I’m checking that the history is back to exactly three commits and then I’ll resume the validation gate.
+The final stack is three commits again and the tree is clean. Re-running clippy now.
+Clippy is green after the folded fixes. I’m running the full test suite now: `cargo test --all-targets --all-features`.
+The full test suite found one failing terminal integration test: the frame no longer contains the exact two-file directive status line it expects. I’m inspecting that test and the rendered behavior to decide whether this is an introduced regression or a stale assertion exposed by the new UI changes.
+The focused test passes by itself, which points to an order/parallelism wrinkle rather than the new three-commit split changing the behavior outright. I’m rerunning the terminal app test target to see whether the failure reproduces under the normal target-level schedule.
+The full `terminal_app` target is green on rerun. I’m rerunning the complete required test command so the final verification has a clean full-suite result.
+Full tests are green now. I’m doing one final `cargo fmt`/status check so the ready state is tidy and there are no formatting edits left unstaged.
+The final status check shows the same three commits and no file changes after formatting. I’m doing a last explicit clean-tree and commit-count check before I wrap up.
+Done. The provisional history since `c92a0b7` is rewritten into exactly three final commits:
+
+1. `a0e6d38 ADD terminal visual yanking so pane text can be copied with vim motions`
+2. `c83fece ADD selected-agent slash routing so backend commands bypass command chat parsing`
+3. `04de084 ADD review completion confirmation so clean reviews can close patch chats`
+
+I folded the required docs/plain-text updates into the owning feature commits: terminal controls in `Spec.md` and `docs/architecture.md`, slash routing in the same surfaces, and review completion behavior in `Spec.md`, `docs/architecture.md`, and `docs/orchestrator-file-workflow.md`.
+
+Verification:
+- `cargo fmt` passed, final tree unchanged
+- `cargo clippy --all-targets --all-features -- -D warnings` passed
+- `cargo test --all-targets --all-features` passed
+- Final commit count after `c92a0b7`: `3`
+- Working tree is clean
+
+I did not run real-agent verification because this benchmark checkout explicitly waives it under the provider-isolation policy.

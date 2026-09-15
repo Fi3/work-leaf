@@ -1,0 +1,71 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling proc-macro2 v1.0.106
+   Compiling quote v1.0.45
+   Compiling unicode-ident v1.0.24
+   Compiling cfg_aliases v0.2.1
+   Compiling libc v0.2.186
+   Compiling serde_core v1.0.228
+   Compiling zmij v1.0.21
+   Compiling serde v1.0.228
+    Checking unicode-segmentation v1.13.3
+    Checking cfg-if v1.0.4
+   Compiling serde_json v1.0.150
+    Checking bitflags v2.13.0
+    Checking memchr v2.8.1
+    Checking unicode-width v0.2.2
+    Checking bitflags v1.3.2
+    Checking utf8parse v0.2.2
+   Compiling nix v0.31.3
+    Checking log v0.4.32
+    Checking cassowary v0.3.0
+    Checking itoa v1.0.18
+    Checking unicode-width v0.1.14
+    Checking tui v0.19.0
+   Compiling syn v2.0.117
+   Compiling serde_derive v1.0.228
+    Checking rustyline v18.0.0
+    Checking work-leaf v0.1.0 (/home/user/.codex/wl-author-integration.VrZvTe/author-joint-integration-005/work-leaf-3feature-sequential-bench.FI1UfK/repo)
+error: the loop variable `line` is used to index `lines`
+    --> src/ui.rs:1713:17
+     |
+1713 |     for line in start.line.saturating_add(1)..end.line {
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#needless_range_loop
+     = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+     = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+     |
+1713 -     for line in start.line.saturating_add(1)..end.line {
+1713 +     for (line, <item>) in lines.iter().enumerate().take(end.line).skip(start.line.saturating_add(1)) {
+     |
+
+error: this `if` statement can be collapsed
+   --> src/workspace.rs:142:9
+    |
+142 | /         if agent_slash_command_line(trimmed).is_some() {
+143 | |             if let Some(agent_id) = self.selected_agent.clone() {
+144 | |                 if let Err(error) = self.send_message(&agent_id, trimmed) {
+145 | |                     self.push_command_line(command_chat_error_text(&error));
+...   |
+149 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+142 ~         if agent_slash_command_line(trimmed).is_some()
+143 ~             && let Some(agent_id) = self.selected_agent.clone() {
+144 |                 if let Err(error) = self.send_message(&agent_id, trimmed) {
+...
+147 |                 return;
+148 ~             }
+    |
+
+error: could not compile `work-leaf` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `work-leaf` (lib test) due to 2 previous errors

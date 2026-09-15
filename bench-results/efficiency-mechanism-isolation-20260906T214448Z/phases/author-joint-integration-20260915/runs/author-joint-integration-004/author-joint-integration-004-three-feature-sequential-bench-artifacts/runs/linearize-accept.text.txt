@@ -1,0 +1,55 @@
+Accepted. I’ll preserve the reviewed behavior by replaying the three grouped diffs in order, adding the deferred docs inside the matching commits, then I’ll run the required Rust checks and iterate on any failures.
+First I’m saving the current provisional tip as a local backup ref and exporting the three grouped patches, so the rewrite has a clean escape hatch while still ending with exactly the three requested commits.
+The three patches are exported and the provisional tip is reachable at `refs/backup/provisional-before-linearization`. I’m resetting to the requested base and replaying feature 1 with its docs folded in.
+Now I’m applying the visual-mode patch, then I’ll update the terminal UI and harness documentation in the same working state before committing.
+I’m making the deferred feature-1 documentation updates in present-tense system language: terminal visual modes, yank behavior, and the harness coverage that exercises it.
+Feature 1 is staged in the working tree with its docs. I’m checking the scope, then I’ll create the first final commit with the implementation, tests, review fixes, and docs together.
+The first diff scope is exactly the terminal feature plus product docs; `AGENTS.md` in this checkout is not tracked in git, so its local instruction text is not part of the final commit.
+Correction: `AGENTS.md` is tracked, but the harness wording already matched the intended state at this base, so there is no AGENTS diff to commit. The product docs still carry the needed feature-1 updates.
+I’m committing feature 1 now with a rule-compliant message: the first line says what the commit does and why, and the body notes the selection/yank logic.
+Feature 1 is committed. I’m replaying feature 2 next, then I’ll fold in the slash-routing docs before creating the second final commit.
+I’m documenting the slash-command routing where it belongs: the controller owns selected-agent routing, and the terminal adapter remembers the last visible agent so `/status` from the command surface lands in that chat.
+Feature 2 is assembled with its docs. I’ll check the scope and commit it as the second final commit.
+The second diff is scoped to slash routing, its controller/terminal tests, and the matching docs. Committing that now.
+Feature 2 is committed. I’m replaying feature 3 and then updating the review workflow docs to describe the patch-chat completion prompt and close/reopen behavior.
+The feature 3 code patch applied cleanly. I’m editing the stale “mark the review chat done” wording into the resulting model: clean reviews prompt the patch chat, yes closes/hides it, and follow-up input reopens it.
+I see the exact stale sentences in the workflow doc and the architecture spots that need the new state model. I’m applying those documentation changes into the third commit’s working tree.
+These doc edits are all current-state wording, not change-log wording. I’m keeping them folded with the completion feature because they describe the behavior that feature owns.
+Feature 3 is assembled with the workflow docs updated. I’m checking the final scope before the third commit.
+The third diff is focused on completion confirmation plus docs. I’m committing it as the third final commit.
+The three final commits are in place. I’m verifying the rewritten history shape, then I’ll run the required `cargo fmt`, `cargo clippy`, and `cargo test` checks.
+History has exactly three commits rooted at the requested base. Starting required checks now with `cargo fmt`; if formatting changes anything, I’ll fold it into the relevant final commit.
+`cargo fmt` completed cleanly. I’m checking whether it touched any files before moving on to clippy.
+No formatting changes. Now I’m running clippy with all targets and features, with warnings denied as required.
+Clippy found two small validation fixes: one slash-routing nested `if` in `src/terminal_app.rs` and one visual-yank range loop in `src/ui.rs`. I’ll patch those and then amend each fix back into the commit that owns it.
+I’m applying the clippy fixes directly in the owning code paths now.
+I’ll run `cargo fmt` after the clippy edits, then create autosquash fixups for the first and second commits so the final history remains exactly three commits.
+The formatting pass only retained the two clippy fixes. I’m making one fixup for visual-yank code and one fixup for slash routing, then autosquashing them back into the first two final commits.
+The visual-yank clippy fix is staged as a fixup for commit 1. I’m doing the same for the slash-routing fix against commit 2.
+Both validation fixes are fixup commits. I’m autosquashing them so the rewritten history returns to exactly three commits.
+Working tree is clean before the autosquash. Proceeding with the non-interactive rebase.
+Autosquash completed. I’ll re-check the history shape, then rerun clippy from the top.
+The history is back to exactly three commits and the tree is clean. Rerunning clippy now.
+Clippy is green. I’m running the full test suite now with all targets and features.
+The full test suite passed. I’m doing the final cleanliness and history checks now.
+The repository is clean with three commits. I’m running one final `cargo fmt` on the finished history to make the verification report unambiguous.
+Final format pass made no visible noise. I’m checking cleanliness once more before I wrap this up.
+One housekeeping bit: I’m removing the temporary backup ref I used during the rewrite so the visible repo refs don’t keep the provisional stack around.
+Backup ref removed. Final status and commit count are still clean; I’m doing that last check now.
+Done. The provisional stack was rewritten to exactly three commits rooted at `c92a0b7060a36eac6db2d869b85e589a7a9480f9`, and the working tree is clean.
+
+Final commits:
+
+1. `f26b6fa ADD terminal visual yank modes so pane text can be copied from the UI`
+2. `2fda4a6 UPDATE command-surface slash prompts so selected-agent commands reach the active chat`
+3. `3ad407b ADD review completion confirmation so reviewed patch chats close only after user approval`
+
+I folded the deferred documentation into the owning commits, including updates to `Spec.md`, `docs/architecture.md`, and `docs/orchestrator-file-workflow.md`.
+
+Verification passed:
+
+- `cargo fmt`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all-targets --all-features`
+
+Real-agent verification was not run because this benchmark checkout explicitly waives provider launches under the Benchmark Provider-Isolation Policy in `AGENTS.md`.

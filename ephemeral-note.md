@@ -1,11 +1,50 @@
 # Provisional investigation ledger
 
-Live analysis counter: **DONE: 80 | TODO: 10 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
+Live analysis counter: **DONE: 82 | TODO: 8 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
 **Bug-fix counter: DONE: 11 | TODO: 0 | TOTAL: 11.** BUG011's actual immutable input boundary qualifies. All earlier fixes and failed attempts remain intact.
-**Current activity, 2026-09-15T04:13:00+00:00:** Actual immutable-view launch/resume qualifies with 47,580 raw, complete input equality, no tails and 248 matching source endpoints. Admitting integration-only continuation through this verified view. No model generation is running. Research remains 80/10/90; bugs 11/0/11.
+**Current activity, 2026-09-15T04:48:00+00:00:** P09/P11's source-connected recorded-stage comparison is complete, with failures preserved: mean24.297M versus18.545M, net+5.752M after integration offsets. Research82/8/90; bugs11/0/11. Next is local eligibility of a retained author prefix for the known C08 × C25 joint; no generation is admitted.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-15T04:44:29+00:00 — P09/P11 complete; main counter82/8/90:**
+The three connected recorded-model totals are27,049,174 /23,754,840 /22,087,428;
+mean24,297,147⅓ versus the unchanged18,545,304 reference. Net+5,751,843⅓,
+after subtracting1,830,866⅔ cheaper integration from the earlier prefix increase.
+The all-on package is23.6729% lower in this comparison, NOT the historical
+explained share. All source/input checks and once-only accounting qualify.
+004's original guard failure remains: two UI-help edits to skip-worktree AGENTS.md.
+Its exact committed code separately passes the unchanged final checks in15.40s;
+no source edit, additional model turn or rewritten outcome.005/006 pass original
+host gates. P09's bounded recorded-model confirmation and P11's offset calculation
+close with these limits, each appending exactly one immutable checkpoint.
+Historical attribution and the eight listed joint/transfer/acceptance obligations
+remain unfinished. Bugs stay11/0/11; this observed guard rejection is not a new
+harness defect or an extra bug task.
+
+**2026-09-15T04:33:00+00:00 — three integrations closed; accounting reconciles:**
+All three end by 04:29:36 UTC. Integration raw totals are 5,353,565 / 4,808,321 /
+5,128,101 for 004/005/006. All six public turns complete. The native core runs
+once per new thread; BUG010's existing cache-only population supplement clears
+the retained ordering diagnostic without executing the core again or changing
+any charge. No unfinished tail is observed. Whole saved base/developer/context/
+permission prefixes still match. Run 004 reaches agent completion but fails the
+host check for changed temporary AGENTS.md; inspect its exact source/work before
+deciding qualification. Runs 005/006 pass final host checks. No replacements.
+The bounded P06 artifact lookup examines 280 retained files and finds no actual
+read of the exact old skill path; it spends no model tokens and does not close P06.
+
+**2026-09-15T04:19:17+00:00 — three saved-prefix integration continuations launched:**
+Manifest `97bf854d952a72dcda3f45dd7eb3b8d5cdb8b00a3e9320b04474aec353ca2f05`
+verifies 274 pins. Launch order 005/004/006 is concurrent, with separate runtime
+and artifact roots. The 1,800-second outer clock includes setup; a 12M recorded
+raw tripwire per integration is sampled every 15 seconds with owned cancellation
+and retained tails. Source/cache preparation and original final integration gates
+remain. Earlier implementation/review/fix work is reused exactly, not regenerated.
+All old partial/unqualified integration results and failed preparations remain.
+Commit 382b643 saves the isolated driver, actual immutable-view verification and
+frozen admission; commit 17e924b preserves exact source recovery. No live causal
+analysis or adaptive tuning; only input/source/resource monitoring until closure.
 
 **2026-09-15T04:13:00+00:00 — immutable actual input qualifies; BUG011 closes:**
 The two-turn diagnostic ends at 04:11:21.761991, after 17.99 seconds. Exactly

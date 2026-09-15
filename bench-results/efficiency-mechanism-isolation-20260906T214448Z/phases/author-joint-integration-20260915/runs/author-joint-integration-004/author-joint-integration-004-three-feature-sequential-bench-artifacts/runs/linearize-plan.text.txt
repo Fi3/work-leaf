@@ -1,0 +1,36 @@
+I’ll map the provisional history first, then inspect the resulting diff by area so the three final commits can be based on behavior rather than on the temporary commit boundaries. No files or history changes in this turn.
+The provisional commits are already grouped by request labels (`UPDATE 1`, `UPDATE 2`, `UPDATE 3`). I’m going to inspect each group’s cumulative patch, plus the architecture and docs surface, so the plan can fold tests and review fixes into the right final commit.
+A first pass says the behavior lands in terminal visual editing, command-surface slash routing, and review-completion confirmation. I’m checking the exact functions and tests now, and also whether the public/controller documentation needs to describe any new surface.
+The architecture doc already says `/` in command mode seeds selected-agent chat, but it does not yet describe visual selection/yank or the post-review completion prompt. I’m going through the tests and any existing README/help text so the plan calls out the deferred docs precisely.
+There is no top-level `README.md` in this checkout, so I’m narrowing the doc audit to `docs/` and any repository markdown/plaintext instruction files. After that I’ll turn this into the three-commit proposal.
+`Spec.md`, `Readme.md`, `docs/architecture.md`, and `docs/orchestrator-file-workflow.md` are the relevant plain-text files. I’m reading the sections that intersect these three features, especially the review flow wording that currently says users mark the review chat done.
+The workflow docs still describe the old “mark the review chat done” model, while the code routes the confirmation to the patch-agent chat. That is a clear required doc update for the third final commit; the terminal-mode additions likely belong in the architecture/spec terminal UI sections.
+The final history can stay in the same feature order because later groups build on earlier state but do not need an independent support commit. I’m grabbing line anchors for the main symbols so the plan is explicit about what goes into each final commit.
+I’ve got the anchors for the first two groups. One subtlety for the third group: it adds hidden-agent UI state in `AgentListEntry`, so it crosses controller and terminal UI surfaces and should carry both workflow docs and architecture wording in its final commit.
+The completion flow is concrete now: `ReviewComplete` appends a patch-chat prompt, `yes/y` hides the patch chat from the left list, and later non-confirmation input reopens it and goes to the agent. I’ll also anchor the terminal adapter side before writing the plan.
+One architecture wrinkle I noticed is that `AgentListEntry` is part of the documented terminal UI surface, and the third feature adds hidden-row state there. The accepted turn should document that resulting surface; I won’t propose a separate API cleanup commit because the contract requires each request’s support/docs to stay folded into that request.
+Tiny correction from the deeper check: `AgentListEntry::hidden` already existed at the base commit; the third feature adds the `TerminalUi::set_agent_hidden_state` path and wires completion state into that existing hidden-row model. That makes the doc update simpler: describe the hidden-state behavior, not a new public field.
+I’m at the synthesis point now. One last pass gets line numbers for the doc sections that should be updated during the accepted linearization turn.
+I inspected the history from `c92a0b7060a36eac6db2d869b85e589a7a9480f9`; the provisional commits already group cleanly by request as `UPDATE 1`, `UPDATE 2`, and `UPDATE 3`. Working tree is clean, and I did not modify files or run the repository check suite.
+
+**Proposed Three-Commit Plan**
+
+1. `ADD terminal visual yank modes so pane text can be copied from the UI`
+   - Fold provisional commits `26a9b28..0e27d52`.
+   - Include `src/ui.rs` visual modes, selections, yank/clipboard behavior, `Ctrl-V` parsing in `src/terminal_app.rs` and `src/ui_harness.rs`.
+   - Include tests in `tests/ui_harness.rs`, `tests/terminal_ui.rs`, and `tests/terminal_app.rs`.
+   - Add deferred docs/plain-text updates for terminal visual mode behavior in `docs/architecture.md`, `Spec.md`, and likely the terminal harness note in `AGENTS.md`.
+
+2. `UPDATE command-surface slash prompts so selected-agent commands reach the active chat`
+   - Fold provisional commits `3b85407..6479745`.
+   - Include `src/workspace.rs::selected_agent`, `send_selected_agent_slash_command`, `is_agent_slash_command`, and terminal-side `last_selected_agent` routing in `src/terminal_app.rs`.
+   - Include controller and terminal regression tests in `tests/workspace.rs` and `tests/terminal_app.rs`.
+   - Add docs describing `/status`-style command-surface messages routing to the selected or last terminal-visible agent, especially in `docs/architecture.md` and `Spec.md`.
+
+3. `ADD review completion confirmation so reviewed patch chats close only after user approval`
+   - Fold provisional commits `7043645..7b16e5f`.
+   - Include `src/workspace.rs` completion prompt/state, yes/no parsing, reopen behavior, repeated marker preservation, and terminal mapping through existing hidden-agent state in `src/terminal_app.rs`, `src/ui.rs`, and `src/ui_harness.rs`.
+   - Include tests in `tests/workspace.rs`, `tests/terminal_app.rs`, and `tests/ui_harness.rs`.
+   - Update stale review workflow text in `docs/orchestrator-file-workflow.md`, `docs/architecture.md`, and `Spec.md`; current docs still say the user marks the review chat done, but the resulting behavior prompts in the patch-agent chat and hides/reopens that chat based on the answer.
+
+After acceptance, I’ll rewrite to exactly these three commits rooted at `c92a0b7060a36eac6db2d869b85e589a7a9480f9`, then run the required validation checks.

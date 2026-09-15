@@ -1,9 +1,9 @@
-# DONE: 80 | TODO: 10 | TOTAL: 90
+# DONE: 82 | TODO: 8 | TOTAL: 90
 ## BUG FIXES — DONE: 11 | TODO: 0 | TOTAL: 11
 
-**Pending checks: 10 research obligations remain. Current: admitting the three integration-only continuations after BUG011's actual input qualification. No model generation is running. All three saved source prefixes qualify.**
-**Current verified result:** the historical saving's causally explained combined percentage is **NOT ESTABLISHED**.
-**Activity, 2026-09-15T04:13:00+00:00:** [BUG011's immutable input view qualifies](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/catalog-immutability-016/BUG011-RESULT.md): the actual two-turn launch/resume uses 47,580 raw with exact accounting, complete reference input equality, no tails and 248 matching source endpoints. No original outcome changes. The separate bug counter reaches 11/0/11; research stays 80/10/90. Integration-only admission resumes using this verified view.
+**Pending checks: 8 research obligations remain. Current: qualify an existing author-prefix reference for the C08 × C25 joint; no new model run is admitted. P09's bounded confirmation and P11's recorded-stage offset comparison are finished.**
+**Current verified result:** reversing the author-policy package gives **24.297M versus 18.545M raw**, net **+5.752M** after integration offsets. The all-on package uses **23.6729% less in this contrast**. **The causally explained share of the historical ~50% gap remains NOT ESTABLISHED.**
+**Activity, 2026-09-15T04:48:00+00:00:** [The connected result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P11/CONNECTED-RESULT-20260915.md) retains all three rows, exact input/source/usage checks and old failed integration costs. Continuation004's original instruction-guard failure remains FAIL; its exact saved code passes the unchanged local final checks, without edits or model reruns. These are source-connected recorded-model outcomes, not three uninterrupted successful benchmarks or historical attribution. Research82/8/90; bugs11/0/11.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
@@ -15,9 +15,9 @@
 | P06 | BLOCKED | Refresh × continuation joint check, C08 × C25. |
 | P07 | BLOCKED | Author policy × refresh × continuation joint check, A+B+C08+C25. |
 | P08 | BLOCKED | Remaining exercised whole-package interaction: custody/tools, information, review/repair, lifecycle, scheduling and auxiliary work. |
-| P09 | CHECKING | One three-workflow confirmation batch of the strongest qualified reversal, with all required stages. |
+| P09 | DONE | One three-workflow confirmation batch of the strongest qualified reversal, with all required stages. |
 | P10 | DONE | Source/input/activation and complete distinct-response accounting for every new observation. |
-| P11 | BLOCKED | Full author/review/repair/integration cost offsets. |
+| P11 | DONE | Full author/review/repair/integration cost offsets. |
 | P12 | BLOCKED | Combined same-target effect, interactions and context amplification without double counting. |
 | P13 | BLOCKED | Historical six-vs-six transfer, explained amount/share and justified residual. |
 | P14 | BLOCKED | Evidence-backed executable non-WL causal recipe; reuse existing real execution where it matches. |
@@ -117,22 +117,23 @@ questions and main TODO increases still need approval. Routine repair, verificat
 bounded continuation of existing work follow the current no-routine-pause authority.
 Previously unaccounted bug fixes use their separate counter; they do not expand research TODO.
 
-## Live priority — qualify connected continuation; retain historical transfer limits
+## Live priority — known joint effects after the measured author-package net
 
-Last maintained: **2026-09-15 04:17 UTC**. [The saved stage analysis](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P11/PREFIX-ANALYSIS-RESULT-20260915.md) retains the A+B upstream signal and downstream review/fix costs. Exact original source chains and BUG011's immutable actual integration inputs qualify. The three-row continuation manifest passes verification after retaining the failed preparation. This full-stage cost boundary has the highest immediate value. P13's map establishes historical exposure/location, not causal amount. P06's historical 0.1.14 catalog remains unrecovered; its prepared route is unadmitted and not real-agent verified.
-The accepted historical gap and the user's no-quality-loss assumption remain premises.
+Last maintained: **2026-09-15 04:48 UTC**. [The connected result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P11/CONNECTED-RESULT-20260915.md)
+measures A+B's net +5,751,843⅓ raw after the1,830,866⅔ integration offset.
+The historical45.38%–51.62% saving and the user's no-quality-loss assumption remain premises.
+Highest next value is the known refresh × continuation interaction and its overlap with the
+author package. No new scientific question or ordinary control is selected.
 
 | Priority | Evidence and potential explanatory reach | Next cheap check / stop gate |
 | --- | --- | --- |
-| Active integration-only admission: P09 | All three original source chains/all-ref graphs and dry-runs qualify. BUG009 preserves trust; BUG011's actual immutable-view diagnostic preserves complete inputs and all 248 pins, with 47,580 raw and no tails. | Use the qualified immutable provider and preserve the failed unadmitted preparation. Exactly three stage-only continuations, 30-minute outer bound and 12M recorded raw per row; no author/review rerun, selected-only outcome or full replacement. |
-| Saved retained-data screen: P13 transfer | Historical18/18 Direct test-first versus17/18 WL cohesive publication matches P09's observed policy reversal. The historical initial gap is8.957M–9.730M; outside-initial gap7.434M–8.915M under the inherited cap. | A qualified connected net contrast is needed, not another action census. No historical attributed percentage from a prefix, location, or sum of other-cohort means. P13 remains unfinished. |
-| C08 × C25, P06: setup blocked before generation | Both constituents have positive saved direction from different targets; their combined amount is unmeasured. Existing runtime refresh and observer timing seams coexist, but W002's later full0.1.14 catalog is not the available P01 setup. | Restore/qualify the actual complete input boundary before any joint admission. Preserve the unadmitted route/probe and zero generation; missing historical assets do not prove zero interaction. |
-| Strongest qualified author signal: A+B; full net blocked | P09's qualified author/review/fix prefix mean is +7,582,710 raw. All nine initial authors publish tests separately and execute failure first. 76.37% of initial-author excess is after first passing focused checks, including genuine repairs and repeated validation; this is location, not a B percentage. | Retain exact stage evidence; no historical share from a prefix. The input repair does not qualify old integration outputs retroactively. No automatic full replacement or selection of only the restorable004 source. |
-| B-only discriminator: parked after valid bounded check | P03 ends at 3,088,197 raw with four matcher rejections and seven accepted source-only fragments, before any check/GREEN. Actual B-off feedback is exposed, but post-result stopping is not. | No repeat selected and no independent B percentage. Use the qualified complete joint package for the next existing confirmation task. |
-| P06 comparison limit | The first H003 refresh file is recoverable, but its connected historical runtime is not. A fresh same-generation W alternative reaches its first changed refresh only after 3.386M–9.006M recorded raw in five references; the sixth has none. | Preserve historical-restoration failure. Reuse the existing W reference cohort only with explicit transfer limits and representative exposure; no new ordinary control, null or coverage exclusion from failed setup. |
-| Whole author/refresh/residual joints: P07/P08 | No qualified connected composite exists. The source check confirms that ordinary acceptance has no compiler gate: shared buildability is policy, so an exact private A/B policy inverse need not invent a publication engine. Later stages are exercised, not absent. | Existing P07/P08 blockers remain, narrowed by FRESH-BOUNDARY-RESULT-20260915.md. Any composite still needs owned-span/source/input qualification and representative connected exposure. No new framework, hidden experiment bucket or unsupported exclusion. |
-| Completed P10; dependent P09/P11–P16 | P10's four old admissions retain 3,567,272 raw plus two unknown tails; the later diagnostic contributes 48,827 raw separately. Qualified P04 supplies an author-only signal, not a complete-workflow or historical net amount. | Keep admission accounting disjoint. P09 also needs faithful complete-stage inputs; P15 stays conditional and P16 unfinished. |
-| Parked A-only / C-only / old weak cues | R02 incomplete; R05 lacks a faithful C-only boundary; native R06 is cheaper than R04, opposite the predicted direction. | No automatic repeats or new bridge framework. Reconsider only with a specific genuinely new fact. |
+| Active local P06 reference qualification | C08/C25 have separate positive retained direction, but their combined amount is unmeasured. An already-collected later author prefix might have available0.1.15 inputs before any review intervention acts. | Check the earliest eligible prefix's exact inputs and refresh/continuation exposure, not its token total. No generation, new control or exclusion from a failed setup. |
+| Known P06 historical setup limitation | The0.1.14 body is unrecovered; the bounded retained-tool-read lookup finds no exact read across280 files. H003's isolated refresh file is not a connected runtime. | Preserve these failed setup attempts. An alternative must supply a same-target reference and explicit transfer limits; a3M from-base window known not to reach exposure is not a useful null screen. |
+| Completed A+B confirmation/offsets, P09/P11 | Full recorded-model net +5,751,843⅓; individual increases+3.542M–8.504M. All nine initial authors execute test-first.76.37% of initial excess follows first GREEN, including genuine repairs. | Use the joint package, not independent A/B shares. Keep004's failed guard report and separate exact-code validation. No additional confirmation batch selected. |
+| P07/P08 author/refresh/continuation and residual joints | Their named exercised differences are still not excluded or jointly measured. Standalone custody lacks WL refresh/continuation; no qualified connected composite exists. | Qualify the declared complete factor set and representative boundary. No new framework, hidden task, sum of unlike cohorts or scientific closure from failed setup. |
+| P12/P13 combined amount and historical transfer | Historical18/18 Direct test-first and17/18 WL cohesive sequences match the policy direction. Initial historical gap8.957M–9.730M, outside-initial7.434M–8.915M are locations, not causal allocations. | Combine qualified same-target evidence and justify transfer/residual. Do not label23.6729% of this modified comparison as23.6729% of the historical saving. |
+| Completed accounting; P14–P16 still pending | Three integrations add15,289,987 recorded raw with no unfinished tails. Every old failed/partial outcome and setup diagnostic remains separately accounted. | Preserve recipe fidelity and ownership. P15 stays conditional on valid cause coverage; P16 requires the supported answer. |
+| Parked B-only/A-only/C-only and old weak cues | P03 reaches its bound before GREEN; R02 is incomplete, R05 lacks a faithful boundary, and R06 is cheaper than R04 in the wrong direction. | No automatic repeats or renamed screens. A particular sentence or independent B percentage is not established. |
 
 The [work-chain report](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/RESULT.md)
 distinguishes observed publication/RED/repair work from causally identified excess.

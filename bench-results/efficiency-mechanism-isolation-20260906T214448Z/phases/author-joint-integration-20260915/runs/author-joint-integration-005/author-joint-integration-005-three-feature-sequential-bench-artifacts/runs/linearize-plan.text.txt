@@ -1,0 +1,31 @@
+I’ll inspect the reviewed commit stack and the combined diff against `c92a0b7…`, then map each behavior back to the request it belongs to. I’ll keep this strictly to read-only history/file inspection and won’t run checks or touch the tree.
+The stack is already grouped by request numbers in the provisional messages, but I’m going to verify the actual behavior instead of trusting the labels. Next I’m reading the changed surfaces around `workspace`, `terminal_app`, `ui`, and the focused tests so the plan can fold the right fixes into the right final commits.
+The visible shape is three request clusters: terminal visual yanking, slash-prefixed selected-agent commands, and review completion confirmation. I’m checking the exact call paths and docs surface now, because the final plan needs to name any deferred documentation edits without mixing them into extra commits.
+There are two documentation files beyond architecture that mention the review lifecycle and terminal operation: `Readme.md` and `docs/orchestrator-file-workflow.md`. I’m reading the relevant parts so I can call out precise doc work for the accepted turn.
+The docs already mention a few adjacent concepts, but they don’t yet describe the newly introduced visual/yank UI behavior or the explicit yes/no review completion prompt. I’m drilling into the implementation symbols and tests to make the plan concrete.
+The call path is becoming clear: visual mode is owned entirely by `TerminalUi`, slash command routing crosses `TerminalApp`/`RemoteTerminalApp` into `WorkLeafController`, and completion confirmation sits in controller state with terminal readiness rendering on top. I’ll inspect the final helper symbols and the tests next, then I can give you a clean three-commit plan.
+No documentation/plain-text files have changed in the current diff, so the accepted linearization will need to add those updates where behavior is documented. I’m checking the test names and affected API surface so the three final commits can be scoped without accidental hygiene commits.
+The review confirmation implementation has an important behavioral detail for the plan: `yes` is consumed by the controller and does not go to the backend, while later non-confirmation chat reopens the feature and resumes normal sending. I’m checking whether there are merge-order dependencies among the three request groups before I finalize the linearization order.
+One ordering dependency is real: request 2’s terminal slash shortcut reuses `TerminalUi::is_visual_active()` introduced by request 1, and request 3 builds on the already routed terminal/controller send paths. The natural final order is therefore the same 1, 2, 3 order, with each range squashed into its request commit.
+I’ve got enough to plan the final stack. One note I’ll carry into the plan: because no docs/plain-text files changed in the provisional diff, each final commit needs to absorb only the documentation for the behavior it owns, not a separate cleanup commit.
+I’m doing one last grounding pass for symbol names around the shared terminal state machine. After that I’ll stop tool work and give the proposed final history.
+**Inspection Summary**
+Working tree is clean. The reviewed stack runs from `8f7862f` through `138e1b5` on top of `c92a0b7`, and the combined diff currently touches only `src/terminal_app.rs`, `src/ui.rs`, `src/ui_harness.rs`, `src/workspace.rs`, and the three test files. No docs/plain-text files changed yet.
+
+Request order should stay `1 -> 2 -> 3`: request 2 depends on `TerminalUi::is_visual_active()` from request 1, and request 3 builds on the selected terminal/controller send paths.
+
+**Proposed Three-Commit Plan**
+
+1. `ADD terminal visual yanking so pane text can be copied with vim motions`
+
+   Fold provisional commits `8f7862f..99e33eb`. Include `src/ui.rs::TerminalUi` visual selection state and handlers (`v`, `V`, Ctrl-V, `y`, `Y`), OSC52 clipboard output via `terminal_prefix`, left/right pane selection mapping, `src/terminal_app.rs`/`src/ui_harness.rs` visual-active guards, and the visual/yank UI harness tests. Add required docs in `docs/architecture.md` Terminal UI section and `Spec.md` terminal UI text.
+
+2. `ADD selected-agent slash routing so backend commands bypass command chat parsing`
+
+   Fold provisional commits `8f324c4..4503b54`. Include `src/workspace.rs::execute_command_line` routing for slash-prefixed non-whitespace lines through the selected agent, `agent_slash_command_line`, terminal prompt-mode routing in `src/terminal_app.rs::handle_command_line`, command-mode `/` chat seeding, no-selected-agent command-surface behavior, and the controller/terminal/harness tests. Add docs for selected-agent slash command behavior in `docs/architecture.md` and `Spec.md`.
+
+3. `ADD review completion confirmation so clean reviews can close patch chats`
+
+   Fold provisional commits `5835b2a..138e1b5`. Include `src/workspace.rs` completion prompt state (`feature_completion_prompts`, `closed_features`), yes/no handling after `CommandChatResult::ReviewComplete`, reopen behavior on later chat, terminal ready-highlight closure through `src/terminal_app.rs::session_feature_closed`, duplicate-safe state-line handling, and the workspace/terminal/harness regression tests. Add docs in `docs/architecture.md`, `docs/orchestrator-file-workflow.md` Review Flow/Developer Path, and `Spec.md` Reviews.
+
+After acceptance, I’ll rewrite the history rooted at `c92a0b7` into exactly those three commits, fold each request’s fixes/tests/docs into its own commit, then run the required checks. Real-agent verification is waived for this benchmark checkout by the repo’s provider-isolation policy.
