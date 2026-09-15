@@ -1,0 +1,20 @@
+E.......
+======================================================================
+ERROR: test_cache_preparation_does_not_filter_reviewed_source_with_lint_failures (test_continuation.ContinuationTests.test_cache_preparation_does_not_filter_reviewed_source_with_lint_failures)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/integration-continuation-015/test_continuation.py", line 94, in test_cache_preparation_does_not_filter_reviewed_source_with_lint_failures
+    result = continuation.warm_cache(Path('/tmp/retained/repo'), Path('/tmp/retained'))
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/integration-continuation-015/continuation.py", line 142, in warm_cache
+    require(not result['exit_code'] and not result['timed_out']
+    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            and not result['cancelled_signal'], 'cache compilation did not complete')
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/integration-continuation-015/continuation.py", line 22, in require
+    raise ValueError(message)
+ValueError: cache compilation did not complete
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.037s
+
+FAILED (errors=1)

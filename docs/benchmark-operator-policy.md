@@ -58,6 +58,12 @@ provides one, before a generated diagnostic. Verify the intended keys and preser
 settings rather than assuming command-line quoting or configuration merging applied them.
 Readback establishes configuration activation, not actual-agent input or behavioral verification.
 
+Frozen private catalog and configuration snapshots use read-only namespace mounts
+when a client can initialize or refresh local state. Source hashes are checked
+before admission and at closure; a successful configuration RPC does not establish
+snapshot immutability. Restore a missing input only from exact matching bytes,
+retain the failed preparation, and qualify actual model inputs after a view repair.
+
 Only a relevant observed mechanism signal makes a larger experiment eligible for consideration;
 the applicable study/user authority is still required. A positive shallow screen is not an exact
 causal percentage, and an inconclusive one is not proof of no effect. Stop/deprioritize instead of

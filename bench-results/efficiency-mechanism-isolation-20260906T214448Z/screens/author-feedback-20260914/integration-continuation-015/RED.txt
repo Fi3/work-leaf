@@ -1,0 +1,20 @@
+E
+======================================================================
+ERROR: test_continuation (unittest.loader._FailedTest.test_continuation)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_continuation
+Traceback (most recent call last):
+  File "/usr/lib/python3.14/unittest/loader.py", line 433, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/usr/lib/python3.14/unittest/loader.py", line 374, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/integration-continuation-015/test_continuation.py", line 8, in <module>
+    import continuation
+ModuleNotFoundError: No module named 'continuation'
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (errors=1)

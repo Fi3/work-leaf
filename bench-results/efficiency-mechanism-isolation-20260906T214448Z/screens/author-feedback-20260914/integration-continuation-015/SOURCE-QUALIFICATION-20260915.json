@@ -1,0 +1,54 @@
+{
+  "command": "python3 - <<'PY'\nfrom concurrent.futures import ThreadPoolExecutor\nimport json,subprocess,sys\nfrom pathlib import Path\ns=Path('bench-results/efficiency-mechanism-isolation-20260906T214448Z').resolve();q=s/'screens/author-feedback-20260914/integration-continuation-015'\nsys.path.insert(0,str(q));import continuation\nmanifest=json.loads((q/'SEEDS.json').read_text())\ndef qualify(row):\n repo=Path('/tmp/wl-integration-source-qual.zZiHof')/row['run_id']\n source=s/'infrastructure/driver-source'\n for args in (['git','-C',str(source),'clone','--no-checkout','--no-hardlinks',str(source),str(repo)],['git','-C',str(repo),'checkout','--detach',row['base']],['git','-C',str(repo),'config','user.name','Work Leaf Bench'],['git','-C',str(repo),'config','user.email','bench@example.com']):\n  subprocess.run(args,check=True,capture_output=True)\n seed=continuation.select_seed(manifest,row['run_id'])\n result=continuation.restore(repo,seed)\n result['repo']=str(repo)\n return result\nwith ThreadPoolExecutor(max_workers=3) as pool:\n for result in pool.map(qualify,manifest['rows']):print(json.dumps(result),flush=True)\nPY",
+  "execution": {
+    "chunk_id": "49da1f",
+    "wall_time_seconds": 0.000008311,
+    "exit_code": 0,
+    "original_token_count": 458,
+    "output": "{\"schema\": 1, \"original_run_id\": \"author-joint-confirmation-004\", \"run_id\": \"author-joint-integration-004\", \"head\": \"7b16e5fbfa3f2cfd604c31405771a916f29cb938\", \"tree\": \"f4b66255bb657c0c75d1f25cfbefa28ea3d1fcc1\", \"clean\": true, \"source_refs_preserved\": true, \"all_ref_commit_graph_matches\": true, \"graph_sha256\": \"31ac7b92763eeb2f174fa4b6ebf6b47008e9e235a6d81e9cf9d8bab33312ad0f\", \"refs_sha256\": \"75463509b18bb52a9ca022cd15bf80e5f69d73feb8f1c344895385e982e1c3e0\", \"scope\": \"exact source chain; old model outcomes remain unchanged\", \"repo\": \"/tmp/wl-integration-source-qual.zZiHof/author-joint-integration-004\"}\n{\"schema\": 1, \"original_run_id\": \"author-joint-confirmation-005\", \"run_id\": \"author-joint-integration-005\", \"head\": \"138e1b51ecd7c989c8f48b37db387fbbe3fe6dac\", \"tree\": \"5512929971221609a63ff011208bcdda9df1af4c\", \"clean\": true, \"source_refs_preserved\": true, \"all_ref_commit_graph_matches\": true, \"graph_sha256\": \"3b0a26eee6724085e41281b8a7cb4a4d19c4267dc7057d04ee95c8004ed74629\", \"refs_sha256\": \"75463509b18bb52a9ca022cd15bf80e5f69d73feb8f1c344895385e982e1c3e0\", \"scope\": \"exact source chain; old model outcomes remain unchanged\", \"repo\": \"/tmp/wl-integration-source-qual.zZiHof/author-joint-integration-005\"}\n{\"schema\": 1, \"original_run_id\": \"author-joint-confirmation-006\", \"run_id\": \"author-joint-integration-006\", \"head\": \"67fe0fd538d138b9fe41c2e84a8e93342c26966b\", \"tree\": \"f3b76e57000f5407de646ad7f2221f288ffc558c\", \"clean\": true, \"source_refs_preserved\": true, \"all_ref_commit_graph_matches\": true, \"graph_sha256\": \"83609be34c2b587f373e00abda8a6be3595eb35bdf2bab93283ab9ccbdf829b2\", \"refs_sha256\": \"75463509b18bb52a9ca022cd15bf80e5f69d73feb8f1c344895385e982e1c3e0\", \"scope\": \"exact source chain; old model outcomes remain unchanged\", \"repo\": \"/tmp/wl-integration-source-qual.zZiHof/author-joint-integration-006\"}\n"
+  },
+  "rows": [
+    {
+      "schema": 1,
+      "original_run_id": "author-joint-confirmation-004",
+      "run_id": "author-joint-integration-004",
+      "head": "7b16e5fbfa3f2cfd604c31405771a916f29cb938",
+      "tree": "f4b66255bb657c0c75d1f25cfbefa28ea3d1fcc1",
+      "clean": true,
+      "source_refs_preserved": true,
+      "all_ref_commit_graph_matches": true,
+      "graph_sha256": "31ac7b92763eeb2f174fa4b6ebf6b47008e9e235a6d81e9cf9d8bab33312ad0f",
+      "refs_sha256": "75463509b18bb52a9ca022cd15bf80e5f69d73feb8f1c344895385e982e1c3e0",
+      "scope": "exact source chain; old model outcomes remain unchanged",
+      "repo": "/tmp/wl-integration-source-qual.zZiHof/author-joint-integration-004"
+    },
+    {
+      "schema": 1,
+      "original_run_id": "author-joint-confirmation-005",
+      "run_id": "author-joint-integration-005",
+      "head": "138e1b51ecd7c989c8f48b37db387fbbe3fe6dac",
+      "tree": "5512929971221609a63ff011208bcdda9df1af4c",
+      "clean": true,
+      "source_refs_preserved": true,
+      "all_ref_commit_graph_matches": true,
+      "graph_sha256": "3b0a26eee6724085e41281b8a7cb4a4d19c4267dc7057d04ee95c8004ed74629",
+      "refs_sha256": "75463509b18bb52a9ca022cd15bf80e5f69d73feb8f1c344895385e982e1c3e0",
+      "scope": "exact source chain; old model outcomes remain unchanged",
+      "repo": "/tmp/wl-integration-source-qual.zZiHof/author-joint-integration-005"
+    },
+    {
+      "schema": 1,
+      "original_run_id": "author-joint-confirmation-006",
+      "run_id": "author-joint-integration-006",
+      "head": "67fe0fd538d138b9fe41c2e84a8e93342c26966b",
+      "tree": "f3b76e57000f5407de646ad7f2221f288ffc558c",
+      "clean": true,
+      "source_refs_preserved": true,
+      "all_ref_commit_graph_matches": true,
+      "graph_sha256": "83609be34c2b587f373e00abda8a6be3595eb35bdf2bab93283ab9ccbdf829b2",
+      "refs_sha256": "75463509b18bb52a9ca022cd15bf80e5f69d73feb8f1c344895385e982e1c3e0",
+      "scope": "exact source chain; old model outcomes remain unchanged",
+      "repo": "/tmp/wl-integration-source-qual.zZiHof/author-joint-integration-006"
+    }
+  ]
+}

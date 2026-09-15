@@ -3,9 +3,53 @@
 Live analysis counter: **DONE: 80 | TODO: 10 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
-**Bug-fix counter: DONE: 10 | TODO: 0 | TOTAL: 10.** BUG009's actual integration-input boundary qualifies with exact-project trust. Earlier fixes and failed attempts remain intact; this does not complete the research or repair old outcomes.
-**Current activity, 2026-09-15T03:40:00+00:00:** All three original pre-integration source chains qualify: 55 exact accepted commits, including 36 recovered missing objects, with clean checkpoint trees. Three small verified bundles preserve them. Preparing integration-only continuation through the original driver and BUG009's verified input repair. No model generation is running. Research remains 80/10/90; bugs 10/0/10.
+**Bug-fix counter: DONE: 11 | TODO: 0 | TOTAL: 11.** BUG011's actual immutable input boundary qualifies. All earlier fixes and failed attempts remain intact.
+**Current activity, 2026-09-15T04:13:00+00:00:** Actual immutable-view launch/resume qualifies with 47,580 raw, complete input equality, no tails and 248 matching source endpoints. Admitting integration-only continuation through this verified view. No model generation is running. Research remains 80/10/90; bugs 11/0/11.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-15T04:13:00+00:00 — immutable actual input qualifies; BUG011 closes:**
+The two-turn diagnostic ends at 04:11:21.761991, after 17.99 seconds. Exactly
+47,580 raw (47,394 input + 186 output), three responses and two complete turns;
+no core/join errors, duplicate charges or unfinished tails. All 248 source pins,
+private cache/configuration and checkout remain unchanged. Whole reference
+base/developer/permissions/context inputs match; all 16 prefixes remain and no
+extra resume developer instruction appears. Eight local tests, non-generating
+readback and required Cargo checks pass. BUG011 reaches fixed; bugs 11/0/11,
+main 80/10/90. The original deletion writer remains unknown, not assumed.
+The earlier failed unadmitted preparation remains; the three integration-only
+continuations will use this qualified immutable provider, not rerun authors.
+
+**2026-09-15T04:10:30+00:00 — tiny actual immutable-input qualification admitted:**
+All four missing cache files are restored with exact original hashes; all 51
+cache pins match. Eight fail-first/local tests pass, including the real script's
+zero-generation entrypoint. Read-only namespace flags and effective configuration
+qualify without model turns. Required Cargo and 83 guards pass. Admission
+`fe5f05d3ee8371357fab4dda5b370170bbdde40e34164c229653aa142fafd7b0` pins 248 inputs for one fresh two-turn
+60-second/100k diagnostic. Prompts match the earlier qualified real-005 exactly.
+No integration benchmark is admitted. BUG011 stays pending until actual input,
+cache/config/source endpoints and once-only usage accounting qualify.
+
+**2026-09-15T04:03:00+00:00 — admission guard catches missing frozen catalog inputs:**
+The 03:59 prepare command stops before writing a manifest or launching models:
+four pinned deep-research 0.1.15 private-cache files are missing. Every public
+counterpart matches its original hash. Old P01 cache mounts are writable; the
+precise writer of this deletion is not established. BUG011 is recorded before
+repair, with a twenty-minute local scope and a separately conditional tiny input
+probe. Partial prepared infrastructure and the failed command are preserved.
+No task or outcome is silently replaced. The completed integration-only setup
+screen remains saved; its actual continuation admission has not occurred.
+
+**2026-09-15T03:54:00+00:00 — integration-only launch preparation:**
+All three same-source clones reproduce the complete archived all-ref Git graph,
+original HEAD/tree and clean source. All three complete driver dry-runs preserve
+those checks and run no authors/reviewers. The first dry invocation omitted the
+existing required host environment variable and failed before provider setup;
+its failure is retained. Three read-only effective-config queries confirm exact
+checkout trust and preserve all 330 prior project entries, with zero model turns.
+Nine local seam/rejection/budget tests pass. The restored checkouts lack their
+old compiled target directory, so bounded host-only compilation restores build
+readiness before generation; no test execution or output is sent to the model.
+One cache-preparation qualification is in progress. No generation is admitted.
 
 **2026-09-15T03:40:00+00:00 — all three original source chains recovered exactly:**
 The local screen recovers 005's 19 and 006's 17 missing commit objects from

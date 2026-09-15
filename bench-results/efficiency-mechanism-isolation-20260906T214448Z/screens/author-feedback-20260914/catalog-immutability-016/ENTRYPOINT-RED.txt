@@ -1,0 +1,18 @@
+F....
+======================================================================
+FAIL: test_actual_probe_entrypoint_imports_without_generation (test_provider_route.ProviderRouteTests.test_actual_probe_entrypoint_imports_without_generation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/catalog-immutability-016/test_provider_route.py", line 36, in test_actual_probe_entrypoint_imports_without_generation
+    self.assertEqual(result.returncode, 0, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 0 : Traceback (most recent call last):
+  File "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/catalog-immutability-016/real_probe.py", line 2, in <module>
+    import integration_probe
+ModuleNotFoundError: No module named 'integration_probe'
+
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.028s
+
+FAILED (failures=1)
