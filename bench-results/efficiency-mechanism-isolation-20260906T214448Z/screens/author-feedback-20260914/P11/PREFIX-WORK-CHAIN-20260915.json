@@ -1,0 +1,1241 @@
+{
+  "at": "2026-09-15T01:48:09.239283+00:00",
+  "scope": "all nine qualified modified initial-author episodes and the three saved reference episodes, public host actions only; first passing focused check is not proof all required work was done",
+  "rows": [
+    {
+      "arm": "reference",
+      "feature": "1",
+      "role": "sequential-feature-1-implement",
+      "events_source": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/events.jsonl",
+      "first_passing_test_invocation": 4,
+      "through_first_pass_raw": 1088581,
+      "after_first_pass_raw": 138701,
+      "total_raw": 1227282,
+      "responses_through_first_pass": 14,
+      "responses_after_first_pass": 1,
+      "events": [
+        {
+          "invocation": 1,
+          "event_line": 3,
+          "kind": "proposal_rejected",
+          "reason": "old block absent or ambiguous in declared range",
+          "accepted_paths": []
+        },
+        {
+          "invocation": 2,
+          "event_line": 6,
+          "kind": "proposal_rejected",
+          "reason": "duplicate normalized file identity",
+          "accepted_paths": []
+        },
+        {
+          "invocation": 3,
+          "event_line": 9,
+          "kind": "edit_accepted",
+          "before_head": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+          "commit": "63abf3a1daa73f95936d6fa48ea8ecf9897f2179",
+          "paths": [
+            "src/ui.rs",
+            "src/ui_harness.rs",
+            "src/terminal_app.rs",
+            "tests/ui_harness.rs",
+            "tests/terminal_app.rs"
+          ],
+          "reason": "add terminal visual selection mode with focused harness and app tests"
+        },
+        {
+          "invocation": 4,
+          "event_line": 12,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0002/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test ui_harness --test terminal_app visual"
+        },
+        {
+          "invocation": 5,
+          "event_line": 15,
+          "kind": "done",
+          "head": "63abf3a1daa73f95936d6fa48ea8ecf9897f2179"
+        }
+      ]
+    },
+    {
+      "arm": "reference",
+      "feature": "2",
+      "role": "sequential-feature-2-implement",
+      "events_source": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts/runs/sequential-feature-2-implement.host/events.jsonl",
+      "first_passing_test_invocation": 2,
+      "through_first_pass_raw": 675570,
+      "after_first_pass_raw": 110965,
+      "total_raw": 786535,
+      "responses_through_first_pass": 10,
+      "responses_after_first_pass": 1,
+      "events": [
+        {
+          "invocation": 1,
+          "event_line": 3,
+          "kind": "edit_accepted",
+          "before_head": "47bf550838605ed2bc216269d2d6f97b1f449619",
+          "commit": "352f9ee2720f1914bcd286cccaf1936c03f385a2",
+          "paths": [
+            "src/terminal_app.rs",
+            "src/ui_harness.rs",
+            "tests/terminal_app.rs",
+            "tests/ui_harness.rs"
+          ],
+          "reason": "route prompt-mode slash commands to selected agent"
+        },
+        {
+          "invocation": 2,
+          "event_line": 6,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts/runs/sequential-feature-2-implement.host/operation-0002/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test terminal_app --test ui_harness slash"
+        },
+        {
+          "invocation": 3,
+          "event_line": 9,
+          "kind": "done",
+          "head": "352f9ee2720f1914bcd286cccaf1936c03f385a2"
+        }
+      ]
+    },
+    {
+      "arm": "reference",
+      "feature": "3",
+      "role": "sequential-feature-3-implement",
+      "events_source": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/events.jsonl",
+      "first_passing_test_invocation": 4,
+      "through_first_pass_raw": 2156237,
+      "after_first_pass_raw": 138345,
+      "total_raw": 2294582,
+      "responses_through_first_pass": 25,
+      "responses_after_first_pass": 1,
+      "events": [
+        {
+          "invocation": 1,
+          "event_line": 3,
+          "kind": "proposal_rejected",
+          "reason": "duplicate normalized file identity",
+          "accepted_paths": []
+        },
+        {
+          "invocation": 2,
+          "event_line": 6,
+          "kind": "proposal_rejected",
+          "reason": "old block absent or ambiguous in declared range",
+          "accepted_paths": []
+        },
+        {
+          "invocation": 3,
+          "event_line": 9,
+          "kind": "edit_accepted",
+          "before_head": "352f9ee2720f1914bcd286cccaf1936c03f385a2",
+          "commit": "42f27912a0792a14aae1624f7bab54f25cd8708e",
+          "paths": [
+            "src/workspace.rs",
+            "src/terminal_app.rs",
+            "tests/workspace.rs",
+            "tests/terminal_app.rs"
+          ],
+          "reason": "implement review completion confirmation for patch chats"
+        },
+        {
+          "invocation": 4,
+          "event_line": 12,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0002/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test review_completion"
+        },
+        {
+          "invocation": 5,
+          "event_line": 15,
+          "kind": "done",
+          "head": "42f27912a0792a14aae1624f7bab54f25cd8708e"
+        }
+      ]
+    },
+    {
+      "arm": "004",
+      "feature": "1",
+      "role": "sequential-feature-1-implement",
+      "events_source": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/events.jsonl",
+      "first_passing_test_invocation": 6,
+      "through_first_pass_raw": 1282121,
+      "after_first_pass_raw": 1358078,
+      "total_raw": 2640199,
+      "responses_through_first_pass": 16,
+      "responses_after_first_pass": 9,
+      "events": [
+        {
+          "invocation": 1,
+          "event_line": 3,
+          "kind": "edit_accepted",
+          "before_head": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+          "commit": "26a9b289bdc7a381fad813821b8b8fc5c00ce3e9",
+          "paths": [
+            "tests/terminal_ui.rs",
+            "tests/ui_harness.rs"
+          ],
+          "reason": "add failing visual-mode UI tests before production implementation"
+        },
+        {
+          "invocation": 2,
+          "event_line": 6,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0002/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test terminal_ui --test ui_harness visual"
+        },
+        {
+          "invocation": 3,
+          "event_line": 9,
+          "kind": "proposal_rejected",
+          "reason": "old block absent or ambiguous in declared range",
+          "accepted_paths": []
+        },
+        {
+          "invocation": 4,
+          "event_line": 12,
+          "kind": "proposal_rejected",
+          "reason": "duplicate normalized file identity",
+          "accepted_paths": []
+        },
+        {
+          "invocation": 5,
+          "event_line": 15,
+          "kind": "edit_accepted",
+          "before_head": "26a9b289bdc7a381fad813821b8b8fc5c00ce3e9",
+          "commit": "f9b5063eed735ba6df87ef3825afc3b038145613",
+          "paths": [
+            "src/ui.rs",
+            "src/ui_harness.rs",
+            "src/terminal_app.rs"
+          ],
+          "reason": "implement terminal visual modes and yank support without duplicate file entries"
+        },
+        {
+          "invocation": 6,
+          "event_line": 18,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0004/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test terminal_ui --test ui_harness visual"
+        },
+        {
+          "invocation": 7,
+          "event_line": 21,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0005/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test terminal_ui --test ui_harness"
+        },
+        {
+          "invocation": 8,
+          "event_line": 24,
+          "kind": "edit_accepted",
+          "before_head": "f9b5063eed735ba6df87ef3825afc3b038145613",
+          "commit": "879f2d546e7ad3e8778ec39b0a6e1805b40e0e07",
+          "paths": [
+            "tests/terminal_app.rs"
+          ],
+          "reason": "add terminal app coverage for ctrl-v visual mode input"
+        },
+        {
+          "invocation": 9,
+          "event_line": 27,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0007/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test terminal_app terminal_app_ctrl_v_enters_visual_block_mode_from_command_input"
+        },
+        {
+          "invocation": 10,
+          "event_line": 30,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0008/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test terminal_app"
+        },
+        {
+          "invocation": 11,
+          "event_line": 33,
+          "kind": "done",
+          "head": "879f2d546e7ad3e8778ec39b0a6e1805b40e0e07"
+        }
+      ]
+    },
+    {
+      "arm": "004",
+      "feature": "2",
+      "role": "sequential-feature-2-implement",
+      "events_source": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-2-implement.host/events.jsonl",
+      "first_passing_test_invocation": 4,
+      "through_first_pass_raw": 1009238,
+      "after_first_pass_raw": 547579,
+      "total_raw": 1556817,
+      "responses_through_first_pass": 16,
+      "responses_after_first_pass": 6,
+      "events": [
+        {
+          "invocation": 1,
+          "event_line": 3,
+          "kind": "edit_accepted",
+          "before_head": "0e27d52e66f24d668ba5ffdcc1d2066987f4a77b",
+          "commit": "3b85407c2429c9772b0e44d3586d534fd695543d",
+          "paths": [
+            "tests/workspace.rs"
+          ],
+          "reason": "add controller tests for slash prompts routed to the selected backend agent"
+        },
+        {
+          "invocation": 2,
+          "event_line": 6,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-2-implement.host/operation-0002/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test workspace controller_command_surface_slash_prompt -- --nocapture"
+        },
+        {
+          "invocation": 3,
+          "event_line": 9,
+          "kind": "edit_accepted",
+          "before_head": "3b85407c2429c9772b0e44d3586d534fd695543d",
+          "commit": "3d982c06d620d8f3e4ebbf6d153e73cfbd1d3484",
+          "paths": [
+            "src/workspace.rs",
+            "src/terminal_app.rs"
+          ],
+          "reason": "route slash prompts to the selected backend agent"
+        },
+        {
+          "invocation": 4,
+          "event_line": 12,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-2-implement.host/operation-0004/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test workspace controller_command_surface_slash_prompt -- --nocapture"
+        },
+        {
+          "invocation": 5,
+          "event_line": 15,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-2-implement.host/operation-0005/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test terminal_app slash_command -- --nocapture"
+        },
+        {
+          "invocation": 6,
+          "event_line": 18,
+          "kind": "done",
+          "head": "3d982c06d620d8f3e4ebbf6d153e73cfbd1d3484"
+        }
+      ]
+    },
+    {
+      "arm": "004",
+      "feature": "3",
+      "role": "sequential-feature-3-implement",
+      "events_source": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/events.jsonl",
+      "first_passing_test_invocation": 7,
+      "through_first_pass_raw": 2576753,
+      "after_first_pass_raw": 1337365,
+      "total_raw": 3914118,
+      "responses_through_first_pass": 24,
+      "responses_after_first_pass": 8,
+      "events": [
+        {
+          "invocation": 1,
+          "event_line": 3,
+          "kind": "edit_accepted",
+          "before_head": "6479745d535841e08572e724ef672f19d49a0265",
+          "commit": "7043645660194ecc521e19e498e1e5326a49a940",
+          "paths": [
+            "tests/workspace.rs",
+            "tests/terminal_app.rs",
+            "tests/ui_harness.rs"
+          ],
+          "reason": "add failing tests for review completion confirmation"
+        },
+        {
+          "invocation": 2,
+          "event_line": 6,
+          "kind": "proposal_rejected",
+          "reason": "unknown, mixed, quoted or malformed outer operation",
+          "accepted_paths": []
+        },
+        {
+          "invocation": 3,
+          "event_line": 9,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0002/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "bash -lc 'status=0; cargo test --test workspace controller_prompts_for_feature_completion_after_review_and_reopens_on_new_input -- --nocapture || status=$?; cargo test --test terminal_app terminal_app_review_completion_prompt_closes_and_reopens_patch_chat -- --nocapture || status=$?; cargo test --test ui_harness scripted_harness_review_completion_prompt_closes_and_reopens_chat -- --nocapture || status=$?; exit $status'"
+        },
+        {
+          "invocation": 4,
+          "event_line": 12,
+          "kind": "edit_accepted",
+          "before_head": "7043645660194ecc521e19e498e1e5326a49a940",
+          "commit": "a5796eea84ac854f1cb05a3a10727ba0e2d498e7",
+          "paths": [
+            "src/workspace.rs",
+            "src/ui.rs",
+            "src/terminal_app.rs",
+            "src/ui_harness.rs"
+          ],
+          "reason": "implement review completion confirmation state and terminal close/reopen behavior"
+        },
+        {
+          "invocation": 5,
+          "event_line": 15,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0004/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "bash -lc 'status=0; cargo test --test workspace controller_prompts_for_feature_completion_after_review_and_reopens_on_new_input -- --nocapture || status=$?; cargo test --test terminal_app terminal_app_review_completion_prompt_closes_and_reopens_patch_chat -- --nocapture || status=$?; cargo test --test ui_harness scripted_harness_review_completion_prompt_closes_and_reopens_chat -- --nocapture || status=$?; exit $status'"
+        },
+        {
+          "invocation": 6,
+          "event_line": 18,
+          "kind": "edit_accepted",
+          "before_head": "a5796eea84ac854f1cb05a3a10727ba0e2d498e7",
+          "commit": "55f322cff54988681aa5d9f844c14caf7117d9ca",
+          "paths": [
+            "tests/workspace.rs",
+            "tests/terminal_app.rs",
+            "tests/ui_harness.rs"
+          ],
+          "reason": "repair focused confirmation tests to match fixture state"
+        },
+        {
+          "invocation": 7,
+          "event_line": 21,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0006/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "bash -lc 'status=0; cargo test --test workspace controller_prompts_for_feature_completion_after_review_and_reopens_on_new_input -- --nocapture || status=$?; cargo test --test terminal_app terminal_app_review_completion_prompt_closes_and_reopens_patch_chat -- --nocapture || status=$?; cargo test --test ui_harness scripted_harness_review_completion_prompt_closes_and_reopens_chat -- --nocapture || status=$?; exit $status'"
+        },
+        {
+          "invocation": 8,
+          "event_line": 24,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0007/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test workspace --test terminal_app --test ui_harness --test terminal_ui "
+        },
+        {
+          "invocation": 9,
+          "event_line": 27,
+          "kind": "edit_accepted",
+          "before_head": "55f322cff54988681aa5d9f844c14caf7117d9ca",
+          "commit": "ad8cdaf7a2dceb590a99e90bbd127f841f438aba",
+          "paths": [
+            "src/workspace.rs",
+            "src/ui_harness.rs"
+          ],
+          "reason": "let non-yes-no follow-up continue an open reviewed feature"
+        },
+        {
+          "invocation": 10,
+          "event_line": 30,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0009/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test workspace --test terminal_app --test ui_harness --test terminal_ui"
+        },
+        {
+          "invocation": 11,
+          "event_line": 33,
+          "kind": "edit_accepted",
+          "before_head": "ad8cdaf7a2dceb590a99e90bbd127f841f438aba",
+          "commit": "d1ac3a54c4d1fbede366da25a889ad82f26690e5",
+          "paths": [
+            "src/workspace.rs",
+            "src/ui_harness.rs"
+          ],
+          "reason": "tidy confirmation imports and avoid boolean match style"
+        },
+        {
+          "invocation": 12,
+          "event_line": 36,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-004/author-joint-confirmation-004-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0011/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test workspace --test terminal_app --test ui_harness --test terminal_ui"
+        },
+        {
+          "invocation": 13,
+          "event_line": 39,
+          "kind": "done",
+          "head": "d1ac3a54c4d1fbede366da25a889ad82f26690e5"
+        }
+      ]
+    },
+    {
+      "arm": "005",
+      "feature": "1",
+      "role": "sequential-feature-1-implement",
+      "events_source": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/events.jsonl",
+      "first_passing_test_invocation": 7,
+      "through_first_pass_raw": 1156073,
+      "after_first_pass_raw": 2064550,
+      "total_raw": 3220623,
+      "responses_through_first_pass": 17,
+      "responses_after_first_pass": 15,
+      "events": [
+        {
+          "invocation": 1,
+          "event_line": 3,
+          "kind": "edit_accepted",
+          "before_head": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+          "commit": "8f7862fb52afd71ae603c30558fe416753cfe241",
+          "paths": [
+            "tests/ui_harness.rs"
+          ],
+          "reason": "add focused visual-mode harness tests before implementation"
+        },
+        {
+          "invocation": 2,
+          "event_line": 6,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0002/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test ui_harness visual"
+        },
+        {
+          "invocation": 3,
+          "event_line": 9,
+          "kind": "edit_accepted",
+          "before_head": "8f7862fb52afd71ae603c30558fe416753cfe241",
+          "commit": "dbbe08670c323deb7ff27d8faf97a672e2d6a0cd",
+          "paths": [
+            "tests/ui_harness.rs"
+          ],
+          "reason": "cover uppercase Y line yank before implementation"
+        },
+        {
+          "invocation": 4,
+          "event_line": 12,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0004/receipt.json",
+          "status": 1,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test ui_harness visual uppercase_y"
+        },
+        {
+          "invocation": 5,
+          "event_line": 15,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0005/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test ui_harness yanks"
+        },
+        {
+          "invocation": 6,
+          "event_line": 18,
+          "kind": "edit_accepted",
+          "before_head": "dbbe08670c323deb7ff27d8faf97a672e2d6a0cd",
+          "commit": "bca06430e26a68d39d02ac5335664449821b57f8",
+          "paths": [
+            "src/ui.rs",
+            "src/ui_harness.rs",
+            "src/terminal_app.rs"
+          ],
+          "reason": "implement vim-like visual selection and yanking in terminal panes"
+        },
+        {
+          "invocation": 7,
+          "event_line": 21,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0007/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test ui_harness yanks"
+        },
+        {
+          "invocation": 8,
+          "event_line": 24,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0008/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test ui_harness --test terminal_ui --test terminal_app"
+        },
+        {
+          "invocation": 9,
+          "event_line": 27,
+          "kind": "edit_accepted",
+          "before_head": "bca06430e26a68d39d02ac5335664449821b57f8",
+          "commit": "d07ea173f5fe9a86a8d369a00c97ffdcfb8648ee",
+          "paths": [
+            "src/ui_harness.rs",
+            "src/terminal_app.rs"
+          ],
+          "reason": "prevent slash command startup while visual selection is active"
+        },
+        {
+          "invocation": 10,
+          "event_line": 30,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0010/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test ui_harness --test terminal_ui --test terminal_app"
+        },
+        {
+          "invocation": 11,
+          "event_line": 33,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0011/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --lib ui::tests"
+        },
+        {
+          "invocation": 12,
+          "event_line": 36,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0012/receipt.json",
+          "status": 1,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "rustfmt --check src/ui.rs src/ui_harness.rs src/terminal_app.rs tests/ui_harness.rs"
+        },
+        {
+          "invocation": 13,
+          "event_line": 39,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0013/receipt.json",
+          "status": 1,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "rustfmt --edition 2024 --check src/ui.rs src/ui_harness.rs src/terminal_app.rs"
+        },
+        {
+          "invocation": 14,
+          "event_line": 42,
+          "kind": "edit_accepted",
+          "before_head": "d07ea173f5fe9a86a8d369a00c97ffdcfb8648ee",
+          "commit": "a0e54a28b5e30275efde786e5734839fda0cb1c4",
+          "paths": [
+            "src/ui.rs"
+          ],
+          "reason": "format touched visual-selection source helpers"
+        },
+        {
+          "invocation": 15,
+          "event_line": 45,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0015/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "rustfmt --edition 2024 --check src/ui.rs src/ui_harness.rs src/terminal_app.rs"
+        },
+        {
+          "invocation": 16,
+          "event_line": 48,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0016/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test ui_harness --test terminal_ui --test terminal_app"
+        },
+        {
+          "invocation": 17,
+          "event_line": 51,
+          "kind": "done",
+          "head": "a0e54a28b5e30275efde786e5734839fda0cb1c4"
+        }
+      ]
+    },
+    {
+      "arm": "005",
+      "feature": "2",
+      "role": "sequential-feature-2-implement",
+      "events_source": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-2-implement.host/events.jsonl",
+      "first_passing_test_invocation": 4,
+      "through_first_pass_raw": 1187400,
+      "after_first_pass_raw": 117863,
+      "total_raw": 1305263,
+      "responses_through_first_pass": 15,
+      "responses_after_first_pass": 1,
+      "events": [
+        {
+          "invocation": 1,
+          "event_line": 3,
+          "kind": "edit_accepted",
+          "before_head": "99e33ebc6dde9412710b9c84dd89cf04c208005c",
+          "commit": "8f324c42ea25013b5303b3a26323df4021281d5e",
+          "paths": [
+            "tests/workspace.rs"
+          ],
+          "reason": "add focused controller tests for slash-prefixed backend agent commands"
+        },
+        {
+          "invocation": 2,
+          "event_line": 6,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-2-implement.host/operation-0002/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test workspace controller_routes_slash_command_line_to_selected_backend_agent -- --nocapture"
+        },
+        {
+          "invocation": 3,
+          "event_line": 9,
+          "kind": "edit_accepted",
+          "before_head": "8f324c42ea25013b5303b3a26323df4021281d5e",
+          "commit": "22da8e87e4ec3dd7bddaf8d6aff33c75305f012b",
+          "paths": [
+            "src/workspace.rs"
+          ],
+          "reason": "route controller slash command lines to the selected backend agent"
+        },
+        {
+          "invocation": 4,
+          "event_line": 12,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-2-implement.host/operation-0004/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test workspace -- --nocapture"
+        },
+        {
+          "invocation": 5,
+          "event_line": 15,
+          "kind": "done",
+          "head": "22da8e87e4ec3dd7bddaf8d6aff33c75305f012b"
+        }
+      ]
+    },
+    {
+      "arm": "005",
+      "feature": "3",
+      "role": "sequential-feature-3-implement",
+      "events_source": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/events.jsonl",
+      "first_passing_test_invocation": 7,
+      "through_first_pass_raw": 2697993,
+      "after_first_pass_raw": 1568105,
+      "total_raw": 4266098,
+      "responses_through_first_pass": 22,
+      "responses_after_first_pass": 9,
+      "events": [
+        {
+          "invocation": 1,
+          "event_line": 3,
+          "kind": "edit_accepted",
+          "before_head": "4503b5461ed0e1e5fb2c76d55440015ccf847273",
+          "commit": "5835b2aa2943c45f2823d4b36df30e2fc893842d",
+          "paths": [
+            "tests/ui_harness.rs",
+            "tests/workspace.rs",
+            "tests/terminal_app.rs"
+          ],
+          "reason": "add failing coverage for review completion confirmation flow"
+        },
+        {
+          "invocation": 2,
+          "event_line": 6,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0002/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test workspace controller_review_completion_prompts_user_to_close_and_reopen_patch_agent && cargo test --test terminal_app terminal_app_review_confirmation_highlights_then_closes_and_reopens_patch_chat && cargo test --test ui_harness scripted_harness_review_prompt_closes_and_reopens_patch_agent_chat"
+        },
+        {
+          "invocation": 3,
+          "event_line": 9,
+          "kind": "proposal_rejected",
+          "reason": "duplicate normalized file identity",
+          "accepted_paths": []
+        },
+        {
+          "invocation": 4,
+          "event_line": 12,
+          "kind": "edit_accepted",
+          "before_head": "5835b2aa2943c45f2823d4b36df30e2fc893842d",
+          "commit": "85da94307f4cc53d9bf48d1c66dded3a6c40d641",
+          "paths": [
+            "src/workspace.rs",
+            "src/terminal_app.rs",
+            "src/ui_harness.rs"
+          ],
+          "reason": "implement review completion confirmation state and terminal highlight closure without duplicate file entries"
+        },
+        {
+          "invocation": 5,
+          "event_line": 15,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0004/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test workspace controller_review_completion_prompts_user_to_close_and_reopen_patch_agent && cargo test --test terminal_app terminal_app_review_confirmation_highlights_then_closes_and_reopens_patch_chat && cargo test --test ui_harness scripted_harness_review_prompt_closes_and_reopens_patch_agent_chat"
+        },
+        {
+          "invocation": 6,
+          "event_line": 18,
+          "kind": "edit_accepted",
+          "before_head": "85da94307f4cc53d9bf48d1c66dded3a6c40d641",
+          "commit": "383e1123aead3c779861339bdf2045f0594bbaab",
+          "paths": [
+            "tests/ui_harness.rs"
+          ],
+          "reason": "repair ui harness review highlight assertion to inspect the full left pane row"
+        },
+        {
+          "invocation": 7,
+          "event_line": 21,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0006/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test workspace controller_review_completion_prompts_user_to_close_and_reopen_patch_agent && cargo test --test terminal_app terminal_app_review_confirmation_highlights_then_closes_and_reopens_patch_chat && cargo test --test ui_harness scripted_harness_review_prompt_closes_and_reopens_patch_agent_chat"
+        },
+        {
+          "invocation": 8,
+          "event_line": 24,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0007/receipt.json",
+          "status": 1,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo fmt --check && cargo test --test workspace && cargo test --test terminal_app && cargo test --test ui_harness"
+        },
+        {
+          "invocation": 9,
+          "event_line": 27,
+          "kind": "edit_accepted",
+          "before_head": "383e1123aead3c779861339bdf2045f0594bbaab",
+          "commit": "f7d48782c3a93a47694713fb46920fe434a05add",
+          "paths": [
+            "src/workspace.rs",
+            "tests/workspace.rs",
+            "tests/terminal_app.rs",
+            "tests/ui_harness.rs"
+          ],
+          "reason": "apply rustfmt wrapping reported by focused format check"
+        },
+        {
+          "invocation": 10,
+          "event_line": 30,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0009/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo fmt --check && cargo test --test workspace && cargo test --test terminal_app && cargo test --test ui_harness"
+        },
+        {
+          "invocation": 11,
+          "event_line": 33,
+          "kind": "edit_accepted",
+          "before_head": "f7d48782c3a93a47694713fb46920fe434a05add",
+          "commit": "138e1b51ecd7c989c8f48b37db387fbbe3fe6dac",
+          "paths": [
+            "src/ui_harness.rs",
+            "tests/ui_harness.rs"
+          ],
+          "reason": "keep ui harness review prompt from forcing insert mode"
+        },
+        {
+          "invocation": 12,
+          "event_line": 36,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-005/author-joint-confirmation-005-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0011/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo fmt --check && cargo test --test workspace && cargo test --test terminal_app && cargo test --test ui_harness"
+        },
+        {
+          "invocation": 13,
+          "event_line": 39,
+          "kind": "done",
+          "head": "138e1b51ecd7c989c8f48b37db387fbbe3fe6dac"
+        }
+      ]
+    },
+    {
+      "arm": "006",
+      "feature": "1",
+      "role": "sequential-feature-1-implement",
+      "events_source": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/events.jsonl",
+      "first_passing_test_invocation": 4,
+      "through_first_pass_raw": 1124562,
+      "after_first_pass_raw": 1070895,
+      "total_raw": 2195457,
+      "responses_through_first_pass": 15,
+      "responses_after_first_pass": 8,
+      "events": [
+        {
+          "invocation": 1,
+          "event_line": 3,
+          "kind": "edit_accepted",
+          "before_head": "c92a0b7060a36eac6db2d869b85e589a7a9480f9",
+          "commit": "c5194c820fc8c851e0d67e6810ef1cae48b1532b",
+          "paths": [
+            "tests/ui_harness.rs"
+          ],
+          "reason": "add focused UI harness tests for vim visual selection and copy behavior"
+        },
+        {
+          "invocation": 2,
+          "event_line": 6,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0002/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test ui_harness visual"
+        },
+        {
+          "invocation": 3,
+          "event_line": 9,
+          "kind": "edit_accepted",
+          "before_head": "c5194c820fc8c851e0d67e6810ef1cae48b1532b",
+          "commit": "7570ea2d3e2764465761b444f32574acc3a8769a",
+          "paths": [
+            "src/ui.rs",
+            "src/ui_harness.rs",
+            "src/terminal_app.rs",
+            "src/cli.rs"
+          ],
+          "reason": "implement vim visual modes with pane selection, copy actions, and terminal clipboard output"
+        },
+        {
+          "invocation": 4,
+          "event_line": 12,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0004/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test ui_harness visual"
+        },
+        {
+          "invocation": 5,
+          "event_line": 15,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0005/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test ui_harness --test terminal_ui --test terminal_app"
+        },
+        {
+          "invocation": 6,
+          "event_line": 18,
+          "kind": "edit_accepted",
+          "before_head": "7570ea2d3e2764465761b444f32574acc3a8769a",
+          "commit": "7fd51fce491e9beebd8deb14d4597eb75def9960",
+          "paths": [
+            "tests/ui_harness.rs",
+            "src/ui.rs",
+            "src/ui_harness.rs",
+            "src/terminal_app.rs",
+            "src/cli.rs"
+          ],
+          "reason": "avoid public enum expansion while keeping visual selection behavior and copy plumbing"
+        },
+        {
+          "invocation": 7,
+          "event_line": 21,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0007/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test ui_harness --test terminal_ui --test terminal_app"
+        },
+        {
+          "invocation": 8,
+          "event_line": 24,
+          "kind": "edit_accepted",
+          "before_head": "7fd51fce491e9beebd8deb14d4597eb75def9960",
+          "commit": "b5c43049671971e22ce03bc021e51feee2d665ae",
+          "paths": [
+            "src/ui.rs"
+          ],
+          "reason": "clean up visual cursor branch shape before linting"
+        },
+        {
+          "invocation": 9,
+          "event_line": 27,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/operation-0009/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test ui_harness --test terminal_ui --test terminal_app "
+        },
+        {
+          "invocation": 10,
+          "event_line": 30,
+          "kind": "done",
+          "head": "b5c43049671971e22ce03bc021e51feee2d665ae"
+        }
+      ]
+    },
+    {
+      "arm": "006",
+      "feature": "2",
+      "role": "sequential-feature-2-implement",
+      "events_source": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-2-implement.host/events.jsonl",
+      "first_passing_test_invocation": 4,
+      "through_first_pass_raw": 874304,
+      "after_first_pass_raw": 163504,
+      "total_raw": 1037808,
+      "responses_through_first_pass": 15,
+      "responses_after_first_pass": 2,
+      "events": [
+        {
+          "invocation": 1,
+          "event_line": 3,
+          "kind": "edit_accepted",
+          "before_head": "c0eac70bdab4c90c5bbbecbb1d74b7d22b81efb6",
+          "commit": "25035df3271cd723ca230e685027faa230b9b27d",
+          "paths": [
+            "tests/workspace.rs",
+            "tests/terminal_app.rs"
+          ],
+          "reason": "add failing tests for slash command routing to selected backend agent"
+        },
+        {
+          "invocation": 2,
+          "event_line": 6,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-2-implement.host/operation-0002/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test slash_command --tests"
+        },
+        {
+          "invocation": 3,
+          "event_line": 9,
+          "kind": "edit_accepted",
+          "before_head": "25035df3271cd723ca230e685027faa230b9b27d",
+          "commit": "628fc1a0a650c5c90753d8d5f17b357e2c0145cf",
+          "paths": [
+            "src/workspace.rs",
+            "src/terminal_app.rs"
+          ],
+          "reason": "implement slash command routing to selected agent sessions"
+        },
+        {
+          "invocation": 4,
+          "event_line": 12,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-2-implement.host/operation-0004/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test slash_command --tests"
+        },
+        {
+          "invocation": 5,
+          "event_line": 15,
+          "kind": "done",
+          "head": "628fc1a0a650c5c90753d8d5f17b357e2c0145cf"
+        }
+      ]
+    },
+    {
+      "arm": "006",
+      "feature": "3",
+      "role": "sequential-feature-3-implement",
+      "events_source": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/events.jsonl",
+      "first_passing_test_invocation": 8,
+      "through_first_pass_raw": 2283002,
+      "after_first_pass_raw": 791914,
+      "total_raw": 3074916,
+      "responses_through_first_pass": 25,
+      "responses_after_first_pass": 6,
+      "events": [
+        {
+          "invocation": 1,
+          "event_line": 3,
+          "kind": "proposal_rejected",
+          "reason": "old block absent or ambiguous in declared range",
+          "accepted_paths": []
+        },
+        {
+          "invocation": 2,
+          "event_line": 6,
+          "kind": "edit_accepted",
+          "before_head": "3c5902f3bba21e46ee75bdeb22351b318684d873",
+          "commit": "9336d7e05c661890311497b594f65b02ba2820a5",
+          "paths": [
+            "tests/workspace.rs",
+            "tests/terminal_app.rs"
+          ],
+          "reason": "add failing review-confirmation tests before implementation"
+        },
+        {
+          "invocation": 3,
+          "event_line": 9,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0002/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test workspace controller_asks_patch_agent_chat_for_done_confirmation_after_review -- --exact"
+        },
+        {
+          "invocation": 4,
+          "event_line": 12,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0003/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test terminal_app terminal_app_closes_reviewed_patch_chat_on_yes_and_reopens_on_new_message -- --exact"
+        },
+        {
+          "invocation": 5,
+          "event_line": 15,
+          "kind": "edit_accepted",
+          "before_head": "9336d7e05c661890311497b594f65b02ba2820a5",
+          "commit": "3181cd6b13a413633bb058e18c2eb0683f7c070b",
+          "paths": [
+            "tests/terminal_app.rs"
+          ],
+          "reason": "repair terminal review-confirmation test git helper"
+        },
+        {
+          "invocation": 6,
+          "event_line": 18,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0005/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test terminal_app terminal_app_closes_reviewed_patch_chat_on_yes_and_reopens_on_new_message -- --exact"
+        },
+        {
+          "invocation": 7,
+          "event_line": 21,
+          "kind": "edit_accepted",
+          "before_head": "3181cd6b13a413633bb058e18c2eb0683f7c070b",
+          "commit": "768d8c3d389e8f4fbe12e103ec8b10e1384cd540",
+          "paths": [
+            "src/workspace.rs",
+            "src/ui.rs",
+            "src/terminal_app.rs",
+            "tests/terminal_app.rs"
+          ],
+          "reason": "implement review completion confirmation close and reopen behavior"
+        },
+        {
+          "invocation": 8,
+          "event_line": 24,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0007/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test workspace controller_asks_patch_agent_chat_for_done_confirmation_after_review -- --exact"
+        },
+        {
+          "invocation": 9,
+          "event_line": 27,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0008/receipt.json",
+          "status": 101,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test terminal_app terminal_app_closes_reviewed_patch_chat_on_yes_and_reopens_on_new_message -- --exact"
+        },
+        {
+          "invocation": 10,
+          "event_line": 30,
+          "kind": "edit_accepted",
+          "before_head": "768d8c3d389e8f4fbe12e103ec8b10e1384cd540",
+          "commit": "393dcb9a3dc735f94a22e086cb92a30e04a46b82",
+          "paths": [
+            "tests/terminal_app.rs"
+          ],
+          "reason": "repair terminal review-confirmation compact row assertions"
+        },
+        {
+          "invocation": 11,
+          "event_line": 33,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0010/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test terminal_app terminal_app_closes_reviewed_patch_chat_on_yes_and_reopens_on_new_message -- --exact"
+        },
+        {
+          "invocation": 12,
+          "event_line": 36,
+          "kind": "command_result",
+          "receipt": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/author-joint-confirmation-qualified-20260915/runs/author-joint-confirmation-006/author-joint-confirmation-006-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/operation-0011/receipt.json",
+          "status": 0,
+          "timed_out": false,
+          "custody_errors": [],
+          "command": "cargo test --test workspace controller_starts_review_after_patch_agent_done_and_loops_until_clean -- --exact"
+        },
+        {
+          "invocation": 13,
+          "event_line": 39,
+          "kind": "done",
+          "head": "393dcb9a3dc735f94a22e086cb92a30e04a46b82"
+        }
+      ]
+    }
+  ]
+}

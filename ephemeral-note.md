@@ -3,9 +3,59 @@
 Live analysis counter: **DONE: 80 | TODO: 10 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
-**Bug-fix counter: DONE: 8 | TODO: 0 | TOTAL: 8.** BUG008 passes fail-first namespace tests and actual full guard/observer/host verification. All three failed attempts remain intact.
-**Current activity, 2026-09-15T01:01:47+00:00:** P09's qualified continuation 004–006 remains active from 00:15:02 UTC; 0/3 workflows are terminal, about 47/90 outer-wall minutes elapsed. Latest resource costs are 13,901,485 / 14,196,522 / 13,752,606 raw, not complete effects. All 143 captured input boundaries pass. Terminal accounting/offset preparation is qualified. A six-minute local P06/P07 alternative check is saved; no fourth workflow, normal WL edit or additional generation occurred. Original 001–003 failures remain intact.
+**Bug-fix counter: DONE: 9 | TODO: 1 | TOTAL: 10.** BUG009's integration-input boundary remains open; BUG010's archive-ordering error has a fail-first regression and verified cached-only correction. Earlier fixes and all failed attempts remain intact.
+**Current activity, 2026-09-15T01:56:24+00:00:** saved prefix analysis is complete as a partial deliverable; the required full net remains unavailable. One BUG009 actual integration-profile diagnostic is admitted (two turns/60s total/100k completed-public tripwire). No full workflow or replacement is admitted. Main counter remains80/10/90; bugs9/1/10.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-15T01:56:24+00:00 — replicated upstream sequence; tiny setup discriminator admitted:**
+All nine modified initial authors first publish tests and execute failure before
+production code; all three saved reference authors publish cohesive code/tests.
+The modified pre-integration mean is19,200,485 versus11,617,775 raw, a7,582,710
+increase including review and actual fixes. Initial-author excess splits810,094
+through first focused GREEN and2,618,606⅔ afterwards. The latter is76.37% of
+initial excess, not a B-only share; later work includes real repairs, missing
+coverage and repeated checks. Full net/historical attribution remains pending.
+P11/PREFIX-ANALYSIS-RESULT-20260915.md retains exact chains and limitations.
+BUG009's20-minute local trace ends at01:44 with no repair; it localizes a16→0
+approved-prefix state delta, not its internal cause. A separate small actual-mode
+probe tests the previously unexercised command-bearing danger-full-access
+launch/resume path. It uses the confirmed ChatGPT subscription, existing clean
+diagnostic repo, unchanged provider/observer,211pins, at most two calls and60s.
+Admission143fcabb7a4de0f49cd8bf85cf251fda5566280a6f12a4d2a51ac0ae444852e8.
+No full replacement, old-thread resume, credential copy or ordinary control.
+
+**2026-09-15T01:42:00+00:00 — retain usable stages; offline accounting repair verified:**
+BUG010 reproduces a pathlib-component versus string-sort mismatch on unchanged
+archive files. The correction preserves real mutation rejection and all original
+audits. Three separate supplements reuse21 cached native threads, with zero
+native-core executions and identical records/turns/stage totals. 004 records
+21,730,404raw and005 records25,087,991raw, both with incomplete integration;
+006 records23,252,285raw with complete accounting and passing workflow gates.
+These are costs, not clean full treatment effects: the final202-boundary check
+still fails the extra integration instruction in005/006. All implementation,
+review and repair boundaries qualify. Eleven repair tests, eleven prior analysis
+tests,83 counter guards and Cargo fmt/strict Clippy/all-target tests pass.
+The current next action is the qualified stage/work-chain analysis. No full
+rerun or native generation is admitted. Main counts stay80/10/90; bugs9/1/10.
+
+**2026-09-15T01:24:00+00:00 — integration-input mismatch; generation stopped and research continues:**
+The 01:19:42 checkpoint contains 195 boundaries. Its whole-developer check finds
+extra permissions messages on integration resume in005/006; the saved reference
+has none. Matching catalog, sandbox type and disabled permission profile do not
+make those extra instructions equal. Earlier read-only direct-resume verification
+did not exercise this actual integration permission profile. Ctrl-C reaches the
+owned supervisor; all three close by01:23:16, preserving original reports/logs
+and native accounting tails. No further generation or automatic replacement is
+admitted. BUG009 receives a separate 20-minute local trace/reproduction bound;
+closed-run accounting proceeds under P09. This setup failure is neither a null
+joint effect nor an original-benchmark error. Main counts remain80/10/90.
+
+**2026-09-15T01:11:19+00:00 — active workflows reach later stages:**
+Input-receipt status places 004 in third-feature implementation, 005 in its
+third-feature review, and 006 in integration planning. None is terminal; no
+cost comparison or outcome-driven adjustment occurs. All earlier samples,
+first-attempt failures and input checks remain. The joint-route feasibility
+record and updated ranking are committed in fc2a6e3; main counts stay 80/10/90.
 
 **2026-09-15T01:01:47+00:00 — full inputs still match; joint-route screening preserved:**
 All 143 observed input boundaries qualify, including stage-local catalog/plugin

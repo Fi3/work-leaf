@@ -1,0 +1,16 @@
+2026-09-15T01:42:00+00:00
+python3 -m unittest discover -s <this directory> -p 'test_*.py'
+Exit 0; eleven tests pass, including unchanged prefix paths, real new-file and
+content-mutation rejection, mandatory prior audit, cache reuse and stale-input rejection.
+
+The previous full-analysis-012 suite: eleven tests pass.
+All five progress guards: 26 + 17 + 30 + 9 + 1 tests pass.
+cargo fmt: exit 0.
+cargo clippy --all-targets --all-features -- -D warnings: exit 0.
+cargo test --all-targets --all-features: exit 0 (exec session 70352).
+
+Actual supplemental aggregation: 004,005,006 each exit 0. All original records,
+turns, threads, category totals and native totals compare equal. Twenty-one cached
+native-thread results are reused; no native audit core executes again.
+006 has no accounting errors. 004/005 retain their incomplete terminal turns and
+public-observer completion discrepancies. Experimental input failure is separate.
