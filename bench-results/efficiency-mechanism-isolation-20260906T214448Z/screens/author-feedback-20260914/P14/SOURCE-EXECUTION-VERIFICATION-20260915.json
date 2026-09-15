@@ -1,0 +1,142 @@
+{
+  "command": "python3 - <<'PY'\nimport hashlib,json,pathlib\nroot=pathlib.Path(\"/home/user/src/work-leaf\")\nstudy=root/\"bench-results/efficiency-mechanism-isolation-20260906T214448Z\"\nphase=study/\"phases/standalone-global-hunk-pilot-01\"\ndef sha(p):\n with pathlib.Path(p).open(\"rb\") as f:return hashlib.file_digest(f,\"sha256\").hexdigest()\nmanifest_path=phase/\"PHASE-MANIFEST.json\";manifest=json.loads(manifest_path.read_text())\nchecks=[]\nfor row in manifest[\"files\"]:\n p=pathlib.Path(row[\"path\"]);actual=sha(p) if p.is_file() else None\n checks.append({\"path\":str(p),\"role\":row.get(\"role\"),\"expected\":row[\"sha256\"],\"actual\":actual,\"matches\":actual==row[\"sha256\"]})\nspans=json.loads((study/\"screens/author-feedback-20260914/P02/EXACT-SPANS.json\").read_text())\nspans_check={key:sha(spans[key])==spans[key+\"_sha256\"] for key in (\"host\",\"reference_prompt\")}\nartifact=phase/\"runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts\"\nstages=[]\nfor p in sorted((artifact/\"runs\").glob(\"*.host/result.json\")):\n result=json.loads(p.read_text())\n events=p.with_name(\"events.jsonl\");rows=[json.loads(x) for x in events.read_text().splitlines()]\n counts={kind:sum(r[\"kind\"]==kind for r in rows) for kind in (\"edit_accepted\",\"proposal_rejected\",\"command_result\",\"done\")}\n stages.append({\"path\":str(p),\"sha256\":sha(p),\"stage\":result[\"stage\"],\"completed\":result[\"completed\"],\"clean\":result[\"clean\"],\"pending\":result[\"pending_changes\"],\"errors\":result[\"errors\"],\"invocations\":len(result[\"invocations\"]),\"accepted_commits\":len(result[\"accepted_commits\"]),\"events_sha256\":sha(events),\"events\":counts})\ncost_path=study/\"screens/author-feedback-20260914/P11/CONNECTED-COSTS-20260915.json\";costs=json.loads(cost_path.read_text())\njoins=[]\nfor name,expected in costs[\"source_sha256\"].items():\n p=root/name\n actual=sha(p) if p.is_file() else None\n joins.append({\"path\":name,\"expected\":expected,\"actual\":actual,\"matches\":actual==expected})\nprint(json.dumps({\"scope\":\"P14 immutable recipe and retained execution join; no native re-audit\",\"manifest_path\":str(manifest_path),\"manifest_sha256\":sha(manifest_path),\"admitted_manifest_equal\":sha(manifest_path)==\"b9decad8b45fc8ccf2d66a382240fbd76542950984830462e20113ffd08941e3\",\"source_file_count\":len(checks),\"all_source_files_match\":all(x[\"matches\"] for x in checks),\"source_mismatches\":[x for x in checks if not x[\"matches\"]],\"exact_spans_reference_equal\":spans_check,\"actual_host_stages\":stages,\"connected_costs_path\":str(cost_path),\"connected_costs_sha256\":sha(cost_path),\"connected_input_pin_count\":len(joins),\"all_connected_input_pins_match\":all(x[\"matches\"] for x in joins),\"connected_input_pin_mismatches\":[x for x in joins if not x[\"matches\"]],\"reference_raw\":costs[\"reference_raw\"],\"modified_mean_raw\":costs[\"joined_mean_raw\"],\"joint_delta_raw\":costs[\"joint_policy_delta_raw\"]}))\nPY",
+  "result": {
+    "scope": "P14 immutable recipe and retained execution join; no native re-audit",
+    "manifest_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/PHASE-MANIFEST.json",
+    "manifest_sha256": "b9decad8b45fc8ccf2d66a382240fbd76542950984830462e20113ffd08941e3",
+    "admitted_manifest_equal": true,
+    "source_file_count": 61,
+    "all_source_files_match": true,
+    "source_mismatches": [],
+    "exact_spans_reference_equal": {
+      "host": true,
+      "reference_prompt": true
+    },
+    "actual_host_stages": [
+      {
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-fix-1.host/result.json",
+        "sha256": "50ffa2768595e142ae5e0542892c850eb9557843ab90e28950ad8b8909d9371a",
+        "stage": "sequential-feature-1-fix-1",
+        "completed": true,
+        "clean": true,
+        "pending": [],
+        "errors": [],
+        "invocations": 5,
+        "accepted_commits": 2,
+        "events_sha256": "a40cb5b2782f04a31cda36dd1df28ba77c2374d68554ce92c8481bcdd4080e6e",
+        "events": {
+          "edit_accepted": 2,
+          "proposal_rejected": 1,
+          "command_result": 1,
+          "done": 1
+        }
+      },
+      {
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts/runs/sequential-feature-1-implement.host/result.json",
+        "sha256": "b2ab44dcfad23beb5a8a5309cf21eb5ac4ef29b67fd07b1448de4f2055279716",
+        "stage": "sequential-feature-1-implement",
+        "completed": true,
+        "clean": true,
+        "pending": [],
+        "errors": [],
+        "invocations": 5,
+        "accepted_commits": 1,
+        "events_sha256": "74eddad0e50523cb0044e62f1947546470711b501c864dfbd1925040e5a94c0d",
+        "events": {
+          "edit_accepted": 1,
+          "proposal_rejected": 2,
+          "command_result": 1,
+          "done": 1
+        }
+      },
+      {
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts/runs/sequential-feature-2-implement.host/result.json",
+        "sha256": "121f239acfc41f9118dd67fffee1ad2b3a2bf88cc920775c34b67ef86ec95352",
+        "stage": "sequential-feature-2-implement",
+        "completed": true,
+        "clean": true,
+        "pending": [],
+        "errors": [],
+        "invocations": 3,
+        "accepted_commits": 1,
+        "events_sha256": "37d8c0dfaaead35b93fb4989b0288d29d8dd7255dcc2e4985d82730a8f35abdd",
+        "events": {
+          "edit_accepted": 1,
+          "proposal_rejected": 0,
+          "command_result": 1,
+          "done": 1
+        }
+      },
+      {
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-fix-1.host/result.json",
+        "sha256": "c2649ec14a7a2eefe3c3be4e0d0371746b67cdfec2984ffc8693e3c3aae9aaad",
+        "stage": "sequential-feature-3-fix-1",
+        "completed": true,
+        "clean": true,
+        "pending": [],
+        "errors": [],
+        "invocations": 6,
+        "accepted_commits": 1,
+        "events_sha256": "1a149fa37c7f4c57629e49eecfb81ba0e3a9025ba16461a9177ac56903672eb6",
+        "events": {
+          "edit_accepted": 1,
+          "proposal_rejected": 0,
+          "command_result": 4,
+          "done": 1
+        }
+      },
+      {
+        "path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/standalone-global-hunk-pilot-01/runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts/runs/sequential-feature-3-implement.host/result.json",
+        "sha256": "abb753202ceda8f3dc8d29b1c38df69efdc609f846814d206101942d2fa813c2",
+        "stage": "sequential-feature-3-implement",
+        "completed": true,
+        "clean": true,
+        "pending": [],
+        "errors": [],
+        "invocations": 5,
+        "accepted_commits": 1,
+        "events_sha256": "f4f16fec1add220b884d9a942565cce0a29a1d4b5c3b0a077c7ebba4e8018034",
+        "events": {
+          "edit_accepted": 1,
+          "proposal_rejected": 2,
+          "command_result": 1,
+          "done": 1
+        }
+      }
+    ],
+    "connected_costs_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P11/CONNECTED-COSTS-20260915.json",
+    "connected_costs_sha256": "a7c23af982180f3e1c83bf4b53065060e31cff6642de8cb8cd5869b21f584b0d",
+    "connected_input_pin_count": 10,
+    "all_connected_input_pins_match": true,
+    "connected_input_pin_mismatches": [],
+    "reference_raw": 18545304,
+    "modified_mean_raw": {
+      "exact": "72891442/3",
+      "decimal": 24297147.333333332
+    },
+    "joint_delta_raw": {
+      "exact": "17255530/3",
+      "decimal": 5751843.333333333
+    }
+  },
+  "prior_output_limit": {
+    "command": "python3 - <<'PY'\nimport hashlib,json,pathlib\nroot=pathlib.Path(\"/home/user/src/work-leaf\")\nstudy=root/\"bench-results/efficiency-mechanism-isolation-20260906T214448Z\"\nphase=study/\"phases/standalone-global-hunk-pilot-01\"\ndef sha(p):\n with pathlib.Path(p).open(\"rb\") as f:return hashlib.file_digest(f,\"sha256\").hexdigest()\nmanifest_path=phase/\"PHASE-MANIFEST.json\";manifest=json.loads(manifest_path.read_text())\nchecks=[]\nfor row in manifest[\"files\"]:\n p=pathlib.Path(row[\"path\"]);actual=sha(p) if p.is_file() else None\n checks.append({\"path\":str(p),\"role\":row.get(\"role\"),\"expected\":row[\"sha256\"],\"actual\":actual,\"matches\":actual==row[\"sha256\"]})\nspans=json.loads((study/\"screens/author-feedback-20260914/P02/EXACT-SPANS.json\").read_text())\nspans_check={key:sha(spans[key])==spans[key+\"_sha256\"] for key in (\"host\",\"reference_prompt\")}\nartifact=phase/\"runs/standalone-global-hunk-pilot-001/standalone-global-hunk-pilot-001-three-feature-sequential-bench-artifacts\"\nstages=[]\nfor p in sorted((artifact/\"runs\").glob(\"*.host/result.json\")):\n result=json.loads(p.read_text())\n events=p.with_name(\"events.jsonl\");rows=[json.loads(x) for x in events.read_text().splitlines()]\n counts={kind:sum(r[\"kind\"]==kind for r in rows) for kind in (\"edit_accepted\",\"proposal_rejected\",\"command_result\",\"done\")}\n stages.append({\"path\":str(p),\"sha256\":sha(p),\"stage\":result[\"stage\"],\"completed\":result[\"completed\"],\"clean\":result[\"clean\"],\"pending\":result[\"pending_changes\"],\"errors\":result[\"errors\"],\"invocations\":len(result[\"invocations\"]),\"accepted_commits\":len(result[\"accepted_commits\"]),\"events_sha256\":sha(events),\"events\":counts})\ncost_path=study/\"screens/author-feedback-20260914/P11/CONNECTED-COSTS-20260915.json\";costs=json.loads(cost_path.read_text())\njoins=[]\nfor name,expected in costs[\"source_sha256\"].items():\n p=root/name\n actual=sha(p) if p.is_file() else None\n joins.append({\"path\":name,\"expected\":expected,\"actual\":actual,\"matches\":actual==expected})\nprint(json.dumps({\"scope\":\"P14 immutable recipe and retained execution join; no native re-audit\",\"manifest_path\":str(manifest_path),\"manifest_sha256\":sha(manifest_path),\"admitted_manifest_equal\":sha(manifest_path)==\"b9decad8b45fc8ccf2d66a382240fbd76542950984830462e20113ffd08941e3\",\"source_file_count\":len(checks),\"source_files\":checks,\"exact_spans_reference_equal\":spans_check,\"actual_host_stages\":stages,\"connected_costs_path\":str(cost_path),\"connected_costs_sha256\":sha(cost_path),\"connected_input_pins\":joins,\"reference_raw\":costs[\"reference_raw\"],\"modified_mean_raw\":costs[\"joined_mean_raw\"],\"joint_delta_raw\":costs[\"joint_policy_delta_raw\"]}))\nPY",
+    "exit_code": 0,
+    "tool_output_truncated": true,
+    "interpretation": "The first hash-only query printed all61 rows and was tool-truncated. The compact repeated query emits every failure plus explicit all-match predicates; no model, usage-core or workflow was repeated."
+  },
+  "local_tests": [
+    {
+      "command": "python3 -m unittest discover -s bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/full-workflow-009 -p 'test_full_workflow.py'",
+      "count": 13,
+      "result": "PASS",
+      "seconds": 0.033
+    },
+    {
+      "command": "python3 -m unittest discover -s bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/guard-path-011 -p 'test_source_inverse.py'",
+      "count": 1,
+      "result": "PASS",
+      "seconds": 0.027
+    }
+  ]
+}

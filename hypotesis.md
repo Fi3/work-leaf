@@ -1,9 +1,9 @@
-# DONE: 82 | TODO: 8 | TOTAL: 90
+# DONE: 83 | TODO: 7 | TOTAL: 90
 ## BUG FIXES — DONE: 11 | TODO: 0 | TOTAL: 11
 
-**Pending checks: 8 research obligations remain. Current: qualify actual input after native saved-prefix retention for C08 × C25. Prefix retention works without generation; actual resumed input and faithful WL attachment remain unqualified. No causal benchmark is running.**
+**Pending checks: 7 research obligations remain: P06, P07, P08, P12, P13, P15, P16. P14's retained non-WL causal recipe is verified. Current: resolve the joint-test input/state prerequisites; no causal benchmark is admitted or running.**
 **Current verified result:** reversing the author-policy package gives **24.297M versus 18.545M raw**, net **+5.752M** after integration offsets. The all-on package uses **23.6729% less in this contrast**. **The causally explained share of the historical ~50% gap remains NOT ESTABLISHED.**
-**Activity, 2026-09-15T06:02:14+00:00:** The [single native fork](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P06/READ-PREFIX-RESULT-20260915.md) retains the genuine first read request and old startup prefix by an immutable parent reference; a native hydration read confirms the boundary. Zero model turns; original source unchanged. The previous32,587-raw fresh-input failure remains. Required root tests pass on disk-backed scratch after a retained tmpfs-capacity failure. Research82/8/90; bugs11/0/11.
+**Activity, 2026-09-15T06:29:38+00:00:** [P14's exact recipe and causal verification](bench-results/efficiency-mechanism-isolation-20260906T214448Z/progress-results/P14.md) satisfy its frozen gate: all61 recipe-source pins, both exact-span references and10 connected-result pins match;14 adapter/source tests pass. The real saved execution and qualified reversal are reused, not regenerated. H003's date-aligned463-file lookup finds no exact0.1.14 tool read. Main83/7/90 and bugs11/0/11; historical combined attribution remains unfinished.
 
 | ID | Status | Remaining check |
 | --- | --- | --- |
@@ -20,7 +20,7 @@
 | P11 | DONE | Full author/review/repair/integration cost offsets. |
 | P12 | BLOCKED | Combined same-target effect, interactions and context amplification without double counting. |
 | P13 | BLOCKED | Historical six-vs-six transfer, explained amount/share and justified residual. |
-| P14 | BLOCKED | Evidence-backed executable non-WL causal recipe; reuse existing real execution where it matches. |
+| P14 | DONE | Evidence-backed executable non-WL causal recipe; reuse existing real execution where it matches. |
 | P15 | TODO | Original-benchmark error/accounting/configuration check only after valid causal coverage fails to reconcile the gap. |
 | P16 | BLOCKED | Final source/coverage acceptance of the requested causal answer or concrete corrected benchmark error. |
 
@@ -119,7 +119,7 @@ Previously unaccounted bug fixes use their separate counter; they do not expand 
 
 ## Live priority — known joint effects after the measured author-package net
 
-Last maintained: **2026-09-15 06:02 UTC**. [The connected result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P11/CONNECTED-RESULT-20260915.md)
+Last maintained: **2026-09-15 06:29 UTC**. [The connected result](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P11/CONNECTED-RESULT-20260915.md)
 measures A+B's net +5,751,843⅓ raw after the1,830,866⅔ integration offset.
 The historical45.38%–51.62% saving and the user's no-quality-loss assumption remain premises.
 Highest next value is the known refresh × continuation interaction and its overlap with the
@@ -127,12 +127,12 @@ author package. No new scientific question or ordinary control is selected.
 
 | Priority | Evidence and potential explanatory reach | Next cheap check / stop gate |
 | --- | --- | --- |
-| Active local P06 saved-prefix qualification | Native fork and hydration preserve the original first read request/automatic prefix without generation. The fixed-review/C08 switch passes local guards and full Cargo checks. The32,587-raw fresh-input failure exposes remote catalog drift. | Qualify actual resumed input using the existing full private catalog; first establish a small faithful WL attachment and later-review/exposure route. No original-thread edits, hidden-controller recreation or full run from a known unrepresentative budget. |
-| Known P06 historical setup limitation | The0.1.14 body is unrecovered; the bounded retained-tool-read lookup finds no exact read across280 files. H003's isolated refresh file is not a connected runtime. | Preserve these failed setup attempts. An alternative must supply a same-target reference and explicit transfer limits; a3M from-base window known not to reach exposure is not a useful null screen. |
+| P06 H003 exact same-author opportunity | H003 has the actual overlap, but both the September lookup and463-file August28–30 actual-read lookup fail to recover0.1.14. Native fork capability is proven on the later client only. | Check first-party version/artifact metadata before spending on any further input probe. Do not substitute0.1.15, repeat the same file scan or infer zero joint effect from unavailable setup. Connected source and actual input remain gates. |
+| Parked later C21 shortcuts | Native fork/hydration retain the first-read prefix. But all8 resumed-output releases in C21-02 are reviewers and changed refreshes are authors; no selected pre-feedback author interval exposes both. The fresh-input probe fails on catalog/menu drift. | Preserve capability, private patch and every failed eligibility result. No benchmark, reviewer replay or framework from this shortcut. The known from-base3M exposure failure remains. |
 | Completed A+B confirmation/offsets, P09/P11 | Full recorded-model net +5,751,843⅓; individual increases+3.542M–8.504M. All nine initial authors execute test-first.76.37% of initial excess follows first GREEN, including genuine repairs. | Use the joint package, not independent A/B shares. Keep004's failed guard report and separate exact-code validation. No additional confirmation batch selected. |
 | P07/P08 author/refresh/continuation and residual joints | Their named exercised differences are still not excluded or jointly measured. Standalone custody lacks WL refresh/continuation; no qualified connected composite exists. | Qualify the declared complete factor set and representative boundary. No new framework, hidden task, sum of unlike cohorts or scientific closure from failed setup. |
 | P12/P13 combined amount and historical transfer | Historical18/18 Direct test-first and17/18 WL cohesive sequences match the policy direction. Initial historical gap8.957M–9.730M, outside-initial7.434M–8.915M are locations, not causal allocations. | Combine qualified same-target evidence and justify transfer/residual. Do not label23.6729% of this modified comparison as23.6729% of the historical saving. |
-| Completed accounting; P14–P16 still pending | Three integrations add15,289,987 recorded raw with no unfinished tails. Every old failed/partial outcome and setup diagnostic remains separately accounted. | Preserve recipe fidelity and ownership. P15 stays conditional on valid cause coverage; P16 requires the supported answer. |
+| Completed non-WL causal recipe, P14 | Exact host/driver sources and actual recovery records match; the qualified A+B reversal verifies the retained recipe's mechanism. No additional all-on run. | P14 does not establish the historical share or authorize current re-execution. P15 stays conditional on valid cause coverage; P16 requires the supported answer. |
 | Parked B-only/A-only/C-only and old weak cues | P03 reaches its bound before GREEN; R02 is incomplete, R05 lacks a faithful boundary, and R06 is cheaper than R04 in the wrong direction. | No automatic repeats or renamed screens. A particular sentence or independent B percentage is not established. |
 
 The [work-chain report](bench-results/efficiency-mechanism-isolation-20260906T214448Z/screens/author-feedback-20260914/P05/RESULT.md)

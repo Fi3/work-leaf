@@ -1,0 +1,12 @@
+{
+  "command": "python3 - <<'PY'\nimport pathlib,json,hashlib,time\nroot=pathlib.Path(\"/home/user/.codex/sessions/2026/08\")\nneedle=\"deep-research-work/0.1.14/skills/deep-research/SKILL.md\"\nfiles=sorted(p for d in (\"28\",\"29\",\"30\") for p in (root/d).glob(\"*.jsonl\"))\nstarted=time.monotonic();found=[];counts={\"files\":len(files),\"malformed_lines\":0}\nfor path in files:\n calls={}\n for line,raw in enumerate(path.open(),1):\n  try:r=json.loads(raw)\n  except json.JSONDecodeError:counts[\"malformed_lines\"]+=1;continue\n  if r.get(\"type\")!=\"response_item\":continue\n  p=r.get(\"payload\",{});kind=p.get(\"type\")\n  if kind in (\"function_call\",\"custom_tool_call\"):\n   a=p.get(\"arguments\",p.get(\"input\",\"\"))\n   text=a if isinstance(a,str) else json.dumps(a)\n   if needle in text and not any(s in text.lower() for s in (\"auth.json\",\"api_key\",\"access_token\",\"bearer\")):\n    call=p.get(\"call_id\");calls[call]={\"path\":str(path),\"call_line\":line,\"call_id\":call,\"name\":p.get(\"name\"),\"arguments\":text}\n  elif kind in (\"function_call_output\",\"custom_tool_call_output\") and p.get(\"call_id\") in calls:\n   value=p.get(\"output\",\"\");body=value if isinstance(value,str) else json.dumps(value)\n   found.append({**calls[p[\"call_id\"]],\"output_line\":line,\"output_bytes\":len(body.encode()),\"output_sha256\":hashlib.sha256(body.encode()).hexdigest(),\"output_first\":body[:400],\"source_sha256\":hashlib.sha256(path.read_bytes()).hexdigest()})\ncounts[\"elapsed_seconds\"]=round(time.monotonic()-started,6)\nprint(json.dumps({\"scope\":\"H003 date-aligned exact public-skill actual tool reads\",\"counts\":counts,\"matches\":found}))\nPY",
+  "result": {
+    "scope": "H003 date-aligned exact public-skill actual tool reads",
+    "counts": {
+      "files": 463,
+      "malformed_lines": 0,
+      "elapsed_seconds": 4.898991
+    },
+    "matches": []
+  }
+}

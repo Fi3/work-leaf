@@ -1,11 +1,45 @@
 # Provisional investigation ledger
 
-Live analysis counter: **DONE: 82 | TODO: 8 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
+Live analysis counter: **DONE: 83 | TODO: 7 | TOTAL: 90** — [hypotesis.md](hypotesis.md).
 **2026-09-14 operating scope:** [conditional user approval](bench-results/efficiency-mechanism-isolation-20260906T214448Z/AUTHORITY-COMPLETE-KNOWN-WORK-20260914.md) permits the complete known remaining-work list, P01–P16, while preserving every earlier result and the 74/0 checkpoint.
 The [frozen complete-plan contract](bench-results/efficiency-mechanism-isolation-20260906T214448Z/PROGRESS-END-TO-END-CONTRACT-20260914.json) pins all sixteen tasks, gates, budgets and the user's novelty condition.
 **Bug-fix counter: DONE: 11 | TODO: 0 | TOTAL: 11.** BUG011's actual immutable input boundary qualifies. All earlier fixes and failed attempts remain intact.
-**Current activity, 2026-09-15T06:02:14+00:00:** P06's single native fork and hydration retain the saved first-read prefix through an immutable parent reference, zero model turns and unchanged original source. Actual resumed input, WL attachment, later review input and exposure remain unqualified. The previous32,587-raw failure remains. No causal benchmark is admitted or running. Research82/8/90; bugs11/0/11.
+**Current activity, 2026-09-15T06:29:38+00:00:** P14's retained executable recipe and qualified causal reversal pass their source/evidence gate. Main83/7/90, bugs11/0/11. Remaining joint/transfer work is not closed; first-party artifact/version metadata is the next input-prerequisite check. No causal benchmark is admitted or running.
 The historical saving's verified attributable combined percentage remains **NOT ESTABLISHED**.
+
+**2026-09-15T06:29:38+00:00 — P14 verified; cumulative research83/7/90:**
+The existing all-on executable host/driver and actual real-agent operation logs
+match all61 admitted source hashes, both prompt/host reference spans and10
+connected-result source pins. All five original author/fix stages are complete
+and clean, retaining24 invocations, six accepted edits, five rejections and eight
+checks. Thirteen adapter and one path-inverse tests pass. The explicit A+B
+reverse operation, actual workflow and whole-stage5,751,843⅓-raw net satisfy
+P14's causal-recipe gate. No extra all-on workflow or native core is run. This
+is not historical50% attribution or a fresh current-launch certificate. All
+feature/guard failures and prior integration tails remain. The immutable83/7
+checkpoint records onlyP14; total90 and bug11/0/11 are unchanged.
+The first hash-only query printed61 rows and was tool-truncated; the compact
+repeat reports every mismatch plus explicit all-match predicates, no generation.
+The date-aligned H asset lookup is closed:463 files, zero malformed lines,
+4.898991 seconds, no exact tool-call/output read of the public0.1.14 path.
+This does not exclude indirect reads or unknown external copies. No install,
+credential access/copy, model response or same failed lookup repeated.
+
+**2026-09-15T06:14:41+00:00 — C21 interval parked; H-date lookup selected:**
+The three source-pinned C21-02 grace logs contain107 exact-usage releases and8
+resumed-output releases, all8 in reviewer threads. Changed refreshes occur in
+authors, so the selected single-author pre-feedback interval does not expose
+both factors. No state-replay framework, model run or causal null is claimed.
+The sampled intermediate tree is absent locally; its final bundle advertises
+only finalHEAD. This does not prove arbitrary earlier source unrecoverable.
+The first-prefix/source preparation and all prior checks are committedfc2a2cb3.
+Required root fmt/clippy/tests and all four counter guards pass; only raw diff
+context markers trigger git's whitespace diagnostic and remain byte-preserved.
+H003 is August29, not the September6–8 dates in the earlier280-file asset lookup.
+A separate ten-minute read-only search covers its463 date-adjacent histories.
+The general binary-name lookup finds no matching old executable and encounters
+unrelated protected system temp directories; it is not an exhaustive absence
+claim. No auth material, package install or global configuration edit occurs.
 
 **2026-09-15T06:02:14+00:00 — native prefix capability, not a causal result:**
 The before-first-turn shortcut is rejected by source order without a fork: its

@@ -1,0 +1,117 @@
+{
+  "command": "python3 - <<'PY'\nimport hashlib,json,pathlib,collections\nroot=pathlib.Path(\"/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z\")\nphase=root/\"phases/review-evidence-02\"\nrows=[]\nfor run in range(1,4):\n identity=f\"review-evidence-02-workflow-{run:03d}\"\n source=phase/\"postcapture\"/identity/\"SOURCE-INPUT.json\"; manifest=json.loads(source.read_text())\n for capture in manifest[\"captures\"]:\n  folder=pathlib.Path(capture[\"path\"])\n  grace=folder/\"provider-usage-grace.jsonl\"\n  values=[json.loads(x) for x in grace.read_text().splitlines()]\n  totals=collections.Counter(v[\"outcome\"] for v in values)\n  selected=[{\"line\":i+1,**v} for i,v in enumerate(values) if \"resum\" in v[\"outcome\"] or \"timeout\" in v[\"outcome\"]]\n  rows.append({\"run\":identity,\"source_path\":str(source),\"source_sha256\":hashlib.sha256(source.read_bytes()).hexdigest(),\"grace_path\":str(grace),\"grace_sha256\":hashlib.sha256(grace.read_bytes()).hexdigest(),\"outcomes\":dict(totals),\"resumed_or_timeout\":selected})\nprint(json.dumps({\"scope\":\"existing C21-02 grace exposure only; no native accounting or generation\",\"rows\":rows}))\nPY",
+  "result": {
+    "scope": "existing C21-02 grace exposure only; no native accounting or generation",
+    "rows": [
+      {
+        "run": "review-evidence-02-workflow-001",
+        "source_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/review-evidence-02/postcapture/review-evidence-02-workflow-001/SOURCE-INPUT.json",
+        "source_sha256": "133a74895ee86fb435b05e5879b47b4237a49ef9e4e71bb4fd8dff90f3033152",
+        "grace_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/review-evidence-02/runs/review-evidence-02-workflow-001/review-evidence-02-workflow-001-three-feature-bench-artifacts/observation/app-server/00000856397944331315-566/provider-usage-grace.jsonl",
+        "grace_sha256": "9470511da5f729bcecee1a5e4f4f2409834ea5acd7b48f59245bad8c59b89ead",
+        "outcomes": {
+          "forwarded-after-exact-usage": 35,
+          "forwarded-after-output-resumed": 2
+        },
+        "resumed_or_timeout": [
+          {
+            "line": 25,
+            "thread_id": "01a09213-bb24-7460-9934-7566b52cdf46",
+            "turn_id": "01a09213-bb75-7912-8187-326848cbce1f",
+            "configured_grace_ms": 1000,
+            "output_resume_policy": "forward",
+            "waited_ms": 0,
+            "outcome": "forwarded-after-output-resumed"
+          },
+          {
+            "line": 36,
+            "thread_id": "01a09213-bb24-7460-9934-7566b52cdf46",
+            "turn_id": "01a09218-ac63-7a72-a47c-fa89945d01d1",
+            "configured_grace_ms": 1000,
+            "output_resume_policy": "forward",
+            "waited_ms": 0,
+            "outcome": "forwarded-after-output-resumed"
+          }
+        ]
+      },
+      {
+        "run": "review-evidence-02-workflow-002",
+        "source_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/review-evidence-02/postcapture/review-evidence-02-workflow-002/SOURCE-INPUT.json",
+        "source_sha256": "825568e34b0d2c4f0fffaacacab190a3e4e0e2b2c06d5ac2b88a5721e2034049",
+        "grace_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/review-evidence-02/runs/review-evidence-02-workflow-002/review-evidence-02-workflow-002-three-feature-bench-artifacts/observation/app-server/00000856397944333689-564/provider-usage-grace.jsonl",
+        "grace_sha256": "9c4596636218ecfe13b24df3a7a8547bf72fdee2c827cbeb62be10ff2c349425",
+        "outcomes": {
+          "forwarded-after-exact-usage": 38,
+          "forwarded-after-output-resumed": 6
+        },
+        "resumed_or_timeout": [
+          {
+            "line": 19,
+            "thread_id": "01a0920f-a18b-7872-957d-340ed7241fc7",
+            "turn_id": "01a0920f-a1f3-7982-8736-25501c115164",
+            "configured_grace_ms": 1000,
+            "output_resume_policy": "forward",
+            "waited_ms": 0,
+            "outcome": "forwarded-after-output-resumed"
+          },
+          {
+            "line": 20,
+            "thread_id": "01a0920f-a18b-7872-957d-340ed7241fc7",
+            "turn_id": "01a0920f-d851-7660-8379-c22ab2edc07d",
+            "configured_grace_ms": 1000,
+            "output_resume_policy": "forward",
+            "waited_ms": 1,
+            "outcome": "forwarded-after-output-resumed"
+          },
+          {
+            "line": 21,
+            "thread_id": "01a0920f-a18b-7872-957d-340ed7241fc7",
+            "turn_id": "01a09211-fe3c-7253-a558-3207ff3c4579",
+            "configured_grace_ms": 1000,
+            "output_resume_policy": "forward",
+            "waited_ms": 2,
+            "outcome": "forwarded-after-output-resumed"
+          },
+          {
+            "line": 24,
+            "thread_id": "01a0920f-a18b-7872-957d-340ed7241fc7",
+            "turn_id": "01a09213-2dc8-7291-b630-9b344f789671",
+            "configured_grace_ms": 1000,
+            "output_resume_policy": "forward",
+            "waited_ms": 1,
+            "outcome": "forwarded-after-output-resumed"
+          },
+          {
+            "line": 32,
+            "thread_id": "01a09217-7228-77c1-828b-3f9c75f14cb4",
+            "turn_id": "01a09217-727d-72c2-83fe-d792ef1a1f95",
+            "configured_grace_ms": 1000,
+            "output_resume_policy": "forward",
+            "waited_ms": 0,
+            "outcome": "forwarded-after-output-resumed"
+          },
+          {
+            "line": 43,
+            "thread_id": "01a09217-7228-77c1-828b-3f9c75f14cb4",
+            "turn_id": "01a0921f-453f-7b31-a607-1fb36269abd3",
+            "configured_grace_ms": 1000,
+            "output_resume_policy": "forward",
+            "waited_ms": 0,
+            "outcome": "forwarded-after-output-resumed"
+          }
+        ]
+      },
+      {
+        "run": "review-evidence-02-workflow-003",
+        "source_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/review-evidence-02/postcapture/review-evidence-02-workflow-003/SOURCE-INPUT.json",
+        "source_sha256": "625e99c017c7c36b8d185f78e7066db29a98e654375098dc4f02a919df8536dc",
+        "grace_path": "/home/user/src/work-leaf/bench-results/efficiency-mechanism-isolation-20260906T214448Z/phases/review-evidence-02/runs/review-evidence-02-workflow-003/review-evidence-02-workflow-003-three-feature-bench-artifacts/observation/app-server/00000856397944327752-565/provider-usage-grace.jsonl",
+        "grace_sha256": "73c9822212906cdb4ea7cc8b73e974b54a8ca8fc9d28a6e3133c80b9e64a1173",
+        "outcomes": {
+          "forwarded-after-exact-usage": 34
+        },
+        "resumed_or_timeout": []
+      }
+    ]
+  }
+}
